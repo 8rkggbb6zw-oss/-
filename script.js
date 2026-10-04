@@ -412,31 +412,94 @@ function startGame(THREE) {
     }
   }
 
-  // Lily pads floating in clusters, a few with flowers
-  var padGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.015, 20, 1, false, 0.35, Math.PI * 2 - 0.7);
-  var padMats = [mat(0x2f5e3c), mat(0x3a6b40), mat(0x28513a)];
-  var lotusPetal = new THREE.SphereGeometry(0.09, 10, 8);
-  var lilyPads = [];
-  for (var lc = 0; lc < 11; lc++) {
+  // ---------- Lily pads ----------
+  // A round pad with a V-shaped slit, curled-up rim, veins, spots and a yellowish edge
+  function lilyPadGeometry(shift) {
+    var RINGS = 6, SEG = 32, NOTCH = 0.4;
+    var pos = [0, 0.003, 0], col = [], idx = [], c = new THREE.Color();
+    var base = new THREE.Color(0x3d7a36), dark = new THREE.Color(0x24532a), vein = new THREE.Color(0x7aa54e);
+    var rim = new THREE.Color(0x9aa23e), spot = new THREE.Color(0x6e5a2c);
+    c.copy(base).lerp(vein, 0.4);
+    col.push(c.r, c.g, c.b);
+    for (var r = 1; r <= RINGS; r++) {
+      var f = r / RINGS;
+      for (var s = 0; s <= SEG; s++) {
+        var a = NOTCH / 2 + (s / SEG) * (Math.PI * 2 - NOTCH);
+        var rad = f * (1 + noise(Math.cos(a) * 3 + shift, Math.sin(a) * 3) * 0.07);
+        var x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+        var y = f * f * f * 0.07 + Math.sin(a * 7 + shift) * 0.015 * f * f; // rim curls up and waves
+        pos.push(x, y, z);
+        c.copy(base).lerp(dark, Math.min(1, Math.max(0, noise(x * 7 + shift, z * 7) * 0.4 + 0.3)));
+        var veinLine = Math.pow(Math.abs(Math.cos(a * 6.5)), 24);
+        c.lerp(vein, veinLine * 0.6 * (1 - f * 0.6));
+        if (f > 0.75) c.lerp(rim, (f - 0.75) * 1.4);
+        if (noise(x * 13 + shift, z * 13 - shift) > 0.55) c.lerp(spot, 0.45);
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var s2 = 0; s2 < SEG; s2++) idx.push(0, 2 + s2, 1 + s2);
+    for (var r2 = 1; r2 < RINGS; r2++) {
+      var in0 = 1 + (r2 - 1) * (SEG + 1), out0 = 1 + r2 * (SEG + 1);
+      for (var s3 = 0; s3 < SEG; s3++) {
+        var ia = in0 + s3, ib = in0 + s3 + 1, oc = out0 + s3, od = out0 + s3 + 1;
+        idx.push(ia, ib, oc, ib, od, oc);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var padGeos = [0, 2.3, 4.6, 6.9].map(lilyPadGeometry);
+  var padMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, side: THREE.DoubleSide });
+
+  // Water lily flower: three rings of pointed petals around a yellow centre
+  var lilyPetalGeo = new THREE.SphereGeometry(1, 10, 6);
+  lilyPetalGeo.translate(0, 0, 1); // petal grows outward from its base
+  var lilyWhite = new THREE.MeshStandardMaterial({ color: 0xfbf4f6, roughness: 0.6, emissive: 0x332229, emissiveIntensity: 0.15 });
+  var lilyPink = new THREE.MeshStandardMaterial({ color: 0xf5aecb, roughness: 0.6, emissive: 0x3a1a28, emissiveIntensity: 0.15 });
+  var lilyCenterMat = mat(0xf2c94c, 0xd9a520, 0.3);
+  function waterLily(x, z, pink) {
+    var flower = new THREE.Group();
+    [[9, 0, 0.3, 1], [9, Math.PI / 9, 0.75, 0.85], [6, 0.2, 1.2, 0.6]].forEach(function (ringDef) {
+      for (var i = 0; i < ringDef[0]; i++) {
+        var holder = new THREE.Group();
+        holder.rotation.y = ringDef[1] + (i / ringDef[0]) * Math.PI * 2;
+        var petal = place(new THREE.Mesh(lilyPetalGeo, pink ? lilyPink : lilyWhite), 0, 0, 0, holder);
+        petal.scale.set(0.055 * ringDef[3], 0.018, 0.13 * ringDef[3]);
+        petal.rotation.x = -ringDef[2]; // tilt the petal up out of the water
+        flower.add(holder);
+      }
+    });
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.05, 10), lilyCenterMat), 0, 0.04, 0, flower);
+    flower.position.set(x, WATER_Y + 0.03, z);
+    scene.add(flower);
+    return flower;
+  }
+  // A closed bud poking up out of the water
+  function lilyBud(x, z) {
+    var bud = place(new THREE.Mesh(lilyPetalGeo, lilyPink), x, WATER_Y, z);
+    bud.scale.set(0.06, 0.06, 0.14);
+    bud.rotation.x = -Math.PI / 2 + 0.2;
+    return bud;
+  }
+
+  var lilyPads = [], lilyFlowers = [];
+  for (var lc = 0; lc < 12; lc++) {
     var cs = waterSpot(0.25);
-    var count = 3 + Math.floor(rand() * 4);
+    var count = 3 + Math.floor(rand() * 5);
     for (var lpad = 0; lpad < count; lpad++) {
-      var lx = cs.x + (rand() - 0.5) * 1.4, lz = cs.z + (rand() - 0.5) * 1.4;
+      var lx = cs.x + (rand() - 0.5) * 1.8, lz = cs.z + (rand() - 0.5) * 1.8;
       if (groundHeight(lx, lz) > WATER_Y - 0.1 || onDock(lx, lz)) continue;
-      var pad = place(new THREE.Mesh(padGeo, padMats[lpad % 3]), lx, WATER_Y + 0.015, lz);
-      pad.scale.setScalar(0.6 + rand() * 0.7);
+      var pad = place(new THREE.Mesh(padGeos[Math.floor(rand() * 4)], padMat), lx, WATER_Y + 0.01, lz);
+      pad.scale.setScalar(0.25 + rand() * 0.35);
       pad.rotation.y = rand() * Math.PI * 2;
       pad.castShadow = false;
       lilyPads.push(pad);
-      if (lc % 4 === 0 && lpad === 0) {
-        for (var lp = 0; lp < 6; lp++) {
-          var la = (lp / 6) * Math.PI * 2;
-          var petal = place(new THREE.Mesh(lotusPetal, M.petal), Math.cos(la) * 0.09, 0.05, Math.sin(la) * 0.09, pad);
-          petal.scale.set(1.3, 0.5, 0.7);
-          petal.rotation.set(0, -la, 0.5);
-        }
-        place(new THREE.Mesh(lotusPetal, M.center), 0, 0.07, 0, pad).scale.setScalar(0.6);
-      }
+      if (lpad === 0 && lc % 3 === 0) lilyFlowers.push(waterLily(lx, lz, lc % 2 === 1));
+      if (lpad === 1 && lc % 4 === 1) lilyBud(lx + 0.25, lz + 0.1);
     }
   }
   var rippleTimer = 0;
@@ -973,8 +1036,12 @@ function startGame(THREE) {
     waterUniforms.uSunDir.value.copy(sun.position).sub(sun.target.position).normalize();
     waterUniforms.uSunColor.value.copy(sun.color).multiplyScalar(sun.intensity);
     lilyPads.forEach(function (pad, n) {
-      pad.position.y = WATER_Y + 0.015 + Math.sin(t * 1.4 + n * 1.3) * 0.01;
-      pad.rotation.y += dt * 0.03 * (n % 2 ? 1 : -1);
+      pad.position.y = WATER_Y + 0.01 + Math.sin(t * 1.4 + n * 1.3) * 0.008;
+      pad.rotation.y += dt * 0.02 * (n % 2 ? 1 : -1);
+    });
+    lilyFlowers.forEach(function (flower, n) {
+      flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
+      flower.rotation.y += dt * 0.05;
     });
     rippleTimer -= dt;
     if (rippleTimer <= 0) {
