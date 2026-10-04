@@ -147,16 +147,25 @@ function startGame(THREE) {
 
   // The wooden dock points from the shore toward where you start
   var DOCK_A = Math.atan2(-((FARM_Z + 5) - LAKE_Z), FARM_X - LAKE_X);
-  var DOCK_LEN = 5.2, DOCK_W = 1.5, DOCK_Y = 0.3;
+  var DOCK_LEN = 5.8, DOCK_W = 2.2, DOCK_Y = 0.3;
   var dockIn = { x: -Math.cos(DOCK_A), z: Math.sin(DOCK_A) }; // direction out over the water
   var dockStart = {
     x: LAKE_X + Math.cos(DOCK_A) * (lakeRadius(DOCK_A) + 0.8),
     z: LAKE_Z - Math.sin(DOCK_A) * (lakeRadius(DOCK_A) + 0.8)
   };
-  function onDock(x, z) {
+  function dockCoords(x, z) {
     var rx = x - dockStart.x, rz = z - dockStart.z;
-    var along = rx * dockIn.x + rz * dockIn.z, across = -rx * dockIn.z + rz * dockIn.x;
-    return along > -0.2 && along < DOCK_LEN && Math.abs(across) < DOCK_W / 2;
+    return { along: rx * dockIn.x + rz * dockIn.z, across: -rx * dockIn.z + rz * dockIn.x };
+  }
+  // Where you can walk on the dock (keeps you clear of the posts and lamps at its edges)
+  function onDock(x, z) {
+    var d = dockCoords(x, z);
+    return d.along > -0.2 && d.along < DOCK_LEN - 0.25 && Math.abs(d.across) < DOCK_W / 2 - 0.4;
+  }
+  // Everywhere the dock covers, so grass and lily pads stay out from under it
+  function underDock(x, z) {
+    var d = dockCoords(x, z);
+    return d.along > -0.4 && d.along < DOCK_LEN + 0.4 && Math.abs(d.across) < DOCK_W / 2 + 0.4;
   }
   function nearDock(a) {
     return Math.abs(Math.atan2(Math.sin(a - DOCK_A), Math.cos(a - DOCK_A))) < 0.3;
@@ -271,7 +280,7 @@ function startGame(THREE) {
     for (var i = 0; i < 50; i++) {
       var e = lakeEdge(rand() * Math.PI * 2, 0, 16.7), f = rand() * 0.85;
       var x = LAKE_X + e.x * f, z = LAKE_Z + e.z * f;
-      if (groundHeight(x, z) < WATER_Y - minDepth && !onDock(x, z)) return { x: x, z: z };
+      if (groundHeight(x, z) < WATER_Y - minDepth && !underDock(x, z)) return { x: x, z: z };
     }
     return { x: LAKE_X, z: LAKE_Z };
   }
@@ -494,7 +503,7 @@ function startGame(THREE) {
     var count = 2 + Math.floor(rand() * 3);
     for (var lpad = 0; lpad < count; lpad++) {
       var lx = cs.x + (rand() - 0.5) * 2.6, lz = cs.z + (rand() - 0.5) * 2.6;
-      if (groundHeight(lx, lz) > WATER_Y - 0.1 || onDock(lx, lz)) continue;
+      if (groundHeight(lx, lz) > WATER_Y - 0.1 || underDock(lx, lz)) continue;
       var pad = place(new THREE.Mesh(padGeos[Math.floor(rand() * 4)], padMat), lx, WATER_Y + 0.01, lz);
       pad.scale.setScalar(0.25 + rand() * 0.35);
       pad.rotation.y = rand() * Math.PI * 2;
@@ -510,25 +519,90 @@ function startGame(THREE) {
   var dock = new THREE.Group();
   dock.position.set(dockStart.x, 0, dockStart.z);
   dock.rotation.y = Math.atan2(-dockIn.z, dockIn.x); // the dock's x axis points out over the water
-  var plankGeo = new THREE.BoxGeometry(0.28, 0.06, DOCK_W);
-  var woodMats = [mat(0x9c7150), mat(0x8a6244), mat(0xa77b57)];
-  for (var pk = 0; pk * 0.31 < DOCK_LEN; pk++) {
-    var plank = place(new THREE.Mesh(plankGeo, woodMats[pk % 3]), pk * 0.31 + 0.14, DOCK_Y - 0.03, (rand() - 0.5) * 0.04, dock);
-    plank.rotation.y = (rand() - 0.5) * 0.03;
+  // How deep the lake bed is under a spot on the dock (dock-local x along, z across)
+  function bedBelow(px, pz) {
+    return groundHeight(dockStart.x + dockIn.x * px - dockIn.z * pz, dockStart.z + dockIn.z * px + dockIn.x * pz);
   }
-  var darkWood = mat(0x5e4029);
-  var beamGeo = new THREE.BoxGeometry(DOCK_LEN, 0.1, 0.1);
-  place(new THREE.Mesh(beamGeo, darkWood), DOCK_LEN / 2, DOCK_Y - 0.11, DOCK_W / 2 - 0.1, dock);
-  place(new THREE.Mesh(beamGeo, darkWood), DOCK_LEN / 2, DOCK_Y - 0.11, -DOCK_W / 2 + 0.1, dock);
-  // Posts reach all the way down to the lake bed
-  [0.4, 2.0, 3.6, DOCK_LEN - 0.1].forEach(function (px) {
+
+  // Deck: long boards running the length of the dock in warm, sunny wood tones
+  var woodTones = [mat(0xc89d6e), mat(0xb98b5c), mat(0xd2a877), mat(0xbf9363)];
+  var trimWood = mat(0x8a6040), darkWood = mat(0x5e4029);
+  var BOARDS = 9, boardW = DOCK_W / BOARDS;
+  for (var bd = 0; bd < BOARDS; bd++) {
+    place(new THREE.Mesh(new THREE.BoxGeometry(DOCK_LEN, 0.06, boardW - 0.015), woodTones[Math.floor(rand() * 4)]),
+      DOCK_LEN / 2, DOCK_Y - 0.03, -DOCK_W / 2 + boardW * (bd + 0.5), dock);
+  }
+  var trimGeo = new THREE.BoxGeometry(DOCK_LEN, 0.1, 0.1);
+  place(new THREE.Mesh(trimGeo, trimWood), DOCK_LEN / 2, DOCK_Y - 0.02, DOCK_W / 2 - 0.05, dock);
+  place(new THREE.Mesh(trimGeo, trimWood), DOCK_LEN / 2, DOCK_Y - 0.02, -DOCK_W / 2 + 0.05, dock);
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, DOCK_W), trimWood), DOCK_LEN - 0.06, DOCK_Y - 0.02, 0, dock);
+  // Frame and pilings underneath, reaching down to the lake bed
+  for (var fb = 0.6; fb < DOCK_LEN; fb += 1.3) {
+    place(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, DOCK_W), darkWood), fb, DOCK_Y - 0.12, 0, dock);
     [-1, 1].forEach(function (sideSign) {
-      var pz = sideSign * DOCK_W / 2;
-      var wx = dockStart.x + dockIn.x * px - dockIn.z * pz, wz = dockStart.z + dockIn.z * px + dockIn.x * pz;
-      var bottom = groundHeight(wx, wz) - 0.1, top = DOCK_Y + 0.15;
-      var post = place(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, top - bottom, 8), darkWood), px, (top + bottom) / 2, pz, dock);
-      post.receiveShadow = true;
+      var pz = sideSign * (DOCK_W / 2 - 0.2), bottom = bedBelow(fb, pz) - 0.1, top = DOCK_Y - 0.1;
+      if (top - bottom > 0.05) {
+        place(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, top - bottom, 8), darkWood), fb, (top + bottom) / 2, pz, dock);
+      }
     });
+  }
+
+  // Mooring posts down one side, with dark caps and a rope band
+  var POST_X = [0.3, 1.65, 3.0, 4.35, DOCK_LEN - 0.2], POST_Z = DOCK_W / 2 - 0.05, POST_TOP = DOCK_Y + 0.45;
+  var postMat = mat(0x8a5e3c), capMat = mat(0x3e2b1f), bandMat = mat(0xd9c9a3), swagMat = mat(0x3a2d24);
+  var redMat = mat(0xd9443a), whiteMat = mat(0xf4f1ea);
+  POST_X.forEach(function (px, i) {
+    var bottom = bedBelow(px, POST_Z) - 0.1;
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, POST_TOP - bottom, 10), postMat), px, (POST_TOP + bottom) / 2, POST_Z, dock);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.12, 0.07, 12), capMat), px, POST_TOP + 0.03, POST_Z, dock);
+    place(new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), capMat), px, POST_TOP + 0.06, POST_Z, dock);
+    place(new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.022, 6, 16), bandMat), px, POST_TOP - 0.12, POST_Z, dock).rotation.x = Math.PI / 2;
+
+    // Red-and-white striped buoy hanging over the side
+    var buoy = new THREE.Group();
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.32, 12), whiteMat), 0, 0, 0, buoy);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.06, 12), redMat), 0, 0.09, 0, buoy);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.06, 12), redMat), 0, -0.09, 0, buoy);
+    place(new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 6), redMat), 0, -0.16, 0, buoy);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 4), bandMat), 0, 0.28, 0, buoy);
+    buoy.position.set(px + 0.25, DOCK_Y - 0.12, POST_Z + 0.12);
+    buoy.rotation.set(0.15, 0, (i % 2 ? 1 : -1) * 0.08);
+    dock.add(buoy);
+
+    // Rope hanging in a loop to the next post
+    if (i < POST_X.length - 1) {
+      var nx = POST_X[i + 1];
+      var curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(px, POST_TOP - 0.12, POST_Z + 0.1),
+        new THREE.Vector3((px + nx) / 2, POST_TOP - 0.75, POST_Z + 0.16),
+        new THREE.Vector3(nx, POST_TOP - 0.12, POST_Z + 0.1));
+      place(new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.022, 6, false), swagMat), 0, 0, 0, dock);
+    }
+  });
+
+  // Curly iron lamp posts down the other side, with two glowing globes each
+  var ironMat = new THREE.MeshStandardMaterial({ color: 0x4a5058, roughness: 0.4, metalness: 0.6 });
+  var globeMat = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.4, roughness: 0.3 });
+  var dockLights = [];
+  [1.0, 3.7].forEach(function (lx0) {
+    var lamp = new THREE.Group();
+    lamp.position.set(lx0, DOCK_Y, -DOCK_W / 2 + 0.18);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.14, 12), ironMat), 0, 0.07, 0, lamp);
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 1.75, 8), ironMat), 0, 0.92, 0, lamp);
+    place(new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.015, 6, 12), ironMat), 0, 0.5, 0, lamp);
+    place(new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), ironMat), 0, 1.82, 0, lamp);
+    [-1, 1].forEach(function (sideSign) {
+      // A half-circle arm curling over from the pole, with a globe hanging from its end
+      place(new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 6, 16, Math.PI), ironMat), sideSign * 0.17, 1.5, 0, lamp);
+      place(new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 12, Math.PI * 1.5), ironMat), sideSign * 0.08, 1.38, 0, lamp);
+      place(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.06, 12), ironMat), sideSign * 0.34, 1.44, 0, lamp);
+      place(new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), globeMat), sideSign * 0.34, 1.32, 0, lamp).castShadow = false;
+    });
+    var glow = new THREE.PointLight(0xffd9a0, 0, 7, 2);
+    glow.position.set(0, 1.3, 0);
+    lamp.add(glow);
+    dockLights.push(glow);
+    dock.add(lamp);
   });
   scene.add(dock);
 
@@ -558,7 +632,7 @@ function startGame(THREE) {
     var ga = rand() * Math.PI * 2, gr = Math.sqrt(rand()) * 17.3;
     var gx = Math.cos(ga) * gr, gz = Math.sin(ga) * gr;
     if (Math.abs(gx - FARM_X) < COLS * TILE / 2 + 0.5 && Math.abs(gz - FARM_Z) < ROWS * TILE / 2 + 0.5) continue;
-    if (groundHeight(gx, gz) < -0.04 || onDock(gx, gz) || dist(gx, gz, TREE_X, TREE_Z) < 0.9) continue;
+    if (groundHeight(gx, gz) < -0.04 || underDock(gx, gz) || dist(gx, gz, TREE_X, TREE_Z) < 0.9) continue;
     gEuler.set((rand() - 0.5) * 0.5, rand() * Math.PI, (rand() - 0.5) * 0.5);
     gQuat.setFromEuler(gEuler);
     var gs = 0.6 + rand() * 0.9;
@@ -1041,6 +1115,8 @@ function startGame(THREE) {
       pad.position.y = WATER_Y + 0.01 + Math.sin(t * 1.4 + n * 1.3) * 0.008;
       pad.rotation.y += dt * 0.02 * (n % 2 ? 1 : -1);
     });
+    globeMat.emissiveIntensity = 0.4 + night * 1.4;
+    dockLights.forEach(function (glow) { glow.intensity = night * 1.3; });
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
       flower.rotation.y += dt * 0.05;
