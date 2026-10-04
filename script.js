@@ -1,446 +1,322 @@
-// Everdawn — a cozy 3D garden.
-// No imports needed: three.js is loaded automatically from a CDN at runtime
-// and used through the global `THREE` object.
+// Everdawn — a cozy 3D garden island.
+// three.js is loaded by a <script> tag in index.html, so no imports are needed.
+// If it's missing for some reason, it gets loaded here automatically.
 
-const THREE_SOURCES = [
-  'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-  'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
-  'https://unpkg.com/three@0.128.0/build/three.min.js',
-];
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.async = true;
-    s.onload = resolve;
-    s.onerror = () => { s.remove(); reject(new Error('Failed to load ' + src)); };
-    document.head.appendChild(s);
-  });
+var toastTimer = 0;
+function showToast(message, ms) {
+  var box = document.getElementById('toast');
+  box.textContent = message;
+  box.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { box.classList.remove('show'); }, ms || 1800);
 }
 
-function loadThree() {
-  if (window.THREE) return Promise.resolve(window.THREE);
-  // Try each CDN in turn until one of them gives us THREE
-  let attempt = Promise.reject(new Error('three.js could not be loaded'));
-  THREE_SOURCES.forEach(function (src) {
-    attempt = attempt.catch(function () {
-      return loadScript(src).then(function () {
-        if (!window.THREE) throw new Error('THREE missing after loading ' + src);
-        return window.THREE;
-      });
-    });
-  });
-  return attempt;
-}
-
-loadThree()
-  .then(startGame)
-  .catch((err) => {
-    console.error(err);
-    const t = document.getElementById('toast');
-    t.textContent = 'Could not load the 3D engine — check your connection.';
-    t.classList.add('show');
-  });
+(function () {
+  if (window.THREE) { startGame(window.THREE); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  s.onload = function () { startGame(window.THREE); };
+  s.onerror = function () { showToast('Could not load the 3D engine. Check your internet connection.', 60000); };
+  document.head.appendChild(s);
+})();
 
 function startGame(THREE) {
-  // ---------- DOM ----------
-  const canvas = document.getElementById('game');
-  const ui = {
+  var canvas = document.getElementById('game');
+  var ui = {
     harvest: document.getElementById('harvest'),
     clock: document.getElementById('clock'),
+    day: document.getElementById('day'),
     mana: document.getElementById('mana'),
-    toast: document.getElementById('toast'),
     btnAct: document.getElementById('btnAct'),
-    btnSpell: document.getElementById('btnSpell'),
+    btnSpell: document.getElementById('btnSpell')
   };
   canvas.tabIndex = 0;
   canvas.style.outline = 'none';
 
-  // ---------- Tunables ----------
-  const TILE = 1.3;
-  const COLS = 7;
-  const ROWS = 5;
-  const FARM = { x: 2, z: 1 };
-  const ISLAND_R = 18;
-  const WALK_R = 16.3;
-  const TREE_POS = new THREE.Vector3(-8, 0, -4);
-  const TREE_ZONE = 3;
-  const MAX_MANA = 100;
-  const SPELL_COST = 35;
-  const STAGE_TIME = 6;      // seconds per growth stage while watered
-  const DAY_LENGTH = 150;    // seconds for a full dawn → night → dawn cycle
-  const SPEED = 4.4;
-  const LAKE = { x: -6, z: 6.5, r: 3.2 };
+  // ---------- Settings ----------
+  var TILE = 1.3, COLS = 6, ROWS = 4, FARM_X = 2, FARM_Z = 0;
+  var WALK_R = 16;
+  var TREE_X = -8, TREE_Z = -4, TREE_ZONE = 3;
+  var LAKE_X = -6, LAKE_Z = 6.5, LAKE_R = 3.2;
+  var MAX_MANA = 100, SPELL_COST = 35;
+  var STAGE_TIME = 6;              // seconds per growth stage while watered
+  var SPEED = 4.4;
+  var GAME_MINUTES_PER_SECOND = 8; // one in-game day = 3 real minutes
 
-  const state = {
-    mana: MAX_MANA,
-    harvest: 0,
-    time: 0,
-    dayPhase: 0.02,
-    inTreeZone: false,
-  };
+  var state = { mana: MAX_MANA, harvest: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
 
-  // Deterministic random so the island looks the same every visit
-  let seed = 20240917;
-  const rand = () => {
-    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  // Same "random" island every time
+  var seed = 12345;
+  function rand() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  }
 
-  // ---------- Renderer / scene / camera ----------
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  // ---------- Renderer, scene, camera ----------
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  const scene = new THREE.Scene();
+  var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x9fd8ff);
   scene.fog = new THREE.Fog(0x9fd8ff, 32, 75);
 
-  const camera = new THREE.PerspectiveCamera(50, 1.5, 0.1, 200);
-  const cam = { yaw: 0, pitch: 0.75, dist: 14, target: new THREE.Vector3() };
+  var camera = new THREE.PerspectiveCamera(50, 1.5, 0.1, 200);
+  var cam = { yaw: 0, pitch: 0.75, dist: 14, target: new THREE.Vector3() };
 
   function resize() {
-    const w = canvas.clientWidth || 800;
-    const h = canvas.clientHeight || Math.round(w / 1.5);
+    var w = canvas.clientWidth || 800;
+    var h = canvas.clientHeight || Math.round(w / 1.5);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
   resize();
-  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
-  else window.addEventListener('resize', resize);
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
 
-  // ---------- Lights ----------
-  const hemi = new THREE.HemisphereLight(0xfff1e0, 0x8a6fb8, 0.7);
+  var hemi = new THREE.HemisphereLight(0xfff1e0, 0x8a6fb8, 0.7);
   scene.add(hemi);
-
-  const sun = new THREE.DirectionalLight(0xffe2c4, 1);
+  var sun = new THREE.DirectionalLight(0xffe2c4, 1);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
-  Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 });
+  sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
+  sun.shadow.camera.top = 16; sun.shadow.camera.bottom = -16;
+  sun.shadow.camera.far = 60;
   sun.shadow.bias = -0.0008;
-  scene.add(sun, sun.target);
+  scene.add(sun);
+  scene.add(sun.target);
 
-  // ---------- Materials ----------
-  const std = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.85 }, extra));
-  const M = {
-    grass: std(0x9be08a),
-    cliff: std(0xc9a27e),
-    garden: std(0xc5e89a),
-    soilDry: std(0xb07d55),
-    soilWet: std(0x6b4630, { roughness: 0.55 }),
-    stem: std(0x5cb85c),
-    leaf: std(0x7ed37a),
-    bud: std(0xf7a8d8),
-    petal: std(0xffb3e6, { emissive: 0xff6fcf, emissiveIntensity: 0.35 }),
-    center: std(0xffe27a, { emissive: 0xffc94d, emissiveIntensity: 0.4 }),
-    robe: std(0xb48cff),
-    skin: std(0xffe0c7),
-    hat: std(0x7b4fd6),
-    star: std(0xffd75e, { emissive: 0xffb64d, emissiveIntensity: 0.8 }),
-    eye: std(0x3b2b55),
-    trunk: std(0x8a5a8c),
-    canopy: std(0xffc3f2, { emissive: 0xff7fd8, emissiveIntensity: 0.45 }),
-    rock: std(0xb9b3d6),
-    bush: std(0x86cf8a),
-    drop: new THREE.MeshStandardMaterial({ color: 0x7cc7ff, emissive: 0x3d9bff, emissiveIntensity: 0.5 }),
+  // ---------- Helpers ----------
+  function mat(color, glowColor, glow) {
+    var m = new THREE.MeshStandardMaterial({ color: color, roughness: 0.85 });
+    if (glowColor) { m.emissive = new THREE.Color(glowColor); m.emissiveIntensity = glow; }
+    return m;
+  }
+  function place(mesh, x, y, z, parent) {
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    (parent || scene).add(mesh);
+    return mesh;
+  }
+  function dist(x1, z1, x2, z2) { return Math.sqrt((x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2)); }
+
+  var M = {
+    grass: mat(0x9be08a), cliff: mat(0xc9a27e), garden: mat(0xc5e89a), sand: mat(0xf3dfb0),
+    soilDry: mat(0xb07d55), soilWet: mat(0x6b4630),
+    stem: mat(0x5cb85c), leaf: mat(0x7ed37a), bud: mat(0xf7a8d8), pad: mat(0x6cc46a),
+    petal: mat(0xffb3e6, 0xff6fcf, 0.35), center: mat(0xffe27a, 0xffc94d, 0.4),
+    robe: mat(0xb48cff), skin: mat(0xffe0c7), hat: mat(0x7b4fd6), eye: mat(0x3b2b55),
+    star: mat(0xffd75e, 0xffb64d, 0.8), drop: mat(0x7cc7ff, 0x3d9bff, 0.5),
+    trunk: mat(0x8a5a8c), canopy: mat(0xffc3f2, 0xff7fd8, 0.45),
+    rock: mat(0xb9b3d6), bush: mat(0x86cf8a)
   };
-  const shadowed = (m, cast = true, receive = true) => { m.castShadow = cast; m.receiveShadow = receive; return m; };
 
   // ---------- Island ----------
-  const island = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R, ISLAND_R - 2.5, 2.4, 64), M.grass), false, true);
-  island.position.y = -1.2;
-  scene.add(island);
-
-  const cliff = new THREE.Mesh(new THREE.CylinderGeometry(ISLAND_R - 2.4, 4, 6, 64, 1, true), M.cliff);
-  cliff.position.y = -5.4;
-  scene.add(cliff);
-
-  const sea = new THREE.Mesh(
-    new THREE.CircleGeometry(90, 64),
-    new THREE.MeshStandardMaterial({ color: 0x8fd3ff, transparent: true, opacity: 0.85, roughness: 0.3 })
-  );
+  var island = place(new THREE.Mesh(new THREE.CylinderGeometry(18, 15.5, 2.4, 64), M.grass), 0, -1.2, 0);
+  island.castShadow = false;
+  place(new THREE.Mesh(new THREE.CylinderGeometry(15.6, 4, 6, 64, 1, true), M.cliff), 0, -5.4, 0);
+  var sea = new THREE.Mesh(new THREE.CircleGeometry(90, 64),
+    new THREE.MeshStandardMaterial({ color: 0x8fd3ff, transparent: true, opacity: 0.85, roughness: 0.3 }));
   sea.rotation.x = -Math.PI / 2;
   sea.position.y = -1.4;
   scene.add(sea);
+  place(new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 0.8, 0.04, ROWS * TILE + 0.8), M.garden), FARM_X, 0.01, FARM_Z);
 
-  const gardenPatch = shadowed(new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 0.8, 0.04, ROWS * TILE + 0.8), M.garden), false, true);
-  gardenPatch.position.set(FARM.x, 0.01, FARM.z);
-  scene.add(gardenPatch);
-
-  // ---------- Decorations ----------
-  const inFarm = (x, z, pad) =>
-    Math.abs(x - FARM.x) < (COLS * TILE) / 2 + pad && Math.abs(z - FARM.z) < (ROWS * TILE) / 2 + pad;
-  const freeSpot = (pad = 1.2) => {
-    for (let i = 0; i < 60; i++) {
-      const a = rand() * Math.PI * 2;
-      const r = 3 + rand() * (WALK_R - 2.5);
-      const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (inFarm(x, z, pad)) continue;
-      if (Math.hypot(x - TREE_POS.x, z - TREE_POS.z) < TREE_ZONE + 0.8) continue;
-      if (Math.hypot(x - FARM.x, z - 6) < 2) continue;
-      if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r * 1.25 + 0.5) continue;
-      return { x, z };
-    }
-    return null;
-  };
-
-  const solids = []; // simple circle colliders {x, z, r}
-
-  const tuftGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
-  for (let i = 0; i < 140; i++) {
-    const p = freeSpot(0.6);
-    if (!p) continue;
-    const tuft = new THREE.Group();
-    for (let k = 0; k < 3; k++) {
-      const blade = new THREE.Mesh(tuftGeo, M.stem);
-      blade.position.set((k - 1) * 0.07, 0.15, (rand() - 0.5) * 0.06);
-      blade.rotation.z = (k - 1) * 0.35;
-      tuft.add(blade);
-    }
-    tuft.position.set(p.x, 0, p.z);
-    tuft.rotation.y = rand() * Math.PI;
-    scene.add(tuft);
-  }
-
-  const rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
-  for (let i = 0; i < 12; i++) {
-    const p = freeSpot();
-    if (!p) continue;
-    const s = 0.5 + rand() * 0.8;
-    const rock = shadowed(new THREE.Mesh(rockGeo, M.rock));
-    rock.position.set(p.x, s * 0.2, p.z);
-    rock.scale.set(s, s * 0.7, s);
-    rock.rotation.set(rand(), rand() * 3, rand());
-    scene.add(rock);
-    solids.push({ x: p.x, z: p.z, r: s * 0.5 });
-  }
-
-  const bushGeo = new THREE.IcosahedronGeometry(0.6, 1);
-  const flowerGeo = new THREE.SphereGeometry(0.08, 8, 6);
-  const flowerMats = [0xff9be0, 0xffe27a, 0x9ec9ff, 0xffffff].map((c) => std(c, { emissive: c, emissiveIntensity: 0.15 }));
-  for (let i = 0; i < 14; i++) {
-    const p = freeSpot();
-    if (!p) continue;
-    const bush = new THREE.Group();
-    const s = 0.7 + rand() * 0.6;
-    for (let k = 0; k < 3; k++) {
-      const b = shadowed(new THREE.Mesh(bushGeo, M.bush));
-      b.position.set((k - 1) * 0.45 * s, 0.35 * s, (rand() - 0.5) * 0.3);
-      b.scale.setScalar(s * (0.8 + rand() * 0.4));
-      bush.add(b);
-    }
-    for (let k = 0; k < 4; k++) {
-      const f = new THREE.Mesh(flowerGeo, flowerMats[Math.floor(rand() * flowerMats.length)]);
-      const a = rand() * Math.PI * 2;
-      f.position.set(Math.cos(a) * 0.5 * s, 0.55 * s + rand() * 0.3, Math.sin(a) * 0.4 * s);
-      bush.add(f);
-    }
-    bush.position.set(p.x, 0, p.z);
-    bush.rotation.y = rand() * Math.PI;
-    scene.add(bush);
-    solids.push({ x: p.x, z: p.z, r: 0.9 * s });
-  }
+  var solids = []; // things you bump into: {x, z, r}
 
   // ---------- The glowing Dawn Tree ----------
-  const tree = new THREE.Group();
-  tree.position.copy(TREE_POS);
-  const trunk = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 2.8, 10), M.trunk));
-  trunk.position.y = 1.4;
-  tree.add(trunk);
-  const canopyGeo = new THREE.IcosahedronGeometry(1, 1);
-  [[0, 3.6, 0, 1.7], [-1.1, 3.0, 0.5, 1.15], [1.1, 3.1, -0.3, 1.2], [0.2, 4.5, 0.4, 1.1]].forEach(([x, y, z, s]) => {
-    const c = shadowed(new THREE.Mesh(canopyGeo, M.canopy));
-    c.position.set(x, y, z);
-    c.scale.setScalar(s);
-    tree.add(c);
+  var tree = new THREE.Group();
+  tree.position.set(TREE_X, 0, TREE_Z);
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 2.8, 10), M.trunk), 0, 1.4, 0, tree);
+  var canopyGeo = new THREE.IcosahedronGeometry(1, 1);
+  [[0, 3.6, 0, 1.7], [-1.1, 3.0, 0.5, 1.15], [1.1, 3.1, -0.3, 1.2], [0.2, 4.5, 0.4, 1.1]].forEach(function (c) {
+    place(new THREE.Mesh(canopyGeo, M.canopy), c[0], c[1], c[2], tree).scale.setScalar(c[3]);
   });
-  const treeLight = new THREE.PointLight(0xffa8ee, 1.2, 12, 2);
+  var treeLight = new THREE.PointLight(0xffa8ee, 1.2, 12, 2);
   treeLight.position.set(0, 3.4, 0);
   tree.add(treeLight);
-  const treeRing = new THREE.Mesh(
-    new THREE.RingGeometry(TREE_ZONE - 0.35, TREE_ZONE, 64),
-    new THREE.MeshBasicMaterial({ color: 0xffb3f0, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false })
-  );
+  var treeRing = new THREE.Mesh(new THREE.RingGeometry(TREE_ZONE - 0.35, TREE_ZONE, 64),
+    new THREE.MeshBasicMaterial({ color: 0xffb3f0, transparent: true, opacity: 0.5, depthWrite: false }));
   treeRing.rotation.x = -Math.PI / 2;
   treeRing.position.y = 0.03;
   tree.add(treeRing);
   scene.add(tree);
-  solids.push({ x: TREE_POS.x, z: TREE_POS.z, r: 0.8 });
+  solids.push({ x: TREE_X, z: TREE_Z, r: 0.8 });
 
   // ---------- The lake ----------
-  // Wobbly outline so it looks like a natural pond rather than a perfect circle
-  const lakeRadius = (a) => LAKE.r * (1 + 0.12 * Math.sin(3 * a) + 0.06 * Math.sin(5 * a + 1));
-  function lakeShape(scale) {
-    const shape = new THREE.Shape();
-    for (let i = 0; i <= 48; i++) {
-      const a = (i / 48) * Math.PI * 2;
-      const r = lakeRadius(a) * scale;
+  function lakeRadius(a) { return LAKE_R * (1 + 0.12 * Math.sin(3 * a) + 0.06 * Math.sin(5 * a + 1)); }
+  function lakeGeometry(scale) {
+    var shape = new THREE.Shape();
+    for (var i = 0; i <= 48; i++) {
+      var a = (i / 48) * Math.PI * 2, r = lakeRadius(a) * scale;
       if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
       else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
-    return shape;
+    var g = new THREE.ShapeGeometry(shape);
+    g.rotateX(-Math.PI / 2); // lay it flat; a point at angle a ends up at (cos a, 0, -sin a)
+    return g;
   }
-  const lake = new THREE.Group();
-  lake.position.set(LAKE.x, 0, LAKE.z);
-  const shore = shadowed(new THREE.Mesh(new THREE.ShapeGeometry(lakeShape(1.2)), std(0xf3dfb0)), false, true);
-  shore.rotation.x = -Math.PI / 2;
-  shore.position.y = 0.015;
-  const waterMat = new THREE.MeshStandardMaterial({
+  var lake = new THREE.Group();
+  lake.position.set(LAKE_X, 0, LAKE_Z);
+  place(new THREE.Mesh(lakeGeometry(1.2), M.sand), 0, 0.015, 0, lake).castShadow = false;
+  var waterMat = new THREE.MeshStandardMaterial({
     color: 0x7cc8ff, emissive: 0x2f7fd0, emissiveIntensity: 0.15,
-    roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9,
+    roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9
   });
-  const water = new THREE.Mesh(new THREE.ShapeGeometry(lakeShape(1)), waterMat);
-  water.rotation.x = -Math.PI / 2;
-  water.position.y = 0.04;
-  water.receiveShadow = true;
-  lake.add(shore, water);
+  place(new THREE.Mesh(lakeGeometry(1), waterMat), 0, 0.04, 0, lake).castShadow = false;
 
-  // Lily pads (a circle with a little notch cut out) and one pink lotus
-  const padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
-  const padMat = std(0x6cc46a);
-  const lilyPads = [];
-  [[-1.2, 0.6], [0.9, -1.1], [1.4, 0.9], [-0.3, -1.6], [0.2, 1.5]].forEach(([x, z], i) => {
-    const pad = shadowed(new THREE.Mesh(padGeo, padMat), false, true);
-    pad.position.set(x, 0.07, z);
+  var padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
+  var lilyPads = [];
+  [[-1.2, 0.6], [0.9, -1.1], [1.4, 0.9], [-0.3, -1.6], [0.2, 1.5]].forEach(function (p, i) {
+    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0], 0.07, p[1], lake);
     pad.rotation.y = i * 1.7;
-    pad.userData.phase = i * 1.3;
-    lake.add(pad);
     lilyPads.push(pad);
   });
-  const lotus = new THREE.Group();
-  const lotusPetalGeo = new THREE.SphereGeometry(0.1, 10, 8);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    const petal = new THREE.Mesh(lotusPetalGeo, M.petal);
+  var lotus = new THREE.Group();
+  var lotusPetal = new THREE.SphereGeometry(0.1, 10, 8);
+  for (var lp = 0; lp < 6; lp++) {
+    var la = (lp / 6) * Math.PI * 2;
+    var petal = place(new THREE.Mesh(lotusPetal, M.petal), Math.cos(la) * 0.1, 0.05, Math.sin(la) * 0.1, lotus);
     petal.scale.set(1.3, 0.5, 0.7);
-    petal.position.set(Math.cos(a) * 0.1, 0.05, Math.sin(a) * 0.1);
-    petal.rotation.y = -a;
-    petal.rotation.z = 0.5;
-    lotus.add(petal);
+    petal.rotation.set(0, -la, 0.5);
   }
-  lotus.add(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center));
-  lotus.position.copy(lilyPads[0].position).setY(0.1);
+  place(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center), 0, 0.06, 0, lotus);
+  lotus.position.set(-1.2, 0.1, 0.6);
   lake.add(lotus);
 
-  // A few pebbles around the shore
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2 + rand() * 0.4;
-    const r = lakeRadius(a) * 1.15;
-    const pebble = shadowed(new THREE.Mesh(rockGeo, M.rock));
-    const s = 0.25 + rand() * 0.25;
-    pebble.position.set(Math.cos(a) * r, s * 0.15, Math.sin(a) * r);
-    pebble.scale.set(s, s * 0.6, s);
-    pebble.rotation.set(rand(), rand() * 3, rand());
-    lake.add(pebble);
+  var rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
+  for (var pb = 0; pb < 9; pb++) {
+    var pa = (pb / 9) * Math.PI * 2 + rand() * 0.4;
+    var pr = lakeRadius(pa) * 1.15, ps = 0.25 + rand() * 0.25;
+    var pebble = place(new THREE.Mesh(rockGeo, M.rock), Math.cos(pa) * pr, ps * 0.15, -Math.sin(pa) * pr, lake);
+    pebble.scale.set(ps, ps * 0.6, ps);
   }
   scene.add(lake);
-  // Can't walk on water: one round collider that fits inside the wobbly edge
-  solids.push({ x: LAKE.x, z: LAKE.z, r: LAKE.r * 0.8 });
-  let rippleTimer = 0;
+  solids.push({ x: LAKE_X, z: LAKE_Z, r: LAKE_R * 0.8 }); // no walking on water
+  var rippleTimer = 0;
 
-  // Sparkles orbiting the tree
-  const SPARKLES = 40;
-  const sparkleData = [];
-  const sparklePos = new Float32Array(SPARKLES * 3);
-  for (let i = 0; i < SPARKLES; i++) {
-    sparkleData.push({ a: rand() * Math.PI * 2, r: 1.5 + rand() * 1.8, y: 1 + rand() * 4, s: 0.3 + rand() * 0.7 });
+  // ---------- Grass, rocks and bushes ----------
+  function freeSpot(padding) {
+    for (var i = 0; i < 60; i++) {
+      var a = rand() * Math.PI * 2, r = 3 + rand() * (WALK_R - 2.5);
+      var x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (Math.abs(x - FARM_X) < COLS * TILE / 2 + padding && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + padding) continue;
+      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 0.8) continue;
+      if (dist(x, z, LAKE_X, LAKE_Z) < LAKE_R * 1.3 + 0.5) continue;
+      if (dist(x, z, FARM_X, 5) < 2) continue;
+      return { x: x, z: z };
+    }
+    return null;
   }
-  const sparkleGeo = new THREE.BufferGeometry();
-  sparkleGeo.setAttribute('position', new THREE.BufferAttribute(sparklePos, 3));
-  const sparkles = new THREE.Points(sparkleGeo, new THREE.PointsMaterial({
-    color: 0xfff1a8, size: 0.16, transparent: true, opacity: 0.9, depthWrite: false,
-  }));
-  sparkles.position.copy(TREE_POS);
-  scene.add(sparkles);
-
-  // Fireflies (visible at dusk / night)
-  const FLIES = 60;
-  const flyData = [];
-  const flyPos = new Float32Array(FLIES * 3);
-  for (let i = 0; i < FLIES; i++) {
-    const a = rand() * Math.PI * 2, r = rand() * WALK_R;
-    flyData.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, y: 0.5 + rand() * 2.5, p: rand() * 10 });
+  var bladeGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
+  for (var g = 0; g < 120; g++) {
+    var spot = freeSpot(0.6);
+    if (!spot) continue;
+    for (var b = 0; b < 3; b++) {
+      var blade = new THREE.Mesh(bladeGeo, M.stem);
+      blade.position.set(spot.x + (b - 1) * 0.07, 0.15, spot.z);
+      blade.rotation.z = (b - 1) * 0.35;
+      scene.add(blade);
+    }
   }
-  const flyGeo = new THREE.BufferGeometry();
-  flyGeo.setAttribute('position', new THREE.BufferAttribute(flyPos, 3));
-  const fireflies = new THREE.Points(flyGeo, new THREE.PointsMaterial({
-    color: 0xfff3a0, size: 0.2, transparent: true, opacity: 0, depthWrite: false,
-  }));
-  scene.add(fireflies);
+  for (var rk = 0; rk < 10; rk++) {
+    var rs = freeSpot(1.2);
+    if (!rs) continue;
+    var size = 0.5 + rand() * 0.8;
+    var rock = place(new THREE.Mesh(rockGeo, M.rock), rs.x, size * 0.2, rs.z);
+    rock.scale.set(size, size * 0.7, size);
+    rock.rotation.set(rand(), rand() * 3, rand());
+    solids.push({ x: rs.x, z: rs.z, r: size * 0.5 });
+  }
+  var bushGeo = new THREE.IcosahedronGeometry(0.6, 1);
+  for (var bu = 0; bu < 12; bu++) {
+    var bs = freeSpot(1.2);
+    if (!bs) continue;
+    var bsize = 0.7 + rand() * 0.6;
+    for (var k = 0; k < 3; k++) {
+      place(new THREE.Mesh(bushGeo, M.bush), bs.x + (k - 1) * 0.4 * bsize, 0.35 * bsize, bs.z + (rand() - 0.5) * 0.5)
+        .scale.setScalar(bsize * (0.7 + rand() * 0.5));
+    }
+    solids.push({ x: bs.x, z: bs.z, r: 0.9 * bsize });
+  }
 
-  // ---------- Farm tiles ----------
-  const tiles = [];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  // ---------- Sparkles round the tree, fireflies at night ----------
+  function makePoints(count, color, size) {
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    var pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: color, size: size, transparent: true, depthWrite: false }));
+    scene.add(pts);
+    return pts;
+  }
+  var sparkles = makePoints(40, 0xfff1a8, 0.16);
+  sparkles.position.set(TREE_X, 0, TREE_Z);
+  var fireflies = makePoints(60, 0xfff3a0, 0.2);
+  var flyHome = [];
+  for (var f = 0; f < 60; f++) {
+    var fa = rand() * Math.PI * 2, fr = rand() * WALK_R;
+    flyHome.push({ x: Math.cos(fa) * fr, z: Math.sin(fa) * fr, y: 0.5 + rand() * 2.5, p: rand() * 10 });
+  }
+
+  // ---------- Garden tiles and crops ----------
+  var tiles = [];
+  for (var row = 0; row < ROWS; row++) {
+    for (var col = 0; col < COLS; col++) {
       tiles.push({
-        c, r,
-        x: FARM.x + (c - (COLS - 1) / 2) * TILE,
-        z: FARM.z + (r - (ROWS - 1) / 2) * TILE,
-        tilled: false, soil: null,
-        crop: null, stage: 0, growth: 0, wet: false, drop: null,
+        x: FARM_X + (col - (COLS - 1) / 2) * TILE,
+        z: FARM_Z + (row - (ROWS - 1) / 2) * TILE,
+        soil: null, crop: null, drop: null, stage: 0, growth: 0, wet: false
       });
     }
   }
-  const tileAt = (x, z) => {
-    const c = Math.round((x - FARM.x) / TILE + (COLS - 1) / 2);
-    const r = Math.round((z - FARM.z) / TILE + (ROWS - 1) / 2);
-    return c >= 0 && c < COLS && r >= 0 && r < ROWS ? tiles[r * COLS + c] : null;
-  };
-
-  const soilGeo = new THREE.BoxGeometry(TILE * 0.9, 0.12, TILE * 0.9);
-  const stemGeo = new THREE.CylinderGeometry(0.035, 0.05, 1, 6);
-  stemGeo.translate(0, 0.5, 0);
-  const leafGeo = new THREE.SphereGeometry(0.12, 8, 6);
-  const budGeo = new THREE.SphereGeometry(0.09, 10, 8);
-  const petalGeo = new THREE.SphereGeometry(0.1, 10, 8);
-  const centerGeo = new THREE.SphereGeometry(0.07, 10, 8);
-  const dropGeo = new THREE.SphereGeometry(0.08, 10, 8);
-
-  function makeCrop() {
-    const g = new THREE.Group();
-    const stem = shadowed(new THREE.Mesh(stemGeo, M.stem));
-    const leaves = new THREE.Group();
-    for (let k = 0; k < 2; k++) {
-      const s = k === 0 ? -1 : 1;
-      const l = shadowed(new THREE.Mesh(leafGeo, M.leaf));
-      l.scale.set(1.3, 0.35, 0.7);
-      l.position.x = s * 0.13;
-      l.rotation.z = s * 0.5;
-      leaves.add(l);
-    }
-    const bud = shadowed(new THREE.Mesh(budGeo, M.bud));
-    const bloom = new THREE.Group();
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      const p = shadowed(new THREE.Mesh(petalGeo, M.petal));
-      p.scale.set(1.25, 0.4, 0.75);
-      p.position.set(Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12);
-      p.rotation.y = -a;
-      p.rotation.z = 0.35;
-      bloom.add(p);
-    }
-    bloom.add(new THREE.Mesh(centerGeo, M.center));
-    g.add(stem, leaves, bud, bloom);
-    g.userData = { stem, leaves, bud, bloom };
-    return g;
+  function tileAt(x, z) {
+    var c = Math.round((x - FARM_X) / TILE + (COLS - 1) / 2);
+    var r = Math.round((z - FARM_Z) / TILE + (ROWS - 1) / 2);
+    return (c >= 0 && c < COLS && r >= 0 && r < ROWS) ? tiles[r * COLS + c] : null;
   }
 
-  function applyStage(tile) {
-    const { stem, leaves, bud, bloom } = tile.crop.userData;
-    const s = tile.stage;
-    const h = [0.16, 0.36, 0.55, 0.7][s];
-    stem.scale.y = h;
-    leaves.position.y = h * 0.45;
-    leaves.scale.setScalar([0.55, 1, 1.15, 1.25][s]);
-    bud.visible = s === 2;
-    bud.position.y = h;
-    bloom.visible = s === 3;
-    bloom.position.y = h;
+  var soilGeo = new THREE.BoxGeometry(TILE * 0.9, 0.12, TILE * 0.9);
+  var stemGeo = new THREE.CylinderGeometry(0.035, 0.05, 1, 6);
+  stemGeo.translate(0, 0.5, 0);
+  var ballGeo = new THREE.SphereGeometry(0.1, 10, 8);
+  var dropGeo = new THREE.SphereGeometry(0.08, 10, 8);
+
+  function makeCrop(tile) {
+    var crop = new THREE.Group();
+    var stem = place(new THREE.Mesh(stemGeo, M.stem), 0, 0, 0, crop);
+    var leaves = new THREE.Group();
+    place(new THREE.Mesh(ballGeo, M.leaf), -0.13, 0, 0, leaves).scale.set(1.6, 0.4, 0.8);
+    place(new THREE.Mesh(ballGeo, M.leaf), 0.13, 0, 0, leaves).scale.set(1.6, 0.4, 0.8);
+    crop.add(leaves);
+    var bud = place(new THREE.Mesh(ballGeo, M.bud), 0, 0, 0, crop);
+    var bloom = new THREE.Group();
+    for (var i = 0; i < 5; i++) {
+      var a = (i / 5) * Math.PI * 2;
+      var p = place(new THREE.Mesh(ballGeo, M.petal), Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12, bloom);
+      p.scale.set(1.25, 0.4, 0.75);
+      p.rotation.set(0, -a, 0.35);
+    }
+    place(new THREE.Mesh(ballGeo, M.center), 0, 0, 0, bloom).scale.setScalar(0.7);
+    crop.add(bloom);
+    crop.userData = { stem: stem, leaves: leaves, bud: bud, bloom: bloom };
+    crop.position.set(tile.x, 0.12, tile.z);
+    crop.rotation.y = Math.random() * Math.PI * 2;
+    scene.add(crop);
+    return crop;
+  }
+
+  function showStage(tile) {
+    var parts = tile.crop.userData, s = tile.stage;
+    var h = [0.16, 0.36, 0.55, 0.7][s];
+    parts.stem.scale.y = h;
+    parts.leaves.position.y = h * 0.45;
+    parts.leaves.scale.setScalar([0.55, 1, 1.15, 1.25][s]);
+    parts.bud.visible = s === 2;
+    parts.bud.position.y = h;
+    parts.bloom.visible = s === 3;
+    parts.bloom.position.y = h;
   }
 
   function setWet(tile, wet) {
@@ -448,382 +324,379 @@ function startGame(THREE) {
     if (tile.soil) tile.soil.material = wet ? M.soilWet : M.soilDry;
   }
 
-  // ---------- Player ----------
-  const player = new THREE.Group();
-  const body = new THREE.Group();
+  // ---------- The mage (you!) ----------
+  var player = new THREE.Group();
+  var body = new THREE.Group();
   player.add(body);
-  const robe = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.4, 0.75, 16), M.robe));
-  robe.position.y = 0.375;
-  const head = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 16), M.skin));
-  head.position.y = 0.98;
-  const brim = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.04, 24), M.hat));
-  brim.position.y = 1.16;
-  const hat = shadowed(new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.65, 20), M.hat));
-  hat.position.set(0, 1.48, -0.04);
-  hat.rotation.x = -0.18;
-  const hatStar = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), M.star);
-  hatStar.position.set(0, 1.42, 0.22);
-  const eyeGeo = new THREE.SphereGeometry(0.04, 8, 6);
-  const eyeL = new THREE.Mesh(eyeGeo, M.eye);
-  const eyeR = new THREE.Mesh(eyeGeo, M.eye);
-  eyeL.position.set(-0.1, 1.0, 0.24);
-  eyeR.position.set(0.1, 1.0, 0.24);
-  body.add(robe, head, brim, hat, hatStar, eyeL, eyeR);
-  player.position.set(FARM.x, 0, 6);
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.4, 0.75, 16), M.robe), 0, 0.375, 0, body);
+  place(new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 16), M.skin), 0, 0.98, 0, body);
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.04, 24), M.hat), 0, 1.16, 0, body);
+  place(new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.65, 20), M.hat), 0, 1.48, -0.04, body).rotation.x = -0.18;
+  var hatStar = place(new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 0), M.star), 0, 1.42, 0.22, body);
+  var eyeGeo = new THREE.SphereGeometry(0.04, 8, 6);
+  place(new THREE.Mesh(eyeGeo, M.eye), -0.1, 1.0, 0.24, body);
+  place(new THREE.Mesh(eyeGeo, M.eye), 0.1, 1.0, 0.24, body);
+  player.position.set(FARM_X, 0, 5);
   scene.add(player);
-  let facing = Math.PI; // facing -z, toward the garden
-  let moveTarget = null;
+  var facing = Math.PI; // looking toward the garden
+  var walkTarget = null;
 
-  // Tile highlight cursor
-  const cursor = new THREE.Mesh(
-    new THREE.RingGeometry(TILE * 0.56, TILE * 0.66, 4, 1),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide })
-  );
+  var cursor = new THREE.Mesh(new THREE.RingGeometry(TILE * 0.56, TILE * 0.66, 4, 1),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }));
   cursor.rotation.set(-Math.PI / 2, 0, Math.PI / 4);
   cursor.position.y = 0.14;
   scene.add(cursor);
 
-  // ---------- Effects ----------
-  const particles = [];
-  const partGeo = new THREE.SphereGeometry(0.06, 6, 5);
-  function burst(pos, color, n, { speed = 2, up = 2, life = 0.9, gravity = -4, size = 1 } = {}) {
-    for (let i = 0; i < n; i++) {
-      const mesh = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
-      mesh.position.copy(pos);
-      mesh.scale.setScalar(size * (0.6 + Math.random() * 0.8));
-      const vel = new THREE.Vector3((Math.random() - 0.5) * speed, up * (0.3 + Math.random()), (Math.random() - 0.5) * speed);
-      const l = life * (0.7 + Math.random() * 0.6);
-      particles.push({ mesh, vel, life: l, max: l, gravity });
-      scene.add(mesh);
+  // ---------- Particles and ripples ----------
+  var particles = [], waves = [];
+  var dotGeo = new THREE.SphereGeometry(0.06, 6, 5);
+  var waveGeo = new THREE.RingGeometry(0.85, 1, 48);
+
+  function burst(x, y, z, color, count, speed, up, gravity) {
+    for (var i = 0; i < count; i++) {
+      var m = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: color, transparent: true, depthWrite: false }));
+      m.position.set(x, y, z);
+      var life = 0.6 + Math.random() * 0.6;
+      particles.push({
+        mesh: m, life: life, max: life, gravity: gravity,
+        vel: new THREE.Vector3((Math.random() - 0.5) * speed, up * (0.3 + Math.random()), (Math.random() - 0.5) * speed)
+      });
+      scene.add(m);
     }
   }
 
-  const waves = [];
-  const waveGeo = new THREE.RingGeometry(0.85, 1, 64);
-  function wave(pos, color, maxScale = 10, life = 1.1) {
-    const mesh = new THREE.Mesh(waveGeo, new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false,
-    }));
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(pos.x, 0.08, pos.z);
-    scene.add(mesh);
-    waves.push({ mesh, life, max: life, maxScale });
+  function ripple(x, z, color, maxSize, life) {
+    var m = new THREE.Mesh(waveGeo, new THREE.MeshBasicMaterial({ color: color, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.08, z);
+    scene.add(m);
+    waves.push({ mesh: m, life: life, max: life, size: maxSize });
   }
 
-  // ---------- UI helpers ----------
-  let toastTimer = 0;
-  function toast(msg, ms = 1800) {
-    ui.toast.textContent = msg;
-    ui.toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => ui.toast.classList.remove('show'), ms);
+  // ---------- Clock ----------
+  function twoDigits(n) { return n < 10 ? '0' + n : String(n); }
+
+  function clockText(totalMinutes) {
+    var hour = Math.floor(totalMinutes / 60);
+    var minute = Math.floor((totalMinutes % 60) / 10) * 10; // ticks every 10 minutes
+    var icon = hour >= 5 && hour < 8 ? '☼' : hour >= 8 && hour < 17 ? '☀' : hour >= 17 && hour < 20 ? '☾' : '★';
+    var hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return icon + ' ' + hour12 + ':' + twoDigits(minute) + ' ' + (hour < 12 ? 'AM' : 'PM');
   }
-  let lastClock = '';
-  function updateUI() {
-    ui.mana.style.width = ((state.mana / MAX_MANA) * 100).toFixed(1) + '%';
-    ui.harvest.textContent = state.harvest;
-    const p = state.dayPhase;
-    const label = p < 0.18 ? '☼ Dawn' : p < 0.5 ? '☀ Day' : p < 0.68 ? '☾ Dusk' : '★ Night';
-    if (label !== lastClock) { ui.clock.textContent = label; lastClock = label; }
+
+  function updateClock(dt) {
+    state.minutes += dt * GAME_MINUTES_PER_SECOND;
+    if (state.minutes >= 24 * 60) {
+      state.minutes -= 24 * 60;
+      state.day += 1;
+      showToast('☀ A new day begins: Day ' + state.day, 2500);
+    }
+    var text = clockText(state.minutes);
+    if (ui.clock.textContent !== text) ui.clock.textContent = text;
+    var dayText = 'Day ' + state.day;
+    if (ui.day.textContent !== dayText) ui.day.textContent = dayText;
+  }
+
+  // Sky through the day: [hour, sky colour, sun colour, sun strength, ambient strength, how "night" it is]
+  var SKY = [
+    [0, 0x232259, 0x8fa0ff, 0.2, 0.3, 1],
+    [5, 0x3a3473, 0x9fa8ff, 0.25, 0.32, 1],
+    [6.5, 0xffc6a8, 0xffb98a, 0.8, 0.6, 0],
+    [9, 0x9fd8ff, 0xfff4e0, 1.15, 0.75, 0],
+    [16.5, 0x9fd8ff, 0xfff4e0, 1.1, 0.75, 0],
+    [18.5, 0xf3a6d0, 0xff9a7a, 0.7, 0.55, 0.3],
+    [20, 0x2b2a5e, 0x8fa0ff, 0.25, 0.3, 1],
+    [24, 0x232259, 0x8fa0ff, 0.2, 0.3, 1]
+  ].map(function (k) {
+    return { h: k[0], sky: new THREE.Color(k[1]), sun: new THREE.Color(k[2]), sunI: k[3], hemiI: k[4], night: k[5] };
+  });
+
+  function updateSky() {
+    var hour = state.minutes / 60, i = 0;
+    while (i < SKY.length - 2 && hour > SKY[i + 1].h) i++;
+    var a = SKY[i], b = SKY[i + 1];
+    var t = THREE.MathUtils.smoothstep(hour, a.h, b.h);
+    scene.background.copy(a.sky).lerp(b.sky, t);
+    scene.fog.color.copy(scene.background);
+    sun.color.copy(a.sun).lerp(b.sun, t);
+    sun.intensity = a.sunI + (b.sunI - a.sunI) * t;
+    hemi.intensity = a.hemiI + (b.hemiI - a.hemiI) * t;
+    var angle = (hour / 24) * Math.PI * 2;
+    sun.position.set(player.position.x + Math.sin(angle) * 14, 14, player.position.z + 9);
+    sun.target.position.copy(player.position);
+    return a.night + (b.night - a.night) * t;
   }
 
   // ---------- Actions ----------
-  const tmpV = new THREE.Vector3();
-
   function targetTile() {
-    const fx = player.position.x + Math.sin(facing) * 0.95;
-    const fz = player.position.z + Math.cos(facing) * 0.95;
+    var fx = player.position.x + Math.sin(facing) * 0.95;
+    var fz = player.position.z + Math.cos(facing) * 0.95;
     return tileAt(fx, fz) || tileAt(player.position.x, player.position.z);
   }
 
   function interact() {
-    const tile = targetTile();
+    var tile = targetTile();
     if (!tile) {
-      if (state.inTreeZone) toast('The Dawn Tree hums softly… your mana is restoring ✦');
-      else if (Math.hypot(player.position.x - LAKE.x, player.position.z - LAKE.z) < LAKE.r + 1.5) toast('The lake glimmers… a lotus drifts by 🪷');
-      else toast('Walk to the garden soil to farm 🌱');
+      if (state.inTreeZone) showToast('The Dawn Tree hums softly… your mana is restoring ✦');
+      else if (dist(player.position.x, player.position.z, LAKE_X, LAKE_Z) < LAKE_R + 1.5) showToast('The lake glimmers… a lotus drifts by 🪷');
+      else showToast('Walk to the garden soil to farm 🌱');
       return;
     }
-    tmpV.set(tile.x, 0.3, tile.z);
-
-    if (!tile.tilled) {
-      tile.tilled = true;
-      tile.soil = shadowed(new THREE.Mesh(soilGeo, M.soilDry), false, true);
-      tile.soil.position.set(tile.x, 0.06, tile.z);
-      scene.add(tile.soil);
-      burst(tmpV, 0xb07d55, 10, { speed: 2, up: 1.6, life: 0.6 });
-      toast('Tilled the soil ⛏');
+    if (!tile.soil) {
+      tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
+      burst(tile.x, 0.3, tile.z, 0xb07d55, 10, 2, 1.6, -4);
+      showToast('Tilled the soil ⛏');
     } else if (!tile.crop) {
-      tile.crop = makeCrop();
-      tile.crop.position.set(tile.x, 0.12, tile.z);
-      tile.crop.rotation.y = Math.random() * Math.PI * 2;
+      tile.crop = makeCrop(tile);
       tile.stage = 0;
       tile.growth = 0;
-      applyStage(tile);
-      scene.add(tile.crop);
-      tile.drop = new THREE.Mesh(dropGeo, M.drop);
-      tile.drop.position.set(tile.x, 1.1, tile.z);
-      scene.add(tile.drop);
-      burst(tmpV, 0x7ed37a, 8, { speed: 1.2, up: 1.4, life: 0.6 });
-      toast('Planted a moonbloom seed 🌱');
+      showStage(tile);
+      tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
+      burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
+      showToast('Planted a moonbloom seed 🌱');
     } else if (tile.stage === 3) {
-      harvestTile(tile);
+      scene.remove(tile.crop);
+      scene.remove(tile.drop);
+      tile.crop = null;
+      setWet(tile, false);
+      state.harvest += 1;
+      ui.harvest.textContent = state.harvest;
+      burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
+      showToast('Harvested a moonbloom! 🌸');
     } else if (!tile.wet) {
       setWet(tile, true);
-      burst(tmpV.set(tile.x, 1.2, tile.z), 0x7cc7ff, 14, { speed: 1, up: 0.5, life: 0.7, gravity: -6 });
-      toast('Watered 💧');
+      burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
+      showToast('Watered 💧');
     } else {
-      const pct = Math.round(((tile.stage + tile.growth) / 3) * 100);
-      toast(`Growing nicely… ${pct}% ✨`);
+      showToast('Growing nicely… ' + Math.round((tile.stage + tile.growth) / 3 * 100) + '% ✨');
     }
-  }
-
-  function harvestTile(tile) {
-    scene.remove(tile.crop);
-    tile.crop = null;
-    tile.stage = 0;
-    tile.growth = 0;
-    setWet(tile, false);
-    state.harvest++;
-    burst(tmpV.set(tile.x, 0.8, tile.z), 0xffb3e6, 22, { speed: 3, up: 3, life: 1.1 });
-    burst(tmpV, 0xffe27a, 10, { speed: 2, up: 3.5, life: 1 });
-    toast(`Harvested a moonbloom! 🌸 (${state.harvest})`);
   }
 
   function castSpell() {
-    if (state.mana < SPELL_COST) {
-      toast('Not enough mana — visit the glowing tree ✦');
-      return;
-    }
+    if (state.mana < SPELL_COST) { showToast('Not enough mana. Visit the glowing tree ✦'); return; }
     state.mana -= SPELL_COST;
-    let watered = 0;
-    for (let i = 0; i < tiles.length; i++) {
-      const t = tiles[i];
+    var watered = 0;
+    tiles.forEach(function (t) {
       if (t.crop && t.stage < 3 && !t.wet) {
         setWet(t, true);
-        watered++;
-        burst(tmpV.set(t.x, 0.6, t.z), 0xc08bff, 8, { speed: 1.4, up: 2.2, life: 0.9, gravity: -2 });
+        watered += 1;
+        burst(t.x, 0.6, t.z, 0xc08bff, 8, 1.4, 2.2, -2);
       }
-    }
-    wave(player.position, 0xffb3f0, 14, 1.2);
-    wave(player.position, 0x8ec5ff, 9, 0.9);
-    burst(tmpV.copy(player.position).setY(1.2), 0xfff1a8, 26, { speed: 4, up: 3, life: 1, gravity: -1 });
-    toast(watered ? `Dawn Bloom! Watered ${watered} crop${watered > 1 ? 's' : ''} 🌸` : 'Dawn Bloom shimmers… no crops needed water ✦');
+    });
+    ripple(player.position.x, player.position.z, 0xffb3f0, 14, 1.2);
+    burst(player.position.x, 1.2, player.position.z, 0xfff1a8, 26, 4, 3, -1);
+    showToast(watered ? 'Dawn Bloom! Watered ' + watered + ' crop' + (watered > 1 ? 's' : '') + ' 🌸' : 'Dawn Bloom shimmers… no crops needed water ✦');
   }
 
-  // ---------- Input: keyboard ----------
-  const keys = new Set();
-  const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'Space', 'KeyQ']);
-  const typing = (el) => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
-
-  window.addEventListener('keydown', (e) => {
-    if (typing(e.target) || !GAME_KEYS.has(e.code)) return;
+  // ---------- Keyboard ----------
+  var keys = {};
+  var GAME_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'Space', 'KeyQ'];
+  window.addEventListener('keydown', function (e) {
+    if (GAME_KEYS.indexOf(e.code) === -1) return;
     e.preventDefault();
-    keys.add(e.code);
-    moveTarget = null;
+    keys[e.code] = true;
+    walkTarget = null;
     if (e.repeat) return;
     if (e.code === 'KeyE' || e.code === 'Space') interact();
     if (e.code === 'KeyQ') castSpell();
   });
-  window.addEventListener('keyup', (e) => keys.delete(e.code));
-  window.addEventListener('blur', () => keys.clear());
+  window.addEventListener('keyup', function (e) { keys[e.code] = false; });
+  window.addEventListener('blur', function () { keys = {}; });
 
-  const refocus = () => canvas.focus({ preventScroll: true });
-  ui.btnAct.addEventListener('click', () => { interact(); refocus(); });
-  ui.btnSpell.addEventListener('click', () => { castSpell(); refocus(); });
+  function focusGame() { canvas.focus({ preventScroll: true }); }
+  ui.btnAct.addEventListener('click', function () { interact(); focusGame(); });
+  ui.btnSpell.addEventListener('click', function () { castSpell(); focusGame(); });
 
-  // ---------- Input: pointer (orbit, pinch zoom, tap to walk) ----------
-  const pointers = new Map();
-  let drag = null;
-  let pinchDist = 0;
-  const raycaster = new THREE.Raycaster();
-  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  const ndc = new THREE.Vector2();
+  // ---------- Mouse / touch: drag to turn, pinch or scroll to zoom, tap to walk ----------
+  var pointers = {}, drag = null, pinch = 0;
+  var raycaster = new THREE.Raycaster();
+  var ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-  canvas.addEventListener('pointerdown', (e) => {
-    refocus();
+  function pointerList() { return Object.keys(pointers).map(function (id) { return pointers[id]; }); }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    focusGame();
     canvas.setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 1) {
-      drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
-      canvas.style.cursor = 'grabbing';
-    } else if (pointers.size === 2) {
-      const [a, b] = Array.from(pointers.values());
-      pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (drag) drag.moved = true; // a pinch is never a tap
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var list = pointerList();
+    if (list.length === 1) {
+      drag = { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, time: Date.now(), moved: false };
+    } else if (list.length === 2) {
+      pinch = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+      if (drag) drag.moved = true;
     }
   });
 
-  canvas.addEventListener('pointermove', (e) => {
-    if (!pointers.has(e.pointerId)) return;
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 2) {
-      const [a, b] = Array.from(pointers.values());
-      const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (pinchDist > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * (pinchDist / d), 6, 26);
-      pinchDist = d;
+  canvas.addEventListener('pointermove', function (e) {
+    if (!pointers[e.pointerId]) return;
+    pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var list = pointerList();
+    if (list.length === 2) {
+      var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+      if (pinch > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * pinch / d, 6, 26);
+      pinch = d;
       return;
     }
     if (!drag) return;
-    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    cam.yaw -= (e.clientX - drag.x) * 0.008;
+    cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * 0.006, 0.25, 1.35);
     drag.x = e.clientX;
     drag.y = e.clientY;
-    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-    cam.yaw -= dx * 0.008;
-    cam.pitch = THREE.MathUtils.clamp(cam.pitch + dy * 0.006, 0.25, 1.35);
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 6) drag.moved = true;
   });
 
-  function endPointer(e) {
-    if (!pointers.has(e.pointerId)) return;
-    pointers.delete(e.pointerId);
-    if (pointers.size === 0) {
-      if (drag && !drag.moved && performance.now() - drag.t < 450 && e.type === 'pointerup') tapToWalk(e);
-      drag = null;
-      pinchDist = 0;
-      canvas.style.cursor = '';
-    }
+  function pointerEnd(e) {
+    if (!pointers[e.pointerId]) return;
+    delete pointers[e.pointerId];
+    if (pointerList().length > 0) return;
+    if (e.type === 'pointerup' && drag && !drag.moved && Date.now() - drag.time < 450) tapToWalk(e);
+    drag = null;
+    pinch = 0;
   }
-  canvas.addEventListener('pointerup', endPointer);
-  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerup', pointerEnd);
+  canvas.addEventListener('pointercancel', pointerEnd);
 
   function tapToWalk(e) {
-    const rect = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    var rect = canvas.getBoundingClientRect();
+    var ndc = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = new THREE.Vector3();
-    if (!raycaster.ray.intersectPlane(groundPlane, hit)) return;
+    var hit = new THREE.Vector3();
+    if (!raycaster.ray.intersectPlane(ground, hit)) return;
     if (Math.hypot(hit.x, hit.z) > WALK_R) return;
-    moveTarget = hit;
-    wave(hit, 0xffffff, 0.6, 0.45);
+    walkTarget = hit;
+    ripple(hit.x, hit.z, 0xffffff, 0.6, 0.45);
   }
 
-  canvas.addEventListener('wheel', (e) => {
+  canvas.addEventListener('wheel', function (e) {
     e.preventDefault();
     cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), 6, 26);
   }, { passive: false });
 
-  // ---------- Day / night palette ----------
-  const SKY_KEYS = [
-    { t: 0.00, sky: 0xffc6a8, sun: 0xffb98a, sunI: 0.8, hemiI: 0.6 },
-    { t: 0.25, sky: 0x9fd8ff, sun: 0xfff4e0, sunI: 1.15, hemiI: 0.75 },
-    { t: 0.55, sky: 0xf3a6d0, sun: 0xff9a7a, sunI: 0.7, hemiI: 0.55 },
-    { t: 0.75, sky: 0x2b2a5e, sun: 0x8fa0ff, sunI: 0.25, hemiI: 0.3 },
-    { t: 0.92, sky: 0x3a3473, sun: 0x9fa8ff, sunI: 0.25, hemiI: 0.32 },
-    { t: 1.00, sky: 0xffc6a8, sun: 0xffb98a, sunI: 0.8, hemiI: 0.6 },
-  ].map((k) => Object.assign({}, k, { sky: new THREE.Color(k.sky), sun: new THREE.Color(k.sun) }));
-  const skyColor = new THREE.Color();
-
-  function updateSky() {
-    const p = state.dayPhase;
-    let i = 0;
-    while (i < SKY_KEYS.length - 2 && p > SKY_KEYS[i + 1].t) i++;
-    const a = SKY_KEYS[i], b = SKY_KEYS[i + 1];
-    const k = THREE.MathUtils.smoothstep(p, a.t, b.t);
-    skyColor.copy(a.sky).lerp(b.sky, k);
-    scene.background.copy(skyColor);
-    scene.fog.color.copy(skyColor);
-    sun.color.copy(a.sun).lerp(b.sun, k);
-    sun.intensity = THREE.MathUtils.lerp(a.sunI, b.sunI, k);
-    hemi.intensity = THREE.MathUtils.lerp(a.hemiI, b.hemiI, k);
-
-    const ang = p * Math.PI * 2;
-    sun.position.set(player.position.x + Math.cos(ang) * 14, 14 + Math.sin(ang) * 5, player.position.z + 9);
-    sun.target.position.copy(player.position);
-
-    // 0 during the day, 1 at night
-    const night = THREE.MathUtils.smoothstep(p, 0.5, 0.7) * (1 - THREE.MathUtils.smoothstep(p, 0.94, 1));
-    return night;
-  }
-
-  // ---------- Main loop ----------
-  const clock = new THREE.Clock();
-  const fwd = new THREE.Vector2();
-  const right = new THREE.Vector2();
-  const move = new THREE.Vector2();
-
+  // ---------- Every frame ----------
   function updatePlayer(dt) {
-    fwd.set(-Math.sin(cam.yaw), -Math.cos(cam.yaw));
-    right.set(Math.cos(cam.yaw), -Math.sin(cam.yaw));
-    const f = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0);
-    const s = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
-    move.set(fwd.x * f + right.x * s, fwd.y * f + right.y * s);
+    var forward = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+    var side = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+    // Movement is relative to where the camera is looking
+    var mx = -Math.sin(cam.yaw) * forward + Math.cos(cam.yaw) * side;
+    var mz = -Math.cos(cam.yaw) * forward - Math.sin(cam.yaw) * side;
 
-    if (move.lengthSq() === 0 && moveTarget) {
-      move.set(moveTarget.x - player.position.x, moveTarget.z - player.position.z);
-      if (move.length() < 0.15) { moveTarget = null; move.set(0, 0); }
+    if (mx === 0 && mz === 0 && walkTarget) {
+      mx = walkTarget.x - player.position.x;
+      mz = walkTarget.z - player.position.z;
+      if (Math.hypot(mx, mz) < 0.15) { walkTarget = null; mx = 0; mz = 0; }
     }
 
-    const moving = move.lengthSq() > 0;
+    var moving = mx !== 0 || mz !== 0;
     if (moving) {
-      move.normalize();
-      const prevX = player.position.x, prevZ = player.position.z;
-      player.position.x += move.x * SPEED * dt;
-      player.position.z += move.y * SPEED * dt;
+      var len = Math.hypot(mx, mz);
+      mx /= len; mz /= len;
+      var beforeX = player.position.x, beforeZ = player.position.z;
+      player.position.x += mx * SPEED * dt;
+      player.position.z += mz * SPEED * dt;
 
-      // stay on the island
-      const r = Math.hypot(player.position.x, player.position.z);
-      if (r > WALK_R) player.position.multiplyScalar(WALK_R / r);
-      // bump into trees, rocks and bushes
-      for (let i = 0; i < solids.length; i++) {
-        const o = solids[i];
-        const dx = player.position.x - o.x, dz = player.position.z - o.z;
-        const d = Math.hypot(dx, dz), min = o.r + 0.35;
-        if (d < min && d > 1e-4) {
-          player.position.x = o.x + (dx / d) * min;
-          player.position.z = o.z + (dz / d) * min;
+      var fromCenter = Math.hypot(player.position.x, player.position.z);
+      if (fromCenter > WALK_R) player.position.multiplyScalar(WALK_R / fromCenter);
+      solids.forEach(function (o) {
+        var dx = player.position.x - o.x, dz = player.position.z - o.z;
+        var d = Math.hypot(dx, dz), min = o.r + 0.35;
+        if (d < min && d > 0.0001) {
+          player.position.x = o.x + dx / d * min;
+          player.position.z = o.z + dz / d * min;
         }
-      }
-      // give up on a tap target we're stuck against
-      if (moveTarget && Math.hypot(player.position.x - prevX, player.position.z - prevZ) < SPEED * dt * 0.2) moveTarget = null;
+      });
+      // Stop tap-walking if something is in the way
+      if (walkTarget && Math.hypot(player.position.x - beforeX, player.position.z - beforeZ) < SPEED * dt * 0.2) walkTarget = null;
 
-      const want = Math.atan2(move.x, move.y);
-      let diff = want - facing;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      facing += diff * Math.min(1, dt * 14);
+      var turn = Math.atan2(mx, mz) - facing;
+      turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+      facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-
-    // walk bob / idle breathing
-    const t = state.time;
-    if (moving) {
-      body.position.y = Math.abs(Math.sin(t * 11)) * 0.09;
-      body.rotation.z = Math.sin(t * 11) * 0.06;
-    } else {
-      body.position.y *= 0.8;
-      body.rotation.z *= 0.8;
-      body.scale.y = 1 + Math.sin(t * 2.5) * 0.015;
-    }
+    body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
+    body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
   }
 
   function updateCrops(dt, night) {
-    const t = state.time;
-    for (let i = 0; i < tiles.length; i++) {
-      const tile = tiles[i];
-      if (!tile.crop) continue;
+    tiles.forEach(function (tile) {
+      if (!tile.crop) return;
       if (tile.wet && tile.stage < 3) {
         tile.growth += dt / STAGE_TIME;
         if (tile.growth >= 1) {
-          tile.stage++;
+          tile.stage += 1;
           tile.growth = 0;
-          applyStage(tile);
-          burst(tmpV.set(tile.x, 0.7, tile.z), tile.stage === 3 ? 0xffb3e6 : 0x9be08a, tile.stage === 3 ? 14 : 6, { speed: 1.2, up: 1.6, life: 0.7, gravity: -2 });
+          showStage(tile);
+          burst(tile.x, 0.7, tile.z, tile.stage === 3 ? 0xffb3e6 : 0x9be08a, tile.stage === 3 ? 14 : 6, 1.2, 1.6, -2);
           if (tile.stage < 3) setWet(tile, false); // thirsty again
         }
       }
-      tile.crop.rotation.z = Math.sin(t * 1.6 + tile.x * 1.3 + tile.z) * 0.05;
-      if (tile.stage === 3) tile.crop.userData.bloom.rotation.y += dt * 0.6;
+      tile.crop.rotation.z = Math.sin(state.time * 1.6 + tile.x * 1.3 + tile.z) * 0.05;
+      tile.drop.visible = !tile.wet && tile.stage < 3;
+      tile.drop.position.y = 1 + Math.sin(state.time * 3 + tile.x) * 0.08;
+    });
+    M.petal.emissiveIntensity = 0.3 + night * 0.6 + Math.sin(state.time * 3) * 0.1;
+  }
 
-      const thirsty = !tile.wet && tile.stage < 3;
-      tile.drop.visible = thirsty;
-      if (thirsty) tile.drop.position.y = 1.0 + Math.sin(t * 3 + tile.x) * 0.08;
+  function updateWorld(dt, night) {
+    var t = state.time;
+
+    // Dawn Tree glow and mana
+    var pulse = 0.5 + Math.sin(t * 2) * 0.5;
+    M.canopy.emissiveIntensity = 0.35 + night * 0.5 + pulse * 0.15;
+    treeLight.intensity = 0.9 + night * 1.6 + pulse * 0.3;
+    treeRing.material.opacity = 0.3 + pulse * 0.35;
+    var sp = sparkles.geometry.attributes.position;
+    for (var i = 0; i < 40; i++) {
+      var a = i * 2.4 + t * (0.3 + (i % 5) * 0.12), r = 1.5 + (i % 7) * 0.28;
+      sp.setXYZ(i, Math.cos(a) * r, 1 + (i % 9) * 0.45 + Math.sin(t * 1.5 + i) * 0.3, Math.sin(a) * r);
     }
-    M.petal.emissiveIntensity = 0.3 + night * 0.6 + Math.sin(t * 3) * 0.1;
+    sp.needsUpdate = true;
+
+    var inZone = dist(player.position.x, player.position.z, TREE_X, TREE_Z) < TREE_ZONE;
+    if (inZone && !state.inTreeZone) showToast('The Dawn Tree restores your mana ✦');
+    state.inTreeZone = inZone;
+    state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
+    ui.mana.style.width = (state.mana / MAX_MANA * 100).toFixed(1) + '%';
+
+    // Lake: shimmer, bobbing lily pads, the odd ripple
+    waterMat.emissiveIntensity = 0.12 + night * 0.25 + Math.sin(t * 1.5) * 0.05;
+    lilyPads.forEach(function (pad, n) {
+      pad.position.y = 0.07 + Math.sin(t * 1.4 + n * 1.3) * 0.015;
+      pad.rotation.y += dt * 0.05;
+    });
+    lotus.rotation.y += dt * 0.3;
+    rippleTimer -= dt;
+    if (rippleTimer <= 0) {
+      rippleTimer = 0.6 + Math.random() * 0.9;
+      var ra = Math.random() * Math.PI * 2, rr = Math.random() * LAKE_R * 0.7;
+      ripple(LAKE_X + Math.cos(ra) * rr, LAKE_Z + Math.sin(ra) * rr, 0xffffff, 0.9, 1.6);
+    }
+
+    // Fireflies come out at night
+    fireflies.visible = night > 0.02;
+    fireflies.material.opacity = night * 0.95;
+    if (fireflies.visible) {
+      var fp = fireflies.geometry.attributes.position;
+      flyHome.forEach(function (h, n) {
+        fp.setXYZ(n, h.x + Math.sin(t * 0.5 + h.p) * 0.8, h.y + Math.sin(t * 1.3 + h.p * 2) * 0.35, h.z + Math.cos(t * 0.4 + h.p) * 0.8);
+      });
+      fp.needsUpdate = true;
+    }
+
+    // Highlight the tile in front of you
+    var tile = targetTile();
+    cursor.visible = !!tile;
+    if (tile) {
+      cursor.position.x = tile.x;
+      cursor.position.z = tile.z;
+      cursor.material.opacity = 0.45 + Math.sin(t * 5) * 0.25;
+      cursor.material.color.set(tile.crop && tile.stage === 3 ? 0xffb3e6 : tile.crop && !tile.wet ? 0x8ec5ff : 0xffffff);
+    }
   }
 
   function updateEffects(dt) {
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
       p.life -= dt;
       if (p.life <= 0) {
         scene.remove(p.mesh);
@@ -835,117 +708,50 @@ function startGame(THREE) {
       p.mesh.position.addScaledVector(p.vel, dt);
       p.mesh.material.opacity = p.life / p.max;
     }
-    for (let i = waves.length - 1; i >= 0; i--) {
-      const w = waves[i];
+    for (var j = waves.length - 1; j >= 0; j--) {
+      var w = waves[j];
       w.life -= dt;
       if (w.life <= 0) {
         scene.remove(w.mesh);
         w.mesh.material.dispose();
-        waves.splice(i, 1);
+        waves.splice(j, 1);
         continue;
       }
-      const k = 1 - w.life / w.max;
-      w.mesh.scale.setScalar(0.2 + k * w.maxScale);
+      var k = 1 - w.life / w.max;
+      w.mesh.scale.setScalar(0.2 + k * w.size);
       w.mesh.material.opacity = (1 - k) * 0.9;
     }
   }
 
-  function updateWorld(dt, night) {
-    const t = state.time;
-
-    // Dawn Tree: glow, ring pulse, sparkles, mana refill
-    const pulse = 0.5 + Math.sin(t * 2) * 0.5;
-    M.canopy.emissiveIntensity = 0.35 + night * 0.5 + pulse * 0.15;
-    treeLight.intensity = 0.9 + night * 1.6 + pulse * 0.3;
-    treeRing.material.opacity = 0.3 + pulse * 0.35;
-    for (let i = 0; i < SPARKLES; i++) {
-      const d = sparkleData[i];
-      const a = d.a + t * d.s;
-      sparklePos[i * 3] = Math.cos(a) * d.r;
-      sparklePos[i * 3 + 1] = d.y + Math.sin(t * 1.5 + i) * 0.3;
-      sparklePos[i * 3 + 2] = Math.sin(a) * d.r;
-    }
-    sparkleGeo.attributes.position.needsUpdate = true;
-
-    const inZone = Math.hypot(player.position.x - TREE_POS.x, player.position.z - TREE_POS.z) < TREE_ZONE;
-    if (inZone && !state.inTreeZone) toast('The Dawn Tree restores your mana ✦');
-    state.inTreeZone = inZone;
-    const before = state.mana;
-    state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
-    if (inZone && state.mana > before && Math.random() < dt * 12) {
-      burst(tmpV.copy(player.position).setY(0.4), 0xc08bff, 1, { speed: 0.6, up: 1.8, life: 0.8, gravity: 0.5, size: 0.8 });
-    }
-
-    // Lake: shimmer, bobbing lily pads and the odd ripple
-    waterMat.emissiveIntensity = 0.12 + night * 0.25 + Math.sin(t * 1.5) * 0.05;
-    for (let i = 0; i < lilyPads.length; i++) {
-      const pad = lilyPads[i];
-      pad.position.y = 0.07 + Math.sin(t * 1.4 + pad.userData.phase) * 0.015;
-      pad.rotation.y += dt * 0.05;
-    }
-    lotus.position.y = lilyPads[0].position.y + 0.03;
-    lotus.rotation.y += dt * 0.3;
-    rippleTimer -= dt;
-    if (rippleTimer <= 0) {
-      rippleTimer = 0.6 + Math.random() * 0.9;
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.random() * LAKE.r * 0.7;
-      wave(tmpV.set(LAKE.x + Math.cos(a) * r, 0, LAKE.z + Math.sin(a) * r), 0xffffff, 0.9, 1.6);
-    }
-
-    // Fireflies
-    fireflies.material.opacity = night * 0.95;
-    fireflies.visible = night > 0.02;
-    if (fireflies.visible) {
-      for (let i = 0; i < FLIES; i++) {
-        const d = flyData[i];
-        flyPos[i * 3] = d.x + Math.sin(t * 0.5 + d.p) * 0.8;
-        flyPos[i * 3 + 1] = d.y + Math.sin(t * 1.3 + d.p * 2) * 0.35;
-        flyPos[i * 3 + 2] = d.z + Math.cos(t * 0.4 + d.p) * 0.8;
-      }
-      flyGeo.attributes.position.needsUpdate = true;
-    }
-
-    // Tile cursor
-    const tile = targetTile();
-    cursor.visible = !!tile;
-    if (tile) {
-      cursor.position.x = tile.x;
-      cursor.position.z = tile.z;
-      cursor.material.opacity = 0.45 + Math.sin(t * 5) * 0.25;
-      cursor.material.color.set(tile.stage === 3 && tile.crop ? 0xffb3e6 : tile.crop && !tile.wet ? 0x8ec5ff : 0xffffff);
-    }
-  }
-
+  var camGoal = new THREE.Vector3();
   function updateCamera(dt) {
-    tmpV.copy(player.position).setY(0.8);
-    cam.target.lerp(tmpV, 1 - Math.exp(-dt * 6));
-    const cp = Math.cos(cam.pitch);
+    camGoal.set(player.position.x, 0.8, player.position.z);
+    cam.target.lerp(camGoal, 1 - Math.exp(-dt * 6));
+    var flat = Math.cos(cam.pitch) * cam.dist;
     camera.position.set(
-      cam.target.x + Math.sin(cam.yaw) * cp * cam.dist,
+      cam.target.x + Math.sin(cam.yaw) * flat,
       cam.target.y + Math.sin(cam.pitch) * cam.dist,
-      cam.target.z + Math.cos(cam.yaw) * cp * cam.dist
+      cam.target.z + Math.cos(cam.yaw) * flat
     );
     camera.lookAt(cam.target);
   }
 
-  cam.target.copy(player.position).setY(0.8);
+  var clock = new THREE.Clock();
+  cam.target.set(player.position.x, 0.8, player.position.z);
 
-  function tick() {
-    const dt = Math.min(clock.getDelta(), 0.05);
+  function frame() {
+    var dt = Math.min(clock.getDelta(), 0.05);
     state.time += dt;
-    state.dayPhase = (state.dayPhase + dt / DAY_LENGTH) % 1;
-
-    const night = updateSky();
+    updateClock(dt);
+    var night = updateSky();
     updatePlayer(dt);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
     updateCamera(dt);
-    updateUI();
     renderer.render(scene, camera);
   }
-  renderer.setAnimationLoop(tick);
+  renderer.setAnimationLoop(frame);
 
-  toast('Welcome to Everdawn ✦ Press E on the soil to begin', 3200);
+  showToast('Welcome to Everdawn ✦ Press E on the soil to begin', 3200);
 }

@@ -13,10 +13,7 @@ body {
   padding: 18px 12px 28px;
 }
 
-.shell {
-  width: 100%;
-  max-width: 800px;
-}
+.shell { width: 100%; max-width: 800px; }
 
 .topbar {
   display: flex;
@@ -35,22 +32,24 @@ h1 {
   color: #7b4fd6;
   text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255, 190, 240, 0.9);
 }
-.spark { color: #ffb64d; display: inline-block; animation: twinkle 2.4s ease-in-out infinite; }
-@keyframes twinkle { 50% { transform: scale(1.25) rotate(20deg); opacity: .7; }}
 
-.stats { display: flex; align-items: center; gap: 10px; }
+.spark { color: #ffb64d; display: inline-block; animation: twinkle 2.4s ease-in-out infinite; }
+@keyframes twinkle { 50% { transform: scale(1.25) rotate(20deg); opacity: .7; } }
+
+.stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 
 .stat {
   background: rgba(255, 255, 255, 0.75);
   border-radius: 999px;
   padding: 5px 14px;
   font-weight: 500;
+  white-space: nowrap;
   box-shadow: 0 2px 8px rgba(120, 80, 190, 0.18);
 }
 
 .mana {
   position: relative;
-  width: 130px;
+  width: 120px;
   height: 26px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.75);
@@ -72,7 +71,6 @@ h1 {
   place-items: center;
   font-size: .8rem;
   font-weight: 600;
-  color: #4a3b6b;
   text-shadow: 0 0 4px #fff;
 }
 
@@ -85,39 +83,35 @@ h1 {
 }
 
 canvas {
-  aspect-ratio: 3 / 2;
-  touch-action: none;
-  cursor: grab;
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 3 / 2;
   border-radius: 16px;
   background: #9fd8ff;
+  touch-action: none;
+  cursor: grab;
 }
 
-.toast{
+.toast {
   position: absolute;
   left: 50%;
   bottom: 22px;
+  max-width: 90%;
   transform: translate(-50%, 12px);
   background: rgba(6, 40, 100, 0.85);
   color: #fff;
   padding: 7px 16px;
   border-radius: 999px;
   font-size: .95rem;
+  text-align: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity .25s, transform .25s;
-  white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 14px 0 6px;
-}
+.controls { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
 
 button {
   font: inherit;
@@ -142,10 +136,4 @@ kbd {
   font-size: .85rem;
 }
 
-.help {
-  text-align: center;
-  font-size: .9rem;
-  line-height: 1.5;
-  opacity: .85;
-  margin: 10px 8px 0;
-}
+.help { text-align: center; font-size: .9rem; line-height: 1.5; opacity: .85; margin: 10px 8px 0; }

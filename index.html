@@ -2,18 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="./style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Everdawn</title>
+    <link rel="stylesheet" href="style.css">
   </head>
   <body>
-
     <main class="shell">
       <header class="topbar">
         <h1>Everdawn <span class="spark">✦</span></h1>
         <div class="stats">
           <div class="stat" title="Moonblooms harvested">🌸 <b id="harvest">0</b></div>
-          <div class="stat" id="clock">☼ Dawn</div>
+          <div class="stat" title="Time on the island"><span id="clock">☼ 6:00 AM</span> · <span id="day">Day 1</span></div>
           <div class="mana" title="Mana">
             <div class="mana-fill" id="mana"></div>
             <span>Mana</span>
@@ -32,11 +31,14 @@
       </div>
 
       <p class="help">
-        Click the game once, then: <b>WASD / Arrows</b> to moveㆍ<b>E / Space</b> to till, plant, water &amp; harvestㆍ
-        <b>Q</b> casts Dawn Bloom (waters every crop)ㆍ<b>Drag</b> to orbit the camera, <b>Scroll</b> to zoomㆍVisit the glowing tree to refill mana.
+        <b>WASD / Arrows</b> or <b>tap the ground</b> to move · <b>E / Space</b> to till, plant, water &amp; harvest ·
+        <b>Q</b> casts Dawn Bloom (waters every crop) · <b>Drag</b> to turn the camera, <b>Scroll / pinch</b> to zoom ·
+        Visit the glowing tree to refill mana, and the lake to rest.
       </p>
     </main>
 
-    <script type="module" src="./script.js"></script>
+    <!-- three.js is loaded here, so script.js needs no imports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
