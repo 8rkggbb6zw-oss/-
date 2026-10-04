@@ -487,11 +487,13 @@ function startGame(THREE) {
   }
 
   var lilyPads = [], lilyFlowers = [];
-  for (var lc = 0; lc < 12; lc++) {
-    var cs = waterSpot(0.25);
-    var count = 3 + Math.floor(rand() * 5);
+  for (var lc = 0; lc < 8; lc++) {
+    // Small groups spaced evenly around the lake
+    var ce = lakeEdge((lc / 8) * Math.PI * 2 + rand() * 0.4, 0, 16.7), cf = 0.3 + rand() * 0.45;
+    var cs = { x: LAKE_X + ce.x * cf, z: LAKE_Z + ce.z * cf };
+    var count = 2 + Math.floor(rand() * 3);
     for (var lpad = 0; lpad < count; lpad++) {
-      var lx = cs.x + (rand() - 0.5) * 1.8, lz = cs.z + (rand() - 0.5) * 1.8;
+      var lx = cs.x + (rand() - 0.5) * 2.6, lz = cs.z + (rand() - 0.5) * 2.6;
       if (groundHeight(lx, lz) > WATER_Y - 0.1 || onDock(lx, lz)) continue;
       var pad = place(new THREE.Mesh(padGeos[Math.floor(rand() * 4)], padMat), lx, WATER_Y + 0.01, lz);
       pad.scale.setScalar(0.25 + rand() * 0.35);
