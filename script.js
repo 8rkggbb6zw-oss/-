@@ -80,7 +80,7 @@ function startGame(THREE) {
   scene.add(hemi);
   var sun = new THREE.DirectionalLight(0xffe2c4, 1);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
   sun.shadow.camera.top = 16; sun.shadow.camera.bottom = -16;
   sun.shadow.camera.far = 60;
@@ -104,28 +104,147 @@ function startGame(THREE) {
   function dist(x1, z1, x2, z2) { return Math.sqrt((x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2)); }
 
   var M = {
-    grass: mat(0x9be08a), cliff: mat(0xc9a27e), garden: mat(0xc5e89a), sand: mat(0xf3dfb0),
-    soilDry: mat(0xb07d55), soilWet: mat(0x6b4630),
-    stem: mat(0x5cb85c), leaf: mat(0x7ed37a), bud: mat(0xf7a8d8), pad: mat(0x6cc46a),
+    cliff: mat(0xc9a27e), garden: mat(0xb9cf86),
+    soilDry: mat(0x9a6b47), soilWet: mat(0x5e3f2b),
+    stem: mat(0x5cb85c), leaf: mat(0x7ed37a), bud: mat(0xf7a8d8),
     petal: mat(0xffb3e6, 0xff6fcf, 0.35), center: mat(0xffe27a, 0xffc94d, 0.4),
     robe: mat(0xb48cff), skin: mat(0xffe0c7), hat: mat(0x7b4fd6), eye: mat(0x3b2b55),
     star: mat(0xffd75e, 0xffb64d, 0.8), drop: mat(0x7cc7ff, 0x3d9bff, 0.5),
-    trunk: mat(0x8a5a8c), canopy: mat(0xffc3f2, 0xff7fd8, 0.45),
-    rock: mat(0xb9b3d6), bush: mat(0x86cf8a)
+    trunk: mat(0x8a5a8c), canopy: mat(0xffc3f2, 0xff7fd8, 0.45)
   };
 
+  // ---------- Shape of the land ----------
+  var WATER_Y = -0.12; // height of the lake's surface
+
+  // Smooth wobbly noise, roughly -1..1, used for colours, rocks and the lake bed
+  function noise(x, z) {
+    return Math.sin(x * 0.9 + Math.sin(z * 0.7) * 1.3) * Math.cos(z * 1.1 - Math.sin(x * 0.5)) * 0.5 +
+      Math.sin(x * 2.3 - z * 1.9) * 0.25 + Math.cos(x * 4.1 + z * 3.7) * 0.12;
+  }
+  function lakeRadius(a) { return LAKE_R * (1 + 0.08 * Math.sin(3 * a) + 0.04 * Math.sin(5 * a + 1)); }
+  // A point on the lake's edge (pushed out by `extra`), kept on the island
+  function lakeEdge(a, extra, limit) {
+    var r = lakeRadius(a) + extra;
+    var x = Math.cos(a) * r, z = -Math.sin(a) * r;
+    var wx = LAKE_X + x, wz = LAKE_Z + z, wd = Math.sqrt(wx * wx + wz * wz);
+    if (wd > limit) { x = wx * limit / wd - LAKE_X; z = wz * limit / wd - LAKE_Z; }
+    return { x: x, z: z };
+  }
+  // 0 at the middle of the lake, 1 at its edge
+  function lakeQ(x, z) {
+    var lx = x - LAKE_X, lz = z - LAKE_Z;
+    return Math.sqrt(lx * lx + lz * lz) / lakeRadius(Math.atan2(-lz, lx));
+  }
+  // How high the ground is anywhere on the island: flat, except the bowl the lake sits in
+  function groundHeight(x, z) {
+    var q = lakeQ(x, z);
+    if (q >= 1.15) return 0;
+    var t = Math.min(1, (1.15 - q) / 1.15);
+    t = t * t * (3 - 2 * t);
+    var rim = Math.min(1, Math.max(0, (17.5 - Math.sqrt(x * x + z * z)) / 2.5)); // rise back up at the island's edge
+    return (-1.2 * t + noise(x * 1.5, z * 1.5) * 0.06 * t) * rim;
+  }
+
+  // The wooden dock points from the shore toward where you start
+  var DOCK_A = Math.atan2(-((FARM_Z + 5) - LAKE_Z), FARM_X - LAKE_X);
+  var DOCK_LEN = 5.2, DOCK_W = 1.5, DOCK_Y = 0.3;
+  var dockIn = { x: -Math.cos(DOCK_A), z: Math.sin(DOCK_A) }; // direction out over the water
+  var dockStart = {
+    x: LAKE_X + Math.cos(DOCK_A) * (lakeRadius(DOCK_A) + 0.8),
+    z: LAKE_Z - Math.sin(DOCK_A) * (lakeRadius(DOCK_A) + 0.8)
+  };
+  function onDock(x, z) {
+    var rx = x - dockStart.x, rz = z - dockStart.z;
+    var along = rx * dockIn.x + rz * dockIn.z, across = -rx * dockIn.z + rz * dockIn.x;
+    return along > -0.2 && along < DOCK_LEN && Math.abs(across) < DOCK_W / 2;
+  }
+  function nearDock(a) {
+    return Math.abs(Math.atan2(Math.sin(a - DOCK_A), Math.cos(a - DOCK_A))) < 0.3;
+  }
+  function inLake(x, z) { return !onDock(x, z) && groundHeight(x, z) < WATER_Y - 0.05; }
+  function nearLake(x, z) { return lakeQ(x, z) < 1.2; }
+
   // ---------- Island ----------
-  var island = place(new THREE.Mesh(new THREE.CylinderGeometry(18, 15.5, 2.4, 64), M.grass), 0, -1.2, 0);
-  island.castShadow = false;
+  var islandSide = place(new THREE.Mesh(new THREE.CylinderGeometry(18, 15.5, 2.4, 96, 1, true), mat(0x6f9e4f)), 0, -1.2, 0);
+  islandSide.castShadow = false;
   place(new THREE.Mesh(new THREE.CylinderGeometry(15.6, 4, 6, 64, 1, true), M.cliff), 0, -5.4, 0);
   var sea = new THREE.Mesh(new THREE.CircleGeometry(90, 64),
     new THREE.MeshStandardMaterial({ color: 0x8fd3ff, transparent: true, opacity: 0.85, roughness: 0.3 }));
   sea.rotation.x = -Math.PI / 2;
   sea.position.y = -1.4;
   scene.add(sea);
+
+  // The ground: a round grid that follows groundHeight, coloured grass → mud → lake bed
+  function terrainGeometry() {
+    var RINGS = 72, SEG = 180, R = 18;
+    var pos = [], col = [], idx = [], c = new THREE.Color();
+    var grassA = new THREE.Color(0x8cc867), grassB = new THREE.Color(0x5e9a45), dry = new THREE.Color(0xb3c46e);
+    var mud = new THREE.Color(0x75704f), bedShallow = new THREE.Color(0x7a7a55), bedDeep = new THREE.Color(0x2c4a4a);
+    function vertex(x, z) {
+      var h = groundHeight(x, z);
+      pos.push(x, h, z);
+      c.copy(grassA).lerp(grassB, noise(x * 0.8, z * 0.8) * 0.5 + 0.5);
+      var patch = noise(x * 2.7 + 5, z * 2.7 - 3);
+      if (patch > 0.3) c.lerp(dry, Math.min(1, (patch - 0.3) * 1.5));
+      if (h < -0.02) c.lerp(mud, Math.min(1, (-h - 0.02) / 0.1) * 0.85);
+      if (h < WATER_Y) c.copy(bedShallow).lerp(bedDeep, Math.min(1, (WATER_Y - h) / 0.8));
+      col.push(c.r, c.g, c.b);
+    }
+    vertex(0, 0);
+    for (var r = 1; r <= RINGS; r++) {
+      for (var s = 0; s < SEG; s++) {
+        var a = (s / SEG) * Math.PI * 2, rr = (r / RINGS) * R;
+        vertex(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+    }
+    for (var s2 = 0; s2 < SEG; s2++) idx.push(0, 1 + (s2 + 1) % SEG, 1 + s2);
+    for (var r2 = 1; r2 < RINGS; r2++) {
+      var in0 = 1 + (r2 - 1) * SEG, out0 = 1 + r2 * SEG;
+      for (var s3 = 0; s3 < SEG; s3++) {
+        var ia = in0 + s3, ib = in0 + (s3 + 1) % SEG, oc = out0 + s3, od = out0 + (s3 + 1) % SEG;
+        idx.push(ia, ib, oc, ib, od, oc);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var terrain = new THREE.Mesh(terrainGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
+  terrain.receiveShadow = true;
+  scene.add(terrain);
   place(new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 0.8, 0.04, ROWS * TILE + 0.8), M.garden), FARM_X, 0.01, FARM_Z);
 
   var solids = []; // things you bump into: {x, z, r}
+
+  // Lumpy rocks: a ball pushed in and out by noise, darker underneath, a little moss on top
+  function boulderGeometry(shift) {
+    var g = new THREE.IcosahedronGeometry(1, 2);
+    var p = g.attributes.position, colors = [], v = new THREE.Vector3(), c = new THREE.Color();
+    var light = new THREE.Color(0x9aa1a6), dark = new THREE.Color(0x585e63), moss = new THREE.Color(0x6b8a42);
+    for (var i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      v.multiplyScalar(1 + noise(v.x * 2.2 + shift, v.z * 2.2 + v.y * 1.7) * 0.22 + noise(v.y * 5 + shift, v.x * 5) * 0.05);
+      if (v.y < -0.3) v.y = -0.3 + (v.y + 0.3) * 0.3; // flatter bottom so it sits on the ground
+      p.setXYZ(i, v.x, v.y, v.z);
+      c.copy(light).lerp(dark, Math.min(1, Math.max(0, 0.15 - v.y * 0.6 + noise(v.x * 6, v.z * 6 + shift) * 0.15)));
+      if (v.y > 0.45) c.lerp(moss, Math.min(1, (v.y - 0.45) * 1.6) * 0.5);
+      colors.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  var boulderGeos = [0, 3.7, 7.4, 11.1].map(boulderGeometry);
+  var stoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+  function boulder(x, z, size, squash, parent) {
+    var b = place(new THREE.Mesh(boulderGeos[Math.floor(rand() * 4)], stoneMat), x, 0, z, parent);
+    b.scale.set(size, size * squash, size * (0.75 + rand() * 0.4));
+    b.rotation.y = rand() * Math.PI * 2;
+    return b;
+  }
 
   // ---------- The glowing Dawn Tree ----------
   var tree = new THREE.Group();
@@ -147,39 +266,27 @@ function startGame(THREE) {
   solids.push({ x: TREE_X, z: TREE_Z, r: 0.8 });
 
   // ---------- The lake ----------
-  function lakeRadius(a) { return LAKE_R * (1 + 0.08 * Math.sin(3 * a) + 0.04 * Math.sin(5 * a + 1)); }
-  // A point on the lake's edge (pushed out by `extra`), kept on the island
-  function lakeEdge(a, extra, limit) {
-    var r = lakeRadius(a) + extra;
-    var x = Math.cos(a) * r, z = -Math.sin(a) * r;
-    var wx = LAKE_X + x, wz = LAKE_Z + z, wd = Math.sqrt(wx * wx + wz * wz);
-    if (wd > limit) { x = wx * limit / wd - LAKE_X; z = wz * limit / wd - LAKE_Z; }
-    return { x: x, z: z };
-  }
-  // A random spot inside the water, between `inner` and `outer` (0 = middle, 1 = shore)
-  function lakeSpot(inner, outer) {
-    var e = lakeEdge(rand() * Math.PI * 2, 0, 16.7), f = inner + rand() * (outer - inner);
-    return { x: e.x * f, z: e.z * f };
-  }
-  function lakeGeometry(extra, limit) {
-    var shape = new THREE.Shape();
-    for (var i = 0; i <= 96; i++) {
-      var p = lakeEdge((i / 96) * Math.PI * 2, extra, limit);
-      if (i === 0) shape.moveTo(p.x, -p.z);
-      else shape.lineTo(p.x, -p.z);
+  // A random spot in water at least `minDepth` deep
+  function waterSpot(minDepth) {
+    for (var i = 0; i < 50; i++) {
+      var e = lakeEdge(rand() * Math.PI * 2, 0, 16.7), f = rand() * 0.85;
+      var x = LAKE_X + e.x * f, z = LAKE_Z + e.z * f;
+      if (groundHeight(x, z) < WATER_Y - minDepth && !onDock(x, z)) return { x: x, z: z };
     }
-    var g = new THREE.ShapeGeometry(shape);
-    g.rotateX(-Math.PI / 2); // lay it flat on the ground
-    return g;
+    return { x: LAKE_X, z: LAKE_Z };
   }
-  // Water surface: rings from the middle out to the shore, each point knows how deep it is
+  // Water surface: rings out from the lake's middle; each point knows how deep the water is there
   function waterGeometry() {
-    var RINGS = 14, SEG = 96, pos = [0, 0, 0], depth = [1], idx = [];
+    var RINGS = 30, SEG = 128, pos = [], depth = [], idx = [];
+    function vertex(x, z) {
+      pos.push(x - LAKE_X, 0, z - LAKE_Z);
+      depth.push(Math.max(0, WATER_Y - groundHeight(x, z)));
+    }
+    vertex(LAKE_X, LAKE_Z);
     for (var r = 1; r <= RINGS; r++) {
       for (var s = 0; s < SEG; s++) {
-        var e = lakeEdge((s / SEG) * Math.PI * 2, 0, 16.7), f = r / RINGS;
-        pos.push(e.x * f, 0, e.z * f);
-        depth.push(1 - f);
+        var e = lakeEdge((s / SEG) * Math.PI * 2, 1.2, 17.6), f = r / RINGS;
+        vertex(LAKE_X + e.x * f, LAKE_Z + e.z * f);
       }
     }
     for (var s2 = 0; s2 < SEG; s2++) idx.push(0, 1 + s2, 1 + (s2 + 1) % SEG);
@@ -197,45 +304,15 @@ function startGame(THREE) {
     return g;
   }
 
-  // The wooden dock points from the shore toward where you start
-  var DOCK_A = Math.atan2(-((FARM_Z + 5) - LAKE_Z), FARM_X - LAKE_X);
-  var DOCK_LEN = 4.6, DOCK_W = 1.5;
-  var dockIn = { x: -Math.cos(DOCK_A), z: Math.sin(DOCK_A) }; // direction out over the water
-  var dockStart = {
-    x: LAKE_X + Math.cos(DOCK_A) * (lakeRadius(DOCK_A) + 0.8),
-    z: LAKE_Z - Math.sin(DOCK_A) * (lakeRadius(DOCK_A) + 0.8)
-  };
-  function onDock(x, z) {
-    var rx = x - dockStart.x, rz = z - dockStart.z;
-    var along = rx * dockIn.x + rz * dockIn.z, across = -rx * dockIn.z + rz * dockIn.x;
-    return along > -0.2 && along < DOCK_LEN && Math.abs(across) < DOCK_W / 2;
-  }
-  function nearDock(a) {
-    var d = Math.abs(Math.atan2(Math.sin(a - DOCK_A), Math.cos(a - DOCK_A)));
-    return d < 0.3;
-  }
-  function inLake(x, z) {
-    if (onDock(x, z)) return false;
-    var lx = x - LAKE_X, lz = z - LAKE_Z;
-    return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) - 0.3;
-  }
-  function nearLake(x, z) {
-    var lx = x - LAKE_X, lz = z - LAKE_Z;
-    return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) + 1.5;
-  }
-
-  var lake = new THREE.Group();
-  lake.position.set(LAKE_X, 0, LAKE_Z);
-  // Mossy bank and the lake bed under the water
-  place(new THREE.Mesh(lakeGeometry(0.9, 17.4), mat(0x76b862)), 0, 0.012, 0, lake).castShadow = false;
-  place(new THREE.Mesh(lakeGeometry(0, 16.7), mat(0x3f7470)), 0, 0.02, 0, lake).castShadow = false;
-
-  // Water: shallow teal at the edges, deep blue in the middle, with moving shimmer
+  // Water that reflects the sky, catches sun glints, and gets bluer the deeper it is
   var waterUniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
     uTime: { value: 0 },
     uNight: { value: 0 },
-    uShallow: { value: new THREE.Color(0x5cc3cf) },
-    uDeep: { value: new THREE.Color(0x1d5d8c) }
+    uShallow: { value: new THREE.Color(0x4fb3b8) },
+    uDeep: { value: new THREE.Color(0x14496e) },
+    uSky: { value: new THREE.Color(0x9fd8ff) },
+    uSunDir: { value: new THREE.Vector3(0, 1, 0) },
+    uSunColor: { value: new THREE.Color(0xffffff) }
   }]);
   var waterMat = new THREE.ShaderMaterial({
     uniforms: waterUniforms,
@@ -262,88 +339,99 @@ function startGame(THREE) {
       'uniform float uNight;',
       'uniform vec3 uShallow;',
       'uniform vec3 uDeep;',
+      'uniform vec3 uSky;',
+      'uniform vec3 uSunDir;',
+      'uniform vec3 uSunColor;',
       'varying float vDepth;',
       'varying vec3 vWorld;',
       '#include <fog_pars_fragment>',
+      'float waves(vec2 p) {',
+      '  return 0.025 * sin(dot(p, vec2(1.0, 0.6)) * 2.3 + uTime * 1.4)',
+      '       + 0.020 * sin(dot(p, vec2(-0.7, 1.0)) * 3.1 + uTime * 1.9)',
+      '       + 0.012 * sin(dot(p, vec2(0.3, -1.0)) * 5.7 + uTime * 2.6)',
+      '       + 0.008 * sin(dot(p, vec2(-1.0, -0.4)) * 9.3 + uTime * 3.3);',
+      '}',
       'void main() {',
-      '  float d = smoothstep(0.0, 0.7, vDepth);',
-      '  vec3 col = mix(uShallow, uDeep, d);',
       '  vec2 p = vWorld.xz;',
-      '  float w = sin(p.x * 1.7 + uTime * 0.8) + sin(p.y * 2.1 - uTime * 0.6)',
-      '          + sin((p.x + p.y) * 1.3 + uTime * 1.1) + sin((p.x - p.y) * 2.7 - uTime * 0.9);',
-      '  col += vec3(0.55, 0.8, 0.85) * smoothstep(2.3, 3.4, w) * 0.3 * (1.0 - d * 0.4);',
-      '  col = mix(col, vec3(0.85, 0.96, 0.96), smoothstep(0.07, 0.0, vDepth) * 0.55);',
-      '  col *= mix(1.0, 0.35, uNight);',
-      '  gl_FragColor = vec4(col, mix(0.55, 0.92, d));',
+      '  float h = waves(p);',
+      '  vec3 n = normalize(vec3(-(waves(p + vec2(0.05, 0.0)) - h) / 0.05, 1.0, -(waves(p + vec2(0.0, 0.05)) - h) / 0.05));',
+      '  vec3 v = normalize(cameraPosition - vWorld);',
+      '  float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, v), 0.0), 5.0);',
+      '  float d = smoothstep(0.0, 0.9, vDepth);',
+      '  vec3 col = mix(uShallow, uDeep, d);',
+      '  col = mix(col, mix(uSky, vec3(1.0), 0.2), fres * 0.85);',
+      '  float spec = pow(max(dot(n, normalize(uSunDir + v)), 0.0), 180.0) * 1.5;',
+      '  col += uSunColor * spec;',
+      '  float foam = smoothstep(0.05, 0.0, vDepth) * (0.6 + 0.4 * sin(p.x * 7.0 + p.y * 5.0 + uTime * 2.0));',
+      '  col = mix(col, vec3(0.93, 0.97, 0.97), clamp(foam, 0.0, 1.0) * 0.55);',
+      '  col *= mix(1.0, 0.6, uNight);',
+      '  float alpha = clamp(mix(0.3, 0.93, smoothstep(0.0, 0.6, vDepth)) + fres * 0.3 + spec + foam * 0.4, 0.0, 1.0);',
+      '  gl_FragColor = vec4(col, alpha);',
       '  #include <fog_fragment>',
       '}'
     ].join('\n')
   });
   var water = new THREE.Mesh(waterGeometry(), waterMat);
-  water.position.y = 0.12;
+  water.position.set(LAKE_X, WATER_Y, LAKE_Z);
   water.renderOrder = 1;
-  lake.add(water);
+  scene.add(water);
 
-  // Rocks under the surface
-  var boulderGeo = new THREE.IcosahedronGeometry(1, 1);
-  var rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
-  var stoneMat = mat(0x9ea7b3), wetStoneMat = mat(0x5f8790);
-  for (var ur = 0; ur < 12; ur++) {
-    var us = lakeSpot(0.5, 0.85), usz = 0.6 + rand() * 0.9;
-    var under = place(new THREE.Mesh(boulderGeo, wetStoneMat), us.x, 0.02, us.z, lake);
-    under.scale.set(usz, 0.08, usz * (0.7 + rand() * 0.5));
-    under.rotation.y = rand() * 3;
+  // Rocks on the lake bed, seen through the water
+  for (var ur = 0; ur < 14; ur++) {
+    var us = waterSpot(0.15);
+    var under = boulder(us.x, us.z, 0.4 + rand() * 0.7, 0.45);
+    under.position.y = groundHeight(us.x, us.z);
     under.castShadow = false;
   }
 
-  // Big boulders out in the water
+  // Big boulders sticking out of the water, each with a smaller one beside it
   [2.1, 3.2, 4.3].forEach(function (offset, i) {
-    var e = lakeEdge(DOCK_A + offset, 0, 16.7), f = 0.45 + i * 0.12, size = 0.8 + rand() * 0.6;
-    var big = place(new THREE.Mesh(boulderGeo, stoneMat), e.x * f, size * 0.2, e.z * f, lake);
-    big.scale.set(size, size * 0.65, size * 0.85);
-    big.rotation.y = rand() * 3;
-    var small = place(new THREE.Mesh(boulderGeo, stoneMat), e.x * f + size * 0.9, 0.1, e.z * f + 0.3, lake);
-    small.scale.set(size * 0.5, size * 0.3, size * 0.45);
+    var e = lakeEdge(DOCK_A + offset, 0, 16.7), f = 0.4 + i * 0.12, size = 1.0 + rand() * 0.5;
+    var bx = LAKE_X + e.x * f, bz = LAKE_Z + e.z * f;
+    boulder(bx, bz, size, 0.9).position.y = groundHeight(bx, bz) + size * 0.35;
+    boulder(bx + size * 0.9, bz + 0.3, size * 0.5, 0.8).position.y = groundHeight(bx + size * 0.9, bz + 0.3) + size * 0.2;
   });
 
-  // Rounded boulders all around the shore
+  // Boulders scattered along the shore
   for (var sb = 0; sb < 34; sb++) {
     var sa = (sb / 34) * Math.PI * 2 + rand() * 0.12;
-    if (nearDock(sa) || rand() < 0.3) continue; // leave gaps so it doesn't look like a necklace
-    var se = lakeEdge(sa, -0.3 + rand() * 0.8, 16.9), ss = 0.3 + rand() * 0.6;
-    var shoreRock = place(new THREE.Mesh(boulderGeo, stoneMat), se.x, ss * 0.1, se.z, lake);
-    shoreRock.scale.set(ss, ss * 0.6, ss * (0.7 + rand() * 0.4));
-    shoreRock.rotation.y = rand() * 3;
-    solids.push({ x: LAKE_X + se.x, z: LAKE_Z + se.z, r: ss * 0.6 });
+    if (nearDock(sa) || rand() < 0.35) continue; // leave gaps so it looks natural
+    var se = lakeEdge(sa, -0.6 + rand() * 1.2, 16.9), ss = 0.3 + rand() * 0.55;
+    var sx = LAKE_X + se.x, sz = LAKE_Z + se.z;
+    boulder(sx, sz, ss, 0.7).position.y = groundHeight(sx, sz) + ss * 0.1;
+    solids.push({ x: sx, z: sz, r: ss * 0.6 });
   }
 
-  // Reeds in a few spots along the edge
-  var reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
-  var reedMat = mat(0x4f7d3c), cattailMat = mat(0x7a4f2e);
-  for (var rc = 0; rc < 9; rc++) {
+  // Reeds and cattails growing in the shallows
+  var reedGeo = new THREE.ConeGeometry(0.03, 0.9, 4);
+  reedGeo.translate(0, 0.45, 0);
+  var cattailGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6);
+  var reedMat = mat(0x4f7d3c), cattailMat = mat(0x6e4a2a);
+  for (var rc = 0; rc < 10; rc++) {
     var ra0 = rand() * Math.PI * 2;
     if (nearDock(ra0)) continue;
-    var re = lakeEdge(ra0, -0.15, 16.6);
-    for (var rd = 0; rd < 7; rd++) {
-      var reed = place(new THREE.Mesh(reedGeo, reedMat), re.x + (rand() - 0.5) * 0.6, 0.4, re.z + (rand() - 0.5) * 0.6, lake);
-      reed.scale.y = 0.7 + rand() * 0.6;
-      reed.rotation.set((rand() - 0.5) * 0.3, 0, (rand() - 0.5) * 0.3);
-      if (rd % 3 === 0) {
-        place(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.18, 6), cattailMat), 0, 0.35, 0, reed);
-      }
+    var re = lakeEdge(ra0, -0.9, 16.6);
+    for (var rd = 0; rd < 9; rd++) {
+      var rx = LAKE_X + re.x + (rand() - 0.5) * 0.8, rz = LAKE_Z + re.z + (rand() - 0.5) * 0.8;
+      var reed = place(new THREE.Mesh(reedGeo, reedMat), rx, groundHeight(rx, rz), rz);
+      reed.scale.y = 0.8 + rand() * 0.7;
+      reed.rotation.set((rand() - 0.5) * 0.25, 0, (rand() - 0.5) * 0.25);
+      if (rd % 3 === 0) place(new THREE.Mesh(cattailGeo, cattailMat), 0, 0.82, 0, reed);
     }
   }
 
-  // Lily pads in clusters, a few with flowers
-  var padGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.02, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
-  var padMat = mat(0x2f5e3c);
+  // Lily pads floating in clusters, a few with flowers
+  var padGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.015, 20, 1, false, 0.35, Math.PI * 2 - 0.7);
+  var padMats = [mat(0x2f5e3c), mat(0x3a6b40), mat(0x28513a)];
   var lotusPetal = new THREE.SphereGeometry(0.09, 10, 8);
   var lilyPads = [];
   for (var lc = 0; lc < 11; lc++) {
-    var cs = lakeSpot(0.2, 0.8);
+    var cs = waterSpot(0.25);
     var count = 3 + Math.floor(rand() * 4);
     for (var lpad = 0; lpad < count; lpad++) {
-      var pad = place(new THREE.Mesh(padGeo, padMat), cs.x + (rand() - 0.5) * 1.4, 0.14, cs.z + (rand() - 0.5) * 1.4, lake);
+      var lx = cs.x + (rand() - 0.5) * 1.4, lz = cs.z + (rand() - 0.5) * 1.4;
+      if (groundHeight(lx, lz) > WATER_Y - 0.1 || onDock(lx, lz)) continue;
+      var pad = place(new THREE.Mesh(padGeo, padMats[lpad % 3]), lx, WATER_Y + 0.015, lz);
       pad.scale.setScalar(0.6 + rand() * 0.7);
       pad.rotation.y = rand() * Math.PI * 2;
       pad.castShadow = false;
@@ -359,29 +447,33 @@ function startGame(THREE) {
       }
     }
   }
+  var rippleTimer = 0;
 
   // ---------- The dock ----------
   var dock = new THREE.Group();
   dock.position.set(dockStart.x, 0, dockStart.z);
-  dock.rotation.y = Math.atan2(-dockIn.z, dockIn.x); // local x now points out over the water
+  dock.rotation.y = Math.atan2(-dockIn.z, dockIn.x); // the dock's x axis points out over the water
   var plankGeo = new THREE.BoxGeometry(0.28, 0.06, DOCK_W);
-  var woodMats = [mat(0xa8774f), mat(0x9a6a45), mat(0xb38457)];
+  var woodMats = [mat(0x9c7150), mat(0x8a6244), mat(0xa77b57)];
   for (var pk = 0; pk * 0.31 < DOCK_LEN; pk++) {
-    var plank = place(new THREE.Mesh(plankGeo, woodMats[pk % 3]), pk * 0.31 + 0.14, 0.27, (rand() - 0.5) * 0.04, dock);
+    var plank = place(new THREE.Mesh(plankGeo, woodMats[pk % 3]), pk * 0.31 + 0.14, DOCK_Y - 0.03, (rand() - 0.5) * 0.04, dock);
     plank.rotation.y = (rand() - 0.5) * 0.03;
   }
+  var darkWood = mat(0x5e4029);
   var beamGeo = new THREE.BoxGeometry(DOCK_LEN, 0.1, 0.1);
-  place(new THREE.Mesh(beamGeo, mat(0x6e4a30)), DOCK_LEN / 2, 0.19, DOCK_W / 2 - 0.1, dock);
-  place(new THREE.Mesh(beamGeo, mat(0x6e4a30)), DOCK_LEN / 2, 0.19, -DOCK_W / 2 + 0.1, dock);
-  var postGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.8, 8);
-  [0.5, 2.4, DOCK_LEN - 0.1].forEach(function (px) {
-    place(new THREE.Mesh(postGeo, mat(0x6e4a30)), px, 0.05, DOCK_W / 2, dock);
-    place(new THREE.Mesh(postGeo, mat(0x6e4a30)), px, 0.05, -DOCK_W / 2, dock);
+  place(new THREE.Mesh(beamGeo, darkWood), DOCK_LEN / 2, DOCK_Y - 0.11, DOCK_W / 2 - 0.1, dock);
+  place(new THREE.Mesh(beamGeo, darkWood), DOCK_LEN / 2, DOCK_Y - 0.11, -DOCK_W / 2 + 0.1, dock);
+  // Posts reach all the way down to the lake bed
+  [0.4, 2.0, 3.6, DOCK_LEN - 0.1].forEach(function (px) {
+    [-1, 1].forEach(function (sideSign) {
+      var pz = sideSign * DOCK_W / 2;
+      var wx = dockStart.x + dockIn.x * px - dockIn.z * pz, wz = dockStart.z + dockIn.z * px + dockIn.x * pz;
+      var bottom = groundHeight(wx, wz) - 0.1, top = DOCK_Y + 0.15;
+      var post = place(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, top - bottom, 8), darkWood), px, (top + bottom) / 2, pz, dock);
+      post.receiveShadow = true;
+    });
   });
   scene.add(dock);
-
-  scene.add(lake);
-  var rippleTimer = 0;
 
   // ---------- Grass, rocks and bushes ----------
   function freeSpot(padding) {
@@ -396,33 +488,65 @@ function startGame(THREE) {
     }
     return null;
   }
-  var bladeGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
-  for (var g = 0; g < 120; g++) {
-    var spot = freeSpot(0.6);
-    if (!spot) continue;
-    for (var b = 0; b < 3; b++) {
-      var blade = new THREE.Mesh(bladeGeo, M.stem);
-      blade.position.set(spot.x + (b - 1) * 0.07, 0.15, spot.z);
-      blade.rotation.z = (b - 1) * 0.35;
-      scene.add(blade);
-    }
+
+  // Thousands of grass blades, drawn in one go so it stays fast
+  var bladeGeo = new THREE.ConeGeometry(0.045, 0.38, 3);
+  bladeGeo.translate(0, 0.19, 0);
+  var BLADES = 3000;
+  var grass = new THREE.InstancedMesh(bladeGeo, new THREE.MeshStandardMaterial({ roughness: 0.9 }), BLADES);
+  var gMatrix = new THREE.Matrix4(), gQuat = new THREE.Quaternion(), gEuler = new THREE.Euler();
+  var gScale = new THREE.Vector3(), gPos = new THREE.Vector3(), gColor = new THREE.Color();
+  var blades = 0;
+  for (var gi = 0; gi < BLADES * 3 && blades < BLADES; gi++) {
+    var ga = rand() * Math.PI * 2, gr = Math.sqrt(rand()) * 17.3;
+    var gx = Math.cos(ga) * gr, gz = Math.sin(ga) * gr;
+    if (Math.abs(gx - FARM_X) < COLS * TILE / 2 + 0.5 && Math.abs(gz - FARM_Z) < ROWS * TILE / 2 + 0.5) continue;
+    if (groundHeight(gx, gz) < -0.04 || onDock(gx, gz) || dist(gx, gz, TREE_X, TREE_Z) < 0.9) continue;
+    gEuler.set((rand() - 0.5) * 0.5, rand() * Math.PI, (rand() - 0.5) * 0.5);
+    gQuat.setFromEuler(gEuler);
+    var gs = 0.6 + rand() * 0.9;
+    gScale.set(gs, gs * (0.6 + rand() * 0.9), gs);
+    gPos.set(gx, groundHeight(gx, gz), gz);
+    gMatrix.compose(gPos, gQuat, gScale);
+    grass.setMatrixAt(blades, gMatrix);
+    gColor.setHSL(0.24 + rand() * 0.07, 0.4 + rand() * 0.2, 0.3 + rand() * 0.15);
+    grass.setColorAt(blades, gColor);
+    blades++;
   }
-  for (var rk = 0; rk < 10; rk++) {
+  grass.count = blades;
+  grass.instanceMatrix.needsUpdate = true;
+  if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
+  grass.receiveShadow = true;
+  scene.add(grass);
+
+  for (var rk = 0; rk < 12; rk++) {
     var rs = freeSpot(1.2);
     if (!rs) continue;
-    var size = 0.5 + rand() * 0.8;
-    var rock = place(new THREE.Mesh(rockGeo, M.rock), rs.x, size * 0.2, rs.z);
-    rock.scale.set(size, size * 0.7, size);
-    rock.rotation.set(rand(), rand() * 3, rand());
-    solids.push({ x: rs.x, z: rs.z, r: size * 0.5 });
+    var size = 0.4 + rand() * 0.7;
+    boulder(rs.x, rs.z, size, 0.7).position.y = size * 0.15;
+    solids.push({ x: rs.x, z: rs.z, r: size * 0.8 });
   }
-  var bushGeo = new THREE.IcosahedronGeometry(0.6, 1);
+
+  // Bushes: lumpy leafy balls in a few greens
+  function bushGeometry(shift) {
+    var g = new THREE.IcosahedronGeometry(0.6, 2);
+    var p = g.attributes.position, v = new THREE.Vector3();
+    for (var i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      v.multiplyScalar(1 + noise(v.x * 6 + shift, v.z * 6 + v.y * 4) * 0.12);
+      p.setXYZ(i, v.x, v.y, v.z);
+    }
+    g.computeVertexNormals();
+    return g;
+  }
+  var bushGeos = [bushGeometry(0), bushGeometry(5)];
+  var bushMats = [mat(0x4f8a3e), mat(0x5d9a45), mat(0x467e38)];
   for (var bu = 0; bu < 12; bu++) {
     var bs = freeSpot(1.2);
     if (!bs) continue;
     var bsize = 0.7 + rand() * 0.6;
     for (var k = 0; k < 3; k++) {
-      place(new THREE.Mesh(bushGeo, M.bush), bs.x + (k - 1) * 0.4 * bsize, 0.35 * bsize, bs.z + (rand() - 0.5) * 0.5)
+      place(new THREE.Mesh(bushGeos[k % 2], bushMats[k]), bs.x + (k - 1) * 0.4 * bsize, 0.35 * bsize, bs.z + (rand() - 0.5) * 0.5)
         .scale.setScalar(bsize * (0.7 + rand() * 0.5));
     }
     solids.push({ x: bs.x, z: bs.z, r: 0.9 * bsize });
@@ -553,7 +677,7 @@ function startGame(THREE) {
   function ripple(x, z, color, maxSize, life) {
     var m = new THREE.Mesh(waveGeo, new THREE.MeshBasicMaterial({ color: color, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     m.rotation.x = -Math.PI / 2;
-    m.position.set(x, 0.16, z);
+    m.position.set(x, Math.max(groundHeight(x, z), WATER_Y) + 0.03, z);
     scene.add(m);
     waves.push({ mesh: m, life: life, max: life, size: maxSize });
   }
@@ -803,7 +927,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = onDock(player.position.x, player.position.z) ? 0.3 : 0; // step up onto the dock
+    player.position.y = onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z);
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
@@ -853,15 +977,19 @@ function startGame(THREE) {
     // Lake: moving water, bobbing lily pads, the odd ripple
     waterUniforms.uTime.value = t;
     waterUniforms.uNight.value = night;
+    waterUniforms.uSky.value.copy(scene.background);
+    waterUniforms.uSunDir.value.copy(sun.position).sub(sun.target.position).normalize();
+    waterUniforms.uSunColor.value.copy(sun.color).multiplyScalar(sun.intensity);
     lilyPads.forEach(function (pad, n) {
-      pad.position.y = 0.14 + Math.sin(t * 1.4 + n * 1.3) * 0.012;
+      pad.position.y = WATER_Y + 0.015 + Math.sin(t * 1.4 + n * 1.3) * 0.01;
       pad.rotation.y += dt * 0.03 * (n % 2 ? 1 : -1);
     });
     rippleTimer -= dt;
     if (rippleTimer <= 0) {
       rippleTimer = 0.6 + Math.random() * 0.9;
       var re = lakeEdge(Math.random() * Math.PI * 2, 0, 16.7), rf = Math.random() * 0.7;
-      ripple(LAKE_X + re.x * rf, LAKE_Z + re.z * rf, 0xffffff, 0.9, 1.6);
+      var rpx = LAKE_X + re.x * rf, rpz = LAKE_Z + re.z * rf;
+      if (groundHeight(rpx, rpz) < WATER_Y - 0.1) ripple(rpx, rpz, 0xffffff, 0.9, 1.6);
     }
 
     // Fireflies come out at night
