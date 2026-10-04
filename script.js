@@ -378,19 +378,11 @@ function startGame(THREE) {
 
   // Rocks on the lake bed, seen through the water
   for (var ur = 0; ur < 14; ur++) {
-    var us = waterSpot(0.15);
-    var under = boulder(us.x, us.z, 0.4 + rand() * 0.7, 0.45);
+    var us = waterSpot(0.55); // deep enough that the rock stays fully under the surface
+    var under = boulder(us.x, us.z, 0.4 + rand() * 0.5, 0.4);
     under.position.y = groundHeight(us.x, us.z);
     under.castShadow = false;
   }
-
-  // Big boulders sticking out of the water, each with a smaller one beside it
-  [2.1, 3.2, 4.3].forEach(function (offset, i) {
-    var e = lakeEdge(DOCK_A + offset, 0, 16.7), f = 0.4 + i * 0.12, size = 1.0 + rand() * 0.5;
-    var bx = LAKE_X + e.x * f, bz = LAKE_Z + e.z * f;
-    boulder(bx, bz, size, 0.9).position.y = groundHeight(bx, bz) + size * 0.35;
-    boulder(bx + size * 0.9, bz + 0.3, size * 0.5, 0.8).position.y = groundHeight(bx + size * 0.9, bz + 0.3) + size * 0.2;
-  });
 
   // Boulders scattered along the shore
   for (var sb = 0; sb < 34; sb++) {
