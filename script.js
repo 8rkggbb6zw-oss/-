@@ -37,7 +37,7 @@ function startGame(THREE) {
   var TILE = 1.3, COLS = 6, ROWS = 4, FARM_X = 2, FARM_Z = 0;
   var WALK_R = 16;
   var TREE_X = -8, TREE_Z = -4, TREE_ZONE = 3;
-  var LAKE_X = -6, LAKE_Z = 6.5, LAKE_R = 3.2;
+  var LAKE_X = -7, LAKE_Z = 8, LAKE_R = 4.5;
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
   var SPEED = 4.4;
@@ -171,7 +171,7 @@ function startGame(THREE) {
   var padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
   var lilyPads = [];
   [[-1.2, 0.6], [0.9, -1.1], [1.4, 0.9], [-0.3, -1.6], [0.2, 1.5]].forEach(function (p, i) {
-    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0], 0.07, p[1], lake);
+    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0] * LAKE_R / 3.2, 0.07, p[1] * LAKE_R / 3.2, lake);
     pad.rotation.y = i * 1.7;
     lilyPads.push(pad);
   });
@@ -184,7 +184,7 @@ function startGame(THREE) {
     petal.rotation.set(0, -la, 0.5);
   }
   place(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center), 0, 0.06, 0, lotus);
-  lotus.position.set(-1.2, 0.1, 0.6);
+  lotus.position.set(lilyPads[0].position.x, 0.1, lilyPads[0].position.z);
   lake.add(lotus);
 
   var rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
