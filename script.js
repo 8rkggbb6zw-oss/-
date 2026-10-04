@@ -606,6 +606,103 @@ function startGame(THREE) {
   });
   scene.add(dock);
 
+  // ---------- Little rowboat tied to the end of the dock ----------
+  var BOAT_L = 2.4, BOAT_W = 0.34, BOAT_D = 0.3;
+  function hullHalfWidth(t) { return BOAT_W * Math.pow(Math.max(0, 1 - t * t), 0.5); }        // pointed at both ends
+  function hullRise(t) { return 0.12 * t * t * t * t + (t > 0 ? 0.1 * t * t * t : 0); }       // ends sweep up, the front more
+  function hullDepth(t) { return BOAT_D * (1 - 0.4 * t * t); }
+  // A point on the hull: t runs -1 (back) to 1 (front), a runs 0..PI around the cross-section, s shrinks it inward
+  function hullPoint(t, a, s) {
+    s = s || 1;
+    var y = hullRise(t) - hullDepth(t) * Math.pow(Math.sin(a), 0.8) * s; // slightly flatter bottom
+    return new THREE.Vector3(t * BOAT_L / 2 * (s < 1 ? 0.97 : 1), y, hullHalfWidth(t) * Math.cos(a) * s);
+  }
+  // Hull skin with planks: outer = red paint, inner = natural wood
+  function hullGeometry(s, plankA, plankB, seam) {
+    var N = 32, R = 14, pos = [], col = [], idx = [], c = new THREE.Color();
+    for (var i = 0; i <= N; i++) {
+      for (var j = 0; j <= R; j++) {
+        var a = (j / R) * Math.PI, p = hullPoint(-1 + 2 * i / N, a, s);
+        pos.push(p.x, p.y, p.z);
+        var band = (a / Math.PI) * 7;
+        c.copy(Math.floor(band) % 2 ? plankA : plankB);
+        if (Math.abs(band - Math.round(band)) < 0.08) c.lerp(seam, 0.35); // faint lines between planks
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var i2 = 0; i2 < N; i2++) {
+      for (var j2 = 0; j2 < R; j2++) {
+        var p0 = i2 * (R + 1) + j2, p1 = p0 + 1, p2 = p0 + R + 1, p3 = p2 + 1;
+        idx.push(p0, p2, p1, p1, p2, p3);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  function boatTube(points, radius, material, closed) {
+    return place(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points, closed), points.length * 4, radius, 6, closed), material), 0, 0, 0, boat);
+  }
+
+  var boat = new THREE.Group();
+  var hullMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, side: THREE.DoubleSide }); // varnished shine
+  var rimWood = mat(0xa95e3c), ribWood = mat(0x4f2c1a), seatWood = mat(0xc79a6a);
+  place(new THREE.Mesh(hullGeometry(1, new THREE.Color(0x9a4e33), new THREE.Color(0x8f4730), new THREE.Color(0x6a3322)), hullMat), 0, 0, 0, boat);
+  place(new THREE.Mesh(hullGeometry(0.9, new THREE.Color(0x6b3f28), new THREE.Color(0x5f3722), new THREE.Color(0x3f2416)), hullMat), 0, 0, 0, boat);
+
+  // Thick rim all the way round the top edge
+  var rimPoints = [];
+  for (var bi = 0; bi <= 24; bi++) rimPoints.push(hullPoint(-0.98 + bi * 1.96 / 24, 0));
+  for (var bj = 23; bj >= 1; bj--) rimPoints.push(hullPoint(-0.98 + bj * 1.96 / 24, Math.PI));
+  boatTube(rimPoints, 0.04, rimWood, true);
+
+  // Keel strip along the bottom, curling up into a tall prow at the front and a short post at the back
+  var keelPoints = [];
+  for (var kk = 0; kk <= 12; kk++) keelPoints.push(hullPoint(-1 + kk / 6, Math.PI / 2).add(new THREE.Vector3(0, -0.02, 0)));
+  var bowTip = hullPoint(1, 0), sternTip = hullPoint(-1, 0);
+  // the prow curls up and back over itself into a little scroll
+  keelPoints.push(new THREE.Vector3(bowTip.x + 0.09, bowTip.y + 0.1, 0), new THREE.Vector3(bowTip.x + 0.11, bowTip.y + 0.22, 0),
+    new THREE.Vector3(bowTip.x + 0.04, bowTip.y + 0.29, 0), new THREE.Vector3(bowTip.x - 0.03, bowTip.y + 0.24, 0));
+  keelPoints.unshift(new THREE.Vector3(sternTip.x - 0.06, sternTip.y + 0.1, 0));
+  boatTube(keelPoints, 0.04, rimWood, false);
+  place(new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), rimWood), bowTip.x - 0.03, bowTip.y + 0.23, 0, boat);
+
+  // Ribs, floorboards and two seats inside
+  [-0.65, -0.35, 0, 0.35, 0.65].forEach(function (t) {
+    var ribPoints = [];
+    for (var k = 0; k <= 8; k++) ribPoints.push(hullPoint(t, (k / 8) * Math.PI, 0.9));
+    boatTube(ribPoints, 0.016, ribWood, false);
+  });
+  [-0.08, 0.08].forEach(function (fz) {
+    place(new THREE.Mesh(new THREE.BoxGeometry(BOAT_L * 0.55, 0.02, 0.1), ribWood), 0, -BOAT_D * 0.78, fz, boat);
+  });
+  [-0.35, 0.3].forEach(function (t) {
+    var sx = t * BOAT_L / 2, sy = hullRise(t) - 0.07;
+    place(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, hullHalfWidth(t) * 1.8), seatWood), sx, sy, 0, boat);
+  });
+
+  // Float it just past the end of the dock, nose pointing back at the dock
+  var BOAT_Y = WATER_Y + 0.14;
+  boat.position.set(DOCK_LEN + BOAT_L / 2 + 0.25, BOAT_Y, 0.35);
+  boat.rotation.y = Math.PI + 0.12;
+  dock.add(boat);
+
+  // Rope from the last mooring post to the tip of the prow
+  var prowTop = new THREE.Vector3(bowTip.x + 0.1, bowTip.y + 0.18, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), boat.rotation.y).add(boat.position);
+  var lastPost = new THREE.Vector3(POST_X[POST_X.length - 1], POST_TOP - 0.12, POST_Z);
+  place(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
+    lastPost, new THREE.Vector3((lastPost.x + prowTop.x) / 2, BOAT_Y - 0.05, (lastPost.z + prowTop.z) / 2), prowTop), 16, 0.02, 6, false), bandMat), 0, 0, 0, dock);
+
+  // Clear any lily pads that ended up under the boat
+  dock.updateMatrixWorld(true);
+  var boatWorld = dock.localToWorld(boat.position.clone());
+  lilyPads.concat(lilyFlowers).forEach(function (item) {
+    if (dist(item.position.x, item.position.z, boatWorld.x, boatWorld.z) < BOAT_L * 0.75) item.visible = false;
+  });
+
   // ---------- Grass, rocks and bushes ----------
   function freeSpot(padding) {
     for (var i = 0; i < 60; i++) {
@@ -1117,6 +1214,9 @@ function startGame(THREE) {
     });
     globeMat.emissiveIntensity = 0.4 + night * 1.4;
     dockLights.forEach(function (glow) { glow.intensity = night * 1.3; });
+    boat.position.y = BOAT_Y + Math.sin(t * 1.3) * 0.02; // the boat gently bobs and rocks
+    boat.rotation.z = Math.sin(t * 1.1) * 0.03;
+    boat.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
       flower.rotation.y += dt * 0.05;
