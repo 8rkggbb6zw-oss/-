@@ -71,6 +71,7 @@ function startGame(THREE) {
   const STAGE_TIME = 6;      // seconds per growth stage while watered
   const DAY_LENGTH = 150;    // seconds for a full dawn → night → dawn cycle
   const SPEED = 4.4;
+  const LAKE = { x: -6, z: 6.5, r: 3.2 };
 
   const state = {
     mana: MAX_MANA,
@@ -182,6 +183,7 @@ function startGame(THREE) {
       if (inFarm(x, z, pad)) continue;
       if (Math.hypot(x - TREE_POS.x, z - TREE_POS.z) < TREE_ZONE + 0.8) continue;
       if (Math.hypot(x - FARM.x, z - 6) < 2) continue;
+      if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r * 1.25 + 0.5) continue;
       return { x, z };
     }
     return null;
@@ -269,6 +271,77 @@ function startGame(THREE) {
   tree.add(treeRing);
   scene.add(tree);
   solids.push({ x: TREE_POS.x, z: TREE_POS.z, r: 0.8 });
+
+  // ---------- The lake ----------
+  // Wobbly outline so it looks like a natural pond rather than a perfect circle
+  const lakeRadius = (a) => LAKE.r * (1 + 0.12 * Math.sin(3 * a) + 0.06 * Math.sin(5 * a + 1));
+  function lakeShape(scale) {
+    const shape = new THREE.Shape();
+    for (let i = 0; i <= 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const r = lakeRadius(a) * scale;
+      if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    return shape;
+  }
+  const lake = new THREE.Group();
+  lake.position.set(LAKE.x, 0, LAKE.z);
+  const shore = shadowed(new THREE.Mesh(new THREE.ShapeGeometry(lakeShape(1.2)), std(0xf3dfb0)), false, true);
+  shore.rotation.x = -Math.PI / 2;
+  shore.position.y = 0.015;
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x7cc8ff, emissive: 0x2f7fd0, emissiveIntensity: 0.15,
+    roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9,
+  });
+  const water = new THREE.Mesh(new THREE.ShapeGeometry(lakeShape(1)), waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = 0.04;
+  water.receiveShadow = true;
+  lake.add(shore, water);
+
+  // Lily pads (a circle with a little notch cut out) and one pink lotus
+  const padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
+  const padMat = std(0x6cc46a);
+  const lilyPads = [];
+  [[-1.2, 0.6], [0.9, -1.1], [1.4, 0.9], [-0.3, -1.6], [0.2, 1.5]].forEach(([x, z], i) => {
+    const pad = shadowed(new THREE.Mesh(padGeo, padMat), false, true);
+    pad.position.set(x, 0.07, z);
+    pad.rotation.y = i * 1.7;
+    pad.userData.phase = i * 1.3;
+    lake.add(pad);
+    lilyPads.push(pad);
+  });
+  const lotus = new THREE.Group();
+  const lotusPetalGeo = new THREE.SphereGeometry(0.1, 10, 8);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const petal = new THREE.Mesh(lotusPetalGeo, M.petal);
+    petal.scale.set(1.3, 0.5, 0.7);
+    petal.position.set(Math.cos(a) * 0.1, 0.05, Math.sin(a) * 0.1);
+    petal.rotation.y = -a;
+    petal.rotation.z = 0.5;
+    lotus.add(petal);
+  }
+  lotus.add(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center));
+  lotus.position.copy(lilyPads[0].position).setY(0.1);
+  lake.add(lotus);
+
+  // A few pebbles around the shore
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rand() * 0.4;
+    const r = lakeRadius(a) * 1.15;
+    const pebble = shadowed(new THREE.Mesh(rockGeo, M.rock));
+    const s = 0.25 + rand() * 0.25;
+    pebble.position.set(Math.cos(a) * r, s * 0.15, Math.sin(a) * r);
+    pebble.scale.set(s, s * 0.6, s);
+    pebble.rotation.set(rand(), rand() * 3, rand());
+    lake.add(pebble);
+  }
+  scene.add(lake);
+  // Can't walk on water: one round collider that fits inside the wobbly edge
+  solids.push({ x: LAKE.x, z: LAKE.z, r: LAKE.r * 0.8 });
+  let rippleTimer = 0;
 
   // Sparkles orbiting the tree
   const SPARKLES = 40;
@@ -467,6 +540,7 @@ function startGame(THREE) {
     const tile = targetTile();
     if (!tile) {
       if (state.inTreeZone) toast('The Dawn Tree hums softly… your mana is restoring ✦');
+      else if (Math.hypot(player.position.x - LAKE.x, player.position.z - LAKE.z) < LAKE.r + 1.5) toast('The lake glimmers… a lotus drifts by 🪷');
       else toast('Walk to the garden soil to farm 🌱');
       return;
     }
@@ -800,6 +874,23 @@ function startGame(THREE) {
     state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
     if (inZone && state.mana > before && Math.random() < dt * 12) {
       burst(tmpV.copy(player.position).setY(0.4), 0xc08bff, 1, { speed: 0.6, up: 1.8, life: 0.8, gravity: 0.5, size: 0.8 });
+    }
+
+    // Lake: shimmer, bobbing lily pads and the odd ripple
+    waterMat.emissiveIntensity = 0.12 + night * 0.25 + Math.sin(t * 1.5) * 0.05;
+    for (let i = 0; i < lilyPads.length; i++) {
+      const pad = lilyPads[i];
+      pad.position.y = 0.07 + Math.sin(t * 1.4 + pad.userData.phase) * 0.015;
+      pad.rotation.y += dt * 0.05;
+    }
+    lotus.position.y = lilyPads[0].position.y + 0.03;
+    lotus.rotation.y += dt * 0.3;
+    rippleTimer -= dt;
+    if (rippleTimer <= 0) {
+      rippleTimer = 0.6 + Math.random() * 0.9;
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * LAKE.r * 0.7;
+      wave(tmpV.set(LAKE.x + Math.cos(a) * r, 0, LAKE.z + Math.sin(a) * r), 0xffffff, 0.9, 1.6);
     }
 
     // Fireflies
