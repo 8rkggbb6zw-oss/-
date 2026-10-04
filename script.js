@@ -653,6 +653,27 @@ function startGame(THREE) {
   place(new THREE.Mesh(hullGeometry(1, new THREE.Color(0x9a4e33), new THREE.Color(0x8f4730), new THREE.Color(0x6a3322)), hullMat), 0, 0, 0, boat);
   place(new THREE.Mesh(hullGeometry(0.9, new THREE.Color(0x6b3f28), new THREE.Color(0x5f3722), new THREE.Color(0x3f2416)), hullMat), 0, 0, 0, boat);
 
+  // Invisible "water blocker" just above the waterline, shaped like the inside of the boat.
+  // It is drawn after the boat but before the lake, so the lake can't show through the hull.
+  var keepDry = new THREE.Shape();
+  for (var wi = 0; wi <= 32; wi++) {
+    var wt = -0.8 + (wi / 32) * 1.6;
+    if (wi === 0) keepDry.moveTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.85);
+    else keepDry.lineTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.85);
+  }
+  for (var wj = 32; wj >= 0; wj--) {
+    var wt2 = -0.8 + (wj / 32) * 1.6;
+    keepDry.lineTo(wt2 * BOAT_L / 2, -hullHalfWidth(wt2) * 0.85);
+  }
+  var dryGeo = new THREE.ShapeGeometry(keepDry);
+  dryGeo.rotateX(-Math.PI / 2);
+  var dryPatch = new THREE.Mesh(dryGeo, new THREE.MeshBasicMaterial({
+    colorWrite: false, depthWrite: true, transparent: true, opacity: 0, side: THREE.DoubleSide
+  }));
+  dryPatch.position.y = WATER_Y + 0.03 - (WATER_Y + 0.14); // a little above the water, in the boat's own space
+  dryPatch.renderOrder = 0; // the lake uses renderOrder 1, so this goes first
+  boat.add(dryPatch);
+
   // Thick rim all the way round the top edge
   var rimPoints = [];
   for (var bi = 0; bi <= 24; bi++) rimPoints.push(hullPoint(-0.98 + bi * 1.96 / 24, 0));
