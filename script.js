@@ -34,10 +34,10 @@ function startGame(THREE) {
   canvas.style.outline = 'none';
 
   // ---------- Settings ----------
-  var TILE = 1.3, COLS = 6, ROWS = 4, FARM_X = 2, FARM_Z = 0;
+  var TILE = 1.3, COLS = 6, ROWS = 4, FARM_X = 5.5, FARM_Z = -3.5;
   var WALK_R = 16;
-  var TREE_X = -8, TREE_Z = -4, TREE_ZONE = 3;
-  var LAKE_X = -7, LAKE_Z = 8, LAKE_R = 4.5;
+  var TREE_X = -7, TREE_Z = -8, TREE_ZONE = 3;
+  var LAKE_X = -7, LAKE_Z = 6.5, LAKE_R = 8.5;
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
   var SPEED = 4.4;
@@ -147,31 +147,47 @@ function startGame(THREE) {
   solids.push({ x: TREE_X, z: TREE_Z, r: 0.8 });
 
   // ---------- The lake ----------
-  function lakeRadius(a) { return LAKE_R * (1 + 0.12 * Math.sin(3 * a) + 0.06 * Math.sin(5 * a + 1)); }
-  function lakeGeometry(scale) {
+  function lakeRadius(a) { return LAKE_R * (1 + 0.08 * Math.sin(3 * a) + 0.04 * Math.sin(5 * a + 1)); }
+  // A point on the lake's edge (pushed out by `extra`), kept on the island
+  function lakeEdge(a, extra, limit) {
+    var r = lakeRadius(a) + extra;
+    var x = Math.cos(a) * r, z = -Math.sin(a) * r;
+    var wx = LAKE_X + x, wz = LAKE_Z + z, wd = Math.sqrt(wx * wx + wz * wz);
+    if (wd > limit) { x = wx * limit / wd - LAKE_X; z = wz * limit / wd - LAKE_Z; }
+    return { x: x, z: z };
+  }
+  function lakeGeometry(extra, limit) {
     var shape = new THREE.Shape();
-    for (var i = 0; i <= 48; i++) {
-      var a = (i / 48) * Math.PI * 2, r = lakeRadius(a) * scale;
-      if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-      else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    for (var i = 0; i <= 96; i++) {
+      var p = lakeEdge((i / 96) * Math.PI * 2, extra, limit);
+      if (i === 0) shape.moveTo(p.x, -p.z);
+      else shape.lineTo(p.x, -p.z);
     }
     var g = new THREE.ShapeGeometry(shape);
-    g.rotateX(-Math.PI / 2); // lay it flat; a point at angle a ends up at (cos a, 0, -sin a)
+    g.rotateX(-Math.PI / 2); // lay it flat on the ground
     return g;
+  }
+  function inLake(x, z) {
+    var lx = x - LAKE_X, lz = z - LAKE_Z;
+    return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) - 0.3;
+  }
+  function nearLake(x, z) {
+    var lx = x - LAKE_X, lz = z - LAKE_Z;
+    return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) + 1.5;
   }
   var lake = new THREE.Group();
   lake.position.set(LAKE_X, 0, LAKE_Z);
-  place(new THREE.Mesh(lakeGeometry(1.2), M.sand), 0, 0.015, 0, lake).castShadow = false;
+  place(new THREE.Mesh(lakeGeometry(1, 17.4), M.sand), 0, 0.015, 0, lake).castShadow = false;
   var waterMat = new THREE.MeshStandardMaterial({
     color: 0x7cc8ff, emissive: 0x2f7fd0, emissiveIntensity: 0.15,
     roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9
   });
-  place(new THREE.Mesh(lakeGeometry(1), waterMat), 0, 0.04, 0, lake).castShadow = false;
+  place(new THREE.Mesh(lakeGeometry(0, 16.7), waterMat), 0, 0.04, 0, lake).castShadow = false;
 
   var padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
   var lilyPads = [];
-  [[-1.2, 0.6], [0.9, -1.1], [1.4, 0.9], [-0.3, -1.6], [0.2, 1.5]].forEach(function (p, i) {
-    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0] * LAKE_R / 3.2, 0.07, p[1] * LAKE_R / 3.2, lake);
+  [[-3, 1.5], [2.2, -2.8], [3.5, 2.2], [-0.8, -4], [0.5, 3.8], [-4.2, -1.5], [4.5, -0.5], [-2.2, 4.2], [1.5, 0.6], [-1.5, -1.2]].forEach(function (p, i) {
+    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0], 0.07, p[1], lake);
     pad.rotation.y = i * 1.7;
     lilyPads.push(pad);
   });
@@ -184,18 +200,17 @@ function startGame(THREE) {
     petal.rotation.set(0, -la, 0.5);
   }
   place(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center), 0, 0.06, 0, lotus);
-  lotus.position.set(lilyPads[0].position.x, 0.1, lilyPads[0].position.z);
+  lotus.position.set(-3, 0.1, 1.5);
   lake.add(lotus);
 
   var rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
-  for (var pb = 0; pb < 9; pb++) {
-    var pa = (pb / 9) * Math.PI * 2 + rand() * 0.4;
-    var pr = lakeRadius(pa) * 1.15, ps = 0.25 + rand() * 0.25;
-    var pebble = place(new THREE.Mesh(rockGeo, M.rock), Math.cos(pa) * pr, ps * 0.15, -Math.sin(pa) * pr, lake);
+  for (var pb = 0; pb < 16; pb++) {
+    var pe = lakeEdge((pb / 16) * Math.PI * 2 + rand() * 0.3, 0.6, 17);
+    var ps = 0.25 + rand() * 0.3;
+    var pebble = place(new THREE.Mesh(rockGeo, M.rock), pe.x, ps * 0.15, pe.z, lake);
     pebble.scale.set(ps, ps * 0.6, ps);
   }
   scene.add(lake);
-  solids.push({ x: LAKE_X, z: LAKE_Z, r: LAKE_R * 0.8 }); // no walking on water
   var rippleTimer = 0;
 
   // ---------- Grass, rocks and bushes ----------
@@ -205,8 +220,8 @@ function startGame(THREE) {
       var x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (Math.abs(x - FARM_X) < COLS * TILE / 2 + padding && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + padding) continue;
       if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 0.8) continue;
-      if (dist(x, z, LAKE_X, LAKE_Z) < LAKE_R * 1.3 + 0.5) continue;
-      if (dist(x, z, FARM_X, 5) < 2) continue;
+      if (nearLake(x, z)) continue;
+      if (dist(x, z, FARM_X, FARM_Z + 5) < 2) continue;
       return { x: x, z: z };
     }
     return null;
@@ -336,7 +351,7 @@ function startGame(THREE) {
   var eyeGeo = new THREE.SphereGeometry(0.04, 8, 6);
   place(new THREE.Mesh(eyeGeo, M.eye), -0.1, 1.0, 0.24, body);
   place(new THREE.Mesh(eyeGeo, M.eye), 0.1, 1.0, 0.24, body);
-  player.position.set(FARM_X, 0, 5);
+  player.position.set(FARM_X, 0, FARM_Z + 5);
   scene.add(player);
   var facing = Math.PI; // looking toward the garden
   var walkTarget = null;
@@ -438,7 +453,7 @@ function startGame(THREE) {
     var tile = targetTile();
     if (!tile) {
       if (state.inTreeZone) showToast('The Dawn Tree hums softly… your mana is restoring ✦');
-      else if (dist(player.position.x, player.position.z, LAKE_X, LAKE_Z) < LAKE_R + 1.5) showToast('The lake glimmers… a lotus drifts by 🪷');
+      else if (nearLake(player.position.x, player.position.z)) showToast('The lake glimmers… a lotus drifts by 🪷');
       else showToast('Walk to the garden soil to farm 🌱');
       return;
     }
@@ -604,6 +619,12 @@ function startGame(THREE) {
           player.position.z = o.z + dz / d * min;
         }
       });
+      // No walking on water: slide along the shore instead
+      if (inLake(player.position.x, player.position.z)) {
+        if (!inLake(player.position.x, beforeZ)) player.position.z = beforeZ;
+        else if (!inLake(beforeX, player.position.z)) player.position.x = beforeX;
+        else { player.position.x = beforeX; player.position.z = beforeZ; }
+      }
       // Stop tap-walking if something is in the way
       if (walkTarget && Math.hypot(player.position.x - beforeX, player.position.z - beforeZ) < SPEED * dt * 0.2) walkTarget = null;
 
@@ -668,7 +689,7 @@ function startGame(THREE) {
     rippleTimer -= dt;
     if (rippleTimer <= 0) {
       rippleTimer = 0.6 + Math.random() * 0.9;
-      var ra = Math.random() * Math.PI * 2, rr = Math.random() * LAKE_R * 0.7;
+      var ra = Math.random() * Math.PI * 2, rr = Math.random() * LAKE_R * 0.6;
       ripple(LAKE_X + Math.cos(ra) * rr, LAKE_Z + Math.sin(ra) * rr, 0xffffff, 0.9, 1.6);
     }
 
