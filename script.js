@@ -19,17 +19,19 @@ function loadScript(src) {
   });
 }
 
-async function loadThree() {
-  if (window.THREE) return window.THREE;
-  for (const src of THREE_SOURCES) {
-    try {
-      await loadScript(src);
-      if (window.THREE) return window.THREE;
-    } catch (err) {
-      console.warn(err.message);
-    }
-  }
-  throw new Error('three.js could not be loaded');
+function loadThree() {
+  if (window.THREE) return Promise.resolve(window.THREE);
+  // Try each CDN in turn until one of them gives us THREE
+  let attempt = Promise.reject(new Error('three.js could not be loaded'));
+  THREE_SOURCES.forEach(function (src) {
+    attempt = attempt.catch(function () {
+      return loadScript(src).then(function () {
+        if (!window.THREE) throw new Error('THREE missing after loading ' + src);
+        return window.THREE;
+      });
+    });
+  });
+  return attempt;
 }
 
 loadThree()
@@ -123,7 +125,7 @@ function startGame(THREE) {
   scene.add(sun, sun.target);
 
   // ---------- Materials ----------
-  const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
+  const std = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.85 }, extra));
   const M = {
     grass: std(0x9be08a),
     cliff: std(0xc9a27e),
@@ -330,7 +332,8 @@ function startGame(THREE) {
     const g = new THREE.Group();
     const stem = shadowed(new THREE.Mesh(stemGeo, M.stem));
     const leaves = new THREE.Group();
-    for (const s of [-1, 1]) {
+    for (let k = 0; k < 2; k++) {
+      const s = k === 0 ? -1 : 1;
       const l = shadowed(new THREE.Mesh(leafGeo, M.leaf));
       l.scale.set(1.3, 0.35, 0.7);
       l.position.x = s * 0.13;
@@ -520,7 +523,8 @@ function startGame(THREE) {
     }
     state.mana -= SPELL_COST;
     let watered = 0;
-    for (const t of tiles) {
+    for (let i = 0; i < tiles.length; i++) {
+      const t = tiles[i];
       if (t.crop && t.stage < 3 && !t.wet) {
         setWet(t, true);
         watered++;
@@ -570,7 +574,7 @@ function startGame(THREE) {
       drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: false };
       canvas.style.cursor = 'grabbing';
     } else if (pointers.size === 2) {
-      const [a, b] = [...pointers.values()];
+      const [a, b] = Array.from(pointers.values());
       pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
       if (drag) drag.moved = true; // a pinch is never a tap
     }
@@ -580,7 +584,7 @@ function startGame(THREE) {
     if (!pointers.has(e.pointerId)) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) {
-      const [a, b] = [...pointers.values()];
+      const [a, b] = Array.from(pointers.values());
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       if (pinchDist > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * (pinchDist / d), 6, 26);
       pinchDist = d;
@@ -632,7 +636,7 @@ function startGame(THREE) {
     { t: 0.75, sky: 0x2b2a5e, sun: 0x8fa0ff, sunI: 0.25, hemiI: 0.3 },
     { t: 0.92, sky: 0x3a3473, sun: 0x9fa8ff, sunI: 0.25, hemiI: 0.32 },
     { t: 1.00, sky: 0xffc6a8, sun: 0xffb98a, sunI: 0.8, hemiI: 0.6 },
-  ].map((k) => ({ ...k, sky: new THREE.Color(k.sky), sun: new THREE.Color(k.sun) }));
+  ].map((k) => Object.assign({}, k, { sky: new THREE.Color(k.sky), sun: new THREE.Color(k.sun) }));
   const skyColor = new THREE.Color();
 
   function updateSky() {
@@ -686,7 +690,8 @@ function startGame(THREE) {
       const r = Math.hypot(player.position.x, player.position.z);
       if (r > WALK_R) player.position.multiplyScalar(WALK_R / r);
       // bump into trees, rocks and bushes
-      for (const o of solids) {
+      for (let i = 0; i < solids.length; i++) {
+        const o = solids[i];
         const dx = player.position.x - o.x, dz = player.position.z - o.z;
         const d = Math.hypot(dx, dz), min = o.r + 0.35;
         if (d < min && d > 1e-4) {
@@ -719,7 +724,8 @@ function startGame(THREE) {
 
   function updateCrops(dt, night) {
     const t = state.time;
-    for (const tile of tiles) {
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
       if (!tile.crop) continue;
       if (tile.wet && tile.stage < 3) {
         tile.growth += dt / STAGE_TIME;
