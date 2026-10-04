@@ -156,6 +156,11 @@ function startGame(THREE) {
     if (wd > limit) { x = wx * limit / wd - LAKE_X; z = wz * limit / wd - LAKE_Z; }
     return { x: x, z: z };
   }
+  // A random spot inside the water, between `inner` and `outer` (0 = middle, 1 = shore)
+  function lakeSpot(inner, outer) {
+    var e = lakeEdge(rand() * Math.PI * 2, 0, 16.7), f = inner + rand() * (outer - inner);
+    return { x: e.x * f, z: e.z * f };
+  }
   function lakeGeometry(extra, limit) {
     var shape = new THREE.Shape();
     for (var i = 0; i <= 96; i++) {
@@ -167,7 +172,50 @@ function startGame(THREE) {
     g.rotateX(-Math.PI / 2); // lay it flat on the ground
     return g;
   }
+  // Water surface: rings from the middle out to the shore, each point knows how deep it is
+  function waterGeometry() {
+    var RINGS = 14, SEG = 96, pos = [0, 0, 0], depth = [1], idx = [];
+    for (var r = 1; r <= RINGS; r++) {
+      for (var s = 0; s < SEG; s++) {
+        var e = lakeEdge((s / SEG) * Math.PI * 2, 0, 16.7), f = r / RINGS;
+        pos.push(e.x * f, 0, e.z * f);
+        depth.push(1 - f);
+      }
+    }
+    for (var s2 = 0; s2 < SEG; s2++) idx.push(0, 1 + s2, 1 + (s2 + 1) % SEG);
+    for (var r2 = 1; r2 < RINGS; r2++) {
+      var in0 = 1 + (r2 - 1) * SEG, out0 = 1 + r2 * SEG;
+      for (var s3 = 0; s3 < SEG; s3++) {
+        var a = in0 + s3, b = in0 + (s3 + 1) % SEG, c = out0 + s3, d = out0 + (s3 + 1) % SEG;
+        idx.push(a, c, b, b, c, d);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('depth', new THREE.Float32BufferAttribute(depth, 1));
+    g.setIndex(idx);
+    return g;
+  }
+
+  // The wooden dock points from the shore toward where you start
+  var DOCK_A = Math.atan2(-((FARM_Z + 5) - LAKE_Z), FARM_X - LAKE_X);
+  var DOCK_LEN = 4.6, DOCK_W = 1.5;
+  var dockIn = { x: -Math.cos(DOCK_A), z: Math.sin(DOCK_A) }; // direction out over the water
+  var dockStart = {
+    x: LAKE_X + Math.cos(DOCK_A) * (lakeRadius(DOCK_A) + 0.8),
+    z: LAKE_Z - Math.sin(DOCK_A) * (lakeRadius(DOCK_A) + 0.8)
+  };
+  function onDock(x, z) {
+    var rx = x - dockStart.x, rz = z - dockStart.z;
+    var along = rx * dockIn.x + rz * dockIn.z, across = -rx * dockIn.z + rz * dockIn.x;
+    return along > -0.2 && along < DOCK_LEN && Math.abs(across) < DOCK_W / 2;
+  }
+  function nearDock(a) {
+    var d = Math.abs(Math.atan2(Math.sin(a - DOCK_A), Math.cos(a - DOCK_A)));
+    return d < 0.3;
+  }
   function inLake(x, z) {
+    if (onDock(x, z)) return false;
     var lx = x - LAKE_X, lz = z - LAKE_Z;
     return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) - 0.3;
   }
@@ -175,41 +223,163 @@ function startGame(THREE) {
     var lx = x - LAKE_X, lz = z - LAKE_Z;
     return Math.sqrt(lx * lx + lz * lz) < lakeRadius(Math.atan2(-lz, lx)) + 1.5;
   }
+
   var lake = new THREE.Group();
   lake.position.set(LAKE_X, 0, LAKE_Z);
-  place(new THREE.Mesh(lakeGeometry(1, 17.4), M.sand), 0, 0.015, 0, lake).castShadow = false;
-  var waterMat = new THREE.MeshStandardMaterial({
-    color: 0x7cc8ff, emissive: 0x2f7fd0, emissiveIntensity: 0.15,
-    roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9
-  });
-  place(new THREE.Mesh(lakeGeometry(0, 16.7), waterMat), 0, 0.04, 0, lake).castShadow = false;
+  // Mossy bank and the lake bed under the water
+  place(new THREE.Mesh(lakeGeometry(0.9, 17.4), mat(0x76b862)), 0, 0.012, 0, lake).castShadow = false;
+  place(new THREE.Mesh(lakeGeometry(0, 16.7), mat(0x3f7470)), 0, 0.02, 0, lake).castShadow = false;
 
-  var padGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.03, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
-  var lilyPads = [];
-  [[-3, 1.5], [2.2, -2.8], [3.5, 2.2], [-0.8, -4], [0.5, 3.8], [-4.2, -1.5], [4.5, -0.5], [-2.2, 4.2], [1.5, 0.6], [-1.5, -1.2]].forEach(function (p, i) {
-    var pad = place(new THREE.Mesh(padGeo, M.pad), p[0], 0.07, p[1], lake);
-    pad.rotation.y = i * 1.7;
-    lilyPads.push(pad);
+  // Water: shallow teal at the edges, deep blue in the middle, with moving shimmer
+  var waterUniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+    uTime: { value: 0 },
+    uNight: { value: 0 },
+    uShallow: { value: new THREE.Color(0x5cc3cf) },
+    uDeep: { value: new THREE.Color(0x1d5d8c) }
+  }]);
+  var waterMat = new THREE.ShaderMaterial({
+    uniforms: waterUniforms,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    fog: true,
+    vertexShader: [
+      'attribute float depth;',
+      'varying float vDepth;',
+      'varying vec3 vWorld;',
+      '#include <fog_pars_vertex>',
+      'void main() {',
+      '  vDepth = depth;',
+      '  vec4 world = modelMatrix * vec4(position, 1.0);',
+      '  vWorld = world.xyz;',
+      '  vec4 mvPosition = viewMatrix * world;',
+      '  gl_Position = projectionMatrix * mvPosition;',
+      '  #include <fog_vertex>',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform float uTime;',
+      'uniform float uNight;',
+      'uniform vec3 uShallow;',
+      'uniform vec3 uDeep;',
+      'varying float vDepth;',
+      'varying vec3 vWorld;',
+      '#include <fog_pars_fragment>',
+      'void main() {',
+      '  float d = smoothstep(0.0, 0.7, vDepth);',
+      '  vec3 col = mix(uShallow, uDeep, d);',
+      '  vec2 p = vWorld.xz;',
+      '  float w = sin(p.x * 1.7 + uTime * 0.8) + sin(p.y * 2.1 - uTime * 0.6)',
+      '          + sin((p.x + p.y) * 1.3 + uTime * 1.1) + sin((p.x - p.y) * 2.7 - uTime * 0.9);',
+      '  col += vec3(0.55, 0.8, 0.85) * smoothstep(2.3, 3.4, w) * 0.3 * (1.0 - d * 0.4);',
+      '  col = mix(col, vec3(0.85, 0.96, 0.96), smoothstep(0.07, 0.0, vDepth) * 0.55);',
+      '  col *= mix(1.0, 0.35, uNight);',
+      '  gl_FragColor = vec4(col, mix(0.55, 0.92, d));',
+      '  #include <fog_fragment>',
+      '}'
+    ].join('\n')
   });
-  var lotus = new THREE.Group();
-  var lotusPetal = new THREE.SphereGeometry(0.1, 10, 8);
-  for (var lp = 0; lp < 6; lp++) {
-    var la = (lp / 6) * Math.PI * 2;
-    var petal = place(new THREE.Mesh(lotusPetal, M.petal), Math.cos(la) * 0.1, 0.05, Math.sin(la) * 0.1, lotus);
-    petal.scale.set(1.3, 0.5, 0.7);
-    petal.rotation.set(0, -la, 0.5);
-  }
-  place(new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), M.center), 0, 0.06, 0, lotus);
-  lotus.position.set(-3, 0.1, 1.5);
-  lake.add(lotus);
+  var water = new THREE.Mesh(waterGeometry(), waterMat);
+  water.position.y = 0.12;
+  water.renderOrder = 1;
+  lake.add(water);
 
+  // Rocks under the surface
+  var boulderGeo = new THREE.IcosahedronGeometry(1, 1);
   var rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
-  for (var pb = 0; pb < 16; pb++) {
-    var pe = lakeEdge((pb / 16) * Math.PI * 2 + rand() * 0.3, 0.6, 17);
-    var ps = 0.25 + rand() * 0.3;
-    var pebble = place(new THREE.Mesh(rockGeo, M.rock), pe.x, ps * 0.15, pe.z, lake);
-    pebble.scale.set(ps, ps * 0.6, ps);
+  var stoneMat = mat(0x9ea7b3), wetStoneMat = mat(0x5f8790);
+  for (var ur = 0; ur < 12; ur++) {
+    var us = lakeSpot(0.5, 0.85), usz = 0.6 + rand() * 0.9;
+    var under = place(new THREE.Mesh(boulderGeo, wetStoneMat), us.x, 0.02, us.z, lake);
+    under.scale.set(usz, 0.08, usz * (0.7 + rand() * 0.5));
+    under.rotation.y = rand() * 3;
+    under.castShadow = false;
   }
+
+  // Big boulders out in the water
+  [2.1, 3.2, 4.3].forEach(function (offset, i) {
+    var e = lakeEdge(DOCK_A + offset, 0, 16.7), f = 0.45 + i * 0.12, size = 0.8 + rand() * 0.6;
+    var big = place(new THREE.Mesh(boulderGeo, stoneMat), e.x * f, size * 0.2, e.z * f, lake);
+    big.scale.set(size, size * 0.65, size * 0.85);
+    big.rotation.y = rand() * 3;
+    var small = place(new THREE.Mesh(boulderGeo, stoneMat), e.x * f + size * 0.9, 0.1, e.z * f + 0.3, lake);
+    small.scale.set(size * 0.5, size * 0.3, size * 0.45);
+  });
+
+  // Rounded boulders all around the shore
+  for (var sb = 0; sb < 34; sb++) {
+    var sa = (sb / 34) * Math.PI * 2 + rand() * 0.12;
+    if (nearDock(sa) || rand() < 0.3) continue; // leave gaps so it doesn't look like a necklace
+    var se = lakeEdge(sa, -0.3 + rand() * 0.8, 16.9), ss = 0.3 + rand() * 0.6;
+    var shoreRock = place(new THREE.Mesh(boulderGeo, stoneMat), se.x, ss * 0.1, se.z, lake);
+    shoreRock.scale.set(ss, ss * 0.6, ss * (0.7 + rand() * 0.4));
+    shoreRock.rotation.y = rand() * 3;
+    solids.push({ x: LAKE_X + se.x, z: LAKE_Z + se.z, r: ss * 0.6 });
+  }
+
+  // Reeds in a few spots along the edge
+  var reedGeo = new THREE.ConeGeometry(0.035, 0.9, 4);
+  var reedMat = mat(0x4f7d3c), cattailMat = mat(0x7a4f2e);
+  for (var rc = 0; rc < 9; rc++) {
+    var ra0 = rand() * Math.PI * 2;
+    if (nearDock(ra0)) continue;
+    var re = lakeEdge(ra0, -0.15, 16.6);
+    for (var rd = 0; rd < 7; rd++) {
+      var reed = place(new THREE.Mesh(reedGeo, reedMat), re.x + (rand() - 0.5) * 0.6, 0.4, re.z + (rand() - 0.5) * 0.6, lake);
+      reed.scale.y = 0.7 + rand() * 0.6;
+      reed.rotation.set((rand() - 0.5) * 0.3, 0, (rand() - 0.5) * 0.3);
+      if (rd % 3 === 0) {
+        place(new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.18, 6), cattailMat), 0, 0.35, 0, reed);
+      }
+    }
+  }
+
+  // Lily pads in clusters, a few with flowers
+  var padGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.02, 18, 1, false, 0.4, Math.PI * 2 - 0.8);
+  var padMat = mat(0x2f5e3c);
+  var lotusPetal = new THREE.SphereGeometry(0.09, 10, 8);
+  var lilyPads = [];
+  for (var lc = 0; lc < 11; lc++) {
+    var cs = lakeSpot(0.2, 0.8);
+    var count = 3 + Math.floor(rand() * 4);
+    for (var lpad = 0; lpad < count; lpad++) {
+      var pad = place(new THREE.Mesh(padGeo, padMat), cs.x + (rand() - 0.5) * 1.4, 0.14, cs.z + (rand() - 0.5) * 1.4, lake);
+      pad.scale.setScalar(0.6 + rand() * 0.7);
+      pad.rotation.y = rand() * Math.PI * 2;
+      pad.castShadow = false;
+      lilyPads.push(pad);
+      if (lc % 4 === 0 && lpad === 0) {
+        for (var lp = 0; lp < 6; lp++) {
+          var la = (lp / 6) * Math.PI * 2;
+          var petal = place(new THREE.Mesh(lotusPetal, M.petal), Math.cos(la) * 0.09, 0.05, Math.sin(la) * 0.09, pad);
+          petal.scale.set(1.3, 0.5, 0.7);
+          petal.rotation.set(0, -la, 0.5);
+        }
+        place(new THREE.Mesh(lotusPetal, M.center), 0, 0.07, 0, pad).scale.setScalar(0.6);
+      }
+    }
+  }
+
+  // ---------- The dock ----------
+  var dock = new THREE.Group();
+  dock.position.set(dockStart.x, 0, dockStart.z);
+  dock.rotation.y = Math.atan2(-dockIn.z, dockIn.x); // local x now points out over the water
+  var plankGeo = new THREE.BoxGeometry(0.28, 0.06, DOCK_W);
+  var woodMats = [mat(0xa8774f), mat(0x9a6a45), mat(0xb38457)];
+  for (var pk = 0; pk * 0.31 < DOCK_LEN; pk++) {
+    var plank = place(new THREE.Mesh(plankGeo, woodMats[pk % 3]), pk * 0.31 + 0.14, 0.27, (rand() - 0.5) * 0.04, dock);
+    plank.rotation.y = (rand() - 0.5) * 0.03;
+  }
+  var beamGeo = new THREE.BoxGeometry(DOCK_LEN, 0.1, 0.1);
+  place(new THREE.Mesh(beamGeo, mat(0x6e4a30)), DOCK_LEN / 2, 0.19, DOCK_W / 2 - 0.1, dock);
+  place(new THREE.Mesh(beamGeo, mat(0x6e4a30)), DOCK_LEN / 2, 0.19, -DOCK_W / 2 + 0.1, dock);
+  var postGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.8, 8);
+  [0.5, 2.4, DOCK_LEN - 0.1].forEach(function (px) {
+    place(new THREE.Mesh(postGeo, mat(0x6e4a30)), px, 0.05, DOCK_W / 2, dock);
+    place(new THREE.Mesh(postGeo, mat(0x6e4a30)), px, 0.05, -DOCK_W / 2, dock);
+  });
+  scene.add(dock);
+
   scene.add(lake);
   var rippleTimer = 0;
 
@@ -383,7 +553,7 @@ function startGame(THREE) {
   function ripple(x, z, color, maxSize, life) {
     var m = new THREE.Mesh(waveGeo, new THREE.MeshBasicMaterial({ color: color, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     m.rotation.x = -Math.PI / 2;
-    m.position.set(x, 0.08, z);
+    m.position.set(x, 0.16, z);
     scene.add(m);
     waves.push({ mesh: m, life: life, max: life, size: maxSize });
   }
@@ -633,6 +803,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
+    player.position.y = onDock(player.position.x, player.position.z) ? 0.3 : 0; // step up onto the dock
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
@@ -679,18 +850,18 @@ function startGame(THREE) {
     state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
     ui.mana.style.width = (state.mana / MAX_MANA * 100).toFixed(1) + '%';
 
-    // Lake: shimmer, bobbing lily pads, the odd ripple
-    waterMat.emissiveIntensity = 0.12 + night * 0.25 + Math.sin(t * 1.5) * 0.05;
+    // Lake: moving water, bobbing lily pads, the odd ripple
+    waterUniforms.uTime.value = t;
+    waterUniforms.uNight.value = night;
     lilyPads.forEach(function (pad, n) {
-      pad.position.y = 0.07 + Math.sin(t * 1.4 + n * 1.3) * 0.015;
-      pad.rotation.y += dt * 0.05;
+      pad.position.y = 0.14 + Math.sin(t * 1.4 + n * 1.3) * 0.012;
+      pad.rotation.y += dt * 0.03 * (n % 2 ? 1 : -1);
     });
-    lotus.rotation.y += dt * 0.3;
     rippleTimer -= dt;
     if (rippleTimer <= 0) {
       rippleTimer = 0.6 + Math.random() * 0.9;
-      var ra = Math.random() * Math.PI * 2, rr = Math.random() * LAKE_R * 0.6;
-      ripple(LAKE_X + Math.cos(ra) * rr, LAKE_Z + Math.sin(ra) * rr, 0xffffff, 0.9, 1.6);
+      var re = lakeEdge(Math.random() * Math.PI * 2, 0, 16.7), rf = Math.random() * 0.7;
+      ripple(LAKE_X + re.x * rf, LAKE_Z + re.z * rf, 0xffffff, 0.9, 1.6);
     }
 
     // Fireflies come out at night
