@@ -35,7 +35,19 @@ function startGame(THREE) {
 
   // ---------- Settings ----------
   var TILE = 1.3, COLS = 6, ROWS = 4, FARM_X = 5.5, FARM_Z = -3.5;
-  var WALK_R = 16;
+  var WALK_R = 16;  // the middle of the island, where the first scenery was planted
+  var ISLAND = 34;  // half the width of the whole island, which is a square with softly rounded corners
+  var SQUARENESS = 8; // 2 would be a circle; the bigger this is, the squarer the island
+  // Like distance from the middle, but measured in the island's rounded-square shape: ISLAND at the edge
+  function islandR(x, z) {
+    return Math.pow(Math.pow(Math.abs(x), SQUARENESS) + Math.pow(Math.abs(z), SQUARENESS), 1 / SQUARENESS);
+  }
+  // How far the island's edge is from the middle, in direction a
+  function islandEdge(a) {
+    return ISLAND / Math.pow(Math.pow(Math.abs(Math.cos(a)), SQUARENESS) + Math.pow(Math.abs(Math.sin(a)), SQUARENESS), 1 / SQUARENESS);
+  }
+  // Can you stand here? (inside the island, a little back from the edge)
+  function onIsland(x, z) { return islandR(x, z) < ISLAND - 1.5; }
   var TREE_X = -7, TREE_Z = -8, TREE_ZONE = 3;
   var LAKE_X = -7, LAKE_Z = 6.5, LAKE_R = 8.5;
   var MAX_MANA = 100, SPELL_COST = 35;
@@ -51,6 +63,19 @@ function startGame(THREE) {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   }
+  var outerSeed = 20240;
+  function outerRand() { // used for everything on the outer land
+    outerSeed = (outerSeed * 16807) % 2147483647;
+    return (outerSeed - 1) / 2147483646;
+  }
+  // A random spot on the outer land (outside the middle of the island)
+  function outerSpot(margin) {
+    for (var i = 0; i < 40; i++) {
+      var x = (outerRand() * 2 - 1) * ISLAND, z = (outerRand() * 2 - 1) * ISLAND;
+      if (islandR(x, z) < ISLAND - margin && Math.sqrt(x * x + z * z) > 16.5) return { x: x, z: z };
+    }
+    return null;
+  }
 
   // ---------- Renderer, scene, camera ----------
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
@@ -60,7 +85,7 @@ function startGame(THREE) {
 
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x9fd8ff);
-  scene.fog = new THREE.Fog(0x9fd8ff, 32, 75);
+  scene.fog = new THREE.Fog(0x9fd8ff, 40, 110);
 
   var camera = new THREE.PerspectiveCamera(50, 1.5, 0.1, 200);
   var cam = { yaw: 0, pitch: 0.75, dist: 14, target: new THREE.Vector3() };
@@ -141,7 +166,7 @@ function startGame(THREE) {
     if (q >= 1.15) return 0;
     var t = Math.min(1, (1.15 - q) / 1.15);
     t = t * t * (3 - 2 * t);
-    var rim = Math.min(1, Math.max(0, (17.5 - Math.sqrt(x * x + z * z)) / 2.5)); // rise back up at the island's edge
+    var rim = Math.min(1, Math.max(0, (ISLAND - 0.5 - islandR(x, z)) / 2.5)); // rise back up at the island's edge
     return (-1.2 * t + noise(x * 1.5, z * 1.5) * 0.06 * t) * rim;
   }
 
@@ -174,10 +199,26 @@ function startGame(THREE) {
   function nearLake(x, z) { return lakeQ(x, z) < 1.2; }
 
   // ---------- Island ----------
-  var islandSide = place(new THREE.Mesh(new THREE.CylinderGeometry(18, 15.5, 2.4, 96, 1, true), mat(0x6f9e4f)), 0, -1.2, 0);
+  // The island's sides follow its rounded-square shape: a grassy edge, then cliffs tapering into the sea
+  function islandBand(sTop, sBot, yTop, yBot) {
+    var SEG = 256, pos = [], idx = [];
+    for (var i = 0; i <= SEG; i++) {
+      var a = (i / SEG) * Math.PI * 2, e = islandEdge(a);
+      pos.push(Math.cos(a) * e * sTop, yTop, Math.sin(a) * e * sTop, Math.cos(a) * e * sBot, yBot, Math.sin(a) * e * sBot);
+    }
+    for (var j = 0; j < SEG; j++) { var k = j * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var sideMat = mat(0x6f9e4f), cliffMat = M.cliff.clone();
+  sideMat.side = cliffMat.side = THREE.DoubleSide;
+  var islandSide = place(new THREE.Mesh(islandBand(1.03, 0.92, 0, -2.4), sideMat), 0, 0, 0);
   islandSide.castShadow = false;
-  place(new THREE.Mesh(new THREE.CylinderGeometry(15.6, 4, 6, 64, 1, true), M.cliff), 0, -5.4, 0);
-  var sea = new THREE.Mesh(new THREE.CircleGeometry(90, 64),
+  place(new THREE.Mesh(islandBand(0.92, 0.3, -2.4, -8.4), cliffMat), 0, 0, 0).castShadow = false;
+  var sea = new THREE.Mesh(new THREE.CircleGeometry(260, 64),
     new THREE.MeshStandardMaterial({ color: 0x8fd3ff, transparent: true, opacity: 0.85, roughness: 0.3 }));
   sea.rotation.x = -Math.PI / 2;
   sea.position.y = -1.4;
@@ -222,7 +263,7 @@ function startGame(THREE) {
   // The ground: a round grid that follows groundHeight, coloured grass → mud → lake bed,
   // with lush and sunny patches and softly worn paths to the dock and the Dawn Tree
   function terrainGeometry() {
-    var RINGS = 72, SEG = 180, R = 18;
+    var RINGS = 150, SEG = 360;
     var pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
     var grassA = new THREE.Color(0x8fcb68), grassB = new THREE.Color(0x5a9643), lush = new THREE.Color(0x4a8a3a);
     var sunny = new THREE.Color(0xb8cf72), path = new THREE.Color(0xa88a5c), pathEdge = new THREE.Color(0x8a9a52);
@@ -252,7 +293,7 @@ function startGame(THREE) {
     vertex(0, 0);
     for (var r = 1; r <= RINGS; r++) {
       for (var s = 0; s < SEG; s++) {
-        var a = (s / SEG) * Math.PI * 2, rr = (r / RINGS) * R;
+        var a = (s / SEG) * Math.PI * 2, rr = (r / RINGS) * islandEdge(a) * 1.03;
         vertex(Math.cos(a) * rr, Math.sin(a) * rr);
       }
     }
@@ -327,7 +368,7 @@ function startGame(THREE) {
   var ROCK_TINTS = [0x9c9a93, 0x8f949a, 0xa59c8e, 0x8d9288, 0x99999a, 0xa29589];
   function boulderGeometry(shift, n) {
     function hash(k) { var x = Math.sin(k * 12.9898 + shift * 78.233) * 43758.5453; return x - Math.floor(x); }
-    var g = new THREE.IcosahedronGeometry(1, 4);
+    var g = new THREE.IcosahedronGeometry(1, 3);
     var p = g.attributes.position, colors = [], v = new THREE.Vector3(), c = new THREE.Color();
     // flat chipped faces: a few planes that slice off the round sides
     var cuts = [];
@@ -788,7 +829,7 @@ function startGame(THREE) {
   // A random spot in water at least `minDepth` deep
   function waterSpot(minDepth) {
     for (var i = 0; i < 50; i++) {
-      var e = lakeEdge(rand() * Math.PI * 2, 0, 16.7), f = rand() * 0.85;
+      var e = lakeEdge(rand() * Math.PI * 2, 0, ISLAND - 1.3), f = rand() * 0.85;
       var x = LAKE_X + e.x * f, z = LAKE_Z + e.z * f;
       if (groundHeight(x, z) < WATER_Y - minDepth && !underDock(x, z)) return { x: x, z: z };
     }
@@ -804,7 +845,7 @@ function startGame(THREE) {
     vertex(LAKE_X, LAKE_Z);
     for (var r = 1; r <= RINGS; r++) {
       for (var s = 0; s < SEG; s++) {
-        var e = lakeEdge((s / SEG) * Math.PI * 2, 1.2, 17.6), f = r / RINGS;
+        var e = lakeEdge((s / SEG) * Math.PI * 2, 1.2, ISLAND - 0.4), f = r / RINGS;
         vertex(LAKE_X + e.x * f, LAKE_Z + e.z * f);
       }
     }
@@ -907,7 +948,7 @@ function startGame(THREE) {
   for (var sb = 0; sb < 34; sb++) {
     var sa = (sb / 34) * Math.PI * 2 + rand() * 0.12;
     if (nearDock(sa) || rand() < 0.35) continue; // leave gaps so it looks natural
-    var se = lakeEdge(sa, -0.6 + rand() * 1.2, 16.9), ss = 0.3 + rand() * 0.55;
+    var se = lakeEdge(sa, -0.6 + rand() * 1.2, ISLAND - 1.1), ss = 0.3 + rand() * 0.55;
     var sx = LAKE_X + se.x, sz = LAKE_Z + se.z;
     boulder(sx, sz, ss, 0.7).position.y = groundHeight(sx, sz) + ss * 0.1;
     solids.push({ x: sx, z: sz, r: ss * 0.6 });
@@ -1008,7 +1049,7 @@ function startGame(THREE) {
   var lilyPads = [], lilyFlowers = [];
   for (var lc = 0; lc < 8; lc++) {
     // Small groups spaced evenly around the lake
-    var ce = lakeEdge((lc / 8) * Math.PI * 2 + rand() * 0.4, 0, 16.7), cf = 0.3 + rand() * 0.45;
+    var ce = lakeEdge((lc / 8) * Math.PI * 2 + rand() * 0.4, 0, ISLAND - 1.3), cf = 0.3 + rand() * 0.45;
     var cs = { x: LAKE_X + ce.x * cf, z: LAKE_Z + ce.z * cf };
     var count = 2 + Math.floor(rand() * 3);
     for (var lpad = 0; lpad < count; lpad++) {
@@ -1583,8 +1624,8 @@ function startGame(THREE) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
       'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
   };
-  var BLADES = 3000;
-  var grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, BLADES);
+  var BLADES = 3000, OUTER_BLADES = 9000;
+  var grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, BLADES + OUTER_BLADES);
   var gMatrix = new THREE.Matrix4(), gQuat = new THREE.Quaternion(), gEuler = new THREE.Euler();
   var gScale = new THREE.Vector3(), gPos = new THREE.Vector3(), gColor = new THREE.Color();
   var blades = 0;
@@ -1604,6 +1645,20 @@ function startGame(THREE) {
     grass.setColorAt(blades, gColor);
     blades++;
   }
+  for (var ob = 0; ob < OUTER_BLADES; ob++) { // grass across the outer land
+    var os = outerSpot(0.6);
+    if (!os || groundHeight(os.x, os.z) < -0.04 || underDock(os.x, os.z)) continue;
+    gEuler.set((outerRand() - 0.5) * 0.5, outerRand() * Math.PI, (outerRand() - 0.5) * 0.5);
+    gQuat.setFromEuler(gEuler);
+    var ogs = 0.6 + outerRand() * 0.9;
+    gScale.set(ogs, ogs * (0.6 + outerRand() * 0.9), ogs);
+    gPos.set(os.x, groundHeight(os.x, os.z), os.z);
+    gMatrix.compose(gPos, gQuat, gScale);
+    grass.setMatrixAt(blades, gMatrix);
+    gColor.setHSL(0.24 + outerRand() * 0.07, 0.35 + outerRand() * 0.2, 0.55 + outerRand() * 0.2);
+    grass.setColorAt(blades, gColor);
+    blades++;
+  }
   grass.count = blades;
   grass.instanceMatrix.needsUpdate = true;
   if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
@@ -1611,14 +1666,14 @@ function startGame(THREE) {
   scene.add(grass);
 
   // Little wildflowers dotted through the grass: a thin stem with a tiny flower head
-  var FLOWERS = 360;
+  var FLOWERS = 360, OUTER_FLOWERS = 1000;
   var stemGeoW = new THREE.CylinderGeometry(0.006, 0.008, 0.22, 4);
   stemGeoW.translate(0, 0.11, 0);
   var headGeoW = new THREE.IcosahedronGeometry(0.035, 0);
   headGeoW.scale(1, 0.55, 1);
   headGeoW.translate(0, 0.23, 0);
-  var flowerStems = new THREE.InstancedMesh(stemGeoW, new THREE.MeshStandardMaterial({ color: 0x4f8a3a, roughness: 0.9 }), FLOWERS);
-  var flowerHeads = new THREE.InstancedMesh(headGeoW, new THREE.MeshStandardMaterial({ roughness: 0.6 }), FLOWERS);
+  var flowerStems = new THREE.InstancedMesh(stemGeoW, new THREE.MeshStandardMaterial({ color: 0x4f8a3a, roughness: 0.9 }), FLOWERS + OUTER_FLOWERS);
+  var flowerHeads = new THREE.InstancedMesh(headGeoW, new THREE.MeshStandardMaterial({ roughness: 0.6 }), FLOWERS + OUTER_FLOWERS);
   var FLOWER_COLORS = [0xffffff, 0xfff3a8, 0xffc4e8, 0xc9b3ff, 0xffd27a].map(function (c) { return new THREE.Color(c); });
   var wfM = new THREE.Matrix4(), wfQ = new THREE.Quaternion(), wfE = new THREE.Euler(), wfP = new THREE.Vector3(), wfS = new THREE.Vector3();
   var wildflowers = 0;
@@ -1639,6 +1694,21 @@ function startGame(THREE) {
     flowerStems.setMatrixAt(wildflowers, wfM);
     flowerHeads.setMatrixAt(wildflowers, wfM);
     flowerHeads.setColorAt(wildflowers, FLOWER_COLORS[Math.floor(h2 * 997) % FLOWER_COLORS.length]);
+    wildflowers++;
+  }
+  for (var of = 0; of < OUTER_FLOWERS * 3 && wildflowers < FLOWERS + OUTER_FLOWERS; of++) { // and across the outer land
+    var ofs = outerSpot(1), oh = outerRand();
+    if (!ofs || noise(ofs.x * 0.6 + 3, ofs.z * 0.6 - 1) < 0.05 + oh * 0.2) continue;
+    if (groundHeight(ofs.x, ofs.z) < -0.03 || underDock(ofs.x, ofs.z)) continue;
+    wfE.set((oh - 0.5) * 0.3, outerRand() * 6.28, (outerRand() - 0.5) * 0.3);
+    wfQ.setFromEuler(wfE);
+    var owsz = 0.8 + oh * 0.6;
+    wfS.set(owsz, owsz, owsz);
+    wfP.set(ofs.x, groundHeight(ofs.x, ofs.z), ofs.z);
+    wfM.compose(wfP, wfQ, wfS);
+    flowerStems.setMatrixAt(wildflowers, wfM);
+    flowerHeads.setMatrixAt(wildflowers, wfM);
+    flowerHeads.setColorAt(wildflowers, FLOWER_COLORS[Math.floor(outerRand() * FLOWER_COLORS.length)]);
     wildflowers++;
   }
   flowerStems.count = flowerHeads.count = wildflowers;
@@ -1702,10 +1772,17 @@ function startGame(THREE) {
   var startX = FARM_X, startZ = FARM_Z + 5;
   var forestSpots = [];
   // A free spot on dry land, away from the garden, lake, dock, Dawn Tree, paths and other trees
-  function forestSpot(gap, tall) {
+  function forestSpot(gap, tall, outer) {
     for (var i = 0; i < 80; i++) {
-      var a = rand() * Math.PI * 2, r = 2 + Math.sqrt(rand()) * 14.3;
-      var x = Math.cos(a) * r, z = Math.sin(a) * r;
+      var x, z;
+      if (outer) { // anywhere on the outer land
+        var o = outerSpot(1.5 + gap);
+        if (!o) continue;
+        x = o.x; z = o.z;
+      } else {
+        var a = rand() * Math.PI * 2, r = 2 + Math.sqrt(rand()) * 14.3;
+        x = Math.cos(a) * r; z = Math.sin(a) * r;
+      }
       if (Math.abs(x - FARM_X) < COLS * TILE / 2 + 1.8 && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + 1.8) continue;
       if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + (tall ? 4.6 : 1.5)) continue; // tall trees stay clear of the Dawn Tree's canopy
       if (lakeQ(x, z) < 1.3 || underDock(x, z) || dist(x, z, dockStart.x, dockStart.z) < 2.5) continue;
@@ -1874,11 +1951,11 @@ function startGame(THREE) {
     batch.count = 0;
     return batch;
   }
-  var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 9000);
+  var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 28000);
   var sprayGeo = new THREE.PlaneGeometry(1, 1);
   sprayGeo.rotateX(-Math.PI / 2);
   sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
-  var needleBatch = foliageBatch(sprayGeo, needleTex, 10000);
+  var needleBatch = foliageBatch(sprayGeo, needleTex, 18000);
   var pineCoreMat = new THREE.MeshStandardMaterial({ color: 0x1d3a22, roughness: 1 });
   var fMat = new THREE.Matrix4(), fWorld = new THREE.Matrix4(), fQuat = new THREE.Quaternion(), fEuler = new THREE.Euler();
   var fPos = new THREE.Vector3(), fScale = new THREE.Vector3(), fColor = new THREE.Color();
@@ -2101,7 +2178,9 @@ function startGame(THREE) {
     }
   }
 
+  var sceneryGroups = []; // every tree and bush, joined into a few big meshes at the end so the game stays fast
   function finishTree(t, x, z, trunkRadius) {
+    sceneryGroups.push(t);
     t.position.set(x, groundHeight(x, z), z);
     t.rotation.y = rand() * Math.PI * 2;
     t.rotation.z = (rand() - 0.5) * 0.04; // not perfectly upright
@@ -2118,8 +2197,9 @@ function startGame(THREE) {
     else pineTree(ts.x, ts.z, size);
   }
   // Bushes: several low clumps of leaves on short twigs, darker inside and underneath
-  bushSpots.forEach(function (bs) {
+  function growBush(bs) {
     var b = new THREE.Group(), sz = bs.size, warm = (rand() - 0.5) * 0.1;
+    sceneryGroups.push(b);
     b.userData.bark = barkMat;
     b.position.set(bs.x, groundHeight(bs.x, bs.z), bs.z);
     b.rotation.y = rand() * Math.PI * 2;
@@ -2138,13 +2218,8 @@ function startGame(THREE) {
       leafClump(b, center, (0.36 + rand() * 0.1) * sz, warm);
     }
     leafClump(b, new THREE.Vector3(0, 0.55 * sz, 0), 0.4 * sz, warm); // a rounded top
-  });
-
-  [leafBatch, needleBatch].forEach(function (batch) {
-    batch.instanceMatrix.needsUpdate = true;
-    if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
-    scene.add(batch);
-  });
+  }
+  bushSpots.forEach(growBush);
 
   // Rocks: clusters of a big boulder with smaller ones around it, plus loose stones
   for (var rc2 = 0; rc2 < 22; rc2++) {
@@ -2166,6 +2241,112 @@ function startGame(THREE) {
       boulder(sx2, sz2, ssz, 0.6).position.y = ssz * 0.1;
     }
   }
+
+  // ---------- Trees, bushes and rocks scattered across the outer land ----------
+  seed = 31337; // its own random numbers, so the middle of the island stays exactly as it was
+  function rockCluster(spot, big) {
+    boulder(spot.x, spot.z, big, 0.65 + rand() * 0.25).position.y = big * 0.15;
+    solids.push({ x: spot.x, z: spot.z, r: big * 0.8 });
+    var smalls = Math.floor(rand() * 4);
+    for (var sm2 = 0; sm2 < smalls; sm2++) {
+      var a3 = rand() * Math.PI * 2, d3 = big + 0.2 + rand() * 0.4, s3 = 0.15 + rand() * 0.3;
+      var x3 = spot.x + Math.cos(a3) * d3, z3 = spot.z + Math.sin(a3) * d3;
+      if (lakeQ(x3, z3) < 1.25 || !onIsland(x3, z3)) continue;
+      var hit3 = false;
+      for (var so3 = 0; so3 < solids.length - 1 && !hit3; so3++) {
+        if (dist(x3, z3, solids[so3].x, solids[so3].z) < solids[so3].r + s3) hit3 = true;
+      }
+      if (!hit3) boulder(x3, z3, s3, 0.6).position.y = s3 * 0.1;
+    }
+  }
+  for (var ot = 0; ot < 170; ot++) { // trees, some in little groves
+    var osize = 0.85 + rand() * 0.5;
+    var ots = forestSpot(1.15 * osize, true, true);
+    if (!ots) continue;
+    if (rand() < 0.65) leafyTree(ots.x, ots.z, osize);
+    else pineTree(ots.x, ots.z, osize);
+  }
+  for (var obu = 0; obu < 60; obu++) { // bushes
+    var obsz = 0.7 + rand() * 0.6;
+    var obs = forestSpot(0.85 * obsz, false, true);
+    if (!obs) continue;
+    obs.size = obsz;
+    solids.push({ x: obs.x, z: obs.z, r: 0.85 * obsz });
+    growBush(obs);
+  }
+  for (var orc = 0; orc < 70; orc++) { // rocks and boulder clusters
+    var obig = 0.5 + rand() * 1.1;
+    var ors = forestSpot(obig * 0.9, false, true);
+    if (ors) rockCluster(ors, obig);
+  }
+
+  [leafBatch, needleBatch].forEach(function (batch) {
+    batch.instanceMatrix.needsUpdate = true;
+    if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+    scene.add(batch);
+  });
+
+  // Join all the trunks, branches, roots and soil patches into one mesh per material, and all the rocks
+  // into one batch per rock shape, so hundreds of trees and rocks still draw quickly
+  function joinGeometries(geos) {
+    var pos = [], nor = [], uv = [], col = [], idx = [], off = 0, anyColor = false;
+    geos.forEach(function (g) { if (g.attributes.color) anyColor = true; });
+    geos.forEach(function (g) {
+      var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv, c = g.attributes.color;
+      for (var i = 0; i < p.count; i++) {
+        pos.push(p.getX(i), p.getY(i), p.getZ(i));
+        nor.push(n.getX(i), n.getY(i), n.getZ(i));
+        uv.push(u ? u.getX(i) : 0, u ? u.getY(i) : 0);
+        if (anyColor) { if (c) col.push(c.getX(i), c.getY(i), c.getZ(i)); else col.push(1, 1, 1); }
+      }
+      if (g.index) { for (var j = 0; j < g.index.count; j++) idx.push(g.index.getX(j) + off); }
+      else { for (var k = 0; k < p.count; k++) idx.push(k + off); }
+      off += p.count;
+    });
+    var m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    m.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    if (anyColor) m.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    m.setIndex(idx);
+    return m;
+  }
+  var byMaterial = {}, materialList = [];
+  sceneryGroups.forEach(function (grp) {
+    grp.updateMatrixWorld(true);
+    grp.traverse(function (o) {
+      if (!o.isMesh) return;
+      var key = o.material.uuid;
+      if (!byMaterial[key]) { byMaterial[key] = { mat: o.material, geos: [] }; materialList.push(byMaterial[key]); }
+      var g = o.geometry.clone();
+      g.applyMatrix4(o.matrixWorld);
+      byMaterial[key].geos.push(g);
+    });
+    scene.remove(grp);
+  });
+  materialList.forEach(function (entry) {
+    var joined = new THREE.Mesh(joinGeometries(entry.geos), entry.mat);
+    joined.castShadow = entry.mat !== litterMat;
+    joined.receiveShadow = true;
+    scene.add(joined);
+  });
+  var rockLists = boulderGeos.map(function () { return []; });
+  scene.children.slice().forEach(function (o) {
+    if (!o.isMesh || o.material !== stoneMat) return;
+    var which = boulderGeos.indexOf(o.geometry);
+    if (which < 0) return;
+    o.updateMatrix();
+    rockLists[which].push(o.matrix.clone());
+    scene.remove(o);
+  });
+  rockLists.forEach(function (list, which) {
+    if (!list.length) return;
+    var rocks = new THREE.InstancedMesh(boulderGeos[which], stoneMat, list.length);
+    list.forEach(function (m4, n) { rocks.setMatrixAt(n, m4); });
+    rocks.castShadow = rocks.receiveShadow = true;
+    scene.add(rocks);
+  });
+
   // Hide grass blades that would poke up through rocks, trunks and bushes
   var hideM = new THREE.Matrix4().makeScale(0, 0, 0), bladeM = new THREE.Matrix4(), bladeP = new THREE.Vector3();
   for (var gb = 0; gb < grass.count; gb++) {
@@ -2173,7 +2354,8 @@ function startGame(THREE) {
     bladeP.setFromMatrixPosition(bladeM);
     if (pathDist(bladeP.x, bladeP.z) < PATH_W + 0.1) { grass.setMatrixAt(gb, hideM); continue; } // bare dirt on the paths
     for (var sg = 0; sg < solids.length; sg++) {
-      if (dist(bladeP.x, bladeP.z, solids[sg].x, solids[sg].z) < solids[sg].r) { grass.setMatrixAt(gb, hideM); break; }
+      var gdx = bladeP.x - solids[sg].x, gdz = bladeP.z - solids[sg].z, gr2 = solids[sg].r;
+      if (gdx * gdx + gdz * gdz < gr2 * gr2) { grass.setMatrixAt(gb, hideM); break; }
     }
   }
   grass.instanceMatrix.needsUpdate = true;
@@ -2189,6 +2371,9 @@ function startGame(THREE) {
     }
   }
   flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
+  // Batches of grass, leaves, flowers and rocks are spread all over, so always draw them
+  // (three.js would otherwise skip a whole batch when the middle of the island is off screen)
+  scene.traverse(function (o) { if (o.isInstancedMesh) o.frustumCulled = false; });
   seed = seedBeforeForest;
 
   // ---------- Sparkles round the Dawn Tree ----------
@@ -2216,10 +2401,11 @@ function startGame(THREE) {
     g.fillRect(0, 0, 64, 64);
   })(flyGlowCanvas.getContext('2d'));
   var flyGlowTex = new THREE.CanvasTexture(flyGlowCanvas);
+  var FLY_COUNT = 180;
   function fireflyLayer(size) {
     var geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(FLY_COUNT * 3), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(FLY_COUNT * 3), 3));
     var pts = new THREE.Points(geo, new THREE.PointsMaterial({
       map: flyGlowTex, size: size, vertexColors: true, transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false
@@ -2236,6 +2422,10 @@ function startGame(THREE) {
   for (var f = 0; f < 60; f++) {
     var fa = rand() * Math.PI * 2, fr = rand() * WALK_R;
     flyHome.push({ x: Math.cos(fa) * fr, z: Math.sin(fa) * fr, y: 0.5 + rand() * 2.5, p: rand() * 10 });
+  }
+  while (flyHome.length < FLY_COUNT) { // more fireflies across the outer land
+    var ofh = outerSpot(2);
+    if (ofh) flyHome.push({ x: ofh.x, z: ofh.z, y: 0.5 + outerRand() * 2.5, p: outerRand() * 10 });
   }
 
   // ---------- Garden tiles and crops ----------
@@ -2639,7 +2829,7 @@ function startGame(THREE) {
     raycaster.setFromCamera(ndc, camera);
     var hit = new THREE.Vector3();
     if (!raycaster.ray.intersectPlane(ground, hit)) return;
-    if (Math.hypot(hit.x, hit.z) > WALK_R) return;
+    if (!onIsland(hit.x, hit.z)) return;
     walkTarget = hit;
     ripple(hit.x, hit.z, 0xffffff, 0.6, 0.45);
   }
@@ -2671,8 +2861,8 @@ function startGame(THREE) {
       player.position.x += mx * SPEED * dt;
       player.position.z += mz * SPEED * dt;
 
-      var fromCenter = Math.hypot(player.position.x, player.position.z);
-      if (fromCenter > WALK_R) player.position.multiplyScalar(WALK_R / fromCenter);
+      var fromCenter = islandR(player.position.x, player.position.z);
+      if (fromCenter > ISLAND - 1.5) player.position.multiplyScalar((ISLAND - 1.5) / fromCenter); // stay on the island
       solids.forEach(function (o) {
         var dx = player.position.x - o.x, dz = player.position.z - o.z;
         var d = Math.hypot(dx, dz), min = o.r + 0.35;
@@ -2764,7 +2954,7 @@ function startGame(THREE) {
     rippleTimer -= dt;
     if (rippleTimer <= 0) {
       rippleTimer = 0.6 + Math.random() * 0.9;
-      var re = lakeEdge(Math.random() * Math.PI * 2, 0, 16.7), rf = Math.random() * 0.7;
+      var re = lakeEdge(Math.random() * Math.PI * 2, 0, ISLAND - 1.3), rf = Math.random() * 0.7;
       var rpx = LAKE_X + re.x * rf, rpz = LAKE_Z + re.z * rf;
       if (groundHeight(rpx, rpz) < WATER_Y - 0.1) ripple(rpx, rpz, 0xffffff, 0.9, 1.6);
     }
@@ -2780,7 +2970,7 @@ function startGame(THREE) {
         var fy = Math.max(0.25, h.y + Math.sin(t * 0.9 + h.p * 2) * 0.4 + Math.sin(t * 2.3 + h.p) * 0.08);
         var blink = Math.pow(Math.max(0, Math.sin(t * (0.9 + (h.p % 1) * 0.8) + h.p * 5)), 3); // glows up, then fades out
         var b = Math.min(1, night * 1.4) * (0.1 + blink * 0.9);
-        var tint = FLY_TINTS[n < 51 ? n % 4 : 4 + (n % 2)];
+        var tint = FLY_TINTS[n % 7 === 6 ? 4 + (n % 2) : n % 4];
         fp.setXYZ(n, fx, fy, fz);
         cp.setXYZ(n, fx, fy, fz);
         fc.setXYZ(n, tint.r * b, tint.g * b, tint.b * b);
