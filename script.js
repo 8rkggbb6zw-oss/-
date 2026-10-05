@@ -2576,8 +2576,89 @@ function startGame(THREE) {
     u.solid.r = 0.35 * u.size; // only the stump is in the way now
   }
 
+  // ---------- Wooden logs you walk into to collect ----------
+  var LOGS_PER_TREE = 3; // the tree's wood is split between them
+  var logBarkTex = barkTex.clone();
+  logBarkTex.needsUpdate = true;
+  logBarkTex.repeat.set(2, 1);
+  var logGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.75, 14);
+  logGeo.rotateZ(Math.PI / 2); // lying on its side
+  var logMats = [new THREE.MeshStandardMaterial({ map: logBarkTex, color: 0xb08a6a, roughness: 0.9 }), stumpTopMat, stumpTopMat];
+  var logs = [];
+  function dropLogs(u, len) {
+    for (var i = 0; i < LOGS_PER_TREE; i++) {
+      var f = (i + 0.7) / (LOGS_PER_TREE + 0.4);
+      var x = u.base.x + u.fallDir.x * len * f + (Math.random() - 0.5) * 0.6;
+      var z = u.base.z + u.fallDir.z * len * f + (Math.random() - 0.5) * 0.6;
+      var m = new THREE.Mesh(logGeo, logMats);
+      m.castShadow = m.receiveShadow = true;
+      m.position.set(x, u.base.y + 1.2, z);
+      m.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(m);
+      var share = Math.floor(WOOD_PER_TREE / LOGS_PER_TREE) + (i < WOOD_PER_TREE % LOGS_PER_TREE ? 1 : 0);
+      logs.push({ mesh: m, x: x, z: z, ground: u.base.y, t: -i * 0.12, vy: 2.2 + Math.random(), wood: share });
+    }
+  }
+  function updateLogs(dt) {
+    for (var i = logs.length - 1; i >= 0; i--) {
+      var L = logs[i];
+      L.t += dt;
+      if (L.t < 0) { L.mesh.visible = false; continue; }
+      L.mesh.visible = true;
+      var restY = L.ground + 0.17;
+      if (!L.landed) { // pops up out of the sparkles, then thuds down with a small bounce
+        L.vy -= 14 * dt;
+        L.mesh.position.y += L.vy * dt;
+        L.mesh.rotation.y += dt * 4;
+        if (L.mesh.position.y <= restY) {
+          L.mesh.position.y = restY;
+          if (Math.abs(L.vy) > 1.5) L.vy = -L.vy * 0.35;
+          else { L.landed = true; L.restT = 0; }
+        }
+      } else { // resting: a gentle glint-bob so you can spot it
+        L.restT += dt;
+        L.mesh.position.y = restY + Math.max(0, Math.sin(L.restT * 3)) * 0.04;
+      }
+      if (L.t > 0.35 && dist(player.position.x, player.position.z, L.x, L.z) < 0.75) { // walked into it: collect
+        if (!addItem('wood', L.wood)) continue;
+        popSound();
+        showToast('+' + L.wood + ' Wood 🪵');
+        burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
+        scene.remove(L.mesh);
+        logs.splice(i, 1);
+      }
+    }
+  }
+
+  // A little "pop" sound, made on the fly (no sound files needed)
+  var audioCtx = null;
+  function wakeAudio() { // phones only allow sound after you've touched the screen or pressed a key
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx && AC) audioCtx = new AC();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  window.addEventListener('pointerdown', wakeAudio);
+  window.addEventListener('keydown', wakeAudio);
+  window.addEventListener('touchstart', wakeAudio);
+  function popSound() {
+    if (!audioCtx) return;
+    var now = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620 + Math.random() * 120, now);         // a quick upward bloop
+    osc.frequency.exponentialRampToValueAtTime(1300, now + 0.07);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
   var fallQ = new THREE.Quaternion();
   function updateTrees(dt) {
+    updateLogs(dt);
     var before = swingT;
     swingT += dt;
     // holding the action button (or E / Space) keeps the axe swinging
@@ -2607,7 +2688,6 @@ function startGame(THREE) {
             var tx = u.base.x + u.fallDir.x * reach, tz = u.base.z + u.fallDir.z * reach;
             burst(tx, 0.4, tz, 0x6aa84f, 22, 4, 1.5, -4);   // leaves fly
             burst(tx, 0.2, tz, 0xb59a70, 14, 3, 0.8, -3);   // dust
-            if (addItem('wood', WOOD_PER_TREE)) showToast('+' + WOOD_PER_TREE + ' Wood 🪵');
           }
         }
         u.proxy.quaternion.copy(fallQ.setFromAxisAngle(u.fallAxis, angle));
@@ -2617,6 +2697,7 @@ function startGame(THREE) {
             var len = (u.leafy ? 3.6 : 3.4) * u.size;
             sparklePoof(new THREE.Vector3(u.base.x, u.base.y + 0.2, u.base.z),
               new THREE.Vector3(u.base.x + u.fallDir.x * len, u.base.y + 0.2, u.base.z + u.fallDir.z * len), 240);
+            dropLogs(u, len);  // logs tumble out of the sparkles, ready to pick up
             var rr = 1.1 * u.size, sx = -u.fallDir.z * rr, sz = u.fallDir.x * rr; // and a poof over the stump and roots
             sparklePoof(new THREE.Vector3(u.base.x - sx, u.base.y + 0.1, u.base.z - sz),
               new THREE.Vector3(u.base.x + sx, u.base.y + 0.1, u.base.z + sz), 110);
@@ -3123,6 +3204,7 @@ function startGame(THREE) {
       if (state.inTreeZone && state.petalDay !== state.day && addItem('petal', 1)) {
         state.petalDay = state.day;
         burst(TREE_X, 2.5, TREE_Z, 0xffb3f0, 18, 2, 1, -2);
+        popSound();
         showToast('+1 Dawn Petal 🌺');
       }
       return;
@@ -3148,6 +3230,7 @@ function startGame(THREE) {
       addItem('bloom', 1);
       addItem('seed', 2);
       burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
+      popSound();
       showToast('+1 Moonbloom 🌸  +2 Seeds 🌱');
     } else if (!tile.wet) {
       setWet(tile, true);
@@ -3175,7 +3258,7 @@ function startGame(THREE) {
     bloom: { name: 'Moonbloom', icon: '🌸', info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
-    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree gives you 15.' }
+    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' }
   };
   var BAG_SLOTS = 12;
   var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }]; // you start with a few seeds and an axe
