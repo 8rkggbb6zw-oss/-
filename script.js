@@ -1119,46 +1119,96 @@ function startGame(THREE) {
     return null;
   }
 
-  // Leafy clump: a lumpy ball, lighter on top and darker underneath
-  function leafGeometry(shift, top, bottom) {
-    var g = new THREE.IcosahedronGeometry(1, 2);
-    var p = g.attributes.position, colors = [], v = new THREE.Vector3(), c = new THREE.Color();
-    var light = new THREE.Color(top), dark = new THREE.Color(bottom);
-    for (var i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i);
-      v.multiplyScalar(1 + noise(v.x * 3 + shift, v.z * 3 + v.y * 2) * 0.16 + noise(v.y * 7 + shift, v.x * 7) * 0.05);
-      p.setXYZ(i, v.x, v.y, v.z);
-      c.copy(dark).lerp(light, Math.min(1, Math.max(0, v.y * 0.5 + 0.5 + noise(v.x * 9, v.z * 9 + shift) * 0.15)));
-      colors.push(c.r, c.g, c.b);
-    }
-    g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    g.computeVertexNormals();
-    return g;
+  // One leaf: a soft oval with a rounded tip, cupped a little and curling at the end
+  var leafShape = new THREE.Shape();
+  leafShape.moveTo(0, 0);
+  leafShape.bezierCurveTo(0.3, 0.04, 0.33, 0.5, 0, 0.62);
+  leafShape.bezierCurveTo(-0.33, 0.5, -0.3, 0.04, 0, 0);
+  var leafCardGeo = new THREE.ShapeGeometry(leafShape, 4);
+  var lcp = leafCardGeo.attributes.position;
+  for (var lci = 0; lci < lcp.count; lci++) {
+    var lx0 = lcp.getX(lci), ly0 = lcp.getY(lci);
+    lcp.setZ(lci, lx0 * lx0 * 1.4 + ly0 * ly0 * 0.18);
   }
-  var leafMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
-  var oakLeaves = [leafGeometry(0, 0x7cbf4e, 0x2f5f2a), leafGeometry(4, 0x6fb046, 0x2a5426), leafGeometry(8, 0x8ac458, 0x36662c)];
-  var birchLeaves = [leafGeometry(2, 0xb7d86a, 0x5f8a34), leafGeometry(6, 0xc4dd78, 0x6a9238)];
-  var barkMat = mat(0x6b4a32), darkBarkMat = mat(0x4e3524);
-  var birchBarkMat = new THREE.MeshStandardMaterial({ color: 0xe9e4d8, roughness: 0.8 });
-  var birchMarkMat = mat(0x3a332b);
+  leafCardGeo.computeVertexNormals();
+  // Every leaf of every tree goes into one batch, so thousands of leaves stay fast
+  var MAX_LEAVES = 40000;
+  var leafBatch = new THREE.InstancedMesh(leafCardGeo, new THREE.MeshStandardMaterial({ roughness: 0.8, side: THREE.DoubleSide }), MAX_LEAVES);
+  leafBatch.castShadow = true;
+  leafBatch.receiveShadow = true;
+  var leafCount = 0;
+  var leafLight = new THREE.Color(0xa8d454), leafMid = new THREE.Color(0x7cb340), leafDark = new THREE.Color(0x4a872c);
+  var lfN = new THREE.Vector3(), lfDown = new THREE.Vector3(), lfSide = new THREE.Vector3(), lfColor = new THREE.Color();
+  var lfBasis = new THREE.Matrix4(), lfTwist = new THREE.Matrix4(), lfTilt = new THREE.Matrix4(), lfScale = new THREE.Matrix4();
+  var lfLocal = new THREE.Matrix4(), lfWorld = new THREE.Matrix4();
+
+  // Cover a round puff with overlapping leaves that fan out from its top, like a rosette
+  function leafPuff(tree, cx, cy, cz, radius, leafSize, tint) {
+    var under = place(new THREE.Mesh(new THREE.SphereGeometry(radius * 0.88, 14, 10), leafCanopyMat), cx, cy, cz, tree);
+    under.castShadow = false;
+    // Leaves in rings, row under row like roof shingles, fanning out from the top of the puff
+    var spacing = 0.13 * leafSize / 0.6, RINGS = 9;
+    tree.updateMatrixWorld(true);
+    for (var ringNo = 0; ringNo < RINGS && leafCount < MAX_LEAVES; ringNo++) {
+      var theta = 0.18 + ringNo * (2.3 / (RINGS - 1));          // angle down from the top of the puff
+      var perRing = Math.max(5, Math.round(Math.PI * 2 * radius * Math.sin(theta) / spacing));
+      for (var k = 0; k < perRing && leafCount < MAX_LEAVES; k++) {
+        var phi = (k + (ringNo % 2) * 0.5) / perRing * Math.PI * 2 + (rand() - 0.5) * 0.15;
+        var y = Math.cos(theta), ring = Math.sin(theta);
+        lfN.set(Math.cos(phi) * ring, y, Math.sin(phi) * ring);
+        lfDown.set(0, -1, 0).addScaledVector(lfN, lfN.y);           // pointing down the slope of the puff
+        if (lfDown.lengthSq() < 0.0001) lfDown.set(Math.cos(phi), 0, Math.sin(phi));
+        lfDown.normalize();
+        lfSide.crossVectors(lfDown, lfN);
+        lfBasis.makeBasis(lfSide, lfDown, lfN);                       // leaf tip points downhill, face points out
+        lfTwist.makeRotationZ((rand() - 0.5) * 0.5);
+        lfTilt.makeRotationX(0.2 + rand() * 0.15);                    // tips lift a little, layered like shingles
+        lfScale.makeScale(leafSize, leafSize, leafSize);
+        lfLocal.makeTranslation(cx + lfN.x * radius * 0.94, cy + lfN.y * radius * 0.94, cz + lfN.z * radius * 0.94)
+          .multiply(lfBasis).multiply(lfTwist).multiply(lfTilt).multiply(lfScale);
+        lfWorld.multiplyMatrices(tree.matrixWorld, lfLocal);
+        leafBatch.setMatrixAt(leafCount, lfWorld);
+        var h = (y + 0.75) / 1.75; // 0 underneath, 1 on top
+        lfColor.copy(leafDark).lerp(leafMid, Math.min(1, h * 1.6)).lerp(leafLight, Math.max(0, h - 0.55) * 2.2);
+        lfColor.offsetHSL(tint + (rand() - 0.5) * 0.02, 0, (rand() - 0.5) * 0.06);
+        leafBatch.setColorAt(leafCount, lfColor);
+        leafCount++;
+      }
+    }
+  }
+  var leafCanopyMat = mat(0x47812b);
+  var trunkMat = new THREE.MeshStandardMaterial({ color: 0xb08257, roughness: 0.9 });
+  var darkBarkMat = mat(0x4e3524);
   var berryMat = new THREE.MeshStandardMaterial({ color: 0xffd6f4, emissive: 0xff7fd8, emissiveIntensity: 0.9 });
   var berryGeo = new THREE.SphereGeometry(0.06, 8, 6);
+  var rootGeo = new THREE.ConeGeometry(0.13, 0.9, 5);
 
-  function oakTree(x, z, size) {
+  // Leafy tree: short thick trunk with flared roots, and a canopy of stacked leafy puffs
+  function leafyTree(x, z, size) {
     var t = new THREE.Group();
-    var trunkH = 1.7 * size;
-    place(new THREE.Mesh(new THREE.CylinderGeometry(0.14 * size, 0.24 * size, trunkH, 9), barkMat), 0, trunkH / 2, 0, t);
-    place(new THREE.Mesh(new THREE.ConeGeometry(0.36 * size, 0.35 * size, 9), barkMat), 0, 0.12 * size, 0, t); // root flare
-    var blobs = 4 + Math.floor(rand() * 3);
-    for (var i = 0; i < blobs; i++) {
-      var a = (i / blobs) * Math.PI * 2 + rand(), r = i === 0 ? 0 : 0.55 * size;
-      var leaf = place(new THREE.Mesh(oakLeaves[Math.floor(rand() * 3)], leafMat),
-        Math.cos(a) * r, trunkH + 0.35 * size + (i === 0 ? 0.45 * size : rand() * 0.35 * size), Math.sin(a) * r, t);
-      leaf.scale.setScalar((i === 0 ? 1.0 : 0.75 + rand() * 0.2) * size);
-      leaf.rotation.y = rand() * Math.PI;
+    var trunkH = 1.25 * size;
+    var profile = [];
+    for (var i = 0; i <= 10; i++) {
+      var yy = (i / 10) * (trunkH + 0.5 * size);
+      profile.push(new THREE.Vector2(size * (0.15 - 0.03 * yy / trunkH + 0.2 * Math.exp(-yy * 5 / size)), yy));
     }
-    if (rand() < 0.25) addGlowBerries(t, trunkH + 0.5 * size, 0.9 * size);
+    place(new THREE.Mesh(new THREE.LatheGeometry(profile, 12), trunkMat), 0, 0, 0, t);
+    for (var rt = 0; rt < 5; rt++) { // roots spreading out over the ground
+      var holder = new THREE.Group();
+      holder.rotation.y = (rt / 5) * Math.PI * 2 + rand() * 0.4;
+      var root = place(new THREE.Mesh(rootGeo, trunkMat), 0.3 * size, 0.08 * size, 0, holder);
+      root.rotation.z = -1.25;
+      root.scale.set(size, size * (0.8 + rand() * 0.4), size * 0.55);
+      t.add(holder);
+    }
     finishTree(t, x, z, 0.3 * size);
+    var top = trunkH + 0.2 * size, tint = (rand() - 0.5) * 0.03, leaf = 0.6 * size;
+    leafPuff(t, 0, top + 1.25 * size, 0, 0.95 * size, leaf, tint);                  // crown
+    leafPuff(t, -0.62 * size, top + 0.5 * size, 0.12 * size, 0.82 * size, leaf, tint); // left
+    leafPuff(t, 0.62 * size, top + 0.5 * size, 0.08 * size, 0.82 * size, leaf, tint);  // right
+    leafPuff(t, 0, top + 0.75 * size, -0.45 * size, 0.8 * size, leaf, tint);          // back
+    leafPuff(t, 0.05 * size, top + 0.42 * size, 0.42 * size, 0.72 * size, leaf, tint); // front
+    if (rand() < 0.2) addGlowBerries(t, top + 0.9 * size, 1.05 * size);
   }
 
   function pineTree(x, z, size) {
@@ -1175,28 +1225,9 @@ function startGame(THREE) {
     finishTree(t, x, z, 0.25 * size);
   }
 
-  function birchTree(x, z, size) {
-    var t = new THREE.Group();
-    var trunkH = 2.3 * size;
-    place(new THREE.Mesh(new THREE.CylinderGeometry(0.08 * size, 0.12 * size, trunkH, 8), birchBarkMat), 0, trunkH / 2, 0, t);
-    for (var m = 0; m < 6; m++) { // dark birch markings on the white bark
-      var mark = place(new THREE.Mesh(new THREE.BoxGeometry(0.1 * size, 0.035 * size, 0.06 * size), birchMarkMat),
-        0, (0.3 + m * 0.33) * size, 0, t);
-      mark.rotation.y = rand() * Math.PI * 2;
-      mark.translateZ(0.08 * size);
-    }
-    for (var i = 0; i < 3; i++) {
-      var leaf = place(new THREE.Mesh(birchLeaves[i % 2], leafMat),
-        (rand() - 0.5) * 0.5 * size, trunkH + (0.1 + i * 0.4) * size, (rand() - 0.5) * 0.5 * size, t);
-      leaf.scale.set(0.65 * size, 0.85 * size, 0.65 * size);
-    }
-    if (rand() < 0.2) addGlowBerries(t, trunkH + 0.4 * size, 0.6 * size);
-    finishTree(t, x, z, 0.2 * size);
-  }
-
   // A few magical glowing berries hidden in the leaves
   function addGlowBerries(t, y, spread) {
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < 8; i++) {
       var a = rand() * Math.PI * 2;
       var berry = new THREE.Mesh(berryGeo, berryMat);
       berry.position.set(Math.cos(a) * spread, y + (rand() - 0.3) * spread * 0.8, Math.sin(a) * spread);
@@ -1207,21 +1238,23 @@ function startGame(THREE) {
   function finishTree(t, x, z, trunkRadius) {
     t.position.set(x, groundHeight(x, z), z);
     t.rotation.y = rand() * Math.PI * 2;
-    t.rotation.z = (rand() - 0.5) * 0.06; // not perfectly upright
+    t.rotation.z = (rand() - 0.5) * 0.05; // not perfectly upright
     scene.add(t);
     solids.push({ x: x, z: z, r: trunkRadius + 0.1 });
   }
 
-  // Plant the trees: mostly oaks, with pines and birches mixed in
-  for (var tr = 0; tr < 48; tr++) {
-    var size = 0.8 + rand() * 0.6;
-    var ts = forestSpot(0.8 * size);
+  // Plant the trees: mostly big leafy ones, with some pines mixed in
+  for (var tr = 0; tr < 44; tr++) {
+    var size = 0.8 + rand() * 0.5;
+    var ts = forestSpot(0.9 * size);
     if (!ts) continue;
-    var kind = rand();
-    if (kind < 0.45) oakTree(ts.x, ts.z, size);
-    else if (kind < 0.75) pineTree(ts.x, ts.z, size);
-    else birchTree(ts.x, ts.z, size * 0.9);
+    if (rand() < 0.75) leafyTree(ts.x, ts.z, size);
+    else pineTree(ts.x, ts.z, size);
   }
+  leafBatch.count = leafCount;
+  leafBatch.instanceMatrix.needsUpdate = true;
+  if (leafBatch.instanceColor) leafBatch.instanceColor.needsUpdate = true;
+  scene.add(leafBatch);
 
   // Rocks: clusters of a big boulder with smaller ones around it, plus loose stones
   for (var rc2 = 0; rc2 < 22; rc2++) {
