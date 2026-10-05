@@ -3767,7 +3767,7 @@ function startGame(THREE) {
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
-    pickaxe: { name: 'Pickaxe', icon: '⛏️', info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
+    pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
@@ -3992,6 +3992,83 @@ function startGame(THREE) {
       g.beginPath();
       g.moveTo(11, -29); g.lineTo(12, -26); g.lineTo(15, -25); g.lineTo(12, -24); g.lineTo(11, -21);
       g.lineTo(10, -24); g.lineTo(7, -25); g.lineTo(10, -26); g.closePath();
+      g.fill();
+    });
+  }
+  function iconPickaxe() {
+    return iconCanvas(function (g) {
+      // drawn upright along the handle, then tilted, so the handle runs corner to corner
+      g.translate(36.9, 35);   // centred and scaled so the pickaxe fills the whole picture
+      g.scale(0.98, 0.98);
+      g.rotate(-Math.PI / 4);
+      g.shadowColor = 'rgba(60,30,90,0.35)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 2;
+      // handle: dark outline, warm polished wood, a light streak of grain
+      function handlePath() {
+        g.beginPath();
+        g.moveTo(-3.2, -24); g.lineTo(3.2, -24);
+        g.quadraticCurveTo(4.4, 2, 3.4, 28); g.quadraticCurveTo(0, 32, -3.4, 28);
+        g.quadraticCurveTo(-4.4, 2, -3.2, -24);
+        g.closePath();
+      }
+      handlePath();
+      g.fillStyle = '#5a3418';
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.save();
+      g.scale(0.72, 0.97);
+      handlePath();
+      var wood = g.createLinearGradient(-4, 0, 4, 0);
+      wood.addColorStop(0, '#8a5328'); wood.addColorStop(0.45, '#c98a4e'); wood.addColorStop(1, '#8a5328');
+      g.fillStyle = wood;
+      g.fill();
+      g.restore();
+      g.strokeStyle = 'rgba(255,236,200,0.6)';
+      g.lineWidth = 0.9;
+      g.beginPath(); g.moveTo(-0.8, -14); g.quadraticCurveTo(0.6, 6, -0.2, 22); g.stroke();
+      // leather grip with slanted wraps
+      g.fillStyle = '#4a2c1a';
+      g.fillRect(-4.2, 14, 8.4, 13);
+      g.strokeStyle = '#7a4c30';
+      g.lineWidth = 1.4;
+      for (var w = 0; w < 4; w++) { g.beginPath(); g.moveTo(-4.2, 15 + w * 3.2); g.lineTo(4.2, 17.5 + w * 3.2); g.stroke(); }
+      // steel head: a curved bar tapering to a sharp point on each side
+      g.shadowColor = 'rgba(40,40,60,0.4)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 1.5;
+      g.beginPath();
+      g.moveTo(-30, -14);                                  // left point
+      g.quadraticCurveTo(-18, -27, 0, -30);                // top curve
+      g.quadraticCurveTo(18, -27, 30, -14);                // to the right point
+      g.quadraticCurveTo(17, -20, 0, -21);                 // underside curve
+      g.quadraticCurveTo(-17, -20, -30, -14);
+      g.closePath();
+      var steel = g.createLinearGradient(0, -31, 0, -18);
+      steel.addColorStop(0, '#eef2f6'); steel.addColorStop(0.5, '#b3bcc6'); steel.addColorStop(1, '#78818b');
+      g.fillStyle = steel;
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.strokeStyle = '#3d444c';
+      g.lineWidth = 1.6;
+      g.stroke();
+      // a bright polished line along the top
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(-24, -20); g.quadraticCurveTo(0, -31, 24, -20); g.stroke();
+      // the socket where the handle goes through
+      g.fillStyle = '#4b535c';
+      g.fillRect(-5.5, -31, 11, 12);
+      g.strokeStyle = '#2e343a';
+      g.lineWidth = 1.2;
+      g.strokeRect(-5.5, -31, 11, 12);
+      g.fillStyle = '#c98a4e';
+      g.fillRect(-2, -30, 4, 3);
+      // a sparkle on the head
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.moveTo(15, -29); g.lineTo(16, -26); g.lineTo(19, -25); g.lineTo(16, -24); g.lineTo(15, -21);
+      g.lineTo(14, -24); g.lineTo(11, -25); g.lineTo(14, -26); g.closePath();
       g.fill();
     });
   }
