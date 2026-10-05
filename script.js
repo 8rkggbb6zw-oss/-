@@ -1084,6 +1084,162 @@ function startGame(THREE) {
     solids.push({ x: bs.x, z: bs.z, r: 0.9 * bsize });
   }
 
+  // ---------- Trees and rocks all over the island ----------
+  var seedBeforeForest = seed;
+  seed = 777; // the forest has its own random numbers, so it never moves the rest of the scenery
+
+  // Distance from point (px, pz) to the line from (ax, az) to (bx, bz): used to keep paths clear
+  function distToPath(px, pz, ax, az, bx, bz) {
+    var dx = bx - ax, dz = bz - az, len2 = dx * dx + dz * dz;
+    var t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / len2));
+    return dist(px, pz, ax + dx * t, az + dz * t);
+  }
+  var startX = FARM_X, startZ = FARM_Z + 5;
+  var forestSpots = [];
+  // A free spot on dry land, away from the garden, lake, dock, Dawn Tree, paths and other trees
+  function forestSpot(gap) {
+    for (var i = 0; i < 80; i++) {
+      var a = rand() * Math.PI * 2, r = 2 + Math.sqrt(rand()) * 14.3;
+      var x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (Math.abs(x - FARM_X) < COLS * TILE / 2 + 1.8 && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + 1.8) continue;
+      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.5) continue;
+      if (lakeQ(x, z) < 1.3 || underDock(x, z) || dist(x, z, dockStart.x, dockStart.z) < 2.5) continue;
+      if (dist(x, z, startX, startZ) < 2.5) continue;
+      if (distToPath(x, z, startX, startZ, dockStart.x, dockStart.z) < 1.6) continue; // path to the dock
+      if (distToPath(x, z, startX, startZ, TREE_X, TREE_Z) < 1.6) continue;           // path to the Dawn Tree
+      var crowded = false;
+      for (var j = 0; j < forestSpots.length; j++) {
+        if (dist(x, z, forestSpots[j].x, forestSpots[j].z) < gap + forestSpots[j].gap) { crowded = true; break; }
+      }
+      if (crowded) continue;
+      var spot = { x: x, z: z, gap: gap };
+      forestSpots.push(spot);
+      return spot;
+    }
+    return null;
+  }
+
+  // Leafy clump: a lumpy ball, lighter on top and darker underneath
+  function leafGeometry(shift, top, bottom) {
+    var g = new THREE.IcosahedronGeometry(1, 2);
+    var p = g.attributes.position, colors = [], v = new THREE.Vector3(), c = new THREE.Color();
+    var light = new THREE.Color(top), dark = new THREE.Color(bottom);
+    for (var i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i);
+      v.multiplyScalar(1 + noise(v.x * 3 + shift, v.z * 3 + v.y * 2) * 0.16 + noise(v.y * 7 + shift, v.x * 7) * 0.05);
+      p.setXYZ(i, v.x, v.y, v.z);
+      c.copy(dark).lerp(light, Math.min(1, Math.max(0, v.y * 0.5 + 0.5 + noise(v.x * 9, v.z * 9 + shift) * 0.15)));
+      colors.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  var leafMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+  var oakLeaves = [leafGeometry(0, 0x7cbf4e, 0x2f5f2a), leafGeometry(4, 0x6fb046, 0x2a5426), leafGeometry(8, 0x8ac458, 0x36662c)];
+  var birchLeaves = [leafGeometry(2, 0xb7d86a, 0x5f8a34), leafGeometry(6, 0xc4dd78, 0x6a9238)];
+  var barkMat = mat(0x6b4a32), darkBarkMat = mat(0x4e3524);
+  var birchBarkMat = new THREE.MeshStandardMaterial({ color: 0xe9e4d8, roughness: 0.8 });
+  var birchMarkMat = mat(0x3a332b);
+  var berryMat = new THREE.MeshStandardMaterial({ color: 0xffd6f4, emissive: 0xff7fd8, emissiveIntensity: 0.9 });
+  var berryGeo = new THREE.SphereGeometry(0.06, 8, 6);
+
+  function oakTree(x, z, size) {
+    var t = new THREE.Group();
+    var trunkH = 1.7 * size;
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.14 * size, 0.24 * size, trunkH, 9), barkMat), 0, trunkH / 2, 0, t);
+    place(new THREE.Mesh(new THREE.ConeGeometry(0.36 * size, 0.35 * size, 9), barkMat), 0, 0.12 * size, 0, t); // root flare
+    var blobs = 4 + Math.floor(rand() * 3);
+    for (var i = 0; i < blobs; i++) {
+      var a = (i / blobs) * Math.PI * 2 + rand(), r = i === 0 ? 0 : 0.55 * size;
+      var leaf = place(new THREE.Mesh(oakLeaves[Math.floor(rand() * 3)], leafMat),
+        Math.cos(a) * r, trunkH + 0.35 * size + (i === 0 ? 0.45 * size : rand() * 0.35 * size), Math.sin(a) * r, t);
+      leaf.scale.setScalar((i === 0 ? 1.0 : 0.75 + rand() * 0.2) * size);
+      leaf.rotation.y = rand() * Math.PI;
+    }
+    if (rand() < 0.25) addGlowBerries(t, trunkH + 0.5 * size, 0.9 * size);
+    finishTree(t, x, z, 0.3 * size);
+  }
+
+  function pineTree(x, z, size) {
+    var t = new THREE.Group();
+    var trunkH = 0.9 * size;
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.09 * size, 0.16 * size, trunkH + 0.6 * size, 8), darkBarkMat), 0, (trunkH + 0.6 * size) / 2, 0, t);
+    var tiers = 4, shade = [0x2e5d36, 0x346842, 0x3a7046, 0x427a4c];
+    for (var i = 0; i < tiers; i++) {
+      var radius = (1.15 - i * 0.24) * size, height = (1.1 - i * 0.12) * size;
+      var tier = place(new THREE.Mesh(new THREE.ConeGeometry(radius, height, 10), new THREE.MeshStandardMaterial({ color: shade[i], roughness: 0.9, flatShading: true })),
+        0, trunkH + i * 0.62 * size + height / 2, 0, t);
+      tier.rotation.y = rand() * Math.PI;
+    }
+    finishTree(t, x, z, 0.25 * size);
+  }
+
+  function birchTree(x, z, size) {
+    var t = new THREE.Group();
+    var trunkH = 2.3 * size;
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.08 * size, 0.12 * size, trunkH, 8), birchBarkMat), 0, trunkH / 2, 0, t);
+    for (var m = 0; m < 6; m++) { // dark birch markings on the white bark
+      var mark = place(new THREE.Mesh(new THREE.BoxGeometry(0.1 * size, 0.035 * size, 0.06 * size), birchMarkMat),
+        0, (0.3 + m * 0.33) * size, 0, t);
+      mark.rotation.y = rand() * Math.PI * 2;
+      mark.translateZ(0.08 * size);
+    }
+    for (var i = 0; i < 3; i++) {
+      var leaf = place(new THREE.Mesh(birchLeaves[i % 2], leafMat),
+        (rand() - 0.5) * 0.5 * size, trunkH + (0.1 + i * 0.4) * size, (rand() - 0.5) * 0.5 * size, t);
+      leaf.scale.set(0.65 * size, 0.85 * size, 0.65 * size);
+    }
+    if (rand() < 0.2) addGlowBerries(t, trunkH + 0.4 * size, 0.6 * size);
+    finishTree(t, x, z, 0.2 * size);
+  }
+
+  // A few magical glowing berries hidden in the leaves
+  function addGlowBerries(t, y, spread) {
+    for (var i = 0; i < 7; i++) {
+      var a = rand() * Math.PI * 2;
+      var berry = new THREE.Mesh(berryGeo, berryMat);
+      berry.position.set(Math.cos(a) * spread, y + (rand() - 0.3) * spread * 0.8, Math.sin(a) * spread);
+      t.add(berry);
+    }
+  }
+
+  function finishTree(t, x, z, trunkRadius) {
+    t.position.set(x, groundHeight(x, z), z);
+    t.rotation.y = rand() * Math.PI * 2;
+    t.rotation.z = (rand() - 0.5) * 0.06; // not perfectly upright
+    scene.add(t);
+    solids.push({ x: x, z: z, r: trunkRadius + 0.1 });
+  }
+
+  // Plant the trees: mostly oaks, with pines and birches mixed in
+  for (var tr = 0; tr < 48; tr++) {
+    var size = 0.8 + rand() * 0.6;
+    var ts = forestSpot(0.8 * size);
+    if (!ts) continue;
+    var kind = rand();
+    if (kind < 0.45) oakTree(ts.x, ts.z, size);
+    else if (kind < 0.75) pineTree(ts.x, ts.z, size);
+    else birchTree(ts.x, ts.z, size * 0.9);
+  }
+
+  // Rocks: clusters of a big boulder with smaller ones around it, plus loose stones
+  for (var rc2 = 0; rc2 < 22; rc2++) {
+    var big = 0.5 + rand() * 0.9;
+    var rs2 = forestSpot(big * 0.9);
+    if (!rs2) continue;
+    boulder(rs2.x, rs2.z, big, 0.65 + rand() * 0.25).position.y = big * 0.15;
+    solids.push({ x: rs2.x, z: rs2.z, r: big * 0.8 });
+    var smalls = Math.floor(rand() * 4);
+    for (var sm = 0; sm < smalls; sm++) {
+      var sa2 = rand() * Math.PI * 2, sd = big + 0.2 + rand() * 0.4, ssz = 0.15 + rand() * 0.3;
+      var sx2 = rs2.x + Math.cos(sa2) * sd, sz2 = rs2.z + Math.sin(sa2) * sd;
+      if (lakeQ(sx2, sz2) < 1.25) continue;
+      boulder(sx2, sz2, ssz, 0.6).position.y = ssz * 0.1;
+    }
+  }
+  seed = seedBeforeForest;
+
   // ---------- Sparkles round the tree, fireflies at night ----------
   function makePoints(count, color, size) {
     var geo = new THREE.BufferGeometry();
