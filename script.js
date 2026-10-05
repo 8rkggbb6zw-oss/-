@@ -3465,7 +3465,7 @@ function startGame(THREE) {
   // ---------- Bag (inventory) ----------
   var ITEMS = {
     seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
-    bloom: { name: 'Moonbloom', icon: '🌸', info: 'A glowing flower grown in your garden.' },
+    bloom: { name: 'Moonbloom', icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
@@ -3551,6 +3551,68 @@ function startGame(THREE) {
       sparkle(53, 13, 6);
       sparkle(10, 18, 4);
       sparkle(57, 57, 3.5);
+    });
+  }
+  function iconBloom() {
+    return iconCanvas(function (g) {
+      // a soft pink glow behind the flower
+      var halo = g.createRadialGradient(32, 28, 2, 32, 28, 30);
+      halo.addColorStop(0, 'rgba(255,160,230,0.65)');
+      halo.addColorStop(1, 'rgba(255,160,230,0)');
+      g.fillStyle = halo;
+      g.fillRect(0, 0, 64, 64);
+      // stem and a leaf
+      g.strokeStyle = '#4f9a48';
+      g.lineWidth = 3;
+      g.lineCap = 'round';
+      g.beginPath(); g.moveTo(32, 34); g.quadraticCurveTo(30, 48, 34, 60); g.stroke();
+      g.fillStyle = '#6cc35f';
+      g.beginPath(); g.moveTo(32, 50); g.quadraticCurveTo(42, 42, 48, 46); g.quadraticCurveTo(42, 54, 32, 50); g.fill();
+      // two rings of petals: back ones lavender, front ones pink, each fading to white at the tip
+      function petals(count, len, wide, spin, inner, outer) {
+        for (var i = 0; i < count; i++) {
+          g.save();
+          g.translate(32, 27);
+          g.rotate(spin + (i / count) * Math.PI * 2);
+          var grad = g.createLinearGradient(0, 0, 0, -len);
+          grad.addColorStop(0, inner);
+          grad.addColorStop(1, outer);
+          g.fillStyle = grad;
+          g.beginPath();
+          g.moveTo(0, 0);
+          g.bezierCurveTo(wide, -len * 0.35, wide * 0.8, -len * 0.9, 0, -len);
+          g.bezierCurveTo(-wide * 0.8, -len * 0.9, -wide, -len * 0.35, 0, 0);
+          g.fill();
+          g.strokeStyle = 'rgba(180,70,150,0.35)';
+          g.lineWidth = 0.8;
+          g.stroke();
+          g.restore();
+        }
+      }
+      petals(6, 21, 9, Math.PI / 6, '#c58cff', '#f3e3ff');
+      petals(6, 18, 8.5, 0, '#ff7fd1', '#ffe6f6');
+      // golden glowing centre with a little crescent moon
+      var core = g.createRadialGradient(30, 25, 1, 32, 27, 8);
+      core.addColorStop(0, '#fff8d0');
+      core.addColorStop(1, '#ffc94d');
+      g.fillStyle = core;
+      g.beginPath(); g.arc(32, 27, 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#f0a020';
+      g.beginPath(); g.arc(32, 27, 4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffe9a8';
+      g.beginPath(); g.arc(33.6, 25.8, 3.4, 0, Math.PI * 2); g.fill();
+      // sparkles
+      function sparkle(x, y, r) {
+        g.fillStyle = '#fff3a0';
+        g.beginPath();
+        g.moveTo(x, y - r); g.lineTo(x + r * 0.25, y - r * 0.25); g.lineTo(x + r, y); g.lineTo(x + r * 0.25, y + r * 0.25);
+        g.lineTo(x, y + r); g.lineTo(x - r * 0.25, y + r * 0.25); g.lineTo(x - r, y); g.lineTo(x - r * 0.25, y - r * 0.25);
+        g.closePath();
+        g.fill();
+      }
+      sparkle(54, 10, 5);
+      sparkle(9, 44, 3.5);
+      sparkle(56, 36, 3);
     });
   }
   function iconCoal() {
