@@ -48,7 +48,7 @@ function startGame(THREE) {
   }
   // Can you stand here? (inside the island, a little back from the edge)
   function onIsland(x, z) { return islandR(x, z) < ISLAND - 1.5; }
-  var TREE_X = -7, TREE_Z = -8, TREE_ZONE = 3;
+  var TREE_X = -24, TREE_Z = -24, TREE_ZONE = 3; // the Dawn Tree, just in from the top-left corner
   var LAKE_X = -7, LAKE_Z = 6.5, LAKE_R = 8.5;
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
