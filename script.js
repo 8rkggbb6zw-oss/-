@@ -1231,7 +1231,8 @@ function startGame(THREE) {
   var sprayGeo = new THREE.PlaneGeometry(1, 1);
   sprayGeo.rotateX(-Math.PI / 2);
   sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
-  var needleBatch = foliageBatch(sprayGeo, needleTex, 6000);
+  var needleBatch = foliageBatch(sprayGeo, needleTex, 10000);
+  var pineCoreMat = new THREE.MeshStandardMaterial({ color: 0x1d3a22, roughness: 1 });
   var fMat = new THREE.Matrix4(), fWorld = new THREE.Matrix4(), fQuat = new THREE.Quaternion(), fEuler = new THREE.Euler();
   var fPos = new THREE.Vector3(), fScale = new THREE.Vector3(), fColor = new THREE.Color();
   var fRotY = new THREE.Matrix4(), fRotZ = new THREE.Matrix4(), fRotX = new THREE.Matrix4(), fScaleM = new THREE.Matrix4();
@@ -1322,23 +1323,50 @@ function startGame(THREE) {
     t.userData.bark = pineBarkMat;
     finishTree(t, x, z, 0.28 * size);
     var H = (3.0 + rand() * 0.8) * size;
-    var trunkGeo = new THREE.CylinderGeometry(0.05 * size, 0.25 * size, H, 10);
-    trunkGeo.translate(0, H / 2, 0);
+    var trunkGeo = new THREE.CylinderGeometry(0.02 * size, 0.25 * size, H * 0.86, 10); // stops below the tip, hidden in the needles
+    trunkGeo.translate(0, H * 0.43, 0);
     place(new THREE.Mesh(trunkGeo, pineBarkMat), 0, 0, 0, t);
+    // A dark cone hidden inside the branches, so you can't see through the gaps
+    var coreH = H * 0.62, coreGeo = new THREE.ConeGeometry(0.62 * size, coreH, 10);
+    coreGeo.translate(0, H * 0.24 + coreH / 2, 0);
+    place(new THREE.Mesh(coreGeo, pineCoreMat), 0, 0, 0, t);
     t.updateMatrixWorld(true);
-    var WHORLS = 11;
+    var WHORLS = 15;
     for (var w = 0; w < WHORLS; w++) {
       var f = w / (WHORLS - 1); // 0 at the bottom, 1 at the top
-      var y = H * (0.22 + f * 0.76), spread = (1.45 * (1 - f) + 0.3) * size;
-      var arms = Math.max(4, Math.round(9 - f * 4));
+      var y = H * (0.2 + f * 0.66), spread = (1.5 * (1 - f) + 0.35) * size;
+      var arms = Math.max(6, Math.round(12 - f * 5));
       for (var b = 0; b < arms; b++) {
-        fRotY.makeRotationY((b / arms) * Math.PI * 2 + w * 0.7 + rand() * 0.3);
+        var turn = (b / arms) * Math.PI * 2 + w * 0.7 + rand() * 0.3;
+        fRotY.makeRotationY(turn);
         fRotZ.makeRotationZ(-(0.22 + rand() * 0.22 + (1 - f) * 0.12)); // droop
         fRotX.makeRotationX((rand() - 0.5) * 0.7);                       // twist so the sprays aren't all flat
-        fScaleM.makeScale(spread, 1, spread * 0.55);
+        fScaleM.makeScale(spread, 1, spread * 0.75);
         fMat.makeTranslation(0, y, 0).multiply(fRotY).multiply(fRotZ).multiply(fRotX).multiply(fScaleM);
         addCard(needleBatch, t, fMat, 0.6 + f * 0.35 + rand() * 0.1, -0.03);
+        // a shorter inner spray between each pair of long ones fills the branch out
+        fRotY.makeRotationY(turn + Math.PI / arms);
+        fRotZ.makeRotationZ(-(0.1 + rand() * 0.2));
+        fScaleM.makeScale(spread * 0.6, 1, spread * 0.5);
+        fMat.makeTranslation(0, y + 0.06 * size, 0).multiply(fRotY).multiply(fRotZ).multiply(fScaleM);
+        addCard(needleBatch, t, fMat, 0.5 + f * 0.35 + rand() * 0.1, -0.03);
       }
+    }
+    // A pointed leafy tip: sprays angled up around the top, plus one pointing straight up
+    for (var tip = 0; tip < 6; tip++) {
+      fRotY.makeRotationY((tip / 6) * Math.PI * 2 + rand() * 0.4);
+      fRotZ.makeRotationZ(1.15 + rand() * 0.2);
+      fRotX.makeRotationX((rand() - 0.5) * 0.6);
+      fScaleM.makeScale(0.42 * size, 1, 0.22 * size);
+      fMat.makeTranslation(0, H * 0.85, 0).multiply(fRotY).multiply(fRotZ).multiply(fRotX).multiply(fScaleM);
+      addCard(needleBatch, t, fMat, 0.95 + rand() * 0.1, -0.03);
+    }
+    for (var up = 0; up < 2; up++) {
+      fRotY.makeRotationY(up * Math.PI / 2);
+      fRotZ.makeRotationZ(Math.PI / 2 - 0.05);
+      fScaleM.makeScale(0.32 * size, 1, 0.16 * size);
+      fMat.makeTranslation(0, H * 0.88, 0).multiply(fRotY).multiply(fRotZ).multiply(fScaleM);
+      addCard(needleBatch, t, fMat, 1.0, -0.03);
     }
   }
 
