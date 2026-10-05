@@ -2179,13 +2179,31 @@ function startGame(THREE) {
   }
 
   var sceneryGroups = []; // every tree and bush, joined into a few big meshes at the end so the game stays fast
+  var lastTree = null;
   function finishTree(t, x, z, trunkRadius) {
     sceneryGroups.push(t);
+    lastTree = t;
     t.position.set(x, groundHeight(x, z), z);
     t.rotation.y = rand() * Math.PI * 2;
     t.rotation.z = (rand() - 0.5) * 0.04; // not perfectly upright
     scene.add(t);
     solids.push({ x: x, z: z, r: trunkRadius + 0.1 });
+    t.userData.solid = solids[solids.length - 1];
+  }
+  // Plants a tree and remembers which leaves are its own, so it can be chopped down later
+  var choppable = [];
+  function plantTree(x, z, size, leafy) {
+    var l0 = leafBatch.count, n0 = needleBatch.count;
+    if (leafy) leafyTree(x, z, size);
+    else pineTree(x, z, size);
+    var t = lastTree;
+    t.userData.size = size;
+    t.userData.leafy = leafy;
+    t.userData.leaves = [
+      { batch: leafBatch, start: l0, count: leafBatch.count - l0 },
+      { batch: needleBatch, start: n0, count: needleBatch.count - n0 }
+    ];
+    choppable.push(t);
   }
 
   // Plant the trees: mostly broadleaf, with some pines mixed in
@@ -2193,8 +2211,7 @@ function startGame(THREE) {
     var size = 0.85 + rand() * 0.45;
     var ts = forestSpot(1.15 * size, true); // wide enough apart that their leaves don't grow into each other
     if (!ts) continue;
-    if (rand() < 0.7) leafyTree(ts.x, ts.z, size);
-    else pineTree(ts.x, ts.z, size);
+    plantTree(ts.x, ts.z, size, rand() < 0.7);
   }
   // Bushes: several low clumps of leaves on short twigs, darker inside and underneath
   function growBush(bs) {
@@ -2263,8 +2280,7 @@ function startGame(THREE) {
     var osize = 0.85 + rand() * 0.5;
     var ots = forestSpot(1.15 * osize, true, true);
     if (!ots) continue;
-    if (rand() < 0.65) leafyTree(ots.x, ots.z, osize);
-    else pineTree(ots.x, ots.z, osize);
+    plantTree(ots.x, ots.z, osize, rand() < 0.65);
   }
   for (var obu = 0; obu < 60; obu++) { // bushes
     var obsz = 0.7 + rand() * 0.6;
@@ -2293,6 +2309,8 @@ function startGame(THREE) {
     geos.forEach(function (g) { if (g.attributes.color) anyColor = true; });
     geos.forEach(function (g) {
       var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv, c = g.attributes.color;
+      g.userData.vStart = off;        // where this piece starts in the joined mesh (used to chop trees)
+      g.userData.iStart = idx.length;
       for (var i = 0; i < p.count; i++) {
         pos.push(p.getX(i), p.getY(i), p.getZ(i));
         nor.push(n.getX(i), n.getY(i), n.getZ(i));
@@ -2321,6 +2339,7 @@ function startGame(THREE) {
       var g = o.geometry.clone();
       g.applyMatrix4(o.matrixWorld);
       byMaterial[key].geos.push(g);
+      if (grp.userData.leaves) (grp.userData.pieces = grp.userData.pieces || []).push({ entry: byMaterial[key], geo: g });
     });
     scene.remove(grp);
   });
@@ -2329,6 +2348,7 @@ function startGame(THREE) {
     joined.castShadow = entry.mat !== litterMat;
     joined.receiveShadow = true;
     scene.add(joined);
+    entry.mesh = joined;
   });
   var rockLists = boulderGeos.map(function () { return []; });
   scene.children.slice().forEach(function (o) {
@@ -2346,6 +2366,240 @@ function startGame(THREE) {
     rocks.castShadow = rocks.receiveShadow = true;
     scene.add(rocks);
   });
+
+  // ---------- Chopping trees ----------
+  var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
+  var REGROW_WAIT = 180, GROW_TIME = 14; // seconds: a stump waits 3 minutes, then a new tree grows back
+  var FALL_MATS = [barkMat, pineBarkMat, pineCoreMat]; // trunks and branches fall; roots and soil stay
+  // Ranges of the big shared buffers that changed this frame, sent to the graphics card in one go
+  var dirtyRanges = [];
+  function markDirty(attr, start, count) {
+    for (var i = 0; i < dirtyRanges.length; i++) {
+      var d = dirtyRanges[i];
+      if (d.attr === attr) { d.lo = Math.min(d.lo, start); d.hi = Math.max(d.hi, start + count); return; }
+    }
+    dirtyRanges.push({ attr: attr, lo: start, hi: start + count });
+  }
+  function flushDirty() {
+    dirtyRanges.forEach(function (d) {
+      d.attr.updateRange.offset = d.lo;
+      d.attr.updateRange.count = d.hi - d.lo;
+      d.attr.needsUpdate = true;
+    });
+    dirtyRanges = [];
+  }
+  // Remember every tree's own trunk, branches and leaves inside the shared batches
+  choppable.forEach(function (t) {
+    var u = t.userData;
+    u.base = t.position.clone();
+    u.hits = 0;
+    u.state = 'standing';
+    u.solidR = u.solid.r;
+    u.parts = [];
+    (u.pieces || []).forEach(function (pc) {
+      if (FALL_MATS.indexOf(pc.entry.mat) < 0) return;
+      var pos = pc.entry.mesh.geometry.attributes.position, vs = pc.geo.userData.vStart, vc = pc.geo.attributes.position.count;
+      u.parts.push({
+        mesh: pc.entry.mesh, vStart: vs, vCount: vc,
+        iStart: pc.geo.userData.iStart, iCount: pc.geo.index ? pc.geo.index.count : vc,
+        orig: pos.array.slice(vs * 3, (vs + vc) * 3)
+      });
+    });
+    u.pieces = null;
+    u.leafOrig = u.leaves.map(function (L) { return L.batch.instanceMatrix.array.slice(L.start * 16, (L.start + L.count) * 16); });
+  });
+
+  // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
+  var growM = new THREE.Matrix4(), chopM = new THREE.Matrix4(), chopM2 = new THREE.Matrix4();
+  function setTreeGrowth(t, k) {
+    var u = t.userData, b = u.base;
+    u.parts.forEach(function (pt) {
+      var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
+      for (var i = 0; i < o.length; i += 3) {
+        arr[s0 + i] = b.x + (o[i] - b.x) * k;
+        arr[s0 + i + 1] = b.y + (o[i + 1] - b.y) * k;
+        arr[s0 + i + 2] = b.z + (o[i + 2] - b.z) * k;
+      }
+      markDirty(attr, s0, o.length);
+    });
+    growM.makeTranslation(b.x, b.y, b.z).multiply(chopM2.makeScale(k, k, k)).multiply(chopM.makeTranslation(-b.x, -b.y, -b.z));
+    u.leaves.forEach(function (L, n) {
+      if (!L.count) return;
+      var o = u.leafOrig[n], arr = L.batch.instanceMatrix.array;
+      for (var i = 0; i < L.count; i++) {
+        chopM.fromArray(o, i * 16).premultiply(growM);
+        chopM.toArray(arr, (L.start + i) * 16);
+      }
+      markDirty(L.batch.instanceMatrix, L.start * 16, L.count * 16);
+    });
+  }
+
+  // A copy of the tree that can tip over on its own, pivoting just above the stump
+  function makeFallingTree(t) {
+    var u = t.userData, b = u.base, grp = new THREE.Group();
+    grp.position.set(b.x, b.y + u.stumpH, b.z);
+    u.parts.forEach(function (pt) {
+      var src = pt.mesh.geometry, g = new THREE.BufferGeometry(), vs = pt.vStart, vc = pt.vCount, i;
+      var pos = new Float32Array(vc * 3);
+      for (i = 0; i < vc; i++) {
+        pos[i * 3] = pt.orig[i * 3] - b.x;
+        pos[i * 3 + 1] = pt.orig[i * 3 + 1] - b.y - u.stumpH;
+        pos[i * 3 + 2] = pt.orig[i * 3 + 2] - b.z;
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(src.attributes.normal.array.slice(vs * 3, (vs + vc) * 3), 3));
+      g.setAttribute('uv', new THREE.BufferAttribute(src.attributes.uv.array.slice(vs * 2, (vs + vc) * 2), 2));
+      if (src.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(src.attributes.color.array.slice(vs * 3, (vs + vc) * 3), 3));
+      var idx = new Uint32Array(pt.iCount);
+      for (i = 0; i < pt.iCount; i++) idx[i] = src.index.array[pt.iStart + i] - vs;
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+      var m = new THREE.Mesh(g, pt.mesh.material);
+      m.castShadow = true;
+      grp.add(m);
+    });
+    chopM2.makeTranslation(-b.x, -b.y - u.stumpH, -b.z);
+    u.leaves.forEach(function (L, n) {
+      if (!L.count) return;
+      var im = new THREE.InstancedMesh(L.batch.geometry, L.batch.material, L.count), c = new THREE.Color();
+      im.customDepthMaterial = L.batch.customDepthMaterial;
+      im.castShadow = true;
+      im.frustumCulled = false;
+      for (var i = 0; i < L.count; i++) {
+        chopM.fromArray(u.leafOrig[n], i * 16).premultiply(chopM2);
+        im.setMatrixAt(i, chopM);
+        c.fromArray(L.batch.instanceColor.array, (L.start + i) * 3);
+        im.setColorAt(i, c);
+      }
+      grp.add(im);
+    });
+    scene.add(grp);
+    return grp;
+  }
+
+  // Tree stumps: bark round the side, rings on top
+  var ringCanvas = document.createElement('canvas');
+  ringCanvas.width = ringCanvas.height = 128;
+  (function (g) {
+    g.fillStyle = '#d8b98a';
+    g.fillRect(0, 0, 128, 128);
+    for (var r = 6; r < 64; r += 4 + Math.random() * 3) {
+      g.strokeStyle = 'rgba(140,96,58,' + (0.3 + Math.random() * 0.3) + ')';
+      g.lineWidth = 1 + Math.random();
+      g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.stroke();
+    }
+    g.fillStyle = '#a77a4c';
+    g.beginPath(); g.arc(64, 64, 4, 0, Math.PI * 2); g.fill();
+  })(ringCanvas.getContext('2d'));
+  var stumpTopMat = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(ringCanvas), roughness: 0.9 });
+  function makeStump(t) {
+    var u = t.userData, s = u.size;
+    var geo = u.leafy ? new THREE.CylinderGeometry(0.3 * s, 0.42 * s, u.stumpH, 14) : new THREE.CylinderGeometry(0.22 * s, 0.26 * s, u.stumpH, 12);
+    var m = new THREE.Mesh(geo, [u.leafy ? barkMat : pineBarkMat, stumpTopMat, barkMat]);
+    m.position.set(u.base.x, u.base.y + u.stumpH / 2, u.base.z);
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  }
+
+  // The nearest standing tree you're close enough to chop
+  function treeInReach() {
+    var best = null, bestD = 99;
+    choppable.forEach(function (t) {
+      var u = t.userData;
+      if (u.state !== 'standing') return;
+      var d = dist(player.position.x, player.position.z, u.base.x, u.base.z);
+      if (d < u.solid.r + 1.1 && d < bestD) { best = t; bestD = d; }
+    });
+    return best;
+  }
+
+  var swingT = 1; // time since the last swing of the axe
+  function chopTree(t) {
+    if (swingT < 0.35) return; // still mid-swing
+    swingT = 0;
+    var u = t.userData;
+    facing = Math.atan2(u.base.x - player.position.x, u.base.z - player.position.z); // turn to face the tree
+    u.hits++;
+    var hx = u.base.x - Math.sin(facing) * 0.3, hz = u.base.z - Math.cos(facing) * 0.3;
+    burst(hx, 0.8, hz, 0xd2a86e, 9, 2.2, 1.6, -7);                 // wood chips
+    burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 5, 1.6, 0.2, -1.2); // a few leaves shaken loose
+    if (u.hits < CHOPS_TO_FELL) { showToast('🪓 Chop ' + u.hits + '/' + CHOPS_TO_FELL); return; }
+    // Timber! Swap the standing tree for a copy that tips over, away from you
+    u.state = 'falling';
+    u.fallT = 0;
+    u.landed = false;
+    u.stumpH = (u.leafy ? 0.38 : 0.32) * u.size;
+    var away = new THREE.Vector3(u.base.x - player.position.x, 0, u.base.z - player.position.z);
+    if (away.lengthSq() < 0.0001) away.set(1, 0, 0);
+    away.normalize();
+    u.fallDir = away;
+    u.fallAxis = new THREE.Vector3(0, 1, 0).cross(away).normalize();
+    u.proxy = makeFallingTree(t);
+    setTreeGrowth(t, 0);
+    u.stump = makeStump(t);
+    u.solid.r = 0.35 * u.size; // only the stump is in the way now
+    showToast('Timber! 🌲');
+  }
+
+  var fallQ = new THREE.Quaternion();
+  function updateTrees(dt) {
+    swingT += dt;
+    choppable.forEach(function (t) {
+      var u = t.userData;
+      if (u.state === 'falling') {
+        u.fallT += dt;
+        var FALL = 1.6, flat = Math.PI / 2 - 0.05, angle;
+        if (u.fallT < FALL) angle = Math.pow(u.fallT / FALL, 2.4) * flat; // slow at first, then faster and faster
+        else {
+          var tb = u.fallT - FALL;                                          // a little bounce as it lands
+          angle = flat - 0.1 * Math.exp(-tb * 5) * Math.abs(Math.sin(tb * 12));
+          if (!u.landed) {
+            u.landed = true;
+            var reach = (u.leafy ? 2.6 : 2.4) * u.size;
+            var tx = u.base.x + u.fallDir.x * reach, tz = u.base.z + u.fallDir.z * reach;
+            burst(tx, 0.4, tz, 0x6aa84f, 22, 4, 1.5, -4);   // leaves fly
+            burst(tx, 0.2, tz, 0xb59a70, 14, 3, 0.8, -3);   // dust
+            if (addItem('wood', WOOD_PER_TREE)) showToast('+' + WOOD_PER_TREE + ' Wood 🪵');
+          }
+        }
+        u.proxy.quaternion.copy(fallQ.setFromAxisAngle(u.fallAxis, angle));
+        if (u.fallT > FALL + 1.8) { // the fallen tree turns into sparkles and is gone
+          var k = Math.max(0, 1 - (u.fallT - FALL - 1.8) / 0.8);
+          u.proxy.scale.setScalar(k);
+          if (k === 0) {
+            burst(u.base.x + u.fallDir.x * 1.5, 0.5, u.base.z + u.fallDir.z * 1.5, 0xfff1a8, 16, 3, 1.2, -1);
+            scene.remove(u.proxy);
+            u.proxy.traverse(function (o) { if (o.isMesh && !o.isInstancedMesh) o.geometry.dispose(); });
+            u.proxy = null;
+            u.state = 'stump';
+            u.wait = REGROW_WAIT;
+          }
+        }
+      } else if (u.state === 'stump') {
+        u.wait -= dt;
+        if (u.wait <= 0) {
+          scene.remove(u.stump);
+          u.stump.geometry.dispose();
+          u.stump = null;
+          u.state = 'growing';
+          u.growT = 0;
+          u.solid.r = u.solidR;
+        }
+      } else if (u.state === 'growing') { // a new tree grows back, slowly
+        u.growT += dt;
+        var g = Math.min(1, u.growT / GROW_TIME);
+        setTreeGrowth(t, 0.05 + 0.95 * (1 - Math.pow(1 - g, 3)));
+        if (g >= 1) { u.state = 'standing'; u.hits = 0; }
+      }
+    });
+    // the axe in your hand, and its swing
+    axeHold.visible = heldItem() === 'axe';
+    var sw = swingT;
+    axeHold.rotation.x = sw < 0.12 ? 0.25 - (sw / 0.12) * 1.55
+      : sw < 0.22 ? -1.3 + ((sw - 0.12) / 0.1) * 2.8
+      : sw < 0.4 ? 1.5 - ((sw - 0.22) / 0.18) * 1.25 : 0.25;
+    flushDirty();
+  }
 
   // Hide grass blades that would poke up through rocks, trunks and bushes
   var hideM = new THREE.Matrix4().makeScale(0, 0, 0), bladeM = new THREE.Matrix4(), bladeP = new THREE.Vector3();
@@ -2504,6 +2758,13 @@ function startGame(THREE) {
   var eyeGeo = new THREE.SphereGeometry(0.04, 8, 6);
   place(new THREE.Mesh(eyeGeo, M.eye), -0.1, 1.0, 0.24, body);
   place(new THREE.Mesh(eyeGeo, M.eye), 0.1, 1.0, 0.24, body);
+  // The axe, shown in your hand while it's selected in the hotbar
+  var axeHold = new THREE.Group();
+  axeHold.position.set(0.34, 0.5, 0.06);
+  body.add(axeHold);
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.62, 8), new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, 0.26, 0, axeHold);
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.22), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 })), 0, 0.5, 0.08, axeHold);
+  axeHold.visible = false;
   player.position.set(FARM_X, 0, FARM_Z + 5);
   scene.add(player);
   var facing = Math.PI; // looking toward the garden
@@ -2703,8 +2964,11 @@ function startGame(THREE) {
   }
 
   function interact() {
+    var nearTree = treeInReach();
+    if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var tile = targetTile();
     if (!tile) {
+      if (nearTree) { showToast('Select your axe 🪓 in the hotbar to chop this tree'); return; }
       if (state.inTreeZone && state.petalDay !== state.day && addItem('petal', 1)) {
         state.petalDay = state.day;
         burst(TREE_X, 2.5, TREE_Z, 0xffb3f0, 18, 2, 1, -2);
@@ -2767,10 +3031,12 @@ function startGame(THREE) {
   var ITEMS = {
     seed: { name: 'Moonbloom Seed', icon: '🌱', info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
     bloom: { name: 'Moonbloom', icon: '🌸', info: 'A glowing flower grown in your garden.' },
-    petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' }
+    petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
+    axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
+    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree gives you 15.' }
   };
   var BAG_SLOTS = 12;
-  var bag = [{ id: 'seed', count: 6 }]; // you start with a few seeds
+  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }]; // you start with a few seeds and an axe
   var bagUi = {
     box: document.getElementById('inventory'),
     grid: document.getElementById('invGrid'),
@@ -2782,6 +3048,7 @@ function startGame(THREE) {
   var ROW_SIZE = 4, hotRow = 0; // the hotbar shows one row of the bag at a time
   var hotUi = { slots: document.getElementById('hotbarSlots'), row: document.getElementById('btnRow') };
 
+  function heldItem() { return bag[selectedSlot] ? bag[selectedSlot].id : null; } // what's selected in the hotbar
   function bagCount(id) {
     for (var i = 0; i < bag.length; i++) if (bag[i].id === id) return bag[i].count;
     return 0;
@@ -2801,7 +3068,11 @@ function startGame(THREE) {
     for (var i = 0; i < bag.length; i++) {
       if (bag[i].id === id && bag[i].count >= n) {
         bag[i].count -= n;
-        if (bag[i].count === 0) { bag.splice(i, 1); selectedSlot = -1; }
+        if (bag[i].count === 0) { // that slot is now empty: the items after it move up one
+          bag.splice(i, 1);
+          if (selectedSlot === i) selectedSlot = -1;
+          else if (selectedSlot > i) selectedSlot--;
+        }
         renderBag();
         return true;
       }
@@ -3062,6 +3333,7 @@ function startGame(THREE) {
     boat.rotation.z = Math.sin(t * 1.1) * 0.03;
     boat.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
     updateFish(dt, t, night); // magical fish swim, glow and leap
+    updateTrees(dt);          // chopped trees fall, stumps wait, and new trees grow back
     forestTime.value = t;     // trees sway in the breeze
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
