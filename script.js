@@ -2010,6 +2010,106 @@ function startGame(THREE) {
     waves.push({ mesh: m, life: life, max: life, size: maxSize });
   }
 
+  // Spell sparkles: they gather and float up around you, drift through the air to each crop
+  // the spell touches, then spiral down onto it and twinkle out
+  var SPELL_SPARKS = 600;
+  var spellGeo = new THREE.BufferGeometry();
+  spellGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPELL_SPARKS * 3), 3));
+  spellGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SPELL_SPARKS * 3), 3));
+  var spellPoints = new THREE.Points(spellGeo, new THREE.PointsMaterial({
+    map: dawnGlowTex, size: 0.42, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  }));
+  spellPoints.frustumCulled = false; // the sparkles fly all over, so always draw them
+  scene.add(spellPoints);
+  var spellTints = [new THREE.Color(0xffe08a), new THREE.Color(0xff9be0), new THREE.Color(0xc9a0ff), new THREE.Color(0xffffff)];
+  var sparks = [];
+  for (var spi = 0; spi < SPELL_SPARKS; spi++) sparks.push({ on: false });
+  function freeSpark() {
+    for (var i = 0; i < sparks.length; i++) if (!sparks[i].on) return sparks[i];
+    return null;
+  }
+  // target: {x, z} of a crop, or null to just shimmer up around you
+  function launchSparks(target, count, delay) {
+    for (var i = 0; i < count; i++) {
+      var sk = freeSpark();
+      if (!sk) return;
+      var a = Math.random() * Math.PI * 2, r = 0.3 + Math.random() * 0.4;
+      sk.on = true;
+      sk.age = -(delay + Math.random() * 0.35);   // waits a moment so they leave in a stream, not all at once
+      sk.start = new THREE.Vector3(player.position.x + Math.cos(a) * r, 0.5 + Math.random() * 0.6, player.position.z + Math.sin(a) * r);
+      sk.lift = 0.7 + Math.random() * 0.5;       // how high they float up before setting off
+      sk.rise = 0.45 + Math.random() * 0.2;
+      sk.tint = spellTints[Math.floor(Math.random() * spellTints.length)];
+      sk.twinkle = 4 + Math.random() * 5;
+      sk.p = Math.random() * 6.28;
+      sk.target = target;
+      if (target) {
+        sk.end = new THREE.Vector3(target.x + (Math.random() - 0.5) * 0.3, 1.3 + Math.random() * 0.3, target.z + (Math.random() - 0.5) * 0.3);
+        sk.travel = 0.9 + Math.random() * 0.4;
+        sk.settle = 0.8 + Math.random() * 0.3;
+        sk.arc = 1.6 + Math.random() * 1.2;      // how high the arc through the air goes
+        sk.spin = (Math.random() < 0.5 ? -1 : 1) * (3 + Math.random() * 3);
+      } else {
+        sk.travel = 0; sk.settle = 1.2 + Math.random() * 0.6;
+      }
+    }
+  }
+  var sparkMid = new THREE.Vector3(), sparkUp = new THREE.Vector3(), sparkPos = new THREE.Vector3();
+  function updateSpellSparks(dt, time) {
+    var pos = spellGeo.attributes.position, col = spellGeo.attributes.color;
+    for (var i = 0; i < sparks.length; i++) {
+      var sk = sparks[i], bright = 0;
+      if (sk.on) {
+        sk.age += dt;
+        var t = sk.age;
+        if (t < 0) {
+          bright = 0;
+          sparkPos.copy(sk.start);
+        } else if (t < sk.rise) { // 1. float up around you, swirling a little
+          var k = t / sk.rise, ease = 1 - (1 - k) * (1 - k);
+          sparkUp.copy(sk.start).y += sk.lift * ease;
+          sparkPos.copy(sparkUp);
+          sparkPos.x += Math.sin(time * 3 + sk.p) * 0.08;
+          sparkPos.z += Math.cos(time * 3 + sk.p) * 0.08;
+          bright = k;
+        } else if (t < sk.rise + sk.travel) { // 2. drift in an arc through the air to the crop
+          var f = (t - sk.rise) / sk.travel, e = f * f * (3 - 2 * f);
+          sparkUp.copy(sk.start).y += sk.lift;
+          sparkMid.copy(sparkUp).lerp(sk.end, 0.5).y += sk.arc;
+          sparkPos.copy(sparkUp).multiplyScalar((1 - e) * (1 - e))
+            .addScaledVector(sparkMid, 2 * (1 - e) * e)
+            .addScaledVector(sk.end, e * e);
+          sparkPos.x += Math.sin(time * 4 + sk.p) * 0.06;
+          bright = 1;
+        } else if (t < sk.rise + sk.travel + sk.settle) { // 3. spiral down onto the crop (or drift up and fade near you)
+          var g = (t - sk.rise - sk.travel) / sk.settle;
+          if (sk.target) {
+            var ang = sk.p + g * sk.spin, rad = 0.4 * (1 - g) + 0.05;
+            sparkPos.set(sk.target.x + Math.cos(ang) * rad, sk.end.y - g * (sk.end.y - 0.35), sk.target.z + Math.sin(ang) * rad);
+          } else {
+            sparkUp.copy(sk.start).y += sk.lift + g * 0.8;
+            sparkPos.copy(sparkUp);
+            sparkPos.x += Math.sin(time * 2 + sk.p) * 0.15 * g;
+            sparkPos.z += Math.cos(time * 2 + sk.p) * 0.15 * g;
+          }
+          bright = 1 - g * g;
+        } else {
+          sk.on = false;
+        }
+        bright *= 1.1 + 0.6 * Math.max(0, Math.sin(time * sk.twinkle + sk.p)); // twinkle
+      }
+      if (sk.on) {
+        pos.setXYZ(i, sparkPos.x, sparkPos.y, sparkPos.z);
+        col.setXYZ(i, sk.tint.r * bright, sk.tint.g * bright, sk.tint.b * bright);
+      } else {
+        col.setXYZ(i, 0, 0, 0);
+      }
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+  }
+
   // ---------- Clock ----------
   function twoDigits(n) { return n < 10 ? '0' + n : String(n); }
 
@@ -2116,12 +2216,11 @@ function startGame(THREE) {
     tiles.forEach(function (t) {
       if (t.crop && t.stage < 3 && !t.wet) {
         setWet(t, true);
+        launchSparks(t, 16, watered * 0.12); // sparkles float over and settle onto this crop
         watered += 1;
-        burst(t.x, 0.6, t.z, 0xc08bff, 8, 1.4, 2.2, -2);
       }
     });
-    ripple(player.position.x, player.position.z, 0xffb3f0, 14, 1.2);
-    burst(player.position.x, 1.2, player.position.z, 0xfff1a8, 26, 4, 3, -1);
+    if (!watered) launchSparks(null, 30, 0); // nothing to water: the sparkles just shimmer up around you
     showToast(watered ? 'Dawn Bloom! Watered ' + watered + ' crop' + (watered > 1 ? 's' : '') + ' 🌸' : 'Dawn Bloom shimmers… no crops needed water ✦');
   }
 
@@ -2351,7 +2450,10 @@ function startGame(THREE) {
     }
   }
 
+  var spellTime = 0;
   function updateEffects(dt) {
+    spellTime += dt;
+    updateSpellSparks(dt, spellTime);
     for (var i = particles.length - 1; i >= 0; i--) {
       var p = particles[i];
       p.life -= dt;
