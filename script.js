@@ -2548,6 +2548,57 @@ function startGame(THREE) {
 
   var SWING_TIME = 0.6, IMPACT = 0.27; // seconds: a whole swing, and when the axe bites into the trunk
   var swingT = 9, swingTree = null, swingRock = null; // time since the last swing started, and what it's aimed at
+  // ---------- Tilling soil with the hoe ----------
+  var TILL_FIND_CHANCE = 0.15; // each time you till, a 15% chance of digging something up
+  var TILL_FINDS = ['stone', 'fiber', 'sap', 'acorn', 'pinecone', 'coal', 'hay', 'wood', 'seed'];
+  var swingTile = null, tilling = [];
+  var ridgeGeo = new THREE.CylinderGeometry(0.07, 0.07, TILE * 0.82, 8, 1, false, 0, Math.PI);
+  ridgeGeo.rotateZ(Math.PI / 2);
+  ridgeGeo.rotateX(-Math.PI / 2); // a half-round ridge lying across the plot
+  function tillTile(tile) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    swingTile = tile;
+    facing = Math.atan2(tile.x - player.position.x, tile.z - player.position.z);
+  }
+  // The hoe bites into the ground: the turf flips over into a mound of soil with furrows
+  function hoeHits(tile) {
+    if (tile.soil) return;
+    tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
+    tile.ridges = [];
+    for (var r = 0; r < 3; r++) { // three furrows, raised one after another
+      var ridge = place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil);
+      ridge.scale.set(1, 0.001, 1);
+      tile.ridges.push(ridge);
+    }
+    tile.soil.scale.set(0.6, 0.05, 0.6);
+    tile.tillT = 0;
+    tilling.push(tile);
+    burst(tile.x, 0.2, tile.z, 0x8a5a36, 16, 2.6, 2.2, -8); // clods of earth
+    burst(tile.x, 0.2, tile.z, 0x6aa84f, 8, 2, 1.8, -7);    // bits of turf
+    if (Math.random() < TILL_FIND_CHANCE) { // dug something up!
+      var find = TILL_FINDS[Math.floor(Math.random() * TILL_FINDS.length)];
+      dropPickup(find, 1, tile.x + (Math.random() - 0.5) * 0.4, tile.z + (Math.random() - 0.5) * 0.4, 0.12, 0.35);
+      burst(tile.x, 0.4, tile.z, 0xfff1a8, 10, 2, 2, -3);
+    }
+  }
+  function updateTilling(dt) {
+    for (var i = tilling.length - 1; i >= 0; i--) {
+      var tile = tilling[i];
+      tile.tillT += dt;
+      var t = tile.tillT;
+      // the soil heaves up with a little bounce, then settles
+      var k = Math.min(1, t / 0.3);
+      var bounce = k < 1 ? 1 - Math.pow(1 - k, 3) : 1 + Math.sin(Math.min(1, (t - 0.3) / 0.3) * Math.PI) * 0.12 * Math.max(0, 1 - (t - 0.3) / 0.3);
+      tile.soil.scale.set(0.6 + 0.4 * Math.min(1, k * 1.4), Math.max(0.05, bounce), 0.6 + 0.4 * Math.min(1, k * 1.4));
+      tile.ridges.forEach(function (ridge, n) { // furrows rise one by one
+        var rk = Math.max(0, Math.min(1, (t - 0.15 - n * 0.1) / 0.2));
+        ridge.scale.y = Math.max(0.001, rk * (rk < 1 ? 1.2 : 1));
+      });
+      if (t > 0.7) { tile.soil.scale.set(1, 1, 1); tilling.splice(i, 1); }
+    }
+  }
+
   // ---------- Trimming bushes ----------
   var SNIPS_TO_TRIM = 10, HAY_CHANCE = 0.5, swingBush = null;
   var allScenery = null; // every tree and bush, filled in once everything is set up
@@ -2928,11 +2979,14 @@ function startGame(THREE) {
       if (heldItem() === 'axe') { var holdTree = treeInReach(); if (holdTree) chopTree(holdTree); }
       if (heldItem() === 'pickaxe') { var holdRock = rockInReach(); if (holdRock) mineRock(holdRock); }
       if (heldItem() === 'trimmers') { var holdBush = bushInReach(); if (holdBush) trimBush(holdBush); }
+      if (heldItem() === 'hoe') { var holdTile = targetTile(); if (holdTile && !holdTile.soil) tillTile(holdTile); }
     }
     if (swingTree && before < IMPACT && swingT >= IMPACT) { axeHits(swingTree); swingTree = null; }
     if (swingRock && before < IMPACT && swingT >= IMPACT) { pickHits(swingRock); swingRock = null; }
     updateRocks(dt);
     if (swingBush && before < IMPACT && swingT >= IMPACT) { snipHits(swingBush); swingBush = null; }
+    if (swingTile && before < IMPACT && swingT >= IMPACT) { hoeHits(swingTile); swingTile = null; }
+    updateTilling(dt);
     allScenery.forEach(function (t) {
       var u = t.userData;
       if (u.state === 'standing' && u.shudderT !== undefined) { // a quick shudder after each hit
@@ -3014,11 +3068,12 @@ function startGame(THREE) {
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
-    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe' || heldItem() === 'trimmers';
+    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe' || heldItem() === 'trimmers' || heldItem() === 'hoe';
     axeArm.visible = holding;
     axeHeadGrp.visible = heldItem() === 'axe';
     pickHeadGrp.visible = heldItem() === 'pickaxe';
     trimHeadGrp.visible = heldItem() === 'trimmers';
+    hoeHeadGrp.visible = heldItem() === 'hoe';
     // the trimmer blades open as you wind up and snap shut as they hit
     var open = swingT < IMPACT ? Math.min(1, swingT / 0.15) : Math.max(0, 1 - (swingT - IMPACT) / 0.05);
     if (swingT >= SWING_TIME) open = 0.3;
@@ -3210,7 +3265,7 @@ function startGame(THREE) {
 
   function setWet(tile, wet) {
     tile.wet = wet;
-    if (tile.soil) tile.soil.material = wet ? M.soilWet : M.soilDry;
+    if (tile.soil) tile.soil.traverse(function (o) { if (o.isMesh) o.material = wet ? M.soilWet : M.soilDry; });
   }
 
   // ---------- The mage (you!) ----------
@@ -3242,6 +3297,13 @@ function startGame(THREE) {
   axeArm.add(axeHeadGrp);
   axeArm.add(pickHeadGrp);
   axeArm.add(trimHeadGrp);
+  // hoe: a flat blade set at a right angle to the handle
+  var hoeHeadGrp = new THREE.Group();
+  axeArm.add(hoeHeadGrp);
+  var hoeMetal = new THREE.MeshStandardMaterial({ color: 0xa7adb5, metalness: 0.7, roughness: 0.4 });
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.08), hoeMetal), 0, -0.84, -0.02, hoeHeadGrp); // collar
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.17), hoeMetal), 0, -0.86, -0.13, hoeHeadGrp);  // blade
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.03), new THREE.MeshStandardMaterial({ color: 0xe6eaef, metalness: 0.9, roughness: 0.2 })), 0, -0.86, -0.22, hoeHeadGrp); // sharp edge
   // hedge trimmers: two long blades that pivot open and closed at a bolt
   var bladeMetal = new THREE.MeshStandardMaterial({ color: 0xd9dee5, metalness: 0.8, roughness: 0.25 });
   var bladeGeo = new THREE.BoxGeometry(0.018, 0.42, 0.05);
@@ -3523,8 +3585,7 @@ function startGame(THREE) {
       return;
     }
     if (!tile.soil) {
-      tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
-      burst(tile.x, 0.3, tile.z, 0xb07d55, 10, 2, 1.6, -4);
+      if (heldItem() === 'hoe') tillTile(tile); // you need the hoe to till
     } else if (!tile.crop) {
       if (!takeItem('seed', 1)) return;
       tile.crop = makeCrop(tile);
@@ -3573,6 +3634,7 @@ function startGame(THREE) {
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
+    hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
     hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
@@ -3721,6 +3783,24 @@ function startGame(THREE) {
       sparkle(56, 36, 3);
     });
   }
+  function iconHoe() {
+    return iconCanvas(function (g) {
+      g.lineCap = 'round';
+      g.strokeStyle = '#8a5a34'; // wooden handle
+      g.lineWidth = 5;
+      g.beginPath(); g.moveTo(12, 58); g.lineTo(44, 14); g.stroke();
+      g.strokeStyle = 'rgba(255,255,255,0.3)';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(13, 55); g.lineTo(43, 14); g.stroke();
+      var grad = g.createLinearGradient(36, 8, 58, 26); // metal blade
+      grad.addColorStop(0, '#d5dae0'); grad.addColorStop(1, '#7d848c');
+      g.fillStyle = grad;
+      g.beginPath(); g.moveTo(40, 10); g.lineTo(48, 6); g.lineTo(60, 22); g.lineTo(50, 28); g.closePath(); g.fill();
+      g.strokeStyle = '#5c636b'; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = '#f2f5f8'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(51, 27); g.lineTo(60, 22); g.stroke(); // bright cutting edge
+    });
+  }
   function iconFiber() {
     return iconCanvas(function (g) {
       g.lineCap = 'round';
@@ -3838,7 +3918,7 @@ function startGame(THREE) {
     });
   }
   var BAG_SLOTS = 12;
-  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }, { id: 'trimmers', count: 1 }]; // you start with a few seeds and an axe
+  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }, { id: 'trimmers', count: 1 }, { id: 'hoe', count: 1 }]; // you start with a few seeds and your tools
   var bagUi = {
     box: document.getElementById('inventory'),
     grid: document.getElementById('invGrid'),
