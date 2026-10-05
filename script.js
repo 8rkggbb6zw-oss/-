@@ -2369,7 +2369,9 @@ function startGame(THREE) {
 
   // ---------- Chopping trees ----------
   var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
-  var REGROW_WAIT = 180, GROW_TIME = 14; // seconds: a stump waits 3 minutes, then a new tree grows back
+  var REGROW_DAYS = 75;   // in-game days for a felled tree to grow all the way back
+  var SPROUT_DAYS = 1;    // the spot stays empty this long before a little sapling sprouts
+  function gameMinutes() { return (state.day - 1) * 24 * 60 + state.minutes; } // in-game minutes since Day 1 began
   var FALL_MATS = [barkMat, pineBarkMat, pineCoreMat]; // trunks and branches fall; roots and soil stay
   // Ranges of the big shared buffers that changed this frame, sent to the graphics card in one go
   var dirtyRanges = [];
@@ -2549,7 +2551,6 @@ function startGame(THREE) {
     burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 6, 1.6, 0.2, -1.2); // a few leaves shaken loose
     if (u.hits < CHOPS_TO_FELL) {
       u.shudderT = 0;
-      showToast('🪓 Chop ' + u.hits + '/' + CHOPS_TO_FELL);
       return;
     }
     // Timber! Swap the standing tree for a copy that tips over, away from you
@@ -2574,6 +2575,11 @@ function startGame(THREE) {
   function updateTrees(dt) {
     var before = swingT;
     swingT += dt;
+    // holding the action button (or E / Space) keeps the axe swinging
+    if ((actionHeld || keys['KeyE'] || keys['Space']) && swingT >= SWING_TIME && heldItem() === 'axe') {
+      var holdTree = treeInReach();
+      if (holdTree) chopTree(holdTree);
+    }
     if (swingTree && before < IMPACT && swingT >= IMPACT) { axeHits(swingTree); swingTree = null; }
     choppable.forEach(function (t) {
       var u = t.userData;
@@ -2613,25 +2619,26 @@ function startGame(THREE) {
             scene.remove(u.proxy);
             u.proxy.traverse(function (o) { if (o.isMesh && !o.isInstancedMesh) o.geometry.dispose(); });
             u.proxy = null;
-            u.state = 'stump';
-            u.wait = REGROW_WAIT;
+            scene.remove(u.stump); // the stump goes with it, leaving just the roots and soil
+            u.stump.geometry.dispose();
+            u.stump = null;
+            u.solid.r = 0;
+            u.state = 'regrowing';
+            u.felledAt = gameMinutes();
+            u.shownK = -1;
           }
         }
-      } else if (u.state === 'stump') {
-        u.wait -= dt;
-        if (u.wait <= 0) {
-          scene.remove(u.stump);
-          u.stump.geometry.dispose();
-          u.stump = null;
-          u.state = 'growing';
-          u.growT = 0;
-          u.solid.r = u.solidR;
+      } else if (u.state === 'regrowing') { // a new tree grows back slowly over many in-game days
+        var days = (gameMinutes() - u.felledAt) / (24 * 60);
+        if (days < SPROUT_DAYS) return;
+        var g = Math.min(1, (days - SPROUT_DAYS) / (REGROW_DAYS - SPROUT_DAYS));
+        var k = 0.06 + 0.94 * g;
+        if (g >= 1 || k - u.shownK > 0.004) { // only redraw when it has visibly grown, to keep the game fast
+          setTreeGrowth(t, k);
+          u.shownK = k;
+          u.solid.r = u.solidR * k;
         }
-      } else if (u.state === 'growing') { // a new tree grows back, slowly
-        u.growT += dt;
-        var g = Math.min(1, u.growT / GROW_TIME);
-        setTreeGrowth(t, 0.05 + 0.95 * (1 - Math.pow(1 - g, 3)));
-        if (g >= 1) { u.state = 'standing'; u.hits = 0; }
+        if (g >= 1) { u.state = 'standing'; u.hits = 0; u.solid.r = u.solidR; }
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
@@ -3276,6 +3283,12 @@ function startGame(THREE) {
 
   function focusGame() { canvas.focus({ preventScroll: true }); }
   ui.btnAct.addEventListener('click', function () { interact(); focusGame(); });
+  var actionHeld = false; // true while the Interact button is held down
+  ui.btnAct.addEventListener('pointerdown', function () { actionHeld = true; });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+    ui.btnAct.addEventListener(ev, function () { actionHeld = false; });
+  });
+  ui.btnAct.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // no long-press menu on phones
   ui.btnSpell.addEventListener('click', function () { castSpell(); focusGame(); });
 
   // ---------- Mouse / touch: drag to turn, pinch or scroll to zoom, tap to walk ----------

@@ -124,6 +124,10 @@ button {
   background: linear-gradient(135deg, #a86bff, #f7ef8a);
   box-shadow: 0 4px 0 #7b4fd6, 0 6px 14px rgba(120, 80, 190, 0.35);
   transition: transform .08s, box-shadow .08s;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* holding a button doesn't pop up the iPhone text menu */
+  touch-action: manipulation;
 }
 button:active { transform: translateY(3px); box-shadow: 0 1px 0 #7b4fd6; }
 
