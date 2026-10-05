@@ -2030,7 +2030,35 @@ function startGame(THREE) {
   }
   var sparkles = makePoints(40, 0xfff1a8, 0.16);
   sparkles.position.set(TREE_X, 0, TREE_Z);
-  var fireflies = makePoints(60, 0xfff3a0, 0.2);
+  // Fireflies: each one has a soft glowing halo and a bright little centre, and blinks at its own pace
+  var flyGlowCanvas = document.createElement('canvas');
+  flyGlowCanvas.width = flyGlowCanvas.height = 64;
+  (function (g) {
+    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.2, 'rgba(255,255,255,0.6)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+  })(flyGlowCanvas.getContext('2d'));
+  var flyGlowTex = new THREE.CanvasTexture(flyGlowCanvas);
+  function fireflyLayer(size) {
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(60 * 3), 3));
+    var pts = new THREE.Points(geo, new THREE.PointsMaterial({
+      map: flyGlowTex, size: size, vertexColors: true, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    pts.frustumCulled = false;
+    scene.add(pts);
+    return pts;
+  }
+  var fireflies = fireflyLayer(1.2);      // soft glowing halo
+  var fireflyCores = fireflyLayer(0.26);  // bright little centre
+  // mostly yellow-green and gold, with a few magical pink and blue ones
+  var FLY_TINTS = [0xd9ff6e, 0xeaff8a, 0xffe27a, 0xc6ff5e, 0xffb3f0, 0x9fe6ff].map(function (c) { return new THREE.Color(c); });
   var flyHome = [];
   for (var f = 0; f < 60; f++) {
     var fa = rand() * Math.PI * 2, fr = rand() * WALK_R;
@@ -2568,15 +2596,24 @@ function startGame(THREE) {
       if (groundHeight(rpx, rpz) < WATER_Y - 0.1) ripple(rpx, rpz, 0xffffff, 0.9, 1.6);
     }
 
-    // Fireflies come out at night
-    fireflies.visible = night > 0.02;
-    fireflies.material.opacity = night * 0.95;
+    // Fireflies come out at night: they drift lazily, bob up and down, and blink on and off
+    fireflies.visible = fireflyCores.visible = night > 0.02;
     if (fireflies.visible) {
-      var fp = fireflies.geometry.attributes.position;
+      var fp = fireflies.geometry.attributes.position, fc = fireflies.geometry.attributes.color;
+      var cp = fireflyCores.geometry.attributes.position, cc = fireflyCores.geometry.attributes.color;
       flyHome.forEach(function (h, n) {
-        fp.setXYZ(n, h.x + Math.sin(t * 0.5 + h.p) * 0.8, h.y + Math.sin(t * 1.3 + h.p * 2) * 0.35, h.z + Math.cos(t * 0.4 + h.p) * 0.8);
+        var fx = h.x + Math.sin(t * 0.31 + h.p) * 1.2 + Math.sin(t * 0.83 + h.p * 3) * 0.35;
+        var fz = h.z + Math.cos(t * 0.27 + h.p * 1.7) * 1.2 + Math.cos(t * 0.71 + h.p * 2) * 0.35;
+        var fy = Math.max(0.25, h.y + Math.sin(t * 0.9 + h.p * 2) * 0.4 + Math.sin(t * 2.3 + h.p) * 0.08);
+        var blink = Math.pow(Math.max(0, Math.sin(t * (0.9 + (h.p % 1) * 0.8) + h.p * 5)), 3); // glows up, then fades out
+        var b = Math.min(1, night * 1.4) * (0.1 + blink * 0.9);
+        var tint = FLY_TINTS[n < 51 ? n % 4 : 4 + (n % 2)];
+        fp.setXYZ(n, fx, fy, fz);
+        cp.setXYZ(n, fx, fy, fz);
+        fc.setXYZ(n, tint.r * b, tint.g * b, tint.b * b);
+        cc.setXYZ(n, (tint.r + 1) * 0.5 * b, (tint.g + 1) * 0.5 * b, (tint.b + 1) * 0.5 * b);
       });
-      fp.needsUpdate = true;
+      fp.needsUpdate = fc.needsUpdate = cp.needsUpdate = cc.needsUpdate = true;
     }
 
     // Highlight the tile in front of you
