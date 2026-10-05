@@ -724,13 +724,16 @@ function startGame(THREE) {
     if (dist(item.position.x, item.position.z, boatWorld.x, boatWorld.z) < BOAT_L * 0.75) item.visible = false;
   });
 
-  // ---------- Magical glowing fish ----------
-  var FISH_Y = WATER_Y - 0.13; // swimming depth, just under the surface
+  // ---------- Magical koi ----------
+  // Real-looking fish (shaped body, scales, koi patches, swimming wave) with a touch of magic:
+  // see-through fins that shift colour, glowing rune-dots, sparkles and a soft glow that brightens at night.
+  var FISH_Y = WATER_Y - 0.12; // swimming depth, just under the surface
+  var FISH_LEN = 0.62;
   var FISH_KINDS = [
-    { body: 0x8ff3ff, fin: 0xd2fbff, glow: 0x3fd8ff }, // moonlight aqua
-    { body: 0xb894ff, fin: 0xe6d4ff, glow: 0x8a5cff }, // starlight violet
-    { body: 0xffa6dd, fin: 0xffdcf2, glow: 0xff5fc4 }, // dawn pink
-    { body: 0xffd97a, fin: 0xfff2c4, glow: 0xffb83f }  // sun gold
+    { back: 0xdfe8f0, belly: 0xffffff, patch: 0x5aa8e6, fin: 0xcfeaff, glow: 0x3fd8ff, hue: 0.53 }, // moon koi
+    { back: 0xf3ece4, belly: 0xffffff, patch: 0xe8532a, fin: 0xffe0c8, glow: 0xffb83f, hue: 0.09 }, // ember koi
+    { back: 0x3b3f8f, belly: 0xb9a6ff, patch: 0x7c5cff, fin: 0xd8ccff, glow: 0x8a5cff, hue: 0.74 }, // twilight koi
+    { back: 0xffd6e6, belly: 0xfff4f8, patch: 0xe8508f, fin: 0xffd9ec, glow: 0xff5fc4, hue: 0.92 }  // rose koi
   ];
 
   // Soft round glow texture, drawn once on a little canvas
@@ -739,80 +742,128 @@ function startGame(THREE) {
   var gctx = glowCanvas.getContext('2d');
   var grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.4)');
   grad.addColorStop(1, 'rgba(255,255,255,0)');
   gctx.fillStyle = grad;
   gctx.fillRect(0, 0, 64, 64);
   var glowTexture = new THREE.CanvasTexture(glowCanvas);
 
+  // Fish body radius along its length: u = 0 at the tail, 1 at the nose
+  function fishRadius(u) { return 0.012 + 0.085 * Math.pow(Math.sin(Math.PI * u), 0.8) * (0.55 + 0.45 * u); }
+  function fishBodyGeometry(kind, shift) {
+    var N = 22, R = 16, pos = [], col = [], idx = [], c = new THREE.Color();
+    var back = new THREE.Color(kind.back), belly = new THREE.Color(kind.belly), patch = new THREE.Color(kind.patch);
+    for (var i = 0; i <= N; i++) {
+      var u = i / N, r = i === N ? 0 : fishRadius(u), x = (u - 0.5) * FISH_LEN;
+      for (var j = 0; j < R; j++) {
+        var a = (j / R) * Math.PI * 2, y = Math.cos(a) * r * 1.2, z = Math.sin(a) * r * 0.75;
+        pos.push(x, y, z);
+        c.copy(belly).lerp(back, Math.min(1, Math.max(0, Math.cos(a) * 0.8 + 0.5)));       // dark back, pale belly
+        if (Math.cos(a) > -0.2 && noise(x * 16 + shift, Math.abs(z) * 10 + y * 12 + shift) > 0.2) c.lerp(patch, 0.85); // koi patches
+        c.multiplyScalar(0.9 + 0.1 * Math.abs(Math.sin(x * 140) * Math.sin(a * 9)));      // scale shimmer
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var i2 = 0; i2 < N; i2++) {
+      for (var j2 = 0; j2 < R; j2++) {
+        var p0 = i2 * R + j2, p1 = i2 * R + (j2 + 1) % R, p2 = p0 + R, p3 = p1 + R;
+        idx.push(p0, p2, p1, p1, p2, p3);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
   // Fin shapes (drawn flat, then turned to face the right way)
   function finGeometry(points) {
     var shape = new THREE.Shape();
     shape.moveTo(points[0], points[1]);
     for (var i = 2; i < points.length; i += 4) shape.quadraticCurveTo(points[i], points[i + 1], points[i + 2], points[i + 3]);
-    return new THREE.ShapeGeometry(shape, 8);
+    return new THREE.ShapeGeometry(shape, 10);
   }
-  var tailGeo = finGeometry([0, 0, -0.18, 0.2, -0.36, 0.2, -0.27, 0.02, -0.4, -0.14, -0.2, -0.16, 0, 0]);
-  var dorsalGeo = finGeometry([-0.12, 0.06, -0.04, 0.24, 0.1, 0.07, 0, 0.05, -0.12, 0.06]);
-  var sideFinGeo = finGeometry([0, 0, -0.04, 0.1, -0.14, 0.09, -0.08, 0.02, 0, 0]);
-  var fishBodyGeo = new THREE.SphereGeometry(1, 18, 12);
-  var fishDotGeo = new THREE.SphereGeometry(0.018, 8, 6);
-  var fishEyeGeo = new THREE.SphereGeometry(0.022, 8, 6);
-  var fishEyeMat = new THREE.MeshBasicMaterial({ color: 0x1b1030 });
+  var tailGeo = finGeometry([0, 0, -0.12, 0.12, -0.3, 0.17, -0.2, 0.06, -0.24, 0, -0.2, -0.06, -0.3, -0.17, -0.12, -0.12, 0, 0]);
+  var dorsalGeo = finGeometry([0.1, 0, 0.02, 0.1, -0.14, 0.05, -0.16, 0.02, -0.14, 0, -0.02, 0, 0.1, 0]);
+  var sideFinGeo = finGeometry([0, 0, -0.03, 0.08, -0.11, 0.07, -0.07, 0.01, 0, 0]);
+  var fishEyeGeo = new THREE.SphereGeometry(0.016, 8, 6);
+  var fishEyeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+  var runeGeo = new THREE.SphereGeometry(0.013, 6, 4);
 
-  function makeFish(kind) {
+  function makeFish(kind, shift) {
+    var bodyGeo = fishBodyGeometry(kind, shift);
     var bodyMat = new THREE.MeshStandardMaterial({
-      color: kind.body, emissive: kind.glow, emissiveIntensity: 0.6, roughness: 0.25,
-      transparent: true, opacity: 0.85
+      vertexColors: true, roughness: 0.3, metalness: 0.15,
+      emissive: kind.glow, emissiveIntensity: 0.18, transparent: true, opacity: 0.92
     });
     var finMat = new THREE.MeshStandardMaterial({
-      color: kind.fin, emissive: kind.glow, emissiveIntensity: 0.5, roughness: 0.3,
+      color: kind.fin, emissive: kind.glow, emissiveIntensity: 0.55, roughness: 0.3,
       transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false
     });
-    var dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+    var runeMat = new THREE.MeshBasicMaterial({ color: kind.glow, transparent: true, opacity: 0.6 });
     var fish = new THREE.Group();
-    var bodyMesh = new THREE.Mesh(fishBodyGeo, bodyMat);
-    bodyMesh.scale.set(0.26, 0.095, 0.08);
-    fish.add(bodyMesh);
+    fish.add(new THREE.Mesh(bodyGeo, bodyMat));
     var tail = new THREE.Mesh(tailGeo, finMat);
-    tail.position.x = -0.2;
+    tail.position.x = -FISH_LEN / 2;
     fish.add(tail);
-    fish.add(new THREE.Mesh(dorsalGeo, finMat));
+    var dorsal = new THREE.Mesh(dorsalGeo, finMat);
+    dorsal.position.set(0.02, 0.085, 0);
+    fish.add(dorsal);
     var sideFins = [-1, 1].map(function (side) {
-      var f = new THREE.Mesh(sideFinGeo, finMat);
-      f.position.set(0.05, -0.02, side * 0.07);
-      f.rotation.x = side * Math.PI / 2.4;
-      fish.add(f);
-      return f;
+      var fin = new THREE.Mesh(sideFinGeo, finMat);
+      fin.position.set(0.1, -0.04, side * 0.05);
+      fin.rotation.x = side * Math.PI / 2.6;
+      fish.add(fin);
+      return fin;
     });
     [-1, 1].forEach(function (side) {
       var eye = new THREE.Mesh(fishEyeGeo, fishEyeMat);
-      eye.position.set(0.18, 0.025, side * 0.05);
+      eye.position.set(0.22, 0.025, side * 0.035);
       fish.add(eye);
+      for (var k = 0; k < 4; k++) { // glowing rune-dots along each side
+        var rune = new THREE.Mesh(runeGeo, runeMat);
+        var rx = 0.12 - k * 0.055;
+        rune.position.set(rx, 0.005, side * fishRadius(0.5 + rx / FISH_LEN) * 0.76);
+        fish.add(rune);
+      }
     });
-    [0.08, -0.02, -0.11].forEach(function (dx) { // glowing spots along the back
-      var dot = new THREE.Mesh(fishDotGeo, dotMat);
-      dot.position.set(dx, 0.075, 0);
-      fish.add(dot);
+    // Glowing koi whiskers trailing from the mouth
+    var whiskerMat = new THREE.MeshBasicMaterial({ color: kind.glow, transparent: true, opacity: 0.85 });
+    [-1, 1].forEach(function (side) {
+      var whisker = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(0.29, -0.01, side * 0.02),
+        new THREE.Vector3(0.27, -0.03, side * 0.09),
+        new THREE.Vector3(0.18, -0.02, side * 0.12));
+      fish.add(new THREE.Mesh(new THREE.TubeGeometry(whisker, 8, 0.004, 4, false), whiskerMat));
     });
-    fish.scale.setScalar(1.6);
-    fish.traverse(function (o) { o.renderOrder = 2; }); // drawn after the water so they glow through it
+    // A soft magical aura around the whole fish
+    var aura = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture, color: kind.glow, transparent: true, opacity: 0.4,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    aura.scale.set(0.9, 0.45, 1);
+    fish.add(aura);
+    fish.traverse(function (o) { o.renderOrder = 2; }); // drawn after the water so you can see them through it
     scene.add(fish);
 
-    // A soft halo of light on the water above the fish
-    var halo = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({
-      map: glowTexture, color: kind.glow, transparent: true, opacity: 0.45,
+    // A soft glow on the water above the fish (faint by day, brighter at night)
+    var halo = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({
+      map: glowTexture, color: kind.glow, transparent: true, opacity: 0.2,
       blending: THREE.AdditiveBlending, depthWrite: false
     }));
     halo.rotation.x = -Math.PI / 2;
     halo.renderOrder = 2;
     scene.add(halo);
 
-    return { group: fish, tail: tail, sideFins: sideFins, bodyMat: bodyMat, finMat: finMat, halo: halo, kind: kind };
+    return {
+      group: fish, bodyGeo: bodyGeo, basePos: new Float32Array(bodyGeo.attributes.position.array),
+      tail: tail, sideFins: sideFins, bodyMat: bodyMat, finMat: finMat, runeMat: runeMat, halo: halo, aura: aura, kind: kind
+    };
   }
 
   // Sparkles that drift up from the fish (one shared pool, drawn in a single go)
-  var SPARKS = 160;
+  var SPARKS = 120;
   var sparkPos = new Float32Array(SPARKS * 3), sparkCol = new Float32Array(SPARKS * 3);
   var sparkInfo = [];
   for (var sp0 = 0; sp0 < SPARKS; sp0++) {
@@ -823,7 +874,7 @@ function startGame(THREE) {
   sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
   sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
   var fishSparkles = new THREE.Points(sparkGeo, new THREE.PointsMaterial({
-    size: 0.09, map: glowTexture, vertexColors: true, transparent: true,
+    size: 0.07, map: glowTexture, vertexColors: true, transparent: true,
     blending: THREE.AdditiveBlending, depthWrite: false
   }));
   fishSparkles.renderOrder = 3;
@@ -857,7 +908,7 @@ function startGame(THREE) {
   var fishes = [];
   var seedBeforeFish = seed; // so adding fish doesn't move the rest of the scenery
   for (var fi = 0; fi < 7; fi++) {
-    var f = makeFish(FISH_KINDS[fi % FISH_KINDS.length]);
+    var f = makeFish(FISH_KINDS[fi % FISH_KINDS.length], fi * 3.1);
     var placed = false;
     for (var tries = 0; tries < 40 && !placed; tries++) {
       var home = waterSpot(0.5);
@@ -866,14 +917,17 @@ function startGame(THREE) {
       f.turn = rand() * Math.PI * 2;
       placed = loopIsClear(f);
     }
-    f.speed = (0.35 + rand() * 0.25) * (rand() < 0.5 ? 1 : -1);
+    f.speed = (0.3 + rand() * 0.2) * (rand() < 0.5 ? 1 : -1);
     f.phase = rand() * Math.PI * 2;
-    f.jumpIn = 3 + rand() * 9; // seconds until its next leap
-    f.jump = -1;               // -1 = swimming, 0..1 = mid-leap
-    f.sparkIn = 0;
+    f.jumpIn = 4 + rand() * 8; // seconds until its next leap
+    f.jump = -1;                // -1 = swimming, 0..1 = mid-leap
+    f.sparkIn = rand() * 2;
     fishes.push(f);
   }
   seed = seedBeforeFish;
+
+  // How far the body bends sideways: none at the nose, most at the tail
+  function swimBend(f, tailness, t, n) { return Math.sin(t * 6 + n - tailness * 4.5) * 0.045 * tailness * tailness; }
 
   function updateFish(dt, t, night) {
     fishes.forEach(function (f, n) {
@@ -884,45 +938,57 @@ function startGame(THREE) {
       g.position.z = p.z;
       g.rotation.y = Math.atan2(-(ahead.z - p.z), ahead.x - p.x); // face the way it's swimming
 
-      // Every so often, leap out of the water in a sparkly arc
-      var y = FISH_Y + Math.sin(t * 1.7 + n) * 0.03, pitch = 0;
+      // Swimming wave down the body
+      var pos = f.bodyGeo.attributes.position, base = f.basePos;
+      for (var i = 0; i < pos.count; i++) {
+        var tailness = 0.5 - base[i * 3] / FISH_LEN; // 0 at the nose, 1 at the tail
+        pos.array[i * 3 + 2] = base[i * 3 + 2] + swimBend(f, tailness, t, n);
+      }
+      pos.needsUpdate = true;
+      var tipBend = swimBend(f, 1, t, n), nearTip = swimBend(f, 0.85, t, n);
+      f.tail.position.z = tipBend;
+      f.tail.rotation.y = Math.atan2(tipBend - nearTip, 0.15 * FISH_LEN) * 2.5;
+      f.sideFins[0].rotation.z = Math.sin(t * 5 + n) * 0.35;
+      f.sideFins[1].rotation.z = -Math.sin(t * 5 + n) * 0.35;
+
+      // Now and then, a sparkly leap out of the water
+      var y = FISH_Y + Math.sin(t * 1.3 + n) * 0.025, pitch = 0;
       f.jumpIn -= dt;
       if (f.jump < 0 && f.jumpIn <= 0) {
         f.jump = 0;
-        ripple(p.x, p.z, f.kind.glow, 0.9, 1.0);
-        for (var b = 0; b < 12; b++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.2, 0.8);
+        ripple(p.x, p.z, 0xffffff, 0.9, 1.0);
+        for (var b = 0; b < 18; b++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.3, 0.9);
       }
       if (f.jump >= 0) {
         f.jump += dt / 1.1;
-        y += Math.sin(Math.PI * Math.min(f.jump, 1)) * 0.75;
+        y += Math.sin(Math.PI * Math.min(f.jump, 1)) * 0.7;
         pitch = Math.cos(Math.PI * Math.min(f.jump, 1)) * 0.9;
         if (f.jump >= 1) {
           f.jump = -1;
-          f.jumpIn = 6 + Math.random() * 10;
-          ripple(p.x, p.z, f.kind.glow, 1.1, 1.2);
-          for (var b2 = 0; b2 < 16; b2++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.4, 1.0);
+          f.jumpIn = 6 + Math.random() * 8;
+          ripple(p.x, p.z, 0xffffff, 1.1, 1.2);
+          for (var b2 = 0; b2 < 24; b2++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.5, 1.1);
         }
       }
       g.position.y = y;
       g.rotation.z = pitch;
 
-      // Flowing tail and fluttering fins
-      f.tail.rotation.y = Math.sin(t * 7 + n) * 0.45;
-      f.sideFins[0].rotation.z = Math.sin(t * 9 + n) * 0.4;
-      f.sideFins[1].rotation.z = -Math.sin(t * 9 + n) * 0.4;
-
-      // Brighter glow at night
-      f.bodyMat.emissiveIntensity = 0.55 + night * 1.0 + Math.sin(t * 2 + n) * 0.1;
-      f.finMat.emissiveIntensity = 0.45 + night * 0.9;
+      // Magic: fins slowly shift colour, rune-dots pulse, everything glows brighter at night
+      var pulse = 0.5 + 0.5 * Math.sin(t * 2.2 + n);
+      f.finMat.emissive.setHSL((f.kind.hue + Math.sin(t * 0.6 + n) * 0.18 + 1) % 1, 0.9, 0.6); // rainbow sheen
+      f.finMat.emissiveIntensity = 0.55 + night * 0.9;
+      f.bodyMat.emissiveIntensity = 0.15 + pulse * 0.08 + night * 0.6;
+      f.runeMat.opacity = 0.6 + 0.4 * pulse;
+      f.aura.material.opacity = 0.3 + pulse * 0.15 + night * 0.4;
       f.halo.position.set(p.x, WATER_Y + 0.01, p.z);
-      f.halo.material.opacity = (0.5 + night * 0.4) * (f.jump >= 0 ? 0.5 : 1);
+      f.halo.material.opacity = (0.35 + pulse * 0.1 + night * 0.5) * (f.jump >= 0 ? 0.4 : 1);
 
-      // A gentle trail of sparkles from the tail
+      // An occasional sparkle drifting up from the tail
       f.sparkIn -= dt;
       if (f.sparkIn <= 0) {
-        f.sparkIn = 0.12 + Math.random() * 0.15;
-        var back = -0.45;
-        sparkle(p.x + Math.cos(g.rotation.y) * back, y + 0.05, p.z - Math.sin(g.rotation.y) * back, f.kind.glow, 0.15, 0.35);
+        f.sparkIn = 0.15 + Math.random() * 0.2;
+        var back = -FISH_LEN * 0.6;
+        sparkle(p.x + Math.cos(g.rotation.y) * back, y + 0.05, p.z - Math.sin(g.rotation.y) * back, f.kind.glow, 0.12, 0.3);
       }
     });
 
