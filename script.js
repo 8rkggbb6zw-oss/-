@@ -3136,7 +3136,7 @@ function startGame(THREE) {
     var held = heldItem();
     var holding = held === 'axe' || held === 'pickaxe' || held === 'trimmers' || held === 'hoe'; // a tool
     axeArm.visible = !!held;   // your arm shows whenever you're holding anything
-    toolHandle.visible = holding;
+    toolHandle.visible = holding && held !== 'trimmers'; // the trimmers have their own short handle
     if (held !== heldShown) {  // swap the material in your hand
       heldItemGrp.traverse(function (o) { // free the old item's one-off shapes
         if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
@@ -3405,16 +3405,66 @@ function startGame(THREE) {
   place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.17), hoeMetal), 0, -0.86, -0.13, hoeHeadGrp);  // blade
   place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.03), new THREE.MeshStandardMaterial({ color: 0xe6eaef, metalness: 0.9, roughness: 0.2 })), 0, -0.86, -0.22, hoeHeadGrp); // sharp edge
   // hedge trimmers: two long blades that pivot open and closed at a bolt
-  var bladeMetal = new THREE.MeshStandardMaterial({ color: 0xd9dee5, metalness: 0.8, roughness: 0.25 });
-  var bladeGeo = new THREE.BoxGeometry(0.018, 0.42, 0.05);
-  bladeGeo.translate(0, -0.21, 0);
+  // a wide blade: straight back, wavy cutting edge, sharp point; thins to a bright edge
+  function trimBladeGeometry(side) {
+    var sh = new THREE.Shape(), L = 0.44;
+    sh.moveTo(-0.03, 0.02);                              // back of the blade, near the pivot
+    sh.lineTo(-0.032, -L * 0.62);
+    sh.quadraticCurveTo(-0.025, -L * 0.9, 0.012, -L);    // the back sweeps in to a sharp point
+    sh.lineTo(0.03, -L * 0.72);                          // a keen straight edge off the point
+    for (var k = 1; k <= 6; k++) {                       // then a wavy cutting edge back toward the pivot
+      var y = -L * 0.72 + k * (L * 0.72 / 6);
+      sh.quadraticCurveTo(0.03 + (k % 2 ? 0.012 : -0.003), y - L * 0.06, 0.03, y);
+    }
+    sh.lineTo(0.03, 0.02);
+    sh.closePath();
+    var depth = 0.016;
+    var g = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1, curveSegments: 10 });
+    var p = g.attributes.position, col = [];
+    for (var i = 0; i < p.count; i++) {
+      var w = p.getX(i), z = p.getZ(i) - depth / 2;
+      var thin = w > 0 ? Math.max(0.15, 1 - w / 0.038) : 1;   // thins toward the cutting edge
+      p.setZ(i, z * thin);
+      var shine = w > 0.018 ? 1.18 : 0.8 + (p.getY(i) < -0.3 ? 0.1 : 0);
+      col.push(shine, shine, shine * 1.04);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.rotateY(-Math.PI / 2);                              // the blade's width now runs front to back
+    if (side < 0) g.scale(1, 1, -1);                      // the other blade is a mirror image, edges facing each other
+    g.computeVertexNormals();
+    return g;
+  }
+  var trimSteel = new THREE.MeshStandardMaterial({ color: 0xdfe5ec, metalness: 0.3, roughness: 0.3, emissive: 0x2a3038, vertexColors: true, side: THREE.DoubleSide });
   var trimBladeA = new THREE.Group(), trimBladeB = new THREE.Group();
   [trimBladeA, trimBladeB].forEach(function (blade, n) {
     blade.position.set(n ? -0.012 : 0.012, -0.6, 0);
-    place(new THREE.Mesh(bladeGeo, bladeMetal), 0, 0, 0, blade);
+    place(new THREE.Mesh(trimBladeGeometry(n ? -1 : 1), trimSteel), 0, 0, 0, blade);
     trimHeadGrp.add(blade);
   });
-  place(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 10), new THREE.MeshStandardMaterial({ color: 0xe0a030, metalness: 0.6, roughness: 0.4 })), 0, -0.6, 0, trimHeadGrp).rotation.z = Math.PI / 2;
+  // shiny gold pivot bolt with a dark rim
+  var trimBolt = place(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.065, 16), new THREE.MeshStandardMaterial({ color: 0xe8b24a, metalness: 0.6, roughness: 0.3, emissive: 0x3a2808 })), 0, -0.6, 0, trimHeadGrp);
+  trimBolt.rotation.z = Math.PI / 2;
+  var trimRim = place(new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16), new THREE.MeshStandardMaterial({ color: 0x7a5a12, roughness: 0.5 })), 0, -0.6, 0, trimHeadGrp);
+  trimRim.rotation.y = Math.PI / 2;
+  // two handles, one on each blade: they go back from the bolt to your hand and open and close with the blades
+  var trimWood = new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 });
+  var trimGripMat = new THREE.MeshStandardMaterial({ color: 0xd8463a, roughness: 0.6 });
+  var trimRidgeMat = new THREE.MeshStandardMaterial({ color: 0x9e2a22, roughness: 0.6 });
+  var trimHandleGeo = new THREE.CylinderGeometry(0.016, 0.02, 0.27, 8);
+  trimHandleGeo.translate(0, 0.135, 0);
+  var trimGripGeo = new THREE.CylinderGeometry(0.026, 0.022, 0.13, 10);
+  [trimBladeA, trimBladeB].forEach(function (blade, n) {
+    var arm = new THREE.Group();                   // a handle, splayed a little away from the other one
+    arm.rotation.x = (n ? -1 : 1) * 0.12;
+    blade.add(arm);
+    place(new THREE.Mesh(trimHandleGeo, trimWood), 0, 0, 0, arm);
+    place(new THREE.Mesh(trimGripGeo, trimGripMat), 0, 0.2, 0, arm);  // red rubber grip at the end
+    for (var rr = 0; rr < 3; rr++) {
+      var ridge = place(new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.005, 6, 12), trimRidgeMat), 0, 0.16 + rr * 0.04, 0, arm);
+      ridge.rotation.x = Math.PI / 2;
+    }
+    place(new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), new THREE.MeshStandardMaterial({ color: 0x2e2e34, roughness: 0.8 })), 0, 0.06, (n ? -1 : 1) * 0.01, arm); // rubber bumper
+  });
   // Axe head: a flared steel blade with a curved edge, thinning to a sharp, bright edge
   function axeHeadGeometry() {
     var sh = new THREE.Shape();
