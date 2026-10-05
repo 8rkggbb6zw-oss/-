@@ -3969,7 +3969,6 @@ function startGame(THREE) {
     bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
       : 'Tap an item to see what it is.';
   }
-  // One slot button, for the bag or the hotbar
   // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
     var slot = document.createElement('button');
@@ -4039,7 +4038,8 @@ function startGame(THREE) {
     renderBag();
   });
   window.addEventListener('pointercancel', function () {
-    if (slotDrag && slotDrag.ghost) document.body.removeChild(slotDrag.ghost);
+    if (!slotDrag) return;
+    if (slotDrag.ghost) document.body.removeChild(slotDrag.ghost);
     slotDrag = null;
     renderBag();
   });
