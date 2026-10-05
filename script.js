@@ -2779,6 +2779,8 @@ function startGame(THREE) {
     close: document.getElementById('btnCloseBag')
   };
   var selectedSlot = -1;
+  var ROW_SIZE = 4, hotRow = 0; // the hotbar shows one row of the bag at a time
+  var hotUi = { slots: document.getElementById('hotbarSlots'), row: document.getElementById('btnRow') };
 
   function bagCount(id) {
     for (var i = 0; i < bag.length; i++) if (bag[i].id === id) return bag[i].count;
@@ -2811,25 +2813,46 @@ function startGame(THREE) {
     bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
       : 'Tap an item to see what it is.';
   }
+  // One slot button, for the bag or the hotbar
+  function makeSlot(i, onPick) {
+    var slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'slot' + (bag[i] ? '' : ' empty') + (i === selectedSlot ? ' selected' : '');
+    if (bag[i]) {
+      slot.textContent = ITEMS[bag[i].id].icon;
+      slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
+      var count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = bag[i].count;
+      slot.appendChild(count);
+      slot.onclick = function () { selectedSlot = i; renderBag(); if (onPick) onPick(i); };
+    } else {
+      slot.setAttribute('aria-label', 'Empty slot');
+    }
+    return slot;
+  }
+  function renderHotbar() {
+    if (!hotUi.slots) return;
+    hotUi.slots.innerHTML = '';
+    for (var k = 0; k < ROW_SIZE; k++) {
+      hotUi.slots.appendChild(makeSlot(hotRow * ROW_SIZE + k, function (i) {
+        showToast(ITEMS[bag[i].id].icon + ' ' + ITEMS[bag[i].id].name + ' × ' + bag[i].count);
+      }));
+    }
+    if (hotUi.row) hotUi.row.textContent = (hotRow + 1) + '/' + (BAG_SLOTS / ROW_SIZE) + ' ⇅';
+  }
+  function nextRow() {
+    hotRow = (hotRow + 1) % (BAG_SLOTS / ROW_SIZE);
+    renderHotbar();
+  }
+  if (hotUi.row) hotUi.row.addEventListener('click', function () { nextRow(); focusGame(); });
+
   function renderBag() {
+    renderHotbar();
     if (!bagUi.grid) return;
     bagUi.grid.innerHTML = '';
     for (var i = 0; i < BAG_SLOTS; i++) {
-      var slot = document.createElement('button');
-      slot.type = 'button';
-      slot.className = 'slot' + (bag[i] ? '' : ' empty') + (i === selectedSlot ? ' selected' : '');
-      if (bag[i]) {
-        slot.textContent = ITEMS[bag[i].id].icon;
-        slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
-        var count = document.createElement('span');
-        count.className = 'count';
-        count.textContent = bag[i].count;
-        slot.appendChild(count);
-        slot.onclick = (function (n) { return function () { selectedSlot = n; renderBag(); }; })(i);
-      } else {
-        slot.setAttribute('aria-label', 'Empty slot');
-      }
-      bagUi.grid.appendChild(slot);
+      bagUi.grid.appendChild(makeSlot(i));
     }
     describeSlot();
   }
@@ -2857,6 +2880,7 @@ function startGame(THREE) {
   window.addEventListener('keydown', function (e) { // I opens and closes the bag, Escape closes it
     if (e.repeat) return;
     if (e.code === 'KeyI') toggleBag();
+    if (e.code === 'KeyR') nextRow();
     if (e.code === 'Escape') toggleBag(false);
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });

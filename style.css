@@ -96,7 +96,7 @@ canvas {
 .toast {
   position: absolute;
   left: 50%;
-  bottom: 22px;
+  bottom: 84px;
   max-width: 90%;
   transform: translate(-50%, 12px);
   background: rgba(6, 40, 100, 0.85);
@@ -188,3 +188,30 @@ kbd {
 }
 
 .inv-info { margin: 10px 2px 0; font-size: .85rem; line-height: 1.4; min-height: 2.8em; }
+
+/* ---------- Hotbar: one row of the bag along the bottom of the game ---------- */
+.hotbar {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4px 14px rgba(120, 80, 190, 0.3), inset 0 0 0 2px #fff;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.hotbar-slots { display: flex; gap: 6px; }
+.hotbar .slot { width: 48px; font-size: 1.4rem; }
+.hotbar .slot .count { font-size: .7rem; right: 4px; bottom: 1px; }
+
+.row-btn {
+  padding: 8px 10px;
+  font-size: .85rem;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 #7b4fd6;
+}
