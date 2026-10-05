@@ -1581,16 +1581,21 @@ function startGame(THREE) {
     g.fillRect(0, 0, w, h);
     for (var i = 0; i < 300; i++) { // long cracks and ridges running up the bark
       var x = Math.random() * w, y = Math.random() * h, len = 20 + Math.random() * 80;
+      var c1 = (Math.random() - 0.5) * 8, c2 = (Math.random() - 0.5) * 8, c3 = (Math.random() - 0.5) * 5;
       g.strokeStyle = Math.random() < 0.55 ? 'rgba(38,26,18,0.6)' : 'rgba(160,132,104,0.35)';
       g.lineWidth = 1 + Math.random() * 3;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.bezierCurveTo(x + (Math.random() - 0.5) * 8, y + len * 0.33, x + (Math.random() - 0.5) * 8, y + len * 0.66, x + (Math.random() - 0.5) * 5, y + len);
-      g.stroke();
+      for (var ox = -w; ox <= w; ox += w) { // drawn again past each edge so the bark repeats with no seams
+        for (var oy = -h; oy <= h; oy += h) {
+          g.beginPath();
+          g.moveTo(x + ox, y + oy);
+          g.bezierCurveTo(x + ox + c1, y + oy + len * 0.33, x + ox + c2, y + oy + len * 0.66, x + ox + c3, y + oy + len);
+          g.stroke();
+        }
+      }
     }
     for (var j = 0; j < 700; j++) { // speckles
       g.fillStyle = Math.random() < 0.5 ? 'rgba(30,22,15,0.25)' : 'rgba(180,155,130,0.2)';
-      g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+      g.fillRect(Math.random() * (w - 2), Math.random() * (h - 2), 2, 2);
     }
   });
   barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
@@ -1640,6 +1645,44 @@ function startGame(THREE) {
 
   var barkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, roughness: 0.95 });
   var pineBarkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0x9a8a80, roughness: 0.95 });
+  var rootMat = barkMat.clone(), pineRootMat = pineBarkMat.clone();
+  rootMat.vertexColors = pineRootMat.vertexColors = true;
+
+  // Soil and fallen leaves under trees and bushes
+  var litterTex = paintTexture(256, 256, function (g) {
+    var grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(70,52,36,0.85)');
+    grad.addColorStop(0.55, 'rgba(84,66,44,0.55)');
+    grad.addColorStop(1, 'rgba(90,75,50,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    for (var i = 0; i < 260; i++) { // fallen leaves and little twigs, thinning out toward the edge
+      var a = Math.random() * Math.PI * 2, r = Math.pow(Math.random(), 0.8) * 115;
+      var x = 128 + Math.cos(a) * r, y = 128 + Math.sin(a) * r, fade = 1 - r / 128;
+      g.save();
+      g.translate(x, y);
+      g.rotate(Math.random() * 6.28);
+      if (Math.random() < 0.15) {
+        g.strokeStyle = 'rgba(60,42,28,' + fade + ')';
+        g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(-8, 0); g.lineTo(8, 1); g.stroke();
+      } else {
+        var hue = Math.random() < 0.6 ? 25 + Math.random() * 20 : 60 + Math.random() * 30;
+        g.fillStyle = 'hsla(' + hue + ',' + (35 + Math.random() * 25) + '%,' + (25 + Math.random() * 20) + '%,' + fade + ')';
+        g.beginPath(); g.ellipse(0, 0, 5 + Math.random() * 3, 2.5, 0, 0, Math.PI * 2); g.fill();
+      }
+      g.restore();
+    }
+  });
+  var litterMat = new THREE.MeshStandardMaterial({ map: litterTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
+  var litterGeo = new THREE.CircleGeometry(1, 28);
+  litterGeo.rotateX(-Math.PI / 2);
+  function litter(parent, radius) {
+    var m = place(new THREE.Mesh(litterGeo, litterMat), 0, 0.03, 0, parent);
+    m.scale.set(radius, 1, radius);
+    m.castShadow = false;
+    return m;
+  }
 
   // All leaf clumps (and all pine sprays) go into one batch each, so the forest stays fast
   var forestTime = { value: 0 };
@@ -1705,7 +1748,8 @@ function startGame(THREE) {
   function taperTube(points, r0, r1, flat) {
     var curve = new THREE.CatmullRomCurve3(points), SEGS = 12, RADIAL = 10;
     var frames = curve.computeFrenetFrames(SEGS, false);
-    var pos = [], nor = [], uv = [], idx = [], P = new THREE.Vector3(), N = new THREE.Vector3();
+    var pos = [], nor = [], uv = [], idx = [], col = [], P = new THREE.Vector3(), N = new THREE.Vector3();
+    var soil = new THREE.Color(0x6a5240), cc = new THREE.Color();
     var T = new THREE.Vector3(), side = new THREE.Vector3(), upv = new THREE.Vector3(), WORLD_UP = new THREE.Vector3(0, 1, 0);
     for (var i = 0; i <= SEGS; i++) {
       var u = i / SEGS, r = r0 + (r1 - r0) * u;
@@ -1734,7 +1778,10 @@ function startGame(THREE) {
           pos.push(P.x + r * N.x, P.y + r * N.y, P.z + r * N.z);
         }
         nor.push(N.x, N.y, N.z);
-        uv.push((j / RADIAL) * 2, u * 2);
+        uv.push((j / RADIAL) * 2, u * (flat ? 4 : 2));
+        var earthy = flat ? Math.min(1, Math.max(0, (u - 0.45) * 1.6) + (sn < 0 ? 0.25 : 0)) : 0;
+        cc.setRGB(1, 1, 1).lerp(soil, earthy * 0.8);
+        col.push(cc.r, cc.g, cc.b);
       }
     }
     for (var a = 0; a < SEGS; a++) {
@@ -1747,18 +1794,28 @@ function startGame(THREE) {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setIndex(idx);
     return g;
   }
   // A root: grows out of the trunk, arches over the ground and dives back into the earth
   function root(tree, angle, reach, thick, rise, wiggle) {
     var dx = Math.cos(angle), dz = Math.sin(angle), sx = -dz * wiggle, sz = dx * wiggle;
+    var mat = tree.userData.root || tree.userData.bark;
     place(new THREE.Mesh(taperTube([
       new THREE.Vector3(dx * reach * 0.08, rise, dz * reach * 0.08),
       new THREE.Vector3(dx * reach * 0.35 + sx * 0.4, rise * 0.35, dz * reach * 0.35 + sz * 0.4),
       new THREE.Vector3(dx * reach * 0.7 + sx, thick * 0.3, dz * reach * 0.7 + sz),
       new THREE.Vector3(dx * reach, -thick * 1.5, dz * reach)
-    ], thick, thick * 0.12, true), tree.userData.bark), 0, 0, 0, tree);
+    ], thick, thick * 0.12, true), mat), 0, 0, 0, tree);
+    // a thinner root branching off to one side partway along
+    var side = wiggle >= 0 ? 1 : -1, ba = angle + side * 0.75;
+    var bx = dx * reach * 0.42 + sx * 0.5, bz = dz * reach * 0.42 + sz * 0.5, bl = reach * 0.55;
+    place(new THREE.Mesh(taperTube([
+      new THREE.Vector3(bx, thick * 0.5, bz),
+      new THREE.Vector3(bx + Math.cos(ba) * bl * 0.45, thick * 0.2, bz + Math.sin(ba) * bl * 0.45),
+      new THREE.Vector3(bx + Math.cos(ba + side * 0.25) * bl, -thick * 0.8, bz + Math.sin(ba + side * 0.25) * bl)
+    ], thick * 0.5, thick * 0.06, true), mat), 0, 0, 0, tree);
   }
 
   // A clump of leaves: several leafy cards at random angles around a point, darker underneath
@@ -1782,18 +1839,33 @@ function startGame(THREE) {
   function leafyTree(x, z, size) {
     var t = new THREE.Group();
     t.userData.bark = barkMat;
+    t.userData.root = rootMat;
     finishTree(t, x, z, 0.36 * size);
     var trunkH = (1.5 + rand() * 0.6) * size, warm = (rand() - 0.5) * 0.12;
+    var rootAngles = [], rootLens = [];
+    for (var ra = 0; ra < 5; ra++) {
+      rootAngles.push((ra / 5) * Math.PI * 2 + rand() * 0.5);
+      rootLens.push(0.8 + rand() * 0.4);
+    }
     var profile = [];
-    for (var i = 0; i <= 12; i++) {
-      var yy = (i / 12) * trunkH;
+    for (var i = 0; i <= 16; i++) {
+      var yy = Math.pow(i / 16, 1.5) * trunkH; // more rings near the bottom, where the trunk flares
       profile.push(new THREE.Vector2(0.27 * size * (1 - 0.3 * yy / trunkH) + 0.26 * size * Math.exp(-yy * 5 / size), yy));
     }
-    place(new THREE.Mesh(new THREE.LatheGeometry(profile, 14), barkMat), 0, 0, 0, t);
-    for (var rt = 0; rt < 5; rt++) { // roots winding out over the ground
-      var rootAngle = (rt / 5) * Math.PI * 2 + rand() * 0.5, rootLen = 0.8 + rand() * 0.4;
-      root(t, rootAngle, 1.05 * size * rootLen, 0.12 * size, 0.5 * size, (rt % 2 ? 0.12 : -0.12) * size);
+    var trunkGeo = new THREE.LatheGeometry(profile, 30);
+    var tpos = trunkGeo.attributes.position;
+    for (var tv = 0; tv < tpos.count; tv++) { // the base swells out into each root, like real buttresses
+      var vx = tpos.getX(tv), vy = tpos.getY(tv), vz = tpos.getZ(tv), va = Math.atan2(vz, vx), swell = 0;
+      for (var rr = 0; rr < 5; rr++) swell += Math.pow(Math.max(0, Math.cos(va - rootAngles[rr])), 6);
+      var k = 1 + swell * 0.55 * Math.exp(-vy * 3.5 / size) + noise(va * 3, vy * 4) * 0.03;
+      tpos.setXYZ(tv, vx * k, vy, vz * k);
     }
+    trunkGeo.computeVertexNormals();
+    place(new THREE.Mesh(trunkGeo, barkMat), 0, 0, 0, t);
+    for (var rt = 0; rt < 5; rt++) { // roots winding out over the ground
+      root(t, rootAngles[rt], 1.1 * size * rootLens[rt], 0.13 * size, 0.55 * size, (rt % 2 ? 0.12 : -0.12) * size);
+    }
+    litter(t, 1.5 * size);
     t.updateMatrixWorld(true);
     var leaderEnd = branch(t, new THREE.Vector3(0, trunkH - 0.05 * size, 0), direction(rand() * 6.28, rand() * 0.25), 0.9 * size, 0.19 * size, 0.07 * size);
     leafClump(t, leaderEnd, 0.85 * size, warm);
@@ -1816,7 +1888,9 @@ function startGame(THREE) {
   function pineTree(x, z, size) {
     var t = new THREE.Group();
     t.userData.bark = pineBarkMat;
+    t.userData.root = pineRootMat;
     finishTree(t, x, z, 0.28 * size);
+    litter(t, 1.4 * size);
     var H = (3.0 + rand() * 0.8) * size;
     var trunkGeo = new THREE.CylinderGeometry(0.02 * size, 0.25 * size, H * 0.86, 10); // stops below the tip, hidden in the needles
     trunkGeo.translate(0, H * 0.43, 0);
@@ -1892,6 +1966,7 @@ function startGame(THREE) {
     b.position.set(bs.x, groundHeight(bs.x, bs.z), bs.z);
     b.rotation.y = rand() * Math.PI * 2;
     scene.add(b);
+    litter(b, 0.9 * sz);
     b.updateMatrixWorld(true);
     var clumpsN = 4 + Math.floor(rand() * 3);
     for (var c = 0; c < clumpsN; c++) {
