@@ -256,23 +256,404 @@ function startGame(THREE) {
   }
 
   // ---------- The glowing Dawn Tree ----------
+  // A huge magical blossom tree: twisted trunk with glowing veins, curving branches,
+  // pink and lavender blossoms, hanging glowing strands and orbs, drifting petals and a rune circle
+  var seedBeforeDawn = seed;
+  seed = 4242; // the Dawn Tree has its own random numbers, so it never moves the rest of the scenery
   var tree = new THREE.Group();
   tree.position.set(TREE_X, 0, TREE_Z);
-  place(new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 2.8, 10), M.trunk), 0, 1.4, 0, tree);
-  var canopyGeo = new THREE.IcosahedronGeometry(1, 1);
-  [[0, 3.6, 0, 1.7], [-1.1, 3.0, 0.5, 1.15], [1.1, 3.1, -0.3, 1.2], [0.2, 4.5, 0.4, 1.1]].forEach(function (c) {
-    place(new THREE.Mesh(canopyGeo, M.canopy), c[0], c[1], c[2], tree).scale.setScalar(c[3]);
+  tree.rotation.y = 0.4;
+
+  function dawnPaint(w, h, paint) {
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    paint(cv.getContext('2d'), w, h);
+    return new THREE.CanvasTexture(cv);
+  }
+  var dawnBark = dawnPaint(128, 256, function (g, w, h) {
+    g.fillStyle = '#7a5478';
+    g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 260; i++) { // long twisting ridges in the bark
+      var x = Math.random() * w, y = Math.random() * h, len = 30 + Math.random() * 90;
+      g.strokeStyle = Math.random() < 0.55 ? 'rgba(45,22,48,0.55)' : 'rgba(205,165,205,0.3)';
+      g.lineWidth = 1 + Math.random() * 3;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.bezierCurveTo(x + 6, y + len * 0.33, x - 6, y + len * 0.66, x + (Math.random() - 0.5) * 6, y + len);
+      g.stroke();
+    }
   });
-  var treeLight = new THREE.PointLight(0xffa8ee, 1.2, 12, 2);
-  treeLight.position.set(0, 3.4, 0);
+  var dawnVeins = dawnPaint(128, 256, function (g, w, h) {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#fff';
+    g.shadowColor = '#fff';
+    g.shadowBlur = 6;
+    for (var i = 0; i < 6; i++) { // glowing magic veins winding up the bark
+      var x = Math.random() * w;
+      g.lineWidth = 1.5 + Math.random() * 2;
+      g.beginPath();
+      g.moveTo(x, h);
+      for (var y = h; y > -16; y -= 16) { x += (Math.random() - 0.5) * 16; g.lineTo(x, y); }
+      g.stroke();
+    }
+  });
+  dawnBark.wrapS = dawnBark.wrapT = dawnVeins.wrapS = dawnVeins.wrapT = THREE.RepeatWrapping;
+  dawnBark.repeat.set(3, 2);
+  var dawnBarkMat = new THREE.MeshStandardMaterial({
+    map: dawnBark, bumpMap: dawnBark, bumpScale: 0.05, roughness: 0.9,
+    emissive: 0xff8fe6, emissiveMap: dawnVeins, emissiveIntensity: 0.5
+  });
+
+  // All the wood is built from pieces, then joined into one mesh so it stays fast
+  var dawnWood = [], dawnM = new THREE.Matrix4(), dawnQ = new THREE.Quaternion(), dawnS = new THREE.Vector3(), DAWN_UP = new THREE.Vector3(0, 1, 0);
+  function dawnPiece(geo, pos, dir, scale) {
+    dawnQ.setFromUnitVectors(DAWN_UP, dir);
+    dawnS.set(scale, scale, scale);
+    dawnM.compose(pos, dawnQ, dawnS);
+    geo.applyMatrix4(dawnM);
+    dawnWood.push(geo);
+  }
+  // A curved branch that tapers from r0 to r1 along the points given; returns its curve
+  function dawnLimb(points, r0, r1) {
+    var curve = new THREE.CatmullRomCurve3(points), N = 8, prev = curve.getPoint(0);
+    for (var i = 1; i <= N; i++) {
+      var p = curve.getPoint(i / N), d = p.clone().sub(prev), len = d.length();
+      var ra = r0 + (r1 - r0) * (i - 1) / N, rb = r0 + (r1 - r0) * i / N;
+      var seg = new THREE.CylinderGeometry(rb, ra, len, 10, 1, true);
+      seg.translate(0, len / 2, 0);
+      dawnPiece(seg, prev, d.normalize(), 1);
+      dawnPiece(new THREE.SphereGeometry(rb, 10, 6), p, DAWN_UP, 1); // smooth knuckle where the pieces meet
+      prev = p;
+    }
+    return curve;
+  }
+  function mergeWood(parts) {
+    var pos = [], nor = [], uv = [], idx = [], off = 0;
+    parts.forEach(function (g) {
+      var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv;
+      for (var i = 0; i < p.count; i++) {
+        pos.push(p.getX(i), p.getY(i), p.getZ(i));
+        nor.push(n.getX(i), n.getY(i), n.getZ(i));
+        uv.push(u.getX(i), u.getY(i));
+      }
+      if (g.index) { for (var j = 0; j < g.index.count; j++) idx.push(g.index.getX(j) + off); }
+      else { for (var k = 0; k < p.count; k++) idx.push(k + off); }
+      off += p.count;
+    });
+    var m = new THREE.BufferGeometry();
+    m.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    m.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    m.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    m.setIndex(idx);
+    return m;
+  }
+
+  // Twisted trunk with a wide flared base and spiral ridges
+  var TRUNK_H = 4.4, trunkProfile = [];
+  for (var tpi = 0; tpi <= 18; tpi++) {
+    var ty = (tpi / 18) * TRUNK_H;
+    trunkProfile.push(new THREE.Vector2(0.6 * (1 - 0.4 * ty / TRUNK_H) + 0.8 * Math.exp(-ty * 2.4), ty));
+  }
+  var dawnTrunk = new THREE.LatheGeometry(trunkProfile, 28);
+  var dtp = dawnTrunk.attributes.position;
+  for (var dv = 0; dv < dtp.count; dv++) {
+    var vx = dtp.getX(dv), vy = dtp.getY(dv), vz = dtp.getZ(dv);
+    var vr = Math.sqrt(vx * vx + vz * vz), va = Math.atan2(vz, vx);
+    vr *= 1 + 0.12 * Math.sin(va * 6 + vy * 1.6); // ridges
+    va += vy * 0.35;                               // twist
+    dtp.setXYZ(dv, Math.cos(va) * vr, vy, Math.sin(va) * vr);
+  }
+  dawnTrunk.computeVertexNormals();
+  dawnWood.push(dawnTrunk);
+
+  // Big roots curling out over the ground
+  for (var dr = 0; dr < 7; dr++) {
+    var ra = (dr / 7) * Math.PI * 2 + rand() * 0.4, rl = 2.0 + rand() * 0.9;
+    var rx = Math.cos(ra), rz = Math.sin(ra);
+    dawnLimb([
+      new THREE.Vector3(rx * 0.45, 0.6, rz * 0.45),
+      new THREE.Vector3(rx * 1.1, 0.16, rz * 1.1),
+      new THREE.Vector3(rx * rl * 0.75, 0.02, rz * rl * 0.75 + (rand() - 0.5) * 0.4),
+      new THREE.Vector3(rx * rl, -0.12, rz * rl)
+    ], 0.3, 0.05);
+  }
+
+  // Branches: a leader going up, and wide curving limbs with smaller branches; blossoms go at their ends
+  var clumps = [];
+  var leader = dawnLimb([new THREE.Vector3(0, 4.0, 0), new THREE.Vector3(0.3, 5.4, 0.1), new THREE.Vector3(0.1, 6.6, -0.2)], 0.36, 0.1);
+  clumps.push({ p: leader.getPoint(1), r: 1.5 }, { p: leader.getPoint(0.6), r: 1.2 });
+  var hangPoints = [];
+  var LIMBS = 7;
+  for (var li = 0; li < LIMBS; li++) {
+    var la = (li / LIMBS) * Math.PI * 2 + rand() * 0.5, lx = Math.cos(la), lz = Math.sin(la);
+    var y0 = 3.3 + rand() * 1.0, reach = 2.6 + rand() * 0.7;
+    var limb = dawnLimb([
+      new THREE.Vector3(lx * 0.2, y0, lz * 0.2),
+      new THREE.Vector3(lx * 1.2, y0 + 0.8, lz * 1.2),
+      new THREE.Vector3(lx * reach * 0.8, y0 + 1.3, lz * reach * 0.8),
+      new THREE.Vector3(lx * reach, y0 + 1.5 + rand() * 0.5, lz * reach)
+    ], 0.34, 0.09);
+    var tipP = limb.getPoint(1);
+    clumps.push({ p: tipP, r: 1.3 + rand() * 0.3 }, { p: limb.getPoint(0.55), r: 1.0 });
+    hangPoints.push(limb.getPoint(0.75));
+    for (var sb = 0; sb < 2; sb++) {
+      var sa = la + (sb ? 0.7 : -0.7) + (rand() - 0.5) * 0.3, from = limb.getPoint(0.6 + sb * 0.2);
+      var sl = 1.0 + rand() * 0.5;
+      var sub = dawnLimb([
+        from,
+        new THREE.Vector3(from.x + Math.cos(sa) * sl * 0.5, from.y + 0.5, from.z + Math.sin(sa) * sl * 0.5),
+        new THREE.Vector3(from.x + Math.cos(sa) * sl, from.y + 0.7 + rand() * 0.4, from.z + Math.sin(sa) * sl)
+      ], 0.12, 0.04);
+      clumps.push({ p: sub.getPoint(1), r: 1.0 + rand() * 0.3 });
+    }
+  }
+  var dawnWoodMesh = place(new THREE.Mesh(mergeWood(dawnWood), dawnBarkMat), 0, 0, 0, tree);
+
+  // Blossoms: painted clusters of five-petal flowers, pink with some lavender, see-through round the edge
+  var blossomTex = dawnPaint(256, 256, function (g) {
+    var i, a, r, x, y;
+    for (i = 0; i < 60; i++) { // a few leaves peeking out underneath
+      a = Math.random() * Math.PI * 2; r = Math.pow(Math.random(), 0.6) * 100;
+      x = 128 + Math.cos(a) * r; y = 128 + Math.sin(a) * r;
+      g.save(); g.translate(x, y); g.rotate(Math.random() * 6.28);
+      g.fillStyle = 'hsl(' + (95 + Math.random() * 25) + ',35%,' + (32 + Math.random() * 12) + '%)';
+      g.beginPath(); g.ellipse(0, 0, 9, 4, 0, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+    for (i = 0; i < 230; i++) {
+      a = Math.random() * Math.PI * 2; r = Math.pow(Math.random(), 0.6) * 104;
+      x = 128 + Math.cos(a) * r; y = 128 + Math.sin(a) * r * 0.92;
+      var s = 7 + Math.random() * 7, spin = Math.random() * 6.28;
+      var sunny = Math.max(0, Math.min(1, 0.55 - ((x - 128) + (y - 128)) / 300));
+      var hue = Math.random() < 0.25 ? 275 + Math.random() * 20 : 318 + Math.random() * 22;
+      g.fillStyle = 'hsl(' + hue + ',' + (78 + Math.random() * 15) + '%,' + (56 + sunny * 22 + Math.random() * 6) + '%)';
+      for (var k = 0; k < 5; k++) {
+        var pa = spin + (k / 5) * Math.PI * 2;
+        g.beginPath();
+        g.ellipse(x + Math.cos(pa) * s * 0.55, y + Math.sin(pa) * s * 0.55, s * 0.55, s * 0.38, pa, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.fillStyle = '#fff2b0';
+      g.beginPath(); g.arc(x, y, s * 0.22, 0, Math.PI * 2); g.fill();
+    }
+  });
+  // Hanging strands of glowing blossoms, getting smaller and more lavender toward the tip
+  var strandTex = dawnPaint(64, 256, function (g) {
+    for (var y = 6; y < 250; y += 7) {
+      var f = y / 256, s = 11 * (1 - f * 0.7);
+      for (var k = 0; k < 3; k++) {
+        g.fillStyle = 'hsl(' + (325 - f * 50) + ',85%,' + (72 + f * 12) + '%)';
+        g.beginPath();
+        g.arc(32 + (Math.random() - 0.5) * 18 * (1 - f * 0.5), y + Math.random() * 4, s * (0.5 + Math.random() * 0.4), 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  });
+  function blossomMaterial(tex, glow) {
+    var m = new THREE.MeshStandardMaterial({
+      map: tex, emissive: 0xff7fd8, emissiveMap: tex, emissiveIntensity: glow,
+      alphaTest: 0.3, transparent: true, side: THREE.DoubleSide, roughness: 0.8
+    });
+    m.onBeforeCompile = function (shader) { // light every card as if it faced the sky, so their backs don't go dark
+      shader.vertexShader = shader.vertexShader.replace('#include <defaultnormal_vertex>', 'vec3 transformedNormal = normalMatrix * vec3(0.0, 1.0, 0.0);');
+      shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
+    };
+    return m;
+  }
+  var blossomMat = blossomMaterial(blossomTex, 0.3), strandMat = blossomMaterial(strandTex, 0.6);
+  function cardBatch(geo, tex, m, max) {
+    var b = new THREE.InstancedMesh(geo, m, max);
+    b.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.3 });
+    b.castShadow = true;
+    b.n = 0;
+    return b;
+  }
+  var blossomCards = cardBatch(new THREE.PlaneGeometry(1, 1), blossomTex, blossomMat, 1200);
+  var strandGeo = new THREE.PlaneGeometry(0.32, 1.5);
+  strandGeo.translate(0, -0.75, 0); // hangs down from where it's attached
+  var strandCards = cardBatch(strandGeo, strandTex, strandMat, 200);
+  var cardM = new THREE.Matrix4(), cardQ = new THREE.Quaternion(), cardE = new THREE.Euler(), cardP = new THREE.Vector3(), cardS = new THREE.Vector3(), cardC = new THREE.Color();
+  function addDawnCard(b, shade) {
+    if (b.n >= b.instanceMatrix.count) return;
+    cardM.compose(cardP, cardQ, cardS);
+    b.setMatrixAt(b.n, cardM);
+    cardC.setRGB(shade, shade, shade);
+    b.setColorAt(b.n, cardC);
+    b.n++;
+  }
+  clumps.forEach(function (c) {
+    for (var i = 0; i < 26; i++) {
+      cardP.set(rand() - 0.5, (rand() - 0.35) * 0.8, rand() - 0.5).normalize().multiplyScalar(c.r * (0.35 + rand() * 0.5)).add(c.p);
+      cardE.set(rand() * 6.28, rand() * 6.28, rand() * 6.28);
+      cardQ.setFromEuler(cardE);
+      var s = c.r * (1.1 + rand() * 0.5);
+      cardS.set(s, s, s);
+      var lift = Math.max(0, Math.min(1, (cardP.y - c.p.y) / c.r * 0.6 + 0.5));
+      addDawnCard(blossomCards, 0.72 + lift * 0.3 + rand() * 0.06);
+    }
+    for (var h = 0; h < 4; h++) { // strands hanging from the underside of each clump
+      cardP.set((rand() - 0.5) * c.r * 1.3, -c.r * 0.35, (rand() - 0.5) * c.r * 1.3).add(c.p);
+      cardE.set((rand() - 0.5) * 0.15, rand() * 6.28, (rand() - 0.5) * 0.15);
+      cardQ.setFromEuler(cardE);
+      var hs = 0.7 + rand() * 0.6;
+      cardS.set(1, hs, 1);
+      addDawnCard(strandCards, 1);
+      cardE.y += Math.PI / 2; // a second card crossing the first, so the strand looks round
+      cardQ.setFromEuler(cardE);
+      addDawnCard(strandCards, 1);
+    }
+  });
+  [blossomCards, strandCards].forEach(function (b) {
+    b.count = b.n;
+    b.instanceMatrix.needsUpdate = true;
+    if (b.instanceColor) b.instanceColor.needsUpdate = true;
+    tree.add(b);
+  });
+
+  // Soft glows: inside the canopy, and on glowing orbs hanging from the branches
+  var dawnGlowTex = dawnPaint(64, 64, function (g) {
+    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+  });
+  function dawnGlow(color, size, opacity) {
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: dawnGlowTex, color: color, transparent: true, opacity: opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    sp.scale.set(size, size, 1);
+    return sp;
+  }
+  var canopyGlows = [];
+  for (var cg = 0; cg < 6; cg++) {
+    var glow = dawnGlow(cg % 2 ? 0xc9a0ff : 0xff9be0, 3.5, 0.2);
+    var gcl = clumps[cg * 3 % clumps.length].p;
+    glow.position.set(gcl.x * 0.7, gcl.y - 0.3, gcl.z * 0.7);
+    tree.add(glow);
+    canopyGlows.push(glow);
+  }
+  var orbMat = new THREE.MeshBasicMaterial({ color: 0xfff1c4 });
+  var threadMat = new THREE.MeshBasicMaterial({ color: 0xffd6f4 });
+  var dawnOrbs = [];
+  hangPoints.forEach(function (hp, n) {
+    var pivot = new THREE.Group();
+    pivot.position.copy(hp);
+    var drop = 0.7 + rand() * 0.6;
+    var thread = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, drop, 4), threadMat);
+    thread.position.y = -drop / 2;
+    pivot.add(thread);
+    var orb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), orbMat);
+    orb.position.y = -drop - 0.1;
+    pivot.add(orb);
+    var halo = dawnGlow(n % 2 ? 0xffd27a : 0xff9be0, 0.9, 0.7);
+    halo.position.copy(orb.position);
+    pivot.add(halo);
+    tree.add(pivot);
+    dawnOrbs.push({ pivot: pivot, halo: halo, p: rand() * 6.28 });
+  });
+
+  // Little glowing mushrooms tucked between the roots
+  var mushStem = new THREE.MeshStandardMaterial({ color: 0xf4ecf7, roughness: 0.7 });
+  var mushCap = new THREE.MeshStandardMaterial({ color: 0x9fe6ff, emissive: 0x58c8ff, emissiveIntensity: 0.4, roughness: 0.5 });
+  var capGeo = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  for (var mu = 0; mu < 9; mu++) {
+    var ma = (mu / 9) * Math.PI * 2 + 0.45 + rand() * 0.3, md = 1.3 + rand() * 0.9, ms = 0.6 + rand() * 0.7;
+    var mx = Math.cos(ma) * md, mz = Math.sin(ma) * md;
+    place(new THREE.Mesh(new THREE.CylinderGeometry(0.035 * ms, 0.05 * ms, 0.22 * ms, 8), mushStem), mx, 0.11 * ms, mz, tree);
+    place(new THREE.Mesh(capGeo, mushCap), mx, 0.2 * ms, mz, tree).scale.set(0.12 * ms, 0.08 * ms, 0.12 * ms);
+  }
+
+  // Petals drifting down from the blossoms
+  var PETALS = 70;
+  var petalTex = dawnPaint(32, 32, function (g) {
+    g.fillStyle = '#fff';
+    g.beginPath(); g.ellipse(16, 16, 12, 7, 0.6, 0, Math.PI * 2); g.fill();
+  });
+  var petalGeo = new THREE.BufferGeometry();
+  petalGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PETALS * 3), 3));
+  var petals = new THREE.Points(petalGeo, new THREE.PointsMaterial({ map: petalTex, color: 0xffb8ec, size: 0.14, transparent: true, alphaTest: 0.3, depthWrite: false }));
+  tree.add(petals);
+  var petalState = [];
+  function resetPetal(pt, anywhere) {
+    var a = rand() * Math.PI * 2, r = Math.sqrt(rand()) * 3.4;
+    pt.x = Math.cos(a) * r; pt.z = Math.sin(a) * r;
+    pt.y = anywhere ? rand() * 5.5 : 4.5 + rand() * 1.5;
+    pt.speed = 0.25 + rand() * 0.25; pt.p = rand() * 6.28;
+  }
+  for (var pe = 0; pe < PETALS; pe++) { var pt = {}; resetPetal(pt, true); petalState.push(pt); }
+
+  var treeLight = new THREE.PointLight(0xffa8ee, 1.2, 16, 2);
+  treeLight.position.set(0, 4.8, 0);
   tree.add(treeLight);
-  var treeRing = new THREE.Mesh(new THREE.RingGeometry(TREE_ZONE - 0.35, TREE_ZONE, 64),
-    new THREE.MeshBasicMaterial({ color: 0xffb3f0, transparent: true, opacity: 0.5, depthWrite: false }));
-  treeRing.rotation.x = -Math.PI / 2;
-  treeRing.position.y = 0.03;
-  tree.add(treeRing);
+
+  // Sparkles scattered over the ground round the tree mark where your mana refills
+  var GROUND_SPARKS = 140;
+  var groundSparkGeo = new THREE.BufferGeometry();
+  groundSparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GROUND_SPARKS * 3), 3));
+  groundSparkGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(GROUND_SPARKS * 3), 3));
+  var groundSparks = new THREE.Points(groundSparkGeo, new THREE.PointsMaterial({
+    map: dawnGlowTex, size: 0.38, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  }));
+  tree.add(groundSparks);
+  var sparkTints = [new THREE.Color(0xff9be0), new THREE.Color(0xffe08a), new THREE.Color(0xc9a0ff), new THREE.Color(0xffffff)];
+  var groundSparkState = [];
+  function resetGroundSpark(sk, anyHeight) {
+    var a = rand() * Math.PI * 2, r = 1.3 + Math.sqrt(rand()) * (TREE_ZONE - 1.1);
+    sk.x = Math.cos(a) * r; sk.z = Math.sin(a) * r;
+    sk.y = anyHeight ? rand() * 1.2 : 0.05;
+    sk.rise = 0.12 + rand() * 0.2; sk.p = rand() * 6.28; sk.speed = 2 + rand() * 3;
+    sk.tint = sparkTints[Math.floor(rand() * sparkTints.length)];
+  }
+  for (var gs = 0; gs < GROUND_SPARKS; gs++) { var sk = {}; resetGroundSpark(sk, true); groundSparkState.push(sk); }
   scene.add(tree);
-  solids.push({ x: TREE_X, z: TREE_Z, r: 0.8 });
+  solids.push({ x: TREE_X, z: TREE_Z, r: 1.2 });
+  seed = seedBeforeDawn;
+
+  // Twinkle, sway and drift: called every frame from updateWorld
+  var canopyFade = 1;
+  function updateDawnTree(dt, t, night, pulse) {
+    dawnBarkMat.emissiveIntensity = 0.3 + night * 1.2 + pulse * 0.5;
+    blossomMat.emissiveIntensity = 0.22 + night * 0.5 + pulse * 0.1;
+    strandMat.emissiveIntensity = 0.45 + night * 0.8 + pulse * 0.2;
+    mushCap.emissiveIntensity = 0.3 + night * 1.4;
+    treeLight.intensity = 0.9 + night * 1.6 + pulse * 0.3;
+    var gp = groundSparkGeo.attributes.position, gc = groundSparkGeo.attributes.color;
+    groundSparkState.forEach(function (sk, n) {
+      sk.y += sk.rise * dt;
+      if (sk.y > 1.3) resetGroundSpark(sk, false);
+      var fade = Math.min(1, sk.y * 6) * (1 - sk.y / 1.3);        // fade in near the ground, out as it rises
+      var twinkle = Math.max(0, Math.sin(t * sk.speed + sk.p));   // each sparkle blinks on and off
+      var bright = fade * twinkle * (1.3 + pulse * 0.4 + night * 0.5);
+      gp.setXYZ(n, sk.x + Math.sin(t * 0.8 + sk.p) * 0.05, sk.y, sk.z);
+      gc.setXYZ(n, sk.tint.r * bright, sk.tint.g * bright, sk.tint.b * bright);
+    });
+    gp.needsUpdate = true;
+    gc.needsUpdate = true;
+    canopyGlows.forEach(function (g, n) { g.material.opacity = 0.12 + night * 0.25 + pulse * 0.06 + Math.sin(t * 1.3 + n) * 0.03; });
+    dawnOrbs.forEach(function (o) {
+      o.pivot.rotation.z = Math.sin(t * 1.1 + o.p) * 0.08;
+      o.pivot.rotation.x = Math.cos(t * 0.8 + o.p) * 0.06;
+      o.halo.material.opacity = 0.5 + night * 0.4 + Math.sin(t * 2.2 + o.p) * 0.12;
+    });
+    var pp = petalGeo.attributes.position;
+    petalState.forEach(function (pt, n) {
+      pt.y -= pt.speed * dt;
+      pt.x += Math.sin(t * 1.2 + pt.p) * dt * 0.25;
+      pt.z += Math.cos(t * 0.9 + pt.p) * dt * 0.25;
+      if (pt.y < 0.05) resetPetal(pt, false);
+      pp.setXYZ(n, pt.x, pt.y, pt.z);
+    });
+    pp.needsUpdate = true;
+    // see-through blossoms when you walk under the tree, so they never hide you
+    var near = dist(player.position.x, player.position.z, TREE_X, TREE_Z) < 4.5;
+    canopyFade += ((near ? 0.45 : 1) - canopyFade) * Math.min(1, dt * 4);
+    blossomMat.opacity = strandMat.opacity = canopyFade;
+  }
 
   // ---------- The lake ----------
   // A random spot in water at least `minDepth` deep
@@ -1033,7 +1414,7 @@ function startGame(THREE) {
     var ga = rand() * Math.PI * 2, gr = Math.sqrt(rand()) * 17.3;
     var gx = Math.cos(ga) * gr, gz = Math.sin(ga) * gr;
     if (Math.abs(gx - FARM_X) < COLS * TILE / 2 + 0.5 && Math.abs(gz - FARM_Z) < ROWS * TILE / 2 + 0.5) continue;
-    if (groundHeight(gx, gz) < -0.04 || underDock(gx, gz) || dist(gx, gz, TREE_X, TREE_Z) < 0.9) continue;
+    if (groundHeight(gx, gz) < -0.04 || underDock(gx, gz) || dist(gx, gz, TREE_X, TREE_Z) < 1.6) continue;
     gEuler.set((rand() - 0.5) * 0.5, rand() * Math.PI, (rand() - 0.5) * 0.5);
     gQuat.setFromEuler(gEuler);
     var gs = 0.6 + rand() * 0.9;
@@ -1803,13 +2184,11 @@ function startGame(THREE) {
 
     // Dawn Tree glow and mana
     var pulse = 0.5 + Math.sin(t * 2) * 0.5;
-    M.canopy.emissiveIntensity = 0.35 + night * 0.5 + pulse * 0.15;
-    treeLight.intensity = 0.9 + night * 1.6 + pulse * 0.3;
-    treeRing.material.opacity = 0.3 + pulse * 0.35;
+    updateDawnTree(dt, t, night, pulse);
     var sp = sparkles.geometry.attributes.position;
     for (var i = 0; i < 40; i++) {
-      var a = i * 2.4 + t * (0.3 + (i % 5) * 0.12), r = 1.5 + (i % 7) * 0.28;
-      sp.setXYZ(i, Math.cos(a) * r, 1 + (i % 9) * 0.45 + Math.sin(t * 1.5 + i) * 0.3, Math.sin(a) * r);
+      var a = i * 2.4 + t * (0.3 + (i % 5) * 0.12), r = 1.6 + (i % 7) * 0.4;
+      sp.setXYZ(i, Math.cos(a) * r, 1 + (i % 9) * 0.7 + Math.sin(t * 1.5 + i) * 0.3, Math.sin(a) * r);
     }
     sp.needsUpdate = true;
 
