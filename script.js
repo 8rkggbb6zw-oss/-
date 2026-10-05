@@ -1119,142 +1119,217 @@ function startGame(THREE) {
     return null;
   }
 
-  // One leaf: a soft oval with a rounded tip, cupped a little and curling at the end
-  var leafShape = new THREE.Shape();
-  leafShape.moveTo(0, 0);
-  leafShape.bezierCurveTo(0.3, 0.04, 0.33, 0.5, 0, 0.62);
-  leafShape.bezierCurveTo(-0.33, 0.5, -0.3, 0.04, 0, 0);
-  var leafCardGeo = new THREE.ShapeGeometry(leafShape, 4);
-  var lcp = leafCardGeo.attributes.position;
-  for (var lci = 0; lci < lcp.count; lci++) {
-    var lx0 = lcp.getX(lci), ly0 = lcp.getY(lci);
-    lcp.setZ(lci, lx0 * lx0 * 1.4 + ly0 * ly0 * 0.18);
+  // Painted textures for bark, leaves and pine needles, drawn once on little canvases
+  function paintTexture(w, h, paint) {
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    paint(cv.getContext('2d'), w, h);
+    return new THREE.CanvasTexture(cv);
   }
-  leafCardGeo.computeVertexNormals();
-  // Every leaf of every tree goes into one batch, so thousands of leaves stay fast
-  var MAX_LEAVES = 40000;
-  var leafBatch = new THREE.InstancedMesh(leafCardGeo, new THREE.MeshStandardMaterial({ roughness: 0.8, side: THREE.DoubleSide }), MAX_LEAVES);
-  leafBatch.castShadow = true;
-  leafBatch.receiveShadow = true;
-  var leafCount = 0;
-  var leafLight = new THREE.Color(0xa8d454), leafMid = new THREE.Color(0x7cb340), leafDark = new THREE.Color(0x4a872c);
-  var lfN = new THREE.Vector3(), lfDown = new THREE.Vector3(), lfSide = new THREE.Vector3(), lfColor = new THREE.Color();
-  var lfBasis = new THREE.Matrix4(), lfTwist = new THREE.Matrix4(), lfTilt = new THREE.Matrix4(), lfScale = new THREE.Matrix4();
-  var lfLocal = new THREE.Matrix4(), lfWorld = new THREE.Matrix4();
+  var barkTex = paintTexture(128, 256, function (g, w, h) {
+    g.fillStyle = '#6e5440';
+    g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 300; i++) { // long cracks and ridges running up the bark
+      var x = Math.random() * w, y = Math.random() * h, len = 20 + Math.random() * 80;
+      g.strokeStyle = Math.random() < 0.55 ? 'rgba(38,26,18,0.6)' : 'rgba(160,132,104,0.35)';
+      g.lineWidth = 1 + Math.random() * 3;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.bezierCurveTo(x + (Math.random() - 0.5) * 8, y + len * 0.33, x + (Math.random() - 0.5) * 8, y + len * 0.66, x + (Math.random() - 0.5) * 5, y + len);
+      g.stroke();
+    }
+    for (var j = 0; j < 700; j++) { // speckles
+      g.fillStyle = Math.random() < 0.5 ? 'rgba(30,22,15,0.25)' : 'rgba(180,155,130,0.2)';
+      g.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+    }
+  });
+  barkTex.wrapS = barkTex.wrapT = THREE.RepeatWrapping;
+  barkTex.repeat.set(2, 3);
+  var leafTex = paintTexture(256, 256, function (g) {
+    for (var i = 0; i < 320; i++) { // a round clump of overlapping leaves, see-through around the edge
+      var a = Math.random() * Math.PI * 2, r = Math.pow(Math.random(), 0.65) * 108;
+      var x = 128 + Math.cos(a) * r, y = 128 + Math.sin(a) * r * 0.92;
+      var len = 13 + Math.random() * 13, ang = Math.random() * Math.PI * 2;
+      g.save();
+      g.translate(x, y);
+      g.rotate(ang);
+      g.fillStyle = 'hsl(' + (80 + Math.random() * 28) + ',' + (38 + Math.random() * 22) + '%,' + (30 + Math.random() * 28) + '%)';
+      g.beginPath();
+      g.ellipse(0, 0, len / 2, len * 0.22, 0, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = 'rgba(20,40,12,0.35)';
+      g.lineWidth = 1;
+      g.stroke();
+      g.strokeStyle = 'rgba(225,240,190,0.3)'; // the leaf's middle vein
+      g.beginPath();
+      g.moveTo(-len / 2, 0);
+      g.lineTo(len / 2, 0);
+      g.stroke();
+      g.restore();
+    }
+  });
+  var needleTex = paintTexture(256, 128, function (g) {
+    for (var i = 0; i < 520; i++) { // needles sprouting from a drooping twig
+      var t = Math.random(), x = 6 + t * 240, y = 64 + t * t * 14;
+      var reach = (44 - t * 26) * (0.5 + Math.random() * 0.5), side = Math.random() < 0.5 ? -1 : 1;
+      g.strokeStyle = 'hsl(' + (135 + Math.random() * 20) + ',' + (30 + Math.random() * 15) + '%,' + (16 + Math.random() * 18) + '%)';
+      g.lineWidth = 1.6;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + 6 + Math.random() * 12, y + side * reach);
+      g.stroke();
+    }
+    g.strokeStyle = '#4a3828';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(2, 64);
+    g.quadraticCurveTo(128, 68, 252, 78);
+    g.stroke();
+  });
 
-  // Cover a round puff with overlapping leaves that fan out from its top, like a rosette
-  function leafPuff(tree, cx, cy, cz, radius, leafSize, tint) {
-    var under = place(new THREE.Mesh(new THREE.SphereGeometry(radius * 0.88, 14, 10), leafCanopyMat), cx, cy, cz, tree);
-    under.castShadow = false;
-    // Leaves in rings, row under row like roof shingles, fanning out from the top of the puff
-    var spacing = 0.13 * leafSize / 0.6, RINGS = 9;
-    tree.updateMatrixWorld(true);
-    for (var ringNo = 0; ringNo < RINGS && leafCount < MAX_LEAVES; ringNo++) {
-      var theta = 0.18 + ringNo * (2.3 / (RINGS - 1));          // angle down from the top of the puff
-      var perRing = Math.max(5, Math.round(Math.PI * 2 * radius * Math.sin(theta) / spacing));
-      for (var k = 0; k < perRing && leafCount < MAX_LEAVES; k++) {
-        var phi = (k + (ringNo % 2) * 0.5) / perRing * Math.PI * 2 + (rand() - 0.5) * 0.15;
-        var y = Math.cos(theta), ring = Math.sin(theta);
-        lfN.set(Math.cos(phi) * ring, y, Math.sin(phi) * ring);
-        lfDown.set(0, -1, 0).addScaledVector(lfN, lfN.y);           // pointing down the slope of the puff
-        if (lfDown.lengthSq() < 0.0001) lfDown.set(Math.cos(phi), 0, Math.sin(phi));
-        lfDown.normalize();
-        lfSide.crossVectors(lfDown, lfN);
-        lfBasis.makeBasis(lfSide, lfDown, lfN);                       // leaf tip points downhill, face points out
-        lfTwist.makeRotationZ((rand() - 0.5) * 0.5);
-        lfTilt.makeRotationX(0.2 + rand() * 0.15);                    // tips lift a little, layered like shingles
-        lfScale.makeScale(leafSize, leafSize, leafSize);
-        lfLocal.makeTranslation(cx + lfN.x * radius * 0.94, cy + lfN.y * radius * 0.94, cz + lfN.z * radius * 0.94)
-          .multiply(lfBasis).multiply(lfTwist).multiply(lfTilt).multiply(lfScale);
-        lfWorld.multiplyMatrices(tree.matrixWorld, lfLocal);
-        leafBatch.setMatrixAt(leafCount, lfWorld);
-        var h = (y + 0.75) / 1.75; // 0 underneath, 1 on top
-        lfColor.copy(leafDark).lerp(leafMid, Math.min(1, h * 1.6)).lerp(leafLight, Math.max(0, h - 0.55) * 2.2);
-        lfColor.offsetHSL(tint + (rand() - 0.5) * 0.02, 0, (rand() - 0.5) * 0.06);
-        leafBatch.setColorAt(leafCount, lfColor);
-        leafCount++;
+  var barkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, roughness: 0.95 });
+  var pineBarkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0x9a8a80, roughness: 0.95 });
+
+  // All leaf clumps (and all pine sprays) go into one batch each, so the forest stays fast
+  function foliageBatch(geo, tex, max) {
+    var batch = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({
+      map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.85
+    }), max);
+    batch.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.45 }); // leafy shadows
+    batch.castShadow = true;
+    batch.receiveShadow = true;
+    batch.setColorAt(0, new THREE.Color(1, 1, 1)); // makes room for every card's colour (must happen before count is 0)
+    batch.count = 0;
+    return batch;
+  }
+  var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 9000);
+  var sprayGeo = new THREE.PlaneGeometry(1, 1);
+  sprayGeo.rotateX(-Math.PI / 2);
+  sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
+  var needleBatch = foliageBatch(sprayGeo, needleTex, 6000);
+  var fMat = new THREE.Matrix4(), fWorld = new THREE.Matrix4(), fQuat = new THREE.Quaternion(), fEuler = new THREE.Euler();
+  var fPos = new THREE.Vector3(), fScale = new THREE.Vector3(), fColor = new THREE.Color();
+  var fRotY = new THREE.Matrix4(), fRotZ = new THREE.Matrix4(), fRotX = new THREE.Matrix4(), fScaleM = new THREE.Matrix4();
+  function addCard(batch, tree, local, shade, warm) {
+    if (batch.count >= batch.instanceMatrix.count) return;
+    fWorld.multiplyMatrices(tree.matrixWorld, local);
+    batch.setMatrixAt(batch.count, fWorld);
+    fColor.setRGB(shade * (1 + warm), shade, shade * (0.88 - warm));
+    batch.setColorAt(batch.count, fColor);
+    batch.count++;
+  }
+
+  // A branch: a tapered log from `from` in direction `dir`; returns where it ends
+  var UP = new THREE.Vector3(0, 1, 0);
+  function branch(tree, from, dir, length, r0, r1) {
+    var geo = new THREE.CylinderGeometry(r1, r0, length, 7, 1);
+    geo.translate(0, length / 2, 0);
+    var b = place(new THREE.Mesh(geo, tree.userData.bark), from.x, from.y, from.z, tree);
+    b.quaternion.setFromUnitVectors(UP, dir);
+    return from.clone().addScaledVector(dir, length);
+  }
+  // A clump of leaves: several leafy cards at random angles around a point, darker underneath
+  function leafClump(tree, center, radius, warm) {
+    for (var i = 0; i < 10; i++) {
+      fPos.set(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(radius * 1.1).add(center);
+      fEuler.set(rand() * Math.PI * 2, rand() * Math.PI * 2, rand() * Math.PI * 2);
+      fQuat.setFromEuler(fEuler);
+      var s = radius * (1.25 + rand() * 0.5);
+      fScale.set(s, s, s);
+      fMat.compose(fPos, fQuat, fScale);
+      var lift = Math.max(0, Math.min(1, (fPos.y - center.y) / radius * 0.6 + 0.5)); // 0 underneath, 1 on top
+      addCard(leafBatch, tree, fMat, 0.55 + lift * 0.45 + rand() * 0.08, warm);
+    }
+  }
+  function direction(angle, tilt) {
+    return new THREE.Vector3(Math.cos(angle) * Math.sin(tilt), Math.cos(tilt), Math.sin(angle) * Math.sin(tilt));
+  }
+
+  // Broadleaf tree: flared trunk with roots, splitting into branches and twigs with leaf clumps at the ends
+  function leafyTree(x, z, size) {
+    var t = new THREE.Group();
+    t.userData.bark = barkMat;
+    finishTree(t, x, z, 0.28 * size);
+    var trunkH = (1.5 + rand() * 0.6) * size, warm = (rand() - 0.5) * 0.12;
+    var profile = [];
+    for (var i = 0; i <= 12; i++) {
+      var yy = (i / 12) * trunkH;
+      profile.push(new THREE.Vector2(0.17 * size * (1 - 0.35 * yy / trunkH) + 0.2 * size * Math.exp(-yy * 6 / size), yy));
+    }
+    place(new THREE.Mesh(new THREE.LatheGeometry(profile, 14), barkMat), 0, 0, 0, t);
+    for (var rt = 0; rt < 5; rt++) { // roots spreading over the ground
+      var holder = new THREE.Group();
+      holder.rotation.y = (rt / 5) * Math.PI * 2 + rand() * 0.5;
+      var root = place(new THREE.Mesh(new THREE.ConeGeometry(0.11 * size, 0.8 * size, 6), barkMat), 0.28 * size, 0.07 * size, 0, holder);
+      root.rotation.z = -1.3;
+      root.scale.set(1, 0.8 + rand() * 0.4, 0.55);
+      t.add(holder);
+    }
+    t.updateMatrixWorld(true);
+    var leaderEnd = branch(t, new THREE.Vector3(0, trunkH - 0.05 * size, 0), direction(rand() * 6.28, rand() * 0.25), 0.9 * size, 0.12 * size, 0.04 * size);
+    leafClump(t, leaderEnd, 0.85 * size, warm);
+    var mains = 3 + Math.floor(rand() * 2);
+    for (var m = 0; m < mains; m++) {
+      var a = (m / mains) * Math.PI * 2 + rand() * 0.6, tilt = 0.55 + rand() * 0.35;
+      var start = new THREE.Vector3(0, trunkH * (0.78 + rand() * 0.2), 0), dir = direction(a, tilt);
+      var len = (1.0 + rand() * 0.4) * size;
+      var end = branch(t, start, dir, len, 0.1 * size, 0.045 * size);
+      leafClump(t, start.clone().addScaledVector(dir, len * 0.6), 0.6 * size, warm);
+      var subs = 2 + Math.floor(rand() * 2);
+      for (var sb2 = 0; sb2 < subs; sb2++) {
+        var end2 = branch(t, end, direction(a + (rand() - 0.5) * 1.4, 0.35 + rand() * 0.6), (0.55 + rand() * 0.35) * size, 0.045 * size, 0.015 * size);
+        leafClump(t, end2, (0.6 + rand() * 0.2) * size, warm);
       }
     }
   }
-  var leafCanopyMat = mat(0x47812b);
-  var trunkMat = new THREE.MeshStandardMaterial({ color: 0xb08257, roughness: 0.9 });
-  var darkBarkMat = mat(0x4e3524);
-  var berryMat = new THREE.MeshStandardMaterial({ color: 0xffd6f4, emissive: 0xff7fd8, emissiveIntensity: 0.9 });
-  var berryGeo = new THREE.SphereGeometry(0.06, 8, 6);
-  var rootGeo = new THREE.ConeGeometry(0.13, 0.9, 5);
 
-  // Leafy tree: short thick trunk with flared roots, and a canopy of stacked leafy puffs
-  function leafyTree(x, z, size) {
-    var t = new THREE.Group();
-    var trunkH = 1.25 * size;
-    var profile = [];
-    for (var i = 0; i <= 10; i++) {
-      var yy = (i / 10) * (trunkH + 0.5 * size);
-      profile.push(new THREE.Vector2(size * (0.15 - 0.03 * yy / trunkH + 0.2 * Math.exp(-yy * 5 / size)), yy));
-    }
-    place(new THREE.Mesh(new THREE.LatheGeometry(profile, 12), trunkMat), 0, 0, 0, t);
-    for (var rt = 0; rt < 5; rt++) { // roots spreading out over the ground
-      var holder = new THREE.Group();
-      holder.rotation.y = (rt / 5) * Math.PI * 2 + rand() * 0.4;
-      var root = place(new THREE.Mesh(rootGeo, trunkMat), 0.3 * size, 0.08 * size, 0, holder);
-      root.rotation.z = -1.25;
-      root.scale.set(size, size * (0.8 + rand() * 0.4), size * 0.55);
-      t.add(holder);
-    }
-    finishTree(t, x, z, 0.3 * size);
-    var top = trunkH + 0.2 * size, tint = (rand() - 0.5) * 0.03, leaf = 0.6 * size;
-    leafPuff(t, 0, top + 1.25 * size, 0, 0.95 * size, leaf, tint);                  // crown
-    leafPuff(t, -0.62 * size, top + 0.5 * size, 0.12 * size, 0.82 * size, leaf, tint); // left
-    leafPuff(t, 0.62 * size, top + 0.5 * size, 0.08 * size, 0.82 * size, leaf, tint);  // right
-    leafPuff(t, 0, top + 0.75 * size, -0.45 * size, 0.8 * size, leaf, tint);          // back
-    leafPuff(t, 0.05 * size, top + 0.42 * size, 0.42 * size, 0.72 * size, leaf, tint); // front
-    if (rand() < 0.2) addGlowBerries(t, top + 0.9 * size, 1.05 * size);
-  }
-
+  // Pine: tall tapering trunk with whorls of drooping needle sprays, wide at the bottom, narrow at the top
   function pineTree(x, z, size) {
     var t = new THREE.Group();
-    var trunkH = 0.9 * size;
-    place(new THREE.Mesh(new THREE.CylinderGeometry(0.09 * size, 0.16 * size, trunkH + 0.6 * size, 8), darkBarkMat), 0, (trunkH + 0.6 * size) / 2, 0, t);
-    var tiers = 4, shade = [0x2e5d36, 0x346842, 0x3a7046, 0x427a4c];
-    for (var i = 0; i < tiers; i++) {
-      var radius = (1.15 - i * 0.24) * size, height = (1.1 - i * 0.12) * size;
-      var tier = place(new THREE.Mesh(new THREE.ConeGeometry(radius, height, 10), new THREE.MeshStandardMaterial({ color: shade[i], roughness: 0.9, flatShading: true })),
-        0, trunkH + i * 0.62 * size + height / 2, 0, t);
-      tier.rotation.y = rand() * Math.PI;
-    }
-    finishTree(t, x, z, 0.25 * size);
-  }
-
-  // A few magical glowing berries hidden in the leaves
-  function addGlowBerries(t, y, spread) {
-    for (var i = 0; i < 8; i++) {
-      var a = rand() * Math.PI * 2;
-      var berry = new THREE.Mesh(berryGeo, berryMat);
-      berry.position.set(Math.cos(a) * spread, y + (rand() - 0.3) * spread * 0.8, Math.sin(a) * spread);
-      t.add(berry);
+    t.userData.bark = pineBarkMat;
+    finishTree(t, x, z, 0.22 * size);
+    var H = (3.0 + rand() * 0.8) * size;
+    var trunkGeo = new THREE.CylinderGeometry(0.03 * size, 0.17 * size, H, 8);
+    trunkGeo.translate(0, H / 2, 0);
+    place(new THREE.Mesh(trunkGeo, pineBarkMat), 0, 0, 0, t);
+    t.updateMatrixWorld(true);
+    var WHORLS = 11;
+    for (var w = 0; w < WHORLS; w++) {
+      var f = w / (WHORLS - 1); // 0 at the bottom, 1 at the top
+      var y = H * (0.22 + f * 0.76), spread = (1.45 * (1 - f) + 0.3) * size;
+      var arms = Math.max(4, Math.round(9 - f * 4));
+      for (var b = 0; b < arms; b++) {
+        fRotY.makeRotationY((b / arms) * Math.PI * 2 + w * 0.7 + rand() * 0.3);
+        fRotZ.makeRotationZ(-(0.22 + rand() * 0.22 + (1 - f) * 0.12)); // droop
+        fRotX.makeRotationX((rand() - 0.5) * 0.7);                       // twist so the sprays aren't all flat
+        fScaleM.makeScale(spread, 1, spread * 0.55);
+        fMat.makeTranslation(0, y, 0).multiply(fRotY).multiply(fRotZ).multiply(fRotX).multiply(fScaleM);
+        addCard(needleBatch, t, fMat, 0.6 + f * 0.35 + rand() * 0.1, -0.03);
+      }
     }
   }
 
   function finishTree(t, x, z, trunkRadius) {
     t.position.set(x, groundHeight(x, z), z);
     t.rotation.y = rand() * Math.PI * 2;
-    t.rotation.z = (rand() - 0.5) * 0.05; // not perfectly upright
+    t.rotation.z = (rand() - 0.5) * 0.04; // not perfectly upright
     scene.add(t);
     solids.push({ x: x, z: z, r: trunkRadius + 0.1 });
   }
 
-  // Plant the trees: mostly big leafy ones, with some pines mixed in
+  // Plant the trees: mostly broadleaf, with some pines mixed in
   for (var tr = 0; tr < 44; tr++) {
-    var size = 0.8 + rand() * 0.5;
-    var ts = forestSpot(0.9 * size);
+    var size = 0.85 + rand() * 0.45;
+    var ts = forestSpot(0.95 * size);
     if (!ts) continue;
-    if (rand() < 0.75) leafyTree(ts.x, ts.z, size);
+    if (rand() < 0.7) leafyTree(ts.x, ts.z, size);
     else pineTree(ts.x, ts.z, size);
   }
-  leafBatch.count = leafCount;
-  leafBatch.instanceMatrix.needsUpdate = true;
-  if (leafBatch.instanceColor) leafBatch.instanceColor.needsUpdate = true;
-  scene.add(leafBatch);
+  [leafBatch, needleBatch].forEach(function (batch) {
+    batch.instanceMatrix.needsUpdate = true;
+    if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+    scene.add(batch);
+  });
 
   // Rocks: clusters of a big boulder with smaller ones around it, plus loose stones
   for (var rc2 = 0; rc2 < 22; rc2++) {
