@@ -724,6 +724,223 @@ function startGame(THREE) {
     if (dist(item.position.x, item.position.z, boatWorld.x, boatWorld.z) < BOAT_L * 0.75) item.visible = false;
   });
 
+  // ---------- Magical glowing fish ----------
+  var FISH_Y = WATER_Y - 0.13; // swimming depth, just under the surface
+  var FISH_KINDS = [
+    { body: 0x8ff3ff, fin: 0xd2fbff, glow: 0x3fd8ff }, // moonlight aqua
+    { body: 0xb894ff, fin: 0xe6d4ff, glow: 0x8a5cff }, // starlight violet
+    { body: 0xffa6dd, fin: 0xffdcf2, glow: 0xff5fc4 }, // dawn pink
+    { body: 0xffd97a, fin: 0xfff2c4, glow: 0xffb83f }  // sun gold
+  ];
+
+  // Soft round glow texture, drawn once on a little canvas
+  var glowCanvas = document.createElement('canvas');
+  glowCanvas.width = glowCanvas.height = 64;
+  var gctx = glowCanvas.getContext('2d');
+  var grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.35, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  gctx.fillStyle = grad;
+  gctx.fillRect(0, 0, 64, 64);
+  var glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+  // Fin shapes (drawn flat, then turned to face the right way)
+  function finGeometry(points) {
+    var shape = new THREE.Shape();
+    shape.moveTo(points[0], points[1]);
+    for (var i = 2; i < points.length; i += 4) shape.quadraticCurveTo(points[i], points[i + 1], points[i + 2], points[i + 3]);
+    return new THREE.ShapeGeometry(shape, 8);
+  }
+  var tailGeo = finGeometry([0, 0, -0.18, 0.2, -0.36, 0.2, -0.27, 0.02, -0.4, -0.14, -0.2, -0.16, 0, 0]);
+  var dorsalGeo = finGeometry([-0.12, 0.06, -0.04, 0.24, 0.1, 0.07, 0, 0.05, -0.12, 0.06]);
+  var sideFinGeo = finGeometry([0, 0, -0.04, 0.1, -0.14, 0.09, -0.08, 0.02, 0, 0]);
+  var fishBodyGeo = new THREE.SphereGeometry(1, 18, 12);
+  var fishDotGeo = new THREE.SphereGeometry(0.018, 8, 6);
+  var fishEyeGeo = new THREE.SphereGeometry(0.022, 8, 6);
+  var fishEyeMat = new THREE.MeshBasicMaterial({ color: 0x1b1030 });
+
+  function makeFish(kind) {
+    var bodyMat = new THREE.MeshStandardMaterial({
+      color: kind.body, emissive: kind.glow, emissiveIntensity: 0.6, roughness: 0.25,
+      transparent: true, opacity: 0.85
+    });
+    var finMat = new THREE.MeshStandardMaterial({
+      color: kind.fin, emissive: kind.glow, emissiveIntensity: 0.5, roughness: 0.3,
+      transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false
+    });
+    var dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+    var fish = new THREE.Group();
+    var bodyMesh = new THREE.Mesh(fishBodyGeo, bodyMat);
+    bodyMesh.scale.set(0.26, 0.095, 0.08);
+    fish.add(bodyMesh);
+    var tail = new THREE.Mesh(tailGeo, finMat);
+    tail.position.x = -0.2;
+    fish.add(tail);
+    fish.add(new THREE.Mesh(dorsalGeo, finMat));
+    var sideFins = [-1, 1].map(function (side) {
+      var f = new THREE.Mesh(sideFinGeo, finMat);
+      f.position.set(0.05, -0.02, side * 0.07);
+      f.rotation.x = side * Math.PI / 2.4;
+      fish.add(f);
+      return f;
+    });
+    [-1, 1].forEach(function (side) {
+      var eye = new THREE.Mesh(fishEyeGeo, fishEyeMat);
+      eye.position.set(0.18, 0.025, side * 0.05);
+      fish.add(eye);
+    });
+    [0.08, -0.02, -0.11].forEach(function (dx) { // glowing spots along the back
+      var dot = new THREE.Mesh(fishDotGeo, dotMat);
+      dot.position.set(dx, 0.075, 0);
+      fish.add(dot);
+    });
+    fish.scale.setScalar(1.6);
+    fish.traverse(function (o) { o.renderOrder = 2; }); // drawn after the water so they glow through it
+    scene.add(fish);
+
+    // A soft halo of light on the water above the fish
+    var halo = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({
+      map: glowTexture, color: kind.glow, transparent: true, opacity: 0.45,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    halo.rotation.x = -Math.PI / 2;
+    halo.renderOrder = 2;
+    scene.add(halo);
+
+    return { group: fish, tail: tail, sideFins: sideFins, bodyMat: bodyMat, finMat: finMat, halo: halo, kind: kind };
+  }
+
+  // Sparkles that drift up from the fish (one shared pool, drawn in a single go)
+  var SPARKS = 160;
+  var sparkPos = new Float32Array(SPARKS * 3), sparkCol = new Float32Array(SPARKS * 3);
+  var sparkInfo = [];
+  for (var sp0 = 0; sp0 < SPARKS; sp0++) {
+    sparkPos[sp0 * 3 + 1] = -100;
+    sparkInfo.push({ life: 0, max: 1, vx: 0, vy: 0, vz: 0, color: new THREE.Color() });
+  }
+  var sparkGeo = new THREE.BufferGeometry();
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+  sparkGeo.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
+  var fishSparkles = new THREE.Points(sparkGeo, new THREE.PointsMaterial({
+    size: 0.09, map: glowTexture, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  }));
+  fishSparkles.renderOrder = 3;
+  scene.add(fishSparkles);
+  var nextSpark = 0;
+  function sparkle(x, y, z, color, spread, rise) {
+    var s = sparkInfo[nextSpark];
+    sparkPos[nextSpark * 3] = x; sparkPos[nextSpark * 3 + 1] = y; sparkPos[nextSpark * 3 + 2] = z;
+    s.vx = (Math.random() - 0.5) * spread; s.vz = (Math.random() - 0.5) * spread; s.vy = rise * (0.5 + Math.random());
+    s.max = s.life = 0.8 + Math.random() * 0.8;
+    s.color.set(color);
+    nextSpark = (nextSpark + 1) % SPARKS;
+  }
+
+  // Each fish swims a lazy figure-of-eight around its own spot in deep, open water
+  function loopPoint(f, a) {
+    var lx = Math.cos(a) * f.rx, lz = Math.sin(2 * a) * f.rz * 0.5;
+    return {
+      x: f.hx + lx * Math.cos(f.turn) - lz * Math.sin(f.turn),
+      z: f.hz + lx * Math.sin(f.turn) + lz * Math.cos(f.turn)
+    };
+  }
+  function loopIsClear(f) {
+    for (var i = 0; i < 24; i++) {
+      var p = loopPoint(f, (i / 24) * Math.PI * 2);
+      if (groundHeight(p.x, p.z) > WATER_Y - 0.3 || underDock(p.x, p.z)) return false;
+      if (typeof boatWorld !== 'undefined' && dist(p.x, p.z, boatWorld.x, boatWorld.z) < 1.8) return false;
+    }
+    return true;
+  }
+  var fishes = [];
+  var seedBeforeFish = seed; // so adding fish doesn't move the rest of the scenery
+  for (var fi = 0; fi < 7; fi++) {
+    var f = makeFish(FISH_KINDS[fi % FISH_KINDS.length]);
+    var placed = false;
+    for (var tries = 0; tries < 40 && !placed; tries++) {
+      var home = waterSpot(0.5);
+      f.hx = home.x; f.hz = home.z;
+      f.rx = 2.4 - tries * 0.05; f.rz = 1.8 - tries * 0.04;
+      f.turn = rand() * Math.PI * 2;
+      placed = loopIsClear(f);
+    }
+    f.speed = (0.35 + rand() * 0.25) * (rand() < 0.5 ? 1 : -1);
+    f.phase = rand() * Math.PI * 2;
+    f.jumpIn = 3 + rand() * 9; // seconds until its next leap
+    f.jump = -1;               // -1 = swimming, 0..1 = mid-leap
+    f.sparkIn = 0;
+    fishes.push(f);
+  }
+  seed = seedBeforeFish;
+
+  function updateFish(dt, t, night) {
+    fishes.forEach(function (f, n) {
+      var a = t * f.speed + f.phase;
+      var p = loopPoint(f, a), ahead = loopPoint(f, a + 0.05 * (f.speed > 0 ? 1 : -1));
+      var g = f.group;
+      g.position.x = p.x;
+      g.position.z = p.z;
+      g.rotation.y = Math.atan2(-(ahead.z - p.z), ahead.x - p.x); // face the way it's swimming
+
+      // Every so often, leap out of the water in a sparkly arc
+      var y = FISH_Y + Math.sin(t * 1.7 + n) * 0.03, pitch = 0;
+      f.jumpIn -= dt;
+      if (f.jump < 0 && f.jumpIn <= 0) {
+        f.jump = 0;
+        ripple(p.x, p.z, f.kind.glow, 0.9, 1.0);
+        for (var b = 0; b < 12; b++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.2, 0.8);
+      }
+      if (f.jump >= 0) {
+        f.jump += dt / 1.1;
+        y += Math.sin(Math.PI * Math.min(f.jump, 1)) * 0.75;
+        pitch = Math.cos(Math.PI * Math.min(f.jump, 1)) * 0.9;
+        if (f.jump >= 1) {
+          f.jump = -1;
+          f.jumpIn = 6 + Math.random() * 10;
+          ripple(p.x, p.z, f.kind.glow, 1.1, 1.2);
+          for (var b2 = 0; b2 < 16; b2++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.4, 1.0);
+        }
+      }
+      g.position.y = y;
+      g.rotation.z = pitch;
+
+      // Flowing tail and fluttering fins
+      f.tail.rotation.y = Math.sin(t * 7 + n) * 0.45;
+      f.sideFins[0].rotation.z = Math.sin(t * 9 + n) * 0.4;
+      f.sideFins[1].rotation.z = -Math.sin(t * 9 + n) * 0.4;
+
+      // Brighter glow at night
+      f.bodyMat.emissiveIntensity = 0.55 + night * 1.0 + Math.sin(t * 2 + n) * 0.1;
+      f.finMat.emissiveIntensity = 0.45 + night * 0.9;
+      f.halo.position.set(p.x, WATER_Y + 0.01, p.z);
+      f.halo.material.opacity = (0.5 + night * 0.4) * (f.jump >= 0 ? 0.5 : 1);
+
+      // A gentle trail of sparkles from the tail
+      f.sparkIn -= dt;
+      if (f.sparkIn <= 0) {
+        f.sparkIn = 0.12 + Math.random() * 0.15;
+        var back = -0.45;
+        sparkle(p.x + Math.cos(g.rotation.y) * back, y + 0.05, p.z - Math.sin(g.rotation.y) * back, f.kind.glow, 0.15, 0.35);
+      }
+    });
+
+    // Move and fade the sparkles
+    for (var i = 0; i < SPARKS; i++) {
+      var s = sparkInfo[i];
+      if (s.life <= 0) { sparkPos[i * 3 + 1] = -100; continue; }
+      s.life -= dt;
+      sparkPos[i * 3] += s.vx * dt;
+      sparkPos[i * 3 + 1] += s.vy * dt;
+      sparkPos[i * 3 + 2] += s.vz * dt;
+      var fade = Math.max(0, s.life / s.max);
+      sparkCol[i * 3] = s.color.r * fade; sparkCol[i * 3 + 1] = s.color.g * fade; sparkCol[i * 3 + 2] = s.color.b * fade;
+    }
+    sparkGeo.attributes.position.needsUpdate = true;
+    sparkGeo.attributes.color.needsUpdate = true;
+  }
+
   // ---------- Grass, rocks and bushes ----------
   function freeSpot(padding) {
     for (var i = 0; i < 60; i++) {
@@ -1238,6 +1455,7 @@ function startGame(THREE) {
     boat.position.y = BOAT_Y + Math.sin(t * 1.3) * 0.02; // the boat gently bobs and rocks
     boat.rotation.z = Math.sin(t * 1.1) * 0.03;
     boat.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
+    updateFish(dt, t, night); // magical fish swim, glow and leap
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
       flower.rotation.y += dt * 0.05;
