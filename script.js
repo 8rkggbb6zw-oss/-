@@ -1470,9 +1470,14 @@ function startGame(THREE) {
       var a = rand() * Math.PI * 2, r = 3 + rand() * (WALK_R - 2.5);
       var x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (Math.abs(x - FARM_X) < COLS * TILE / 2 + padding && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + padding) continue;
-      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 0.8) continue;
+      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.5) continue;
       if (nearLake(x, z)) continue;
       if (dist(x, z, FARM_X, FARM_Z + 5) < 2) continue;
+      var blocked = false; // keep clear of rocks, bushes and anything else already placed
+      for (var s = 0; s < solids.length; s++) {
+        if (dist(x, z, solids[s].x, solids[s].z) < solids[s].r + padding) { blocked = true; break; }
+      }
+      if (blocked) continue;
       return { x: x, z: z };
     }
     return null;
@@ -1516,29 +1521,14 @@ function startGame(THREE) {
     solids.push({ x: rs.x, z: rs.z, r: size * 0.8 });
   }
 
-  // Bushes: lumpy leafy balls in a few greens
-  function bushGeometry(shift) {
-    var g = new THREE.IcosahedronGeometry(0.6, 2);
-    var p = g.attributes.position, v = new THREE.Vector3();
-    for (var i = 0; i < p.count; i++) {
-      v.fromBufferAttribute(p, i);
-      v.multiplyScalar(1 + noise(v.x * 6 + shift, v.z * 6 + v.y * 4) * 0.12);
-      p.setXYZ(i, v.x, v.y, v.z);
-    }
-    g.computeVertexNormals();
-    return g;
-  }
-  var bushGeos = [bushGeometry(0), bushGeometry(5)];
-  var bushMats = [mat(0x4f8a3e), mat(0x5d9a45), mat(0x467e38)];
+  // Bushes: their spots are chosen here, and they're grown from real leaves along with the trees below
+  var bushSpots = [];
   for (var bu = 0; bu < 12; bu++) {
     var bs = freeSpot(1.2);
     if (!bs) continue;
-    var bsize = 0.7 + rand() * 0.6;
-    for (var k = 0; k < 3; k++) {
-      place(new THREE.Mesh(bushGeos[k % 2], bushMats[k]), bs.x + (k - 1) * 0.4 * bsize, 0.35 * bsize, bs.z + (rand() - 0.5) * 0.5)
-        .scale.setScalar(bsize * (0.7 + rand() * 0.5));
-    }
-    solids.push({ x: bs.x, z: bs.z, r: 0.9 * bsize });
+    bs.size = 0.7 + rand() * 0.6;
+    bushSpots.push(bs);
+    solids.push({ x: bs.x, z: bs.z, r: 0.85 * bs.size });
   }
 
   // ---------- Trees and rocks all over the island ----------
@@ -1554,12 +1544,12 @@ function startGame(THREE) {
   var startX = FARM_X, startZ = FARM_Z + 5;
   var forestSpots = [];
   // A free spot on dry land, away from the garden, lake, dock, Dawn Tree, paths and other trees
-  function forestSpot(gap) {
+  function forestSpot(gap, tall) {
     for (var i = 0; i < 80; i++) {
       var a = rand() * Math.PI * 2, r = 2 + Math.sqrt(rand()) * 14.3;
       var x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (Math.abs(x - FARM_X) < COLS * TILE / 2 + 1.8 && Math.abs(z - FARM_Z) < ROWS * TILE / 2 + 1.8) continue;
-      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.5) continue;
+      if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + (tall ? 4.6 : 1.5)) continue; // tall trees stay clear of the Dawn Tree's canopy
       if (lakeQ(x, z) < 1.3 || underDock(x, z) || dist(x, z, dockStart.x, dockStart.z) < 2.5) continue;
       if (dist(x, z, startX, startZ) < 2.5) continue;
       if (distToPath(x, z, startX, startZ, dockStart.x, dockStart.z) < 1.6) continue; // path to the dock
@@ -1567,6 +1557,9 @@ function startGame(THREE) {
       var crowded = false;
       for (var j = 0; j < forestSpots.length; j++) {
         if (dist(x, z, forestSpots[j].x, forestSpots[j].z) < gap + forestSpots[j].gap) { crowded = true; break; }
+      }
+      for (var k = 0; k < solids.length && !crowded; k++) { // and clear of rocks, bushes and the shore boulders
+        if (dist(x, z, solids[k].x, solids[k].z) < solids[k].r + gap) crowded = true;
       }
       if (crowded) continue;
       var spot = { x: x, z: z, gap: gap };
@@ -1826,11 +1819,29 @@ function startGame(THREE) {
   // Plant the trees: mostly broadleaf, with some pines mixed in
   for (var tr = 0; tr < 44; tr++) {
     var size = 0.85 + rand() * 0.45;
-    var ts = forestSpot(0.95 * size);
+    var ts = forestSpot(1.15 * size, true); // wide enough apart that their leaves don't grow into each other
     if (!ts) continue;
     if (rand() < 0.7) leafyTree(ts.x, ts.z, size);
     else pineTree(ts.x, ts.z, size);
   }
+  // Bushes: several low clumps of leaves on short twigs, darker inside and underneath
+  bushSpots.forEach(function (bs) {
+    var b = new THREE.Group(), sz = bs.size, warm = (rand() - 0.5) * 0.1;
+    b.userData.bark = barkMat;
+    b.position.set(bs.x, groundHeight(bs.x, bs.z), bs.z);
+    b.rotation.y = rand() * Math.PI * 2;
+    scene.add(b);
+    b.updateMatrixWorld(true);
+    var clumpsN = 4 + Math.floor(rand() * 3);
+    for (var c = 0; c < clumpsN; c++) {
+      var ca = (c / clumpsN) * Math.PI * 2 + rand() * 0.6, cr = (0.25 + rand() * 0.2) * sz;
+      var center = new THREE.Vector3(Math.cos(ca) * cr, (0.32 + rand() * 0.15) * sz, Math.sin(ca) * cr);
+      branch(b, new THREE.Vector3(0, 0, 0), center.clone().normalize(), center.length(), 0.03 * sz, 0.012 * sz);
+      leafClump(b, center, (0.36 + rand() * 0.1) * sz, warm);
+    }
+    leafClump(b, new THREE.Vector3(0, 0.55 * sz, 0), 0.4 * sz, warm); // a rounded top
+  });
+
   [leafBatch, needleBatch].forEach(function (batch) {
     batch.instanceMatrix.needsUpdate = true;
     if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
@@ -1849,9 +1860,24 @@ function startGame(THREE) {
       var sa2 = rand() * Math.PI * 2, sd = big + 0.2 + rand() * 0.4, ssz = 0.15 + rand() * 0.3;
       var sx2 = rs2.x + Math.cos(sa2) * sd, sz2 = rs2.z + Math.sin(sa2) * sd;
       if (lakeQ(sx2, sz2) < 1.25) continue;
+      var onSomething = false;
+      for (var so = 0; so < solids.length - 1 && !onSomething; so++) { // (the last one is this cluster's own big boulder)
+        if (dist(sx2, sz2, solids[so].x, solids[so].z) < solids[so].r + ssz) onSomething = true;
+      }
+      if (onSomething) continue;
       boulder(sx2, sz2, ssz, 0.6).position.y = ssz * 0.1;
     }
   }
+  // Hide grass blades that would poke up through rocks, trunks and bushes
+  var hideM = new THREE.Matrix4().makeScale(0, 0, 0), bladeM = new THREE.Matrix4(), bladeP = new THREE.Vector3();
+  for (var gb = 0; gb < grass.count; gb++) {
+    grass.getMatrixAt(gb, bladeM);
+    bladeP.setFromMatrixPosition(bladeM);
+    for (var sg = 0; sg < solids.length; sg++) {
+      if (dist(bladeP.x, bladeP.z, solids[sg].x, solids[sg].z) < solids[sg].r) { grass.setMatrixAt(gb, hideM); break; }
+    }
+  }
+  grass.instanceMatrix.needsUpdate = true;
   seed = seedBeforeForest;
 
   // ---------- Sparkles round the tree, fireflies at night ----------
