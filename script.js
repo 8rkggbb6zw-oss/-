@@ -3687,7 +3687,7 @@ function startGame(THREE) {
     seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
     bloom: { name: 'Moonbloom', icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
-    axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
+    axe: { name: 'Axe', icon: '🪓', img: iconAxe(), info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
@@ -3837,6 +3837,57 @@ function startGame(THREE) {
       sparkle(54, 10, 5);
       sparkle(9, 44, 3.5);
       sparkle(56, 36, 3);
+    });
+  }
+  function iconAxe() {
+    return iconCanvas(function (g) {
+      g.lineCap = 'round';
+      // wooden handle with a slight curve and a darker grain line
+      g.strokeStyle = '#7a4a26';
+      g.lineWidth = 6;
+      g.beginPath(); g.moveTo(14, 58); g.quadraticCurveTo(26, 36, 40, 12); g.stroke();
+      g.strokeStyle = '#a8703f';
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(14, 57); g.quadraticCurveTo(26, 35, 39, 12); g.stroke();
+      g.strokeStyle = 'rgba(255,230,190,0.45)';
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(16, 53); g.quadraticCurveTo(27, 34, 38, 15); g.stroke();
+      // leather grip wrapped round the bottom
+      g.strokeStyle = '#5a3a24';
+      g.lineWidth = 7;
+      g.beginPath(); g.moveTo(15, 56); g.lineTo(20, 47); g.stroke();
+      g.strokeStyle = '#8a5a38';
+      g.lineWidth = 1.2;
+      for (var w = 0; w < 4; w++) { g.beginPath(); g.moveTo(13 + w * 1.6, 52 - w * 2.4); g.lineTo(19 + w * 1.6, 55 - w * 2.4); g.stroke(); }
+      // steel head: a wedge with a curved cutting edge
+      var steel = g.createLinearGradient(30, 6, 58, 32);
+      steel.addColorStop(0, '#eef2f6');
+      steel.addColorStop(0.5, '#aab3bd');
+      steel.addColorStop(1, '#6e7781');
+      g.fillStyle = steel;
+      g.beginPath();
+      g.moveTo(34, 10);
+      g.lineTo(44, 6);
+      g.quadraticCurveTo(58, 8, 60, 22);
+      g.quadraticCurveTo(54, 34, 44, 30);
+      g.lineTo(38, 22);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = '#4e565f';
+      g.lineWidth = 1.2;
+      g.stroke();
+      // the bright sharpened edge
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(47, 7); g.quadraticCurveTo(58, 10, 59, 22); g.quadraticCurveTo(54, 31, 46, 30); g.stroke();
+      // a dark collar where the head meets the handle
+      g.fillStyle = '#3f464e';
+      g.beginPath(); g.moveTo(33, 11); g.lineTo(38, 9); g.lineTo(42, 18); g.lineTo(37, 21); g.closePath(); g.fill();
+      // a little gleam
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.moveTo(52, 12); g.lineTo(53, 15); g.lineTo(56, 16); g.lineTo(53, 17); g.lineTo(52, 20); g.lineTo(51, 17); g.lineTo(48, 16); g.lineTo(51, 15);
+      g.closePath(); g.fill();
     });
   }
   function iconHoe() {
