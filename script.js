@@ -2754,6 +2754,33 @@ function startGame(THREE) {
       var band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 14), bandMat);
       g.add(band);
       g.rotation.z = Math.PI / 2;
+    } else if (item === 'seed') { // three little pearly lavender seeds
+      for (var si = 0; si < 3; si++) {
+        m = new THREE.Mesh(sapGeo, seedMat);
+        m.scale.setScalar(0.55);
+        m.position.set(Math.cos(si * 2.1) * 0.06, 0, Math.sin(si * 2.1) * 0.06);
+        g.add(m);
+      }
+    } else if (item === 'bloom') { // a little glowing moonbloom flower on a stem
+      var st = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), M.stem);
+      st.position.y = -0.08;
+      g.add(st);
+      for (var pi = 0; pi < 6; pi++) {
+        var pet = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.petal);
+        var pa = (pi / 6) * Math.PI * 2;
+        pet.position.set(Math.cos(pa) * 0.06, 0.04, Math.sin(pa) * 0.06);
+        pet.scale.set(1.2, 0.45, 0.8);
+        pet.rotation.y = -pa;
+        g.add(pet);
+      }
+      m = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), M.center);
+      m.position.y = 0.05;
+      g.add(m);
+    } else if (item === 'petal') { // a curled, shimmering Dawn Petal
+      m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), petalMat);
+      m.scale.set(1, 0.25, 0.65);
+      m.rotation.z = 0.4;
+      g.add(m);
     } else if (item === 'stone') {
       m = new THREE.Mesh(boulderGeos[2], stoneMat);
       m.scale.set(0.15, 0.12, 0.13);
@@ -2780,6 +2807,8 @@ function startGame(THREE) {
     return g;
   }
   var fiberMat = new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 });
+  var seedMat = new THREE.MeshStandardMaterial({ color: 0xc9b0f2, emissive: 0x8a6ad8, emissiveIntensity: 0.3, roughness: 0.25 });
+  var petalMat = new THREE.MeshStandardMaterial({ color: 0xff9be0, emissive: 0xff6fcf, emissiveIntensity: 0.45, roughness: 0.4, side: THREE.DoubleSide });
   var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
   var hayMat = new THREE.MeshStandardMaterial({ color: 0xe8c45a, roughness: 0.95 });
   var bandMat = new THREE.MeshStandardMaterial({ color: 0xb0402e, roughness: 0.8 });
@@ -3068,8 +3097,23 @@ function startGame(THREE) {
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
-    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe' || heldItem() === 'trimmers' || heldItem() === 'hoe';
-    axeArm.visible = holding;
+    var held = heldItem();
+    var holding = held === 'axe' || held === 'pickaxe' || held === 'trimmers' || held === 'hoe'; // a tool
+    axeArm.visible = !!held;   // your arm shows whenever you're holding anything
+    toolHandle.visible = holding;
+    if (held !== heldShown) {  // swap the material in your hand
+      heldItemGrp.traverse(function (o) { // free the old item's one-off shapes
+        if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+      });
+      while (heldItemGrp.children.length) heldItemGrp.remove(heldItemGrp.children[0]);
+      if (held && !holding) {
+        var model = pickupModel(held);
+        model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
+        heldItemGrp.add(model);
+      }
+      heldShown = held;
+    }
+    if (heldItemGrp.children.length) heldItemGrp.rotation.y += 0.02; // a gentle twirl so it catches the light
     axeHeadGrp.visible = heldItem() === 'axe';
     pickHeadGrp.visible = heldItem() === 'pickaxe';
     trimHeadGrp.visible = heldItem() === 'trimmers';
@@ -3291,7 +3335,11 @@ function startGame(THREE) {
   place(new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), M.skin), 0, -0.34, 0, axeArm);  // hand
   var handleGeo = new THREE.CylinderGeometry(0.024, 0.03, 0.62, 8);
   handleGeo.translate(0, -0.31, 0);
-  place(new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, -0.3, 0, axeArm);
+  var toolHandle = place(new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, -0.3, 0, axeArm);
+  // whatever material you've selected is held in your hand
+  var heldItemGrp = new THREE.Group(), heldShown = null;
+  heldItemGrp.position.set(0, -0.44, 0.02);
+  axeArm.add(heldItemGrp);
   var axeMetal = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 });
   var axeHeadGrp = new THREE.Group(), pickHeadGrp = new THREE.Group(), trimHeadGrp = new THREE.Group();
   axeArm.add(axeHeadGrp);
