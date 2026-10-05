@@ -3811,7 +3811,7 @@ function startGame(THREE) {
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
-    trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 84, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
+    trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 93, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
     hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
@@ -4116,68 +4116,109 @@ function startGame(THREE) {
   }
   function iconTrimmers() {
     return iconCanvas(function (g) {
-      g.translate(31, 31);     // centred and scaled so the trimmers fill the picture
-      g.scale(1.04, 1.04);
-      g.rotate(Math.PI / 4); // tilted, handles toward the bottom-left corner
-      // one half: a long steel blade above the pivot and a wooden handle below, drawn pointing up, then tilted
+      g.translate(29.2, 32.9); // centred and scaled so the trimmers fill the picture
+      g.scale(0.92, 0.92);
+      g.rotate(Math.PI / 4);   // tilted, handles toward the bottom-left corner
+      // one half: a wide steel blade above the pivot and a curved wooden handle below, drawn pointing up, then tilted
       function half(tilt, flip) {
         g.save();
         g.rotate(tilt);
         g.scale(flip, 1);
-        // wooden handle with a dark outline
+        // curved wooden handle with a dark outline
         g.shadowColor = 'rgba(60,30,90,0.35)';
         g.shadowBlur = 3;
         g.shadowOffsetY = 2;
         g.beginPath();
-        g.moveTo(-3, 2); g.lineTo(3, 2); g.lineTo(3.6, 26); g.quadraticCurveTo(0, 30, -3.6, 26); g.closePath();
+        g.moveTo(-3.6, 3); g.lineTo(3.6, 3);
+        g.quadraticCurveTo(5.5, 14, 3.4, 27); g.quadraticCurveTo(-0.4, 31, -3.8, 27);
+        g.quadraticCurveTo(-2, 14, -3.6, 3);
+        g.closePath();
         g.fillStyle = '#5a3418';
         g.fill();
         g.shadowColor = 'transparent';
         g.beginPath();
-        g.moveTo(-1.9, 3); g.lineTo(1.9, 3); g.lineTo(2.4, 25); g.quadraticCurveTo(0, 27.5, -2.4, 25); g.closePath();
-        var wood = g.createLinearGradient(-3, 0, 3, 0);
-        wood.addColorStop(0, '#8a5328'); wood.addColorStop(0.45, '#c98a4e'); wood.addColorStop(1, '#8a5328');
+        g.moveTo(-2.2, 4); g.lineTo(2.2, 4);
+        g.quadraticCurveTo(4, 14, 2.2, 25); g.quadraticCurveTo(-0.4, 27.5, -2.6, 25);
+        g.quadraticCurveTo(-0.9, 14, -2.2, 4);
+        g.closePath();
+        var wood = g.createLinearGradient(-3, 0, 4, 0);
+        wood.addColorStop(0, '#8a5328'); wood.addColorStop(0.45, '#d29452'); wood.addColorStop(1, '#8a5328');
         g.fillStyle = wood;
         g.fill();
-        // green rubber grip at the end
-        g.fillStyle = '#3f8a3a';
-        g.beginPath(); g.moveTo(-3.8, 15); g.lineTo(3.8, 15); g.lineTo(4, 26); g.quadraticCurveTo(0, 30.5, -4, 26); g.closePath(); g.fill();
-        g.strokeStyle = '#2c6a2a';
+        // red rubber grip with ridges
+        g.beginPath();
+        g.moveTo(-3.4, 15); g.lineTo(4.4, 15);
+        g.quadraticCurveTo(4.6, 22, 3.6, 27); g.quadraticCurveTo(-0.4, 31.5, -4, 27);
+        g.quadraticCurveTo(-3, 21, -3.4, 15);
+        g.closePath();
+        var grip = g.createLinearGradient(-4, 0, 5, 0);
+        grip.addColorStop(0, '#9e2a22'); grip.addColorStop(0.45, '#e0503f'); grip.addColorStop(1, '#9e2a22');
+        g.fillStyle = grip;
+        g.fill();
+        g.strokeStyle = 'rgba(90,20,15,0.6)';
         g.lineWidth = 1;
-        for (var r = 0; r < 3; r++) { g.beginPath(); g.moveTo(-3.8, 18 + r * 3); g.lineTo(3.8, 18 + r * 3); g.stroke(); }
-        // steel blade: long, straight back, sharp bevelled edge on one side, pointed tip
+        for (var r = 0; r < 3; r++) { g.beginPath(); g.moveTo(-3.4, 18 + r * 3); g.lineTo(4.4, 18 + r * 3); g.stroke(); }
+        // a little rubber bumper where the handles meet
+        g.fillStyle = '#2e2e34';
+        g.beginPath(); g.ellipse(2.8, 7, 1.8, 2.2, 0, 0, Math.PI * 2); g.fill();
+        // wide steel blade: straight back, wavy cutting edge on the inside, rounded tip
         g.shadowColor = 'rgba(40,40,60,0.4)';
         g.shadowBlur = 2;
         g.shadowOffsetY = 1;
         g.beginPath();
-        g.moveTo(-3.2, 2); g.lineTo(-3.2, -26); g.lineTo(0, -32); g.lineTo(3.4, -24); g.lineTo(3.4, 2); g.closePath();
-        var steel = g.createLinearGradient(-3, 0, 3.4, 0);
-        steel.addColorStop(0, '#8f98a3'); steel.addColorStop(0.5, '#e6ebf0'); steel.addColorStop(1, '#a9b2bc');
+        g.moveTo(-4.2, 3);
+        g.lineTo(-4.4, -20);
+        g.quadraticCurveTo(-3.2, -30, 2.6, -38);             // the back sweeps in to a sharp point
+        g.lineTo(4.2, -24);                                   // a straight, keen edge off the point
+        var edgeX = 4.2;
+        for (var k = 1; k <= 6; k++) {                        // then the wavy cutting edge, down the inside
+          var y = -24 + k * 4;
+          g.quadraticCurveTo(edgeX + (k % 2 ? 1.6 : -0.4), y - 2, edgeX, y);
+        }
+        g.lineTo(4.2, 3);
+        g.closePath();
+        var steel = g.createLinearGradient(-4.4, 0, 4.4, 0);
+        steel.addColorStop(0, '#848d98'); steel.addColorStop(0.5, '#eef2f6'); steel.addColorStop(1, '#a3acb6');
         g.fillStyle = steel;
         g.fill();
         g.shadowColor = 'transparent';
         g.strokeStyle = '#3d444c';
-        g.lineWidth = 1.2;
+        g.lineWidth = 1.3;
         g.stroke();
-        g.strokeStyle = '#ffffff'; // bright sharpened edge
-        g.lineWidth = 1.4;
-        g.beginPath(); g.moveTo(2.6, -1); g.lineTo(2.6, -24); g.lineTo(0, -30); g.stroke();
+        g.strokeStyle = '#ffffff';                            // bright bevel along the cutting edge
+        g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(2.8, 1); g.lineTo(2.8, -23); g.lineTo(2.2, -35); g.stroke(); // bright right up to the point
+        g.strokeStyle = 'rgba(70,80,90,0.45)';                // a groove down the middle of the blade
+        g.lineWidth = 0.9;
+        g.beginPath(); g.moveTo(-1.2, 0); g.lineTo(-1.2, -22); g.lineTo(0.4, -30); g.stroke();
         g.restore();
       }
-      half(-0.2, 1);
-      half(0.2, -1);
+      half(-0.3, 1);
+      half(0.3, -1);
       // gold pivot bolt where the blades cross
       g.fillStyle = '#7a5a12';
-      g.beginPath(); g.arc(0, 2, 4.4, 0, Math.PI * 2); g.fill();
-      var bolt = g.createRadialGradient(-1, 1, 0.5, 0, 2, 4);
-      bolt.addColorStop(0, '#fff3c4'); bolt.addColorStop(1, '#d9a441');
+      g.beginPath(); g.arc(0, 3, 5, 0, Math.PI * 2); g.fill();
+      var bolt = g.createRadialGradient(-1.2, 1.8, 0.5, 0, 3, 4.6);
+      bolt.addColorStop(0, '#fff6d0'); bolt.addColorStop(1, '#d9a441');
       g.fillStyle = bolt;
-      g.beginPath(); g.arc(0, 2, 3.4, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(0, 3, 3.9, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#8a6418';
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(-2, 3); g.lineTo(2, 3); g.stroke(); // a screw slot
+      // tiny glints right at the sharp points
+      [[-0.3, 1], [0.3, -1]].forEach(function (b) {
+        g.save();
+        g.rotate(b[0]);
+        g.scale(b[1], 1);
+        g.fillStyle = '#ffffff';
+        g.beginPath(); g.arc(2.4, -35.5, 1.1, 0, Math.PI * 2); g.fill();
+        g.restore();
+      });
       // a sparkle on a blade
       g.fillStyle = '#ffffff';
       g.beginPath();
-      g.moveTo(-5, -22); g.lineTo(-4, -19); g.lineTo(-1, -18); g.lineTo(-4, -17); g.lineTo(-5, -14);
-      g.lineTo(-6, -17); g.lineTo(-9, -18); g.lineTo(-6, -19); g.closePath();
+      g.moveTo(-9, -21); g.lineTo(-8, -18); g.lineTo(-5, -17); g.lineTo(-8, -16); g.lineTo(-9, -13);
+      g.lineTo(-10, -16); g.lineTo(-13, -17); g.lineTo(-10, -18); g.closePath();
       g.fill();
     });
   }
