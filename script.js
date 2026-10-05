@@ -3512,6 +3512,13 @@ function startGame(THREE) {
     if (e.repeat) return;
     if (e.code === 'KeyI') toggleBag();
     if (e.code === 'KeyR') nextRow();
+    // number keys 1-4 pick that slot in the hotbar's current row (pressing it again unselects it)
+    var num = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+    if (num >= 0) {
+      var pick = hotRow * ROW_SIZE + num;
+      selectedSlot = selectedSlot === pick ? -1 : pick;
+      renderBag();
+    }
     if (e.code === 'Escape') toggleBag(false);
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
