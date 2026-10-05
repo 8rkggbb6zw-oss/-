@@ -1224,10 +1224,6 @@ function startGame(THREE) {
     return batch;
   }
   var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 9000);
-  var coreBatch = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: 0x3f6b2c, roughness: 1 }), 900);
-  coreBatch.castShadow = true;
-  coreBatch.receiveShadow = true;
-  coreBatch.count = 0;
   var sprayGeo = new THREE.PlaneGeometry(1, 1);
   sprayGeo.rotateX(-Math.PI / 2);
   sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
@@ -1256,14 +1252,6 @@ function startGame(THREE) {
   }
   // A clump of leaves: several leafy cards at random angles around a point, darker underneath
   function leafClump(tree, center, radius, warm) {
-    if (coreBatch.count < coreBatch.instanceMatrix.count) {
-      fPos.copy(center);
-      fQuat.set(0, 0, 0, 1);
-      fScale.set(radius * 0.4, radius * 0.32, radius * 0.4); // small enough to stay hidden inside the leaves
-      fMat.compose(fPos, fQuat, fScale);
-      fWorld.multiplyMatrices(tree.matrixWorld, fMat);
-      coreBatch.setMatrixAt(coreBatch.count++, fWorld);
-    }
     for (var i = 0; i < 12; i++) {
       fPos.set(rand() - 0.5, (rand() - 0.35) * 0.8, rand() - 0.5).normalize().multiplyScalar(radius * (0.45 + rand() * 0.4)).add(center);
       fEuler.set(rand() * Math.PI * 2, rand() * Math.PI * 2, rand() * Math.PI * 2);
@@ -1386,8 +1374,6 @@ function startGame(THREE) {
     if (rand() < 0.7) leafyTree(ts.x, ts.z, size);
     else pineTree(ts.x, ts.z, size);
   }
-  coreBatch.instanceMatrix.needsUpdate = true;
-  scene.add(coreBatch);
   [leafBatch, needleBatch].forEach(function (batch) {
     batch.instanceMatrix.needsUpdate = true;
     if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
