@@ -2191,7 +2191,7 @@ function startGame(THREE) {
     t.userData.solid = solids[solids.length - 1];
   }
   // Plants a tree and remembers which leaves are its own, so it can be chopped down later
-  var choppable = [];
+  var choppable = [], trimmable = []; // trees you can chop, and bushes you can trim
   function plantTree(x, z, size, leafy) {
     var l0 = leafBatch.count, n0 = needleBatch.count;
     if (leafy) leafyTree(x, z, size);
@@ -2216,6 +2216,7 @@ function startGame(THREE) {
   // Bushes: several low clumps of leaves on short twigs, darker inside and underneath
   function growBush(bs) {
     var b = new THREE.Group(), sz = bs.size, warm = (rand() - 0.5) * 0.1;
+    var l0 = leafBatch.count;
     sceneryGroups.push(b);
     b.userData.bark = barkMat;
     b.position.set(bs.x, groundHeight(bs.x, bs.z), bs.z);
@@ -2235,6 +2236,12 @@ function startGame(THREE) {
       leafClump(b, center, (0.36 + rand() * 0.1) * sz, warm);
     }
     leafClump(b, new THREE.Vector3(0, 0.55 * sz, 0), 0.4 * sz, warm); // a rounded top
+    b.userData.size = sz;
+    b.userData.bush = true;
+    b.userData.solid = solids[solids.length - 1]; // its solid was added just before it was grown
+    b.userData.solidR = b.userData.solid.r;
+    b.userData.leaves = [{ batch: leafBatch, start: l0, count: leafBatch.count - l0 }];
+    trimmable.push(b);
   }
   bushSpots.forEach(growBush);
 
@@ -2392,8 +2399,8 @@ function startGame(THREE) {
     });
     dirtyRanges = [];
   }
-  // Remember every tree's own trunk, branches and leaves inside the shared batches
-  choppable.forEach(function (t) {
+  // Remember every tree's (and bush's) own trunk, branches and leaves inside the shared batches
+  choppable.concat(trimmable).forEach(function (t) {
     var u = t.userData;
     u.base = t.position.clone();
     u.hits = 0;
@@ -2541,6 +2548,50 @@ function startGame(THREE) {
 
   var SWING_TIME = 0.6, IMPACT = 0.27; // seconds: a whole swing, and when the axe bites into the trunk
   var swingT = 9, swingTree = null, swingRock = null; // time since the last swing started, and what it's aimed at
+  // ---------- Trimming bushes ----------
+  var SNIPS_TO_TRIM = 10, HAY_CHANCE = 0.5, swingBush = null;
+  var allScenery = null; // every tree and bush, filled in once everything is set up
+  function bushInReach() {
+    var best = null, bestD = 99;
+    trimmable.forEach(function (b) {
+      var u = b.userData;
+      if (u.state !== 'standing') return;
+      var d = dist(player.position.x, player.position.z, u.base.x, u.base.z);
+      if (d < u.solidR + 1.0 && d < bestD) { best = b; bestD = d; }
+    });
+    return best;
+  }
+  function trimBush(b) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    swingBush = b;
+    facing = Math.atan2(b.userData.base.x - player.position.x, b.userData.base.z - player.position.z);
+  }
+  // The trimmers snip: leaves fly, the bush shudders, and on the tenth snip it's trimmed away
+  function snipHits(b) {
+    var u = b.userData;
+    if (u.state !== 'standing') return;
+    u.hits++;
+    burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x6aa84f, 12, 2.4, 1.6, -5); // snipped leaves
+    burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x9bd06a, 5, 1.8, 1.2, -3);
+    if (u.hits < SNIPS_TO_TRIM) { u.shudderT = 0; return; }
+    u.state = 'shrinking';
+    u.shrinkT = 0;
+    u.shudderT = undefined;
+    burst(u.base.x, u.base.y + 0.4 * u.size, u.base.z, 0x6aa84f, 30, 3.5, 2, -4);
+    var span = 0.8 * u.size;
+    sparklePoof(new THREE.Vector3(u.base.x - span, u.base.y, u.base.z), new THREE.Vector3(u.base.x + span, u.base.y, u.base.z), 150);
+    var fibers = Math.max(2, Math.min(5, Math.round(1 + u.size * 2.5)));
+    for (var i = 0; i < fibers; i++) {
+      var a = Math.random() * Math.PI * 2, d = 0.4 + Math.random() * 0.8;
+      dropPickup('fiber', 1, u.base.x + Math.cos(a) * d, u.base.z + Math.sin(a) * d, u.base.y, 0.2 + i * 0.06);
+    }
+    if (Math.random() < HAY_CHANCE) {
+      var ha = Math.random() * Math.PI * 2;
+      dropPickup('hay', 1, u.base.x + Math.cos(ha) * 0.8, u.base.z + Math.sin(ha) * 0.8, u.base.y, 0.55);
+    }
+  }
+
   function chopTree(t) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
@@ -2639,6 +2690,19 @@ function startGame(THREE) {
       var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.06, 6), capMat);
       stem.position.y = 0.17;
       g.add(stem);
+    } else if (item === 'fiber') { // a little bundle of green strands
+      for (var fi = 0; fi < 6; fi++) {
+        var strand = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.014, 0.34, 5), fiberMat);
+        strand.rotation.set((Math.random() - 0.5) * 0.5, 0, (fi - 2.5) * 0.12);
+        strand.position.x = (fi - 2.5) * 0.02;
+        g.add(strand);
+      }
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 10), twineMat));
+    } else if (item === 'hay') { // a small tied bale of straw
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.3, 14), hayMat));
+      var band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 14), bandMat);
+      g.add(band);
+      g.rotation.z = Math.PI / 2;
     } else if (item === 'stone') {
       m = new THREE.Mesh(boulderGeos[2], stoneMat);
       m.scale.set(0.15, 0.12, 0.13);
@@ -2664,10 +2728,14 @@ function startGame(THREE) {
     g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     return g;
   }
+  var fiberMat = new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 });
+  var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
+  var hayMat = new THREE.MeshStandardMaterial({ color: 0xe8c45a, roughness: 0.95 });
+  var bandMat = new THREE.MeshStandardMaterial({ color: 0xb0402e, roughness: 0.8 });
   var coalGeo = new THREE.IcosahedronGeometry(0.13, 0);
   coalGeo.scale(1, 0.8, 0.9);
   var coalMat = new THREE.MeshStandardMaterial({ color: 0x26262c, roughness: 0.35, metalness: 0.35, flatShading: true });
-  var PICKUP_GLOW = { wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8, stone: 0xe6eeff, coal: 0xffb070 };
+  var PICKUP_GLOW = { fiber: 0xd8ffb0, hay: 0xffe6a0, wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8, stone: 0xe6eeff, coal: 0xffb070 };
   // Puts a floating, glowing pickup on the ground: walk into it to collect
   function dropPickup(item, amount, x, z, groundY, delay) {
     var holder = new THREE.Group(); // floats and spins
@@ -2766,6 +2834,7 @@ function startGame(THREE) {
       });
     });
   });
+  allScenery = choppable.concat(trimmable);
   function rockInReach() {
     var best = null, bestD = 99;
     mineable.forEach(function (r) {
@@ -2858,11 +2927,13 @@ function startGame(THREE) {
     if ((actionHeld || keys['KeyE'] || keys['Space']) && swingT >= SWING_TIME) {
       if (heldItem() === 'axe') { var holdTree = treeInReach(); if (holdTree) chopTree(holdTree); }
       if (heldItem() === 'pickaxe') { var holdRock = rockInReach(); if (holdRock) mineRock(holdRock); }
+      if (heldItem() === 'trimmers') { var holdBush = bushInReach(); if (holdBush) trimBush(holdBush); }
     }
     if (swingTree && before < IMPACT && swingT >= IMPACT) { axeHits(swingTree); swingTree = null; }
     if (swingRock && before < IMPACT && swingT >= IMPACT) { pickHits(swingRock); swingRock = null; }
     updateRocks(dt);
-    choppable.forEach(function (t) {
+    if (swingBush && before < IMPACT && swingT >= IMPACT) { snipHits(swingBush); swingBush = null; }
+    allScenery.forEach(function (t) {
       var u = t.userData;
       if (u.state === 'standing' && u.shudderT !== undefined) { // a quick shudder after each hit
         u.shudderT += dt;
@@ -2870,7 +2941,19 @@ function startGame(THREE) {
         setTreeTilt(t, sh, Math.sin(facing), Math.cos(facing));
         if (u.shudderT >= 0.45) u.shudderT = undefined;
       }
-      if (u.state === 'falling') {
+      if (u.state === 'shrinking') { // a trimmed bush shrinks away into its sparkles
+        u.shrinkT += dt;
+        var sk = Math.max(0, 1 - u.shrinkT / 0.4);
+        setTreeGrowth(t, sk);
+        if (sk === 0) {
+          u.solid.r = 0;
+          showHiddenGrass(u.solid, true);
+          u.state = 'regrowing';
+          u.felledAt = gameMinutes();
+          u.shownK = -1;
+          u.grassHidden = false;
+        }
+      } else if (u.state === 'falling') {
         u.fallT += dt;
         var FALL = 1.6, flat = Math.PI / 2 - 0.05, angle;
         if (u.fallT < FALL) angle = Math.pow(u.fallT / FALL, 2.4) * flat; // slow at first, then faster and faster
@@ -2931,10 +3014,16 @@ function startGame(THREE) {
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
-    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe';
+    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe' || heldItem() === 'trimmers';
     axeArm.visible = holding;
     axeHeadGrp.visible = heldItem() === 'axe';
     pickHeadGrp.visible = heldItem() === 'pickaxe';
+    trimHeadGrp.visible = heldItem() === 'trimmers';
+    // the trimmer blades open as you wind up and snap shut as they hit
+    var open = swingT < IMPACT ? Math.min(1, swingT / 0.15) : Math.max(0, 1 - (swingT - IMPACT) / 0.05);
+    if (swingT >= SWING_TIME) open = 0.3;
+    trimBladeA.rotation.x = 0.05 + open * 0.35;
+    trimBladeB.rotation.x = -0.05 - open * 0.35;
     var REST = 5.23, UP = 2.35, HIT = 4.75;            // arm angles: carrying, raised up behind you, striking forward over the top
     var armX = REST, armZ = 0, twist = 0, lean = 0, squash = 0, sw = swingT;
     function easeOut(k) { return 1 - (1 - k) * (1 - k); }
@@ -3149,9 +3238,21 @@ function startGame(THREE) {
   handleGeo.translate(0, -0.31, 0);
   place(new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, -0.3, 0, axeArm);
   var axeMetal = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 });
-  var axeHeadGrp = new THREE.Group(), pickHeadGrp = new THREE.Group();
+  var axeHeadGrp = new THREE.Group(), pickHeadGrp = new THREE.Group(), trimHeadGrp = new THREE.Group();
   axeArm.add(axeHeadGrp);
   axeArm.add(pickHeadGrp);
+  axeArm.add(trimHeadGrp);
+  // hedge trimmers: two long blades that pivot open and closed at a bolt
+  var bladeMetal = new THREE.MeshStandardMaterial({ color: 0xd9dee5, metalness: 0.8, roughness: 0.25 });
+  var bladeGeo = new THREE.BoxGeometry(0.018, 0.42, 0.05);
+  bladeGeo.translate(0, -0.21, 0);
+  var trimBladeA = new THREE.Group(), trimBladeB = new THREE.Group();
+  [trimBladeA, trimBladeB].forEach(function (blade, n) {
+    blade.position.set(n ? -0.012 : 0.012, -0.6, 0);
+    place(new THREE.Mesh(bladeGeo, bladeMetal), 0, 0, 0, blade);
+    trimHeadGrp.add(blade);
+  });
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 10), new THREE.MeshStandardMaterial({ color: 0xe0a030, metalness: 0.6, roughness: 0.4 })), 0, -0.6, 0, trimHeadGrp).rotation.z = Math.PI / 2;
   place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.16), axeMetal), 0, -0.84, -0.07, axeHeadGrp);    // axe head
   place(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.06), axeMetal), 0, -0.84, -0.17, axeHeadGrp);    // its sharp edge
   // pickaxe head: a curved metal bar with a point at each end
@@ -3408,6 +3509,8 @@ function startGame(THREE) {
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var nearRock = heldItem() === 'pickaxe' ? rockInReach() : null;
     if (nearRock) { mineRock(nearRock); return; }
+    var nearBush = heldItem() === 'trimmers' ? bushInReach() : null;
+    if (nearBush) { trimBush(nearBush); return; }
     var tile = targetTile();
     if (!tile) {
       if (nearTree) return;
@@ -3470,6 +3573,9 @@ function startGame(THREE) {
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
+    trimmers: { name: 'Hedge Trimmers', icon: '✂️', info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
+    fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
+    hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
     coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
     sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
@@ -3615,6 +3721,44 @@ function startGame(THREE) {
       sparkle(56, 36, 3);
     });
   }
+  function iconFiber() {
+    return iconCanvas(function (g) {
+      g.lineCap = 'round';
+      for (var i = 0; i < 9; i++) { // a loose bundle of long green strands
+        var x0 = 18 + i * 3.5, bend = (i - 4) * 2.2;
+        g.strokeStyle = ['#3f8a3a', '#5aa84a', '#79c25c', '#4d9a40'][i % 4];
+        g.lineWidth = 2.6;
+        g.beginPath();
+        g.moveTo(x0 - bend, 58);
+        g.bezierCurveTo(x0, 40, x0 + bend * 0.5, 28, x0 + bend * 1.6, 8 + (i % 3) * 3);
+        g.stroke();
+      }
+      g.fillStyle = '#c99a5a'; // tied with a twist of twine
+      g.beginPath(); g.ellipse(32, 40, 13, 4, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#8a6334'; g.lineWidth = 1.2;
+      g.beginPath(); g.moveTo(21, 39); g.lineTo(43, 41); g.stroke();
+    });
+  }
+  function iconHay() {
+    return iconCanvas(function (g) {
+      g.lineCap = 'round';
+      for (var i = 0; i < 22; i++) { // golden straw fanning out of a tied bundle
+        var x = 14 + i * 1.7, spread = (i - 10.5) * 1.1;
+        g.strokeStyle = ['#e8c45a', '#f2d779', '#d4a83e', '#f7e49a'][i % 4];
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(32 + spread * 0.35, 36);
+        g.lineTo(x + spread * 0.4, 6 + (i % 5));
+        g.moveTo(32 + spread * 0.35, 36);
+        g.lineTo(x + spread * 0.25, 60 - (i % 4));
+        g.stroke();
+      }
+      g.fillStyle = '#b0402e'; // a red tie round the middle
+      g.fillRect(19, 33, 26, 6);
+      g.fillStyle = 'rgba(255,255,255,0.35)';
+      g.fillRect(19, 33, 26, 2);
+    });
+  }
   function iconCoal() {
     return iconCanvas(function (g) {
       // a chunky lump made of flat facets, lit from the top left
@@ -3694,7 +3838,7 @@ function startGame(THREE) {
     });
   }
   var BAG_SLOTS = 12;
-  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }]; // you start with a few seeds and an axe
+  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }, { id: 'trimmers', count: 1 }]; // you start with a few seeds and an axe
   var bagUi = {
     box: document.getElementById('inventory'),
     grid: document.getElementById('invGrid'),
