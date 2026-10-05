@@ -3767,7 +3767,7 @@ function startGame(THREE) {
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
-    pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
+    pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
@@ -3998,9 +3998,9 @@ function startGame(THREE) {
   function iconPickaxe() {
     return iconCanvas(function (g) {
       // drawn upright along the handle, then tilted, so the handle runs corner to corner
-      g.translate(36.9, 35);   // centred and scaled so the pickaxe fills the whole picture
+      g.translate(27.1, 35);   // centred and scaled so the pickaxe fills the whole picture
       g.scale(0.98, 0.98);
-      g.rotate(-Math.PI / 4);
+      g.rotate(Math.PI / 4);   // handle toward the bottom-left corner
       g.shadowColor = 'rgba(60,30,90,0.35)';
       g.shadowBlur = 3;
       g.shadowOffsetY = 2;
