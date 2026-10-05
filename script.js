@@ -1700,18 +1700,39 @@ function startGame(THREE) {
     b.quaternion.setFromUnitVectors(UP, dir);
     return from.clone().addScaledVector(dir, length);
   }
-  // A tube that follows a curve and tapers from r0 to r1, with no flat ends: used for roots and twigs
-  function taperTube(points, r0, r1) {
-    var curve = new THREE.CatmullRomCurve3(points), SEGS = 10, RADIAL = 8;
+  // A tube that follows a curve and tapers from r0 to r1, with no flat ends: used for roots and twigs.
+  // Roots (flat = true) are wide and low instead of round, with a tall fin where they join the trunk
+  function taperTube(points, r0, r1, flat) {
+    var curve = new THREE.CatmullRomCurve3(points), SEGS = 12, RADIAL = 10;
     var frames = curve.computeFrenetFrames(SEGS, false);
     var pos = [], nor = [], uv = [], idx = [], P = new THREE.Vector3(), N = new THREE.Vector3();
+    var T = new THREE.Vector3(), side = new THREE.Vector3(), upv = new THREE.Vector3(), WORLD_UP = new THREE.Vector3(0, 1, 0);
     for (var i = 0; i <= SEGS; i++) {
       var u = i / SEGS, r = r0 + (r1 - r0) * u;
       curve.getPointAt(u, P);
+      var wide = 1, tall = 1, sink = 0;
+      if (flat) {
+        curve.getTangentAt(u, T);
+        side.crossVectors(T, WORLD_UP);
+        if (side.lengthSq() < 0.001) side.copy(frames.binormals[i]);
+        side.normalize();
+        upv.crossVectors(side, T).normalize();
+        var knob = 1 + Math.sin(u * 17 + r0 * 40) * 0.1;          // knobbly, uneven thickness
+        wide = 1.5 * knob;
+        tall = (0.5 + 0.9 * Math.pow(1 - u, 3)) * knob;          // a tall fin near the trunk, flat further out
+        sink = r * tall * 0.35;                                  // half-buried in the soil
+      }
       for (var j = 0; j <= RADIAL; j++) {
-        var v = (j / RADIAL) * Math.PI * 2;
-        N.set(0, 0, 0).addScaledVector(frames.normals[i], -Math.cos(v)).addScaledVector(frames.binormals[i], Math.sin(v)).normalize();
-        pos.push(P.x + r * N.x, P.y + r * N.y, P.z + r * N.z);
+        var v = (j / RADIAL) * Math.PI * 2, c = -Math.cos(v), sn = Math.sin(v);
+        if (flat) {
+          pos.push(P.x + upv.x * c * r * tall + side.x * sn * r * wide,
+                   P.y + upv.y * c * r * tall + side.y * sn * r * wide - sink,
+                   P.z + upv.z * c * r * tall + side.z * sn * r * wide);
+          N.set(0, 0, 0).addScaledVector(upv, c / tall).addScaledVector(side, sn / wide).normalize();
+        } else {
+          N.set(0, 0, 0).addScaledVector(frames.normals[i], c).addScaledVector(frames.binormals[i], sn).normalize();
+          pos.push(P.x + r * N.x, P.y + r * N.y, P.z + r * N.z);
+        }
         nor.push(N.x, N.y, N.z);
         uv.push((j / RADIAL) * 2, u * 2);
       }
@@ -1737,7 +1758,7 @@ function startGame(THREE) {
       new THREE.Vector3(dx * reach * 0.35 + sx * 0.4, rise * 0.35, dz * reach * 0.35 + sz * 0.4),
       new THREE.Vector3(dx * reach * 0.7 + sx, thick * 0.3, dz * reach * 0.7 + sz),
       new THREE.Vector3(dx * reach, -thick * 1.5, dz * reach)
-    ], thick, thick * 0.12), tree.userData.bark), 0, 0, 0, tree);
+    ], thick, thick * 0.12, true), tree.userData.bark), 0, 0, 0, tree);
   }
 
   // A clump of leaves: several leafy cards at random angles around a point, darker underneath
