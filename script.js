@@ -3176,10 +3176,25 @@ function startGame(THREE) {
     trimBladeA.rotation.x = 0.05 + open * 0.35;
     trimBladeB.rotation.x = -0.05 - open * 0.35;
     var REST = 5.23, UP = 2.35, HIT = 4.75;            // arm angles: carrying, raised up behind you, striking forward over the top
-    var armX = REST, armZ = 0, twist = 0, lean = 0, squash = 0, sw = swingT;
+    var armX = REST, armZ = 0, armY = 0, twist = 0, lean = 0, squash = 0, sw = swingT;
     function easeOut(k) { return 1 - (1 - k) * (1 - k); }
     function easeIn(k) { return k * k * k; }
-    if (holding && sw < SWING_TIME) {
+    if (held === 'trimmers' && sw < SWING_TIME) {     // trimmers sweep sideways across the hedge
+      var FWD = 4.62, OUT = -1.0, ACROSS = 0.75;       // arm held out in front; how far out to the side, and across
+      if (sw < 0.18) {                                  // wind up: swing the trimmers out to your side, blades opening
+        var tw = easeOut(sw / 0.18);
+        armX = REST + (FWD - REST) * tw; armY = OUT * tw; twist = -0.35 * tw;
+      } else if (sw < IMPACT) {                         // sweep across in front, snapping shut
+        var tc = easeIn((sw - 0.18) / (IMPACT - 0.18));
+        armX = FWD; armY = OUT + (ACROSS - OUT) * tc; twist = -0.35 + 0.65 * tc; lean = 0.08 * tc;
+      } else if (sw < 0.36) {                           // a little follow-through
+        var tj = (sw - IMPACT) / (0.36 - IMPACT);
+        armX = FWD; armY = ACROSS + 0.12 * Math.sin(tj * Math.PI); twist = 0.3; lean = 0.08; squash = 0.5 * Math.sin(tj * Math.PI);
+      } else {                                          // settle back
+        var tr = easeOut((sw - 0.36) / (SWING_TIME - 0.36));
+        armX = FWD + (REST - FWD) * tr; armY = ACROSS * (1 - tr); twist = 0.3 * (1 - tr); lean = 0.08 * (1 - tr);
+      }
+    } else if (holding && sw < SWING_TIME) {
       if (sw < 0.17) {                                  // wind up: raise the axe back over your shoulder, twisting away
         var w = easeOut(sw / 0.17);
         armX = REST + (UP - REST) * w; armZ = -0.45 * w; twist = -0.42 * w; lean = -0.1 * w;
@@ -3198,6 +3213,7 @@ function startGame(THREE) {
     }
     axeArm.rotation.x = armX;
     axeArm.rotation.z = armZ;
+    axeArm.rotation.y = armY;   // turns the arm sideways (used by the trimmers' sweep)
     body.rotation.y = twist;
     body.rotation.x = lean;
     body.scale.set(1 + squash * 0.05, 1 - squash * 0.08, 1 + squash * 0.05);
@@ -3379,6 +3395,7 @@ function startGame(THREE) {
   // Your arm holding the axe, shown while the axe is selected in the hotbar. It swings from the shoulder;
   // the arm and the axe handle point straight down from the shoulder before any rotation
   var axeArm = new THREE.Group();
+  axeArm.rotation.order = 'YXZ'; // so turning sideways (y) swings the whole arm round, wherever it's pointing
   axeArm.position.set(-0.27, 0.68, 0.02);
   body.add(axeArm);
   var sleeve = new THREE.CylinderGeometry(0.075, 0.09, 0.32, 10);
