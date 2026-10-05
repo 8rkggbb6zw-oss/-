@@ -3501,12 +3501,54 @@ function startGame(THREE) {
   }
   function iconCoal() {
     return iconCanvas(function (g) {
-      g.fillStyle = '#2a2a30';
-      g.beginPath(); g.moveTo(14, 38); g.lineTo(22, 18); g.lineTo(40, 12); g.lineTo(54, 26); g.lineTo(50, 48); g.lineTo(30, 56); g.closePath(); g.fill();
-      g.fillStyle = '#4a4a54';
-      g.beginPath(); g.moveTo(22, 18); g.lineTo(40, 12); g.lineTo(36, 30); g.lineTo(20, 32); g.closePath(); g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.5)';
-      g.fillRect(30, 18, 4, 3); g.fillRect(42, 34, 3, 3); g.fillRect(24, 42, 2, 2);
+      // a chunky lump made of flat facets, lit from the top left
+      var P = { a: [12, 36], b: [20, 17], c: [38, 9], d: [54, 22], e: [55, 42], f: [40, 56], h: [20, 53], m: [33, 30], n: [42, 40], o: [26, 41] };
+      function facet(pts, color) {
+        g.fillStyle = color;
+        g.beginPath();
+        g.moveTo(P[pts[0]][0], P[pts[0]][1]);
+        for (var i = 1; i < pts.length; i++) g.lineTo(P[pts[i]][0], P[pts[i]][1]);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = 'rgba(120,120,140,0.35)'; // faint shiny edges between facets
+        g.lineWidth = 1;
+        g.stroke();
+      }
+      g.shadowColor = 'rgba(0,0,0,0.35)';
+      g.shadowBlur = 4;
+      g.shadowOffsetY = 2;
+      facet(['a', 'b', 'c', 'd', 'e', 'f', 'h'], '#1c1c22');
+      g.shadowColor = 'transparent';
+      facet(['b', 'c', 'm'], '#5a5a68');   // brightest, facing the light
+      facet(['c', 'd', 'm'], '#454552');
+      facet(['a', 'b', 'm', 'o'], '#3c3c48');
+      facet(['d', 'e', 'n', 'm'], '#2c2c36');
+      facet(['m', 'n', 'o'], '#34343f');
+      facet(['o', 'n', 'f', 'h'], '#202028');
+      facet(['a', 'o', 'h'], '#26262e');
+      facet(['n', 'e', 'f'], '#18181e');
+      // fine sparkly grain, like real coal (drawn only on top of the lump)
+      g.globalCompositeOperation = 'source-atop';
+      for (var i = 0; i < 70; i++) {
+        var gx = 14 + Math.random() * 40, gy = 12 + Math.random() * 42;
+        g.fillStyle = 'rgba(200,205,230,' + (0.15 + Math.random() * 0.35) + ')';
+        g.fillRect(gx, gy, 1, 1);
+      }
+      g.globalCompositeOperation = 'source-over';
+      // little star-shaped glints of shine
+      function glint(x, y, r) {
+        g.fillStyle = 'rgba(255,255,255,0.95)';
+        g.beginPath();
+        g.moveTo(x, y - r); g.lineTo(x + r * 0.28, y - r * 0.28); g.lineTo(x + r, y); g.lineTo(x + r * 0.28, y + r * 0.28);
+        g.lineTo(x, y + r); g.lineTo(x - r * 0.28, y + r * 0.28); g.lineTo(x - r, y); g.lineTo(x - r * 0.28, y - r * 0.28);
+        g.closePath();
+        g.fill();
+      }
+      glint(30, 19, 5);
+      glint(46, 27, 3);
+      g.strokeStyle = 'rgba(255,255,255,0.55)';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(22, 19); g.lineTo(36, 12); g.stroke(); // a bright top edge
     });
   }
   function iconAcorn() {
