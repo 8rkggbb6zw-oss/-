@@ -2337,6 +2337,7 @@ function startGame(THREE) {
       var key = o.material.uuid;
       if (!byMaterial[key]) { byMaterial[key] = { mat: o.material, geos: [] }; materialList.push(byMaterial[key]); }
       var g = o.geometry.clone();
+      g.userData = {}; // its own notes (clones otherwise share them with every copy of the same shape)
       g.applyMatrix4(o.matrixWorld);
       byMaterial[key].geos.push(g);
       if (grp.userData.leaves) (grp.userData.pieces = grp.userData.pieces || []).push({ entry: byMaterial[key], geo: g });
@@ -2413,10 +2414,12 @@ function startGame(THREE) {
 
   // Moves a whole tree by matrix M (worked out around its base): used to grow, shrink and shudder it
   var growM = new THREE.Matrix4(), chopM = new THREE.Matrix4(), chopM2 = new THREE.Matrix4();
-  function setTreeTransform(t, M, onlyFalling) {
+  // which: 'fall' moves only the trunk, branches and leaves; 'ground' only the roots and soil patch; nothing = all
+  function setTreeTransform(t, M, which) {
     var u = t.userData, e = M.elements;
     u.parts.forEach(function (pt) {
-      if (onlyFalling && !pt.falls) return;
+      if (which === 'fall' && !pt.falls) return;
+      if (which === 'ground' && pt.falls) return;
       var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
       for (var i = 0; i < o.length; i += 3) {
         var x = o[i], y = o[i + 1], z = o[i + 2];
@@ -2426,6 +2429,7 @@ function startGame(THREE) {
       }
       markDirty(attr, s0, o.length);
     });
+    if (which === 'ground') return;
     growM.copy(M);
     u.leaves.forEach(function (L, n) {
       if (!L.count) return;
@@ -2439,10 +2443,10 @@ function startGame(THREE) {
   }
   // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
   var treeM = new THREE.Matrix4(), treeM2 = new THREE.Matrix4();
-  function setTreeGrowth(t, k, onlyFalling) {
+  function setTreeGrowth(t, k, which) {
     var b = t.userData.base;
     treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
-    setTreeTransform(t, treeM, onlyFalling);
+    setTreeTransform(t, treeM, which);
   }
   // Tilts a tree a little around its base, toward direction (dx, dz): used to make it shudder when hit
   var tiltQ = new THREE.Quaternion(), tiltAxis = new THREE.Vector3();
@@ -2567,7 +2571,7 @@ function startGame(THREE) {
     u.fallDir = away;
     u.fallAxis = new THREE.Vector3(0, 1, 0).cross(away).normalize();
     u.proxy = makeFallingTree(t);
-    setTreeGrowth(t, 0, true); // the standing trunk and leaves are swapped for the falling copy; roots stay for now
+    setTreeGrowth(t, 0, 'fall'); // the standing trunk and leaves are swapped for the falling copy; roots stay for now
     u.stump = makeStump(t);
     u.solid.r = 0.35 * u.size; // only the stump is in the way now
   }
@@ -2613,9 +2617,14 @@ function startGame(THREE) {
             var len = (u.leafy ? 3.6 : 3.4) * u.size;
             sparklePoof(new THREE.Vector3(u.base.x, u.base.y + 0.2, u.base.z),
               new THREE.Vector3(u.base.x + u.fallDir.x * len, u.base.y + 0.2, u.base.z + u.fallDir.z * len), 240);
+            var rr = 1.1 * u.size, sx = -u.fallDir.z * rr, sz = u.fallDir.x * rr; // and a poof over the stump and roots
+            sparklePoof(new THREE.Vector3(u.base.x - sx, u.base.y + 0.1, u.base.z - sz),
+              new THREE.Vector3(u.base.x + sx, u.base.y + 0.1, u.base.z + sz), 110);
           }
           var k = Math.max(0, 1 - (u.fallT - FALL - 1.8) / 0.5);
           u.proxy.scale.setScalar(k);
+          setTreeGrowth(t, k, 'ground');                  // roots and the leafy soil patch shrink away
+          if (u.stump) u.stump.scale.set(k, k, k);        // and so does the stump
           if (k === 0) {
             scene.remove(u.proxy);
             u.proxy.traverse(function (o) { if (o.isMesh && !o.isInstancedMesh) o.geometry.dispose(); });
@@ -2625,6 +2634,7 @@ function startGame(THREE) {
             u.stump.geometry.dispose();
             u.stump = null;
             u.solid.r = 0;
+            showHiddenGrass(u.solid, true);   // plain grass grows where the tree stood
             u.state = 'regrowing';
             u.felledAt = gameMinutes();
             u.shownK = -1;
@@ -2640,7 +2650,8 @@ function startGame(THREE) {
           u.shownK = k;
           u.solid.r = u.solidR * k;
         }
-        if (g >= 1) { u.state = 'standing'; u.hits = 0; u.solid.r = u.solidR; }
+        if (k > 0.35 && !u.grassHidden) { showHiddenGrass(u.solid, false); u.grassHidden = true; } // the trunk takes its spot again
+        if (g >= 1) { u.state = 'standing'; u.hits = 0; u.solid.r = u.solidR; u.grassHidden = false; }
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
@@ -2683,7 +2694,11 @@ function startGame(THREE) {
     if (pathDist(bladeP.x, bladeP.z) < PATH_W + 0.1) { grass.setMatrixAt(gb, hideM); continue; } // bare dirt on the paths
     for (var sg = 0; sg < solids.length; sg++) {
       var gdx = bladeP.x - solids[sg].x, gdz = bladeP.z - solids[sg].z, gr2 = solids[sg].r;
-      if (gdx * gdx + gdz * gdz < gr2 * gr2) { grass.setMatrixAt(gb, hideM); break; }
+      if (gdx * gdx + gdz * gdz < gr2 * gr2) {
+        (solids[sg].grass = solids[sg].grass || []).push({ i: gb, m: bladeM.clone() }); // remembered, so it can grow back
+        grass.setMatrixAt(gb, hideM);
+        break;
+      }
     }
   }
   grass.instanceMatrix.needsUpdate = true;
@@ -2692,6 +2707,7 @@ function startGame(THREE) {
     bladeP.setFromMatrixPosition(bladeM);
     for (var sf = 0; sf < solids.length; sf++) {
       if (dist(bladeP.x, bladeP.z, solids[sf].x, solids[sf].z) < solids[sf].r + 0.1) {
+        (solids[sf].flowers = solids[sf].flowers || []).push({ i: fl, m: bladeM.clone() });
         flowerHeads.setMatrixAt(fl, hideM);
         flowerStems.setMatrixAt(fl, hideM);
         break;
@@ -2699,6 +2715,16 @@ function startGame(THREE) {
     }
   }
   flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
+  // Brings back (show = true) or hides again the grass and flowers that were under a tree's trunk
+  function showHiddenGrass(solid, show) {
+    (solid.grass || []).forEach(function (b) { grass.setMatrixAt(b.i, show ? b.m : hideM); });
+    (solid.flowers || []).forEach(function (f) {
+      flowerHeads.setMatrixAt(f.i, show ? f.m : hideM);
+      flowerStems.setMatrixAt(f.i, show ? f.m : hideM);
+    });
+    grass.instanceMatrix.needsUpdate = true;
+    flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
+  }
   // Batches of grass, leaves, flowers and rocks are spread all over, so always draw them
   // (three.js would otherwise skip a whole batch when the middle of the island is off screen)
   scene.traverse(function (o) { if (o.isInstancedMesh) o.frustumCulled = false; });
