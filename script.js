@@ -2675,7 +2675,8 @@ function startGame(THREE) {
     logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: groundY, t: -delay, p: Math.random() * 6.28,
       item: item, amount: amount, hover: big ? FLOAT_H : FLOAT_H + 0.08 });
   }
-  var FLOAT_H = 0.32; // how high the logs hover
+  var FLOAT_H = 0.32;     // how high the logs hover
+  var PICKUP_RANGE = 1.4; // how close you need to be to pick things up
   function updateLogs(dt) {
     for (var i = logs.length - 1; i >= 0; i--) {
       var L = logs[i];
@@ -2691,7 +2692,7 @@ function startGame(THREE) {
       L.glow.material.opacity = 0.3 + Math.sin(L.t * 3 + L.p) * 0.12;
       var sh = 1 - (L.mesh.position.y - L.ground - L.hover) * 0.5; // the shadow grows as the log comes down
       L.shadow.material.opacity = 0.2 * Math.max(0.2, Math.min(1, sh));
-      if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < 0.65) { // walked into it: collect
+      if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < PICKUP_RANGE) { // walked into it: collect
         if (!addItem(L.item, L.amount)) continue;
         popSound();
         showToast('+' + L.amount + ' ' + ITEMS[L.item].name + ' ' + ITEMS[L.item].icon);
