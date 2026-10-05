@@ -183,18 +183,68 @@ function startGame(THREE) {
   sea.position.y = -1.4;
   scene.add(sea);
 
-  // The ground: a round grid that follows groundHeight, coloured grass → mud → lake bed
+  // A fine grass texture painted once, so the ground has detail up close; it tiles with no seams
+  var groundCanvas = document.createElement('canvas');
+  groundCanvas.width = groundCanvas.height = 256;
+  (function (g) {
+    g.fillStyle = '#dedede';
+    g.fillRect(0, 0, 256, 256);
+    g.lineCap = 'round';
+    for (var i = 0; i < 4200; i++) { // thousands of tiny blades of grass, light and dark
+      var x = Math.random() * 256, y = Math.random() * 256, len = 3 + Math.random() * 6, ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+      var ex = Math.cos(ang) * len, ey = Math.sin(ang) * len;
+      g.strokeStyle = Math.random() < 0.5 ? 'rgba(255,255,255,' + (0.3 + Math.random() * 0.4) + ')' : 'rgba(70,80,60,' + (0.15 + Math.random() * 0.3) + ')';
+      g.lineWidth = 0.8 + Math.random() * 1.2;
+      for (var ox = -256; ox <= 256; ox += 256) {
+        for (var oy = -256; oy <= 256; oy += 256) {
+          g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + ex, y + oy + ey); g.stroke();
+        }
+      }
+    }
+  })(groundCanvas.getContext('2d'));
+  var groundTex = new THREE.CanvasTexture(groundCanvas);
+  groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
+
+  // How far a point is from the line between two points: used for the worn paths
+  function segDist(px, pz, ax, az, bx, bz) {
+    var dx = bx - ax, dz = bz - az;
+    var t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)));
+    return dist(px, pz, ax + dx * t, az + dz * t);
+  }
+
+  // How far a point is from the nearest worn path (start → dock, start → Dawn Tree), a little wobbly
+  function pathDist(x, z) {
+    var hx = FARM_X, hz = FARM_Z + 5;
+    return Math.min(segDist(x, z, hx, hz, dockStart.x, dockStart.z), segDist(x, z, hx, hz, TREE_X, TREE_Z)) + noise(x * 1.3, z * 1.3) * 0.18;
+  }
+  var PATH_W = 0.75; // half the width of the paths
+
+  // The ground: a round grid that follows groundHeight, coloured grass → mud → lake bed,
+  // with lush and sunny patches and softly worn paths to the dock and the Dawn Tree
   function terrainGeometry() {
     var RINGS = 72, SEG = 180, R = 18;
-    var pos = [], col = [], idx = [], c = new THREE.Color();
-    var grassA = new THREE.Color(0x8cc867), grassB = new THREE.Color(0x5e9a45), dry = new THREE.Color(0xb3c46e);
+    var pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
+    var grassA = new THREE.Color(0x8fcb68), grassB = new THREE.Color(0x5a9643), lush = new THREE.Color(0x4a8a3a);
+    var sunny = new THREE.Color(0xb8cf72), path = new THREE.Color(0xa88a5c), pathEdge = new THREE.Color(0x8a9a52);
     var mud = new THREE.Color(0x75704f), bedShallow = new THREE.Color(0x7a7a55), bedDeep = new THREE.Color(0x2c4a4a);
     function vertex(x, z) {
       var h = groundHeight(x, z);
       pos.push(x, h, z);
+      uv.push(x * 0.55, z * 0.55);
       c.copy(grassA).lerp(grassB, noise(x * 0.8, z * 0.8) * 0.5 + 0.5);
-      var patch = noise(x * 2.7 + 5, z * 2.7 - 3);
-      if (patch > 0.3) c.lerp(dry, Math.min(1, (patch - 0.3) * 1.5));
+      var lushy = noise(x * 0.45 - 7, z * 0.45 + 2);                 // big patches of deep, lush grass
+      if (lushy > 0.15) c.lerp(lush, Math.min(0.7, (lushy - 0.15) * 1.4));
+      var patch = noise(x * 2.7 + 5, z * 2.7 - 3);                    // small sun-warmed patches
+      if (patch > 0.3) c.lerp(sunny, Math.min(0.8, (patch - 0.3) * 1.5));
+      c.multiplyScalar(0.94 + noise(x * 9, z * 9) * 0.06);             // fine mottling
+      if (h > -0.02) { // worn dirt paths: bare packed earth in the middle, trampled grass at the edges
+        var dp = pathDist(x, z);
+        if (dp < PATH_W + 0.45) c.lerp(pathEdge, Math.min(1, (PATH_W + 0.45 - dp) / 0.45) * 0.6);
+        if (dp < PATH_W) {
+          c.copy(path).lerp(pathEdge, Math.max(0, dp / PATH_W - 0.75) * 2);
+          c.multiplyScalar(0.92 + noise(x * 6, z * 6) * 0.1);
+        }
+      }
       if (h < -0.02) c.lerp(mud, Math.min(1, (-h - 0.02) / 0.1) * 0.85);
       if (h < WATER_Y) c.copy(bedShallow).lerp(bedDeep, Math.min(1, (WATER_Y - h) / 0.8));
       col.push(c.r, c.g, c.b);
@@ -217,11 +267,14 @@ function startGame(THREE) {
     var g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     g.setIndex(idx);
     g.computeVertexNormals();
     return g;
   }
-  var terrain = new THREE.Mesh(terrainGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
+  var terrain = new THREE.Mesh(terrainGeometry(), new THREE.MeshStandardMaterial({
+    vertexColors: true, map: groundTex, bumpMap: groundTex, bumpScale: 0.015, roughness: 0.95
+  }));
   terrain.receiveShadow = true;
   scene.add(terrain);
   place(new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 0.8, 0.04, ROWS * TILE + 0.8), M.garden), FARM_X, 0.01, FARM_Z);
@@ -1483,11 +1536,55 @@ function startGame(THREE) {
     return null;
   }
 
-  // Thousands of grass blades, drawn in one go so it stays fast
-  var bladeGeo = new THREE.ConeGeometry(0.045, 0.38, 3);
-  bladeGeo.translate(0, 0.19, 0);
+  // Thousands of grass tufts, drawn in one go so it stays fast. Each tuft is five curved,
+  // tapering blades, dark at the base and light at the tips, and they sway in the breeze
+  function tuftGeometry() {
+    var pos = [], col = [], idx = [], base = 0, c = new THREE.Color();
+    var dark = new THREE.Color(0x2f5a22), light = new THREE.Color(0xd2ec92);
+    for (var b = 0; b < 5; b++) {
+      var ang = (b / 5) * Math.PI * 2 + b * 0.7, lean = 0.1 + (b % 3) * 0.08;
+      var dx = Math.cos(ang), dz = Math.sin(ang), px = -dz, pz = dx;  // which way it leans, and its width
+      var ox = dx * 0.04, oz = dz * 0.04, h = 0.3 + (b % 2) * 0.14, w = 0.032;
+      for (var i = 0; i <= 3; i++) {
+        var f = i / 3, y = f * h, bend = lean * f * f * h * 2.4, ww = w * (1 - f * 0.9);
+        var cx = ox + dx * bend, cz = oz + dz * bend;
+        pos.push(cx - px * ww, y, cz - pz * ww, cx + px * ww, y, cz + pz * ww);
+        c.copy(dark).lerp(light, Math.pow(f, 0.8));
+        col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      }
+      for (var k = 0; k < 3; k++) {
+        var a = base + k * 2;
+        idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      }
+      base += 8;
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var grassMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 });
+  grassMat.onBeforeCompile = function (shader) {
+    shader.uniforms.uGrassTime = forestTime;
+    shader.vertexShader = 'uniform float uGrassTime;\n' + shader.vertexShader
+      // light each blade like the ground under it, so tufts blend into the field
+      .replace('#include <defaultnormal_vertex>', 'vec3 transformedNormal = normalMatrix * vec3(0.0, 1.0, 0.0);')
+      // tips sway in the breeze, bases stay put
+      .replace('#include <project_vertex>', [
+        'vec4 mvPosition = instanceMatrix * vec4(transformed, 1.0);',
+        'float tip = transformed.y * transformed.y * 6.0;',
+        'mvPosition.x += sin(uGrassTime * 1.8 + mvPosition.x * 0.7 + mvPosition.z * 0.5) * tip * 0.05;',
+        'mvPosition.z += cos(uGrassTime * 1.4 + mvPosition.x * 0.4 + mvPosition.z * 0.3) * tip * 0.035;',
+        'mvPosition = modelViewMatrix * mvPosition;',
+        'gl_Position = projectionMatrix * mvPosition;'
+      ].join('\n'));
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
+      'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
+  };
   var BLADES = 3000;
-  var grass = new THREE.InstancedMesh(bladeGeo, new THREE.MeshStandardMaterial({ roughness: 0.9 }), BLADES);
+  var grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, BLADES);
   var gMatrix = new THREE.Matrix4(), gQuat = new THREE.Quaternion(), gEuler = new THREE.Euler();
   var gScale = new THREE.Vector3(), gPos = new THREE.Vector3(), gColor = new THREE.Color();
   var blades = 0;
@@ -1503,7 +1600,7 @@ function startGame(THREE) {
     gPos.set(gx, groundHeight(gx, gz), gz);
     gMatrix.compose(gPos, gQuat, gScale);
     grass.setMatrixAt(blades, gMatrix);
-    gColor.setHSL(0.24 + rand() * 0.07, 0.4 + rand() * 0.2, 0.3 + rand() * 0.15);
+    gColor.setHSL(0.24 + rand() * 0.07, 0.35 + rand() * 0.2, 0.55 + rand() * 0.2);
     grass.setColorAt(blades, gColor);
     blades++;
   }
@@ -1512,6 +1609,67 @@ function startGame(THREE) {
   if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
   grass.receiveShadow = true;
   scene.add(grass);
+
+  // Little wildflowers dotted through the grass: a thin stem with a tiny flower head
+  var FLOWERS = 360;
+  var stemGeoW = new THREE.CylinderGeometry(0.006, 0.008, 0.22, 4);
+  stemGeoW.translate(0, 0.11, 0);
+  var headGeoW = new THREE.IcosahedronGeometry(0.035, 0);
+  headGeoW.scale(1, 0.55, 1);
+  headGeoW.translate(0, 0.23, 0);
+  var flowerStems = new THREE.InstancedMesh(stemGeoW, new THREE.MeshStandardMaterial({ color: 0x4f8a3a, roughness: 0.9 }), FLOWERS);
+  var flowerHeads = new THREE.InstancedMesh(headGeoW, new THREE.MeshStandardMaterial({ roughness: 0.6 }), FLOWERS);
+  var FLOWER_COLORS = [0xffffff, 0xfff3a8, 0xffc4e8, 0xc9b3ff, 0xffd27a].map(function (c) { return new THREE.Color(c); });
+  var wfM = new THREE.Matrix4(), wfQ = new THREE.Quaternion(), wfE = new THREE.Euler(), wfP = new THREE.Vector3(), wfS = new THREE.Vector3();
+  var wildflowers = 0;
+  for (var wf = 0; wf < FLOWERS * 4 && wildflowers < FLOWERS; wf++) {
+    var h1 = Math.sin(wf * 12.9898) * 43758.5453, h2 = Math.sin(wf * 78.233) * 12345.6789, h3 = Math.sin(wf * 39.425) * 24634.6345;
+    h1 -= Math.floor(h1); h2 -= Math.floor(h2); h3 -= Math.floor(h3);
+    // flowers grow in little drifts: more where this noise is high
+    var wa = h1 * Math.PI * 2, wr = Math.sqrt(h2) * 16.8, wx = Math.cos(wa) * wr, wz = Math.sin(wa) * wr;
+    if (noise(wx * 0.6 + 3, wz * 0.6 - 1) < 0.05 + h3 * 0.2) continue;
+    if (Math.abs(wx - FARM_X) < COLS * TILE / 2 + 0.6 && Math.abs(wz - FARM_Z) < ROWS * TILE / 2 + 0.6) continue;
+    if (groundHeight(wx, wz) < -0.03 || underDock(wx, wz) || dist(wx, wz, TREE_X, TREE_Z) < 2.2 || pathDist(wx, wz) < PATH_W + 0.2) continue;
+    wfE.set((h3 - 0.5) * 0.3, h1 * 6.28, (h2 - 0.5) * 0.3);
+    wfQ.setFromEuler(wfE);
+    var wsz = 0.8 + h3 * 0.6;
+    wfS.set(wsz, wsz, wsz);
+    wfP.set(wx, groundHeight(wx, wz), wz);
+    wfM.compose(wfP, wfQ, wfS);
+    flowerStems.setMatrixAt(wildflowers, wfM);
+    flowerHeads.setMatrixAt(wildflowers, wfM);
+    flowerHeads.setColorAt(wildflowers, FLOWER_COLORS[Math.floor(h2 * 997) % FLOWER_COLORS.length]);
+    wildflowers++;
+  }
+  flowerStems.count = flowerHeads.count = wildflowers;
+  scene.add(flowerStems);
+  scene.add(flowerHeads);
+
+  // Small flat stones pressed into the dirt paths
+  var PEBBLES = 160;
+  var pebbleGeo = new THREE.IcosahedronGeometry(0.07, 1);
+  pebbleGeo.scale(1, 0.3, 0.8);
+  var pebbles = new THREE.InstancedMesh(pebbleGeo, new THREE.MeshStandardMaterial({ roughness: 0.9 }), PEBBLES);
+  var pebbleCount = 0, pebC = new THREE.Color();
+  for (var pb = 0; pb < 3000 && pebbleCount < PEBBLES; pb++) {
+    var q1 = Math.sin(pb * 91.7) * 43758.5453, q2 = Math.sin(pb * 47.3) * 22578.1459, q3 = Math.sin(pb * 13.1) * 9631.73;
+    q1 -= Math.floor(q1); q2 -= Math.floor(q2); q3 -= Math.floor(q3);
+    var pX = -17 + q1 * 34, pZ = -17 + q2 * 34;
+    if (pathDist(pX, pZ) > PATH_W * 0.85 || groundHeight(pX, pZ) < -0.02 || underDock(pX, pZ)) continue;
+    wfE.set(0, q3 * 6.28, 0);
+    wfQ.setFromEuler(wfE);
+    var psz = 0.6 + q3 * 1.1;
+    wfS.set(psz, psz, psz);
+    wfP.set(pX, groundHeight(pX, pZ) + 0.005, pZ);
+    wfM.compose(wfP, wfQ, wfS);
+    pebbles.setMatrixAt(pebbleCount, wfM);
+    pebC.setHSL(0.08 + q1 * 0.05, 0.08 + q2 * 0.1, 0.5 + q3 * 0.2);
+    pebbles.setColorAt(pebbleCount, pebC);
+    pebbleCount++;
+  }
+  pebbles.count = pebbleCount;
+  pebbles.receiveShadow = true;
+  scene.add(pebbles);
 
   for (var rk = 0; rk < 12; rk++) {
     var rs = freeSpot(1.2);
@@ -2013,11 +2171,24 @@ function startGame(THREE) {
   for (var gb = 0; gb < grass.count; gb++) {
     grass.getMatrixAt(gb, bladeM);
     bladeP.setFromMatrixPosition(bladeM);
+    if (pathDist(bladeP.x, bladeP.z) < PATH_W + 0.1) { grass.setMatrixAt(gb, hideM); continue; } // bare dirt on the paths
     for (var sg = 0; sg < solids.length; sg++) {
       if (dist(bladeP.x, bladeP.z, solids[sg].x, solids[sg].z) < solids[sg].r) { grass.setMatrixAt(gb, hideM); break; }
     }
   }
   grass.instanceMatrix.needsUpdate = true;
+  for (var fl = 0; fl < flowerHeads.count; fl++) { // same for the wildflowers
+    flowerHeads.getMatrixAt(fl, bladeM);
+    bladeP.setFromMatrixPosition(bladeM);
+    for (var sf = 0; sf < solids.length; sf++) {
+      if (dist(bladeP.x, bladeP.z, solids[sf].x, solids[sf].z) < solids[sf].r + 0.1) {
+        flowerHeads.setMatrixAt(fl, hideM);
+        flowerStems.setMatrixAt(fl, hideM);
+        break;
+      }
+    }
+  }
+  flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
   seed = seedBeforeForest;
 
   // ---------- Sparkles round the Dawn Tree ----------
