@@ -3811,7 +3811,7 @@ function startGame(THREE) {
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
-    trimmers: { name: 'Hedge Trimmers', icon: '✂️', info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
+    trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 84, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
     hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
@@ -4111,6 +4111,73 @@ function startGame(THREE) {
       g.beginPath();
       g.moveTo(15, -29); g.lineTo(16, -26); g.lineTo(19, -25); g.lineTo(16, -24); g.lineTo(15, -21);
       g.lineTo(14, -24); g.lineTo(11, -25); g.lineTo(14, -26); g.closePath();
+      g.fill();
+    });
+  }
+  function iconTrimmers() {
+    return iconCanvas(function (g) {
+      g.translate(31, 31);     // centred and scaled so the trimmers fill the picture
+      g.scale(1.04, 1.04);
+      g.rotate(Math.PI / 4); // tilted, handles toward the bottom-left corner
+      // one half: a long steel blade above the pivot and a wooden handle below, drawn pointing up, then tilted
+      function half(tilt, flip) {
+        g.save();
+        g.rotate(tilt);
+        g.scale(flip, 1);
+        // wooden handle with a dark outline
+        g.shadowColor = 'rgba(60,30,90,0.35)';
+        g.shadowBlur = 3;
+        g.shadowOffsetY = 2;
+        g.beginPath();
+        g.moveTo(-3, 2); g.lineTo(3, 2); g.lineTo(3.6, 26); g.quadraticCurveTo(0, 30, -3.6, 26); g.closePath();
+        g.fillStyle = '#5a3418';
+        g.fill();
+        g.shadowColor = 'transparent';
+        g.beginPath();
+        g.moveTo(-1.9, 3); g.lineTo(1.9, 3); g.lineTo(2.4, 25); g.quadraticCurveTo(0, 27.5, -2.4, 25); g.closePath();
+        var wood = g.createLinearGradient(-3, 0, 3, 0);
+        wood.addColorStop(0, '#8a5328'); wood.addColorStop(0.45, '#c98a4e'); wood.addColorStop(1, '#8a5328');
+        g.fillStyle = wood;
+        g.fill();
+        // green rubber grip at the end
+        g.fillStyle = '#3f8a3a';
+        g.beginPath(); g.moveTo(-3.8, 15); g.lineTo(3.8, 15); g.lineTo(4, 26); g.quadraticCurveTo(0, 30.5, -4, 26); g.closePath(); g.fill();
+        g.strokeStyle = '#2c6a2a';
+        g.lineWidth = 1;
+        for (var r = 0; r < 3; r++) { g.beginPath(); g.moveTo(-3.8, 18 + r * 3); g.lineTo(3.8, 18 + r * 3); g.stroke(); }
+        // steel blade: long, straight back, sharp bevelled edge on one side, pointed tip
+        g.shadowColor = 'rgba(40,40,60,0.4)';
+        g.shadowBlur = 2;
+        g.shadowOffsetY = 1;
+        g.beginPath();
+        g.moveTo(-3.2, 2); g.lineTo(-3.2, -26); g.lineTo(0, -32); g.lineTo(3.4, -24); g.lineTo(3.4, 2); g.closePath();
+        var steel = g.createLinearGradient(-3, 0, 3.4, 0);
+        steel.addColorStop(0, '#8f98a3'); steel.addColorStop(0.5, '#e6ebf0'); steel.addColorStop(1, '#a9b2bc');
+        g.fillStyle = steel;
+        g.fill();
+        g.shadowColor = 'transparent';
+        g.strokeStyle = '#3d444c';
+        g.lineWidth = 1.2;
+        g.stroke();
+        g.strokeStyle = '#ffffff'; // bright sharpened edge
+        g.lineWidth = 1.4;
+        g.beginPath(); g.moveTo(2.6, -1); g.lineTo(2.6, -24); g.lineTo(0, -30); g.stroke();
+        g.restore();
+      }
+      half(-0.2, 1);
+      half(0.2, -1);
+      // gold pivot bolt where the blades cross
+      g.fillStyle = '#7a5a12';
+      g.beginPath(); g.arc(0, 2, 4.4, 0, Math.PI * 2); g.fill();
+      var bolt = g.createRadialGradient(-1, 1, 0.5, 0, 2, 4);
+      bolt.addColorStop(0, '#fff3c4'); bolt.addColorStop(1, '#d9a441');
+      g.fillStyle = bolt;
+      g.beginPath(); g.arc(0, 2, 3.4, 0, Math.PI * 2); g.fill();
+      // a sparkle on a blade
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      g.moveTo(-5, -22); g.lineTo(-4, -19); g.lineTo(-1, -18); g.lineTo(-4, -17); g.lineTo(-5, -14);
+      g.lineTo(-6, -17); g.lineTo(-9, -18); g.lineTo(-6, -19); g.closePath();
       g.fill();
     });
   }
