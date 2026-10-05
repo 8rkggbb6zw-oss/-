@@ -2351,7 +2351,7 @@ function startGame(THREE) {
     scene.add(joined);
     entry.mesh = joined;
   });
-  var rockLists = boulderGeos.map(function () { return []; });
+  var rockLists = boulderGeos.map(function () { return []; }), rockBatches = [];
   scene.children.slice().forEach(function (o) {
     if (!o.isMesh || o.material !== stoneMat) return;
     var which = boulderGeos.indexOf(o.geometry);
@@ -2366,6 +2366,7 @@ function startGame(THREE) {
     list.forEach(function (m4, n) { rocks.setMatrixAt(n, m4); });
     rocks.castShadow = rocks.receiveShadow = true;
     scene.add(rocks);
+    rockBatches.push({ mesh: rocks, list: list });
   });
 
   // ---------- Chopping trees ----------
@@ -2539,7 +2540,7 @@ function startGame(THREE) {
   }
 
   var SWING_TIME = 0.6, IMPACT = 0.27; // seconds: a whole swing, and when the axe bites into the trunk
-  var swingT = 9, swingTree = null;    // time since the last swing started, and the tree it's aimed at
+  var swingT = 9, swingTree = null, swingRock = null; // time since the last swing started, and what it's aimed at
   function chopTree(t) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
@@ -2638,6 +2639,14 @@ function startGame(THREE) {
       var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.06, 6), capMat);
       stem.position.y = 0.17;
       g.add(stem);
+    } else if (item === 'stone') {
+      m = new THREE.Mesh(boulderGeos[2], stoneMat);
+      m.scale.set(0.15, 0.12, 0.13);
+      g.add(m);
+    } else if (item === 'coal') {
+      m = new THREE.Mesh(coalGeo, coalMat);
+      m.rotation.set(0.4, 0.3, 0.2);
+      g.add(m);
     } else if (item === 'pinecone') { // rings of woody scales getting smaller toward the tip
       for (var r = 0; r < 6; r++) {
         var f = r / 5, rad = 0.06 + Math.sin((f * 0.85 + 0.1) * Math.PI) * 0.07;
@@ -2655,7 +2664,10 @@ function startGame(THREE) {
     g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     return g;
   }
-  var PICKUP_GLOW = { wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8 };
+  var coalGeo = new THREE.IcosahedronGeometry(0.13, 0);
+  coalGeo.scale(1, 0.8, 0.9);
+  var coalMat = new THREE.MeshStandardMaterial({ color: 0x26262c, roughness: 0.35, metalness: 0.35, flatShading: true });
+  var PICKUP_GLOW = { wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8, stone: 0xe6eeff, coal: 0xffb070 };
   // Puts a floating, glowing pickup on the ground: walk into it to collect
   function dropPickup(item, amount, x, z, groundY, delay) {
     var holder = new THREE.Group(); // floats and spins
@@ -2698,7 +2710,9 @@ function startGame(THREE) {
         showToast('+' + L.amount + ' ' + ITEMS[L.item].name + ' ' + ITEMS[L.item].icon);
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
-        L.mesh.traverse(function (o) { if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo) o.geometry.dispose(); });
+        L.mesh.traverse(function (o) { // free one-off shapes; shared ones stay
+          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+        });
         scene.remove(L.shadow);
         L.glow.material.dispose();
         L.shadow.geometry.dispose();
@@ -2734,17 +2748,120 @@ function startGame(THREE) {
     osc.stop(now + 0.15);
   }
 
+  // ---------- Mining rocks ----------
+  var HITS_TO_BREAK = 10, COAL_CHANCE = 0.4;
+  var mineable = [], rockS = new THREE.Vector3(), rockP = new THREE.Vector3(), rockQ = new THREE.Quaternion();
+  rockBatches.forEach(function (rb) {
+    rb.list.forEach(function (m4, n) {
+      m4.decompose(rockP, rockQ, rockS);
+      if (rockP.y < WATER_Y - 0.05) return; // rocks on the lake bed stay put
+      var solid = null;
+      for (var i = 0; i < solids.length; i++) {
+        if (Math.abs(solids[i].x - rockP.x) < 0.001 && Math.abs(solids[i].z - rockP.z) < 0.001) { solid = solids[i]; break; }
+      }
+      mineable.push({
+        mesh: rb.mesh, index: n, orig: m4.clone(), x: rockP.x, z: rockP.z, y: rockP.y,
+        size: rockS.x, solid: solid || { x: rockP.x, z: rockP.z, r: 0 }, solidR: solid ? solid.r : 0,
+        hits: 0, state: 'whole'
+      });
+    });
+  });
+  function rockInReach() {
+    var best = null, bestD = 99;
+    mineable.forEach(function (r) {
+      if (r.state !== 'whole') return;
+      var d = dist(player.position.x, player.position.z, r.x, r.z);
+      if (d < r.size * 0.75 + 1.0 && d < bestD) { best = r; bestD = d; }
+    });
+    return best;
+  }
+  function mineRock(r) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    swingRock = r;
+    facing = Math.atan2(r.x - player.position.x, r.z - player.position.z); // turn to face the rock
+  }
+  // Puts a rock's instance back with a size (k) and a little offset (for shaking)
+  var rockM = new THREE.Matrix4(), rockScaleM = new THREE.Matrix4();
+  function setRock(r, k, ox, oz) {
+    rockM.copy(r.orig).multiply(rockScaleM.makeScale(k, k, k));
+    rockM.elements[12] += ox || 0;
+    rockM.elements[14] += oz || 0;
+    r.mesh.setMatrixAt(r.index, rockM);
+    r.mesh.instanceMatrix.needsUpdate = true;
+  }
+  // The pickaxe lands: chips fly, the rock shakes, and on the tenth hit it crumbles
+  function pickHits(r) {
+    if (r.state !== 'whole') return;
+    r.hits++;
+    var hx = r.x - Math.sin(facing) * r.size * 0.5, hz = r.z - Math.cos(facing) * r.size * 0.5;
+    burst(hx, r.y + r.size * 0.4, hz, 0xa9a49a, 12, 2.6, 2, -8);  // stone chips
+    burst(hx, r.y + r.size * 0.4, hz, 0xfff1c4, 4, 2, 1.5, -4);   // a few sparks
+    if (r.hits < HITS_TO_BREAK) { r.shakeT = 0; return; }
+    // Crumble! The rock bursts into rubble and sparkles, leaving stone (and maybe coal) behind
+    r.state = 'crumbling';
+    r.crumbleT = 0;
+    burst(r.x, r.y + r.size * 0.3, r.z, 0x8f8c86, 30, 4 * Math.max(0.6, r.size), 2.5, -9);
+    var span = 0.9 * Math.max(0.5, r.size);
+    sparklePoof(new THREE.Vector3(r.x - span, r.y, r.z), new THREE.Vector3(r.x + span, r.y, r.z), 160);
+    var stones = Math.max(2, Math.min(6, Math.round(r.size * 4)));
+    for (var i = 0; i < stones; i++) {
+      var a = Math.random() * Math.PI * 2, d = 0.3 + Math.random() * (0.6 + r.size * 0.5);
+      dropPickup('stone', 1, r.x + Math.cos(a) * d, r.z + Math.sin(a) * d, groundHeight(r.x, r.z), 0.2 + i * 0.06);
+    }
+    if (Math.random() < COAL_CHANCE) {
+      var ca = Math.random() * Math.PI * 2;
+      dropPickup('coal', 1, r.x + Math.cos(ca) * 0.7, r.z + Math.sin(ca) * 0.7, groundHeight(r.x, r.z), 0.6);
+    }
+  }
+  function updateRocks(dt) {
+    mineable.forEach(function (r) {
+      if (r.state === 'whole' && r.shakeT !== undefined) { // a quick shake after each hit
+        r.shakeT += dt;
+        var sh = r.shakeT < 0.3 ? Math.sin(r.shakeT * 60) * 0.035 * Math.exp(-r.shakeT * 9) : 0;
+        setRock(r, 1, sh * Math.cos(facing), -sh * Math.sin(facing));
+        if (r.shakeT >= 0.3) r.shakeT = undefined;
+      } else if (r.state === 'crumbling') { // shrinks away into the rubble
+        r.crumbleT += dt;
+        var k = Math.max(0, 1 - r.crumbleT / 0.35);
+        setRock(r, k, (Math.random() - 0.5) * 0.05 * k, (Math.random() - 0.5) * 0.05 * k);
+        if (k === 0) {
+          r.solid.r = 0;
+          showHiddenGrass(r.solid, true); // grass grows where the rock was
+          r.state = 'regrowing';
+          r.brokeAt = gameMinutes();
+          r.shownK = -1;
+          r.grassHidden = false;
+        }
+      } else if (r.state === 'regrowing') { // the rock slowly rises back out of the ground over many days
+        var days = (gameMinutes() - r.brokeAt) / (24 * 60);
+        if (days < SPROUT_DAYS) return;
+        var g = Math.min(1, (days - SPROUT_DAYS) / (REGROW_DAYS - SPROUT_DAYS));
+        var rk = 0.08 + 0.92 * g;
+        if (g >= 1 || rk - r.shownK > 0.004) {
+          setRock(r, rk);
+          r.shownK = rk;
+          r.solid.r = r.solidR * rk;
+        }
+        if (rk > 0.35 && !r.grassHidden) { showHiddenGrass(r.solid, false); r.grassHidden = true; }
+        if (g >= 1) { r.state = 'whole'; r.hits = 0; r.solid.r = r.solidR; }
+      }
+    });
+  }
+
   var fallQ = new THREE.Quaternion();
   function updateTrees(dt) {
     updateLogs(dt);
     var before = swingT;
     swingT += dt;
     // holding the action button (or E / Space) keeps the axe swinging
-    if ((actionHeld || keys['KeyE'] || keys['Space']) && swingT >= SWING_TIME && heldItem() === 'axe') {
-      var holdTree = treeInReach();
-      if (holdTree) chopTree(holdTree);
+    if ((actionHeld || keys['KeyE'] || keys['Space']) && swingT >= SWING_TIME) {
+      if (heldItem() === 'axe') { var holdTree = treeInReach(); if (holdTree) chopTree(holdTree); }
+      if (heldItem() === 'pickaxe') { var holdRock = rockInReach(); if (holdRock) mineRock(holdRock); }
     }
     if (swingTree && before < IMPACT && swingT >= IMPACT) { axeHits(swingTree); swingTree = null; }
+    if (swingRock && before < IMPACT && swingT >= IMPACT) { pickHits(swingRock); swingRock = null; }
+    updateRocks(dt);
     choppable.forEach(function (t) {
       var u = t.userData;
       if (u.state === 'standing' && u.shudderT !== undefined) { // a quick shudder after each hit
@@ -2814,8 +2931,10 @@ function startGame(THREE) {
       }
     });
     // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
-    var holding = heldItem() === 'axe';
+    var holding = heldItem() === 'axe' || heldItem() === 'pickaxe';
     axeArm.visible = holding;
+    axeHeadGrp.visible = heldItem() === 'axe';
+    pickHeadGrp.visible = heldItem() === 'pickaxe';
     var REST = 5.23, UP = 2.35, HIT = 4.75;            // arm angles: carrying, raised up behind you, striking forward over the top
     var armX = REST, armZ = 0, twist = 0, lean = 0, squash = 0, sw = swingT;
     function easeOut(k) { return 1 - (1 - k) * (1 - k); }
@@ -3030,8 +3149,19 @@ function startGame(THREE) {
   handleGeo.translate(0, -0.31, 0);
   place(new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, -0.3, 0, axeArm);
   var axeMetal = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 });
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.16), axeMetal), 0, -0.84, -0.07, axeArm);        // axe head
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.06), axeMetal), 0, -0.84, -0.17, axeArm);        // its sharp edge
+  var axeHeadGrp = new THREE.Group(), pickHeadGrp = new THREE.Group();
+  axeArm.add(axeHeadGrp);
+  axeArm.add(pickHeadGrp);
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.16), axeMetal), 0, -0.84, -0.07, axeHeadGrp);    // axe head
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.06), axeMetal), 0, -0.84, -0.17, axeHeadGrp);    // its sharp edge
+  // pickaxe head: a curved metal bar with a point at each end
+  var pickMetal = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.75, roughness: 0.35 });
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.1), pickMetal), 0, -0.84, 0, pickHeadGrp);
+  [-1, 1].forEach(function (side) {
+    var spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.3, 8), pickMetal);
+    spike.rotation.x = side * (Math.PI / 2 + 0.35); // curving back toward the handle
+    place(spike, 0, -0.81, side * 0.18, pickHeadGrp);
+  });
   axeArm.visible = false;
   player.position.set(FARM_X, 0, FARM_Z + 5);
   scene.add(player);
@@ -3276,6 +3406,8 @@ function startGame(THREE) {
   function interact() {
     var nearTree = treeInReach();
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
+    var nearRock = heldItem() === 'pickaxe' ? rockInReach() : null;
+    if (nearRock) { mineRock(nearRock); return; }
     var tile = targetTile();
     if (!tile) {
       if (nearTree) return;
@@ -3337,6 +3469,9 @@ function startGame(THREE) {
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
+    pickaxe: { name: 'Pickaxe', icon: '⛏️', info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
+    stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
+    coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
     sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
     acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), info: 'Dropped by leafy trees.' },
     pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), info: 'Dropped by pine trees.' }
@@ -3362,6 +3497,16 @@ function startGame(THREE) {
       g.fill();
       g.fillStyle = 'rgba(255,255,255,0.7)';
       g.beginPath(); g.ellipse(24, 38, 4, 7, -0.4, 0, Math.PI * 2); g.fill();
+    });
+  }
+  function iconCoal() {
+    return iconCanvas(function (g) {
+      g.fillStyle = '#2a2a30';
+      g.beginPath(); g.moveTo(14, 38); g.lineTo(22, 18); g.lineTo(40, 12); g.lineTo(54, 26); g.lineTo(50, 48); g.lineTo(30, 56); g.closePath(); g.fill();
+      g.fillStyle = '#4a4a54';
+      g.beginPath(); g.moveTo(22, 18); g.lineTo(40, 12); g.lineTo(36, 30); g.lineTo(20, 32); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.5)';
+      g.fillRect(30, 18, 4, 3); g.fillRect(42, 34, 3, 3); g.fillRect(24, 42, 2, 2);
     });
   }
   function iconAcorn() {
@@ -3391,7 +3536,7 @@ function startGame(THREE) {
     });
   }
   var BAG_SLOTS = 12;
-  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }]; // you start with a few seeds and an axe
+  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }]; // you start with a few seeds and an axe
   var bagUi = {
     box: document.getElementById('inventory'),
     grid: document.getElementById('invGrid'),
