@@ -3417,10 +3417,42 @@ function startGame(THREE) {
   // hoe: a flat blade set at a right angle to the handle
   var hoeHeadGrp = new THREE.Group();
   axeArm.add(hoeHeadGrp);
-  var hoeMetal = new THREE.MeshStandardMaterial({ color: 0xa7adb5, metalness: 0.7, roughness: 0.4 });
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.08), hoeMetal), 0, -0.84, -0.02, hoeHeadGrp); // collar
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.17), hoeMetal), 0, -0.86, -0.13, hoeHeadGrp);  // blade
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.03), new THREE.MeshStandardMaterial({ color: 0xe6eaef, metalness: 0.9, roughness: 0.2 })), 0, -0.86, -0.22, hoeHeadGrp); // sharp edge
+  // a chunky blade, widening toward a sharp edge: blue steel near the handle, polished silver at the edge
+  function hoeBladeGeometry() {
+    var sh = new THREE.Shape(), L = 0.21;
+    sh.moveTo(-0.06, 0); sh.lineTo(0.06, 0);
+    sh.lineTo(0.1, L * 0.9); sh.quadraticCurveTo(0.102, L, 0.09, L);
+    sh.lineTo(-0.09, L); sh.quadraticCurveTo(-0.102, L, -0.1, L * 0.9);
+    sh.closePath();
+    var depth = 0.036;
+    var g = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2, curveSegments: 8 });
+    var p = g.attributes.position, col = [];
+    for (var i = 0; i < p.count; i++) {
+      var y = p.getY(i), z = p.getZ(i) - depth / 2;
+      p.setZ(i, z * (y > L * 0.7 ? Math.max(0.2, 1 - (y - L * 0.7) / (L * 0.32)) : 1)); // thins to a sharp edge
+      var k = Math.min(1, Math.max(0, (y - L * 0.62) / (L * 0.2)));                      // blue → silver
+      col.push(0.55 + 0.42 * k, 0.68 + 0.3 * k, 0.98 + 0.02 * k);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.rotateX(-Math.PI / 2); // lies flat, reaching forward from the handle
+    g.computeVertexNormals();
+    return g;
+  }
+  var hoeSteel = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.3, roughness: 0.3, emissive: 0x1a2438, vertexColors: true });
+  place(new THREE.Mesh(hoeBladeGeometry(), hoeSteel), 0, -0.86, -0.025, hoeHeadGrp);
+  var hoeSlot = place(new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ color: 0x4a5370, roughness: 0.6 })), 0, -0.845, -0.1, hoeHeadGrp);
+  hoeSlot.scale.set(0.035, 0.006, 0.011); // the oval slot on top of the blade
+  // blue socket gripping the handle, a silver collar, and a round wooden cap on the end
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.09, 0.075), new THREE.MeshStandardMaterial({ color: 0x5f86d4, metalness: 0.3, roughness: 0.35, emissive: 0x101c38 })), 0, -0.86, 0, hoeHeadGrp);
+  var hoeCollar = place(new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.011, 8, 16), new THREE.MeshStandardMaterial({ color: 0xe6ebf2, metalness: 0.5, roughness: 0.25 })), 0, -0.915, 0, hoeHeadGrp);
+  hoeCollar.rotation.x = Math.PI / 2;
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.04, 0.035, 16), new THREE.MeshStandardMaterial({ color: 0xc98a4e, roughness: 0.7 })), 0, -0.945, 0, hoeHeadGrp); // wooden cap
+  // leather grip wrapped round the handle where you hold it
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0x4a2c1a, roughness: 0.9 })), 0, -0.42, 0, hoeHeadGrp);
+  for (var hw = 0; hw < 4; hw++) {
+    var hwrap = place(new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.007, 6, 14), new THREE.MeshStandardMaterial({ color: 0x7a4c30, roughness: 0.85 })), 0, -0.36 - hw * 0.04, 0, hoeHeadGrp);
+    hwrap.rotation.x = Math.PI / 2 + 0.35;
+  }
   // hedge trimmers: two long blades that pivot open and closed at a bolt
   // a wide blade: straight back, wavy cutting edge, sharp point; thins to a bright edge
   function trimBladeGeometry(side) {
