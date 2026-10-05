@@ -3452,13 +3452,55 @@ function startGame(THREE) {
     wrap.rotation.x = Math.PI / 2 + 0.35; // wound on a slant
   }
   // pickaxe head: a curved metal bar with a point at each end
-  var pickMetal = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.75, roughness: 0.35 });
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.1), pickMetal), 0, -0.84, 0, pickHeadGrp);
-  [-1, 1].forEach(function (side) {
-    var spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.3, 8), pickMetal);
-    spike.rotation.x = side * (Math.PI / 2 + 0.35); // curving back toward the handle
-    place(spike, 0, -0.81, side * 0.18, pickHeadGrp);
+  // one smooth arc of steel, thickest in the middle and tapering to a sharp point at each end
+  function pickHeadGeometry() {
+    var SEG = 32, RAD = 8, pos = [], col = [], idx = [];
+    for (var i = 0; i <= SEG; i++) {
+      var u = i / SEG * 2 - 1, au = Math.abs(u);
+      var cz = u * 0.27, cy = 0.085 * u * u;                    // the arc: tips curve back toward the grip
+      var tz = 0.27, ty = 0.17 * u, tl = Math.sqrt(tz * tz + ty * ty);
+      tz /= tl; ty /= tl;                                       // direction along the arc
+      var ny = tz, nz = -ty;                                    // pointing out of the curve
+      var r = 0.05 * Math.pow(1 - au, 0.6) + 0.0015;            // chunky middle, long sharp tips
+      for (var j = 0; j <= RAD; j++) {
+        var a = (j / RAD) * Math.PI * 2 + Math.PI / 8, ca = Math.cos(a), sa = Math.sin(a); // eight crisp facets
+        pos.push(sa * r * 0.75, cy + ca * r * ny, cz + ca * r * nz); // a little flattened side to side
+        var shine = 0.62 + au * 0.55 + (ca > 0.3 ? 0.22 : ca < -0.3 ? -0.1 : 0); // bright tips and top edge, darker underneath
+        col.push(shine, shine, shine * 1.04);
+      }
+    }
+    for (var k = 0; k < SEG; k++) {
+      for (var m = 0; m < RAD; m++) {
+        var p0 = k * (RAD + 1) + m, p1 = p0 + RAD + 1;
+        idx.push(p0, p1, p0 + 1, p1, p1 + 1, p0 + 1);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  var pickSteel = new THREE.MeshStandardMaterial({ color: 0xdfe5ec, metalness: 0.35, roughness: 0.3, emissive: 0x2a3038, vertexColors: true, flatShading: true, side: THREE.DoubleSide });
+  place(new THREE.Mesh(pickHeadGeometry(), pickSteel), 0, -0.9, 0, pickHeadGrp);
+  // the dark metal socket where the head meets the handle
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.12, 0.1), new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.6, roughness: 0.5 })), 0, -0.88, 0, pickHeadGrp);
+  var brass = new THREE.MeshStandardMaterial({ color: 0xd9a441, metalness: 0.6, roughness: 0.35, emissive: 0x3a2808 });
+  [-0.815, -0.945].forEach(function (by) { // brass bands above and below the socket
+    place(new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.018, 0.11), brass), 0, by, 0, pickHeadGrp);
   });
+  [-1, 1].forEach(function (sd) { // a rivet on each side
+    var rivet = place(new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), brass), sd * 0.044, -0.88, 0, pickHeadGrp);
+    rivet.scale.set(0.6, 1, 1);
+  });
+  // leather grip wrapped round the handle where you hold it
+  var pickGripMat = new THREE.MeshStandardMaterial({ color: 0x4a2c1a, roughness: 0.9 });
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.16, 12), pickGripMat), 0, -0.42, 0, pickHeadGrp);
+  for (var pw = 0; pw < 4; pw++) {
+    var pwrap = place(new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.007, 6, 14), new THREE.MeshStandardMaterial({ color: 0x7a4c30, roughness: 0.85 })), 0, -0.36 - pw * 0.04, 0, pickHeadGrp);
+    pwrap.rotation.x = Math.PI / 2 + 0.35; // wound on a slant
+  }
   axeArm.visible = false;
   player.position.set(FARM_X, 0, FARM_Z + 5);
   scene.add(player);
