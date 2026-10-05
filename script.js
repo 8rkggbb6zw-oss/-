@@ -2577,54 +2577,69 @@ function startGame(THREE) {
   }
 
   // ---------- Wooden logs you walk into to collect ----------
-  var LOGS_PER_TREE = 3; // the tree's wood is split between them
+  // A felled tree leaves logs floating where it fell, glowing softly like pickups
+  var LOGS_PER_TREE = 7; // the tree's 15 wood is split between them
   var logBarkTex = barkTex.clone();
   logBarkTex.needsUpdate = true;
   logBarkTex.repeat.set(2, 1);
-  var logGeo = new THREE.CylinderGeometry(0.16, 0.18, 0.75, 14);
+  var logGeo = new THREE.CylinderGeometry(0.13, 0.14, 1.15, 14);
   logGeo.rotateZ(Math.PI / 2); // lying on its side
-  var logMats = [new THREE.MeshStandardMaterial({ map: logBarkTex, color: 0xb08a6a, roughness: 0.9 }), stumpTopMat, stumpTopMat];
+  var logMats = [new THREE.MeshStandardMaterial({ map: logBarkTex, color: 0x9a6a48, roughness: 0.9 }), stumpTopMat, stumpTopMat];
   var logs = [];
   function dropLogs(u, len) {
+    var midX = u.base.x + u.fallDir.x * len * 0.45, midZ = u.base.z + u.fallDir.z * len * 0.45;
+    var sideX = -u.fallDir.z, sideZ = u.fallDir.x;
     for (var i = 0; i < LOGS_PER_TREE; i++) {
-      var f = (i + 0.7) / (LOGS_PER_TREE + 0.4);
-      var x = u.base.x + u.fallDir.x * len * f + (Math.random() - 0.5) * 0.6;
-      var z = u.base.z + u.fallDir.z * len * f + (Math.random() - 0.5) * 0.6;
+      var a = (Math.random() - 0.5) * 2.8, c = (i % 4 - 1.5) * 0.55 + (Math.random() - 0.5) * 0.25; // spread out loosely
+      var x = midX + u.fallDir.x * a + sideX * c, z = midZ + u.fallDir.z * a + sideZ * c;
+      var holder = new THREE.Group(); // floats and spins; the log inside is tilted a little
+      holder.position.set(x, u.base.y + 1.0 + Math.random() * 0.4, z);
+      holder.rotation.y = Math.random() * Math.PI * 2;
       var m = new THREE.Mesh(logGeo, logMats);
-      m.castShadow = m.receiveShadow = true;
-      m.position.set(x, u.base.y + 1.2, z);
-      m.rotation.y = Math.random() * Math.PI * 2;
-      scene.add(m);
+      m.castShadow = true;
+      m.rotation.order = 'YXZ';
+      m.rotation.x = Math.random() * Math.PI;  // roll, so the bark looks different on each
+      m.rotation.z = 0.12;                      // a slight tilt, like a floating pickup
+      holder.add(m);
+      var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe6a8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.scale.set(1.5, 1.5, 1);
+      holder.add(glow);
+      scene.add(holder);
+      var shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.scale.set(1.4, 0.6, 1);
+      shadow.position.set(x, u.base.y + 0.03, z);
+      scene.add(shadow);
       var share = Math.floor(WOOD_PER_TREE / LOGS_PER_TREE) + (i < WOOD_PER_TREE % LOGS_PER_TREE ? 1 : 0);
-      logs.push({ mesh: m, x: x, z: z, ground: u.base.y, t: -i * 0.12, vy: 2.2 + Math.random(), wood: share });
+      logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: u.base.y, t: -i * 0.06, p: Math.random() * 6.28, wood: share });
     }
   }
+  var FLOAT_H = 0.32; // how high the logs hover
   function updateLogs(dt) {
     for (var i = logs.length - 1; i >= 0; i--) {
       var L = logs[i];
       L.t += dt;
-      if (L.t < 0) { L.mesh.visible = false; continue; }
-      L.mesh.visible = true;
-      var restY = L.ground + 0.17;
-      if (!L.landed) { // pops up out of the sparkles, then thuds down with a small bounce
-        L.vy -= 14 * dt;
-        L.mesh.position.y += L.vy * dt;
-        L.mesh.rotation.y += dt * 4;
-        if (L.mesh.position.y <= restY) {
-          L.mesh.position.y = restY;
-          if (Math.abs(L.vy) > 1.5) L.vy = -L.vy * 0.35;
-          else { L.landed = true; L.restT = 0; }
-        }
-      } else { // resting: a gentle glint-bob so you can spot it
-        L.restT += dt;
-        L.mesh.position.y = restY + Math.max(0, Math.sin(L.restT * 3)) * 0.04;
-      }
-      if (L.t > 0.35 && dist(player.position.x, player.position.z, L.x, L.z) < 0.75) { // walked into it: collect
+      var on = L.t >= 0;
+      L.mesh.visible = L.shadow.visible = on;
+      if (!on) continue;
+      // pops out of the sparkles, then settles into a gentle hover, bobbing and slowly turning
+      var hoverY = L.ground + FLOAT_H + Math.sin(L.t * 2.4 + L.p) * 0.05;
+      var settle = Math.min(1, L.t / 0.6);
+      L.mesh.position.y += (hoverY - L.mesh.position.y) * Math.min(1, dt * (2 + settle * 6));
+      L.mesh.rotation.y += dt * 0.8;
+      L.glow.material.opacity = 0.3 + Math.sin(L.t * 3 + L.p) * 0.12;
+      var sh = 1 - (L.mesh.position.y - L.ground - FLOAT_H) * 0.5; // the shadow grows as the log comes down
+      L.shadow.material.opacity = 0.2 * Math.max(0.2, Math.min(1, sh));
+      if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < 0.65) { // walked into it: collect
         if (!addItem('wood', L.wood)) continue;
         popSound();
         showToast('+' + L.wood + ' Wood 🪵');
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
+        scene.remove(L.shadow);
+        L.glow.material.dispose();
+        L.shadow.geometry.dispose();
+        L.shadow.material.dispose();
         logs.splice(i, 1);
       }
     }
