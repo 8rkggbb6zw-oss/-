@@ -3371,8 +3371,42 @@ function startGame(THREE) {
     trimHeadGrp.add(blade);
   });
   place(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 10), new THREE.MeshStandardMaterial({ color: 0xe0a030, metalness: 0.6, roughness: 0.4 })), 0, -0.6, 0, trimHeadGrp).rotation.z = Math.PI / 2;
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.16), axeMetal), 0, -0.84, -0.07, axeHeadGrp);    // axe head
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.06), axeMetal), 0, -0.84, -0.17, axeHeadGrp);    // its sharp edge
+  // Axe head: a flared steel blade with a curved edge, thinning to a sharp, bright edge
+  function axeHeadGeometry() {
+    var sh = new THREE.Shape();
+    sh.moveTo(-0.05, 0.045);
+    sh.lineTo(0.03, 0.045);
+    sh.quadraticCurveTo(0.1, 0.06, 0.17, 0.11);     // top of the blade sweeping up
+    sh.quadraticCurveTo(0.245, 0, 0.17, -0.11);     // the curved cutting edge
+    sh.quadraticCurveTo(0.1, -0.06, 0.03, -0.045);  // the beard curving back
+    sh.lineTo(-0.05, -0.045);
+    sh.closePath();
+    var depth = 0.04;
+    var g = new THREE.ExtrudeGeometry(sh, { depth: depth, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 2, curveSegments: 16 });
+    var p = g.attributes.position, col = [];
+    for (var i = 0; i < p.count; i++) {
+      var x = p.getX(i), z = p.getZ(i) - depth / 2;
+      var thin = x > 0.04 ? Math.max(0.12, 1 - (x - 0.04) / 0.17) : 1;  // the blade gets thinner toward its edge
+      p.setZ(i, z * thin);
+      var shine = x < 0.02 ? 0.55 : x > 0.15 ? 1.15 : 0.82;               // dark poll, steel cheek, bright edge
+      col.push(shine, shine, shine * 1.04);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    g.rotateY(Math.PI / 2); // the blade points forward from the handle
+    return g;
+  }
+  var axeSteel = new THREE.MeshStandardMaterial({ color: 0xdfe5ec, metalness: 0.3, roughness: 0.32, emissive: 0x2a3038, vertexColors: true }); // bright polished steel
+  place(new THREE.Mesh(axeHeadGeometry(), axeSteel), 0, -0.86, 0, axeHeadGrp);
+  // the wooden wedge showing through the top of the head, and a dark collar round the handle
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.11, 10), new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.6, roughness: 0.5 })), 0, -0.86, 0, axeHeadGrp);
+  // leather grip wrapped round the handle where you hold it
+  var gripMat = new THREE.MeshStandardMaterial({ color: 0x4a2c1a, roughness: 0.9 });
+  place(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.16, 12), gripMat), 0, -0.42, 0, axeHeadGrp);
+  for (var gw = 0; gw < 4; gw++) {
+    var wrap = place(new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.007, 6, 14), new THREE.MeshStandardMaterial({ color: 0x7a4c30, roughness: 0.85 })), 0, -0.36 - gw * 0.04, 0, axeHeadGrp);
+    wrap.rotation.x = Math.PI / 2 + 0.35; // wound on a slant
+  }
   // pickaxe head: a curved metal bar with a point at each end
   var pickMetal = new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.75, roughness: 0.35 });
   place(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.1), pickMetal), 0, -0.84, 0, pickHeadGrp);
