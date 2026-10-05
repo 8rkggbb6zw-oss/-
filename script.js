@@ -3109,11 +3109,19 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        heldItemGrp.add(model);
+        if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
+          var upright = new THREE.Group();
+          upright.rotation.x = 1.05;            // undoes the arm's angle, so the flower points up
+          upright.position.y = 0.08;            // the stem sits in your hand
+          model.position.y = 0.19 * 1.1;        // the bottom of the stem is at the hand
+          upright.add(model);
+          heldItemGrp.add(upright);
+        } else {
+          heldItemGrp.add(model);
+        }
       }
       heldShown = held;
     }
-    if (heldItemGrp.children.length) heldItemGrp.rotation.y += 0.02; // a gentle twirl so it catches the light
     axeHeadGrp.visible = heldItem() === 'axe';
     pickHeadGrp.visible = heldItem() === 'pickaxe';
     trimHeadGrp.visible = heldItem() === 'trimmers';
