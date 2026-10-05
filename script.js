@@ -3643,7 +3643,7 @@ function startGame(THREE) {
     if (!tile.soil) {
       if (heldItem() === 'hoe') tillTile(tile); // you need the hoe to till
     } else if (!tile.crop) {
-      if (!takeItem('seed', 1)) return;
+      if (heldItem() !== 'seed' || !takeItem('seed', 1)) return; // you plant the seeds you're holding
       tile.crop = makeCrop(tile);
       tile.stage = 0;
       tile.growth = 0;
