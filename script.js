@@ -1700,6 +1700,46 @@ function startGame(THREE) {
     b.quaternion.setFromUnitVectors(UP, dir);
     return from.clone().addScaledVector(dir, length);
   }
+  // A tube that follows a curve and tapers from r0 to r1, with no flat ends: used for roots and twigs
+  function taperTube(points, r0, r1) {
+    var curve = new THREE.CatmullRomCurve3(points), SEGS = 10, RADIAL = 8;
+    var frames = curve.computeFrenetFrames(SEGS, false);
+    var pos = [], nor = [], uv = [], idx = [], P = new THREE.Vector3(), N = new THREE.Vector3();
+    for (var i = 0; i <= SEGS; i++) {
+      var u = i / SEGS, r = r0 + (r1 - r0) * u;
+      curve.getPointAt(u, P);
+      for (var j = 0; j <= RADIAL; j++) {
+        var v = (j / RADIAL) * Math.PI * 2;
+        N.set(0, 0, 0).addScaledVector(frames.normals[i], -Math.cos(v)).addScaledVector(frames.binormals[i], Math.sin(v)).normalize();
+        pos.push(P.x + r * N.x, P.y + r * N.y, P.z + r * N.z);
+        nor.push(N.x, N.y, N.z);
+        uv.push((j / RADIAL) * 2, u * 2);
+      }
+    }
+    for (var a = 0; a < SEGS; a++) {
+      for (var b = 0; b < RADIAL; b++) {
+        var i0 = a * (RADIAL + 1) + b, i1 = (a + 1) * (RADIAL + 1) + b;
+        idx.push(i0, i1, i0 + 1, i1, i1 + 1, i0 + 1);
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    return g;
+  }
+  // A root: grows out of the trunk, arches over the ground and dives back into the earth
+  function root(tree, angle, reach, thick, rise, wiggle) {
+    var dx = Math.cos(angle), dz = Math.sin(angle), sx = -dz * wiggle, sz = dx * wiggle;
+    place(new THREE.Mesh(taperTube([
+      new THREE.Vector3(dx * reach * 0.08, rise, dz * reach * 0.08),
+      new THREE.Vector3(dx * reach * 0.35 + sx * 0.4, rise * 0.35, dz * reach * 0.35 + sz * 0.4),
+      new THREE.Vector3(dx * reach * 0.7 + sx, thick * 0.3, dz * reach * 0.7 + sz),
+      new THREE.Vector3(dx * reach, -thick * 1.5, dz * reach)
+    ], thick, thick * 0.12), tree.userData.bark), 0, 0, 0, tree);
+  }
+
   // A clump of leaves: several leafy cards at random angles around a point, darker underneath
   function leafClump(tree, center, radius, warm) {
     for (var i = 0; i < 12; i++) {
@@ -1729,13 +1769,9 @@ function startGame(THREE) {
       profile.push(new THREE.Vector2(0.27 * size * (1 - 0.3 * yy / trunkH) + 0.26 * size * Math.exp(-yy * 5 / size), yy));
     }
     place(new THREE.Mesh(new THREE.LatheGeometry(profile, 14), barkMat), 0, 0, 0, t);
-    for (var rt = 0; rt < 5; rt++) { // roots spreading over the ground
-      var holder = new THREE.Group();
-      holder.rotation.y = (rt / 5) * Math.PI * 2 + rand() * 0.5;
-      var root = place(new THREE.Mesh(new THREE.ConeGeometry(0.15 * size, 0.9 * size, 6), barkMat), 0.38 * size, 0.08 * size, 0, holder);
-      root.rotation.z = -1.3;
-      root.scale.set(1, 0.8 + rand() * 0.4, 0.55);
-      t.add(holder);
+    for (var rt = 0; rt < 5; rt++) { // roots winding out over the ground
+      var rootAngle = (rt / 5) * Math.PI * 2 + rand() * 0.5, rootLen = 0.8 + rand() * 0.4;
+      root(t, rootAngle, 1.05 * size * rootLen, 0.12 * size, 0.5 * size, (rt % 2 ? 0.12 : -0.12) * size);
     }
     t.updateMatrixWorld(true);
     var leaderEnd = branch(t, new THREE.Vector3(0, trunkH - 0.05 * size, 0), direction(rand() * 6.28, rand() * 0.25), 0.9 * size, 0.19 * size, 0.07 * size);
@@ -1764,6 +1800,10 @@ function startGame(THREE) {
     var trunkGeo = new THREE.CylinderGeometry(0.02 * size, 0.25 * size, H * 0.86, 10); // stops below the tip, hidden in the needles
     trunkGeo.translate(0, H * 0.43, 0);
     place(new THREE.Mesh(trunkGeo, pineBarkMat), 0, 0, 0, t);
+    for (var pr = 0; pr < 4; pr++) { // small roots round the base
+      var prA = (pr / 4) * Math.PI * 2 + Math.sin(x * 3.1 + z * 1.7 + pr) * 0.5;
+      root(t, prA, (0.6 + 0.15 * Math.sin(x + pr * 2.3)) * size, 0.08 * size, 0.3 * size, (pr % 2 ? 0.08 : -0.08) * size);
+    }
     // A dark cone hidden inside the branches, so you can't see through the gaps
     var coreH = H * 0.62, coreGeo = new THREE.ConeGeometry(0.62 * size, coreH, 10);
     coreGeo.translate(0, H * 0.24 + coreH / 2, 0);
@@ -1836,7 +1876,11 @@ function startGame(THREE) {
     for (var c = 0; c < clumpsN; c++) {
       var ca = (c / clumpsN) * Math.PI * 2 + rand() * 0.6, cr = (0.25 + rand() * 0.2) * sz;
       var center = new THREE.Vector3(Math.cos(ca) * cr, (0.32 + rand() * 0.15) * sz, Math.sin(ca) * cr);
-      branch(b, new THREE.Vector3(0, 0, 0), center.clone().normalize(), center.length(), 0.03 * sz, 0.012 * sz);
+      place(new THREE.Mesh(taperTube([ // a woody stem coming up out of the ground into the leaves
+        new THREE.Vector3(0, -0.08 * sz, 0),
+        new THREE.Vector3(center.x * 0.3, center.y * 0.4, center.z * 0.3),
+        center
+      ], 0.035 * sz, 0.01 * sz), barkMat), 0, 0, 0, b);
       leafClump(b, center, (0.36 + rand() * 0.1) * sz, warm);
     }
     leafClump(b, new THREE.Vector3(0, 0.55 * sz, 0), 0.4 * sz, warm); // a rounded top
