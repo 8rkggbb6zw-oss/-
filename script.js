@@ -228,28 +228,104 @@ function startGame(THREE) {
 
   var solids = []; // things you bump into: {x, z, r}
 
-  // Lumpy rocks: a ball pushed in and out by noise, darker underneath, a little moss on top
-  function boulderGeometry(shift) {
-    var g = new THREE.IcosahedronGeometry(1, 2);
+  // Rocks: a ball chipped flat on a few sides like real stone, bumpy and weathered,
+  // speckled grain, darker underneath, with patches of moss on top
+  var rockCanvas = document.createElement('canvas');
+  rockCanvas.width = rockCanvas.height = 256;
+  (function (g) {
+    g.fillStyle = '#d6d4cf';
+    g.fillRect(0, 0, 256, 256);
+    function wrapped(draw) { // draw at every wrapped position so the texture tiles with no seams
+      for (var ox = -256; ox <= 256; ox += 256) for (var oy = -256; oy <= 256; oy += 256) draw(ox, oy);
+    }
+    for (var i = 0; i < 2600; i++) { // grain and speckles
+      var x = Math.random() * 256, y = Math.random() * 256, r = 0.6 + Math.random() * 1.8;
+      g.fillStyle = Math.random() < 0.55 ? 'rgba(70,66,60,' + (0.15 + Math.random() * 0.3) + ')' : 'rgba(255,255,250,' + (0.2 + Math.random() * 0.35) + ')';
+      wrapped(function (ox, oy) { g.fillRect(x + ox, y + oy, r, r); });
+    }
+    for (var j = 0; j < 40; j++) { // soft blotches
+      var bx = Math.random() * 256, by = Math.random() * 256, br = 10 + Math.random() * 30, dark = Math.random() < 0.5;
+      wrapped(function (ox, oy) {
+        var grad = g.createRadialGradient(bx + ox, by + oy, 0, bx + ox, by + oy, br);
+        grad.addColorStop(0, dark ? 'rgba(90,85,78,0.18)' : 'rgba(255,255,255,0.18)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grad;
+        g.fillRect(bx + ox - br, by + oy - br, br * 2, br * 2);
+      });
+    }
+    g.lineCap = 'round';
+    for (var k = 0; k < 14; k++) { // fine cracks
+      var cx = Math.random() * 256, cy = Math.random() * 256, pts = [];
+      for (var c = 0; c < 6; c++) { pts.push([cx, cy]); cx += (Math.random() - 0.5) * 22; cy += 4 + Math.random() * 10; }
+      wrapped(function (ox, oy) {
+        g.strokeStyle = 'rgba(50,46,42,0.35)';
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(pts[0][0] + ox, pts[0][1] + oy);
+        for (var q = 1; q < pts.length; q++) g.lineTo(pts[q][0] + ox, pts[q][1] + oy);
+        g.stroke();
+      });
+    }
+  })(rockCanvas.getContext('2d'));
+  var rockTex = new THREE.CanvasTexture(rockCanvas);
+  rockTex.wrapS = rockTex.wrapT = THREE.RepeatWrapping;
+  rockTex.repeat.set(3, 2);
+
+  var ROCK_TINTS = [0x9c9a93, 0x8f949a, 0xa59c8e, 0x8d9288, 0x99999a, 0xa29589];
+  function boulderGeometry(shift, n) {
+    function hash(k) { var x = Math.sin(k * 12.9898 + shift * 78.233) * 43758.5453; return x - Math.floor(x); }
+    var g = new THREE.IcosahedronGeometry(1, 4);
     var p = g.attributes.position, colors = [], v = new THREE.Vector3(), c = new THREE.Color();
-    var light = new THREE.Color(0x9aa1a6), dark = new THREE.Color(0x585e63), moss = new THREE.Color(0x6b8a42);
+    // flat chipped faces: a few planes that slice off the round sides
+    var cuts = [];
+    for (var k = 0; k < 8; k++) {
+      var ca = hash(k) * Math.PI * 2, cy = hash(k + 10) * 1.4 - 0.4;
+      cuts.push({ n: new THREE.Vector3(Math.cos(ca), cy, Math.sin(ca)).normalize(), d: 0.6 + hash(k + 20) * 0.22 });
+    }
+    var tint = new THREE.Color(ROCK_TINTS[n % ROCK_TINTS.length]);
+    var dark = tint.clone().multiplyScalar(0.55), light = tint.clone().lerp(new THREE.Color(0xffffff), 0.18);
+    var moss = new THREE.Color(0x5f7f3a), mossLight = new THREE.Color(0x86a24f);
     for (var i = 0; i < p.count; i++) {
       v.fromBufferAttribute(p, i);
-      v.multiplyScalar(1 + noise(v.x * 2.2 + shift, v.z * 2.2 + v.y * 1.7) * 0.22 + noise(v.y * 5 + shift, v.x * 5) * 0.05);
+      v.multiplyScalar(1 + noise(v.x * 1.8 + shift, v.z * 1.8 + v.y * 1.5) * 0.16);
+      cuts.forEach(function (cut) {
+        var over = v.dot(cut.n) - cut.d;
+        if (over > 0) v.addScaledVector(cut.n, -over);
+      });
+      v.multiplyScalar(1 + noise(v.x * 7 + shift, v.y * 7 + v.z * 3) * 0.025); // small bumps
       if (v.y < -0.3) v.y = -0.3 + (v.y + 0.3) * 0.3; // flatter bottom so it sits on the ground
       p.setXYZ(i, v.x, v.y, v.z);
-      c.copy(light).lerp(dark, Math.min(1, Math.max(0, 0.15 - v.y * 0.6 + noise(v.x * 6, v.z * 6 + shift) * 0.15)));
-      if (v.y > 0.45) c.lerp(moss, Math.min(1, (v.y - 0.45) * 1.6) * 0.5);
+      var shade = Math.min(1, Math.max(0, 0.3 - v.y * 0.55 + noise(v.x * 4 + shift, v.z * 4) * 0.2));
+      c.copy(light).lerp(dark, shade);
+      var mossy = (v.y - 0.5) * 2 + noise(v.x * 3.5 + shift, v.z * 3.5 - shift) * 0.8; // patchy moss on top
+      if (mossy > 0) c.lerp(noise(v.x * 9, v.z * 9) > 0 ? mossLight : moss, Math.min(0.7, mossy * 1.5));
       colors.push(c.r, c.g, c.b);
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    g.computeVertexNormals();
+    // smooth normals, so edges look weathered and rounded instead of faceted
+    var sums = {}, a = new THREE.Vector3(), b2 = new THREE.Vector3(), cc = new THREE.Vector3(), fn = new THREE.Vector3();
+    function key(i) { return Math.round(p.getX(i) * 1e4) + ',' + Math.round(p.getY(i) * 1e4) + ',' + Math.round(p.getZ(i) * 1e4); }
+    for (var f = 0; f < p.count; f += 3) {
+      a.fromBufferAttribute(p, f); b2.fromBufferAttribute(p, f + 1); cc.fromBufferAttribute(p, f + 2);
+      fn.subVectors(cc, b2).cross(a.sub(b2));
+      for (var j = 0; j < 3; j++) {
+        var kk = key(f + j);
+        if (!sums[kk]) sums[kk] = new THREE.Vector3();
+        sums[kk].add(fn);
+      }
+    }
+    var normals = [];
+    for (var m = 0; m < p.count; m++) {
+      fn.copy(sums[key(m)]).normalize();
+      normals.push(fn.x, fn.y, fn.z);
+    }
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
     return g;
   }
-  var boulderGeos = [0, 3.7, 7.4, 11.1].map(boulderGeometry);
-  var stoneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+  var boulderGeos = [0, 3.7, 7.4, 11.1, 14.8, 18.5].map(boulderGeometry);
+  var stoneMat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.025, vertexColors: true, roughness: 0.95 });
   function boulder(x, z, size, squash, parent) {
-    var b = place(new THREE.Mesh(boulderGeos[Math.floor(rand() * 4)], stoneMat), x, 0, z, parent);
+    var b = place(new THREE.Mesh(boulderGeos[Math.floor(rand() * boulderGeos.length)], stoneMat), x, 0, z, parent);
     b.scale.set(size, size * squash, size * (0.75 + rand() * 0.4));
     b.rotation.y = rand() * Math.PI * 2;
     return b;
