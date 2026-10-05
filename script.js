@@ -1224,7 +1224,7 @@ function startGame(THREE) {
     return batch;
   }
   var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 9000);
-  var coreBatch = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x35602a, roughness: 1 }), 900);
+  var coreBatch = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: 0x3f6b2c, roughness: 1 }), 900);
   coreBatch.castShadow = true;
   coreBatch.receiveShadow = true;
   coreBatch.count = 0;
@@ -1258,7 +1258,7 @@ function startGame(THREE) {
     if (coreBatch.count < coreBatch.instanceMatrix.count) {
       fPos.copy(center);
       fQuat.set(0, 0, 0, 1);
-      fScale.set(radius * 0.62, radius * 0.5, radius * 0.62);
+      fScale.set(radius * 0.4, radius * 0.32, radius * 0.4); // small enough to stay hidden inside the leaves
       fMat.compose(fPos, fQuat, fScale);
       fWorld.multiplyMatrices(tree.matrixWorld, fMat);
       coreBatch.setMatrixAt(coreBatch.count++, fWorld);
@@ -1282,35 +1282,35 @@ function startGame(THREE) {
   function leafyTree(x, z, size) {
     var t = new THREE.Group();
     t.userData.bark = barkMat;
-    finishTree(t, x, z, 0.28 * size);
+    finishTree(t, x, z, 0.36 * size);
     var trunkH = (1.5 + rand() * 0.6) * size, warm = (rand() - 0.5) * 0.12;
     var profile = [];
     for (var i = 0; i <= 12; i++) {
       var yy = (i / 12) * trunkH;
-      profile.push(new THREE.Vector2(0.17 * size * (1 - 0.35 * yy / trunkH) + 0.2 * size * Math.exp(-yy * 6 / size), yy));
+      profile.push(new THREE.Vector2(0.27 * size * (1 - 0.3 * yy / trunkH) + 0.26 * size * Math.exp(-yy * 5 / size), yy));
     }
     place(new THREE.Mesh(new THREE.LatheGeometry(profile, 14), barkMat), 0, 0, 0, t);
     for (var rt = 0; rt < 5; rt++) { // roots spreading over the ground
       var holder = new THREE.Group();
       holder.rotation.y = (rt / 5) * Math.PI * 2 + rand() * 0.5;
-      var root = place(new THREE.Mesh(new THREE.ConeGeometry(0.11 * size, 0.8 * size, 6), barkMat), 0.28 * size, 0.07 * size, 0, holder);
+      var root = place(new THREE.Mesh(new THREE.ConeGeometry(0.15 * size, 0.9 * size, 6), barkMat), 0.38 * size, 0.08 * size, 0, holder);
       root.rotation.z = -1.3;
       root.scale.set(1, 0.8 + rand() * 0.4, 0.55);
       t.add(holder);
     }
     t.updateMatrixWorld(true);
-    var leaderEnd = branch(t, new THREE.Vector3(0, trunkH - 0.05 * size, 0), direction(rand() * 6.28, rand() * 0.25), 0.9 * size, 0.12 * size, 0.04 * size);
+    var leaderEnd = branch(t, new THREE.Vector3(0, trunkH - 0.05 * size, 0), direction(rand() * 6.28, rand() * 0.25), 0.9 * size, 0.19 * size, 0.07 * size);
     leafClump(t, leaderEnd, 0.85 * size, warm);
     var mains = 3 + Math.floor(rand() * 2);
     for (var m = 0; m < mains; m++) {
       var a = (m / mains) * Math.PI * 2 + rand() * 0.6, tilt = 0.55 + rand() * 0.35;
       var start = new THREE.Vector3(0, trunkH * (0.78 + rand() * 0.2), 0), dir = direction(a, tilt);
       var len = (1.0 + rand() * 0.4) * size;
-      var end = branch(t, start, dir, len, 0.1 * size, 0.045 * size);
+      var end = branch(t, start, dir, len, 0.15 * size, 0.07 * size);
       leafClump(t, start.clone().addScaledVector(dir, len * 0.6), 0.6 * size, warm);
       var subs = 2 + Math.floor(rand() * 2);
       for (var sb2 = 0; sb2 < subs; sb2++) {
-        var end2 = branch(t, end, direction(a + (rand() - 0.5) * 1.4, 0.35 + rand() * 0.6), (0.55 + rand() * 0.35) * size, 0.045 * size, 0.015 * size);
+        var end2 = branch(t, end, direction(a + (rand() - 0.5) * 1.4, 0.35 + rand() * 0.6), (0.55 + rand() * 0.35) * size, 0.07 * size, 0.028 * size);
         leafClump(t, end2, (0.6 + rand() * 0.2) * size, warm);
       }
     }
@@ -1320,9 +1320,9 @@ function startGame(THREE) {
   function pineTree(x, z, size) {
     var t = new THREE.Group();
     t.userData.bark = pineBarkMat;
-    finishTree(t, x, z, 0.22 * size);
+    finishTree(t, x, z, 0.28 * size);
     var H = (3.0 + rand() * 0.8) * size;
-    var trunkGeo = new THREE.CylinderGeometry(0.03 * size, 0.17 * size, H, 8);
+    var trunkGeo = new THREE.CylinderGeometry(0.05 * size, 0.25 * size, H, 10);
     trunkGeo.translate(0, H / 2, 0);
     place(new THREE.Mesh(trunkGeo, pineBarkMat), 0, 0, 0, t);
     t.updateMatrixWorld(true);
