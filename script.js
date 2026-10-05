@@ -2409,20 +2409,21 @@ function startGame(THREE) {
     u.leafOrig = u.leaves.map(function (L) { return L.batch.instanceMatrix.array.slice(L.start * 16, (L.start + L.count) * 16); });
   });
 
-  // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
+  // Moves a whole tree by matrix M (worked out around its base): used to grow, shrink and shudder it
   var growM = new THREE.Matrix4(), chopM = new THREE.Matrix4(), chopM2 = new THREE.Matrix4();
-  function setTreeGrowth(t, k) {
-    var u = t.userData, b = u.base;
+  function setTreeTransform(t, M) {
+    var u = t.userData, e = M.elements;
     u.parts.forEach(function (pt) {
       var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
       for (var i = 0; i < o.length; i += 3) {
-        arr[s0 + i] = b.x + (o[i] - b.x) * k;
-        arr[s0 + i + 1] = b.y + (o[i + 1] - b.y) * k;
-        arr[s0 + i + 2] = b.z + (o[i + 2] - b.z) * k;
+        var x = o[i], y = o[i + 1], z = o[i + 2];
+        arr[s0 + i] = e[0] * x + e[4] * y + e[8] * z + e[12];
+        arr[s0 + i + 1] = e[1] * x + e[5] * y + e[9] * z + e[13];
+        arr[s0 + i + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
       }
       markDirty(attr, s0, o.length);
     });
-    growM.makeTranslation(b.x, b.y, b.z).multiply(chopM2.makeScale(k, k, k)).multiply(chopM.makeTranslation(-b.x, -b.y, -b.z));
+    growM.copy(M);
     u.leaves.forEach(function (L, n) {
       if (!L.count) return;
       var o = u.leafOrig[n], arr = L.batch.instanceMatrix.array;
@@ -2432,6 +2433,22 @@ function startGame(THREE) {
       }
       markDirty(L.batch.instanceMatrix, L.start * 16, L.count * 16);
     });
+  }
+  // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
+  var treeM = new THREE.Matrix4(), treeM2 = new THREE.Matrix4();
+  function setTreeGrowth(t, k) {
+    var b = t.userData.base;
+    treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
+    setTreeTransform(t, treeM);
+  }
+  // Tilts a tree a little around its base, toward direction (dx, dz): used to make it shudder when hit
+  var tiltQ = new THREE.Quaternion(), tiltAxis = new THREE.Vector3();
+  function setTreeTilt(t, angle, dx, dz) {
+    var b = t.userData.base;
+    tiltAxis.set(dz, 0, -dx).normalize();
+    treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeRotationFromQuaternion(tiltQ.setFromAxisAngle(tiltAxis, angle)))
+      .multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
+    setTreeTransform(t, treeM);
   }
 
   // A copy of the tree that can tip over on its own, pivoting just above the stump
@@ -2513,21 +2530,33 @@ function startGame(THREE) {
     return best;
   }
 
-  var swingT = 1; // time since the last swing of the axe
+  var SWING_TIME = 0.6, IMPACT = 0.27; // seconds: a whole swing, and when the axe bites into the trunk
+  var swingT = 9, swingTree = null;    // time since the last swing started, and the tree it's aimed at
   function chopTree(t) {
-    if (swingT < 0.35) return; // still mid-swing
+    if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
+    swingTree = t;
     var u = t.userData;
     facing = Math.atan2(u.base.x - player.position.x, u.base.z - player.position.z); // turn to face the tree
+  }
+  // The axe lands: chips fly, the tree shudders, and on the tenth hit it falls
+  function axeHits(t) {
+    var u = t.userData;
+    if (u.state !== 'standing') return;
     u.hits++;
     var hx = u.base.x - Math.sin(facing) * 0.3, hz = u.base.z - Math.cos(facing) * 0.3;
-    burst(hx, 0.8, hz, 0xd2a86e, 9, 2.2, 1.6, -7);                 // wood chips
-    burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 5, 1.6, 0.2, -1.2); // a few leaves shaken loose
-    if (u.hits < CHOPS_TO_FELL) { showToast('🪓 Chop ' + u.hits + '/' + CHOPS_TO_FELL); return; }
+    burst(hx, 0.7, hz, 0xd2a86e, 12, 2.6, 1.8, -7);                // wood chips
+    burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 6, 1.6, 0.2, -1.2); // a few leaves shaken loose
+    if (u.hits < CHOPS_TO_FELL) {
+      u.shudderT = 0;
+      showToast('🪓 Chop ' + u.hits + '/' + CHOPS_TO_FELL);
+      return;
+    }
     // Timber! Swap the standing tree for a copy that tips over, away from you
     u.state = 'falling';
     u.fallT = 0;
     u.landed = false;
+    u.poofed = false;
     u.stumpH = (u.leafy ? 0.38 : 0.32) * u.size;
     var away = new THREE.Vector3(u.base.x - player.position.x, 0, u.base.z - player.position.z);
     if (away.lengthSq() < 0.0001) away.set(1, 0, 0);
@@ -2543,9 +2572,17 @@ function startGame(THREE) {
 
   var fallQ = new THREE.Quaternion();
   function updateTrees(dt) {
+    var before = swingT;
     swingT += dt;
+    if (swingTree && before < IMPACT && swingT >= IMPACT) { axeHits(swingTree); swingTree = null; }
     choppable.forEach(function (t) {
       var u = t.userData;
+      if (u.state === 'standing' && u.shudderT !== undefined) { // a quick shudder after each hit
+        u.shudderT += dt;
+        var sh = u.shudderT < 0.45 ? Math.sin(u.shudderT * 38) * 0.035 * Math.exp(-u.shudderT * 7) : 0;
+        setTreeTilt(t, sh, Math.sin(facing), Math.cos(facing));
+        if (u.shudderT >= 0.45) u.shudderT = undefined;
+      }
       if (u.state === 'falling') {
         u.fallT += dt;
         var FALL = 1.6, flat = Math.PI / 2 - 0.05, angle;
@@ -2563,11 +2600,16 @@ function startGame(THREE) {
           }
         }
         u.proxy.quaternion.copy(fallQ.setFromAxisAngle(u.fallAxis, angle));
-        if (u.fallT > FALL + 1.8) { // the fallen tree turns into sparkles and is gone
-          var k = Math.max(0, 1 - (u.fallT - FALL - 1.8) / 0.8);
+        if (u.fallT > FALL + 1.8) { // the fallen tree turns into a poof of sparkles and is gone
+          if (!u.poofed) {
+            u.poofed = true;
+            var len = (u.leafy ? 3.6 : 3.4) * u.size;
+            sparklePoof(new THREE.Vector3(u.base.x, u.base.y + 0.2, u.base.z),
+              new THREE.Vector3(u.base.x + u.fallDir.x * len, u.base.y + 0.2, u.base.z + u.fallDir.z * len), 140);
+          }
+          var k = Math.max(0, 1 - (u.fallT - FALL - 1.8) / 0.5);
           u.proxy.scale.setScalar(k);
           if (k === 0) {
-            burst(u.base.x + u.fallDir.x * 1.5, 0.5, u.base.z + u.fallDir.z * 1.5, 0xfff1a8, 16, 3, 1.2, -1);
             scene.remove(u.proxy);
             u.proxy.traverse(function (o) { if (o.isMesh && !o.isInstancedMesh) o.geometry.dispose(); });
             u.proxy = null;
@@ -2592,12 +2634,35 @@ function startGame(THREE) {
         if (g >= 1) { u.state = 'standing'; u.hits = 0; }
       }
     });
-    // the axe in your hand, and its swing
-    axeHold.visible = heldItem() === 'axe';
-    var sw = swingT;
-    axeHold.rotation.x = sw < 0.12 ? 0.25 - (sw / 0.12) * 1.55
-      : sw < 0.22 ? -1.3 + ((sw - 0.12) / 0.1) * 2.8
-      : sw < 0.4 ? 1.5 - ((sw - 0.22) / 0.18) * 1.25 : 0.25;
+    // Your arm and axe, and the swing: wind up over your shoulder, chop down hard, recoil, settle
+    var holding = heldItem() === 'axe';
+    axeArm.visible = holding;
+    var REST = 5.23, UP = 2.35, HIT = 4.75;            // arm angles: carrying, raised up behind you, striking forward over the top
+    var armX = REST, armZ = 0, twist = 0, lean = 0, squash = 0, sw = swingT;
+    function easeOut(k) { return 1 - (1 - k) * (1 - k); }
+    function easeIn(k) { return k * k * k; }
+    if (holding && sw < SWING_TIME) {
+      if (sw < 0.17) {                                  // wind up: raise the axe back over your shoulder, twisting away
+        var w = easeOut(sw / 0.17);
+        armX = REST + (UP - REST) * w; armZ = -0.45 * w; twist = -0.42 * w; lean = -0.1 * w;
+      } else if (sw < 0.2) {                            // a tiny pause at the top
+        armX = UP; armZ = -0.45; twist = -0.42; lean = -0.1;
+      } else if (sw < IMPACT) {                         // chop: swing down hard into the trunk
+        var c = easeIn((sw - 0.2) / (IMPACT - 0.2));
+        armX = UP + (HIT - UP) * c; armZ = -0.45 + 0.7 * c; twist = -0.42 + 0.72 * c; lean = -0.1 + 0.32 * c;
+      } else if (sw < 0.36) {                           // the jolt of the hit
+        var j = (sw - IMPACT) / (0.36 - IMPACT);
+        armX = HIT - 0.2 * Math.sin(j * Math.PI); armZ = 0.25; twist = 0.3; lean = 0.22; squash = Math.sin(j * Math.PI);
+      } else {                                          // settle back
+        var r = easeOut((sw - 0.36) / (SWING_TIME - 0.36));
+        armX = HIT + (REST - HIT) * r; armZ = 0.25 * (1 - r); twist = 0.3 * (1 - r); lean = 0.22 * (1 - r);
+      }
+    }
+    axeArm.rotation.x = armX;
+    axeArm.rotation.z = armZ;
+    body.rotation.y = twist;
+    body.rotation.x = lean;
+    body.scale.set(1 + squash * 0.05, 1 - squash * 0.08, 1 + squash * 0.05);
     flushDirty();
   }
 
@@ -2758,13 +2823,22 @@ function startGame(THREE) {
   var eyeGeo = new THREE.SphereGeometry(0.04, 8, 6);
   place(new THREE.Mesh(eyeGeo, M.eye), -0.1, 1.0, 0.24, body);
   place(new THREE.Mesh(eyeGeo, M.eye), 0.1, 1.0, 0.24, body);
-  // The axe, shown in your hand while it's selected in the hotbar
-  var axeHold = new THREE.Group();
-  axeHold.position.set(0.34, 0.5, 0.06);
-  body.add(axeHold);
-  place(new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.62, 8), new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, 0.26, 0, axeHold);
-  place(new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.15, 0.22), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 })), 0, 0.5, 0.08, axeHold);
-  axeHold.visible = false;
+  // Your arm holding the axe, shown while the axe is selected in the hotbar. It swings from the shoulder;
+  // the arm and the axe handle point straight down from the shoulder before any rotation
+  var axeArm = new THREE.Group();
+  axeArm.position.set(-0.27, 0.68, 0.02);
+  body.add(axeArm);
+  var sleeve = new THREE.CylinderGeometry(0.075, 0.09, 0.32, 10);
+  sleeve.translate(0, -0.16, 0);
+  place(new THREE.Mesh(sleeve, M.robe), 0, 0, 0, axeArm);
+  place(new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), M.skin), 0, -0.34, 0, axeArm);  // hand
+  var handleGeo = new THREE.CylinderGeometry(0.024, 0.03, 0.62, 8);
+  handleGeo.translate(0, -0.31, 0);
+  place(new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x8a5a34, roughness: 0.8 })), 0, -0.3, 0, axeArm);
+  var axeMetal = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.7, roughness: 0.35 });
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.16, 0.16), axeMetal), 0, -0.84, -0.07, axeArm);        // axe head
+  place(new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, 0.06), axeMetal), 0, -0.84, -0.17, axeArm);        // its sharp edge
+  axeArm.visible = false;
   player.position.set(FARM_X, 0, FARM_Z + 5);
   scene.add(player);
   var facing = Math.PI; // looking toward the garden
@@ -2828,6 +2902,7 @@ function startGame(THREE) {
       if (!sk) return;
       var a = Math.random() * Math.PI * 2, r = 0.3 + Math.random() * 0.4;
       sk.on = true;
+      sk.poof = false;
       sk.age = -(delay + Math.random() * 0.35);   // waits a moment so they leave in a stream, not all at once
       sk.start = new THREE.Vector3(player.position.x + Math.cos(a) * r, 0.5 + Math.random() * 0.6, player.position.z + Math.sin(a) * r);
       sk.lift = 0.7 + Math.random() * 0.5;       // how high they float up before setting off
@@ -2847,15 +2922,57 @@ function startGame(THREE) {
       }
     }
   }
+  // A poof of sparkles bursting out along a line (from a to b), drifting up and twinkling out
+  var poofFlashes = [];
+  function sparklePoof(a, b, count) {
+    for (var i = 0; i < count; i++) {
+      var sk = freeSpark();
+      if (!sk) break;
+      var f = Math.random();
+      sk.on = true;
+      sk.poof = true;
+      sk.age = -Math.random() * 0.15;
+      sk.start = new THREE.Vector3().lerpVectors(a, b, f);
+      sk.start.y += Math.random() * 1.2;
+      var ang = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 2.2;
+      sk.vel = new THREE.Vector3(Math.cos(ang) * sp, 0.6 + Math.random() * 1.8, Math.sin(ang) * sp);
+      sk.life = 1.2 + Math.random() * 1.1;
+      sk.tint = spellTints[Math.floor(Math.random() * spellTints.length)];
+      sk.twinkle = 5 + Math.random() * 6;
+      sk.p = Math.random() * 6.28;
+    }
+    // and a big soft flash of light in the middle
+    var flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff1c4, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    flash.position.lerpVectors(a, b, 0.5);
+    flash.position.y += 0.8;
+    scene.add(flash);
+    poofFlashes.push({ sprite: flash, t: 0 });
+  }
   var sparkMid = new THREE.Vector3(), sparkUp = new THREE.Vector3(), sparkPos = new THREE.Vector3();
   function updateSpellSparks(dt, time) {
+    for (var fi = poofFlashes.length - 1; fi >= 0; fi--) { // the poof's flash grows and fades
+      var fl = poofFlashes[fi];
+      fl.t += dt;
+      var fk = fl.t / 0.7;
+      fl.sprite.scale.setScalar(1 + fk * 7);
+      fl.sprite.material.opacity = Math.max(0, 0.9 * (1 - fk));
+      if (fk >= 1) { scene.remove(fl.sprite); fl.sprite.material.dispose(); poofFlashes.splice(fi, 1); }
+    }
     var pos = spellGeo.attributes.position, col = spellGeo.attributes.color;
     for (var i = 0; i < sparks.length; i++) {
       var sk = sparks[i], bright = 0;
       if (sk.on) {
         sk.age += dt;
         var t = sk.age;
-        if (t < 0) {
+        if (sk.poof) { // a poof sparkle: bursts outward, slows down, floats up and fades
+          if (t > sk.life) { sk.on = false; }
+          else {
+            var tt = Math.max(0, t), spread = (1 - Math.exp(-tt * 2.5)) / 2.5;
+            sparkPos.copy(sk.start).addScaledVector(sk.vel, spread);
+            sparkPos.y += tt * 0.6;
+            bright = t < 0 ? 0 : Math.pow(1 - t / sk.life, 1.3) * 1.6;
+          }
+        } else if (t < 0) {
           bright = 0;
           sparkPos.copy(sk.start);
         } else if (t < sk.rise) { // 1. float up around you, swirling a little
