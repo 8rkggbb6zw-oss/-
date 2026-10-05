@@ -2605,7 +2605,7 @@ function startGame(THREE) {
             u.poofed = true;
             var len = (u.leafy ? 3.6 : 3.4) * u.size;
             sparklePoof(new THREE.Vector3(u.base.x, u.base.y + 0.2, u.base.z),
-              new THREE.Vector3(u.base.x + u.fallDir.x * len, u.base.y + 0.2, u.base.z + u.fallDir.z * len), 140);
+              new THREE.Vector3(u.base.x + u.fallDir.x * len, u.base.y + 0.2, u.base.z + u.fallDir.z * len), 240);
           }
           var k = Math.max(0, 1 - (u.fallT - FALL - 1.8) / 0.5);
           u.proxy.scale.setScalar(k);
@@ -2878,7 +2878,7 @@ function startGame(THREE) {
 
   // Spell sparkles: they gather and float up around you, drift through the air to each crop
   // the spell touches, then spiral down onto it and twinkle out
-  var SPELL_SPARKS = 600;
+  var SPELL_SPARKS = 900;
   var spellGeo = new THREE.BufferGeometry();
   spellGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPELL_SPARKS * 3), 3));
   spellGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SPELL_SPARKS * 3), 3));
@@ -2942,7 +2942,7 @@ function startGame(THREE) {
       sk.p = Math.random() * 6.28;
     }
     // and a big soft flash of light in the middle
-    var flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff1c4, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    var flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd6f4, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
     flash.position.lerpVectors(a, b, 0.5);
     flash.position.y += 0.8;
     scene.add(flash);
@@ -2954,8 +2954,8 @@ function startGame(THREE) {
       var fl = poofFlashes[fi];
       fl.t += dt;
       var fk = fl.t / 0.7;
-      fl.sprite.scale.setScalar(1 + fk * 7);
-      fl.sprite.material.opacity = Math.max(0, 0.9 * (1 - fk));
+      fl.sprite.scale.setScalar(1.5 + fk * 4);
+      fl.sprite.material.opacity = Math.max(0, 0.55 * (1 - fk));
       if (fk >= 1) { scene.remove(fl.sprite); fl.sprite.material.dispose(); poofFlashes.splice(fi, 1); }
     }
     var pos = spellGeo.attributes.position, col = spellGeo.attributes.color;
@@ -2970,7 +2970,7 @@ function startGame(THREE) {
             var tt = Math.max(0, t), spread = (1 - Math.exp(-tt * 2.5)) / 2.5;
             sparkPos.copy(sk.start).addScaledVector(sk.vel, spread);
             sparkPos.y += tt * 0.6;
-            bright = t < 0 ? 0 : Math.pow(1 - t / sk.life, 1.3) * 1.6;
+            bright = t < 0 ? 0 : Math.pow(1 - t / sk.life, 1.1) * 2.4;
           }
         } else if (t < 0) {
           bright = 0;
