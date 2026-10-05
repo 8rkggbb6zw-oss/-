@@ -2592,27 +2592,88 @@ function startGame(THREE) {
     for (var i = 0; i < LOGS_PER_TREE; i++) {
       var a = (Math.random() - 0.5) * 2.8, c = (i % 4 - 1.5) * 0.55 + (Math.random() - 0.5) * 0.25; // spread out loosely
       var x = midX + u.fallDir.x * a + sideX * c, z = midZ + u.fallDir.z * a + sideZ * c;
-      var holder = new THREE.Group(); // floats and spins; the log inside is tilted a little
-      holder.position.set(x, u.base.y + 1.0 + Math.random() * 0.4, z);
-      holder.rotation.y = Math.random() * Math.PI * 2;
-      var m = new THREE.Mesh(logGeo, logMats);
-      m.castShadow = true;
+      var share = Math.floor(WOOD_PER_TREE / LOGS_PER_TREE) + (i < WOOD_PER_TREE % LOGS_PER_TREE ? 1 : 0);
+      dropPickup('wood', share, x, z, u.base.y, i * 0.06);
+    }
+    // and the extras: 3 drops of sap, plus an acorn (leafy trees) or a pinecone (pines)
+    var extras = ['sap', 'sap', 'sap', u.leafy ? 'acorn' : 'pinecone'];
+    extras.forEach(function (item, n) {
+      var ang = Math.random() * Math.PI * 2, r = 0.5 + Math.random() * 1.1;
+      dropPickup(item, 1, midX + Math.cos(ang) * r, midZ + Math.sin(ang) * r, u.base.y, 0.45 + n * 0.08);
+    });
+  }
+
+  // 3D models for things you can pick up
+  var sapMat = new THREE.MeshStandardMaterial({ color: 0xf0a030, emissive: 0xd07a10, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9 });
+  var sapGeo = new THREE.SphereGeometry(0.11, 16, 12);
+  (function () { // pull the top of the ball up into a droplet point
+    var pp = sapGeo.attributes.position;
+    for (var i = 0; i < pp.count; i++) {
+      var y = pp.getY(i);
+      if (y > 0) { var k = y / 0.11; pp.setXYZ(i, pp.getX(i) * (1 - k * 0.75), y + k * k * 0.12, pp.getZ(i) * (1 - k * 0.75)); }
+    }
+    sapGeo.computeVertexNormals();
+  })();
+  var nutMat = new THREE.MeshStandardMaterial({ color: 0xc07a3a, roughness: 0.5 });
+  var capMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.95 });
+  var coneMat = new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.85 });
+  function pickupModel(item) {
+    var g = new THREE.Group(), m;
+    if (item === 'wood') {
+      m = new THREE.Mesh(logGeo, logMats);
       m.rotation.order = 'YXZ';
       m.rotation.x = Math.random() * Math.PI;  // roll, so the bark looks different on each
       m.rotation.z = 0.12;                      // a slight tilt, like a floating pickup
-      holder.add(m);
-      var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe6a8, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
-      glow.scale.set(1.5, 1.5, 1);
-      holder.add(glow);
-      scene.add(holder);
-      var shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
-      shadow.rotation.x = -Math.PI / 2;
-      shadow.scale.set(1.4, 0.6, 1);
-      shadow.position.set(x, u.base.y + 0.03, z);
-      scene.add(shadow);
-      var share = Math.floor(WOOD_PER_TREE / LOGS_PER_TREE) + (i < WOOD_PER_TREE % LOGS_PER_TREE ? 1 : 0);
-      logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: u.base.y, t: -i * 0.06, p: Math.random() * 6.28, wood: share });
+      g.add(m);
+    } else if (item === 'sap') {
+      g.add(new THREE.Mesh(sapGeo, sapMat));
+    } else if (item === 'acorn') {
+      m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), nutMat);
+      m.scale.set(1, 1.35, 1);
+      g.add(m);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+      cap.position.y = 0.07;
+      cap.scale.set(1, 0.7, 1);
+      g.add(cap);
+      var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.06, 6), capMat);
+      stem.position.y = 0.17;
+      g.add(stem);
+    } else if (item === 'pinecone') { // rings of woody scales getting smaller toward the tip
+      for (var r = 0; r < 6; r++) {
+        var f = r / 5, rad = 0.06 + Math.sin((f * 0.85 + 0.1) * Math.PI) * 0.07;
+        for (var k = 0; k < 7; k++) {
+          var sc = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), coneMat);
+          var a = (k / 7) * Math.PI * 2 + r * 0.45;
+          sc.position.set(Math.cos(a) * rad, -0.12 + f * 0.26, Math.sin(a) * rad);
+          sc.scale.set(1.2, 0.55, 1);
+          sc.lookAt(sc.position.x * 3, sc.position.y + 0.3, sc.position.z * 3);
+          g.add(sc);
+        }
+      }
+      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.26, 8), coneMat));
     }
+    g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
+  var PICKUP_GLOW = { wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8 };
+  // Puts a floating, glowing pickup on the ground: walk into it to collect
+  function dropPickup(item, amount, x, z, groundY, delay) {
+    var holder = new THREE.Group(); // floats and spins
+    holder.position.set(x, groundY + 1.0 + Math.random() * 0.4, z);
+    holder.rotation.y = Math.random() * Math.PI * 2;
+    holder.add(pickupModel(item));
+    var big = item === 'wood';
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: PICKUP_GLOW[item], transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(big ? 1.5 : 0.8, big ? 1.5 : 0.8, 1);
+    holder.add(glow);
+    scene.add(holder);
+    var shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    if (big) shadow.scale.set(1.4, 0.6, 1); else shadow.scale.set(0.45, 0.45, 1);
+    shadow.position.set(x, groundY + 0.03, z);
+    scene.add(shadow);
+    logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: groundY, t: -delay, p: Math.random() * 6.28,
+      item: item, amount: amount, hover: big ? FLOAT_H : FLOAT_H + 0.08 });
   }
   var FLOAT_H = 0.32; // how high the logs hover
   function updateLogs(dt) {
@@ -2623,19 +2684,20 @@ function startGame(THREE) {
       L.mesh.visible = L.shadow.visible = on;
       if (!on) continue;
       // pops out of the sparkles, then settles into a gentle hover, bobbing and slowly turning
-      var hoverY = L.ground + FLOAT_H + Math.sin(L.t * 2.4 + L.p) * 0.05;
+      var hoverY = L.ground + L.hover + Math.sin(L.t * 2.4 + L.p) * 0.05;
       var settle = Math.min(1, L.t / 0.6);
       L.mesh.position.y += (hoverY - L.mesh.position.y) * Math.min(1, dt * (2 + settle * 6));
       L.mesh.rotation.y += dt * 0.8;
       L.glow.material.opacity = 0.3 + Math.sin(L.t * 3 + L.p) * 0.12;
-      var sh = 1 - (L.mesh.position.y - L.ground - FLOAT_H) * 0.5; // the shadow grows as the log comes down
+      var sh = 1 - (L.mesh.position.y - L.ground - L.hover) * 0.5; // the shadow grows as the log comes down
       L.shadow.material.opacity = 0.2 * Math.max(0.2, Math.min(1, sh));
       if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < 0.65) { // walked into it: collect
-        if (!addItem('wood', L.wood)) continue;
+        if (!addItem(L.item, L.amount)) continue;
         popSound();
-        showToast('+' + L.wood + ' Wood 🪵');
+        showToast('+' + L.amount + ' ' + ITEMS[L.item].name + ' ' + ITEMS[L.item].icon);
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
+        L.mesh.traverse(function (o) { if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo) o.geometry.dispose(); });
         scene.remove(L.shadow);
         L.glow.material.dispose();
         L.shadow.geometry.dispose();
@@ -3273,8 +3335,60 @@ function startGame(THREE) {
     bloom: { name: 'Moonbloom', icon: '🌸', info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
-    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' }
+    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
+    sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
+    acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), info: 'Dropped by leafy trees.' },
+    pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), info: 'Dropped by pine trees.' }
   };
+  // Little drawn pictures for items that don't have a good emoji
+  function iconCanvas(draw) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 64;
+    draw(c.getContext('2d'));
+    return c.toDataURL();
+  }
+  function iconSap() {
+    return iconCanvas(function (g) {
+      var grad = g.createRadialGradient(26, 36, 2, 32, 40, 22);
+      grad.addColorStop(0, '#ffe7a0'); grad.addColorStop(0.5, '#f0a63a'); grad.addColorStop(1, '#b8640f');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(32, 6);
+      g.bezierCurveTo(40, 22, 52, 30, 52, 42);
+      g.bezierCurveTo(52, 54, 42, 60, 32, 60);
+      g.bezierCurveTo(22, 60, 12, 54, 12, 42);
+      g.bezierCurveTo(12, 30, 24, 22, 32, 6);
+      g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.7)';
+      g.beginPath(); g.ellipse(24, 38, 4, 7, -0.4, 0, Math.PI * 2); g.fill();
+    });
+  }
+  function iconAcorn() {
+    return iconCanvas(function (g) {
+      var grad = g.createRadialGradient(26, 38, 2, 32, 40, 20);
+      grad.addColorStop(0, '#e2a35e'); grad.addColorStop(1, '#9a5b26');
+      g.fillStyle = grad;
+      g.beginPath(); g.ellipse(32, 40, 14, 18, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#6b4a2b';
+      g.beginPath(); g.ellipse(32, 26, 18, 10, 0, Math.PI, 0); g.lineTo(50, 28); g.quadraticCurveTo(32, 34, 14, 28); g.fill();
+      g.strokeStyle = 'rgba(40,25,10,0.5)'; g.lineWidth = 1.5;
+      for (var i = 0; i < 5; i++) { g.beginPath(); g.moveTo(17 + i * 7, 18); g.lineTo(20 + i * 7, 30); g.stroke(); }
+      g.strokeStyle = '#5a3a1e'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(32, 16); g.lineTo(34, 7); g.stroke();
+    });
+  }
+  function iconPinecone() {
+    return iconCanvas(function (g) {
+      for (var row = 0; row < 6; row++) {
+        var y = 12 + row * 8, w = 8 + Math.sin((row + 0.5) / 6 * Math.PI) * 12;
+        for (var k = -1; k <= 1; k++) {
+          g.fillStyle = row % 2 ? '#8a5530' : '#a8683a';
+          g.beginPath(); g.ellipse(32 + k * w * 0.6, y, w * 0.45, 6, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = 'rgba(50,28,12,0.6)'; g.lineWidth = 1.2; g.stroke();
+        }
+      }
+    });
+  }
   var BAG_SLOTS = 12;
   var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }]; // you start with a few seeds and an axe
   var bagUi = {
@@ -3330,7 +3444,14 @@ function startGame(THREE) {
     slot.type = 'button';
     slot.className = 'slot' + (bag[i] ? '' : ' empty') + (i === selectedSlot ? ' selected' : '');
     if (bag[i]) {
-      slot.textContent = ITEMS[bag[i].id].icon;
+      if (ITEMS[bag[i].id].img) {
+        var pic = document.createElement('img');
+        pic.src = ITEMS[bag[i].id].img;
+        pic.alt = '';
+        pic.style.width = '70%';
+        pic.style.pointerEvents = 'none';
+        slot.appendChild(pic);
+      } else slot.textContent = ITEMS[bag[i].id].icon;
       slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
       var count = document.createElement('span');
       count.className = 'count';
