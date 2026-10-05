@@ -2020,7 +2020,7 @@ function startGame(THREE) {
   grass.instanceMatrix.needsUpdate = true;
   seed = seedBeforeForest;
 
-  // ---------- Sparkles round the tree, fireflies at night ----------
+  // ---------- Sparkles round the Dawn Tree ----------
   function makePoints(count, color, size) {
     var geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
@@ -2030,7 +2030,9 @@ function startGame(THREE) {
   }
   var sparkles = makePoints(40, 0xfff1a8, 0.16);
   sparkles.position.set(TREE_X, 0, TREE_Z);
-  // Fireflies: each one has a soft glowing halo and a bright little centre, and blinks at its own pace
+
+  // ---------- Fireflies at night ----------
+  // Each firefly has a soft glowing halo and a bright little centre, and blinks at its own pace
   var flyGlowCanvas = document.createElement('canvas');
   flyGlowCanvas.width = flyGlowCanvas.height = 64;
   (function (g) {
@@ -2062,9 +2064,7 @@ function startGame(THREE) {
   var flyHome = [];
   for (var f = 0; f < 60; f++) {
     var fa = rand() * Math.PI * 2, fr = rand() * WALK_R;
-    var hx = Math.cos(fa) * fr, hz = Math.sin(fa) * fr;
-    if (dist(hx, hz, TREE_X, TREE_Z) < TREE_ZONE + 3.5) { hx = -hx; hz = -hz; } // keep clear of the Dawn Tree's own sparkles
-    flyHome.push({ x: hx, z: hz, y: 0.5 + rand() * 2.5, p: rand() * 10 });
+    flyHome.push({ x: Math.cos(fa) * fr, z: Math.sin(fa) * fr, y: 0.5 + rand() * 2.5, p: rand() * 10 });
   }
 
   // ---------- Garden tiles and crops ----------
