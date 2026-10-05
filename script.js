@@ -2399,10 +2399,10 @@ function startGame(THREE) {
     u.solidR = u.solid.r;
     u.parts = [];
     (u.pieces || []).forEach(function (pc) {
-      if (FALL_MATS.indexOf(pc.entry.mat) < 0) return;
+      var falls = FALL_MATS.indexOf(pc.entry.mat) >= 0; // trunk and branches fall; roots and soil vanish with the tree
       var pos = pc.entry.mesh.geometry.attributes.position, vs = pc.geo.userData.vStart, vc = pc.geo.attributes.position.count;
       u.parts.push({
-        mesh: pc.entry.mesh, vStart: vs, vCount: vc,
+        falls: falls, mesh: pc.entry.mesh, vStart: vs, vCount: vc,
         iStart: pc.geo.userData.iStart, iCount: pc.geo.index ? pc.geo.index.count : vc,
         orig: pos.array.slice(vs * 3, (vs + vc) * 3)
       });
@@ -2413,9 +2413,10 @@ function startGame(THREE) {
 
   // Moves a whole tree by matrix M (worked out around its base): used to grow, shrink and shudder it
   var growM = new THREE.Matrix4(), chopM = new THREE.Matrix4(), chopM2 = new THREE.Matrix4();
-  function setTreeTransform(t, M) {
+  function setTreeTransform(t, M, onlyFalling) {
     var u = t.userData, e = M.elements;
     u.parts.forEach(function (pt) {
+      if (onlyFalling && !pt.falls) return;
       var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
       for (var i = 0; i < o.length; i += 3) {
         var x = o[i], y = o[i + 1], z = o[i + 2];
@@ -2438,10 +2439,10 @@ function startGame(THREE) {
   }
   // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
   var treeM = new THREE.Matrix4(), treeM2 = new THREE.Matrix4();
-  function setTreeGrowth(t, k) {
+  function setTreeGrowth(t, k, onlyFalling) {
     var b = t.userData.base;
     treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
-    setTreeTransform(t, treeM);
+    setTreeTransform(t, treeM, onlyFalling);
   }
   // Tilts a tree a little around its base, toward direction (dx, dz): used to make it shudder when hit
   var tiltQ = new THREE.Quaternion(), tiltAxis = new THREE.Vector3();
@@ -2458,6 +2459,7 @@ function startGame(THREE) {
     var u = t.userData, b = u.base, grp = new THREE.Group();
     grp.position.set(b.x, b.y + u.stumpH, b.z);
     u.parts.forEach(function (pt) {
+      if (!pt.falls) return;
       var src = pt.mesh.geometry, g = new THREE.BufferGeometry(), vs = pt.vStart, vc = pt.vCount, i;
       var pos = new Float32Array(vc * 3);
       for (i = 0; i < vc; i++) {
@@ -2565,10 +2567,9 @@ function startGame(THREE) {
     u.fallDir = away;
     u.fallAxis = new THREE.Vector3(0, 1, 0).cross(away).normalize();
     u.proxy = makeFallingTree(t);
-    setTreeGrowth(t, 0);
+    setTreeGrowth(t, 0, true); // the standing trunk and leaves are swapped for the falling copy; roots stay for now
     u.stump = makeStump(t);
     u.solid.r = 0.35 * u.size; // only the stump is in the way now
-    showToast('Timber! 🌲');
   }
 
   var fallQ = new THREE.Quaternion();
@@ -2619,7 +2620,8 @@ function startGame(THREE) {
             scene.remove(u.proxy);
             u.proxy.traverse(function (o) { if (o.isMesh && !o.isInstancedMesh) o.geometry.dispose(); });
             u.proxy = null;
-            scene.remove(u.stump); // the stump goes with it, leaving just the roots and soil
+            setTreeGrowth(t, 0);   // the roots and soil patch go too
+            scene.remove(u.stump); // and the stump
             u.stump.geometry.dispose();
             u.stump = null;
             u.solid.r = 0;
@@ -3042,7 +3044,6 @@ function startGame(THREE) {
     if (state.minutes >= 24 * 60) {
       state.minutes -= 24 * 60;
       state.day += 1;
-      showToast('☀ A new day begins: Day ' + state.day, 2500);
     }
     var text = clockText(state.minutes);
     if (ui.clock.textContent !== text) ui.clock.textContent = text;
@@ -3092,30 +3093,25 @@ function startGame(THREE) {
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var tile = targetTile();
     if (!tile) {
-      if (nearTree) { showToast('Select your axe 🪓 in the hotbar to chop this tree'); return; }
+      if (nearTree) return;
       if (state.inTreeZone && state.petalDay !== state.day && addItem('petal', 1)) {
         state.petalDay = state.day;
         burst(TREE_X, 2.5, TREE_Z, 0xffb3f0, 18, 2, 1, -2);
-        showToast('The Dawn Tree gives you a Dawn Petal 🌺');
+        showToast('+1 Dawn Petal 🌺');
       }
-      else if (state.inTreeZone) showToast('The Dawn Tree hums softly… your mana is restoring ✦');
-      else if (nearLake(player.position.x, player.position.z)) showToast('The lake glimmers… a lotus drifts by 🪷');
-      else showToast('Walk to the garden soil to farm 🌱');
       return;
     }
     if (!tile.soil) {
       tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
       burst(tile.x, 0.3, tile.z, 0xb07d55, 10, 2, 1.6, -4);
-      showToast('Tilled the soil ⛏');
     } else if (!tile.crop) {
-      if (!takeItem('seed', 1)) { showToast('No seeds left. Harvest moonblooms to get more 🌱'); return; }
+      if (!takeItem('seed', 1)) return;
       tile.crop = makeCrop(tile);
       tile.stage = 0;
       tile.growth = 0;
       showStage(tile);
       tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
       burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
-      showToast('Planted a moonbloom seed 🌱 (' + bagCount('seed') + ' left)');
     } else if (tile.stage === 3) {
       scene.remove(tile.crop);
       scene.remove(tile.drop);
@@ -3126,18 +3122,15 @@ function startGame(THREE) {
       addItem('bloom', 1);
       addItem('seed', 2);
       burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
-      showToast('Harvested a moonbloom! 🌸 +2 seeds');
+      showToast('+1 Moonbloom 🌸  +2 Seeds 🌱');
     } else if (!tile.wet) {
       setWet(tile, true);
       burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
-      showToast('Watered 💧');
-    } else {
-      showToast('Growing nicely… ' + Math.round((tile.stage + tile.growth) / 3 * 100) + '% ✨');
     }
   }
 
   function castSpell() {
-    if (state.mana < SPELL_COST) { showToast('Not enough mana. Visit the glowing tree ✦'); return; }
+    if (state.mana < SPELL_COST) return;
     state.mana -= SPELL_COST;
     var watered = 0;
     tiles.forEach(function (t) {
@@ -3148,7 +3141,6 @@ function startGame(THREE) {
       }
     });
     if (!watered) launchSparks(null, 30, 0); // nothing to water: the sparkles just shimmer up around you
-    showToast(watered ? 'Dawn Bloom! Watered ' + watered + ' crop' + (watered > 1 ? 's' : '') + ' 🌸' : 'Dawn Bloom shimmers… no crops needed water ✦');
   }
 
   // ---------- Bag (inventory) ----------
@@ -3182,7 +3174,7 @@ function startGame(THREE) {
     for (var i = 0; i < bag.length; i++) {
       if (bag[i].id === id) { bag[i].count += n; renderBag(); return true; }
     }
-    if (bag.length >= BAG_SLOTS) { showToast('Your bag is full 🎒'); return false; }
+    if (bag.length >= BAG_SLOTS) return false;
     bag.push({ id: id, count: n });
     renderBag();
     return true;
@@ -3230,9 +3222,7 @@ function startGame(THREE) {
     if (!hotUi.slots) return;
     hotUi.slots.innerHTML = '';
     for (var k = 0; k < ROW_SIZE; k++) {
-      hotUi.slots.appendChild(makeSlot(hotRow * ROW_SIZE + k, function (i) {
-        showToast(ITEMS[bag[i].id].icon + ' ' + ITEMS[bag[i].id].name + ' × ' + bag[i].count);
-      }));
+      hotUi.slots.appendChild(makeSlot(hotRow * ROW_SIZE + k));
     }
     if (hotUi.row) hotUi.row.textContent = (hotRow + 1) + '/' + (BAG_SLOTS / ROW_SIZE) + ' ⇅';
   }
@@ -3442,7 +3432,6 @@ function startGame(THREE) {
     sp.needsUpdate = true;
 
     var inZone = dist(player.position.x, player.position.z, TREE_X, TREE_Z) < TREE_ZONE;
-    if (inZone && !state.inTreeZone) showToast('The Dawn Tree restores your mana ✦');
     state.inTreeZone = inZone;
     state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
     ui.mana.style.width = (state.mana / MAX_MANA * 100).toFixed(1) + '%';
@@ -3570,5 +3559,4 @@ function startGame(THREE) {
   }
   renderer.setAnimationLoop(frame);
 
-  showToast('Welcome to Everdawn ✦ Press E on the soil to begin', 3200);
 }
