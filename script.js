@@ -3918,7 +3918,9 @@ function startGame(THREE) {
     });
   }
   var BAG_SLOTS = 12;
-  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }, { id: 'trimmers', count: 1 }, { id: 'hoe', count: 1 }]; // you start with a few seeds and your tools
+  // The bag has 12 fixed slots; an empty slot is null, so items stay wherever you put them
+  var bag = [{ id: 'seed', count: 6 }, { id: 'axe', count: 1 }, { id: 'pickaxe', count: 1 }, { id: 'trimmers', count: 1 }, { id: 'hoe', count: 1 }];
+  while (bag.length < BAG_SLOTS) bag.push(null);
   var bagUi = {
     box: document.getElementById('inventory'),
     grid: document.getElementById('invGrid'),
@@ -3932,28 +3934,29 @@ function startGame(THREE) {
 
   function heldItem() { return bag[selectedSlot] ? bag[selectedSlot].id : null; } // what's selected in the hotbar
   function bagCount(id) {
-    for (var i = 0; i < bag.length; i++) if (bag[i].id === id) return bag[i].count;
+    for (var i = 0; i < BAG_SLOTS; i++) if (bag[i] && bag[i].id === id) return bag[i].count;
     return 0;
   }
-  // Adds items to the bag; returns false if there's no room for a new kind of item
+  // Adds items to the bag: onto a stack you already have, or into the first empty slot.
+  // Returns false if the bag is full
   function addItem(id, n) {
-    for (var i = 0; i < bag.length; i++) {
-      if (bag[i].id === id) { bag[i].count += n; renderBag(); return true; }
+    var i;
+    for (i = 0; i < BAG_SLOTS; i++) {
+      if (bag[i] && bag[i].id === id) { bag[i].count += n; renderBag(); return true; }
     }
-    if (bag.length >= BAG_SLOTS) return false;
-    bag.push({ id: id, count: n });
-    renderBag();
-    return true;
+    for (i = 0; i < BAG_SLOTS; i++) {
+      if (!bag[i]) { bag[i] = { id: id, count: n }; renderBag(); return true; }
+    }
+    return false;
   }
   // Takes items out of the bag; returns false if you don't have enough
   function takeItem(id, n) {
-    for (var i = 0; i < bag.length; i++) {
-      if (bag[i].id === id && bag[i].count >= n) {
+    for (var i = 0; i < BAG_SLOTS; i++) {
+      if (bag[i] && bag[i].id === id && bag[i].count >= n) {
         bag[i].count -= n;
-        if (bag[i].count === 0) { // that slot is now empty: the items after it move up one
-          bag.splice(i, 1);
+        if (bag[i].count === 0) { // that slot is now empty
+          bag[i] = null;
           if (selectedSlot === i) selectedSlot = -1;
-          else if (selectedSlot > i) selectedSlot--;
         }
         renderBag();
         return true;
@@ -3967,29 +3970,97 @@ function startGame(THREE) {
       : 'Tap an item to see what it is.';
   }
   // One slot button, for the bag or the hotbar
+  // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
     var slot = document.createElement('button');
     slot.type = 'button';
     slot.className = 'slot' + (bag[i] ? '' : ' empty') + (i === selectedSlot ? ' selected' : '');
+    slot.setAttribute('data-slot', i);
     if (bag[i]) {
-      if (ITEMS[bag[i].id].img) {
-        var pic = document.createElement('img');
-        pic.src = ITEMS[bag[i].id].img;
-        pic.alt = '';
-        pic.style.width = '70%';
-        pic.style.pointerEvents = 'none';
-        slot.appendChild(pic);
-      } else slot.textContent = ITEMS[bag[i].id].icon;
+      slot.appendChild(itemPicture(bag[i].id));
       slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
       var count = document.createElement('span');
       count.className = 'count';
       count.textContent = bag[i].count;
       slot.appendChild(count);
       slot.onclick = function () { selectedSlot = i; renderBag(); if (onPick) onPick(i); };
+      slot.addEventListener('pointerdown', function (e) { startDrag(i, e); });
     } else {
       slot.setAttribute('aria-label', 'Empty slot');
     }
     return slot;
+  }
+  function itemPicture(id) {
+    if (ITEMS[id].img) {
+      var pic = document.createElement('img');
+      pic.src = ITEMS[id].img;
+      pic.alt = '';
+      pic.style.width = '70%';
+      pic.style.pointerEvents = 'none';
+      return pic;
+    }
+    var span = document.createElement('span');
+    span.textContent = ITEMS[id].icon;
+    span.style.pointerEvents = 'none';
+    return span;
+  }
+
+  // ---------- Dragging items between slots ----------
+  var slotDrag = null; // { from, startX, startY, ghost }
+  function startDrag(i, e) {
+    slotDrag = { from: i, startX: e.clientX, startY: e.clientY, ghost: null };
+  }
+  window.addEventListener('pointermove', function (e) {
+    if (!slotDrag) return;
+    if (!slotDrag.ghost) {
+      if (Math.abs(e.clientX - slotDrag.startX) + Math.abs(e.clientY - slotDrag.startY) < 8) return; // a tap, not a drag (yet)
+      slotDrag.ghost = document.createElement('div'); // a copy of the item that follows your finger
+      slotDrag.ghost.className = 'drag-ghost';
+      slotDrag.ghost.appendChild(itemPicture(bag[slotDrag.from].id));
+      document.body.appendChild(slotDrag.ghost);
+      var src = document.querySelectorAll('[data-slot="' + slotDrag.from + '"]');
+      for (var k = 0; k < src.length; k++) src[k].classList.add('dragging');
+    }
+    slotDrag.ghost.style.left = e.clientX + 'px';
+    slotDrag.ghost.style.top = e.clientY + 'px';
+    var over = document.querySelectorAll('.slot.drop-target');
+    for (var j = 0; j < over.length; j++) over[j].classList.remove('drop-target');
+    var target = slotUnder(e.clientX, e.clientY);
+    if (target) target.classList.add('drop-target');
+  });
+  window.addEventListener('pointerup', function (e) {
+    if (!slotDrag) return;
+    var d = slotDrag;
+    slotDrag = null;
+    if (!d.ghost) return; // it was just a tap: the slot's click handles it
+    document.body.removeChild(d.ghost);
+    var target = slotUnder(e.clientX, e.clientY);
+    if (target) moveItem(d.from, +target.getAttribute('data-slot'));
+    renderBag();
+  });
+  window.addEventListener('pointercancel', function () {
+    if (slotDrag && slotDrag.ghost) document.body.removeChild(slotDrag.ghost);
+    slotDrag = null;
+    renderBag();
+  });
+  function slotUnder(x, y) {
+    var el = document.elementFromPoint(x, y);
+    while (el && !(el.getAttribute && el.getAttribute('data-slot') !== null)) el = el.parentNode;
+    return el && el.getAttribute ? el : null;
+  }
+  // Moves an item to another slot, swapping with whatever is there (same items stack together)
+  function moveItem(from, to) {
+    if (from === to || !bag[from]) return;
+    if (bag[to] && bag[to].id === bag[from].id) {
+      bag[to].count += bag[from].count;
+      bag[from] = null;
+    } else {
+      var held = bag[to];
+      bag[to] = bag[from];
+      bag[from] = held;
+    }
+    if (selectedSlot === from) selectedSlot = to;       // the selection follows the item you moved
+    else if (selectedSlot === to) selectedSlot = from;
   }
   function renderHotbar() {
     if (!hotUi.slots) return;
