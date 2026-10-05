@@ -2062,7 +2062,9 @@ function startGame(THREE) {
   var flyHome = [];
   for (var f = 0; f < 60; f++) {
     var fa = rand() * Math.PI * 2, fr = rand() * WALK_R;
-    flyHome.push({ x: Math.cos(fa) * fr, z: Math.sin(fa) * fr, y: 0.5 + rand() * 2.5, p: rand() * 10 });
+    var hx = Math.cos(fa) * fr, hz = Math.sin(fa) * fr;
+    if (dist(hx, hz, TREE_X, TREE_Z) < TREE_ZONE + 3.5) { hx = -hx; hz = -hz; } // keep clear of the Dawn Tree's own sparkles
+    flyHome.push({ x: hx, z: hz, y: 0.5 + rand() * 2.5, p: rand() * 10 });
   }
 
   // ---------- Garden tiles and crops ----------
