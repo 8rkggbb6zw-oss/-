@@ -2754,13 +2754,32 @@ function startGame(THREE) {
       var band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 14), bandMat);
       g.add(band);
       g.rotation.z = Math.PI / 2;
-    } else if (item === 'seed') { // three little pearly lavender seeds
-      for (var si = 0; si < 3; si++) {
-        m = new THREE.Mesh(sapGeo, seedMat);
-        m.scale.setScalar(0.55);
-        m.position.set(Math.cos(si * 2.1) * 0.06, 0, Math.sin(si * 2.1) * 0.06);
-        g.add(m);
-      }
+    } else if (item === 'seed') { // three plump pearly seeds, each with a glowing gold crescent moon
+      var SEEDS = [[0, 0.03, -0.01, 1, 0], [-0.06, -0.005, 0.015, 0.88, 0.45], [0.06, -0.005, 0.015, 0.88, -0.45]];
+      SEEDS.forEach(function (sd) {
+        var one = new THREE.Group();
+        one.position.set(sd[0], sd[1], sd[2]);
+        one.rotation.z = sd[4];                 // tilted outward, like a little bouquet
+        one.scale.setScalar(sd[3]);
+        one.add(new THREE.Mesh(seedGeo, seedMat));
+        var moon = new THREE.Mesh(seedMoonGeo, seedMoonMat);
+        moon.position.set(0, 0.0, 0.047);
+        moon.rotation.z = 0.7;                  // the crescent's horns point up and to the side
+        one.add(moon);
+        var shine = new THREE.Mesh(seedShineGeo, seedShineMat);
+        shine.position.set(-0.022, 0.03, 0.035);
+        one.add(shine);
+        g.add(one);
+      });
+      var seedGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xb98cff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+      seedGlow.scale.set(0.38, 0.38, 1);
+      g.add(seedGlow);
+      [[0.09, 0.09], [-0.1, 0.06], [0.03, 0.13]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.05, 0.05, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
     } else if (item === 'bloom') { // a little glowing moonbloom flower on a stem
       var st = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), M.stem);
       st.position.y = -0.08;
@@ -2807,7 +2826,24 @@ function startGame(THREE) {
     return g;
   }
   var fiberMat = new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 });
-  var seedMat = new THREE.MeshStandardMaterial({ color: 0xc9b0f2, emissive: 0x8a6ad8, emissiveIntensity: 0.3, roughness: 0.25 });
+  var seedMat = new THREE.MeshStandardMaterial({ color: 0xe2d2ff, emissive: 0x7a58d0, emissiveIntensity: 0.4, roughness: 0.15, metalness: 0.15 }); // glossy pearly lavender
+  // a plump teardrop: round at the bottom, softly pointed (not sharp) at the top
+  var seedGeo = (function () {
+    var pts = [];
+    for (var i = 0; i <= 16; i++) {
+      var t = i / 16, y = -0.05 + t * 0.13;
+      var r = t < 0.45 ? Math.sin((t / 0.45) * Math.PI / 2) * 0.05 : 0.05 * Math.pow(Math.cos(((t - 0.45) / 0.55) * Math.PI / 2), 0.9);
+      pts.push(new THREE.Vector2(Math.max(0.0005, r), y));
+    }
+    var g = new THREE.LatheGeometry(pts, 20);
+    g.computeVertexNormals();
+    return g;
+  })();
+  var seedMoonGeo = new THREE.TorusGeometry(0.02, 0.0065, 8, 18, Math.PI * 1.25); // an open ring = a crescent moon
+  var seedMoonMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffc94d, emissiveIntensity: 0.7, roughness: 0.4 });
+  var seedShineGeo = new THREE.SphereGeometry(0.01, 8, 6);
+  seedShineGeo.scale(0.8, 1.6, 0.5);
+  var seedShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
   var petalMat = new THREE.MeshStandardMaterial({ color: 0xff9be0, emissive: 0xff6fcf, emissiveIntensity: 0.45, roughness: 0.4, side: THREE.DoubleSide });
   var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
   var hayMat = new THREE.MeshStandardMaterial({ color: 0xe8c45a, roughness: 0.95 });
@@ -2859,7 +2895,7 @@ function startGame(THREE) {
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
         L.mesh.traverse(function (o) { // free one-off shapes; shared ones stay
-          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
         });
         scene.remove(L.shadow);
         L.glow.material.dispose();
@@ -3103,13 +3139,21 @@ function startGame(THREE) {
     toolHandle.visible = holding;
     if (held !== heldShown) {  // swap the material in your hand
       heldItemGrp.traverse(function (o) { // free the old item's one-off shapes
-        if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+        if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
       });
       while (heldItemGrp.children.length) heldItemGrp.remove(heldItemGrp.children[0]);
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
+        if (held === 'seed') { // seeds sit upright in your open palm
+          var palm = new THREE.Group();
+          palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
+          palm.position.y = 0.04;
+          model.scale.setScalar(0.95);
+          model.position.y = 0.06;
+          palm.add(model);
+          heldItemGrp.add(palm);
+        } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
           var upright = new THREE.Group();
           upright.rotation.x = 1.05;            // undoes the arm's angle, so the flower points up
           upright.position.y = 0.08;            // the stem sits in your hand
