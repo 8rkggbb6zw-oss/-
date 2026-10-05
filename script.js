@@ -657,20 +657,20 @@ function startGame(THREE) {
   // It is drawn after the boat but before the lake, so the lake can't show through the hull.
   var keepDry = new THREE.Shape();
   for (var wi = 0; wi <= 32; wi++) {
-    var wt = -0.8 + (wi / 32) * 1.6;
-    if (wi === 0) keepDry.moveTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.85);
-    else keepDry.lineTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.85);
+    var wt = -0.97 + (wi / 32) * 1.94;
+    if (wi === 0) keepDry.moveTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.9);
+    else keepDry.lineTo(wt * BOAT_L / 2, hullHalfWidth(wt) * 0.9);
   }
   for (var wj = 32; wj >= 0; wj--) {
-    var wt2 = -0.8 + (wj / 32) * 1.6;
-    keepDry.lineTo(wt2 * BOAT_L / 2, -hullHalfWidth(wt2) * 0.85);
+    var wt2 = -0.97 + (wj / 32) * 1.94;
+    keepDry.lineTo(wt2 * BOAT_L / 2, -hullHalfWidth(wt2) * 0.9);
   }
   var dryGeo = new THREE.ShapeGeometry(keepDry);
   dryGeo.rotateX(-Math.PI / 2);
   var dryPatch = new THREE.Mesh(dryGeo, new THREE.MeshBasicMaterial({
     colorWrite: false, depthWrite: true, transparent: true, opacity: 0, side: THREE.DoubleSide
   }));
-  dryPatch.position.y = WATER_Y + 0.03 - (WATER_Y + 0.14); // a little above the water, in the boat's own space
+  dryPatch.position.y = WATER_Y + 0.05 - (WATER_Y + 0.17); // a little above the water, in the boat's own space
   dryPatch.renderOrder = 0; // the lake uses renderOrder 1, so this goes first
   boat.add(dryPatch);
 
@@ -706,7 +706,7 @@ function startGame(THREE) {
   });
 
   // Float it just past the end of the dock, nose pointing back at the dock
-  var BOAT_Y = WATER_Y + 0.14;
+  var BOAT_Y = WATER_Y + 0.17;
   boat.position.set(DOCK_LEN + BOAT_L / 2 + 0.25, BOAT_Y, 0.35);
   boat.rotation.y = Math.PI + 0.12;
   dock.add(boat);
