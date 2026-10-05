@@ -1149,18 +1149,19 @@ function startGame(THREE) {
     for (var i = 0; i < 320; i++) { // a round clump of overlapping leaves, see-through around the edge
       var a = Math.random() * Math.PI * 2, r = Math.pow(Math.random(), 0.65) * 108;
       var x = 128 + Math.cos(a) * r, y = 128 + Math.sin(a) * r * 0.92;
-      var len = 13 + Math.random() * 13, ang = Math.random() * Math.PI * 2;
+      var len = 14 + Math.random() * 14, ang = Math.random() * Math.PI * 2;
+      var sunny = Math.max(0, Math.min(1, 0.55 - ((x - 128) + (y - 128)) / 300)); // light comes from the top-left
       g.save();
       g.translate(x, y);
       g.rotate(ang);
-      g.fillStyle = 'hsl(' + (80 + Math.random() * 28) + ',' + (38 + Math.random() * 22) + '%,' + (30 + Math.random() * 28) + '%)';
+      g.fillStyle = 'hsl(' + (88 + Math.random() * 22 - sunny * 10) + ',' + (45 + Math.random() * 20) + '%,' + (26 + sunny * 26 + Math.random() * 12) + '%)';
       g.beginPath();
-      g.ellipse(0, 0, len / 2, len * 0.22, 0, 0, Math.PI * 2);
+      g.ellipse(0, 0, len / 2, len * 0.24, 0, 0, Math.PI * 2);
       g.fill();
-      g.strokeStyle = 'rgba(20,40,12,0.35)';
+      g.strokeStyle = 'rgba(20,45,12,0.18)';
       g.lineWidth = 1;
       g.stroke();
-      g.strokeStyle = 'rgba(225,240,190,0.3)'; // the leaf's middle vein
+      g.strokeStyle = 'rgba(235,250,200,' + (0.15 + sunny * 0.3) + ')'; // the leaf's middle vein
       g.beginPath();
       g.moveTo(-len / 2, 0);
       g.lineTo(len / 2, 0);
@@ -1172,7 +1173,7 @@ function startGame(THREE) {
     for (var i = 0; i < 520; i++) { // needles sprouting from a drooping twig
       var t = Math.random(), x = 6 + t * 240, y = 64 + t * t * 14;
       var reach = (44 - t * 26) * (0.5 + Math.random() * 0.5), side = Math.random() < 0.5 ? -1 : 1;
-      g.strokeStyle = 'hsl(' + (135 + Math.random() * 20) + ',' + (30 + Math.random() * 15) + '%,' + (16 + Math.random() * 18) + '%)';
+      g.strokeStyle = 'hsl(' + (128 + Math.random() * 20) + ',' + (32 + Math.random() * 16) + '%,' + (22 + Math.random() * 20) + '%)';
       g.lineWidth = 1.6;
       g.beginPath();
       g.moveTo(x, y);
@@ -1191,10 +1192,30 @@ function startGame(THREE) {
   var pineBarkMat = new THREE.MeshStandardMaterial({ map: barkTex, bumpMap: barkTex, bumpScale: 0.03, color: 0x9a8a80, roughness: 0.95 });
 
   // All leaf clumps (and all pine sprays) go into one batch each, so the forest stays fast
+  var forestTime = { value: 0 };
+  function foliageMaterial(tex) {
+    var mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9 });
+    mat.onBeforeCompile = function (shader) {
+      shader.uniforms.uForestTime = forestTime;
+      shader.vertexShader = 'uniform float uForestTime;\n' + shader.vertexShader
+        // light every leaf as if it faced the sky, so the backs of leaves don't go dark
+        .replace('#include <defaultnormal_vertex>', 'vec3 transformedNormal = normalMatrix * vec3(0.0, 1.0, 0.0);')
+        // leaves sway gently in the breeze, more the higher up they are
+        .replace('#include <project_vertex>', [
+          'vec4 mvPosition = instanceMatrix * vec4(transformed, 1.0);',
+          'float sway = max(0.0, mvPosition.y - 0.8) * 0.035;',
+          'mvPosition.x += sin(uForestTime * 1.6 + mvPosition.x * 0.6 + mvPosition.z * 0.4) * sway;',
+          'mvPosition.z += cos(uForestTime * 1.3 + mvPosition.x * 0.5) * sway * 0.7;',
+          'mvPosition = modelViewMatrix * mvPosition;',
+          'gl_Position = projectionMatrix * mvPosition;'
+        ].join('\n'));
+      shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
+        'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
+    };
+    return mat;
+  }
   function foliageBatch(geo, tex, max) {
-    var batch = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({
-      map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.85
-    }), max);
+    var batch = new THREE.InstancedMesh(geo, foliageMaterial(tex), max);
     batch.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.45 }); // leafy shadows
     batch.castShadow = true;
     batch.receiveShadow = true;
@@ -1203,6 +1224,10 @@ function startGame(THREE) {
     return batch;
   }
   var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 9000);
+  var coreBatch = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x35602a, roughness: 1 }), 900);
+  coreBatch.castShadow = true;
+  coreBatch.receiveShadow = true;
+  coreBatch.count = 0;
   var sprayGeo = new THREE.PlaneGeometry(1, 1);
   sprayGeo.rotateX(-Math.PI / 2);
   sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
@@ -1230,15 +1255,23 @@ function startGame(THREE) {
   }
   // A clump of leaves: several leafy cards at random angles around a point, darker underneath
   function leafClump(tree, center, radius, warm) {
-    for (var i = 0; i < 10; i++) {
-      fPos.set(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(radius * 1.1).add(center);
+    if (coreBatch.count < coreBatch.instanceMatrix.count) {
+      fPos.copy(center);
+      fQuat.set(0, 0, 0, 1);
+      fScale.set(radius * 0.62, radius * 0.5, radius * 0.62);
+      fMat.compose(fPos, fQuat, fScale);
+      fWorld.multiplyMatrices(tree.matrixWorld, fMat);
+      coreBatch.setMatrixAt(coreBatch.count++, fWorld);
+    }
+    for (var i = 0; i < 12; i++) {
+      fPos.set(rand() - 0.5, (rand() - 0.35) * 0.8, rand() - 0.5).normalize().multiplyScalar(radius * (0.45 + rand() * 0.4)).add(center);
       fEuler.set(rand() * Math.PI * 2, rand() * Math.PI * 2, rand() * Math.PI * 2);
       fQuat.setFromEuler(fEuler);
-      var s = radius * (1.25 + rand() * 0.5);
+      var s = radius * (1.15 + rand() * 0.45);
       fScale.set(s, s, s);
       fMat.compose(fPos, fQuat, fScale);
       var lift = Math.max(0, Math.min(1, (fPos.y - center.y) / radius * 0.6 + 0.5)); // 0 underneath, 1 on top
-      addCard(leafBatch, tree, fMat, 0.55 + lift * 0.45 + rand() * 0.08, warm);
+      addCard(leafBatch, tree, fMat, 0.62 + lift * 0.4 + rand() * 0.08, warm);
     }
   }
   function direction(angle, tilt) {
@@ -1325,6 +1358,8 @@ function startGame(THREE) {
     if (rand() < 0.7) leafyTree(ts.x, ts.z, size);
     else pineTree(ts.x, ts.z, size);
   }
+  coreBatch.instanceMatrix.needsUpdate = true;
+  scene.add(coreBatch);
   [leafBatch, needleBatch].forEach(function (batch) {
     batch.instanceMatrix.needsUpdate = true;
     if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
@@ -1786,6 +1821,7 @@ function startGame(THREE) {
     boat.rotation.z = Math.sin(t * 1.1) * 0.03;
     boat.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
     updateFish(dt, t, night); // magical fish swim, glow and leap
+    forestTime.value = t;     // trees sway in the breeze
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
       flower.rotation.y += dt * 0.05;
