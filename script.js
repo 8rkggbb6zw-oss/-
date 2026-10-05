@@ -4291,8 +4291,8 @@ function startGame(THREE) {
   }
   function iconHoe() {
     return iconCanvas(function (g) {
-      g.translate(21.8, 32);   // centred and scaled so the hoe fills the picture
-      g.scale(0.78, 0.78);
+      g.translate(22.9, 32);   // centred and scaled so the hoe fills the picture
+      g.scale(0.82, 0.82);
       g.rotate(Math.PI / 4);   // tilted, handle toward the bottom-left corner
       g.shadowColor = 'rgba(60,30,90,0.35)';
       g.shadowBlur = 3;
@@ -4328,52 +4328,46 @@ function startGame(THREE) {
       for (var w = 0; w < 4; w++) { g.beginPath(); g.moveTo(-3.8, 18 + w * 3); g.lineTo(3.8, 20.3 + w * 3); g.stroke(); }
       // dark metal collar where the neck meets the handle
       g.fillStyle = '#3f464e';
-      g.fillRect(-3.8, -34, 7.6, 7);
+      g.fillRect(-3.8, -34, 7.6, 6);
       g.fillStyle = 'rgba(255,255,255,0.35)';
-      g.fillRect(-3.8, -34, 7.6, 1.6);
-      // a gooseneck: steel bending over the top and out to the side
+      g.fillRect(-3.8, -34, 7.6, 1.4);
+      // a gooseneck: the steel neck curves up over the top and out, holding the blade away from the handle
       g.lineCap = 'round';
       g.strokeStyle = '#3d444c';
-      g.lineWidth = 5.4;
-      g.beginPath(); g.moveTo(0, -33); g.bezierCurveTo(0, -42, 7, -43, 9, -37); g.stroke();
+      g.lineWidth = 5.6;
+      g.beginPath(); g.moveTo(0, -33); g.bezierCurveTo(0, -45, 14, -47, 16, -40); g.stroke();
       g.strokeStyle = '#c3cad3';
-      g.lineWidth = 2.8;
-      g.beginPath(); g.moveTo(0, -33); g.bezierCurveTo(0, -42, 7, -43, 9, -37); g.stroke();
-      // the blade: a wide steel plate sticking out at a right angle, hooked a little back toward the handle,
-      // flaring out to a sharp straight edge
-      g.save();
-      g.translate(9, -37);
-      g.rotate(0.25);
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(0, -33); g.bezierCurveTo(0, -45, 14, -47, 16, -40); g.stroke();
+      // the blade: a wide flat steel plate hanging down from the neck, with a sharp straight edge at the bottom
       g.shadowColor = 'rgba(40,40,60,0.4)';
       g.shadowBlur = 3;
       g.shadowOffsetY = 1.5;
       g.beginPath();
-      g.moveTo(-1, -4); g.lineTo(3, -5.5);
-      g.lineTo(19, -9);                 // top corner of the edge
-      g.lineTo(19, 9);                  // the straight cutting edge
-      g.lineTo(3, 5.5); g.lineTo(-1, 4);
+      g.moveTo(8, -41); g.lineTo(24, -41);
+      g.lineTo(26.5, -17); g.lineTo(5.5, -17);
       g.closePath();
-      var steel = g.createLinearGradient(0, -9, 0, 9);
-      steel.addColorStop(0, '#eef2f6'); steel.addColorStop(0.5, '#b8c0ca'); steel.addColorStop(1, '#7d868f');
+      var steel = g.createLinearGradient(5, 0, 27, 0);
+      steel.addColorStop(0, '#8a939e'); steel.addColorStop(0.5, '#eef2f6'); steel.addColorStop(1, '#98a1ab');
       g.fillStyle = steel;
       g.fill();
       g.shadowColor = 'transparent';
       g.strokeStyle = '#3d444c';
-      g.lineWidth = 1.5;
+      g.lineWidth = 1.6;
       g.stroke();
-      g.fillStyle = 'rgba(255,255,255,0.22)';          // a lighter bevel strip along the edge
-      g.beginPath(); g.moveTo(15, -8); g.lineTo(19, -9); g.lineTo(19, 9); g.lineTo(15, 8); g.closePath(); g.fill();
-      g.strokeStyle = '#ffffff';                       // the bright sharpened edge
-      g.lineWidth = 2.2;
-      g.beginPath(); g.moveTo(18.6, -8.4); g.lineTo(18.6, 8.4); g.stroke();
-      g.fillStyle = '#4b535c';                         // a rivet near the neck
-      g.beginPath(); g.arc(3.5, 0, 1.7, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#ffffff';                         // a sparkle on the blade
+      g.fillStyle = 'rgba(255,255,255,0.25)';   // a lighter bevel strip just above the edge
+      g.fillRect(6.2, -22, 19.6, 4.2);
+      g.strokeStyle = '#ffffff';                // the bright sharpened edge
+      g.lineWidth = 2.4;
+      g.beginPath(); g.moveTo(6.6, -18); g.lineTo(25.4, -18); g.stroke();
+      g.fillStyle = '#4b535c';                  // rivets holding the blade to the neck
+      g.beginPath(); g.arc(12.5, -37, 1.6, 0, Math.PI * 2); g.arc(19.5, -37, 1.6, 0, Math.PI * 2); g.fill();
+      // a sparkle on the blade
+      g.fillStyle = '#ffffff';
       g.beginPath();
-      g.moveTo(11, -5); g.lineTo(12, -2); g.lineTo(15, -1); g.lineTo(12, 0); g.lineTo(11, 3);
-      g.lineTo(10, 0); g.lineTo(7, -1); g.lineTo(10, -2); g.closePath();
+      g.moveTo(19, -33); g.lineTo(20, -30); g.lineTo(23, -29); g.lineTo(20, -28); g.lineTo(19, -25);
+      g.lineTo(18, -28); g.lineTo(15, -29); g.lineTo(18, -30); g.closePath();
       g.fill();
-      g.restore();
     });
   }
   function iconFiber() {
