@@ -2705,7 +2705,12 @@ function startGame(THREE) {
   function interact() {
     var tile = targetTile();
     if (!tile) {
-      if (state.inTreeZone) showToast('The Dawn Tree hums softly… your mana is restoring ✦');
+      if (state.inTreeZone && state.petalDay !== state.day && addItem('petal', 1)) {
+        state.petalDay = state.day;
+        burst(TREE_X, 2.5, TREE_Z, 0xffb3f0, 18, 2, 1, -2);
+        showToast('The Dawn Tree gives you a Dawn Petal 🌺');
+      }
+      else if (state.inTreeZone) showToast('The Dawn Tree hums softly… your mana is restoring ✦');
       else if (nearLake(player.position.x, player.position.z)) showToast('The lake glimmers… a lotus drifts by 🪷');
       else showToast('Walk to the garden soil to farm 🌱');
       return;
@@ -2715,13 +2720,14 @@ function startGame(THREE) {
       burst(tile.x, 0.3, tile.z, 0xb07d55, 10, 2, 1.6, -4);
       showToast('Tilled the soil ⛏');
     } else if (!tile.crop) {
+      if (!takeItem('seed', 1)) { showToast('No seeds left. Harvest moonblooms to get more 🌱'); return; }
       tile.crop = makeCrop(tile);
       tile.stage = 0;
       tile.growth = 0;
       showStage(tile);
       tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
       burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
-      showToast('Planted a moonbloom seed 🌱');
+      showToast('Planted a moonbloom seed 🌱 (' + bagCount('seed') + ' left)');
     } else if (tile.stage === 3) {
       scene.remove(tile.crop);
       scene.remove(tile.drop);
@@ -2729,8 +2735,10 @@ function startGame(THREE) {
       setWet(tile, false);
       state.harvest += 1;
       ui.harvest.textContent = state.harvest;
+      addItem('bloom', 1);
+      addItem('seed', 2);
       burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
-      showToast('Harvested a moonbloom! 🌸');
+      showToast('Harvested a moonbloom! 🌸 +2 seeds');
     } else if (!tile.wet) {
       setWet(tile, true);
       burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
@@ -2755,6 +2763,85 @@ function startGame(THREE) {
     showToast(watered ? 'Dawn Bloom! Watered ' + watered + ' crop' + (watered > 1 ? 's' : '') + ' 🌸' : 'Dawn Bloom shimmers… no crops needed water ✦');
   }
 
+  // ---------- Bag (inventory) ----------
+  var ITEMS = {
+    seed: { name: 'Moonbloom Seed', icon: '🌱', info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
+    bloom: { name: 'Moonbloom', icon: '🌸', info: 'A glowing flower grown in your garden.' },
+    petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' }
+  };
+  var BAG_SLOTS = 12;
+  var bag = [{ id: 'seed', count: 6 }]; // you start with a few seeds
+  var bagUi = {
+    box: document.getElementById('inventory'),
+    grid: document.getElementById('invGrid'),
+    info: document.getElementById('invInfo'),
+    open: document.getElementById('btnBag'),
+    close: document.getElementById('btnCloseBag')
+  };
+  var selectedSlot = -1;
+
+  function bagCount(id) {
+    for (var i = 0; i < bag.length; i++) if (bag[i].id === id) return bag[i].count;
+    return 0;
+  }
+  // Adds items to the bag; returns false if there's no room for a new kind of item
+  function addItem(id, n) {
+    for (var i = 0; i < bag.length; i++) {
+      if (bag[i].id === id) { bag[i].count += n; renderBag(); return true; }
+    }
+    if (bag.length >= BAG_SLOTS) { showToast('Your bag is full 🎒'); return false; }
+    bag.push({ id: id, count: n });
+    renderBag();
+    return true;
+  }
+  // Takes items out of the bag; returns false if you don't have enough
+  function takeItem(id, n) {
+    for (var i = 0; i < bag.length; i++) {
+      if (bag[i].id === id && bag[i].count >= n) {
+        bag[i].count -= n;
+        if (bag[i].count === 0) { bag.splice(i, 1); selectedSlot = -1; }
+        renderBag();
+        return true;
+      }
+    }
+    return false;
+  }
+  function describeSlot() {
+    var it = bag[selectedSlot];
+    bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
+      : 'Tap an item to see what it is.';
+  }
+  function renderBag() {
+    if (!bagUi.grid) return;
+    bagUi.grid.innerHTML = '';
+    for (var i = 0; i < BAG_SLOTS; i++) {
+      var slot = document.createElement('button');
+      slot.type = 'button';
+      slot.className = 'slot' + (bag[i] ? '' : ' empty') + (i === selectedSlot ? ' selected' : '');
+      if (bag[i]) {
+        slot.textContent = ITEMS[bag[i].id].icon;
+        slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
+        var count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = bag[i].count;
+        slot.appendChild(count);
+        slot.onclick = (function (n) { return function () { selectedSlot = n; renderBag(); }; })(i);
+      } else {
+        slot.setAttribute('aria-label', 'Empty slot');
+      }
+      bagUi.grid.appendChild(slot);
+    }
+    describeSlot();
+  }
+  function toggleBag(open) {
+    if (!bagUi.box) return;
+    bagUi.box.hidden = open === undefined ? !bagUi.box.hidden : !open;
+    if (!bagUi.box.hidden) renderBag();
+  }
+  if (bagUi.open) bagUi.open.addEventListener('click', function () { toggleBag(); });
+  if (bagUi.close) bagUi.close.addEventListener('click', function () { toggleBag(false); focusGame(); });
+  renderBag();
+
   // ---------- Keyboard ----------
   var keys = {};
   var GAME_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'Space', 'KeyQ'];
@@ -2766,6 +2853,11 @@ function startGame(THREE) {
     if (e.repeat) return;
     if (e.code === 'KeyE' || e.code === 'Space') interact();
     if (e.code === 'KeyQ') castSpell();
+  });
+  window.addEventListener('keydown', function (e) { // I opens and closes the bag, Escape closes it
+    if (e.repeat) return;
+    if (e.code === 'KeyI') toggleBag();
+    if (e.code === 'Escape') toggleBag(false);
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; });

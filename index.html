@@ -23,16 +23,25 @@
       <div class="frame">
         <canvas id="game"></canvas>
         <div id="toast" class="toast"></div>
+        <div id="inventory" class="inventory" hidden>
+          <div class="inv-head">
+            <b>🎒 Bag</b>
+            <button id="btnCloseBag" class="inv-close" type="button" aria-label="Close bag">✕</button>
+          </div>
+          <div id="invGrid" class="inv-grid"></div>
+          <p id="invInfo" class="inv-info">Tap an item to see what it is.</p>
+        </div>
       </div>
 
       <div class="controls">
         <button id="btnAct" type="button">Interact <kbd>E</kbd></button>
         <button id="btnSpell" type="button">Dawn Bloom <kbd>Q</kbd></button>
+        <button id="btnBag" type="button">Bag <kbd>I</kbd></button>
       </div>
 
       <p class="help">
         <b>WASD / Arrows</b> or <b>tap the ground</b> to move · <b>E / Space</b> to till, plant, water &amp; harvest ·
-        <b>Q</b> casts Dawn Bloom (waters every crop) · <b>Drag</b> to turn the camera, <b>Scroll / pinch</b> to zoom ·
+        <b>Q</b> casts Dawn Bloom (waters every crop) · <b>I</b> opens your bag · <b>Drag</b> to turn the camera, <b>Scroll / pinch</b> to zoom ·
         Visit the glowing tree to refill mana, and the lake to rest.
       </p>
     </main>
