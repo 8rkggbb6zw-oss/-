@@ -2826,14 +2826,43 @@ function startGame(THREE) {
         knot.lookAt(sp.x + sd.x, sp.y + sd.y, sp.z + sd.z);
         g.add(knot);
       }
-    } else if (item === 'fiber') { // a little bundle of green strands
-      for (var fi = 0; fi < 6; fi++) {
-        var strand = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.014, 0.34, 5), fiberMat);
-        strand.rotation.set((Math.random() - 0.5) * 0.5, 0, (fi - 2.5) * 0.12);
-        strand.position.x = (fi - 2.5) * 0.02;
-        g.add(strand);
+    } else if (item === 'fiber') { // a tied bundle of long grassy strands, flared at both ends, with twine round the middle
+      var FIB_COLS = [0x2f7a2c, 0x3f8f36, 0x56a845, 0x6dbd52, 0x86cf62, 0x4a9a3c, 0xa2d872, 0x5fb04a];
+      var fibC = new THREE.Color();
+      for (var fi = 0; fi < 26; fi++) {
+        var fa = fi * 2.39996, fdx = Math.cos(fa), fdz = Math.sin(fa);   // which way round the bundle this strand sits
+        var rw = 0.002 + (fi % 4) * 0.004, rt = 0.035 + (fi % 5) * 0.009, rb = 0.028 + (fi % 3) * 0.008;
+        var yt = 0.17 + (fi % 4) * 0.012, yb = -0.16 - (fi % 2) * 0.01;
+        var fGeo = new THREE.PlaneGeometry(1, 1, 1, 14);
+        var fp = fGeo.attributes.position, fCols = [];
+        fibC.setHex(FIB_COLS[(fi * 3) % FIB_COLS.length]);
+        for (var fv = 0; fv < fp.count; fv++) {
+          var t = fp.getY(fv) + 0.5, u = 1 - t;   // 0 = the cut bottom, 1 = the pointed top
+          var cr = u * u * rb + 2 * u * t * rw + t * t * rt;      // out from the middle: flared ends, pinched waist
+          var cyy = u * u * yb + t * t * yt;
+          var fw = 0.008 * (0.6 + 0.4 * Math.sin(Math.PI * t)) * (t > 0.7 ? Math.pow((1 - t) / 0.3, 0.7) : 1);
+          var side = fp.getX(fv) * 2 * fw;
+          fp.setXYZ(fv, fdx * cr - fdz * side, cyy, fdz * cr + fdx * side);
+          var shade = 0.7 + 0.45 * t;             // darker low down, brighter toward the tips
+          fCols.push(fibC.r * shade, fibC.g * shade, fibC.b * shade);
+        }
+        fGeo.setAttribute('color', new THREE.Float32BufferAttribute(fCols, 3));
+        fGeo.computeVertexNormals();
+        g.add(new THREE.Mesh(fGeo, fiberMat));
       }
-      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 10), twineMat));
+      for (var tw = 0; tw < 3; tw++) {            // three turns of twine round the waist
+        var turn = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0085, 6, 18), twineMat);
+        turn.rotation.x = Math.PI / 2 + (tw - 1) * 0.12;
+        turn.position.y = (tw - 1) * 0.011;
+        g.add(turn);
+      }
+      var knot = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), twineMat);
+      knot.position.set(0.034, 0, 0.012);
+      g.add(knot);
+      [[0.05, -0.04, 0.02], [0.06, -0.01, -0.01]].forEach(function (end) { // the two loose ends of the twine
+        var endCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.036, 0, 0.012), new THREE.Vector3(0.05, 0, end[2] + 0.01), new THREE.Vector3(end[0], end[1], end[2]));
+        g.add(new THREE.Mesh(new THREE.TubeGeometry(endCurve, 6, 0.004, 5), twineMat));
+      });
     } else if (item === 'hay') { // a small tied bale of straw
       g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.3, 14), hayMat));
       var band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 14), bandMat);
@@ -2956,7 +2985,7 @@ function startGame(THREE) {
     g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     return g;
   }
-  var fiberMat = new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 });
+  var fiberMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.7, side: THREE.DoubleSide }); // grassy strands, coloured per strand
   var seedMat = new THREE.MeshStandardMaterial({ color: 0xe2d2ff, emissive: 0x7a58d0, emissiveIntensity: 0.4, roughness: 0.15, metalness: 0.15 }); // glossy pearly lavender
   // a plump teardrop: round at the bottom, softly pointed (not sharp) at the top
   var seedGeo = (function () {
@@ -3276,12 +3305,13 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone') { // seeds, sap, acorns and pinecones sit upright in your open palm
+        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone' || held === 'fiber') { // these sit upright in your hand
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
           model.scale.setScalar(0.95);
-          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : 0.06; // the acorn's and pinecone's pointed tips rest in the palm
+          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : held === 'fiber' ? 0.13 : 0.06; // pointed tips rest in the palm; fiber is held below its twine
+          if (held === 'fiber') model.rotation.z = -0.45; // the bundle leans out a little, like it does in the bag
           palm.add(model);
           heldItemGrp.add(palm);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
@@ -4042,7 +4072,7 @@ function startGame(THREE) {
     pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), fill: 95, info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 93, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
-    fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), info: 'Tough green strands trimmed from bushes.' },
+    fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), fill: 92, info: 'Tough green strands trimmed from bushes.' },
     hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
     coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
@@ -4563,20 +4593,87 @@ function startGame(THREE) {
   }
   function iconFiber() {
     return iconCanvas(function (g) {
+      g.lineJoin = 'round';
       g.lineCap = 'round';
-      for (var i = 0; i < 9; i++) { // a loose bundle of long green strands
-        var x0 = 18 + i * 3.5, bend = (i - 4) * 2.2;
-        g.strokeStyle = ['#3f8a3a', '#5aa84a', '#79c25c', '#4d9a40'][i % 4];
-        g.lineWidth = 2.6;
+      g.translate(31.1, 32.9);                               // centred and sized to fill the slot
+      g.scale(0.924, 0.924);
+      g.rotate(0.62);                                         // lying on a slant, like the other items
+      // one long grassy strand: a tapered blade that runs from the bottom, through the tied waist, to the top
+      function strand(bx, by, tx, ty, wx, wide, col, light) {
+        var L = [], R = [], N = 18;
+        for (var i = 0; i <= N; i++) {
+          var t = i / N, u = 1 - t;
+          var x = u * u * bx + 2 * u * t * wx + t * t * tx, y = u * u * by + 2 * u * t * 0 + t * t * ty;
+          var dx = 2 * u * (wx - bx) + 2 * t * (tx - wx), dy = 2 * u * (0 - by) + 2 * t * (ty - 0);
+          var len = Math.sqrt(dx * dx + dy * dy), w = wide * (0.6 + 0.4 * Math.sin(Math.PI * t)) * (t > 0.7 ? Math.pow((1 - t) / 0.3, 0.7) : 1); // cut flat at the bottom, a fine point at the top
+          L.push([x - dy / len * w, y + dx / len * w]);
+          R.push([x + dy / len * w, y - dx / len * w]);
+        }
         g.beginPath();
-        g.moveTo(x0 - bend, 58);
-        g.bezierCurveTo(x0, 40, x0 + bend * 0.5, 28, x0 + bend * 1.6, 8 + (i % 3) * 3);
+        g.moveTo(bx, by + 1);
+        for (i = 0; i <= N; i++) g.lineTo(L[i][0], L[i][1]);
+        g.lineTo(tx, ty - 1.5);                               // pointed tip
+        for (i = N; i >= 0; i--) g.lineTo(R[i][0], R[i][1]);
+        g.closePath();
+        g.fillStyle = col;
+        g.fill();
+        g.strokeStyle = 'rgba(20,60,20,0.6)';
+        g.lineWidth = 0.6;
+        g.stroke();
+        g.strokeStyle = 'rgba(230,255,190,' + light + ')';     // a pale shine down the middle of the blade
+        g.lineWidth = 0.7;
+        g.beginPath();
+        for (i = 2; i <= N - 2; i++) {
+          var p = [(L[i][0] * 0.65 + R[i][0] * 0.35), (L[i][1] * 0.65 + R[i][1] * 0.35)];
+          if (i === 2) g.moveTo(p[0], p[1]); else g.lineTo(p[0], p[1]);
+        }
         g.stroke();
       }
-      g.fillStyle = '#c99a5a'; // tied with a twist of twine
-      g.beginPath(); g.ellipse(32, 40, 13, 4, 0, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = '#8a6334'; g.lineWidth = 1.2;
-      g.beginPath(); g.moveTo(21, 39); g.lineTo(43, 41); g.stroke();
+      g.shadowColor = 'rgba(60,30,90,0.35)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 2;
+      g.fillStyle = '#2e6a2a';                                // a dark mass behind, so the bundle reads as full
+      g.beginPath();
+      g.moveTo(-13, -30); g.quadraticCurveTo(0, -2, 13, -30); g.lineTo(12, 30); g.quadraticCurveTo(0, 2, -12, 30); g.closePath();
+      g.fill();
+      g.shadowColor = 'transparent';
+      var COLS = ['#2f7a2c', '#3f8f36', '#56a845', '#6dbd52', '#86cf62', '#4a9a3c', '#a2d872', '#5fb04a'];
+      var order = [0, 18, 4, 14, 9, 2, 16, 6, 12, 1, 17, 5, 11, 8, 3, 15, 7, 13, 10];  // back strands first, front ones last
+      for (var o = 0; o < order.length; o++) {
+        var k = order[o], u = k / 18 * 2 - 1;
+        var depth = o / (order.length - 1);
+        strand(u * 12 + ((k * 5) % 3 - 1), 30 - Math.abs(u) * 3 + (k % 2), u * 18 + ((k * 7) % 3 - 1) * 1.5, -32 + Math.abs(u) * 6 + (k % 4) * 1.5,
+               u * 3.5, 1.35 + (k % 3) * 0.25, COLS[(k * 3) % COLS.length], (0.25 + depth * 0.4).toFixed(2));
+      }
+      // two loose wisps that have worked free of the bundle
+      g.strokeStyle = '#6dbd52'; g.lineWidth = 1.1;
+      g.beginPath(); g.moveTo(5, -4); g.bezierCurveTo(14, -10, 20, -6, 21, -15); g.stroke();
+      g.strokeStyle = '#4a9a3c';
+      g.beginPath(); g.moveTo(-5, 5); g.bezierCurveTo(-14, 9, -19, 6, -21, 14); g.stroke();
+      // the twine wrapped round the middle, with a knot and two loose ends
+      g.shadowColor = 'rgba(30,20,10,0.4)';
+      g.shadowBlur = 2;
+      g.shadowOffsetY = 1;
+      g.beginPath();
+      g.moveTo(-7.5, -4.5); g.quadraticCurveTo(0, -2.8, 7.5, -4.5); g.lineTo(7.5, 4.5); g.quadraticCurveTo(0, 6.2, -7.5, 4.5); g.closePath();
+      var tw = g.createLinearGradient(-8, 0, 8, 0);
+      tw.addColorStop(0, '#a87a42'); tw.addColorStop(0.35, '#e8c088'); tw.addColorStop(1, '#8a5e2e');
+      g.fillStyle = tw;
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.strokeStyle = 'rgba(90,56,22,0.9)'; g.lineWidth = 0.7;
+      g.stroke();
+      for (var w = -6; w <= 6; w += 2.4) {                   // the twisted turns of the twine
+        g.beginPath(); g.moveTo(w - 1.4, -3.6 - Math.abs(w) * -0.12); g.lineTo(w + 1.4, 4.8); g.stroke();
+      }
+      g.strokeStyle = 'rgba(255,240,210,0.6)'; g.lineWidth = 0.7;
+      g.beginPath(); g.moveTo(-6, -2.2); g.quadraticCurveTo(0, -0.8, 6, -2.2); g.stroke();
+      g.fillStyle = '#c4945a';                                // the knot
+      g.beginPath(); g.ellipse(8.2, 0.5, 2.6, 2.2, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(90,56,22,0.9)'; g.stroke();
+      g.strokeStyle = '#b8884e'; g.lineWidth = 1.5;           // the loose ends
+      g.beginPath(); g.moveTo(9.5, 1.5); g.quadraticCurveTo(13, 4, 12, 9); g.stroke();
+      g.beginPath(); g.moveTo(10, 0); g.quadraticCurveTo(14.5, 0, 16, 4); g.stroke();
     });
   }
   function iconHay() {
