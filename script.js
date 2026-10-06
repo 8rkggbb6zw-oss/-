@@ -2727,7 +2727,8 @@ function startGame(THREE) {
   var capMat = new THREE.MeshStandardMaterial({ color: 0x5e4026, roughness: 0.95 });
   var capScaleMat = new THREE.MeshStandardMaterial({ color: 0x8e6a42, roughness: 0.9 });
   var capScaleTipMat = new THREE.MeshStandardMaterial({ color: 0x9e7a4e, roughness: 0.85 }); // sun-bleached scale tips
-  var coneMat = new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.85 });
+  var coneMat = new THREE.MeshStandardMaterial({ color: 0x3a1e0c, roughness: 0.95 });                      // the dark core between the scales
+  var coneScaleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.75 }); // scales: dark at the base, pale at the tip
   function pickupModel(item) {
     var g = new THREE.Group(), m;
     if (item === 'wood') {
@@ -2892,19 +2893,65 @@ function startGame(THREE) {
       m = new THREE.Mesh(coalGeo, coalMat);
       m.rotation.set(0.4, 0.3, 0.2);
       g.add(m);
-    } else if (item === 'pinecone') { // rings of woody scales getting smaller toward the tip
-      for (var r = 0; r < 6; r++) {
-        var f = r / 5, rad = 0.06 + Math.sin((f * 0.85 + 0.1) * Math.PI) * 0.07;
-        for (var k = 0; k < 7; k++) {
-          var sc = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 4), coneMat);
-          var a = (k / 7) * Math.PI * 2 + r * 0.45;
-          sc.position.set(Math.cos(a) * rad, -0.12 + f * 0.26, Math.sin(a) * rad);
-          sc.scale.set(1.2, 0.55, 1);
-          sc.lookAt(sc.position.x * 3, sc.position.y + 0.3, sc.position.z * 3);
-          g.add(sc);
-        }
+    } else if (item === 'pinecone') { // a woody cone: pointed scales spiralling round a dark core, pale worn tips, a little stem
+      var CONE_TOP = 0.14, CONE_BOT = -0.15;
+      var coneW = function (y) {                // an egg shape: rounded top, widest just above the middle, blunt point at the bottom
+        var t = Math.min(1, Math.max(0, (CONE_TOP - y) / (CONE_TOP - CONE_BOT)));
+        return 0.072 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(t, 0.8))), 0.65);
+      };
+      var corePts = [];
+      for (var ci = 0; ci <= 16; ci++) {
+        var cy = CONE_BOT + (ci / 16) * (CONE_TOP - CONE_BOT);
+        corePts.push(new THREE.Vector2(Math.max(0.002, coneW(cy) * 0.8), cy));
       }
-      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.26, 8), coneMat));
+      g.add(new THREE.Mesh(new THREE.LatheGeometry(corePts, 14), coneMat));
+      // one scale: a flat, pointed woody plate whose tip sticks out (+z), with a ridge down the middle
+      var scaleGeo = new THREE.SphereGeometry(1, 8, 6);
+      var sp = scaleGeo.attributes.position, scCols = [], scC = new THREE.Color();
+      var scBase = new THREE.Color(0x3e200c), scMid = new THREE.Color(0x7e4420), scTip = new THREE.Color(0xb47a46), scEdge = new THREE.Color(0xf0c890), scUmbo = new THREE.Color(0x3a1e0c);
+      for (var vi = 0; vi < sp.count; vi++) {
+        var vx = sp.getX(vi), vy = sp.getY(vi), vz = sp.getZ(vi);
+        var out = (vz + 1) / 2;                 // 0 = tucked into the core, 1 = the open tip
+        vx *= 1 - out * out * 0.7;              // narrows to a point at the tip
+        var top = vy > 0;
+        vy = vy * (top ? (1 - Math.abs(vx) * 0.6) * (1 + out * 0.9) : 0.6); // a raised ridge, and a chunky knob at the tip
+        vy += out * out * out * 0.9;            // the tip curls up a little
+        sp.setXYZ(vi, vx * 0.032, vy * 0.011, vz * 0.034);
+        if (out < 0.55) scC.copy(scBase).lerp(scMid, out / 0.55); else scC.copy(scMid).lerp(scTip, (out - 0.55) / 0.45);
+        if (top && out > 0.62 && out < 0.78) scC.lerp(scEdge, 0.55); // a pale worn band across the knob
+        if (top && out > 0.8 && Math.abs(vx) < 0.22) scC.copy(scUmbo); // the little dark point in the middle of the knob
+        if (!top) scC.multiplyScalar(0.55);     // darker underneath
+        scCols.push(scC.r, scC.g, scC.b);
+      }
+      scaleGeo.setAttribute('color', new THREE.Float32BufferAttribute(scCols, 3));
+      scaleGeo.computeVertexNormals();
+      var NSCALES = 96;
+      for (var r = 0; r < NSCALES; r++) {       // a golden-angle spiral, like a real pinecone
+        var f = r / (NSCALES - 1), y = CONE_BOT + 0.02 + f * (CONE_TOP - CONE_BOT - 0.05);
+        var rad = coneW(y) * 0.85, a = r * 2.39996;
+        var ox = Math.cos(a), oz = Math.sin(a);
+        var sc = new THREE.Mesh(scaleGeo, coneScaleMat);
+        sc.position.set(ox * rad, y, oz * rad);
+        var droop = 0.55 + (1 - f) * 0.35;      // scales point out and down, more open toward the bottom
+        sc.lookAt(sc.position.x + ox, y - droop, sc.position.z + oz);
+        var size = 0.45 + (coneW(y) / 0.072) * 0.5;
+        sc.scale.set(size, size, size * (0.9 + (r % 3) * 0.06)); // slightly uneven lengths
+        sc.position.x += ox * 0.012 * size; sc.position.z += oz * 0.012 * size;
+        g.add(sc);
+      }
+      var coneStemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, CONE_TOP - 0.02, 0), new THREE.Vector3(0, CONE_TOP + 0.03, 0), new THREE.Vector3(0.025, CONE_TOP + 0.05, 0));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(coneStemCurve, 8, 0.012, 6), capMat)); // a short bent woody stem
+      var coneStemEnd = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), capScaleMat);
+      coneStemEnd.position.set(0.025, CONE_TOP + 0.05, 0);
+      coneStemEnd.scale.set(0.6, 1, 1);
+      g.add(coneStemEnd);
+      [[0.6, 0.05, 1.1], [2.4, -0.04, 0.8]].forEach(function (sd) { // a couple of tiny glossy drops of sap
+        var drop = new THREE.Mesh(sapGeo, sapMat);
+        var dr = coneW(sd[1]) + 0.022;
+        drop.position.set(Math.cos(sd[0]) * dr, sd[1], Math.sin(sd[0]) * dr);
+        drop.scale.setScalar(0.11 * sd[2]);
+        g.add(drop);
+      });
     }
     g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     return g;
@@ -3229,12 +3276,12 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed' || held === 'sap' || held === 'acorn') { // seeds, sap and acorns sit upright in your open palm
+        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone') { // seeds, sap, acorns and pinecones sit upright in your open palm
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
           model.scale.setScalar(0.95);
-          model.position.y = held === 'acorn' ? 0.19 : 0.06; // the acorn's pointed tip rests in the palm
+          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : 0.06; // the acorn's and pinecone's pointed tips rest in the palm
           palm.add(model);
           heldItemGrp.add(palm);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
