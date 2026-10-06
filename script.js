@@ -2909,23 +2909,8 @@ function startGame(THREE) {
   iPart(new THREE.BoxGeometry(0.44, 0.03, 0.32), R.curtain, TBX - 0.2, 0.82, TBZ - 0.42, 0, 0.3, 0);
   inSolids.push([TBX, TBZ, 0.8]);
 
-  // a little bubbling cauldron in the right-hand corner
-  var KX = ROOM_W / 2 - 0.85, KZ = 1.5;
-  iPart(new THREE.SphereGeometry(0.45, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), R.iron, KX, 0.5, KZ);
-  iPart(new THREE.TorusGeometry(0.38, 0.05, 8, 20), R.iron, KX, 0.76, KZ, Math.PI / 2);
-  var inBrewMat = rMat(0xe0509f, { emissive: 0xc0307f, emissiveIntensity: 0.6, roughness: 0.2 });
-  iPart(new THREE.CircleGeometry(0.36, 18), inBrewMat, KX, 0.72, KZ, -Math.PI / 2);
-  var inBrewGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8fe0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-  inBrewGlow.position.set(KX, 0.95, KZ); inBrewGlow.scale.set(1.2, 1.2, 1); room.add(inBrewGlow);
-  inSolids.push([KX, KZ, 0.5]);
 
 
-  // potted plants by the door
-  [[-ROOM_W / 2 + 0.5, -NW - 0.55], [ROOM_W / 2 - 0.5, -NW - 0.55]].forEach(function (pp) {
-    iPart(new THREE.CylinderGeometry(0.24, 0.18, 0.4, 12), R.clay, pp[0], 0.2, pp[1]);
-    for (var l = 0; l < 7; l++) iPart(new THREE.SphereGeometry(0.16, 8, 6), R.leaf, pp[0] + Math.cos(l * 0.9) * 0.15, 0.5 + (l % 3) * 0.12, pp[1] + Math.sin(l * 0.9) * 0.15).scale.set(1, 1.3, 0.6);
-    inSolids.push([pp[0], pp[1], 0.3]);
-  });
 
   // windows with pink curtains, softly lit (no view of the outside)
   var panes = [];
@@ -2979,7 +2964,6 @@ function startGame(THREE) {
     });
     candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
     inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
-    inBrewGlow.material.opacity = 0.45 + Math.sin(t * 3) * 0.08;
   }
 
   // Going in and out: walk up to the front door to go in, and up to it again from inside to come back out
