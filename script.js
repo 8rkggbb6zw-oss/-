@@ -2777,43 +2777,58 @@ function startGame(THREE) {
     g.strokeStyle = 'rgba(255,240,200,0.6)'; g.setLineDash([2, 2]);
     for (var i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, h); g.moveTo(0, i * 16); g.lineTo(w, i * 16); g.stroke(); }
   });
-  var rugTex = paintTexture(512, 352, function (g, w, h) {            // a woven rug: plum field, patterned border, a row of moon phases in the middle
-    g.fillStyle = '#4a2c5e'; g.fillRect(0, 0, w, h);
-    for (var n = 0; n < 2200; n++) {                                   // a fine woven texture
-      g.fillStyle = Math.random() < 0.5 ? 'rgba(255,220,255,0.05)' : 'rgba(20,0,30,0.08)';
-      g.fillRect(Math.random() * w, Math.random() * h, 2, 1);
-    }
-    function frame(inset, thick, col) { g.strokeStyle = col; g.lineWidth = thick; g.strokeRect(inset, inset, w - inset * 2, h - inset * 2); }
-    frame(10, 14, '#c98aa6');                                          // the borders: rose, cream, then a darker band with diamonds
-    frame(20, 3, '#f3e6cf');
-    g.fillStyle = '#2f1a3c'; g.fillRect(24, 24, w - 48, 26); g.fillRect(24, h - 50, w - 48, 26); g.fillRect(24, 24, 26, h - 48); g.fillRect(w - 50, 24, 26, h - 48);
-    function diamond(x, y, r, col) { g.fillStyle = col; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fill(); }
-    for (var dx = 44; dx < w - 30; dx += 22) { diamond(dx, 37, 7, dx % 44 ? '#d9a83e' : '#f3e6cf'); diamond(dx, h - 37, 7, dx % 44 ? '#d9a83e' : '#f3e6cf'); }
-    for (var dy = 66; dy < h - 50; dy += 22) { diamond(37, dy, 7, dy % 44 ? '#f3e6cf' : '#d9a83e'); diamond(w - 37, dy, 7, dy % 44 ? '#f3e6cf' : '#d9a83e'); }
-    frame(52, 3, '#f3e6cf');
-    frame(58, 2, '#c98aa6');
-    g.fillStyle = 'rgba(243,230,207,0.35)';                            // a scatter of tiny stars over the field
-    for (var sx = 90; sx < w - 70; sx += 40) for (var sy = 85; sy < h - 70; sy += 36) {
-      if (Math.abs(sx - w / 2) < 150 && Math.abs(sy - h / 2) < 45) continue;
-      var ox = (Math.round(sy / 36) % 2) * 20;
-      g.beginPath(); g.arc(sx + ox, sy, 2, 0, Math.PI * 2); g.fill();
-    }
-    g.strokeStyle = '#d9a83e'; g.lineWidth = 3;                        // the middle: an oval frame holding the phases of the moon
-    g.beginPath(); g.ellipse(w / 2, h / 2, 150, 52, 0, 0, Math.PI * 2); g.stroke();
-    g.strokeStyle = 'rgba(243,230,207,0.6)'; g.lineWidth = 1.5;
-    g.beginPath(); g.ellipse(w / 2, h / 2, 142, 45, 0, 0, Math.PI * 2); g.stroke();
-    [-2, -1, 0, 1, 2].forEach(function (k) {
-      var mx = w / 2 + k * 52, my = h / 2, mr = k === 0 ? 20 : 15;
-      g.fillStyle = '#f3e6cf'; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
-      if (k !== 0) {                                                   // shade part of each moon to show its phase
-        g.fillStyle = '#4a2c5e';
-        g.beginPath(); g.arc(mx + (k < 0 ? 1 : -1) * mr * (Math.abs(k) === 2 ? 0.55 : 0.95), my, mr, 0, Math.PI * 2); g.fill();
-      } else { g.fillStyle = 'rgba(217,168,62,0.35)'; g.beginPath(); g.arc(mx - 5, my - 4, 6, 0, Math.PI * 2); g.fill(); }
+  var rugTex = paintTexture(1024, 704, function (g, w, h) {           // a celestial rug, edge to edge: deep indigo starry sky, a big crescent moon ringed by the moon's phases
+    var GOLD = '#e3b553', CREAM = '#f6ecd8', ROSE = '#d996b4', INK = '#221a3e', SHADE = '#2f2552';
+    var cx = w / 2, cy = h / 2;
+    var field = g.createRadialGradient(cx, cy, 30, cx, cy, w * 0.62);    // midnight indigo, a little lighter in the middle
+    field.addColorStop(0, '#3d3170'); field.addColorStop(1, '#251d47');
+    g.fillStyle = field; g.fillRect(0, 0, w, h);
+    for (var wy = 0; wy < h; wy += 3) { g.fillStyle = wy % 6 ? 'rgba(230,220,255,0.03)' : 'rgba(0,0,20,0.06)'; g.fillRect(0, wy, w, 1); } // woven rows
+    for (var n = 0; n < 4000; n++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(230,220,255,0.05)' : 'rgba(0,0,15,0.07)'; g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 1); }
+    function star(x, y, r, col, pts) { g.fillStyle = col; g.beginPath(); for (var p = 0; p < pts * 2; p++) { var rr = p % 2 ? r * 0.4 : r, aa = p / (pts * 2) * Math.PI * 2 - Math.PI / 2; g.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } g.closePath(); g.fill(); }
+    // little constellations in the four corners: gold stars joined by fine lines
+    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (c) {
+      var bx = cx - c[0] * (cx - 95), by = cy - c[1] * (cy - 95);
+      var pts = [[0, 0], [38, 18], [70, 6], [58, -34], [96, -48]].map(function (q) { return [bx + q[0] * c[0], by + q[1] * c[1]]; });
+      g.strokeStyle = 'rgba(246,236,216,0.45)'; g.lineWidth = 1.5;
+      g.beginPath(); pts.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.stroke();
+      pts.forEach(function (q, i) { star(q[0], q[1], i === 2 ? 9 : 6, i % 2 ? CREAM : GOLD, 4); });
     });
-    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (c) {         // little sprigs in the corners of the field
-      var cx = w / 2 + c[0] * (w / 2 - 90), cy = h / 2 + c[1] * (h / 2 - 88);
-      diamond(cx, cy, 10, '#c98aa6'); diamond(cx, cy, 5, '#f3e6cf');
-    });
+    for (var s2 = 0; s2 < 90; s2++) {                                   // a scatter of tiny stars, kept clear of the middle
+      var sx = 25 + Math.random() * (w - 50), sy = 25 + Math.random() * (h - 50);
+      if (Math.hypot((sx - cx) / 1.55, sy - cy) < 215) continue;
+      star(sx, sy, 2 + Math.random() * 3, Math.random() < 0.5 ? 'rgba(246,236,216,0.8)' : GOLD, 4);
+    }
+    // the middle: a ring of the moon's phases going round, with a big golden crescent cradling a star inside
+    g.strokeStyle = 'rgba(227,181,83,0.6)'; g.lineWidth = 2; g.setLineDash([2, 8]);
+    g.beginPath(); g.ellipse(cx, cy, 300, 196, 0, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([]);
+    g.strokeStyle = GOLD; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(cx, cy, 150, 150 * 0.98, 0, 0, Math.PI * 2); g.stroke();
+    var PH = 8;
+    for (var k = 0; k < PH; k++) {                                     // eight phases round the ring: new, crescent, half, gibbous, full and back
+      var a = k / PH * Math.PI * 2 - Math.PI / 2, mx = cx + Math.cos(a) * 240, my = cy + Math.sin(a) * 160, mr = 28;
+      g.fillStyle = 'rgba(246,236,216,0.12)'; g.beginPath(); g.arc(mx, my, mr * 1.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = SHADE; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
+      var lit = k / PH, wax = lit <= 0.5, f = Math.cos(lit * Math.PI * 2);    // how much of the face is lit, and from which side
+      g.save(); g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.clip();
+      g.fillStyle = CREAM;
+      g.beginPath();
+      g.arc(mx, my, mr, -Math.PI / 2, Math.PI / 2, !wax);             // the lit half
+      g.ellipse(mx, my, Math.abs(f) * mr, mr, 0, Math.PI / 2, -Math.PI / 2, (f > 0) === wax);
+      g.fill();
+      g.restore();
+      g.strokeStyle = GOLD; g.lineWidth = 2.5; g.beginPath(); g.arc(mx, my, mr + 2, 0, Math.PI * 2); g.stroke();
+    }
+    var halo = g.createRadialGradient(cx, cy, 20, cx, cy, 140);
+    halo.addColorStop(0, 'rgba(255,230,170,0.35)'); halo.addColorStop(1, 'rgba(255,230,170,0)');
+    g.fillStyle = halo; g.beginPath(); g.arc(cx, cy, 140, 0, Math.PI * 2); g.fill();
+    var moonG = g.createLinearGradient(cx - 100, cy - 100, cx + 60, cy + 100);
+    moonG.addColorStop(0, '#f7d98a'); moonG.addColorStop(1, '#d49a34');
+    g.fillStyle = moonG; g.beginPath(); g.arc(cx - 10, cy, 100, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#342a62'; g.beginPath(); g.arc(cx + 34, cy - 22, 88, 0, Math.PI * 2); g.fill(); // cut the crescent out
+    star(cx + 28, cy - 10, 30, CREAM, 5); star(cx + 28, cy - 10, 12, GOLD, 5);
+    star(cx + 78, cy + 52, 10, GOLD, 4); star(cx + 60, cy - 78, 7, CREAM, 4);
   });
   function rMat(color, extra) {
     var o = { color: color, roughness: 0.8 };
@@ -2927,12 +2942,16 @@ function startGame(THREE) {
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
 
   // a round table with stools, potions, a candle and an open spellbook, on a braided rug
-  var rugSide = rMat(0x3a2048, { roughness: 1 }), RUG_X = 0.1, RUG_Z = 0.6, RUG_W = 3.9, RUG_D = 2.7; // a rectangular woven rug
+  var rugSide = rMat(0x2a2050, { roughness: 1 }), RUG_X = 0.1, RUG_Z = 0.6, RUG_W = 3.9, RUG_D = 2.7; // a rectangular woven rug
   iPart(new THREE.BoxGeometry(RUG_W, 0.03, RUG_D), [rugSide, rugSide, R.rug, rugSide, rugSide, rugSide], RUG_X, 0.015, RUG_Z);
-  var fringeMat = rMat(0xf3e6cf, { roughness: 1 });
-  [-1, 1].forEach(function (sd) {                                      // cream tassels along both short ends
-    for (var fr = 0; fr < 22; fr++) {
-      iPart(new THREE.BoxGeometry(0.16, 0.012, 0.035), fringeMat, RUG_X + sd * (RUG_W / 2 + 0.07), 0.008, RUG_Z - RUG_D / 2 + 0.1 + fr * (RUG_D - 0.2) / 21, 0, (fr % 3 - 1) * 0.12, 0);
+  var fringeMat = rMat(0xf5e9d3, { roughness: 1 }), knotMat = rMat(0xe3b553, { roughness: 0.8 });
+  [-1, 1].forEach(function (sd) {                                      // soft cream tassels along both short ends, each tied with a little gold knot
+    for (var fr = 0; fr < 14; fr++) {
+      var fz = RUG_Z - RUG_D / 2 + 0.12 + fr * (RUG_D - 0.24) / 13, fx = RUG_X + sd * (RUG_W / 2 + 0.03);
+      iPart(new THREE.SphereGeometry(0.03, 8, 6), knotMat, fx, 0.02, fz).scale.set(1, 0.6, 1);
+      for (var st = -1; st <= 1; st++) {
+        iPart(new THREE.BoxGeometry(0.17, 0.01, 0.014), fringeMat, fx + sd * 0.1, 0.008, fz + st * 0.018, 0, st * 0.18 * sd, 0);
+      }
     }
   });
   var TBX = -1.2, TBZ = 0.9;
