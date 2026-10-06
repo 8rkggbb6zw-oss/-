@@ -2938,7 +2938,6 @@ function startGame(THREE) {
   });
   // the chimney breast, stone all the way up
   iPart(new THREE.BoxGeometry(OPEN_W + 0.9, ROOM_H - 1.79, 0.55), R.stone, FPX, (ROOM_H + 1.79) / 2, FZ0 + 0.275);
-  iPart(new THREE.TorusGeometry(0.22, 0.05, 6, 18, Math.PI * 1.3), R.gold, FPX, 2.6, FZ0 + 0.58, 0, 0, 0.9); // a gold moon on the chimney
   // the fire: iron fire-dogs, three logs, glowing embers, dancing flames and rising sparks
   var FIRE_Z = FZ0 + 0.38;
   [-1, 1].forEach(function (sd) {
