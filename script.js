@@ -50,8 +50,8 @@ function startGame(THREE) {
   function onIsland(x, z) { return islandR(x, z) < ISLAND - 1.5; }
   var TREE_X = -24, TREE_Z = -24, TREE_ZONE = 3; // the Dawn Tree, just in from the top-left corner
   var LAKE_X = 20, LAKE_Z = 2, LAKE_R = 8.5;
-  var HOUSE_X = 12, HOUSE_Z = -24;                                   // the witchy farmhouse, up near the top, a bit to the right
-  var HOUSE_TURN = Math.atan2(FARM_X - HOUSE_X, FARM_Z + 5 - HOUSE_Z); // its door faces where you start
+  var HOUSE_X = 12, HOUSE_Z = -28;                                   // the witchy farmhouse, up near the top, a bit to the right
+  var HOUSE_TURN = 0;                                                // squared up with the island, its door facing down toward the middle
   var HOUSE_DOOR_X = HOUSE_X + Math.sin(HOUSE_TURN) * 3.4, HOUSE_DOOR_Z = HOUSE_Z + Math.cos(HOUSE_TURN) * 3.4; // just outside the front door
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
@@ -75,7 +75,7 @@ function startGame(THREE) {
   function outerSpot(margin) {
     for (var i = 0; i < 40; i++) {
       var x = (outerRand() * 2 - 1) * ISLAND, z = (outerRand() * 2 - 1) * ISLAND;
-      if (dist(x, z, HOUSE_X, HOUSE_Z) < 5) continue; // nothing grows through the farmhouse
+      if (dist(x, z, HOUSE_X, HOUSE_Z) < 6.2) continue; // nothing grows through the farmhouse
       if (islandR(x, z) < ISLAND - margin && Math.sqrt(x * x + z * z) > 16.5) return { x: x, z: z };
     }
     return null;
@@ -1803,7 +1803,7 @@ function startGame(THREE) {
       if (distToPath(x, z, startX, startZ, dockStart.x, dockStart.z) < 1.6) continue; // path to the dock
       if (distToPath(x, z, startX, startZ, TREE_X, TREE_Z) < 1.6) continue;           // path to the Dawn Tree
       if (distToPath(x, z, startX, startZ, HOUSE_DOOR_X, HOUSE_DOOR_Z) < 1.6) continue; // path to the farmhouse
-      if (dist(x, z, HOUSE_X, HOUSE_Z) < (tall ? 8 : 6.2) + gap) continue;              // and a clear yard round the house
+      if (dist(x, z, HOUSE_X, HOUSE_Z) < (tall ? 9.5 : 7.6) + gap) continue;            // and a clear yard round the house
       var crowded = false;
       for (var j = 0; j < forestSpots.length; j++) {
         if (dist(x, z, forestSpots[j].x, forestSpots[j].z) < gap + forestSpots[j].gap) { crowded = true; break; }
@@ -2397,7 +2397,7 @@ function startGame(THREE) {
   // lavender smoke, glowing windows, a round purple door, pumpkins, a broom and a bubbling cauldron
   var house = new THREE.Group(), houseStatic = new THREE.Group(), houseLive = new THREE.Group();
   house.add(houseStatic); house.add(houseLive);
-  var HW = 5, HD = 3.8, WALL_H = 2.5, FOOT_H = 0.45;            // width, depth, wall height, height of the stone footing
+  var HW = 7.5, HD = 3.8, WALL_H = 2.5, FOOT_H = 0.45;            // width, depth, wall height, height of the stone footing
   house.position.set(HOUSE_X, groundHeight(HOUSE_X, HOUSE_Z), HOUSE_Z);
   house.rotation.y = HOUSE_TURN;
   scene.add(house);
@@ -2567,17 +2567,19 @@ function startGame(THREE) {
       hPart(new THREE.SphereGeometry(0.06, 6, 5), 'leaf', -0.3 + f * 0.13, -0.45, 0.2, 0, 0, 0, w);
     }
   }
-  windowAt(-1.6, FOOT_H + 1.35, FRONT + 0.02, 0);
-  windowAt(1.6, FOOT_H + 1.35, FRONT + 0.02, 0);
-  windowAt(HW / 2 + 0.02, FOOT_H + 1.35, 0.4, Math.PI / 2);
+  windowAt(-1.55, FOOT_H + 1.35, FRONT + 0.02, 0);
+  windowAt(1.55, FOOT_H + 1.35, FRONT + 0.02, 0);
+  windowAt(-2.95, FOOT_H + 1.35, FRONT + 0.02, 0, true);                   // round windows toward the ends
+  windowAt(2.95, FOOT_H + 1.35, FRONT + 0.02, 0, true);
+  windowAt(HW / 2 + 0.02, FOOT_H + 1.35, -0.3, Math.PI / 2);
   windowAt(HW / 2 + 0.08, TOP + 0.75, 0, Math.PI / 2, true);              // a round attic window up in the end wall
   windowAt(TX + 0.24, FOOT_H + 1.5, TZ + TR - 0.04, 0.25, true);           // and two in the tower
   windowAt(TX + 0.24, TOP + 1.4, TZ + TR - 0.04, 0.25, true);
 
   // string lights along the front of the roof
   var houseLights = [];
-  for (var sl = 0; sl < 11; sl++) {
-    var lx = -HW / 2 - 0.3 + sl * (HW + 0.6) / 10, sag = Math.sin((sl % 5) / 5 * Math.PI) * 0.12;
+  for (var sl = 0; sl < 15; sl++) {
+    var lx = -HW / 2 - 0.3 + sl * (HW + 0.6) / 14, sag = Math.sin((sl % 5) / 5 * Math.PI) * 0.12;
     var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: sl % 2 ? 0xffd27a : 0xff9be0, emissive: sl % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 0.8 }));
     bulb.position.set(lx, EAVE_Y - 0.08 - sag, FRONT + OVER - 0.05);
     houseLive.add(bulb);
@@ -2614,12 +2616,13 @@ function startGame(THREE) {
     }
     hPart(new THREE.CylinderGeometry(0.03, 0.045, 0.16, 6), 'stem', pk[0] + 0.02, pk[2] * 1.5, FRONT + pk[1], 0, 0, 0.3);
   });
-  hPart(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 6), 'beam', 1.95, FOOT_H + 0.75, FRONT + 0.15, 0.12, 0, -0.18);        // broom handle
-  hPart(new THREE.ConeGeometry(0.2, 0.5, 10), 'straw', 2.07, FOOT_H + 0.02, FRONT + 0.22, 0.12, 0, -0.18);                 // bristles
-  hPart(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), 'flowerPink', 2.03, FOOT_H + 0.25, FRONT + 0.2, 0.12, 0, -0.18); // a ribbon tying them
+  var BRX = HW / 2 + 0.22, BRZ = 1.25;                                // the broom leans on the right-hand end wall
+  hPart(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 6), 'beam', BRX, 0.95, BRZ, 0, 0, 0.18);                  // broom handle
+  hPart(new THREE.ConeGeometry(0.2, 0.5, 10), 'straw', BRX + 0.17, 0.2, BRZ, 0, 0, 0.18);                    // bristles
+  hPart(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), 'flowerPink', BRX + 0.13, 0.43, BRZ, 0, 0, 0.18);   // a ribbon tying them
 
   // a bubbling cauldron on a little fire, out front to the right
-  var CX = 3.4, CZ = FRONT + 1.4;
+  var CX = HW / 2 + 0.95, CZ = FRONT + 1.4;
   hPart(new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), 'iron', CX, 0.55, CZ);
   hPart(new THREE.TorusGeometry(0.42, 0.06, 8, 20), 'iron', CX, 0.84, CZ, Math.PI / 2, 0, 0);
   [0, 2.1, 4.2].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), 'iron', CX + Math.cos(a) * 0.32, 0.12, CZ + Math.sin(a) * 0.32); });
@@ -2650,19 +2653,19 @@ function startGame(THREE) {
   }
 
   // a few little mushrooms and a short picket fence by the front corners
-  [[-3.4, 1.6], [-3.1, 2.1], [3.0, -1.4], [-2.4, -2.2]].forEach(function (mp, n) {
+  [[-HW / 2 - 0.4, FRONT + 0.6], [-HW / 2 - 0.9, FRONT + 0.3], [HW / 2 + 0.5, -1.4], [-1.2, -FRONT - 0.5]].forEach(function (mp, n) {
     hPart(new THREE.CylinderGeometry(0.035, 0.05, 0.22, 6), 'plaster', mp[0], 0.05, mp[1]);
     var cap = hPart(new THREE.SphereGeometry(0.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), n % 2 ? 'flowerPink' : 'flowerBlue', mp[0], 0.16, mp[1]);
     cap.scale.set(1, 0.7, 1);
   });
   [-1, 1].forEach(function (s) {
-    for (var fp = 0; fp < 4; fp++) {
+    for (var fp = 0; fp < 6; fp++) {
       var fx = s * (2.0 + fp * 0.45), fz = FRONT + 2.3;
       hPart(new THREE.BoxGeometry(0.1, 0.6, 0.06), 'plaster', fx, 0.15, fz);
       hPart(new THREE.ConeGeometry(0.07, 0.12, 4), 'plaster', fx, 0.51, fz, 0, Math.PI / 4, 0);
     }
-    hPart(new THREE.BoxGeometry(1.5, 0.07, 0.05), 'beam', s * 2.68, 0.3, FRONT + 2.33);
-    hPart(new THREE.BoxGeometry(1.5, 0.07, 0.05), 'beam', s * 2.68, 0.0, FRONT + 2.33);
+    hPart(new THREE.BoxGeometry(2.4, 0.07, 0.05), 'beam', s * 3.13, 0.3, FRONT + 2.33);
+    hPart(new THREE.BoxGeometry(2.4, 0.07, 0.05), 'beam', s * 3.13, 0.0, FRONT + 2.33);
   });
 
   // Join the still parts into a few meshes (one per material) so the house stays fast
@@ -2691,7 +2694,9 @@ function startGame(THREE) {
     var c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
     return { x: HOUSE_X + lx * c + lz * s, z: HOUSE_Z - lx * s + lz * c };
   }
-  [[-1.6, 0, 2.0], [0, 0, 2.0], [1.6, 0, 2.0], [TX, TZ, TR + 0.2], [CX, CZ, 0.55], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]].forEach(function (c) {
+  var houseBumps = [[TX, TZ, TR + 0.2], [CX, CZ, 0.55], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]];
+  for (var hbx = -2.9; hbx <= 2.95; hbx += 1.45) { houseBumps.push([hbx, -0.85, 1.15], [hbx, 0.85, 1.15]); } // two rows of bumpers fill the house's footprint
+  houseBumps.forEach(function (c) {
     var w = houseToWorld(c[0], c[1]);
     solids.push({ x: w.x, z: w.z, r: c[2] });
   });
