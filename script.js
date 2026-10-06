@@ -2962,8 +2962,20 @@ function startGame(THREE) {
   var auv = archGeo.attributes.uv;
   for (var au = 0; au < auv.count; au++) auv.setXY(au, auv.getX(au) * 0.6, auv.getY(au) * 0.6);
   iPart(archGeo, R.stone, FPX, 0, FZ0);
-  iPart(new THREE.BoxGeometry(0.26, 0.3, 0.08), rMat(0xcfc6d6, { roughness: 0.9 }), FPX, OPEN_H + 0.5, FZF + 0.03);   // a pale keystone
-  iPart(new THREE.TorusGeometry(0.07, 0.018, 6, 14, Math.PI * 1.3), R.gold, FPX, OPEN_H + 0.5, FZF + 0.08, 0, 0, 0.9); // with a little gold moon
+  // a carved keystone over the arch: a wedge of pale stone with a raised gold crescent moon and two little stars
+  var key = new THREE.Shape();
+  key.moveTo(-0.13, 0); key.lineTo(0.13, 0); key.lineTo(0.18, 0.36); key.lineTo(-0.18, 0.36); key.lineTo(-0.13, 0);
+  iPart(new THREE.ExtrudeGeometry(key, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 }), rMat(0xd8d0de, { roughness: 0.85 }), FPX, OPEN_H + 0.22, FZF);
+  var moonShape = new THREE.Shape();                                   // a fat crescent: round outer edge, a smaller curve scooped out of one side
+  for (var mi = 0; mi <= 24; mi++) { var ma = Math.PI * 0.32 + mi / 24 * Math.PI * 1.36; var mx = Math.cos(ma) * 0.1, my = Math.sin(ma) * 0.1; if (mi) moonShape.lineTo(mx, my); else moonShape.moveTo(mx, my); }
+  for (mi = 24; mi >= 0; mi--) { var mb = Math.PI * 0.42 + mi / 24 * Math.PI * 1.16; moonShape.lineTo(0.042 + Math.cos(mb) * 0.072, Math.sin(mb) * 0.08); }
+  var keyMoonMat = rMat(0xffd870, { emissive: 0xd09020, emissiveIntensity: 0.45, metalness: 0.45, roughness: 0.3 });
+  iPart(new THREE.ExtrudeGeometry(moonShape, { depth: 0.025, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.008, bevelSegments: 3, curveSegments: 24 }), keyMoonMat, FPX - 0.02, OPEN_H + 0.4, FZF + 0.075, 0, 0, -0.3);
+  [[0.075, 0.47, 0.03], [0.045, 0.33, 0.02]].forEach(function (ks) {  // two tiny gold stars beside the moon
+    var star = new THREE.Shape();
+    for (var p = 0; p < 10; p++) { var r = p % 2 ? ks[2] * 0.42 : ks[2], a = p / 10 * Math.PI * 2 + Math.PI / 2; if (p) star.lineTo(Math.cos(a) * r, Math.sin(a) * r); else star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    iPart(new THREE.ExtrudeGeometry(star, { depth: 0.012, bevelEnabled: false }), keyMoonMat, FPX + ks[0], OPEN_H + ks[1], FZF + 0.075);
+  });
   var brickTex = paintTexture(128, 128, function (g, w, h) {           // sooty bricks inside, glowing hot near the bottom
     g.fillStyle = '#1c0f0c'; g.fillRect(0, 0, w, h);
     for (var r = 0; r < 8; r++) for (var c = -1; c < 5; c++) {
