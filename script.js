@@ -2863,11 +2863,27 @@ function startGame(THREE) {
         var endCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.036, 0, 0.012), new THREE.Vector3(0.05, 0, end[2] + 0.01), new THREE.Vector3(end[0], end[1], end[2]));
         g.add(new THREE.Mesh(new THREE.TubeGeometry(endCurve, 6, 0.004, 5), twineMat));
       });
-    } else if (item === 'hay') { // a small tied bale of straw
-      g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.3, 14), hayMat));
-      var band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.05, 14), bandMat);
-      g.add(band);
-      g.rotation.z = Math.PI / 2;
+    } else if (item === 'hay') { // a little tied hay bale: straw on every side, two twine bands, fuzzy loose straws
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.17, 0.19), [hayEndMat, hayEndMat, hayMat, hayMat, hayMat, hayMat]));
+      [-0.075, 0.075].forEach(function (bx) {   // the twine bands, pulled tight round the bale
+        var hb = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.176, 0.196), bandMat);
+        hb.position.x = bx;
+        g.add(hb);
+      });
+      var strawGeo = new THREE.CylinderGeometry(0.0025, 0.0035, 1, 4);
+      for (var hs = 0; hs < 46; hs++) {         // loose straws sticking out of the surface all over
+        var hf = hs % 6, hu = Math.random() - 0.5, hv = Math.random() - 0.5, hp = new THREE.Vector3(), hn = new THREE.Vector3();
+        if (hf < 2) { hp.set(hf ? 0.15 : -0.15, hu * 0.17, hv * 0.19); hn.set(hf ? 1 : -1, 0, 0); }
+        else if (hf < 4) { hp.set(hu * 0.3, hf === 2 ? 0.085 : -0.085, hv * 0.19); hn.set(0, hf === 2 ? 1 : -1, 0); }
+        else { hp.set(hu * 0.3, hv * 0.17, hf === 4 ? 0.095 : -0.095); hn.set(0, 0, hf === 4 ? 1 : -1); }
+        var hlen = 0.025 + Math.random() * 0.05;
+        var straw = new THREE.Mesh(strawGeo, hs % 3 ? hayStrawMat : hayStrawPaleMat);
+        hn.x += (Math.random() - 0.5) * 1.2; hn.y += (Math.random() - 0.5) * 1.2; hn.z += (Math.random() - 0.5) * 1.2; hn.normalize();
+        straw.scale.set(1, hlen, 1);
+        straw.position.copy(hp).addScaledVector(hn, hlen * 0.35);
+        straw.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), hn);
+        g.add(straw);
+      }
     } else if (item === 'seed') { // three plump pearly seeds, each with a glowing gold crescent moon
       var SEEDS = [[0, 0.03, -0.01, 1, 0], [-0.06, -0.005, 0.015, 0.88, 0.45], [0.06, -0.005, 0.015, 0.88, -0.45]];
       SEEDS.forEach(function (sd) {
@@ -3006,7 +3022,28 @@ function startGame(THREE) {
   var seedShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
   var petalMat = new THREE.MeshStandardMaterial({ color: 0xff9be0, emissive: 0xff6fcf, emissiveIntensity: 0.45, roughness: 0.4, side: THREE.DoubleSide });
   var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
-  var hayMat = new THREE.MeshStandardMaterial({ color: 0xe8c45a, roughness: 0.95 });
+  // straw textures for the hay bale: long golden strands on the sides, cut ends on the two ends
+  function hayCanvas(ends) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var x = c.getContext('2d');
+    x.fillStyle = ends ? '#d6a848' : '#efca5e';
+    x.fillRect(0, 0, 128, 128);
+    var cols = ends ? ['#7a5418', '#f2d68a', '#a87a28', '#e0b450'] : ['#fff0b0', '#c99a32', '#f2d070', '#a87824', '#e8c058'];
+    x.lineCap = 'round';
+    for (var i = 0; i < (ends ? 260 : 420); i++) {
+      var px = Math.random() * 128, py = Math.random() * 128;
+      x.strokeStyle = x.fillStyle = cols[i % cols.length];
+      if (ends) { x.beginPath(); x.arc(px, py, 1 + Math.random() * 1.6, 0, Math.PI * 2); x.fill(); }
+      else { var l = 10 + Math.random() * 28; x.lineWidth = 1 + Math.random() * 1.6; x.beginPath(); x.moveTo(px, py); x.lineTo(px + l, py + (Math.random() - 0.5) * 4); x.stroke(); }
+    }
+    var t = new THREE.CanvasTexture(c);
+    return t;
+  }
+  var hayMat = new THREE.MeshStandardMaterial({ map: hayCanvas(false), roughness: 0.95 });
+  var hayEndMat = new THREE.MeshStandardMaterial({ map: hayCanvas(true), roughness: 0.95 });
+  var hayStrawMat = new THREE.MeshStandardMaterial({ color: 0xe0b450, roughness: 0.9 });
+  var hayStrawPaleMat = new THREE.MeshStandardMaterial({ color: 0xf6dc8a, roughness: 0.9 });
   var bandMat = new THREE.MeshStandardMaterial({ color: 0xb0402e, roughness: 0.8 });
   var coalGeo = new THREE.IcosahedronGeometry(0.13, 0);
   coalGeo.scale(1, 0.8, 0.9);
@@ -3305,13 +3342,14 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone' || held === 'fiber') { // these sit upright in your hand
+        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone' || held === 'fiber' || held === 'hay') { // these sit upright in your hand
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
           model.scale.setScalar(0.95);
-          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : held === 'fiber' ? 0.13 : 0.06; // pointed tips rest in the palm; fiber is held below its twine
+          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : held === 'fiber' ? 0.13 : held === 'hay' ? 0.08 : 0.06; // pointed tips rest in the palm; fiber is held below its twine
           if (held === 'fiber') model.rotation.z = -0.45; // the bundle leans out a little, like it does in the bag
+          if (held === 'hay') { model.scale.setScalar(0.75); model.rotation.y = 0.5; } // a smaller bale, turned so you see its side and end
           palm.add(model);
           heldItemGrp.add(palm);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
@@ -4073,7 +4111,7 @@ function startGame(THREE) {
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), fill: 95, info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 93, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
     fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), fill: 92, info: 'Tough green strands trimmed from bushes.' },
-    hay: { name: 'Hay', icon: '🌾', img: iconHay(), info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
+    hay: { name: 'Hay', icon: '🌾', img: iconHay(), fill: 92, info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
     coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
     sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
@@ -4678,22 +4716,99 @@ function startGame(THREE) {
   }
   function iconHay() {
     return iconCanvas(function (g) {
+      g.lineJoin = 'round';
       g.lineCap = 'round';
-      for (var i = 0; i < 22; i++) { // golden straw fanning out of a tied bundle
-        var x = 14 + i * 1.7, spread = (i - 10.5) * 1.1;
-        g.strokeStyle = ['#e8c45a', '#f2d779', '#d4a83e', '#f7e49a'][i % 4];
-        g.lineWidth = 2;
-        g.beginPath();
-        g.moveTo(32 + spread * 0.35, 36);
-        g.lineTo(x + spread * 0.4, 6 + (i % 5));
-        g.moveTo(32 + spread * 0.35, 36);
-        g.lineTo(x + spread * 0.25, 60 - (i % 4));
-        g.stroke();
+      g.translate(3.23, 3.23);                                // centred and sized to fill the slot
+      g.scale(0.871, 0.871);
+      var seedN = 7;
+      function rnd() { seedN = (seedN * 16807) % 2147483647; return seedN / 2147483647; } // the same straw every time
+      // a little hay bale seen from above and to the side: O is the bottom front corner
+      var O = [26, 56], LX = [34, -12], EX = [-22, -10], UP = [0, -24];
+      function pt(a, b, c) { return [O[0] + LX[0] * a + EX[0] * b + UP[0] * c, O[1] + LX[1] * a + EX[1] * b + UP[1] * c]; }
+      function face(p) { g.beginPath(); g.moveTo(p[0][0], p[0][1]); for (var i = 1; i < p.length; i++) g.lineTo(p[i][0], p[i][1]); g.closePath(); }
+      var top = [pt(0, 0, 1), pt(1, 0, 1), pt(1, 1, 1), pt(0, 1, 1)];
+      var side = [pt(0, 0, 0), pt(1, 0, 0), pt(1, 0, 1), pt(0, 0, 1)];
+      var end = [pt(0, 0, 0), pt(0, 1, 0), pt(0, 1, 1), pt(0, 0, 1)];
+      // straw lying along the bale: lots of short golden strokes, clipped to a face
+      function straws(f, map, n, cols) {
+        g.save(); face(f); g.clip();
+        for (var i = 0; i < n; i++) {
+          var s = rnd() * 1.2 - 0.1, t = rnd(), l = 0.12 + rnd() * 0.22, j = (rnd() - 0.5) * 0.06;
+          var p0 = map(s, t), p1 = map(s + l, t + j);
+          g.strokeStyle = cols[i % cols.length];
+          g.lineWidth = 0.8 + rnd() * 0.7;
+          g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke();
+        }
+        g.restore();
       }
-      g.fillStyle = '#b0402e'; // a red tie round the middle
-      g.fillRect(19, 33, 26, 6);
-      g.fillStyle = 'rgba(255,255,255,0.35)';
-      g.fillRect(19, 33, 26, 2);
+      g.shadowColor = 'rgba(60,30,90,0.35)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 2;
+      face([pt(0, 0, 0), pt(1, 0, 0), pt(1, 0, 1), pt(1, 1, 1), pt(0, 1, 1), pt(0, 1, 0)]);
+      g.fillStyle = '#c99a32';
+      g.fill();
+      g.shadowColor = 'transparent';
+      // the top: brightest, catching the sun
+      face(top);
+      var tg = g.createLinearGradient(top[3][0], top[3][1], top[1][0], top[1][1]);
+      tg.addColorStop(0, '#fbe79a'); tg.addColorStop(1, '#ecc860');
+      g.fillStyle = tg; g.fill();
+      straws(top, function (a, b) { return pt(a, b, 1); }, 70, ['#fff2b8', '#e8be52', '#d9a83e', '#f7dc80', '#c8952e']);
+      // the long side: warm gold, a little shaded
+      face(side);
+      var sg = g.createLinearGradient(0, side[3][1], 0, side[0][1]);
+      sg.addColorStop(0, '#e9c25a'); sg.addColorStop(1, '#b8862a');
+      g.fillStyle = sg; g.fill();
+      straws(side, function (a, b) { return pt(a, 0, b); }, 80, ['#f4d878', '#c99a32', '#a87824', '#e6bb52', '#8f6418']);
+      // the cut end: darker, showing the ends of the straws
+      face(end);
+      var eg = g.createLinearGradient(end[1][0], 0, end[0][0], 0);
+      eg.addColorStop(0, '#b88a2c'); eg.addColorStop(1, '#d6a844');
+      g.fillStyle = eg; g.fill();
+      g.save(); face(end); g.clip();
+      for (var d = 0; d < 55; d++) {
+        var q = pt(0, rnd(), rnd());
+        g.fillStyle = d % 3 ? 'rgba(110,72,18,0.55)' : 'rgba(255,236,170,0.7)';
+        g.beginPath(); g.ellipse(q[0], q[1], 0.9 + rnd() * 0.5, 0.7, 0, 0, Math.PI * 2); g.fill();
+      }
+      g.restore();
+      // two twine bands wrapped round the bale
+      [0.27, 0.73].forEach(function (a) {
+        var band = [pt(a, 0, 0), pt(a, 0, 1), pt(a, 1, 1)];
+        g.strokeStyle = 'rgba(110,70,15,0.45)'; g.lineWidth = 5.5;   // the straw bulges either side of the tight band
+        g.beginPath(); g.moveTo(band[0][0], band[0][1]); g.lineTo(band[1][0], band[1][1]); g.lineTo(band[2][0], band[2][1]); g.stroke();
+        g.strokeStyle = '#6e2e18'; g.lineWidth = 3.4;
+        g.beginPath(); g.moveTo(band[0][0], band[0][1]); g.lineTo(band[1][0], band[1][1]); g.lineTo(band[2][0], band[2][1]); g.stroke();
+        g.strokeStyle = '#b4502e'; g.lineWidth = 2.2;
+        g.beginPath(); g.moveTo(band[0][0], band[0][1]); g.lineTo(band[1][0], band[1][1]); g.lineTo(band[2][0], band[2][1]); g.stroke();
+        g.strokeStyle = 'rgba(255,200,160,0.6)'; g.lineWidth = 0.7;
+        g.beginPath(); g.moveTo(band[0][0] - 0.6, band[0][1]); g.lineTo(band[1][0] - 0.6, band[1][1] + 0.3); g.lineTo(band[2][0], band[2][1] + 0.6); g.stroke();
+      });
+      // crisp edges
+      g.strokeStyle = 'rgba(110,70,15,0.85)'; g.lineWidth = 0.9;
+      face([pt(0, 0, 0), pt(1, 0, 0), pt(1, 0, 1), pt(1, 1, 1), pt(0, 1, 1), pt(0, 1, 0)]); g.stroke();
+      g.strokeStyle = 'rgba(255,240,190,0.6)'; g.lineWidth = 0.8;
+      g.beginPath(); var e0 = pt(0, 0, 1), e1 = pt(1, 0, 1), e2 = pt(0, 1, 1); g.moveTo(e2[0], e2[1]); g.lineTo(e0[0], e0[1]); g.lineTo(e1[0], e1[1]); g.stroke();
+      // fuzzy edges: short straws sticking out all round the outline, so it looks soft rather than boxy
+      [[[0, 1, 1], [0, 0, 1], -1], [[0, 0, 1], [1, 0, 1], -1], [[1, 0, 1], [1, 1, 1], -1], [[1, 1, 1], [0, 1, 1], -1], [[0, 1, 1], [0, 1, 0], -1], [[1, 0, 0], [1, 0, 1], 1], [[0, 0, 0], [1, 0, 0], 1], [[0, 0, 0], [0, 1, 0], 1]].forEach(function (ed, ei) {
+        var a0 = pt(ed[0][0], ed[0][1], ed[0][2]), a1 = pt(ed[1][0], ed[1][1], ed[1][2]);
+        var ex = a1[0] - a0[0], ey = a1[1] - a0[1], el = Math.sqrt(ex * ex + ey * ey);
+        var nx = ey / el, ny = -ex / el;        // which way is outward from this edge
+        var cx = (a0[0] + a1[0]) / 2 - 32, cy = (a0[1] + a1[1]) / 2 - 33;
+        if (nx * cx + ny * cy < 0) { nx = -nx; ny = -ny; }
+        for (var f = 0; f < 9; f++) {
+          var t = rnd(), L = 1.5 + rnd() * 2.5, tw = (rnd() - 0.5) * 0.9;
+          var bx = a0[0] + ex * t, by = a0[1] + ey * t;
+          g.strokeStyle = f % 3 ? '#e2b44a' : '#f7dc80'; g.lineWidth = 0.9;
+          g.beginPath(); g.moveTo(bx - nx * 1.2, by - ny * 1.2); g.lineTo(bx + (nx + ex / el * tw) * L, by + (ny + ey / el * tw) * L); g.stroke();
+        }
+      });
+      // a few longer loose straws poking out of the edges
+      [[0.15, 0, 1, -3, -5], [0.5, 1, 1, 1, -6], [0.88, 0, 1, 5, -4], [0, 0.6, 0.5, -6, 1], [0, 0.2, 0.15, -5, 4], [1, 0, 0.6, 6, 1]].forEach(function (s, i) {
+        var p = pt(s[0], s[1], s[2]);
+        g.strokeStyle = i % 2 ? '#f2d070' : '#d9a83e'; g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(p[0], p[1]); g.quadraticCurveTo(p[0] + s[3] * 0.6, p[1] + s[4] * 0.3, p[0] + s[3], p[1] + s[4]); g.stroke();
+      });
     });
   }
   function iconCoal() {
