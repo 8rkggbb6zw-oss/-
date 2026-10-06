@@ -2941,7 +2941,7 @@ function startGame(THREE) {
   }
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
 
-  // a round table with stools, potions, a candle and an open spellbook, on a braided rug
+  // the rug in the middle of the room
   var rugSide = rMat(0x2a2050, { roughness: 1 }), RUG_X = 0.1, RUG_Z = 0.6, RUG_W = 3.9, RUG_D = 2.7; // a rectangular woven rug
   iPart(new THREE.BoxGeometry(RUG_W, 0.03, RUG_D), [rugSide, rugSide, R.rug, rugSide, rugSide, rugSide], RUG_X, 0.015, RUG_Z);
   var fringeMat = rMat(0xf5e9d3, { roughness: 1 }), knotMat = rMat(0xe3b553, { roughness: 0.8 });
@@ -2954,19 +2954,6 @@ function startGame(THREE) {
       }
     }
   });
-  var TBX = -1.2, TBZ = 0.9;
-  iPart(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 20), R.wood, TBX, 0.78, TBZ);
-  iPart(new THREE.CylinderGeometry(0.08, 0.12, 0.75, 8), R.darkWood, TBX, 0.38, TBZ);
-  iPart(new THREE.CylinderGeometry(0.35, 0.4, 0.05, 12), R.darkWood, TBX, 0.03, TBZ);
-  [[0.95, 0.3], [-0.6, 0.85]].forEach(function (st) {
-    iPart(new THREE.CylinderGeometry(0.26, 0.26, 0.08, 14), R.curtain, TBX + st[0], 0.48, TBZ + st[1]);
-    iPart(new THREE.CylinderGeometry(0.06, 0.08, 0.45, 6), R.darkWood, TBX + st[0], 0.22, TBZ + st[1]);
-  });
-  potion(TBX + 0.25, 0.82, TBZ - 0.2, 0x9ab8ff, 1.1); potion(TBX - 0.3, 0.82, TBZ - 0.1, 0xff8fd0, 0.8); potion(TBX + 0.1, 0.82, TBZ + 0.3, 0x7dff9a, 0.7);
-  candle(TBX - 0.15, 0.82, TBZ + 0.25, 0.22);
-  iPart(new THREE.BoxGeometry(0.42, 0.04, 0.3), R.cream, TBX - 0.2, 0.84, TBZ - 0.42, 0, 0.3, 0.06);
-  iPart(new THREE.BoxGeometry(0.44, 0.03, 0.32), R.curtain, TBX - 0.2, 0.82, TBZ - 0.42, 0, 0.3, 0);
-  inSolids.push([TBX, TBZ, 0.8]);
 
 
 
