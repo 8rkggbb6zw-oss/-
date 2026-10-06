@@ -52,6 +52,16 @@ function startGame(THREE) {
   var LAKE_X = 20, LAKE_Z = 2, LAKE_R = 8.5;
   var HOUSE_X = 12, HOUSE_Z = -28;                                   // the witchy farmhouse, up near the top, a bit to the right
   var HOUSE_TURN = 0;                                                // squared up with the island, its door facing down toward the middle
+  // the farmhouse porch: [top height, from, to (distance out from the front wall), width] for the landing and each step
+  var PORCH_STEPS = [[0.45, 0, 0.55, 1.6], [0.3, 0.55, 0.88, 1.5], [0.15, 0.88, 1.2, 1.4]];
+  function porchHeight(x, z) {                                        // how high the porch is under a spot (0 if it isn't on the porch)
+    var lx = x - HOUSE_X, lz = z - (HOUSE_Z + 1.9);                   // the house faces straight down the island, its front wall 1.9 out
+    for (var i = 0; i < PORCH_STEPS.length; i++) {
+      var st = PORCH_STEPS[i];
+      if (lz >= st[1] && lz < st[2] && Math.abs(lx) < st[3] / 2) return st[0];
+    }
+    return 0;
+  }
   var IN_X = 0, IN_Z = 1000;                                          // where the inside of the farmhouse is built, far away from the island
   var HOUSE_DOOR_X = HOUSE_X + Math.sin(HOUSE_TURN) * 3.4, HOUSE_DOOR_Z = HOUSE_Z + Math.cos(HOUSE_TURN) * 3.4; // just outside the front door
   var MAX_MANA = 100, SPELL_COST = 35;
@@ -2471,7 +2481,8 @@ function startGame(THREE) {
     flowerWhite: new THREE.MeshStandardMaterial({ color: 0xfff6fb, roughness: 0.6 }),
     flowerLilac: new THREE.MeshStandardMaterial({ color: 0xc9a6f0, roughness: 0.6 }),
     flowerHeart: new THREE.MeshStandardMaterial({ color: 0xffd04a, emissive: 0xb07a10, emissiveIntensity: 0.2, roughness: 0.5 }),
-    soil: new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 })
+    soil: new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }),
+    porchSlab: new THREE.MeshStandardMaterial({ color: 0xa69eae, roughness: 0.75 })
   };
   function hPart(geo, matName, x, y, z, rx, ry, rz, parent) { // one piece of the house
     var m = new THREE.Mesh(geo, houseMats[matName]);
@@ -2540,8 +2551,12 @@ function startGame(THREE) {
   hPart(new THREE.TorusGeometry(0.56, 0.09, 6, 18, Math.PI), 'stone', 0, FOOT_H + 1.3, FRONT + 0.06);
   [-1, 1].forEach(function (s) { hPart(new THREE.BoxGeometry(0.18, 1.3, 0.16), 'stone', s * 0.56, FOOT_H + 0.65, FRONT + 0.06); });
   hPart(new THREE.SphereGeometry(0.06, 10, 8), 'gold', 0.32, FOOT_H + 0.72, FRONT + 0.11);
-  hPart(new THREE.BoxGeometry(1.5, 0.4, 0.8), 'stone', 0, FOOT_H - 0.23, FRONT + 0.45);    // the front step
-  hPart(new THREE.BoxGeometry(1.2, 0.04, 0.45), 'flowerPink', 0, FOOT_H - 0.01, FRONT + 0.5); // a little welcome mat
+  // the front porch: a stone landing at the door and two steps down to the path, each with a smooth slab on top
+  PORCH_STEPS.forEach(function (st) {
+    var top = st[0], z0 = FRONT + st[1], z1 = FRONT + st[2], wide = st[3];
+    hPart(new THREE.BoxGeometry(wide, top + 0.2, z1 - z0), 'stone', 0, (top - 0.2) / 2, (z0 + z1) / 2);
+    hPart(new THREE.BoxGeometry(wide + 0.06, 0.04, z1 - z0 + 0.05), 'porchSlab', 0, top - 0.02, (z0 + z1) / 2 + 0.02);
+  });
 
   // glowing windows with shutters and flower boxes
   function windowAt(x, y, z, ry, round) {
@@ -6720,7 +6735,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z);
+    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z); // up the porch steps
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
