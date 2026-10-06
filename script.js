@@ -2771,18 +2771,35 @@ function startGame(THREE) {
   });
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
   floorTex.repeat.set(3, 3);
-  var paperTex = paintTexture(128, 128, function (g, w, h) {          // dusty lavender wallpaper with little gold stars and moons, wood panels below
-    g.fillStyle = '#b9a3d6'; g.fillRect(0, 0, w, h);
-    for (var i = 0; i < 4; i++) { g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(i * 32 + 14, 0, 4, h * 0.62); }
-    g.fillStyle = '#e8c86a';
-    for (var k = 0; k < 6; k++) {
-      var sx = (k % 3) * 44 + 12 + (k > 2 ? 22 : 0), sy = k > 2 ? 52 : 18;
-      if (k % 2) { g.beginPath(); g.arc(sx, sy, 5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b9a3d6'; g.beginPath(); g.arc(sx + 2.5, sy - 1.5, 4.2, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e8c86a'; }
-      else { g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 2 : 5, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); } g.fill(); }
+  var paperTex = paintTexture(128, 128, function (g, w, h) {          // cosy striped wallpaper: dusty rose and cream, little flowers and gold moons, wood panels below
+    var top = h * 0.66;
+    for (var st = 0; st < 8; st++) {                                   // soft vertical stripes
+      g.fillStyle = st % 2 ? '#f3dfe6' : '#e2b8c8';
+      g.fillRect(st * 16, 0, 16, top);
     }
-    g.fillStyle = '#6e4a3a'; g.fillRect(0, h * 0.66, w, h * 0.34);   // wainscot panels
-    g.fillStyle = 'rgba(30,15,10,0.45)'; g.fillRect(0, h * 0.66, w, 3);
-    for (var q = 0; q < 4; q++) { g.strokeStyle = 'rgba(30,15,10,0.35)'; g.lineWidth = 2; g.strokeRect(q * 32 + 4, h * 0.7, 24, h * 0.25); }
+    g.fillStyle = 'rgba(160,90,120,0.35)';
+    for (var ln = 0; ln < 8; ln++) g.fillRect(ln * 16 + 7.5, 0, 1, top); // a thin line down the middle of each stripe
+    function flower(x, y) {                                            // a tiny five-petal flower
+      g.fillStyle = '#fff8fb';
+      for (var p = 0; p < 5; p++) { var a = p / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 2.4, y + Math.sin(a) * 2.4, 1.8, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#e8b84a'; g.beginPath(); g.arc(x, y, 1.3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#8fb87a'; g.beginPath(); g.ellipse(x + 3.5, y + 4, 2.4, 1.1, 0.6, 0, Math.PI * 2); g.fill();
+    }
+    function moon(x, y) {                                              // a little gold crescent moon
+      g.fillStyle = '#d9a83e'; g.beginPath(); g.arc(x, y, 3.6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#e2b8c8'; g.beginPath(); g.arc(x + 1.8, y - 1, 3.1, 0, Math.PI * 2); g.fill();
+    }
+    for (var r = 0; r < 3; r++) {
+      for (var c = 0; c < 4; c++) {
+        var x = c * 32 + 8 + (r % 2) * 16, y = r * 28 + 12;
+        if ((r + c) % 2) flower(x, y); else moon(x, y);
+      }
+    }
+    g.fillStyle = '#fff4e6'; g.fillRect(0, top - 4, w, 5);           // a cream rail between the paper and the panels
+    g.fillStyle = 'rgba(120,70,60,0.35)'; g.fillRect(0, top + 1, w, 1);
+    g.fillStyle = '#6e4a3a'; g.fillRect(0, top + 2, w, h - top - 2);   // wainscot panels
+    for (var q = 0; q < 4; q++) { g.strokeStyle = 'rgba(30,15,10,0.35)'; g.lineWidth = 2; g.strokeRect(q * 32 + 4, h * 0.71, 24, h * 0.24); }
+    g.fillStyle = 'rgba(255,220,190,0.12)'; for (var q2 = 0; q2 < 4; q2++) g.fillRect(q2 * 32 + 6, h * 0.72, 20, 2);
   });
   paperTex.wrapS = THREE.RepeatWrapping;
   var quiltTex = paintTexture(64, 64, function (g, w, h) {            // a patchwork quilt
