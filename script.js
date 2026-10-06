@@ -2962,20 +2962,10 @@ function startGame(THREE) {
   var auv = archGeo.attributes.uv;
   for (var au = 0; au < auv.count; au++) auv.setXY(au, auv.getX(au) * 0.6, auv.getY(au) * 0.6);
   iPart(archGeo, R.stone, FPX, 0, FZ0);
-  // a carved keystone over the arch: a wedge of pale stone with a raised gold crescent moon and two little stars
+  // a carved keystone over the arch: a wedge of pale stone
   var key = new THREE.Shape();
   key.moveTo(-0.13, 0); key.lineTo(0.13, 0); key.lineTo(0.18, 0.36); key.lineTo(-0.18, 0.36); key.lineTo(-0.13, 0);
   iPart(new THREE.ExtrudeGeometry(key, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 }), rMat(0xd8d0de, { roughness: 0.85 }), FPX, OPEN_H + 0.22, FZF);
-  var moonShape = new THREE.Shape();                                   // a fat crescent: round outer edge, a smaller curve scooped out of one side
-  for (var mi = 0; mi <= 24; mi++) { var ma = Math.PI * 0.32 + mi / 24 * Math.PI * 1.36; var mx = Math.cos(ma) * 0.1, my = Math.sin(ma) * 0.1; if (mi) moonShape.lineTo(mx, my); else moonShape.moveTo(mx, my); }
-  for (mi = 24; mi >= 0; mi--) { var mb = Math.PI * 0.42 + mi / 24 * Math.PI * 1.16; moonShape.lineTo(0.042 + Math.cos(mb) * 0.072, Math.sin(mb) * 0.08); }
-  var keyMoonMat = rMat(0xffd870, { emissive: 0xd09020, emissiveIntensity: 0.45, metalness: 0.45, roughness: 0.3 });
-  iPart(new THREE.ExtrudeGeometry(moonShape, { depth: 0.025, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.008, bevelSegments: 3, curveSegments: 24 }), keyMoonMat, FPX - 0.02, OPEN_H + 0.4, FZF + 0.075, 0, 0, -0.3);
-  [[0.075, 0.47, 0.03], [0.045, 0.33, 0.02]].forEach(function (ks) {  // two tiny gold stars beside the moon
-    var star = new THREE.Shape();
-    for (var p = 0; p < 10; p++) { var r = p % 2 ? ks[2] * 0.42 : ks[2], a = p / 10 * Math.PI * 2 + Math.PI / 2; if (p) star.lineTo(Math.cos(a) * r, Math.sin(a) * r); else star.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
-    iPart(new THREE.ExtrudeGeometry(star, { depth: 0.012, bevelEnabled: false }), keyMoonMat, FPX + ks[0], OPEN_H + ks[1], FZF + 0.075);
-  });
   var brickTex = paintTexture(128, 128, function (g, w, h) {           // sooty bricks inside, glowing hot near the bottom
     g.fillStyle = '#1c0f0c'; g.fillRect(0, 0, w, h);
     for (var r = 0; r < 8; r++) for (var c = -1; c < 5; c++) {
@@ -3121,7 +3111,7 @@ function startGame(THREE) {
   var foot = new THREE.Shape();                                        // a footboard with a gently curved top
   foot.moveTo(-BED_W / 2, 0); foot.lineTo(BED_W / 2, 0); foot.lineTo(BED_W / 2, 0.5); foot.quadraticCurveTo(0, 0.68, -BED_W / 2, 0.5); foot.lineTo(-BED_W / 2, 0);
   iPart(new THREE.ExtrudeGeometry(foot, { depth: 0.06, bevelEnabled: false }), bedWood, BX, 0.28, FZ - 0.03);
-  // the headboard: a black arched frame with a tufted plum velvet panel, gold buttons and a gold crescent moon
+  // the headboard: a black arched frame with a tufted plum velvet panel and gold buttons
   function arch(w, hgt, top) { var s = new THREE.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, hgt); s.bezierCurveTo(w / 2, hgt + top * 0.8, w * 0.2, hgt + top, 0, hgt + top); s.bezierCurveTo(-w * 0.2, hgt + top, -w / 2, hgt + top * 0.8, -w / 2, hgt); s.lineTo(-w / 2, 0); return s; }
   iPart(new THREE.ExtrudeGeometry(arch(BED_W, 0.9, 0.45), { depth: 0.08, bevelEnabled: false }), bedWood, BX, 0.4, HZ - 0.06);
   iPart(new THREE.ExtrudeGeometry(arch(BED_W - 0.24, 0.8, 0.36), { depth: 0.06, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 }), velvet, BX, 0.5, HZ + 0.02);
@@ -3129,7 +3119,6 @@ function startGame(THREE) {
     var tx = (tc - (tr === 2 ? 1 : 2)) * 0.32, ty = 0.75 + tr * 0.3;
     iPart(new THREE.SphereGeometry(0.025, 8, 6), R.gold, BX + tx, ty, HZ + 0.13);
   }
-  iPart(new THREE.TorusGeometry(0.13, 0.03, 8, 20, Math.PI * 1.3), R.gold, BX, 1.62, HZ + 0.12, 0, 0, 0.9);
   // mattress, sheet and the draped duvet
   softSlab(BED_W - 0.04, BED_L, 0.3, 0.06, R.cream, BX, 0.45, MZ);
   var DUV_L = BED_L * 0.72, DROP = 0.3, DUV_Z0 = MZ + BED_L / 2 - DUV_L;  // the duvet covers the bottom of the bed and hangs over the sides and foot
@@ -3219,16 +3208,63 @@ function startGame(THREE) {
 
 
 
-  // windows with pink curtains, softly lit (no view of the outside)
-  var panes = [];
-  [['N', 1.9], ['E', 0.2]].forEach(function (wd) {
-    var wg = new THREE.Group(); wg.position.set(wd[1], 1.95, 0.03); inWalls[wd[0]].g.add(wg);
-    var pane = iPart(new THREE.PlaneGeometry(0.9, 1.0), R.pane, 0, 0, 0.01, 0, 0, 0, wg); panes.push(pane);
-    iPart(new THREE.BoxGeometry(1.06, 0.08, 0.08), R.darkWood, 0, 0.54, 0.04, 0, 0, 0, wg);
-    iPart(new THREE.BoxGeometry(1.1, 0.1, 0.16), R.darkWood, 0, -0.54, 0.07, 0, 0, 0, wg);
-    iPart(new THREE.BoxGeometry(0.05, 1.0, 0.04), R.darkWood, 0, 0, 0.03, 0, 0, 0, wg);
-    iPart(new THREE.BoxGeometry(1.3, 0.06, 0.06), R.gold, 0, 0.68, 0.12, 0, 0, Math.PI / 2 * 0, wg);
-    [-1, 1].forEach(function (s) { iPart(new THREE.BoxGeometry(0.3, 1.3, 0.06), R.curtain, s * 0.55, 0.05, 0.12, 0, 0, s * -0.05, wg); });
+  // windows: arched wooden frames with little panes, a deep sill, a twilight sky outside, and pleated pink curtains
+  // gathered back with gold tie-backs, hung from a gold rod with ball finials under a ruffled valance
+  var skyTex = paintTexture(128, 160, function (g, w, h) {            // the view: a soft dusky sky with a few stars and distant hills
+    var sky = g.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#3c3a7a'); sky.addColorStop(0.55, '#8e7ac0'); sky.addColorStop(0.85, '#e8b4c8'); sky.addColorStop(1, '#f6d2b8');
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,248,230,0.9)';
+    [[18, 14], [52, 30], [96, 18], [76, 52], [30, 60], [110, 70], [64, 10]].forEach(function (st) { g.beginPath(); g.arc(st[0], st[1], 1.3, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = '#5a5a8a';
+    g.beginPath(); g.moveTo(0, h); g.lineTo(0, h - 22); g.quadraticCurveTo(40, h - 40, 80, h - 26); g.quadraticCurveTo(110, h - 18, w, h - 30); g.lineTo(w, h); g.fill();
+  });
+  var paneMat = rMat(0xffffff, { map: skyTex, emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.55, roughness: 0.2 });
+  var winFrame = rMat(0xf1e6da, { roughness: 0.6 });                  // creamy painted wood
+  var curtainMat = rMat(0xe07aae, { roughness: 0.9, side: THREE.DoubleSide });
+  var curtainLining = rMat(0xf5c4dc, { roughness: 0.9 });
+  var WIN_W = 0.9, WIN_H = 1.05, ARCH = 0.3;
+  function winArch(w, h, a) { var s = new THREE.Shape(); s.moveTo(-w / 2, -h / 2); s.lineTo(w / 2, -h / 2); s.lineTo(w / 2, h / 2 - a); s.quadraticCurveTo(w / 2, h / 2 + a * 0.35, 0, h / 2 + a * 0.35); s.quadraticCurveTo(-w / 2, h / 2 + a * 0.35, -w / 2, h / 2 - a); s.lineTo(-w / 2, -h / 2); return s; }
+  [['N', 1.05], ['E', 0.2]].forEach(function (wd) {
+    var wg = new THREE.Group(); wg.position.set(wd[1], 1.85, 0.02); inWalls[wd[0]].g.add(wg);
+    var outer = winArch(WIN_W + 0.16, WIN_H + 0.16, ARCH + 0.06);
+    outer.holes.push(winArch(WIN_W, WIN_H, ARCH));
+    iPart(new THREE.ExtrudeGeometry(outer, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 }), winFrame, 0, 0, 0, 0, 0, 0, wg);
+    var paneGeo = new THREE.ShapeGeometry(winArch(WIN_W, WIN_H, ARCH)), puv = paneGeo.attributes.uv, pp = paneGeo.attributes.position;
+    for (var pv = 0; pv < puv.count; pv++) puv.setXY(pv, pp.getX(pv) / WIN_W + 0.5, (pp.getY(pv) + WIN_H / 2) / (WIN_H + ARCH * 0.35));
+    iPart(paneGeo, paneMat, 0, 0, 0.005, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.035, WIN_H + ARCH * 0.3, 0.04), winFrame, 0, 0.04, 0.04, 0, 0, 0, wg);                    // the glazing bars
+    [-0.18, 0.18].forEach(function (by) { iPart(new THREE.BoxGeometry(WIN_W, 0.035, 0.04), winFrame, 0, by, 0.04, 0, 0, 0, wg); });
+    iPart(new THREE.BoxGeometry(WIN_W + 0.36, 0.06, 0.2), winFrame, 0, -WIN_H / 2 - 0.1, 0.1, 0, 0, 0, wg);                  // a deep sill
+    iPart(new THREE.BoxGeometry(WIN_W + 0.2, 0.08, 0.05), winFrame, 0, -WIN_H / 2 - 0.16, 0.04, 0, 0, 0, wg);
+    var ROD_Y = WIN_H / 2 + ARCH * 0.35 + 0.18, ROD_W = WIN_W + 0.8;
+    iPart(new THREE.CylinderGeometry(0.018, 0.018, ROD_W, 8), R.gold, 0, ROD_Y, 0.16, 0, 0, Math.PI / 2, wg);           // the curtain rod
+    [-1, 1].forEach(function (sd) {
+      iPart(new THREE.SphereGeometry(0.04, 10, 8), R.gold, sd * ROD_W / 2, ROD_Y, 0.16, 0, 0, 0, wg);                    // ball finials
+      iPart(new THREE.BoxGeometry(0.03, 0.03, 0.14), R.gold, sd * (ROD_W / 2 - 0.1), ROD_Y, 0.09, 0, 0, 0, wg);           // brackets
+      // a pleated curtain: hangs in soft folds from the rod, gathered in at a tie-back, then flares out below
+      var CW = 0.42, CH = ROD_Y + WIN_H / 2 + 0.3, cg = new THREE.PlaneGeometry(CW, CH, 16, 24), cp = cg.attributes.position;
+      for (var ci = 0; ci < cp.count; ci++) {
+        var u = cp.getX(ci) / CW + 0.5, v = 1 - (cp.getY(ci) / CH + 0.5);    // u across, v from the rod (0) down to the hem (1)
+        var tie = 0.62, gather = v < tie ? 1 - 0.55 * Math.pow(v / tie, 1.6) : 0.45 + 0.4 * Math.pow((v - tie) / (1 - tie), 0.8);
+        var x = (u - 0.5) * CW * gather - sd * (1 - gather) * 0.12;         // pulled toward the outside edge at the tie-back
+        var z = Math.sin(u * Math.PI * 6) * 0.025 * (0.6 + gather * 0.5); // the pleats
+        cp.setXYZ(ci, x, cp.getY(ci), z);
+      }
+      cg.computeVertexNormals();
+      var cx = sd * (WIN_W / 2 + 0.18);
+      iPart(cg, curtainMat, cx, ROD_Y - CH / 2, 0.13, 0, 0, 0, wg);
+      iPart(new THREE.TorusGeometry(0.06, 0.016, 6, 14), R.gold, cx - sd * 0.1, ROD_Y - CH * 0.62, 0.16, 0, Math.PI / 2, 0, wg); // gold tie-back
+      for (var rr = 0; rr < 4; rr++) iPart(new THREE.TorusGeometry(0.026, 0.006, 5, 10), R.gold, cx + (rr - 1.5) * 0.1, ROD_Y, 0.16, 0, Math.PI / 2, 0, wg); // curtain rings
+    });
+    var vg = new THREE.PlaneGeometry(ROD_W - 0.1, 0.2, 30, 3), vp = vg.attributes.position;   // a ruffled valance across the top
+    for (var vi = 0; vi < vp.count; vi++) {
+      var vx = vp.getX(vi), vy = vp.getY(vi), scallop = vy < -0.05 ? -0.04 * Math.abs(Math.sin(vx * Math.PI / 0.27)) : 0;
+      vp.setXYZ(vi, vx, vy + scallop, Math.sin(vx * 40) * 0.015);
+    }
+    vg.computeVertexNormals();
+    iPart(vg, curtainMat, 0, ROD_Y - 0.06, 0.18, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(ROD_W - 0.1, 0.025, 0.02), curtainLining, 0, ROD_Y + 0.04, 0.18, 0, 0, 0, wg);
   });
 
   // twinkly string lights along the top of the walls
