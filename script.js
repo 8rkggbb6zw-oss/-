@@ -2911,16 +2911,113 @@ function startGame(THREE) {
   iPart(new THREE.TorusGeometry(0.22, 0.05, 6, 18, Math.PI * 1.3), R.gold, FPX, 2.9, NW + 0.52, 0, 0, 0.9); // a gold moon above the fire
   inSolids.push([FPX, NW + 0.5, 1.2]);
 
-  // a cosy bed in the corner, with a patchwork quilt and two plump pillows
-  var BX = ROOM_W / 2 - 1.1, BZ = NW + 1.45;
-  iPart(new THREE.BoxGeometry(1.9, 0.4, 2.7), R.wood, BX, 0.25, BZ);
-  iPart(new THREE.BoxGeometry(2.0, 1.3, 0.14), R.darkWood, BX, 0.65, NW + 0.1);
-  iPart(new THREE.SphereGeometry(0.12, 10, 8), R.gold, BX - 0.95, 1.33, NW + 0.1);
-  iPart(new THREE.SphereGeometry(0.12, 10, 8), R.gold, BX + 0.95, 1.33, NW + 0.1);
-  iPart(new THREE.BoxGeometry(1.8, 0.25, 2.55), R.cream, BX, 0.57, BZ);
-  iPart(new THREE.BoxGeometry(1.86, 0.1, 1.75), R.quilt, BX, 0.73, BZ + 0.42);
-  [-0.42, 0.42].forEach(function (px) { iPart(new THREE.SphereGeometry(0.4, 14, 10), R.pillow, BX + px, 0.8, NW + 0.55).scale.set(1, 0.38, 0.6); });
-  inSolids.push([BX, BZ - 0.65, 1.0], [BX, BZ + 0.65, 1.0]);
+  // a black four-poster bed in the corner: turned posts with gold finials, a tufted plum velvet headboard
+  // with a gold moon, a starry quilted duvet draped over the sides, plump pillows, a throw and sheer drapes
+  var BED_W = 1.9, BED_L = 2.5, BX = ROOM_W / 2 - 1.15, HZ = NW + 0.16, FZ = HZ + BED_L + 0.16, MZ = HZ + 0.08 + BED_L / 2;
+  var bedWood = rMat(0x15121a, { roughness: 0.4, metalness: 0.15 }), velvet = rMat(0x5a3a78, { roughness: 0.95 });
+  var duvetTex = paintTexture(256, 256, function (g, w, h) {        // a midnight quilt stitched in diamonds, a gold star in each
+    g.fillStyle = '#2f2758'; g.fillRect(0, 0, w, h);
+    var shade = g.createLinearGradient(0, 0, w, h); shade.addColorStop(0, 'rgba(255,255,255,0.05)'); shade.addColorStop(1, 'rgba(0,0,0,0.08)');
+    g.fillStyle = shade; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(227,181,83,0.55)'; g.lineWidth = 2; g.setLineDash([5, 4]);
+    for (var d = -w; d < w * 2; d += 64) {                            // the diamond stitching
+      g.beginPath(); g.moveTo(d, 0); g.lineTo(d + h, h); g.stroke();
+      g.beginPath(); g.moveTo(d, h); g.lineTo(d + h, 0); g.stroke();
+    }
+    g.setLineDash([]);
+    for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) {         // a star or a little moon in the middle of each diamond
+      var sx = x * 64 + 32, sy = y * 64, alt = (x + y) % 2;
+      g.fillStyle = alt ? '#e3b553' : '#f6ecd8';
+      if (alt) { g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 3.5 : 9, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); } g.fill(); }
+      else { g.beginPath(); g.arc(sx, sy, 7, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2f2758'; g.beginPath(); g.arc(sx + 3, sy - 2, 6, 0, Math.PI * 2); g.fill(); }
+    }
+  });
+  duvetTex.wrapS = duvetTex.wrapT = THREE.RepeatWrapping;
+  var duvetMat = rMat(0xffffff, { map: duvetTex, roughness: 0.9, side: THREE.DoubleSide });
+  function softSlab(w, d, h, r, mat, x, y, z) {                        // a box with soft rounded edges (cushions, mattress, pillows)
+    var sh = new THREE.Shape(), hw = w / 2 - r, hd = d / 2 - r;
+    sh.moveTo(-hw, -d / 2); sh.lineTo(hw, -d / 2); sh.quadraticCurveTo(w / 2, -d / 2, w / 2, -hd);
+    sh.lineTo(w / 2, hd); sh.quadraticCurveTo(w / 2, d / 2, hw, d / 2); sh.lineTo(-hw, d / 2);
+    sh.quadraticCurveTo(-w / 2, d / 2, -w / 2, hd); sh.lineTo(-w / 2, -hd); sh.quadraticCurveTo(-w / 2, -d / 2, -hw, -d / 2);
+    var geo = new THREE.ExtrudeGeometry(sh, { depth: Math.max(0.001, h - r * 2), bevelEnabled: true, bevelThickness: r, bevelSize: r * 0.6, bevelSegments: 3, curveSegments: 6 });
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, r, 0);
+    return iPart(geo, mat, x, y, z);
+  }
+  // the frame: side rails, a footboard and four turned posts
+  [-1, 1].forEach(function (sd) { iPart(new THREE.BoxGeometry(0.09, 0.22, BED_L + 0.1), bedWood, BX + sd * (BED_W / 2 + 0.02), 0.36, MZ); });
+  var postPts = [[0.075, 0], [0.075, 0.12], [0.095, 0.16], [0.06, 0.22], [0.05, 0.5], [0.075, 0.56], [0.05, 0.62], [0.042, 1.3], [0.065, 1.36], [0.042, 1.42], [0.04, 2.3], [0.06, 2.36], [0.045, 2.42], [0.001, 2.42]];
+  var postGeo = new THREE.LatheGeometry(postPts.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 12);
+  [[-1, HZ], [1, HZ], [-1, FZ], [1, FZ]].forEach(function (pc) {
+    iPart(postGeo, bedWood, BX + pc[0] * (BED_W / 2 + 0.04), 0, pc[1]);
+    iPart(new THREE.SphereGeometry(0.07, 12, 10), R.gold, BX + pc[0] * (BED_W / 2 + 0.04), 2.48, pc[1]);   // gold finials
+  });
+  [HZ, FZ].forEach(function (z) { iPart(new THREE.BoxGeometry(BED_W + 0.1, 0.06, 0.06), bedWood, BX, 2.36, z); });   // the canopy frame
+  [-1, 1].forEach(function (sd) { iPart(new THREE.BoxGeometry(0.06, 0.06, FZ - HZ), bedWood, BX + sd * (BED_W / 2 + 0.04), 2.36, (HZ + FZ) / 2); });
+  var foot = new THREE.Shape();                                        // a footboard with a gently curved top
+  foot.moveTo(-BED_W / 2, 0); foot.lineTo(BED_W / 2, 0); foot.lineTo(BED_W / 2, 0.5); foot.quadraticCurveTo(0, 0.68, -BED_W / 2, 0.5); foot.lineTo(-BED_W / 2, 0);
+  iPart(new THREE.ExtrudeGeometry(foot, { depth: 0.06, bevelEnabled: false }), bedWood, BX, 0.28, FZ - 0.03);
+  // the headboard: a black arched frame with a tufted plum velvet panel, gold buttons and a gold crescent moon
+  function arch(w, hgt, top) { var s = new THREE.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, hgt); s.bezierCurveTo(w / 2, hgt + top * 0.8, w * 0.2, hgt + top, 0, hgt + top); s.bezierCurveTo(-w * 0.2, hgt + top, -w / 2, hgt + top * 0.8, -w / 2, hgt); s.lineTo(-w / 2, 0); return s; }
+  iPart(new THREE.ExtrudeGeometry(arch(BED_W, 0.9, 0.45), { depth: 0.08, bevelEnabled: false }), bedWood, BX, 0.4, HZ - 0.06);
+  iPart(new THREE.ExtrudeGeometry(arch(BED_W - 0.24, 0.8, 0.36), { depth: 0.06, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 }), velvet, BX, 0.5, HZ + 0.02);
+  for (var tr = 0; tr < 3; tr++) for (var tc = 0; tc < 5 - (tr === 2 ? 2 : 0); tc++) {     // tufting buttons
+    var tx = (tc - (tr === 2 ? 1 : 2)) * 0.32, ty = 0.75 + tr * 0.3;
+    iPart(new THREE.SphereGeometry(0.025, 8, 6), R.gold, BX + tx, ty, HZ + 0.13);
+  }
+  iPart(new THREE.TorusGeometry(0.13, 0.03, 8, 20, Math.PI * 1.3), R.gold, BX, 1.62, HZ + 0.12, 0, 0, 0.9);
+  // mattress, sheet and the draped duvet
+  softSlab(BED_W - 0.04, BED_L, 0.3, 0.06, R.cream, BX, 0.45, MZ);
+  var DUV_L = BED_L * 0.72, DROP = 0.3, DUV_Z0 = MZ + BED_L / 2 - DUV_L;  // the duvet covers the bottom of the bed and hangs over the sides and foot
+  var dg = new THREE.PlaneGeometry(BED_W + DROP * 2, DUV_L + DROP, 32, 26), dp = dg.attributes.position, half = (BED_W - 0.04) / 2, rr = 0.07;
+  function fold(e) { // how a length of cloth past an edge wraps over and hangs: returns [outward, drop]
+    if (e <= 0) return [e, 0];
+    if (e < rr * Math.PI / 2) { var an = e / rr; return [rr * Math.sin(an), -rr * (1 - Math.cos(an))]; }
+    return [rr, -rr - (e - rr * Math.PI / 2)];
+  }
+  for (var dv = 0; dv < dp.count; dv++) {
+    var px = dp.getX(dv), pz = -dp.getY(dv) + (DUV_L + DROP) / 2;     // pz: 0 at the top edge of the duvet, growing toward the foot
+    var py = 0, nx = px, nz = pz;
+    var es = Math.abs(px) - half, fs = fold(es);
+    if (es > 0) { nx = (px > 0 ? 1 : -1) * (half + fs[0]); py += fs[1]; nz += Math.sin(pz * 7 + px) * 0.025 * Math.min(1, es / DROP); }
+    var ef = pz - DUV_L, ff = fold(ef);
+    if (ef > 0) { nz = DUV_L + ff[0]; py += ff[1]; nx += Math.sin(px * 7) * 0.025 * Math.min(1, ef / DROP); }
+    py += 0.035 * Math.sin(Math.min(1, Math.max(0, pz / 0.25)) * Math.PI / 2) * (es < 0 && ef < 0 ? 1 : 0.3); // a soft puffy top
+    dp.setXYZ(dv, nx, py, nz);
+  }
+  dg.computeVertexNormals();
+  var duv = dg.attributes.uv;
+  for (var du = 0; du < duv.count; du++) duv.setXY(du, duv.getX(du) * 2.6, duv.getY(du) * 3);
+  iPart(dg, duvetMat, BX, 0.79, DUV_Z0);
+  softSlab(BED_W - 0.02, 0.22, 0.05, 0.02, R.cream, BX, 0.79, DUV_Z0 + 0.06);           // the sheet folded back over the top of the duvet
+  // pillows, a little round cushion, and a rose throw across the foot
+  [-0.43, 0.43].forEach(function (px) { softSlab(0.78, 0.46, 0.2, 0.09, R.pillow, BX + px, 0.73, HZ + 0.38).rotation.x = -0.25; });
+  softSlab(0.6, 0.36, 0.16, 0.07, rMat(0xd9c8f0), BX - 0.15, 0.8, HZ + 0.66).rotation.set(-0.35, 0.12, 0);
+  var cushion = iPart(new THREE.SphereGeometry(0.17, 16, 12), rMat(0xd98fb0), BX + 0.32, 0.95, HZ + 0.7);
+  cushion.scale.set(1, 1, 0.42); cushion.rotation.x = -0.3;
+  softSlab(BED_W + 0.08, 0.5, 0.07, 0.03, rMat(0xd98fb0, { roughness: 1 }), BX, 0.82, FZ - 0.5);
+  // sheer lavender drapes gathered at each post
+  var sheer = rMat(0xd8c4f0, { transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false });
+  [[-1, HZ], [1, HZ], [-1, FZ], [1, FZ]].forEach(function (pc, n) {
+    var cg = new THREE.PlaneGeometry(0.5, 2.3, 6, 16), cp = cg.attributes.position;
+    for (var ci = 0; ci < cp.count; ci++) {
+      var cy = cp.getY(ci) + 1.15, pinch = cy < 1.2 ? 0.35 + 0.65 * Math.abs(cy - 1.2) / 1.2 : 0.35 + 0.65 * (cy - 1.2) / 1.1; // gathered with a tie at the middle
+      cp.setXYZ(ci, cp.getX(ci) * pinch, cy, Math.sin(cp.getX(ci) * 18) * 0.03 * pinch);
+    }
+    cg.computeVertexNormals();
+    var drape = iPart(cg, sheer, BX + pc[0] * (BED_W / 2 + 0.04), 0.06, pc[1] + (n < 2 ? 0.12 : -0.12), 0, pc[0] > 0 ? -Math.PI / 2 : Math.PI / 2, 0);
+    iPart(new THREE.TorusGeometry(0.07, 0.015, 6, 12), R.gold, BX + pc[0] * (BED_W / 2 + 0.04), 1.26, pc[1] + (n < 2 ? 0.12 : -0.12), Math.PI / 2, 0, 0); // a gold tie-back
+  });
+  inSolids.push([BX, MZ - 0.7, 1.05], [BX, MZ + 0.5, 1.05]);
+  // a little black nightstand beside the bed, with a candle and a potion
+  var NSX = BX - BED_W / 2 - 0.5, NSZ = HZ + 0.3;
+  iPart(new THREE.BoxGeometry(0.55, 0.55, 0.5), bedWood, NSX, 0.3, NSZ);
+  iPart(new THREE.BoxGeometry(0.62, 0.05, 0.56), bedWood, NSX, 0.6, NSZ);
+  iPart(new THREE.BoxGeometry(0.42, 0.18, 0.02), rMat(0x26222e, { roughness: 0.6 }), NSX, 0.38, NSZ + 0.26);  // a drawer
+  iPart(new THREE.SphereGeometry(0.025, 8, 6), R.gold, NSX, 0.38, NSZ + 0.28);
+  candle(NSX - 0.12, 0.625, NSZ, 0.2);
+  potion(NSX + 0.13, 0.625, NSZ + 0.02, 0xb98cff, 0.9);
+  inSolids.push([NSX, NSZ, 0.38]);
 
   // a tall black bookshelf on the left wall, open-fronted and empty, with a crown on top and a plinth below
   var SX = -ROOM_W / 2 + 0.28, SZ = -0.5;                             // its middle; it faces into the room (+x)
