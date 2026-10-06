@@ -2466,7 +2466,12 @@ function startGame(THREE) {
     brew: new THREE.MeshStandardMaterial({ color: 0x7dff9a, emissive: 0x3fe070, emissiveIntensity: 0.8, roughness: 0.2 }),
     flowerPink: new THREE.MeshStandardMaterial({ color: 0xff8fd0, roughness: 0.6 }),
     flowerBlue: new THREE.MeshStandardMaterial({ color: 0x9ab8ff, roughness: 0.6 }),
-    leaf: new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 })
+    leaf: new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 }),
+    leafDark: new THREE.MeshStandardMaterial({ color: 0x3f8a3c, roughness: 0.8, side: THREE.DoubleSide }),
+    flowerWhite: new THREE.MeshStandardMaterial({ color: 0xfff6fb, roughness: 0.6 }),
+    flowerLilac: new THREE.MeshStandardMaterial({ color: 0xc9a6f0, roughness: 0.6 }),
+    flowerHeart: new THREE.MeshStandardMaterial({ color: 0xffd04a, emissive: 0xb07a10, emissiveIntensity: 0.2, roughness: 0.5 }),
+    soil: new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 })
   };
   function hPart(geo, matName, x, y, z, rx, ry, rz, parent) { // one piece of the house
     var m = new THREE.Mesh(geo, houseMats[matName]);
@@ -2561,11 +2566,39 @@ function startGame(THREE) {
     [-1, 1].forEach(function (s) { // shutters swung open
       hPart(new THREE.BoxGeometry(0.36, 0.86, 0.05), 'shutter', s * 0.62, 0, 0.1, 0, s * -0.35, 0, w);
     });
-    hPart(new THREE.BoxGeometry(0.9, 0.18, 0.24), 'beam', 0, -0.55, 0.13, 0, 0, 0, w); // a flower box underneath
+    // a flower box underneath: a wooden planter with a rim, full of soil, little five-petal flowers, leaves and trailing ivy
+    hPart(new THREE.BoxGeometry(0.9, 0.18, 0.24), 'beam', 0, -0.55, 0.13, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.96, 0.035, 0.28), 'beam', 0, -0.455, 0.13, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.84, 0.02, 0.2), 'soil', 0, -0.45, 0.13, 0, 0, 0, w);
+    var FLOWER_KINDS = ['flowerPink', 'flowerLilac', 'flowerWhite', 'flowerBlue', 'flowerPink', 'flowerWhite', 'flowerLilac'];
     for (var f = 0; f < 6; f++) {
-      hPart(new THREE.SphereGeometry(0.075, 8, 6), f % 2 ? 'flowerPink' : 'flowerBlue', -0.35 + f * 0.14, -0.4, 0.15 + (f % 2) * 0.04, 0, 0, 0, w);
-      hPart(new THREE.SphereGeometry(0.06, 6, 5), 'leaf', -0.3 + f * 0.13, -0.45, 0.2, 0, 0, 0, w);
+      var fx = -0.35 + f * 0.14, fh = 0.1 + ((f * 5) % 3) * 0.04, fz = 0.1 + (f % 2) * 0.07, tilt = -0.9 - (f % 2) * 0.35;
+      hPart(new THREE.CylinderGeometry(0.006, 0.008, fh, 4), 'leafDark', fx, -0.45 + fh / 2, fz, 0, 0, 0, w);        // the stem
+      var bloom = new THREE.Group();
+      bloom.position.set(fx, -0.45 + fh, fz); bloom.rotation.set(tilt, 0, (f - 3) * 0.12);   // facing up and out of the box
+      w.add(bloom);
+      for (var pt = 0; pt < 5; pt++) {                                 // five rounded petals
+        var pa = pt / 5 * Math.PI * 2 + f;
+        var petal = hPart(new THREE.SphereGeometry(0.048, 8, 6), FLOWER_KINDS[f], Math.cos(pa) * 0.048, Math.sin(pa) * 0.048, 0, 0, 0, pa, bloom);
+        petal.scale.set(1, 0.62, 0.3);
+      }
+      hPart(new THREE.SphereGeometry(0.026, 8, 6), 'flowerHeart', 0, 0, 0.012, 0, 0, 0, bloom).scale.set(1, 1, 0.6); // a golden middle
+      if (f % 3 === 1) {                                                // and here and there a closed bud
+        hPart(new THREE.CylinderGeometry(0.004, 0.005, fh * 0.7, 4), 'leafDark', fx + 0.05, -0.45 + fh * 0.35, fz - 0.04, 0, 0, -0.3, w);
+        hPart(new THREE.SphereGeometry(0.018, 8, 6), FLOWER_KINDS[(f + 2) % 7], fx + 0.07, -0.45 + fh * 0.7, fz - 0.04, 0, 0, 0, w).scale.set(1.2, 1.9, 1.2);
+      }
     }
+    for (var lf = 0; lf < 12; lf++) {                                   // pointed leaves fanning out of the soil
+      var lx = -0.4 + lf * 0.073, la = (lf % 2 ? 1 : -1) * (0.5 + (lf % 3) * 0.2);
+      var leaf = hPart(new THREE.SphereGeometry(0.06, 8, 6), lf % 3 ? 'leaf' : 'leafDark', lx, -0.425, 0.06 + (lf % 3) * 0.06, 0.6 - (lf % 2) * 0.3, 0, la, w);
+      leaf.scale.set(0.4, 1.2, 0.12);
+    }
+    [-0.3, 0.05, 0.32].forEach(function (ix, iv) {                      // ivy trailing over the front of the box
+      for (var k = 0; k < 4 + iv % 2; k++) {
+        var ivy = hPart(new THREE.SphereGeometry(0.036, 8, 6), k % 2 ? 'leaf' : 'leafDark', ix + Math.sin(k * 1.7 + iv) * 0.025, -0.47 - k * 0.055, 0.265, 0.2, 0, k % 2 ? 0.6 : -0.6, w);
+        ivy.scale.set(1, 0.8, 0.3);
+      }
+    });
   }
   windowAt(-1.55, FOOT_H + 1.35, FRONT + 0.02, 0);
   windowAt(1.55, FOOT_H + 1.35, FRONT + 0.02, 0);
