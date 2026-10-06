@@ -3380,7 +3380,27 @@ function startGame(THREE) {
     var fr = notes[Math.floor(Math.random() * notes.length)];
     bellTone(fr, 0.05, 0.5, when);
     bellTone(fr * 1.5, 0.025, 0.35, when + 0.03);
+  }  // Mana sounds: soft twinkles that climb higher as the Dawn Tree fills your mana, and a bright chord when it's full
+  var MANA_NOTES = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349.3, 2637, 3136, 3520]; // a happy five-note scale, two octaves
+  var manaChimeT = 0;
+  function manaFillSound(fullness, dt) {
+    if (!audioCtx) return;
+    manaChimeT -= dt;
+    if (manaChimeT > 0) return;
+    manaChimeT = 0.16;                                              // one twinkle every so often while it fills
+    var fr = MANA_NOTES[Math.min(MANA_NOTES.length - 1, Math.floor(fullness * MANA_NOTES.length))];
+    bellTone(fr, 0.04, 0.4);
+    bellTone(fr * 2.01, 0.012, 0.25, 0.01);                         // a glassy shimmer on top
   }
+  function manaFullSound() {
+    if (!audioCtx) return;
+    [2093, 2637, 3136, 4186].forEach(function (fr, i) {             // a quick sparkling chord, rolled upward
+      bellTone(fr, 0.06, 0.9, i * 0.05);
+      bellTone(fr * 1.005, 0.03, 0.9, i * 0.05 + 0.01);             // slightly detuned twin, for a soft chorus shimmer
+    });
+    for (var i = 0; i < 5; i++) bellTone(4000 + Math.random() * 2500, 0.02, 0.2, 0.25 + Math.random() * 0.5); // a few glints
+  }
+
 
 
 
@@ -5661,7 +5681,12 @@ function startGame(THREE) {
 
     var inZone = dist(player.position.x, player.position.z, TREE_X, TREE_Z) < TREE_ZONE;
     state.inTreeZone = inZone;
+    var manaBefore = state.mana;
     state.mana = Math.min(MAX_MANA, state.mana + (inZone ? 32 : 1.5) * dt);
+    if (inZone && manaBefore < MAX_MANA) {                          // the Dawn Tree is filling you up
+      manaFillSound(state.mana / MAX_MANA, dt);
+      if (state.mana >= MAX_MANA) manaFullSound();
+    } else manaChimeT = 0;
     ui.mana.style.width = (state.mana / MAX_MANA * 100).toFixed(1) + '%';
 
     // Lake: moving water, bobbing lily pads, the odd ripple
