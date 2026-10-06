@@ -3939,7 +3939,7 @@ function startGame(THREE) {
     stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
     coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
     sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
-    acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), info: 'Dropped by leafy trees.' },
+    acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), fill: 92, info: 'Dropped by leafy trees.' },
     pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), info: 'Dropped by pine trees.' }
   };
   // Little drawn pictures for items that don't have a good emoji
@@ -4545,16 +4545,98 @@ function startGame(THREE) {
   }
   function iconAcorn() {
     return iconCanvas(function (g) {
-      var grad = g.createRadialGradient(26, 38, 2, 32, 40, 20);
-      grad.addColorStop(0, '#e2a35e'); grad.addColorStop(1, '#9a5b26');
-      g.fillStyle = grad;
-      g.beginPath(); g.ellipse(32, 40, 14, 18, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#6b4a2b';
-      g.beginPath(); g.ellipse(32, 26, 18, 10, 0, Math.PI, 0); g.lineTo(50, 28); g.quadraticCurveTo(32, 34, 14, 28); g.fill();
-      g.strokeStyle = 'rgba(40,25,10,0.5)'; g.lineWidth = 1.5;
-      for (var i = 0; i < 5; i++) { g.beginPath(); g.moveTo(17 + i * 7, 18); g.lineTo(20 + i * 7, 30); g.stroke(); }
-      g.strokeStyle = '#5a3a1e'; g.lineWidth = 3;
-      g.beginPath(); g.moveTo(32, 16); g.lineTo(34, 7); g.stroke();
+      g.lineJoin = 'round';
+      g.lineCap = 'round';
+      // the nut: plump and glossy, warm brown, with a little pointed tip
+      function nutPath() {
+        g.beginPath();
+        g.moveTo(13.5, 31);
+        g.bezierCurveTo(12.5, 46, 24, 56.5, 31, 59.5);
+        g.bezierCurveTo(38, 56.5, 49.5, 46, 48.5, 31);
+        g.closePath();
+      }
+      g.shadowColor = 'rgba(60,30,90,0.35)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 2;
+      nutPath();
+      var nut = g.createRadialGradient(24, 38, 1.5, 31, 43, 21);
+      nut.addColorStop(0, '#f6c07a'); nut.addColorStop(0.45, '#d08a44'); nut.addColorStop(0.8, '#9c5a26'); nut.addColorStop(1, '#7a421a');
+      g.fillStyle = nut;
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.save(); nutPath(); g.clip();
+      var under = g.createLinearGradient(0, 31, 0, 40);      // the cap's soft shadow on the nut
+      under.addColorStop(0, 'rgba(60,30,10,0.55)'); under.addColorStop(1, 'rgba(60,30,10,0)');
+      g.fillStyle = under;
+      g.fillRect(10, 31, 42, 9);
+      g.strokeStyle = 'rgba(120,64,25,0.35)';                // faint lengthwise stripes
+      g.lineWidth = 1;
+      [[22, 25.5], [31, 31], [40, 36.5]].forEach(function (st) {
+        g.beginPath(); g.moveTo(st[0], 34); g.quadraticCurveTo(st[1], 48, 31, 58); g.stroke();
+      });
+      g.restore();
+      nutPath();
+      g.strokeStyle = '#5a3418';
+      g.lineWidth = 1.5;
+      g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.6)';                 // glossy shine, and a smaller second glint
+      g.beginPath(); g.ellipse(21.5, 41, 2.4, 6.4, 0.3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.45)';
+      g.beginPath(); g.ellipse(25.5, 51, 1.1, 1.8, 0.4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#5a3418';                                // the little pointed tip
+      g.beginPath(); g.moveTo(29.5, 58.6); g.lineTo(31, 62.6); g.lineTo(32.5, 58.6); g.closePath(); g.fill();
+      // the cap: rows of overlapping little scales, with a rim that overhangs the nut
+      function capPath() {
+        g.beginPath();
+        g.moveTo(9.5, 31.5);
+        g.bezierCurveTo(9.5, 14.5, 52.5, 14.5, 52.5, 31.5);
+        g.quadraticCurveTo(52.5, 35.5, 47.5, 35.5);
+        g.quadraticCurveTo(31, 38.5, 14.5, 35.5);
+        g.quadraticCurveTo(9.5, 35.5, 9.5, 31.5);
+        g.closePath();
+      }
+      g.shadowColor = 'rgba(40,20,10,0.45)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 1.5;
+      capPath();
+      var cap = g.createLinearGradient(0, 17, 0, 37);
+      cap.addColorStop(0, '#a88058'); cap.addColorStop(1, '#5a3d24');
+      g.fillStyle = cap;
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.save(); capPath(); g.clip();
+      for (var row = 0; row < 6; row++) {                    // little rounded scales, each row shifted
+        var y = 18 + row * 3.4, shade = 0.85 - row * 0.07;
+        for (var x = 8 + (row % 2) * 2.6; x < 55; x += 5.2) {
+          g.fillStyle = 'rgba(' + Math.round(150 * shade) + ',' + Math.round(108 * shade) + ',' + Math.round(70 * shade) + ',1)';
+          g.beginPath(); g.ellipse(x, y, 2.6, 2.1, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = 'rgba(55,34,18,0.7)';
+          g.lineWidth = 0.8;
+          g.beginPath(); g.arc(x, y - 0.4, 2.5, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); // the shadowed lower edge
+          g.fillStyle = 'rgba(255,235,200,0.35)';
+          g.beginPath(); g.ellipse(x - 0.6, y - 0.9, 1.1, 0.6, 0, 0, Math.PI * 2); g.fill(); // a light tip
+        }
+      }
+      g.fillStyle = 'rgba(255,230,190,0.25)';                // light catching the top of the cap
+      g.beginPath(); g.ellipse(25, 21, 10, 3.4, -0.15, 0, Math.PI * 2); g.fill();
+      g.restore();
+      capPath();
+      g.strokeStyle = '#3e2a18';
+      g.lineWidth = 1.5;
+      g.stroke();
+      g.strokeStyle = 'rgba(255,225,180,0.55)';              // a highlight along the rim
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(14, 34.4); g.quadraticCurveTo(31, 37.2, 48, 34.4); g.stroke();
+      // the curved stem
+      g.strokeStyle = '#3e2a18';
+      g.lineWidth = 4.4;
+      g.beginPath(); g.moveTo(31, 19.5); g.quadraticCurveTo(30.5, 10.5, 36, 6); g.stroke();
+      g.strokeStyle = '#86603a';
+      g.lineWidth = 2.3;
+      g.beginPath(); g.moveTo(31, 19.5); g.quadraticCurveTo(30.5, 10.5, 36, 6); g.stroke();
+      g.strokeStyle = 'rgba(255,230,190,0.5)';
+      g.lineWidth = 0.8;
+      g.beginPath(); g.moveTo(30.4, 17.5); g.quadraticCurveTo(30.2, 11, 34.6, 6.8); g.stroke();
     });
   }
   function iconPinecone() {
