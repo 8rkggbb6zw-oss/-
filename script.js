@@ -2623,9 +2623,11 @@ function startGame(THREE) {
     var u = b.userData;
     if (u.state !== 'standing') return;
     u.hits++;
+    snipSound();
     burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x6aa84f, 12, 2.4, 1.6, -5); // snipped leaves
     burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x9bd06a, 5, 1.8, 1.2, -3);
     if (u.hits < SNIPS_TO_TRIM) { u.shudderT = 0; return; }
+    rustleSound();
     u.state = 'shrinking';
     u.shrinkT = 0;
     u.shudderT = undefined;
@@ -3322,7 +3324,25 @@ function startGame(THREE) {
       hissBurst(0.08, 'bandpass', 700 + Math.random() * 1800, 2.5, 0.28 * (1 - i / 11), 0.002, 0.05, when);
       slideTone('sine', 240 + Math.random() * 200, 140, 0.12 * (1 - i / 11), 0.05, when);
     }
+  }  // Trimming sounds: a crisp "snip-snick" of the shears with a rustle of leaves, and a big leafy whoosh when the bush is cleared
+  function snipSound() {
+    if (!audioCtx) return;
+    var p = 0.92 + Math.random() * 0.16;
+    hissBurst(0.09, 'highpass', 5200 * p, 0.8, 0.22, 0.003, 0.05);      // the blades sliding past each other
+    bellTone(3300 * p, 0.07, 0.06, 0.04);                             // the little metal click as they close
+    bellTone(4700 * p, 0.04, 0.04, 0.045);
+    hissBurst(0.05, 'bandpass', 2600 * p, 3, 0.25, 0.001, 0.025, 0.045); // the snip itself
+    hissBurst(0.3, 'bandpass', 3200, 0.9, 0.16, 0.02, 0.2, 0.05);     // leaves rustling as they fall
   }
+  function rustleSound() {
+    if (!audioCtx) return;
+    for (var i = 0; i < 7; i++) {                                     // waves of rustling leaves, fading away
+      hissBurst(0.25, 'bandpass', 2400 + Math.random() * 2000, 0.8, 0.22 * (1 - i / 9), 0.03, 0.17, i * 0.08 + Math.random() * 0.03);
+    }
+    hissBurst(0.6, 'lowpass', 900, 0.5, 0.18, 0.05, 0.45);            // the soft whoosh of the branches collapsing
+    slideTone('sine', 120, 70, 0.18, 0.25, 0.05);                     // a gentle bump as it settles
+  }
+
 
   // ---------- Mining rocks ----------
   var HITS_TO_BREAK = 10, COAL_CHANCE = 0.4;
