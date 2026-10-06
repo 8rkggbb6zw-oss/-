@@ -2792,7 +2792,7 @@ function startGame(THREE) {
     wood: rMat(0x7a4e32), darkWood: rMat(0x4a3226), stone: rMat(0xffffff, { map: stoneWallTex, roughness: 0.95 }), soot: rMat(0x1a1214),
     cream: rMat(0xf3e6d0), quilt: rMat(0xffffff, { map: quiltTex }), pillow: rMat(0xfff4fa), rug: rMat(0xffffff, { map: rugTex, roughness: 1 }),
     gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
-    leaf: rMat(0x5aa84a), cat: rMat(0x221c2a, { roughness: 0.6 }), catEye: rMat(0xfff27a, { emissive: 0xffd640, emissiveIntensity: 1 }),
+    leaf: rMat(0x5aa84a),
     curtain: rMat(0xd96aa8), pane: rMat(0x9fb4ff, { emissive: 0x6a7ad8, emissiveIntensity: 0.6 }), door: rMat(0xffffff, { map: plankTex, roughness: 0.7 }),
     candle: rMat(0xfff0d8), iron: rMat(0x24222c, { metalness: 0.5, roughness: 0.45 }), mat: rMat(0xff8fd0)
   };
@@ -2919,17 +2919,6 @@ function startGame(THREE) {
   inBrewGlow.position.set(KX, 0.95, KZ); inBrewGlow.scale.set(1.2, 1.2, 1); room.add(inBrewGlow);
   inSolids.push([KX, KZ, 0.5]);
 
-  // a sleepy black cat curled up by the fire, with glowing eyes and a twitching tail
-  var cat = new THREE.Group(); cat.position.set(FPX + 1.55, 0, NW + 1.25); cat.rotation.y = -0.6; room.add(cat);
-  iPart(new THREE.SphereGeometry(0.26, 14, 10), R.cat, 0, 0.2, 0, 0, 0, 0, cat).scale.set(1.25, 0.8, 1);
-  iPart(new THREE.SphereGeometry(0.17, 14, 10), R.cat, 0.26, 0.38, 0.05, 0, 0, 0, cat);
-  [-1, 1].forEach(function (s) {
-    iPart(new THREE.ConeGeometry(0.06, 0.13, 4), R.cat, 0.27, 0.56, 0.05 + s * 0.09, 0, 0, s * 0.25, cat);
-    iPart(new THREE.SphereGeometry(0.03, 8, 6), R.catEye, 0.4, 0.41, 0.05 + s * 0.065, 0, 0, 0, cat);
-  });
-  var catTail = new THREE.Group(); catTail.position.set(-0.28, 0.12, 0); cat.add(catTail);
-  iPart(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.25, 0, 0.2), new THREE.Vector3(-0.05, 0.05, 0.4)), 10, 0.045, 6), R.cat, 0, 0, 0, 0, 0, 0, catTail);
-  inSolids.push([FPX + 1.55, NW + 1.25, 0.35]);
 
   // potted plants by the door
   [[-ROOM_W / 2 + 0.5, -NW - 0.55], [ROOM_W / 2 - 0.5, -NW - 0.55]].forEach(function (pp) {
@@ -2993,7 +2982,6 @@ function startGame(THREE) {
     });
     candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
     inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
-    catTail.rotation.y = Math.sin(t * 1.3) * 0.35;
     inBrewGlow.material.opacity = 0.45 + Math.sin(t * 3) * 0.08;
     exitGlow.material.opacity = 0.25 + Math.sin(t * 2.5) * 0.1;
   }
