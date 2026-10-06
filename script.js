@@ -807,6 +807,115 @@ function startGame(THREE) {
   scene.add(tree);
   solids.push({ x: TREE_X, z: TREE_Z, r: 1.2 });
   seed = seedBeforeDawn;
+  // fallen blossom petals round the Dawn Tree: soft drifts of curled petals, whole little blossoms here and there,
+  // and petals still floating down from the branches. They glow softly, brighter at night.
+  var groundPetalGeo = (function () {                                  // a cherry-blossom petal: rounded, with a little notch at the tip, curled up at the edges
+    var sh = new THREE.Shape();
+    sh.moveTo(0, -0.06);
+    sh.bezierCurveTo(0.03, -0.055, 0.07, -0.01, 0.06, 0.035); sh.quadraticCurveTo(0.05, 0.065, 0.02, 0.062);
+    sh.quadraticCurveTo(0.008, 0.06, 0, 0.045);                        // the notch
+    sh.quadraticCurveTo(-0.008, 0.06, -0.02, 0.062); sh.quadraticCurveTo(-0.05, 0.065, -0.06, 0.035);
+    sh.bezierCurveTo(-0.07, -0.01, -0.03, -0.055, 0, -0.06);
+    var g = new THREE.ShapeGeometry(sh, 8), p = g.attributes.position, cols = [];
+    for (var i = 0; i < p.count; i++) {
+      var px = p.getX(i), py = p.getY(i), k = (py + 0.06) / 0.125, edge = Math.min(1, Math.abs(px) / 0.06);
+      p.setXYZ(i, px, py, px * px * 7 + k * k * 0.018);                // cupped, with the tip lifting off the ground
+      var c = [0.86 + k * 0.14, 0.42 + k * 0.5, 0.68 + k * 0.28];      // rosy at the base, pearly pale at the tip
+      cols.push(c[0] - edge * 0.04, c[1] + edge * 0.05, c[2] + edge * 0.03);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    g.rotateX(-Math.PI / 2);
+    g.computeVertexNormals();
+    return g;
+  })();
+  var groundPetalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.4, side: THREE.DoubleSide, emissive: 0xff4fa8, emissiveIntensity: 0.4 });
+  var PETAL_TINTS = [0xffffff, 0xffe0f0, 0xffc8e6, 0xf6d8ff, 0xffd0dc];
+  function petalHash(n) { var x = Math.sin(n) * 43758.5453; return x - Math.floor(x); }
+  var petalSpots = [];                                                 // where petals land: soft drifts round the roots and out along the ground
+  for (var dr = 0; dr < 26; dr++) {
+    var da = petalHash(dr * 3.1) * Math.PI * 2, dd = 1.3 + Math.pow(petalHash(dr * 7.7), 1.3) * 4.6;
+    petalSpots.push([TREE_X + Math.cos(da) * dd, TREE_Z + Math.sin(da) * dd, 0.5 + petalHash(dr * 5.3) * 0.7, 30 + Math.floor(petalHash(dr * 2.9) * 40)]);
+  }
+  for (var rg = 0; rg < 14; rg++) { var ra = rg / 14 * Math.PI * 2; petalSpots.push([TREE_X + Math.cos(ra) * 1.6, TREE_Z + Math.sin(ra) * 1.6, 0.6, 40]); } // a ring round the roots
+  var PETALS_ON_GROUND = 0;
+  petalSpots.forEach(function (sp) { PETALS_ON_GROUND += sp[3]; });
+  PETALS_ON_GROUND += 260;                                             // plus a light sprinkle everywhere in between
+  var groundPetals = new THREE.InstancedMesh(groundPetalGeo, groundPetalMat, PETALS_ON_GROUND);
+  var gpM = new THREE.Matrix4(), gpQ = new THREE.Quaternion(), gpE = new THREE.Euler(), gpP = new THREE.Vector3(), gpS = new THREE.Vector3(), gpC = new THREE.Color();
+  var gpCount = 0, gpN = 0;
+  function dropPetal(px, pz, size) {
+    if (dist(px, pz, TREE_X, TREE_Z) < 1.05) return;                 // not inside the trunk
+    gpN++;
+    var h1 = petalHash(gpN * 1.37), h2 = petalHash(gpN * 2.71), h3 = petalHash(gpN * 4.13);
+    gpE.set((h1 - 0.5) * 0.7, h2 * Math.PI * 2, (h3 - 0.5) * 0.7);    // each one lies at its own tilt and turn
+    gpQ.setFromEuler(gpE);
+    gpS.set(size, size, size);
+    gpP.set(px, groundHeight(px, pz) + 0.015 + h3 * 0.02, pz);
+    gpM.compose(gpP, gpQ, gpS);
+    groundPetals.setMatrixAt(gpCount, gpM);
+    groundPetals.setColorAt(gpCount, gpC.setHex(PETAL_TINTS[Math.floor(h1 * 97) % PETAL_TINTS.length]));
+    gpCount++;
+  }
+  petalSpots.forEach(function (sp, si) {
+    for (var k = 0; k < sp[3]; k++) {
+      var a = petalHash(si * 91 + k * 1.3) * Math.PI * 2, r = Math.pow(petalHash(si * 37 + k * 2.1), 0.7) * sp[2];
+      dropPetal(sp[0] + Math.cos(a) * r, sp[1] + Math.sin(a) * r * 0.8, 0.8 + petalHash(k * 3.3 + si) * 0.6);
+    }
+  });
+  for (var sk2 = 0; sk2 < 260; sk2++) {
+    var sa2 = petalHash(sk2 * 6.1) * Math.PI * 2, sd2 = 1.2 + petalHash(sk2 * 8.3) * 6;
+    dropPetal(TREE_X + Math.cos(sa2) * sd2, TREE_Z + Math.sin(sa2) * sd2, 0.7 + petalHash(sk2) * 0.5);
+  }
+  groundPetals.count = gpCount;
+  groundPetals.receiveShadow = true;
+  scene.add(groundPetals);
+  // a few whole fallen blossoms: five petals round a golden heart
+  var blossomHeartMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffb040, emissiveIntensity: 0.5, roughness: 0.5 });
+  for (var fb = 0; fb < 22; fb++) {
+    var fa = petalHash(fb * 11.7) * Math.PI * 2, fd = 1.4 + Math.pow(petalHash(fb * 13.1), 1.2) * 4.2;
+    var fx = TREE_X + Math.cos(fa) * fd, fz = TREE_Z + Math.sin(fa) * fd;
+    var flower = new THREE.Group();
+    flower.position.set(fx, groundHeight(fx, fz) + 0.03, fz);
+    flower.rotation.set((petalHash(fb) - 0.5) * 0.4, petalHash(fb * 3) * 6.28, (petalHash(fb * 5) - 0.5) * 0.4);
+    for (var fp = 0; fp < 5; fp++) {
+      var pet = new THREE.Mesh(groundPetalGeo, groundPetalMat);
+      pet.rotation.y = fp / 5 * Math.PI * 2;
+      pet.position.set(Math.sin(fp / 5 * Math.PI * 2) * 0.05, 0.005, Math.cos(fp / 5 * Math.PI * 2) * 0.05);
+      pet.rotation.x = -0.25;
+      flower.add(pet);
+    }
+    var fh = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), blossomHeartMat); fh.scale.y = 0.6; fh.position.y = 0.012; flower.add(fh);
+    flower.scale.setScalar(1.2 + petalHash(fb * 7) * 0.5);
+    scene.add(flower);
+  }
+  // a soft pink shimmer over the petal drifts
+  var petalGlowPos = [];
+  petalSpots.forEach(function (sp) { petalGlowPos.push(sp[0], groundHeight(sp[0], sp[1]) + 0.08, sp[1]); });
+  var petalGlowGeo = new THREE.BufferGeometry();
+  petalGlowGeo.setAttribute('position', new THREE.Float32BufferAttribute(petalGlowPos, 3));
+  var petalGlowMat = new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xff7fd0, size: 1.4, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
+  scene.add(new THREE.Points(petalGlowGeo, petalGlowMat));
+  // petals drifting down from the branches, fluttering as they fall
+  var fallingPetals = [];
+  for (var fpI = 0; fpI < 40; fpI++) {
+    var fm = new THREE.Mesh(groundPetalGeo, groundPetalMat);
+    fm.scale.setScalar(1.1);
+    scene.add(fm);
+    fallingPetals.push({ m: fm, t: petalHash(fpI * 9.1), a: petalHash(fpI * 4.4) * Math.PI * 2, r: 1 + petalHash(fpI * 6.6) * 4, sp: 0.06 + petalHash(fpI * 2.2) * 0.05, ph: fpI });
+  }
+  function updateFallingPetals(dt, t) {
+    fallingPetals.forEach(function (f) {
+      f.t += dt * f.sp;
+      if (f.t > 1) { f.t -= 1; f.a = Math.random() * Math.PI * 2; f.r = 1 + Math.random() * 4; }
+      var x = TREE_X + Math.cos(f.a) * f.r + Math.sin(t * 0.9 + f.ph) * 0.4 * f.t;
+      var z = TREE_Z + Math.sin(f.a) * f.r + Math.cos(t * 0.7 + f.ph) * 0.4 * f.t;
+      var y = 5.5 - f.t * 5.5 + groundHeight(x, z);
+      f.m.position.set(x, Math.max(y, groundHeight(x, z) + 0.03), z);
+      f.m.rotation.set(Math.sin(t * 3 + f.ph) * 1.2, t * 1.5 + f.ph, Math.cos(t * 2.4 + f.ph) * 1.0); // tumbling and fluttering
+      f.m.visible = f.t < 0.97;
+    });
+  }
+
 
   // Twinkle, sway and drift: called every frame from updateWorld
   var canopyFade = 1;
@@ -6817,6 +6926,9 @@ function startGame(THREE) {
     // Dawn Tree glow and mana
     var pulse = 0.5 + Math.sin(t * 2) * 0.5;
     updateDawnTree(dt, t, night, pulse);
+    groundPetalMat.emissiveIntensity = 0.35 + night * 0.65 + Math.sin(t * 1.5) * 0.06; // the fallen petals glow, brighter at night
+    petalGlowMat.opacity = 0.18 + night * 0.35 + Math.sin(t * 2.3) * 0.05;
+    updateFallingPetals(dt, t);
     updateHouse(dt, t, night);
     var sp = sparkles.geometry.attributes.position;
     for (var i = 0; i < 40; i++) {
