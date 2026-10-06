@@ -2655,6 +2655,7 @@ function startGame(THREE) {
     var u = t.userData;
     if (u.state !== 'standing') return;
     u.hits++;
+    chopSound();
     var hx = u.base.x - Math.sin(facing) * 0.3, hz = u.base.z - Math.cos(facing) * 0.3;
     burst(hx, 0.7, hz, 0xd2a86e, 12, 2.6, 1.8, -7);                // wood chips
     burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 6, 1.6, 0.2, -1.2); // a few leaves shaken loose
@@ -2663,6 +2664,7 @@ function startGame(THREE) {
       return;
     }
     // Timber! Swap the standing tree for a copy that tips over, away from you
+    creakSound();
     u.state = 'falling';
     u.fallT = 0;
     u.landed = false;
@@ -3223,6 +3225,71 @@ function startGame(THREE) {
     osc.stop(now + 0.15);
   }
 
+  // Tree-chopping sounds, also made on the fly
+  var noiseBuf = null;
+  function hissBurst(dur, filterType, freq, q, vol, attack, decay, when) { // a burst of filtered hiss: the basis of thocks, crashes and rustles
+    if (!noiseBuf) {
+      noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    var t0 = audioCtx.currentTime + (when || 0);
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    src.buffer = noiseBuf;
+    f.type = filterType; f.frequency.value = freq; f.Q.value = q;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.5);
+    src.stop(t0 + dur);
+  }
+  function slideTone(type, f0, f1, vol, dur, when) { // a pitch that slides from f0 to f1
+    var t0 = audioCtx.currentTime + (when || 0);
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function chopSound() { // a woody "thock" as the axe bites in
+    if (!audioCtx) return;
+    var p = 0.9 + Math.random() * 0.2;
+    slideTone('sine', 230 * p, 105 * p, 0.55, 0.11);            // the deep knock of the trunk
+    slideTone('triangle', 520 * p, 300 * p, 0.18, 0.05);        // the hollow ring of the wood
+    hissBurst(0.12, 'bandpass', 1500 * p, 1.4, 0.4, 0.002, 0.07); // the crack of the blade and chips flying
+  }
+  function creakSound() { // the trunk groans as the tree starts to tip
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), wob = audioCtx.createOscillator(), wobAmt = audioCtx.createGain();
+    var f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(95, t0);
+    osc.frequency.linearRampToValueAtTime(60, t0 + 1.3);
+    wob.frequency.value = 13; wobAmt.gain.value = 9;          // a ratchety wobble, like wood fibres giving way
+    wob.connect(wobAmt); wobAmt.connect(osc.frequency);
+    f.type = 'lowpass'; f.frequency.value = 700; f.Q.value = 4;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.4);
+    osc.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); wob.start(t0);
+    osc.stop(t0 + 1.45); wob.stop(t0 + 1.45);
+  }
+  function crashSound() { // the tree hits the ground: a heavy thud, a rumble and a rustle of leaves
+    if (!audioCtx) return;
+    slideTone('sine', 90, 38, 0.7, 0.45);
+    hissBurst(0.8, 'lowpass', 320, 0.7, 0.6, 0.01, 0.6);
+    hissBurst(0.7, 'highpass', 2600, 0.5, 0.18, 0.03, 0.5, 0.04);
+    slideTone('sine', 70, 40, 0.3, 0.25, 0.16);                // a smaller bounce
+  }
+
   // ---------- Mining rocks ----------
   var HITS_TO_BREAK = 10, COAL_CHANCE = 0.4;
   var mineable = [], rockS = new THREE.Vector3(), rockP = new THREE.Vector3(), rockQ = new THREE.Quaternion();
@@ -3372,6 +3439,7 @@ function startGame(THREE) {
           angle = flat - 0.1 * Math.exp(-tb * 5) * Math.abs(Math.sin(tb * 12));
           if (!u.landed) {
             u.landed = true;
+            crashSound();
             var reach = (u.leafy ? 2.6 : 2.4) * u.size;
             var tx = u.base.x + u.fallDir.x * reach, tz = u.base.z + u.fallDir.z * reach;
             burst(tx, 0.4, tz, 0x6aa84f, 22, 4, 1.5, -4);   // leaves fly
