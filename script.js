@@ -2489,14 +2489,10 @@ function startGame(THREE) {
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { // corner posts
     hPart(new THREE.BoxGeometry(0.2, WALL_H, 0.2), 'beam', c[0] * (HW / 2 - 0.02), FOOT_H + WALL_H / 2, c[1] * (FRONT - 0.02));
   });
-  var TOWER_GAP = Math.sqrt(0.95 * 0.95 - 0.53 * 0.53) + 0.08;   // half the width of the round tower where it meets the left wall
   [FOOT_H + 0.08, FOOT_H + WALL_H * 0.55, TOP - 0.08].forEach(function (y, n) { // beams running round the house
     if (n !== 1) hPart(new THREE.BoxGeometry(HW + 0.04, 0.14, 0.08), 'beam', 0, y, FRONT + 0.02); // (the front skips the middle one: the door and windows are there)
     hPart(new THREE.BoxGeometry(HW + 0.04, 0.14, 0.08), 'beam', 0, y, -FRONT - 0.02);
     hPart(new THREE.BoxGeometry(0.08, 0.14, HD + 0.04), 'beam', HW / 2 + 0.02, y, 0);
-    var gapLo = 0.35 - TOWER_GAP, gapHi = 0.35 + TOWER_GAP, endZ = HD / 2 + 0.02;      // the left wall's beams stop where the tower stands
-    hPart(new THREE.BoxGeometry(0.08, 0.14, gapLo + endZ), 'beam', -HW / 2 - 0.02, y, (gapLo - endZ) / 2);
-    hPart(new THREE.BoxGeometry(0.08, 0.14, endZ - gapHi), 'beam', -HW / 2 - 0.02, y, (gapHi + endZ) / 2);
   });
 
   // the steep roof, with its ends filled in and a ridge along the top
@@ -2610,7 +2606,7 @@ function startGame(THREE) {
   windowAt(HW / 2 + 0.02, FOOT_H + 1.35, -0.3, Math.PI / 2);
   windowAt(HW / 2 + 0.08, TOP + 0.75, 0, Math.PI / 2, true);              // a round attic window up in the end wall
   [FOOT_H + 1.5, TOP + 1.4].forEach(function (wy) {                       // and two in the tower, set out from its curved wall in a deep round frame
-    var ta = 0.25, tx = TX + Math.sin(ta) * (TR + 0.1), tz = TZ + Math.cos(ta) * (TR + 0.1);
+    var ta = -0.55, tx = TX + Math.sin(ta) * (TR + 0.1), tz = TZ + Math.cos(ta) * (TR + 0.1); // turned away from the house so it never overlaps the main wall
     windowAt(tx, wy, tz, ta, true);
     var frame = new THREE.Group(); frame.position.set(tx, wy, tz); frame.rotation.y = ta; houseStatic.add(frame);
     hPart(new THREE.CylinderGeometry(0.4, 0.4, 0.2, 20, 1, true), 'beam', 0, 0, -0.06, Math.PI / 2, 0, 0, frame);
