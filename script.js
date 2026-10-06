@@ -2794,7 +2794,7 @@ function startGame(THREE) {
     gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
     leaf: rMat(0x5aa84a),
     curtain: rMat(0xd96aa8), pane: rMat(0x9fb4ff, { emissive: 0x6a7ad8, emissiveIntensity: 0.6 }), door: rMat(0xffffff, { map: plankTex, roughness: 0.7 }),
-    candle: rMat(0xfff0d8), iron: rMat(0x24222c, { metalness: 0.5, roughness: 0.45 }), mat: rMat(0xff8fd0)
+    candle: rMat(0xfff0d8), iron: rMat(0x24222c, { metalness: 0.5, roughness: 0.45 })
   };
   function iPart(geo, mat, x, y, z, rx, ry, rz, parent) { // one piece of the room (x, z from the middle of the floor)
     var m = new THREE.Mesh(geo, mat);
@@ -2955,16 +2955,13 @@ function startGame(THREE) {
   lightRun('W', ROOM_D, 13);
   lightRun('E', ROOM_D, 13);
 
-  // the front door (seen from inside) and the doormat you step on to go back out
+  // the front door (seen from inside): walk up to it to go back out
   wallPart('S', new THREE.PlaneGeometry(1.1, 1.5), R.door, 0, 0.75, 0.03);
   wallPart('S', new THREE.CircleGeometry(0.55, 18, 0, Math.PI), R.door, 0, 1.5, 0.03);
   wallPart('S', new THREE.TorusGeometry(0.6, 0.07, 6, 18, Math.PI), R.darkWood, 0, 1.5, 0.06);        // a wooden frame round the door
   [-1, 1].forEach(function (sd) { wallPart('S', new THREE.BoxGeometry(0.14, 1.5, 0.1), R.darkWood, sd * 0.62, 0.75, 0.06); });
   wallPart('S', new THREE.SphereGeometry(0.06, 10, 8), R.gold, 0.35, 0.8, 0.08);
   var EXIT_Z = -NW - 0.6;
-  iPart(new THREE.PlaneGeometry(1.3, 0.7), R.mat, 0, 0.015, EXIT_Z, -Math.PI / 2);
-  var exitGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd6f4, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
-  exitGlow.position.set(0, 0.25, EXIT_Z); exitGlow.scale.set(1.6, 0.6, 1); room.add(exitGlow);
 
   var wallLook = new THREE.Vector3();
   function updateInterior(dt, t) {
@@ -2983,10 +2980,9 @@ function startGame(THREE) {
     candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
     inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
     inBrewGlow.material.opacity = 0.45 + Math.sin(t * 3) * 0.08;
-    exitGlow.material.opacity = 0.25 + Math.sin(t * 2.5) * 0.1;
   }
 
-  // Going in and out: walk up to the front door to go in, step on the doormat inside to come back out
+  // Going in and out: walk up to the front door to go in, and up to it again from inside to come back out
   var fadeBox = document.createElement('div');
   fadeBox.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:#120a1c;opacity:0;pointer-events:none;transition:opacity 0.35s;border-radius:inherit;z-index:5;';
   canvas.parentNode.appendChild(fadeBox);
