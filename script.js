@@ -2652,21 +2652,32 @@ function startGame(THREE) {
     smoke.push({ s: puff, t: sm / 7 });
   }
 
-  // a few little mushrooms and a short picket fence by the front corners
+  // a few little mushrooms round the house
   [[-HW / 2 - 0.4, FRONT + 0.6], [-HW / 2 - 0.9, FRONT + 0.3], [HW / 2 + 0.5, -1.4], [-1.2, -FRONT - 0.5]].forEach(function (mp, n) {
     hPart(new THREE.CylinderGeometry(0.035, 0.05, 0.22, 6), 'plaster', mp[0], 0.05, mp[1]);
     var cap = hPart(new THREE.SphereGeometry(0.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), n % 2 ? 'flowerPink' : 'flowerBlue', mp[0], 0.16, mp[1]);
     cap.scale.set(1, 0.7, 1);
   });
-  [-1, 1].forEach(function (s) {
-    for (var fp = 0; fp < 6; fp++) {
-      var fx = s * (2.0 + fp * 0.45), fz = FRONT + 2.3;
-      hPart(new THREE.BoxGeometry(0.1, 0.6, 0.06), 'plaster', fx, 0.15, fz);
+  // a white picket fence all the way round the yard, with a gap at the front for the path
+  var FENCE_L = -HW / 2 - 2.1, FENCE_R = HW / 2 + 1.8, FENCE_B = -FRONT - 1.2, FENCE_F = FRONT + 2.3, GATE = 1.5;
+  var fencePosts = [];
+  function fenceRun(x0, z0, x1, z1) {
+    var len = dist(x0, z0, x1, z1), n = Math.max(1, Math.round(len / 0.45)), ang = Math.atan2(x1 - x0, z1 - z0);
+    for (var fp = 0; fp <= n; fp++) {
+      var fx = x0 + (x1 - x0) * fp / n, fz = z0 + (z1 - z0) * fp / n;
+      hPart(new THREE.BoxGeometry(0.1, 0.6, 0.06), 'plaster', fx, 0.15, fz, 0, ang + Math.PI / 2, 0);
       hPart(new THREE.ConeGeometry(0.07, 0.12, 4), 'plaster', fx, 0.51, fz, 0, Math.PI / 4, 0);
+      fencePosts.push([fx, fz]);
     }
-    hPart(new THREE.BoxGeometry(2.4, 0.07, 0.05), 'beam', s * 3.13, 0.3, FRONT + 2.33);
-    hPart(new THREE.BoxGeometry(2.4, 0.07, 0.05), 'beam', s * 3.13, 0.0, FRONT + 2.33);
-  });
+    [0.3, 0.0].forEach(function (ry) { // two rails joining the posts
+      hPart(new THREE.BoxGeometry(0.05, 0.07, len), 'beam', (x0 + x1) / 2, ry, (z0 + z1) / 2, 0, ang, 0);
+    });
+  }
+  fenceRun(-GATE, FENCE_F, FENCE_L, FENCE_F);   // front, left of the gate
+  fenceRun(FENCE_L, FENCE_F, FENCE_L, FENCE_B);  // left side
+  fenceRun(FENCE_L, FENCE_B, FENCE_R, FENCE_B);  // back
+  fenceRun(FENCE_R, FENCE_B, FENCE_R, FENCE_F);  // right side
+  fenceRun(FENCE_R, FENCE_F, GATE, FENCE_F);     // front, right of the gate
 
   // Join the still parts into a few meshes (one per material) so the house stays fast
   house.updateMatrixWorld(true);
@@ -2696,6 +2707,7 @@ function startGame(THREE) {
   }
   var houseBumps = [[TX, TZ, TR + 0.2], [CX, CZ, 0.55], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]];
   for (var hbx = -2.9; hbx <= 2.95; hbx += 1.45) { houseBumps.push([hbx, -0.85, 1.15], [hbx, 0.85, 1.15]); } // two rows of bumpers fill the house's footprint
+  fencePosts.forEach(function (fp) { houseBumps.push([fp[0], fp[1], 0.24]); }); // and you can't walk through the fence
   houseBumps.forEach(function (c) {
     var w = houseToWorld(c[0], c[1]);
     solids.push({ x: w.x, z: w.z, r: c[2] });
