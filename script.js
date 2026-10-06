@@ -2910,21 +2910,67 @@ function startGame(THREE) {
         t.position.set(tw[0], tw[1], 0.02);
         g.add(t);
       });
-    } else if (item === 'bloom') { // a little glowing moonbloom flower on a stem
-      var st = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), M.stem);
-      st.position.y = -0.08;
-      g.add(st);
-      for (var pi = 0; pi < 6; pi++) {
-        var pet = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.petal);
-        var pa = (pi / 6) * Math.PI * 2;
-        pet.position.set(Math.cos(pa) * 0.06, 0.04, Math.sin(pa) * 0.06);
-        pet.scale.set(1.2, 0.45, 0.8);
-        pet.rotation.y = -pa;
-        g.add(pet);
+    } else if (item === 'bloom') { // a glowing moonbloom: two rings of cupped petals, a golden heart with a crescent moon, a leafy stem
+      var bloomPetal = function (len, wide, cup, inner, outer) { // one spoon-shaped petal pointing out along +x, fading to a pale tip
+        var pg = new THREE.PlaneGeometry(1, 1, 4, 10), pp = pg.attributes.position, pc = [], cIn = new THREE.Color(inner), cOut = new THREE.Color(outer), cc = new THREE.Color();
+        for (var v = 0; v < pp.count; v++) {
+          var t = pp.getY(v) + 0.5, across = pp.getX(v) * 2;  // t: 0 at the heart, 1 at the tip
+          var w = wide * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.6)), 0.55);  // broad and rounded, with a soft point
+          var z = across * w;
+          pp.setXYZ(v, t * len, cup * t * t + z * z * 2.2, z); // curves up toward the tip, edges lift into a cup
+          cc.copy(cIn).lerp(cOut, Math.pow(t, 1.3));
+          cc.lerp(cOut, Math.abs(across) * 0.25 * t);         // paler edges
+          pc.push(cc.r, cc.g, cc.b);
+        }
+        pg.setAttribute('color', new THREE.Float32BufferAttribute(pc, 3));
+        pg.computeVertexNormals();
+        return pg;
+      };
+      var head = new THREE.Group();
+      head.rotation.x = 0.3;                    // the flower nods forward a little
+      var backPetal = bloomPetal(0.11, 0.048, 0.03, 0xb47cff, 0xf3e3ff), frontPetal = bloomPetal(0.095, 0.044, 0.04, 0xff6fcf, 0xffe6f6);
+      for (var pi = 0; pi < 12; pi++) {
+        var back = pi < 6, pet = new THREE.Mesh(back ? backPetal : frontPetal, bloomPetalMat);
+        pet.rotation.y = (pi % 6) / 6 * Math.PI * 2 + (back ? Math.PI / 6 : 0);
+        pet.rotation.z = back ? 0.12 : 0.34;    // back petals open wide, front ones stand up more
+        pet.position.y = back ? -0.004 : 0.004;
+        head.add(pet);
       }
-      m = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), M.center);
-      m.position.y = 0.05;
-      g.add(m);
+      var heart = new THREE.Mesh(new THREE.SphereGeometry(0.026, 14, 10), M.center); // the glowing golden heart
+      heart.scale.set(1, 0.6, 1);
+      heart.position.y = 0.014;
+      head.add(heart);
+      for (var si = 0; si < 9; si++) {          // a ring of little golden stamens
+        var sa = si / 9 * Math.PI * 2;
+        var stamen = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 6, 4), bloomStamenMat);
+        stamen.position.set(Math.cos(sa) * 0.03, 0.026, Math.sin(sa) * 0.03);
+        head.add(stamen);
+      }
+      var bloomMoon = new THREE.Mesh(seedMoonGeo, seedMoonMat); // the crescent moon resting on the heart
+      bloomMoon.scale.setScalar(0.95);
+      bloomMoon.position.set(0, 0.034, 0.004);
+      bloomMoon.rotation.set(-1.0, 0, 0.7);
+      head.add(bloomMoon);
+      g.add(head);
+      var bloomStemCurve = new THREE.CubicBezierCurve3(new THREE.Vector3(0, -0.19, 0), new THREE.Vector3(0.02, -0.13, 0), new THREE.Vector3(-0.018, -0.06, 0), new THREE.Vector3(0, -0.005, 0));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(bloomStemCurve, 12, 0.009, 6), M.stem)); // a slender, gently curving stem
+      var sepals = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.leaf); // the little green cup under the flower
+      sepals.position.y = 0.006;
+      g.add(sepals);
+      var bloomLeaf = new THREE.Mesh(bloomPetal(0.07, 0.022, 0.025, 0x4f9a48, 0x8ad87a), bloomLeafMat); // one leaf off the stem
+      bloomLeaf.position.set(0.006, -0.1, 0);
+      bloomLeaf.rotation.set(0, -0.4, 0.5);
+      g.add(bloomLeaf);
+      var bloomGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff9be0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      bloomGlow.scale.set(0.38, 0.38, 1);
+      bloomGlow.position.y = 0.02;
+      g.add(bloomGlow);
+      [[0.13, 0.08], [-0.13, 0.03], [0.05, 0.15]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.035, 0.035, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
     } else if (item === 'petal') { // a curled, shimmering Dawn Petal
       m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), petalMat);
       m.scale.set(1, 0.25, 0.65);
@@ -3019,6 +3065,9 @@ function startGame(THREE) {
   var seedMoonMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffc94d, emissiveIntensity: 0.7, roughness: 0.4 });
   var seedShineGeo = new THREE.SphereGeometry(0.01, 8, 6);
   seedShineGeo.scale(0.8, 1.6, 0.5);
+  var bloomPetalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, emissive: 0xff6fcf, emissiveIntensity: 0.2, roughness: 0.45, side: THREE.DoubleSide });
+  var bloomLeafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.6, side: THREE.DoubleSide });
+  var bloomStamenMat = new THREE.MeshStandardMaterial({ color: 0xffe9a8, emissive: 0xffc94d, emissiveIntensity: 0.8, roughness: 0.4 });
   var seedShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
   var petalMat = new THREE.MeshStandardMaterial({ color: 0xff9be0, emissive: 0xff6fcf, emissiveIntensity: 0.45, roughness: 0.4, side: THREE.DoubleSide });
   var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
