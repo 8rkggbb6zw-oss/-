@@ -2574,11 +2574,13 @@ function startGame(THREE) {
     tile.soil.scale.set(0.6, 0.05, 0.6);
     tile.tillT = 0;
     tilling.push(tile);
+    tillSound();
     burst(tile.x, 0.2, tile.z, 0x8a5a36, 16, 2.6, 2.2, -8); // clods of earth
     burst(tile.x, 0.2, tile.z, 0x6aa84f, 8, 2, 1.8, -7);    // bits of turf
     if (Math.random() < TILL_FIND_CHANCE) { // dug something up!
       var find = TILL_FINDS[Math.floor(Math.random() * TILL_FINDS.length)];
       dropPickup(find, 1, tile.x + (Math.random() - 0.5) * 0.4, tile.z + (Math.random() - 0.5) * 0.4, 0.12, 0.35);
+      findSound();
       burst(tile.x, 0.4, tile.z, 0xfff1a8, 10, 2, 2, -3);
     }
   }
@@ -3399,7 +3401,52 @@ function startGame(THREE) {
       bellTone(fr * 1.005, 0.03, 0.9, i * 0.05 + 0.01);             // slightly detuned twin, for a soft chorus shimmer
     });
     for (var i = 0; i < 5; i++) bellTone(4000 + Math.random() * 2500, 0.02, 0.2, 0.25 + Math.random() * 0.5); // a few glints
+  }  // Garden sounds: a crunchy dig for tilling, a soft pat and a cheerful bloop for planting, a splash and drips for watering
+  function tillSound() {
+    if (!audioCtx) return;
+    var p = 0.9 + Math.random() * 0.2;
+    slideTone('sine', 130 * p, 65 * p, 0.4, 0.12);                   // the hoe thunks into the ground
+    hissBurst(0.25, 'lowpass', 700 * p, 0.8, 0.45, 0.004, 0.16);      // a crunchy scoop of earth
+    hissBurst(0.15, 'bandpass', 1300 * p, 1.5, 0.18, 0.01, 0.09, 0.03); // the blade scraping through soil
+    for (var i = 0; i < 4; i++) {                                     // clods pattering back down
+      hissBurst(0.06, 'bandpass', 500 + Math.random() * 600, 2, 0.14, 0.002, 0.04, 0.16 + i * 0.06 + Math.random() * 0.03);
+    }
   }
+  function findSound() { // you dug something up!
+    if (!audioCtx) return;
+    bellTone(1568, 0.07, 0.4, 0.3);
+    bellTone(2093, 0.07, 0.5, 0.38);
+    bellTone(3136, 0.03, 0.4, 0.38);
+  }
+  function plantSound() {
+    if (!audioCtx) return;
+    hissBurst(0.1, 'lowpass', 600, 0.7, 0.3, 0.003, 0.06);           // patting the soil down over the seed
+    hissBurst(0.1, 'lowpass', 500, 0.7, 0.22, 0.003, 0.06, 0.11);
+    slideTone('sine', 420, 760, 0.16, 0.12, 0.2);                     // a cheerful little bloop as it settles in
+    bellTone(1760, 0.035, 0.35, 0.3);                                 // and a tiny magic twinkle
+  }
+  function waterSound() {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    if (!noiseBuf) hissBurst(0.01, 'lowpass', 100, 1, 0.0002, 0.001, 0.002);  // makes sure the hiss is ready
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain(); // a soft pouring splash
+    src.buffer = noiseBuf;
+    f.type = 'bandpass'; f.Q.value = 0.9;
+    f.frequency.setValueAtTime(1200, t0);
+    f.frequency.linearRampToValueAtTime(2200, t0 + 0.5);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.05);
+    gain.gain.setValueAtTime(0.2, t0 + 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + 0.75);
+    for (var i = 0; i < 6; i++) {                                     // droplets plinking into the soil
+      var when = 0.08 + i * 0.09 + Math.random() * 0.05, fr = 700 + Math.random() * 500;
+      slideTone('sine', fr, fr * 2.2, 0.08 * (1 - i / 8), 0.06, when);
+    }
+  }
+
 
 
 
@@ -4347,6 +4394,7 @@ function startGame(THREE) {
       showStage(tile);
       tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
       burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
+      plantSound();
     } else if (tile.stage === 3) {
       scene.remove(tile.crop);
       scene.remove(tile.drop);
@@ -4362,6 +4410,7 @@ function startGame(THREE) {
     } else if (!tile.wet) {
       setWet(tile, true);
       burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
+      waterSound();
     }
   }
 
