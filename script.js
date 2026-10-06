@@ -2771,37 +2771,6 @@ function startGame(THREE) {
   });
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
   floorTex.repeat.set(3, 3);
-  var paperTex = paintTexture(128, 128, function (g, w, h) {          // cosy striped wallpaper: dusty rose and cream, little flowers and gold moons, wood panels below
-    var top = h * 0.66;
-    for (var st = 0; st < 8; st++) {                                   // soft vertical stripes
-      g.fillStyle = st % 2 ? '#f3dfe6' : '#e2b8c8';
-      g.fillRect(st * 16, 0, 16, top);
-    }
-    g.fillStyle = 'rgba(160,90,120,0.35)';
-    for (var ln = 0; ln < 8; ln++) g.fillRect(ln * 16 + 7.5, 0, 1, top); // a thin line down the middle of each stripe
-    function flower(x, y) {                                            // a tiny five-petal flower
-      g.fillStyle = '#fff8fb';
-      for (var p = 0; p < 5; p++) { var a = p / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 2.4, y + Math.sin(a) * 2.4, 1.8, 0, Math.PI * 2); g.fill(); }
-      g.fillStyle = '#e8b84a'; g.beginPath(); g.arc(x, y, 1.3, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#8fb87a'; g.beginPath(); g.ellipse(x + 3.5, y + 4, 2.4, 1.1, 0.6, 0, Math.PI * 2); g.fill();
-    }
-    function moon(x, y) {                                              // a little gold crescent moon
-      g.fillStyle = '#d9a83e'; g.beginPath(); g.arc(x, y, 3.6, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#e2b8c8'; g.beginPath(); g.arc(x + 1.8, y - 1, 3.1, 0, Math.PI * 2); g.fill();
-    }
-    for (var r = 0; r < 3; r++) {
-      for (var c = 0; c < 4; c++) {
-        var x = c * 32 + 8 + (r % 2) * 16, y = r * 28 + 12;
-        if ((r + c) % 2) flower(x, y); else moon(x, y);
-      }
-    }
-    g.fillStyle = '#fff4e6'; g.fillRect(0, top - 4, w, 5);           // a cream rail between the paper and the panels
-    g.fillStyle = 'rgba(120,70,60,0.35)'; g.fillRect(0, top + 1, w, 1);
-    g.fillStyle = '#6e4a3a'; g.fillRect(0, top + 2, w, h - top - 2);   // wainscot panels
-    for (var q = 0; q < 4; q++) { g.strokeStyle = 'rgba(30,15,10,0.35)'; g.lineWidth = 2; g.strokeRect(q * 32 + 4, h * 0.71, 24, h * 0.24); }
-    g.fillStyle = 'rgba(255,220,190,0.12)'; for (var q2 = 0; q2 < 4; q2++) g.fillRect(q2 * 32 + 6, h * 0.72, 20, 2);
-  });
-  paperTex.wrapS = THREE.RepeatWrapping;
   var quiltTex = paintTexture(64, 64, function (g, w, h) {            // a patchwork quilt
     var cols = ['#7a58b0', '#b07ad0', '#5b3f8c', '#e49ccf'];
     for (var x = 0; x < 4; x++) for (var y = 0; y < 4; y++) { g.fillStyle = cols[(x + y * 3) % 4]; g.fillRect(x * 16, y * 16, 16, 16); }
@@ -2819,7 +2788,7 @@ function startGame(THREE) {
     return new THREE.MeshStandardMaterial(o);
   }
   var R = {
-    floor: rMat(0xffffff, { map: floorTex }), paper: rMat(0xffffff, { map: paperTex, roughness: 0.95 }),
+    floor: rMat(0xffffff, { map: floorTex }), wall: rMat(0xf2e6d8, { roughness: 0.95 }),
     wood: rMat(0x7a4e32), darkWood: rMat(0x4a3226), stone: rMat(0xffffff, { map: stoneWallTex, roughness: 0.95 }), soot: rMat(0x1a1214),
     cream: rMat(0xf3e6d0), quilt: rMat(0xffffff, { map: quiltTex }), pillow: rMat(0xfff4fa), rug: rMat(0xffffff, { map: rugTex, roughness: 1 }),
     gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
@@ -2837,14 +2806,25 @@ function startGame(THREE) {
   var inSolids = [];                                                  // furniture you bump into (room positions)
   var NW = -ROOM_D / 2;                                               // the back (north) wall
 
-  // floor and walls: each wall only shows from inside, so when the camera is behind one you see straight through it
+  // the floor
   iPart(new THREE.PlaneGeometry(ROOM_W, ROOM_D), R.floor, 0, 0, 0, -Math.PI / 2);
-  [[0, NW, 0, ROOM_W], [0, -NW, Math.PI, ROOM_W], [-ROOM_W / 2, 0, Math.PI / 2, ROOM_D], [ROOM_W / 2, 0, -Math.PI / 2, ROOM_D]].forEach(function (wl) {
-    var wg = new THREE.PlaneGeometry(wl[3], ROOM_H);
-    var uv = wg.attributes.uv;
-    for (var i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * wl[3] / 1.6);
-    iPart(wg, R.paper, wl[0], ROOM_H / 2, wl[1], 0, wl[2], 0);
-  });
+
+  // the walls: plain and soft cream. Each wall is its own group (its local +z points into the room);
+  // a wall the camera is behind hides completely, windows and all, so it never blocks the view
+  var inWalls = {};
+  function makeWall(name, x, z, ry, len) {
+    var wgp = new THREE.Group();
+    wgp.position.set(x, 0, z); wgp.rotation.y = ry;
+    room.add(wgp);
+    inWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
+    iPart(new THREE.PlaneGeometry(len, ROOM_H), R.wall, 0, ROOM_H / 2, 0, 0, 0, 0, wgp);
+    return wgp;
+  }
+  makeWall('N', 0, NW, 0, ROOM_W);
+  makeWall('S', 0, -NW, Math.PI, ROOM_W);
+  makeWall('W', -ROOM_W / 2, 0, Math.PI / 2, ROOM_D);
+  makeWall('E', ROOM_W / 2, 0, -Math.PI / 2, ROOM_D);
+  function wallPart(name, geo, mat, x, y, z, rx, ry, rz) { return iPart(geo, mat, x, y, z, rx, ry, rz, inWalls[name].g); }
 
   // the fireplace on the back wall, with a crackling fire, candles and potions on the mantel
   var FPX = -1.6;
@@ -2909,7 +2889,7 @@ function startGame(THREE) {
     }
   }
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
-  var moonFrame = new THREE.Group(); moonFrame.position.set(-ROOM_W / 2 + 0.04, 2.9, 1.6); moonFrame.rotation.y = Math.PI / 2; room.add(moonFrame);
+  var moonFrame = new THREE.Group(); moonFrame.position.set(-1.6, 2.2, 0.05); inWalls.W.g.add(moonFrame);
   iPart(new THREE.BoxGeometry(0.9, 0.9, 0.06), R.darkWood, 0, 0, 0, 0, 0, 0, moonFrame);           // a framed picture of the moon
   iPart(new THREE.PlaneGeometry(0.74, 0.74), rMat(0x2c2050), 0, 0, 0.035, 0, 0, 0, moonFrame);
   iPart(new THREE.CircleGeometry(0.22, 18), rMat(0xfff2c0, { emissive: 0xffe08a, emissiveIntensity: 0.6 }), 0.05, 0.05, 0.04, 0, 0, 0, moonFrame);
@@ -2961,8 +2941,8 @@ function startGame(THREE) {
 
   // windows with pink curtains, softly lit (no view of the outside)
   var panes = [];
-  [[1.9, NW + 0.03, 0], [ROOM_W / 2 - 0.03, 0.2, -Math.PI / 2]].forEach(function (wd) {
-    var wg = new THREE.Group(); wg.position.set(wd[0], 1.75, wd[1]); wg.rotation.y = wd[2]; room.add(wg);
+  [['N', 1.9], ['E', 0.2]].forEach(function (wd) {
+    var wg = new THREE.Group(); wg.position.set(wd[1], 1.95, 0.03); inWalls[wd[0]].g.add(wg);
     var pane = iPart(new THREE.PlaneGeometry(0.9, 1.0), R.pane, 0, 0, 0.01, 0, 0, 0, wg); panes.push(pane);
     iPart(new THREE.BoxGeometry(1.06, 0.08, 0.08), R.darkWood, 0, 0.54, 0.04, 0, 0, 0, wg);
     iPart(new THREE.BoxGeometry(1.1, 0.1, 0.16), R.darkWood, 0, -0.54, 0.07, 0, 0, 0, wg);
@@ -2973,30 +2953,39 @@ function startGame(THREE) {
 
   // twinkly string lights along the top of the walls
   var inLights = [];
-  function lightRun(x0, z0, x1, z1, n) {
+  function lightRun(name, len, n) { // a sagging string of lights hung along the top beam of one wall
     for (var i = 0; i <= n; i++) {
-      var f = i / n, lx = x0 + (x1 - x0) * f, lz = z0 + (z1 - z0) * f, ly = ROOM_H - 0.25 - Math.sin((i % 4) / 4 * Math.PI) * 0.12;
+      var lx = -len / 2 + 0.2 + (len - 0.4) * i / n, ly = ROOM_H - 0.32 - Math.sin((i % 4) / 4 * Math.PI) * 0.12;
       var lm = rMat(i % 2 ? 0xffd27a : 0xff9be0, { emissive: i % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 1 });
-      iPart(new THREE.SphereGeometry(0.05, 8, 6), lm, lx, ly, lz);
+      wallPart(name, new THREE.SphereGeometry(0.05, 8, 6), lm, lx, ly, 0.2);
       var lh = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: i % 2 ? 0xffc060 : 0xff8fe0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-      lh.position.set(lx, ly, lz); lh.scale.set(0.3, 0.3, 1); room.add(lh);
-      inLights.push({ s: lh, p: i * 1.3 + x0 });
+      lh.position.set(lx, ly, 0.2); lh.scale.set(0.3, 0.3, 1); inWalls[name].g.add(lh);
+      inLights.push({ s: lh, p: i * 1.3 + len });
     }
   }
-  lightRun(-ROOM_W / 2 + 0.1, NW + 0.1, ROOM_W / 2 - 0.1, NW + 0.1, 18);
-  lightRun(-ROOM_W / 2 + 0.1, NW + 0.1, -ROOM_W / 2 + 0.1, -NW - 0.3, 13);
-  lightRun(ROOM_W / 2 - 0.1, NW + 0.1, ROOM_W / 2 - 0.1, -NW - 0.3, 13);
+  lightRun('N', ROOM_W, 18);
+  lightRun('W', ROOM_D, 13);
+  lightRun('E', ROOM_D, 13);
 
   // the front door (seen from inside) and the doormat you step on to go back out
-  iPart(new THREE.PlaneGeometry(1.1, 1.5), R.door, 0, 0.75, -NW - 0.02, 0, Math.PI, 0);
-  iPart(new THREE.CircleGeometry(0.55, 18, 0, Math.PI), R.door, 0, 1.5, -NW - 0.02, 0, Math.PI, 0);
+  wallPart('S', new THREE.PlaneGeometry(1.1, 1.5), R.door, 0, 0.75, 0.03);
+  wallPart('S', new THREE.CircleGeometry(0.55, 18, 0, Math.PI), R.door, 0, 1.5, 0.03);
+  wallPart('S', new THREE.TorusGeometry(0.6, 0.07, 6, 18, Math.PI), R.darkWood, 0, 1.5, 0.06);        // a wooden frame round the door
+  [-1, 1].forEach(function (sd) { wallPart('S', new THREE.BoxGeometry(0.14, 1.5, 0.1), R.darkWood, sd * 0.62, 0.75, 0.06); });
+  wallPart('S', new THREE.SphereGeometry(0.06, 10, 8), R.gold, 0.35, 0.8, 0.08);
   var EXIT_Z = -NW - 0.6;
   iPart(new THREE.PlaneGeometry(1.3, 0.7), R.mat, 0, 0.015, EXIT_Z, -Math.PI / 2);
   var exitGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd6f4, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
   exitGlow.position.set(0, 0.25, EXIT_Z); exitGlow.scale.set(1.6, 0.6, 1); room.add(exitGlow);
 
+  var wallLook = new THREE.Vector3();
   function updateInterior(dt, t) {
     if (!indoors) return;
+    for (var wn in inWalls) { // hide any wall the camera is behind, beams, windows and all, so it never blocks the view
+      var W = inWalls[wn];
+      wallLook.set(camera.position.x - IN_X - W.c.x, 0, camera.position.z - IN_Z - W.c.z);
+      W.g.visible = wallLook.dot(W.n) > 0;
+    }
     fireLight.intensity = 1.5 + Math.sin(t * 11) * 0.15 + Math.sin(t * 17.3) * 0.12;
     flames.forEach(function (f) {
       var k = 1 + Math.sin(t * 9 + f.p) * 0.12 + Math.sin(t * 15 + f.p * 2) * 0.08;
