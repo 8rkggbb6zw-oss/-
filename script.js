@@ -2723,8 +2723,10 @@ function startGame(THREE) {
     }
     sapGeo.computeVertexNormals();
   })();
-  var nutMat = new THREE.MeshStandardMaterial({ color: 0xc07a3a, roughness: 0.5 });
-  var capMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.95 });
+  var nutMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.3, metalness: 0.05 }); // glossy, coloured by height
+  var capMat = new THREE.MeshStandardMaterial({ color: 0x5e4026, roughness: 0.95 });
+  var capScaleMat = new THREE.MeshStandardMaterial({ color: 0x8e6a42, roughness: 0.9 });
+  var capScaleTipMat = new THREE.MeshStandardMaterial({ color: 0x9e7a4e, roughness: 0.85 }); // sun-bleached scale tips
   var coneMat = new THREE.MeshStandardMaterial({ color: 0x8a5530, roughness: 0.85 });
   function pickupModel(item) {
     var g = new THREE.Group(), m;
@@ -2753,17 +2755,76 @@ function startGame(THREE) {
       var sapGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb040, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
       sapGlow.scale.set(0.42, 0.42, 1);
       g.add(sapGlow);
-    } else if (item === 'acorn') {
-      m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), nutMat);
-      m.scale.set(1, 1.35, 1);
-      g.add(m);
-      var cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
-      cap.position.y = 0.07;
-      cap.scale.set(1, 0.7, 1);
+    } else if (item === 'acorn') { // a plump glossy acorn with a scaly cap and a little curved stem
+      var nutPts = [];
+      for (var ai = 0; ai <= 24; ai++) {
+        var at = ai / 24;                       // 0 = the pointed tip, 1 = up under the cap
+        var ar = at < 0.75 ? 0.1 * Math.pow(Math.sin((at / 0.75) * Math.PI / 2), 0.8) : 0.1 * Math.cos(((at - 0.75) / 0.25) * 0.8);
+        nutPts.push(new THREE.Vector2(Math.max(0.0005, ar), -0.17 + at * 0.24));
+      }
+      var nutGeo = new THREE.LatheGeometry(nutPts, 24);
+      nutGeo.computeVertexNormals();
+      var nutCols = [], nutPos = nutGeo.attributes.position, nutC = new THREE.Color();
+      var nutLow = new THREE.Color(0x7a3c1a), nutMid = new THREE.Color(0xc27a36), nutTop = new THREE.Color(0xe8be7a), nutBand = new THREE.Color(0xf3dfae);
+      for (var ni = 0; ni < nutPos.count; ni++) {
+        var nh = (nutPos.getY(ni) + 0.17) / 0.24; // deep red-brown at the tip, warm in the middle, pale gold by the cap
+        if (nh < 0.55) nutC.copy(nutLow).lerp(nutMid, Math.pow(nh / 0.55, 0.6));
+        else nutC.copy(nutMid).lerp(nutTop, (nh - 0.55) / 0.45);
+        if (nh > 0.82) nutC.lerp(nutBand, (nh - 0.82) / 0.18);   // a creamy band just under the cap
+        var nAng = Math.atan2(nutPos.getZ(ni), nutPos.getX(ni));
+        var streak = 1 - 0.12 * Math.pow(Math.sin(nAng * 7 + nh * 1.5), 2) * Math.sin(nh * Math.PI); // faint darker grain lines down the sides
+        nutCols.push(nutC.r * streak, nutC.g * streak, nutC.b * streak);
+      }
+      nutGeo.setAttribute('color', new THREE.Float32BufferAttribute(nutCols, 3));
+      g.add(new THREE.Mesh(nutGeo, nutMat));
+      var tip = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.03, 8), capMat); // the little dark point
+      tip.rotation.x = Math.PI;
+      tip.position.y = -0.175;
+      g.add(tip);
+      var nutShine = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), seedShineMat);
+      nutShine.scale.set(0.7, 1.8, 0.4);
+      nutShine.position.set(-0.045, -0.04, 0.083);
+      nutShine.rotation.z = -0.25;
+      g.add(nutShine);
+      var nutShine2 = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), seedShineMat); // a second, smaller glint
+      nutShine2.position.set(-0.028, -0.105, 0.064);
+      g.add(nutShine2);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+      cap.scale.set(0.108, 0.06, 0.108);        // a low dome that sits over the top of the nut
+      cap.position.y = 0.035;
       g.add(cap);
-      var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.06, 6), capMat);
-      stem.position.y = 0.17;
+      var lip = new THREE.Mesh(new THREE.TorusGeometry(0.104, 0.013, 8, 28), capMat); // the thick overhanging rim
+      lip.rotation.x = Math.PI / 2;
+      lip.position.y = 0.036;
+      g.add(lip);
+      var scaleGeo = new THREE.SphereGeometry(0.022, 7, 5);
+      for (var sr = 0; sr < 5; sr++) {          // rings of overlapping woody scales, smaller toward the top
+        var phi = 1.48 - sr * 0.28, ring = 18 - sr * 3;
+        for (var sk = 0; sk < ring; sk++) {
+          var sa = (sk / ring) * Math.PI * 2 + sr * 0.4;
+          var nx = Math.sin(phi) * Math.cos(sa), ny = Math.cos(phi), nz = Math.sin(phi) * Math.sin(sa);
+          var bump = new THREE.Mesh(scaleGeo, (sk + sr) % 3 === 0 ? capScaleTipMat : (sk % 2 ? capScaleMat : capMat));
+          bump.position.set(nx * 0.112, 0.035 + ny * 0.064, nz * 0.112);
+          bump.lookAt(bump.position.x + nx, bump.position.y + ny + 0.4, bump.position.z + nz);
+          var jit = 0.9 + ((sk * 7 + sr * 3) % 5) * 0.05; // slightly uneven, like real scales
+          bump.scale.set((1 - sr * 0.13) * jit * 0.85, (1.15 - sr * 0.13) * jit * 0.85, 0.4);
+          g.add(bump);
+        }
+      }
+      var stemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.1, 0), new THREE.Vector3(0, 0.15, 0), new THREE.Vector3(0.035, 0.17, 0));
+      var stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 8, 0.011, 6), capMat); // a short stem with a gentle bend
       g.add(stem);
+      var stemEnd = new THREE.Mesh(new THREE.SphereGeometry(0.011, 6, 5), capScaleMat);
+      stemEnd.position.set(0.035, 0.17, 0);
+      stemEnd.scale.set(0.6, 1, 1);             // the snapped-off end shows the paler wood inside
+      g.add(stemEnd);
+      for (var si = 0; si < 2; si++) {          // little growth rings on the stem
+        var knot = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.003, 5, 10), capScaleMat);
+        var sp = stemCurve.getPoint(0.35 + si * 0.35), sd = stemCurve.getTangent(0.35 + si * 0.35);
+        knot.position.copy(sp);
+        knot.lookAt(sp.x + sd.x, sp.y + sd.y, sp.z + sd.z);
+        g.add(knot);
+      }
     } else if (item === 'fiber') { // a little bundle of green strands
       for (var fi = 0; fi < 6; fi++) {
         var strand = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.014, 0.34, 5), fiberMat);
@@ -3168,12 +3229,12 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed' || held === 'sap') { // seeds and sap sit upright in your open palm
+        if (held === 'seed' || held === 'sap' || held === 'acorn') { // seeds, sap and acorns sit upright in your open palm
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
           model.scale.setScalar(0.95);
-          model.position.y = 0.06;
+          model.position.y = held === 'acorn' ? 0.19 : 0.06; // the acorn's pointed tip rests in the palm
           palm.add(model);
           heldItemGrp.add(palm);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
