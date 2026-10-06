@@ -3341,7 +3341,47 @@ function startGame(THREE) {
     }
     hissBurst(0.6, 'lowpass', 900, 0.5, 0.18, 0.05, 0.45);            // the soft whoosh of the branches collapsing
     slideTone('sine', 120, 70, 0.18, 0.25, 0.05);                     // a gentle bump as it settles
+  }  // Spell sounds: a sparkly magical shimmer when you cast, and a soft chime as the sparkles land on each crop
+  function spellSound() {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain(); // a whoosh that sweeps upward
+    if (!noiseBuf) hissBurst(0.01, 'lowpass', 100, 1, 0.0002, 0.001, 0.002);  // makes sure the hiss is ready
+    src.buffer = noiseBuf;
+    f.type = 'bandpass'; f.Q.value = 2.5;
+    f.frequency.setValueAtTime(500, t0);
+    f.frequency.exponentialRampToValueAtTime(3500, t0 + 0.6);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + 0.8);
+    [523.25, 526.5].forEach(function (fr) {                       // a warm, slightly wavy glow underneath
+      var osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = fr;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.5);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + 1.55);
+    });
+    [1046.5, 1318.5, 1568, 2093, 2637, 3136].forEach(function (fr, i) { // a rising, twinkly run of bell notes
+      bellTone(fr, 0.09, 0.7, 0.05 + i * 0.065);
+      bellTone(fr * 2.01, 0.025, 0.4, 0.05 + i * 0.065);          // a faint glassy overtone on each
+    });
+    for (var i = 0; i < 7; i++) {                                 // little random sparkles fizzing around you
+      bellTone(3200 + Math.random() * 3200, 0.03, 0.18, 0.35 + Math.random() * 0.9);
+    }
   }
+  function landChime(when) { // sparkles settling onto a crop
+    if (!audioCtx) return;
+    var notes = [1568, 1760, 2093, 2349];
+    var fr = notes[Math.floor(Math.random() * notes.length)];
+    bellTone(fr, 0.05, 0.5, when);
+    bellTone(fr * 1.5, 0.025, 0.35, when + 0.03);
+  }
+
 
 
   // ---------- Mining rocks ----------
@@ -4308,11 +4348,13 @@ function startGame(THREE) {
   function castSpell() {
     if (state.mana < SPELL_COST) return;
     state.mana -= SPELL_COST;
+    spellSound();
     var watered = 0;
     tiles.forEach(function (t) {
       if (t.crop && t.stage < 3 && !t.wet) {
         setWet(t, true);
         launchSparks(t, 16, watered * 0.12); // sparkles float over and settle onto this crop
+        if (watered < 10) landChime(watered * 0.12 + 1.75); // a soft chime as they land (not too many at once)
         watered += 1;
       }
     });
