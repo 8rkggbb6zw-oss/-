@@ -2420,7 +2420,7 @@ function startGame(THREE) {
       var falls = FALL_MATS.indexOf(pc.entry.mat) >= 0; // trunk and branches fall; roots and soil vanish with the tree
       var pos = pc.entry.mesh.geometry.attributes.position, vs = pc.geo.userData.vStart, vc = pc.geo.attributes.position.count;
       u.parts.push({
-        falls: falls, mesh: pc.entry.mesh, vStart: vs, vCount: vc,
+        falls: falls, flat: pc.entry.mat === litterMat, mesh: pc.entry.mesh, vStart: vs, vCount: vc, // flat: the leaf pile on the ground
         iStart: pc.geo.userData.iStart, iCount: pc.geo.index ? pc.geo.index.count : vc,
         orig: pos.array.slice(vs * 3, (vs + vc) * 3)
       });
@@ -2437,6 +2437,7 @@ function startGame(THREE) {
     u.parts.forEach(function (pt) {
       if (which === 'fall' && !pt.falls) return;
       if (which === 'ground' && pt.falls) return;
+      if (which === 'tilt' && pt.flat) return; // the leaf pile stays flat on the ground while the tree shudders
       var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
       for (var i = 0; i < o.length; i += 3) {
         var x = o[i], y = o[i + 1], z = o[i + 2];
@@ -2472,7 +2473,7 @@ function startGame(THREE) {
     tiltAxis.set(dz, 0, -dx).normalize();
     treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeRotationFromQuaternion(tiltQ.setFromAxisAngle(tiltAxis, angle)))
       .multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
-    setTreeTransform(t, treeM);
+    setTreeTransform(t, treeM, 'tilt');
   }
 
   // A copy of the tree that can tip over on its own, pivoting just above the stump
