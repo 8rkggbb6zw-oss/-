@@ -2874,19 +2874,22 @@ function startGame(THREE) {
   [-0.42, 0.42].forEach(function (px) { iPart(new THREE.SphereGeometry(0.4, 14, 10), R.pillow, BX + px, 0.8, NW + 0.55).scale.set(1, 0.38, 0.6); });
   inSolids.push([BX, BZ - 0.65, 1.0], [BX, BZ + 0.65, 1.0]);
 
-  // a bookshelf full of colourful spellbooks on the left wall
-  var SX = -ROOM_W / 2 + 0.28, SZ = -0.5;
-  iPart(new THREE.BoxGeometry(0.5, 2.5, 1.9), R.darkWood, SX - 0.02, 1.25, SZ);
-  for (var shelf = 0; shelf < 4; shelf++) {
-    var sy = 0.15 + shelf * 0.58;
-    iPart(new THREE.BoxGeometry(0.5, 0.05, 1.8), R.wood, SX + 0.04, sy, SZ);
-    var bz = SZ - 0.82;
-    while (bz < SZ + 0.78) {
-      var bw = 0.08 + Math.random() * 0.07, bh = 0.32 + Math.random() * 0.16;
-      var bookMat = rMat([0x7a58b0, 0xc85a9a, 0x3e8f86, 0xe8c86a, 0x5b3f8c, 0xb0402e][Math.floor(Math.random() * 6)]);
-      iPart(new THREE.BoxGeometry(0.34, bh, bw), bookMat, SX + 0.08, sy + 0.025 + bh / 2, bz + bw / 2, Math.random() < 0.15 ? 0.25 : 0);
-      bz += bw + 0.012;
-    }
+  // a tall black bookshelf on the left wall, open-fronted and empty, with a crown on top and a plinth below
+  var SX = -ROOM_W / 2 + 0.28, SZ = -0.5;                             // its middle; it faces into the room (+x)
+  var shelfBlack = rMat(0x111014, { roughness: 0.4, metalness: 0.15 }), shelfInside = rMat(0x1e1b24, { roughness: 0.6 });
+  iPart(new THREE.BoxGeometry(0.03, 2.36, 1.8), shelfInside, SX - 0.2, 1.3, SZ);                  // the back panel, a shade lighter
+  [-1, 1].forEach(function (sd) {
+    iPart(new THREE.BoxGeometry(0.46, 2.5, 0.07), shelfBlack, SX, 1.25, SZ + sd * 0.935);         // the two sides
+    iPart(new THREE.BoxGeometry(0.03, 2.3, 0.03), shelfInside, SX + 0.235, 1.3, SZ + sd * 0.905); // a fine bead down each front edge
+  });
+  iPart(new THREE.BoxGeometry(0.5, 0.07, 2.0), shelfBlack, SX, 2.47, SZ);                          // the top
+  iPart(new THREE.BoxGeometry(0.56, 0.06, 2.08), shelfBlack, SX + 0.02, 2.54, SZ);                 // a stepped crown
+  iPart(new THREE.BoxGeometry(0.6, 0.05, 2.14), shelfBlack, SX + 0.03, 2.6, SZ);
+  iPart(new THREE.BoxGeometry(0.52, 0.16, 2.0), shelfBlack, SX + 0.01, 0.08, SZ);                  // the plinth at the bottom
+  for (var shelf = 0; shelf < 4; shelf++) {                                                        // four empty shelves, each with a little lip
+    var sy = 0.2 + shelf * 0.58;
+    iPart(new THREE.BoxGeometry(0.42, 0.04, 1.8), shelfBlack, SX, sy, SZ);
+    iPart(new THREE.BoxGeometry(0.03, 0.07, 1.8), shelfBlack, SX + 0.215, sy + 0.01, SZ);
   }
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
 
