@@ -50,6 +50,9 @@ function startGame(THREE) {
   function onIsland(x, z) { return islandR(x, z) < ISLAND - 1.5; }
   var TREE_X = -24, TREE_Z = -24, TREE_ZONE = 3; // the Dawn Tree, just in from the top-left corner
   var LAKE_X = 20, LAKE_Z = 2, LAKE_R = 8.5;
+  var HOUSE_X = 12, HOUSE_Z = -24;                                   // the witchy farmhouse, up near the top, a bit to the right
+  var HOUSE_TURN = Math.atan2(FARM_X - HOUSE_X, FARM_Z + 5 - HOUSE_Z); // its door faces where you start
+  var HOUSE_DOOR_X = HOUSE_X + Math.sin(HOUSE_TURN) * 3.4, HOUSE_DOOR_Z = HOUSE_Z + Math.cos(HOUSE_TURN) * 3.4; // just outside the front door
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
   var SPEED = 4.4;
@@ -72,6 +75,7 @@ function startGame(THREE) {
   function outerSpot(margin) {
     for (var i = 0; i < 40; i++) {
       var x = (outerRand() * 2 - 1) * ISLAND, z = (outerRand() * 2 - 1) * ISLAND;
+      if (dist(x, z, HOUSE_X, HOUSE_Z) < 5) continue; // nothing grows through the farmhouse
       if (islandR(x, z) < ISLAND - margin && Math.sqrt(x * x + z * z) > 16.5) return { x: x, z: z };
     }
     return null;
@@ -256,7 +260,7 @@ function startGame(THREE) {
   // How far a point is from the nearest worn path (start → dock, start → Dawn Tree), a little wobbly
   function pathDist(x, z) {
     var hx = FARM_X, hz = FARM_Z + 5;
-    return Math.min(segDist(x, z, hx, hz, dockStart.x, dockStart.z), segDist(x, z, hx, hz, TREE_X, TREE_Z)) + noise(x * 1.3, z * 1.3) * 0.18;
+    return Math.min(segDist(x, z, hx, hz, dockStart.x, dockStart.z), segDist(x, z, hx, hz, TREE_X, TREE_Z), segDist(x, z, hx, hz, HOUSE_DOOR_X, HOUSE_DOOR_Z)) + noise(x * 1.3, z * 1.3) * 0.18;
   }
   var PATH_W = 0.75; // half the width of the paths
 
@@ -1798,6 +1802,8 @@ function startGame(THREE) {
       if (dist(x, z, startX, startZ) < 2.5) continue;
       if (distToPath(x, z, startX, startZ, dockStart.x, dockStart.z) < 1.6) continue; // path to the dock
       if (distToPath(x, z, startX, startZ, TREE_X, TREE_Z) < 1.6) continue;           // path to the Dawn Tree
+      if (distToPath(x, z, startX, startZ, HOUSE_DOOR_X, HOUSE_DOOR_Z) < 1.6) continue; // path to the farmhouse
+      if (dist(x, z, HOUSE_X, HOUSE_Z) < (tall ? 8 : 6.2) + gap) continue;              // and a clear yard round the house
       var crowded = false;
       for (var j = 0; j < forestSpots.length; j++) {
         if (dist(x, z, forestSpots[j].x, forestSpots[j].z) < gap + forestSpots[j].gap) { crowded = true; break; }
@@ -2384,6 +2390,340 @@ function startGame(THREE) {
     scene.add(rocks);
     rockBatches.push({ mesh: rocks, list: list });
   });
+
+  // ---------- The witchy farmhouse ----------
+  // A cosy little cottage near the top of the island: stone footing, cream walls with dark timber beams,
+  // a steep purple shingled roof, a round tower with a crooked witch-hat roof, a crooked chimney puffing
+  // lavender smoke, glowing windows, a round purple door, pumpkins, a broom and a bubbling cauldron
+  var house = new THREE.Group(), houseStatic = new THREE.Group(), houseLive = new THREE.Group();
+  house.add(houseStatic); house.add(houseLive);
+  var HW = 5, HD = 3.8, WALL_H = 2.5, FOOT_H = 0.45;            // width, depth, wall height, height of the stone footing
+  house.position.set(HOUSE_X, groundHeight(HOUSE_X, HOUSE_Z), HOUSE_Z);
+  house.rotation.y = HOUSE_TURN;
+  scene.add(house);
+
+  var shingleTex = paintTexture(128, 128, function (g, w, h) { // rows of rounded purple shingles
+    g.fillStyle = '#3a2660'; g.fillRect(0, 0, w, h);
+    var cols = ['#5b3f8c', '#6d4ba3', '#4f3580', '#7a58b0', '#634494'];
+    for (var row = 0; row < 8; row++) {
+      for (var k = -1; k < 9; k++) {
+        var x = k * 16 + (row % 2) * 8, y = row * 16;
+        g.fillStyle = cols[(row * 3 + k * 7 + 20) % cols.length];
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + 16, y); g.lineTo(x + 16, y + 10);
+        g.quadraticCurveTo(x + 8, y + 20, x, y + 10); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(30,15,50,0.7)'; g.lineWidth = 1.2; g.stroke();
+        g.strokeStyle = 'rgba(200,170,255,0.25)'; g.beginPath(); g.moveTo(x + 2, y + 2); g.lineTo(x + 14, y + 2); g.stroke();
+      }
+    }
+  });
+  shingleTex.wrapS = shingleTex.wrapT = THREE.RepeatWrapping;
+  var stoneWallTex = paintTexture(128, 128, function (g, w, h) { // rounded stones set in mortar
+    g.fillStyle = '#8c8494'; g.fillRect(0, 0, w, h);
+    for (var row = 0; row < 6; row++) {
+      for (var k = -1; k < 6; k++) {
+        var x = k * 26 + (row % 2) * 13 + (Math.random() - 0.5) * 4, y = row * 21.3 + 10.6;
+        var sh = 120 + Math.floor(Math.random() * 50);
+        g.fillStyle = 'rgb(' + (sh + 8) + ',' + sh + ',' + (sh + 18) + ')';
+        g.beginPath(); g.ellipse(x + 13, y, 11.5, 8.8, (Math.random() - 0.5) * 0.3, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.18)';
+        g.beginPath(); g.ellipse(x + 10, y - 3, 6, 3, 0, 0, Math.PI * 2); g.fill();
+      }
+    }
+  });
+  stoneWallTex.wrapS = stoneWallTex.wrapT = THREE.RepeatWrapping;
+  var plasterTex = paintTexture(64, 64, function (g, w, h) { // soft cream plaster with a little speckle
+    g.fillStyle = '#f3e4cc'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 160; i++) {
+      g.fillStyle = Math.random() < 0.5 ? 'rgba(190,160,130,0.18)' : 'rgba(255,255,255,0.3)';
+      g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+  });
+  plasterTex.wrapS = plasterTex.wrapT = THREE.RepeatWrapping;
+  plasterTex.repeat.set(3, 2);
+  var plankTex = paintTexture(64, 128, function (g, w, h) { // painted plum planks for the door
+    for (var i = 0; i < 4; i++) {
+      g.fillStyle = ['#6a3d8a', '#74449a', '#61377f', '#6f4192'][i];
+      g.fillRect(i * 16, 0, 16, h);
+      g.fillStyle = 'rgba(30,10,45,0.6)'; g.fillRect(i * 16, 0, 1.5, h);
+      for (var j = 0; j < 6; j++) { g.fillStyle = 'rgba(255,220,255,0.08)'; g.fillRect(i * 16 + 3 + Math.random() * 8, Math.random() * h, 1, 20 + Math.random() * 30); }
+    }
+  });
+  var houseMats = {
+    roof: new THREE.MeshStandardMaterial({ map: shingleTex, roughness: 0.8 }),
+    stone: new THREE.MeshStandardMaterial({ map: stoneWallTex, roughness: 0.95 }),
+    plaster: new THREE.MeshStandardMaterial({ map: plasterTex, roughness: 0.95 }),
+    beam: new THREE.MeshStandardMaterial({ color: 0x4a3226, roughness: 0.85 }),
+    door: new THREE.MeshStandardMaterial({ map: plankTex, roughness: 0.7 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xffd36e, emissive: 0xb07a10, emissiveIntensity: 0.35, roughness: 0.35, metalness: 0.6 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0xffe6a0, emissive: 0xffb84a, emissiveIntensity: 0.5, roughness: 0.3 }),
+    shutter: new THREE.MeshStandardMaterial({ color: 0x5e8f86, roughness: 0.8 }),
+    hat: new THREE.MeshStandardMaterial({ color: 0x3d2a63, roughness: 0.75 }),
+    pumpkin: new THREE.MeshStandardMaterial({ color: 0xf08a2a, roughness: 0.6 }),
+    stem: new THREE.MeshStandardMaterial({ color: 0x4f7a32, roughness: 0.8 }),
+    straw: new THREE.MeshStandardMaterial({ color: 0xd9b25a, roughness: 0.9 }),
+    iron: new THREE.MeshStandardMaterial({ color: 0x24222c, roughness: 0.45, metalness: 0.5 }),
+    brew: new THREE.MeshStandardMaterial({ color: 0x7dff9a, emissive: 0x3fe070, emissiveIntensity: 0.8, roughness: 0.2 }),
+    flowerPink: new THREE.MeshStandardMaterial({ color: 0xff8fd0, roughness: 0.6 }),
+    flowerBlue: new THREE.MeshStandardMaterial({ color: 0x9ab8ff, roughness: 0.6 }),
+    leaf: new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 })
+  };
+  function hPart(geo, matName, x, y, z, rx, ry, rz, parent) { // one piece of the house
+    var m = new THREE.Mesh(geo, houseMats[matName]);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    (parent || houseStatic).add(m);
+    return m;
+  }
+  var TOP = FOOT_H + WALL_H, FRONT = HD / 2;
+
+  // footing, walls and timber beams
+  var footGeo = new THREE.BoxGeometry(HW + 0.3, FOOT_H + 0.8, HD + 0.3);
+  hPart(footGeo, 'stone', 0, (FOOT_H - 0.8) / 2, 0);
+  hPart(new THREE.BoxGeometry(HW, WALL_H, HD), 'plaster', 0, FOOT_H + WALL_H / 2, 0);
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { // corner posts
+    hPart(new THREE.BoxGeometry(0.2, WALL_H, 0.2), 'beam', c[0] * (HW / 2 - 0.02), FOOT_H + WALL_H / 2, c[1] * (FRONT - 0.02));
+  });
+  [FOOT_H + 0.08, FOOT_H + WALL_H * 0.55, TOP - 0.08].forEach(function (y, n) { // beams running round the house
+    if (n !== 1) hPart(new THREE.BoxGeometry(HW + 0.04, 0.14, 0.08), 'beam', 0, y, FRONT + 0.02); // (the front skips the middle one: the door and windows are there)
+    hPart(new THREE.BoxGeometry(HW + 0.04, 0.14, 0.08), 'beam', 0, y, -FRONT - 0.02);
+    hPart(new THREE.BoxGeometry(0.08, 0.14, HD + 0.04), 'beam', HW / 2 + 0.02, y, 0);
+    hPart(new THREE.BoxGeometry(0.08, 0.14, HD + 0.04), 'beam', -HW / 2 - 0.02, y, 0);
+  });
+
+  // the steep roof, with its ends filled in and a ridge along the top
+  var RISE = 2.1, OVER = 0.45, halfRun = FRONT + OVER;           // the roof slopes from the ridge down past the wall tops to the eaves
+  var pitch = Math.atan2(RISE, FRONT), slabLen = halfRun / Math.cos(pitch), EAVE_Y = TOP - RISE * OVER / FRONT;
+  var roofGeo = new THREE.BoxGeometry(HW + 0.8, 0.16, slabLen);
+  var ruv = roofGeo.attributes.uv;
+  for (var ru = 0; ru < ruv.count; ru++) ruv.setXY(ru, ruv.getX(ru) * (HW + 0.8) / 1.1, ruv.getY(ru) * slabLen / 1.1); // shingles keep their size
+  [-1, 1].forEach(function (s) {
+    var nY = Math.cos(pitch) * 0.08, nZ = Math.sin(pitch) * 0.08 * s;  // nudged up so its underside sits on the walls
+    hPart(roofGeo, 'roof', 0, (TOP + RISE + EAVE_Y) / 2 + nY, s * halfRun / 2 + nZ, s * pitch, 0, 0);
+  });
+  var gable = new THREE.Shape();                                    // the triangle of wall under each end of the roof
+  gable.moveTo(-FRONT, 0); gable.lineTo(FRONT, 0); gable.lineTo(0, RISE); gable.lineTo(-FRONT, 0);
+  var gableGeo = new THREE.ExtrudeGeometry(gable, { depth: 0.12, bevelEnabled: false });
+  [-1, 1].forEach(function (s) { hPart(gableGeo, 'plaster', s * (HW / 2 - 0.06) - 0.06, TOP, 0, 0, Math.PI / 2, 0); });
+  hPart(new THREE.CylinderGeometry(0.11, 0.11, HW + 0.9, 8), 'hat', 0, TOP + RISE + 0.1, 0, 0, 0, Math.PI / 2); // the ridge
+
+  // the round tower on the left with a crooked witch-hat roof, a little brim and a gold star on top
+  var TX = -HW / 2 - 0.55, TZ = 0.35, TR = 0.95, TH = TOP + RISE + 0.35; // tall enough that its hat clears the roof
+  hPart(new THREE.CylinderGeometry(TR + 0.1, TR + 0.15, FOOT_H + 0.8, 16), 'stone', TX, (FOOT_H - 0.8) / 2, TZ);
+  hPart(new THREE.CylinderGeometry(TR, TR, TH - FOOT_H, 16), 'plaster', TX, FOOT_H + (TH - FOOT_H) / 2, TZ);
+  hPart(new THREE.CylinderGeometry(TR + 0.04, TR + 0.04, 0.14, 16), 'beam', TX, TH - 0.07, TZ);
+  hPart(new THREE.CylinderGeometry(TR + 0.04, TR + 0.04, 0.14, 16), 'beam', TX, FOOT_H + 0.08, TZ);
+  var hatPts = [];
+  for (var hp = 0; hp <= 12; hp++) { var ht = hp / 12; hatPts.push(new THREE.Vector2(Math.max(0.01, (TR + 0.3) * Math.pow(1 - ht, 1.3)), ht * 2.6)); }
+  var hatGeo = new THREE.LatheGeometry(hatPts, 18), hpos = hatGeo.attributes.position;
+  for (var hv = 0; hv < hpos.count; hv++) { var hy = hpos.getY(hv) / 2.6; hpos.setX(hv, hpos.getX(hv) - Math.pow(hy, 2.4) * 0.75); } // the tip flops over
+  hatGeo.computeVertexNormals();
+  hPart(hatGeo, 'roof', TX, TH, TZ);
+  hPart(new THREE.CylinderGeometry(TR + 0.55, TR + 0.6, 0.08, 20), 'hat', TX, TH + 0.02, TZ);   // the brim
+  hPart(new THREE.CylinderGeometry(TR + 0.2, TR + 0.26, 0.2, 18), 'gold', TX, TH + 0.2, TZ);   // a gold hat band
+  var star = hPart(new THREE.OctahedronGeometry(0.16, 0), 'gold', TX - 0.75, TH + 2.62, TZ);
+  star.scale.set(1, 1.3, 0.45);
+
+  // the crooked chimney on the right
+  var chim = hPart(new THREE.BoxGeometry(0.62, 2.5, 0.62), 'stone', HW / 2 - 0.95, TOP + 0.9, -0.7, 0, 0, -0.06);
+  hPart(new THREE.BoxGeometry(0.78, 0.14, 0.78), 'beam', HW / 2 - 0.88, TOP + 2.17, -0.7, 0, 0, -0.06);
+  var CHIM_TOP = new THREE.Vector3(HW / 2 - 0.88, TOP + 2.3, -0.7);
+
+  // the round-topped purple door, with a gold knob, a crescent moon and a stone arch
+  var doorGeo = new THREE.BoxGeometry(1.0, 1.3, 0.1);
+  hPart(doorGeo, 'door', 0, FOOT_H + 0.65, FRONT + 0.03);
+  hPart(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 18, 1, false, -Math.PI / 2, Math.PI), 'door', 0, FOOT_H + 1.3, FRONT + 0.03, Math.PI / 2, 0, 0);
+  hPart(new THREE.TorusGeometry(0.56, 0.09, 6, 18, Math.PI), 'stone', 0, FOOT_H + 1.3, FRONT + 0.06);
+  [-1, 1].forEach(function (s) { hPart(new THREE.BoxGeometry(0.18, 1.3, 0.16), 'stone', s * 0.56, FOOT_H + 0.65, FRONT + 0.06); });
+  hPart(new THREE.SphereGeometry(0.06, 10, 8), 'gold', 0.32, FOOT_H + 0.72, FRONT + 0.11);
+  hPart(new THREE.TorusGeometry(0.13, 0.035, 6, 16, Math.PI * 1.25), 'gold', 0, FOOT_H + 1.32, FRONT + 0.1, 0, 0, 0.8);
+  hPart(new THREE.BoxGeometry(1.5, 0.4, 0.8), 'stone', 0, FOOT_H - 0.23, FRONT + 0.45);    // the front step
+  hPart(new THREE.BoxGeometry(1.2, 0.04, 0.45), 'flowerPink', 0, FOOT_H - 0.01, FRONT + 0.5); // a little welcome mat
+
+  // glowing windows with shutters and flower boxes
+  function windowAt(x, y, z, ry, round) {
+    var w = new THREE.Group();
+    w.position.set(x, y, z); w.rotation.y = ry;
+    houseStatic.add(w);
+    if (round) {
+      (hPart(new THREE.CircleGeometry(0.34, 18), 'glass', 0, 0, 0.02, 0, 0, 0, w));
+      hPart(new THREE.TorusGeometry(0.36, 0.06, 6, 20), 'beam', 0, 0, 0.04, 0, 0, 0, w);
+      hPart(new THREE.BoxGeometry(0.05, 0.68, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
+      hPart(new THREE.BoxGeometry(0.68, 0.05, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
+      return;
+    }
+    (hPart(new THREE.PlaneGeometry(0.7, 0.8), 'glass', 0, 0, 0.02, 0, 0, 0, w));
+    hPart(new THREE.BoxGeometry(0.84, 0.08, 0.08), 'beam', 0, 0.44, 0.05, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.84, 0.08, 0.08), 'beam', 0, -0.44, 0.05, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.08, 0.86, 0.08), 'beam', 0.39, 0, 0.05, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.08, 0.86, 0.08), 'beam', -0.39, 0, 0.05, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.05, 0.8, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
+    hPart(new THREE.BoxGeometry(0.7, 0.05, 0.04), 'beam', 0, 0.05, 0.05, 0, 0, 0, w);
+    [-1, 1].forEach(function (s) { // shutters swung open, with a little moon cut out
+      hPart(new THREE.BoxGeometry(0.36, 0.86, 0.05), 'shutter', s * 0.62, 0, 0.1, 0, s * -0.35, 0, w);
+    });
+    hPart(new THREE.BoxGeometry(0.9, 0.18, 0.24), 'beam', 0, -0.55, 0.13, 0, 0, 0, w); // a flower box underneath
+    for (var f = 0; f < 6; f++) {
+      hPart(new THREE.SphereGeometry(0.075, 8, 6), f % 2 ? 'flowerPink' : 'flowerBlue', -0.35 + f * 0.14, -0.4, 0.15 + (f % 2) * 0.04, 0, 0, 0, w);
+      hPart(new THREE.SphereGeometry(0.06, 6, 5), 'leaf', -0.3 + f * 0.13, -0.45, 0.2, 0, 0, 0, w);
+    }
+  }
+  windowAt(-1.6, FOOT_H + 1.35, FRONT + 0.02, 0);
+  windowAt(1.6, FOOT_H + 1.35, FRONT + 0.02, 0);
+  windowAt(HW / 2 + 0.02, FOOT_H + 1.35, 0.4, Math.PI / 2);
+  windowAt(HW / 2 + 0.08, TOP + 0.75, 0, Math.PI / 2, true);              // a round attic window up in the end wall
+  windowAt(TX + 0.24, FOOT_H + 1.5, TZ + TR - 0.04, 0.25, true);           // and two in the tower
+  windowAt(TX + 0.24, TOP + 1.4, TZ + TR - 0.04, 0.25, true);
+
+  // string lights along the front of the roof
+  var houseLights = [];
+  for (var sl = 0; sl < 11; sl++) {
+    var lx = -HW / 2 - 0.3 + sl * (HW + 0.6) / 10, sag = Math.sin((sl % 5) / 5 * Math.PI) * 0.12;
+    var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: sl % 2 ? 0xffd27a : 0xff9be0, emissive: sl % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 0.8 }));
+    bulb.position.set(lx, EAVE_Y - 0.08 - sag, FRONT + OVER - 0.05);
+    houseLive.add(bulb);
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: sl % 2 ? 0xffc060 : 0xff8fe0, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    halo.scale.set(0.35, 0.35, 1);
+    halo.position.copy(bulb.position);
+    houseLive.add(halo);
+    houseLights.push({ bulb: bulb, halo: halo, p: sl * 1.7 });
+  }
+  // two little lantern posts either side of the path to the door
+  var lanternMat = new THREE.MeshStandardMaterial({ color: 0xffe6a0, emissive: 0xffb040, emissiveIntensity: 1 });
+  var lanterns = [];
+  [-1, 1].forEach(function (s) {
+    var lpx = s * 0.95, lpz = FRONT + 1.1;
+    hPart(new THREE.CylinderGeometry(0.05, 0.06, 1.15, 6), 'beam', lpx, 0.57, lpz);
+    hPart(new THREE.BoxGeometry(0.24, 0.04, 0.24), 'iron', lpx, 1.17, lpz);
+    hPart(new THREE.ConeGeometry(0.19, 0.14, 4), 'iron', lpx, 1.48, lpz, 0, Math.PI / 4, 0);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { hPart(new THREE.BoxGeometry(0.025, 0.24, 0.025), 'iron', lpx + c[0] * 0.1, 1.3, lpz + c[1] * 0.1); });
+    var lg = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), lanternMat);
+    lg.position.set(lpx, 1.3, lpz);
+    houseLive.add(lg);
+    var lh = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb860, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lh.scale.set(1.0, 1.0, 1);
+    lh.position.copy(lg.position);
+    houseLive.add(lh);
+    lanterns.push(lh);
+  });
+
+  // pumpkins by the door, and a broom leaning on the wall
+  [[-1.45, 0.5, 0.3], [-1.95, 0.75, 0.2], [1.5, 0.55, 0.25]].forEach(function (pk) {
+    for (var rib = 0; rib < 6; rib++) { // bumpy ribs all the way round
+      var r1 = hPart(new THREE.SphereGeometry(pk[2], 12, 8), 'pumpkin', pk[0], pk[2] * 0.75, FRONT + pk[1], 0, rib / 6 * Math.PI, 0);
+      r1.scale.set(1.2, 0.8, 0.55);
+    }
+    hPart(new THREE.CylinderGeometry(0.03, 0.045, 0.16, 6), 'stem', pk[0] + 0.02, pk[2] * 1.5, FRONT + pk[1], 0, 0, 0.3);
+  });
+  hPart(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 6), 'beam', 1.95, FOOT_H + 0.75, FRONT + 0.15, 0.12, 0, -0.18);        // broom handle
+  hPart(new THREE.ConeGeometry(0.2, 0.5, 10), 'straw', 2.07, FOOT_H + 0.02, FRONT + 0.22, 0.12, 0, -0.18);                 // bristles
+  hPart(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), 'flowerPink', 2.03, FOOT_H + 0.25, FRONT + 0.2, 0.12, 0, -0.18); // a ribbon tying them
+
+  // a bubbling cauldron on a little fire, out front to the right
+  var CX = 3.4, CZ = FRONT + 1.4;
+  var cauldron = hPart(new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), 'iron', CX, 0.55, CZ);
+  hPart(new THREE.TorusGeometry(0.42, 0.06, 8, 20), 'iron', CX, 0.84, CZ, Math.PI / 2, 0, 0);
+  [0, 2.1, 4.2].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), 'iron', CX + Math.cos(a) * 0.32, 0.12, CZ + Math.sin(a) * 0.32); });
+  [0.4, 1.9, 3.3].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), 'beam', CX, 0.05, CZ, Math.PI / 2, a, 0); }); // firewood
+  var brew = new THREE.Mesh(new THREE.CircleGeometry(0.4, 18), houseMats.brew);
+  brew.rotation.x = -Math.PI / 2;
+  brew.position.set(CX, 0.8, CZ);
+  houseLive.add(brew);
+  var brewGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x7dff9a, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+  brewGlow.scale.set(1.4, 1.4, 1); brewGlow.position.set(CX, 1.0, CZ);
+  houseLive.add(brewGlow);
+  var fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8a30, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+  fireGlow.scale.set(0.8, 0.6, 1); fireGlow.position.set(CX, 0.12, CZ);
+  houseLive.add(fireGlow);
+  var bubbles = [];
+  for (var bb = 0; bb < 6; bb++) {
+    var bub = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), houseMats.brew);
+    houseLive.add(bub);
+    bubbles.push({ m: bub, t: bb / 6, x: (Math.random() - 0.5) * 0.45, z: (Math.random() - 0.5) * 0.45 });
+  }
+
+  // lavender smoke curling out of the chimney
+  var smoke = [];
+  for (var sm = 0; sm < 7; sm++) {
+    var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xbfa8f0, transparent: true, opacity: 0, depthWrite: false }));
+    houseLive.add(puff);
+    smoke.push({ s: puff, t: sm / 7 });
+  }
+
+  // a few glowing mushrooms and a short picket fence by the front corners
+  [[-3.4, 1.6], [-3.1, 2.1], [3.0, -1.4], [-2.4, -2.2]].forEach(function (mp, n) {
+    hPart(new THREE.CylinderGeometry(0.035, 0.05, 0.22, 6), 'plaster', mp[0], 0.05, mp[1]);
+    var cap = hPart(new THREE.SphereGeometry(0.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), n % 2 ? 'flowerPink' : 'flowerBlue', mp[0], 0.16, mp[1]);
+    cap.scale.set(1, 0.7, 1);
+  });
+  [-1, 1].forEach(function (s) {
+    for (var fp = 0; fp < 4; fp++) {
+      var fx = s * (2.0 + fp * 0.45), fz = FRONT + 2.3;
+      hPart(new THREE.BoxGeometry(0.1, 0.6, 0.06), 'plaster', fx, 0.15, fz);
+      hPart(new THREE.ConeGeometry(0.07, 0.12, 4), 'plaster', fx, 0.51, fz, 0, Math.PI / 4, 0);
+    }
+    hPart(new THREE.BoxGeometry(1.5, 0.07, 0.05), 'beam', s * 2.68, 0.3, FRONT + 2.33);
+    hPart(new THREE.BoxGeometry(1.5, 0.07, 0.05), 'beam', s * 2.68, 0.0, FRONT + 2.33);
+  });
+
+  // Join the still parts into a few meshes (one per material) so the house stays fast
+  house.updateMatrixWorld(true);
+  var houseByMat = {};
+  houseStatic.traverse(function (o) {
+    if (!o.isMesh) return;
+    var key = o.material.uuid;
+    if (!houseByMat[key]) houseByMat[key] = { mat: o.material, geos: [] };
+    var g = o.geometry.clone();
+    g.userData = {};
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    g.applyMatrix4(o.matrixWorld);
+    houseByMat[key].geos.push(g);
+  });
+  house.remove(houseStatic);
+  Object.keys(houseByMat).forEach(function (key) {
+    var entry = houseByMat[key];
+    var joined = new THREE.Mesh(joinGeometries(entry.geos), entry.mat);
+    joined.castShadow = joined.receiveShadow = true;
+    scene.add(joined);
+  });
+
+  // You bump into the house, the tower and the cauldron
+  function houseToWorld(lx, lz) {
+    var c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
+    return { x: HOUSE_X + lx * c + lz * s, z: HOUSE_Z - lx * s + lz * c };
+  }
+  [[-1.6, 0, 2.0], [0, 0, 2.0], [1.6, 0, 2.0], [TX, TZ, TR + 0.2], [CX, CZ, 0.55], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]].forEach(function (c) {
+    var w = houseToWorld(c[0], c[1]);
+    solids.push({ x: w.x, z: w.z, r: c[2] });
+  });
+
+  function updateHouse(dt, t, night) {
+    var glow = 0.35 + night * 0.9;
+    houseMats.glass.emissiveIntensity = glow + Math.sin(t * 7) * 0.03 * night;       // the windows glow warmer at night, with a little flicker
+    lanternMat.emissiveIntensity = 0.6 + night * 1.2 + Math.sin(t * 9) * 0.08;
+    lanterns.forEach(function (lh, n) { lh.material.opacity = 0.2 + night * 0.55 + Math.sin(t * 9 + n) * 0.04; });
+    houseLights.forEach(function (L) {                                                 // the string lights twinkle gently
+      var tw = 0.75 + 0.25 * Math.sin(t * 2.2 + L.p);
+      L.bulb.material.emissiveIntensity = (0.4 + night * 1.1) * tw;
+      L.halo.material.opacity = (0.12 + night * 0.5) * tw;
+    });
+    brewGlow.material.opacity = 0.3 + night * 0.35 + Math.sin(t * 3) * 0.06;
+    fireGlow.material.opacity = 0.45 + Math.sin(t * 13) * 0.1 + Math.sin(t * 7.3) * 0.08;
+    bubbles.forEach(function (b) {                                                     // bubbles rise, swell and pop
+      b.t += dt * 0.7;
+      if (b.t > 1) { b.t -= 1; b.x = (Math.random() - 0.5) * 0.45; b.z = (Math.random() - 0.5) * 0.45; }
+      b.m.position.set(CX + b.x, 0.8 + b.t * 0.12, CZ + b.z);
+      b.m.scale.setScalar(0.3 + b.t * 0.9);
+      b.m.visible = b.t < 0.92;
+    });
+    smoke.forEach(function (p) {                                                       // puffs drift up, grow and fade
+      p.t += dt * 0.16;
+      if (p.t > 1) p.t -= 1;
+      var k = p.t;
+      p.s.position.set(CHIM_TOP.x + Math.sin(k * 5 + p.t) * 0.25 + k * 0.6, CHIM_TOP.y + k * 2.6, CHIM_TOP.z + Math.cos(k * 4) * 0.15);
+      p.s.scale.setScalar(0.4 + k * 1.3);
+      p.s.material.opacity = Math.min(1, k * 6) * (1 - k) * 0.8;
+    });
+  }
 
   // ---------- Chopping trees ----------
   var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
@@ -5735,6 +6075,7 @@ function startGame(THREE) {
     // Dawn Tree glow and mana
     var pulse = 0.5 + Math.sin(t * 2) * 0.5;
     updateDawnTree(dt, t, night, pulse);
+    updateHouse(dt, t, night);
     var sp = sparkles.geometry.attributes.position;
     for (var i = 0; i < 40; i++) {
       var a = i * 2.4 + t * (0.3 + (i % 5) * 0.12), r = 1.6 + (i % 7) * 0.4;
