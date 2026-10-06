@@ -2760,17 +2760,40 @@ function startGame(THREE) {
   var fireLight = new THREE.PointLight(0xff9a4a, 1.6, 9, 1.6);       // the fireplace, flickering warm light across the room
   interiorScene.add(fireLight);
 
-  var floorTex = paintTexture(128, 128, function (g, w, h) {          // warm honey floorboards
-    for (var i = 0; i < 8; i++) {
-      g.fillStyle = ['#b7834f', '#a8774a', '#c08c57', '#9f6e43'][i % 4];
-      g.fillRect(0, i * 16, w, 16);
-      g.fillStyle = 'rgba(60,30,10,0.55)'; g.fillRect(0, i * 16, w, 1.5);
-      var cut = (i * 53) % w; g.fillRect(cut, i * 16, 1.5, 16);
-      for (var j = 0; j < 5; j++) { g.fillStyle = 'rgba(80,45,20,0.18)'; g.fillRect(Math.random() * w, i * 16 + 3 + Math.random() * 10, 20 + Math.random() * 30, 1); }
+  var floorTex = paintTexture(512, 512, function (g, w, h) {          // grey hardwood: long planks in soft driftwood greys, with grain, knots and staggered joints
+    var ROWS = 8, rowH = h / ROWS;
+    var greys = [[156, 152, 150], [138, 135, 136], [170, 166, 162], [124, 122, 126], [148, 146, 150], [162, 157, 152], [132, 129, 128], [144, 141, 144]];
+    for (var r = 0; r < ROWS; r++) {
+      var y0 = r * rowH, x = -((r * 173) % 256);                      // each row's joints fall in a different place
+      while (x < w) {
+        var len = 180 + ((r * 7 + Math.floor(x)) % 5) * 40, c = greys[(r * 3 + Math.floor((x + 512) / 97)) % greys.length];
+        var tint = (Math.random() - 0.5) * 14;
+        var grd = g.createLinearGradient(x, y0, x + len, y0);          // each plank a touch lighter at one end
+        grd.addColorStop(0, 'rgb(' + Math.round(c[0] + tint) + ',' + Math.round(c[1] + tint) + ',' + Math.round(c[2] + tint) + ')');
+        grd.addColorStop(1, 'rgb(' + Math.round(c[0] + tint - 10) + ',' + Math.round(c[1] + tint - 10) + ',' + Math.round(c[2] + tint - 8) + ')');
+        g.fillStyle = grd; g.fillRect(x, y0, len, rowH);
+        for (var gl = 0; gl < 9; gl++) {                               // the wood grain: long wavy lines
+          var gy = y0 + 4 + Math.random() * (rowH - 8), amp = 1 + Math.random() * 2.5, ph = Math.random() * 6;
+          g.strokeStyle = Math.random() < 0.6 ? 'rgba(70,66,72,0.22)' : 'rgba(235,232,228,0.18)';
+          g.lineWidth = 0.6 + Math.random() * 0.9;
+          g.beginPath();
+          for (var gx = 0; gx <= len; gx += 8) g.lineTo(x + gx, gy + Math.sin(gx / 40 + ph) * amp);
+          g.stroke();
+        }
+        if (Math.random() < 0.35) {                                    // now and then a little knot
+          var kx = x + 30 + Math.random() * (len - 60), ky = y0 + rowH * (0.3 + Math.random() * 0.4);
+          g.fillStyle = 'rgba(80,74,78,0.45)'; g.beginPath(); g.ellipse(kx, ky, 7, 3.5, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = 'rgba(80,74,78,0.3)'; g.lineWidth = 1; g.beginPath(); g.ellipse(kx, ky, 12, 6, 0, 0, Math.PI * 2); g.stroke();
+        }
+        g.fillStyle = 'rgba(45,42,48,0.65)'; g.fillRect(x, y0, 2, rowH); // the joint at the end of the plank
+        x += len;
+      }
+      g.fillStyle = 'rgba(40,38,44,0.7)'; g.fillRect(0, y0, w, 2);      // the gap between rows
+      g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(0, y0 + 2, w, 1); // and a soft bevel highlight
     }
   });
   floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-  floorTex.repeat.set(3, 3);
+  floorTex.repeat.set(2, 2);
   var quiltTex = paintTexture(64, 64, function (g, w, h) {            // a patchwork quilt
     var cols = ['#7a58b0', '#b07ad0', '#5b3f8c', '#e49ccf'];
     for (var x = 0; x < 4; x++) for (var y = 0; y < 4; y++) { g.fillStyle = cols[(x + y * 3) % 4]; g.fillRect(x * 16, y * 16, 16, 16); }
@@ -2836,7 +2859,7 @@ function startGame(THREE) {
     return new THREE.MeshStandardMaterial(o);
   }
   var R = {
-    floor: rMat(0xffffff, { map: floorTex }), wall: rMat(0xf2e6d8, { roughness: 0.95 }),
+    floor: rMat(0xffffff, { map: floorTex, roughness: 0.5, metalness: 0.05 }), wall: rMat(0xf2e6d8, { roughness: 0.95 }),
     wood: rMat(0x7a4e32), darkWood: rMat(0x4a3226), stone: rMat(0xffffff, { map: stoneWallTex, roughness: 0.95 }), soot: rMat(0x1a1214),
     cream: rMat(0xf3e6d0), quilt: rMat(0xffffff, { map: quiltTex }), pillow: rMat(0xfff4fa), rug: rMat(0xffffff, { map: rugTex, roughness: 1 }),
     gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
