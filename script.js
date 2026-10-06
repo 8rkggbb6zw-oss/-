@@ -2524,7 +2524,7 @@ function startGame(THREE) {
   star.scale.set(1, 1.3, 0.45);
 
   // the crooked chimney on the right
-  var chim = hPart(new THREE.BoxGeometry(0.62, 2.5, 0.62), 'stone', HW / 2 - 0.95, TOP + 0.9, -0.7, 0, 0, -0.06);
+  hPart(new THREE.BoxGeometry(0.62, 2.5, 0.62), 'stone', HW / 2 - 0.95, TOP + 0.9, -0.7, 0, 0, -0.06);
   hPart(new THREE.BoxGeometry(0.78, 0.14, 0.78), 'beam', HW / 2 - 0.88, TOP + 2.17, -0.7, 0, 0, -0.06);
   var CHIM_TOP = new THREE.Vector3(HW / 2 - 0.88, TOP + 2.3, -0.7);
 
@@ -2545,20 +2545,20 @@ function startGame(THREE) {
     w.position.set(x, y, z); w.rotation.y = ry;
     houseStatic.add(w);
     if (round) {
-      (hPart(new THREE.CircleGeometry(0.34, 18), 'glass', 0, 0, 0.02, 0, 0, 0, w));
+      hPart(new THREE.CircleGeometry(0.34, 18), 'glass', 0, 0, 0.02, 0, 0, 0, w);
       hPart(new THREE.TorusGeometry(0.36, 0.06, 6, 20), 'beam', 0, 0, 0.04, 0, 0, 0, w);
       hPart(new THREE.BoxGeometry(0.05, 0.68, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
       hPart(new THREE.BoxGeometry(0.68, 0.05, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
       return;
     }
-    (hPart(new THREE.PlaneGeometry(0.7, 0.8), 'glass', 0, 0, 0.02, 0, 0, 0, w));
+    hPart(new THREE.PlaneGeometry(0.7, 0.8), 'glass', 0, 0, 0.02, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.84, 0.08, 0.08), 'beam', 0, 0.44, 0.05, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.84, 0.08, 0.08), 'beam', 0, -0.44, 0.05, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.08, 0.86, 0.08), 'beam', 0.39, 0, 0.05, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.08, 0.86, 0.08), 'beam', -0.39, 0, 0.05, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.05, 0.8, 0.04), 'beam', 0, 0, 0.05, 0, 0, 0, w);
     hPart(new THREE.BoxGeometry(0.7, 0.05, 0.04), 'beam', 0, 0.05, 0.05, 0, 0, 0, w);
-    [-1, 1].forEach(function (s) { // shutters swung open, with a little moon cut out
+    [-1, 1].forEach(function (s) { // shutters swung open
       hPart(new THREE.BoxGeometry(0.36, 0.86, 0.05), 'shutter', s * 0.62, 0, 0.1, 0, s * -0.35, 0, w);
     });
     hPart(new THREE.BoxGeometry(0.9, 0.18, 0.24), 'beam', 0, -0.55, 0.13, 0, 0, 0, w); // a flower box underneath
@@ -2620,7 +2620,7 @@ function startGame(THREE) {
 
   // a bubbling cauldron on a little fire, out front to the right
   var CX = 3.4, CZ = FRONT + 1.4;
-  var cauldron = hPart(new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), 'iron', CX, 0.55, CZ);
+  hPart(new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), 'iron', CX, 0.55, CZ);
   hPart(new THREE.TorusGeometry(0.42, 0.06, 8, 20), 'iron', CX, 0.84, CZ, Math.PI / 2, 0, 0);
   [0, 2.1, 4.2].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), 'iron', CX + Math.cos(a) * 0.32, 0.12, CZ + Math.sin(a) * 0.32); });
   [0.4, 1.9, 3.3].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), 'beam', CX, 0.05, CZ, Math.PI / 2, a, 0); }); // firewood
@@ -2649,7 +2649,7 @@ function startGame(THREE) {
     smoke.push({ s: puff, t: sm / 7 });
   }
 
-  // a few glowing mushrooms and a short picket fence by the front corners
+  // a few little mushrooms and a short picket fence by the front corners
   [[-3.4, 1.6], [-3.1, 2.1], [3.0, -1.4], [-2.4, -2.2]].forEach(function (mp, n) {
     hPart(new THREE.CylinderGeometry(0.035, 0.05, 0.22, 6), 'plaster', mp[0], 0.05, mp[1]);
     var cap = hPart(new THREE.SphereGeometry(0.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), n % 2 ? 'flowerPink' : 'flowerBlue', mp[0], 0.16, mp[1]);
