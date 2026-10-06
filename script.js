@@ -2953,7 +2953,7 @@ function startGame(THREE) {
 
   // twinkly string lights along the top of the walls
   var inLights = [];
-  function lightRun(name, len, n) { // a sagging string of lights hung along the top beam of one wall
+  function lightRun(name, len, n) { // a sagging string of lights along the top of one wall
     for (var i = 0; i <= n; i++) {
       var lx = -len / 2 + 0.2 + (len - 0.4) * i / n, ly = ROOM_H - 0.32 - Math.sin((i % 4) / 4 * Math.PI) * 0.12;
       var lm = rMat(i % 2 ? 0xffd27a : 0xff9be0, { emissive: i % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 1 });
@@ -2981,7 +2981,7 @@ function startGame(THREE) {
   var wallLook = new THREE.Vector3();
   function updateInterior(dt, t) {
     if (!indoors) return;
-    for (var wn in inWalls) { // hide any wall the camera is behind, beams, windows and all, so it never blocks the view
+    for (var wn in inWalls) { // hide any wall the camera is behind, windows and all, so it never blocks the view
       var W = inWalls[wn];
       wallLook.set(camera.position.x - IN_X - W.c.x, 0, camera.position.z - IN_Z - W.c.z);
       W.g.visible = wallLook.dot(W.n) > 0;
