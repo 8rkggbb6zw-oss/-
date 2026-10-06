@@ -52,6 +52,7 @@ function startGame(THREE) {
   var LAKE_X = 20, LAKE_Z = 2, LAKE_R = 8.5;
   var HOUSE_X = 12, HOUSE_Z = -28;                                   // the witchy farmhouse, up near the top, a bit to the right
   var HOUSE_TURN = 0;                                                // squared up with the island, its door facing down toward the middle
+  var IN_X = 0, IN_Z = 1000;                                          // where the inside of the farmhouse is built, far away from the island
   var HOUSE_DOOR_X = HOUSE_X + Math.sin(HOUSE_TURN) * 3.4, HOUSE_DOOR_Z = HOUSE_Z + Math.cos(HOUSE_TURN) * 3.4; // just outside the front door
   var MAX_MANA = 100, SPELL_COST = 35;
   var STAGE_TIME = 6;              // seconds per growth stage while watered
@@ -2742,6 +2743,296 @@ function startGame(THREE) {
     });
   }
 
+  // ---------- Inside the farmhouse ----------
+  // A cosy room of its own, drawn instead of the island while you're inside, so you can't see out.
+  // It sits far away from the island (at IN_X, IN_Z) so nothing outside can be reached from in here.
+  var interiorScene = new THREE.Scene();
+  interiorScene.background = new THREE.Color(0x1c1228);
+  var ROOM_W = 9, ROOM_D = 7, ROOM_H = 3.4;
+  var indoors = false;
+  var room = new THREE.Group();
+  room.position.set(IN_X, 0, IN_Z);
+  interiorScene.add(room);
+  interiorScene.add(new THREE.HemisphereLight(0xffe6cc, 0x4a3050, 0.75));
+  var roomLamp = new THREE.PointLight(0xffd6f0, 0.55, 16);           // a soft glow over the whole room
+  roomLamp.position.set(IN_X + 0.5, 3.2, IN_Z + 0.5);
+  interiorScene.add(roomLamp);
+  var fireLight = new THREE.PointLight(0xff9a4a, 1.6, 9, 1.6);       // the fireplace, flickering warm light across the room
+  interiorScene.add(fireLight);
+
+  var floorTex = paintTexture(128, 128, function (g, w, h) {          // warm honey floorboards
+    for (var i = 0; i < 8; i++) {
+      g.fillStyle = ['#b7834f', '#a8774a', '#c08c57', '#9f6e43'][i % 4];
+      g.fillRect(0, i * 16, w, 16);
+      g.fillStyle = 'rgba(60,30,10,0.55)'; g.fillRect(0, i * 16, w, 1.5);
+      var cut = (i * 53) % w; g.fillRect(cut, i * 16, 1.5, 16);
+      for (var j = 0; j < 5; j++) { g.fillStyle = 'rgba(80,45,20,0.18)'; g.fillRect(Math.random() * w, i * 16 + 3 + Math.random() * 10, 20 + Math.random() * 30, 1); }
+    }
+  });
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+  floorTex.repeat.set(3, 3);
+  var paperTex = paintTexture(128, 128, function (g, w, h) {          // dusty lavender wallpaper with little gold stars and moons, wood panels below
+    g.fillStyle = '#b9a3d6'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 4; i++) { g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(i * 32 + 14, 0, 4, h * 0.62); }
+    g.fillStyle = '#e8c86a';
+    for (var k = 0; k < 6; k++) {
+      var sx = (k % 3) * 44 + 12 + (k > 2 ? 22 : 0), sy = k > 2 ? 52 : 18;
+      if (k % 2) { g.beginPath(); g.arc(sx, sy, 5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#b9a3d6'; g.beginPath(); g.arc(sx + 2.5, sy - 1.5, 4.2, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e8c86a'; }
+      else { g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 2 : 5, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); } g.fill(); }
+    }
+    g.fillStyle = '#6e4a3a'; g.fillRect(0, h * 0.66, w, h * 0.34);   // wainscot panels
+    g.fillStyle = 'rgba(30,15,10,0.45)'; g.fillRect(0, h * 0.66, w, 3);
+    for (var q = 0; q < 4; q++) { g.strokeStyle = 'rgba(30,15,10,0.35)'; g.lineWidth = 2; g.strokeRect(q * 32 + 4, h * 0.7, 24, h * 0.25); }
+  });
+  paperTex.wrapS = THREE.RepeatWrapping;
+  var quiltTex = paintTexture(64, 64, function (g, w, h) {            // a patchwork quilt
+    var cols = ['#7a58b0', '#b07ad0', '#5b3f8c', '#e49ccf'];
+    for (var x = 0; x < 4; x++) for (var y = 0; y < 4; y++) { g.fillStyle = cols[(x + y * 3) % 4]; g.fillRect(x * 16, y * 16, 16, 16); }
+    g.strokeStyle = 'rgba(255,240,200,0.6)'; g.setLineDash([2, 2]);
+    for (var i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, h); g.moveTo(0, i * 16); g.lineTo(w, i * 16); g.stroke(); }
+  });
+  var rugTex = paintTexture(128, 128, function (g, w, h) {            // a round braided rug
+    var cols = ['#c85a9a', '#7a58b0', '#e8a0c8', '#5b3f8c', '#f0c8e0'];
+    for (var i = 8; i > 0; i--) { g.fillStyle = cols[i % cols.length]; g.beginPath(); g.arc(64, 64, i * 8, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#e8c86a'; g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 4 : 10, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } g.fill();
+  });
+  function rMat(color, extra) {
+    var o = { color: color, roughness: 0.8 };
+    for (var k in extra) o[k] = extra[k];
+    return new THREE.MeshStandardMaterial(o);
+  }
+  var R = {
+    floor: rMat(0xffffff, { map: floorTex }), paper: rMat(0xffffff, { map: paperTex, roughness: 0.95 }),
+    wood: rMat(0x7a4e32), darkWood: rMat(0x4a3226), stone: rMat(0xffffff, { map: stoneWallTex, roughness: 0.95 }), soot: rMat(0x1a1214),
+    cream: rMat(0xf3e6d0), quilt: rMat(0xffffff, { map: quiltTex }), pillow: rMat(0xfff4fa), rug: rMat(0xffffff, { map: rugTex, roughness: 1 }),
+    gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
+    leaf: rMat(0x5aa84a), cat: rMat(0x221c2a, { roughness: 0.6 }), catEye: rMat(0xfff27a, { emissive: 0xffd640, emissiveIntensity: 1 }),
+    curtain: rMat(0xd96aa8), pane: rMat(0x9fb4ff, { emissive: 0x6a7ad8, emissiveIntensity: 0.6 }), door: rMat(0xffffff, { map: plankTex, roughness: 0.7 }),
+    candle: rMat(0xfff0d8), iron: rMat(0x24222c, { metalness: 0.5, roughness: 0.45 }), mat: rMat(0xff8fd0)
+  };
+  function iPart(geo, mat, x, y, z, rx, ry, rz, parent) { // one piece of the room (x, z from the middle of the floor)
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    (parent || room).add(m);
+    return m;
+  }
+  var inSolids = [];                                                  // furniture you bump into (room positions)
+  var NW = -ROOM_D / 2;                                               // the back (north) wall
+
+  // floor and walls: each wall only shows from inside, so when the camera is behind one you see straight through it
+  iPart(new THREE.PlaneGeometry(ROOM_W, ROOM_D), R.floor, 0, 0, 0, -Math.PI / 2);
+  [[0, NW, 0, ROOM_W], [0, -NW, Math.PI, ROOM_W], [-ROOM_W / 2, 0, Math.PI / 2, ROOM_D], [ROOM_W / 2, 0, -Math.PI / 2, ROOM_D]].forEach(function (wl) {
+    var wg = new THREE.PlaneGeometry(wl[3], ROOM_H);
+    var uv = wg.attributes.uv;
+    for (var i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * wl[3] / 1.6);
+    iPart(wg, R.paper, wl[0], ROOM_H / 2, wl[1], 0, wl[2], 0);
+  });
+
+  // the fireplace on the back wall, with a crackling fire, candles and potions on the mantel
+  var FPX = -1.6;
+  iPart(new THREE.BoxGeometry(2.3, 2.1, 0.7), R.stone, FPX, 1.05, NW + 0.35);
+  iPart(new THREE.BoxGeometry(1.2, 0.95, 0.1), R.soot, FPX, 0.6, NW + 0.68);
+  iPart(new THREE.BoxGeometry(1.5, 1.4, 0.5), R.stone, FPX, 2.8, NW + 0.25);
+  iPart(new THREE.BoxGeometry(2.7, 0.14, 0.9), R.darkWood, FPX, 1.62, NW + 0.45);
+  iPart(new THREE.BoxGeometry(2.7, 0.1, 0.8), R.stone, FPX, 0.05, NW + 1.0);
+  [-0.25, 0.2].forEach(function (lx, n) { iPart(new THREE.CylinderGeometry(0.08, 0.08, 0.8, 7), R.wood, FPX + lx * 0.4, 0.18 + n * 0.06, NW + 0.62, 0, 0.3 - n * 0.6, Math.PI / 2); });
+  fireLight.position.set(IN_X + FPX, 0.8, IN_Z + NW + 1.1);
+  var flames = [];
+  [[0, 0.42, 0.55, 0xffb040], [-0.18, 0.36, 0.38, 0xff7a20], [0.2, 0.36, 0.4, 0xff7a20], [0, 0.5, 0.3, 0xfff0a0]].forEach(function (f, n) {
+    var fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: f[3], transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    fl.position.set(FPX + f[0], f[1], NW + 0.66);
+    fl.scale.set(f[2], f[2] * 1.5, 1);
+    room.add(fl);
+    flames.push({ s: fl, base: f[2], p: n * 1.9, y: f[1] });
+  });
+  var candleGlows = [];
+  function candle(x, y, z, hgt) {
+    iPart(new THREE.CylinderGeometry(0.05, 0.05, hgt, 8), R.candle, x, y + hgt / 2, z);
+    var cg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc060, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    cg.position.set(x, y + hgt + 0.06, z);
+    cg.scale.set(0.22, 0.3, 1);
+    room.add(cg);
+    candleGlows.push(cg);
+  }
+  candle(FPX - 1.0, 1.69, NW + 0.5, 0.3); candle(FPX - 0.8, 1.69, NW + 0.55, 0.2); candle(FPX + 1.0, 1.69, NW + 0.5, 0.26);
+  function potion(x, y, z, color, size) { // a round glowing bottle with a cork
+    var pm = rMat(color, { emissive: color, emissiveIntensity: 0.55, roughness: 0.15, transparent: true, opacity: 0.85 });
+    iPart(new THREE.SphereGeometry(0.11 * size, 12, 10), pm, x, y + 0.11 * size, z);
+    iPart(new THREE.CylinderGeometry(0.035 * size, 0.04 * size, 0.1 * size, 8), pm, x, y + 0.25 * size, z);
+    iPart(new THREE.CylinderGeometry(0.04 * size, 0.035 * size, 0.05 * size, 8), R.wood, x, y + 0.32 * size, z);
+  }
+  potion(FPX - 0.3, 1.69, NW + 0.5, 0x7dff9a, 1); potion(FPX + 0.35, 1.69, NW + 0.5, 0xff8fd0, 1.2);
+  iPart(new THREE.TorusGeometry(0.22, 0.05, 6, 18, Math.PI * 1.3), R.gold, FPX, 2.9, NW + 0.52, 0, 0, 0.9); // a gold moon above the fire
+  inSolids.push([FPX, NW + 0.5, 1.2]);
+
+  // a cosy bed in the corner, with a patchwork quilt and two plump pillows
+  var BX = ROOM_W / 2 - 1.1, BZ = NW + 1.45;
+  iPart(new THREE.BoxGeometry(1.9, 0.4, 2.7), R.wood, BX, 0.25, BZ);
+  iPart(new THREE.BoxGeometry(2.0, 1.3, 0.14), R.darkWood, BX, 0.65, NW + 0.1);
+  iPart(new THREE.SphereGeometry(0.12, 10, 8), R.gold, BX - 0.95, 1.33, NW + 0.1);
+  iPart(new THREE.SphereGeometry(0.12, 10, 8), R.gold, BX + 0.95, 1.33, NW + 0.1);
+  iPart(new THREE.BoxGeometry(1.8, 0.25, 2.55), R.cream, BX, 0.57, BZ);
+  iPart(new THREE.BoxGeometry(1.86, 0.1, 1.75), R.quilt, BX, 0.73, BZ + 0.42);
+  [-0.42, 0.42].forEach(function (px) { iPart(new THREE.SphereGeometry(0.4, 14, 10), R.pillow, BX + px, 0.8, NW + 0.55).scale.set(1, 0.38, 0.6); });
+  inSolids.push([BX, BZ - 0.65, 1.0], [BX, BZ + 0.65, 1.0]);
+
+  // a bookshelf full of colourful spellbooks on the left wall
+  var SX = -ROOM_W / 2 + 0.28, SZ = -0.5;
+  iPart(new THREE.BoxGeometry(0.5, 2.5, 1.9), R.darkWood, SX - 0.02, 1.25, SZ);
+  for (var shelf = 0; shelf < 4; shelf++) {
+    var sy = 0.15 + shelf * 0.58;
+    iPart(new THREE.BoxGeometry(0.5, 0.05, 1.8), R.wood, SX + 0.04, sy, SZ);
+    var bz = SZ - 0.82;
+    while (bz < SZ + 0.78) {
+      var bw = 0.08 + Math.random() * 0.07, bh = 0.32 + Math.random() * 0.16;
+      var bookMat = rMat([0x7a58b0, 0xc85a9a, 0x3e8f86, 0xe8c86a, 0x5b3f8c, 0xb0402e][Math.floor(Math.random() * 6)]);
+      iPart(new THREE.BoxGeometry(0.34, bh, bw), bookMat, SX + 0.08, sy + 0.025 + bh / 2, bz + bw / 2, Math.random() < 0.15 ? 0.25 : 0);
+      bz += bw + 0.012;
+    }
+  }
+  inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
+  var moonFrame = new THREE.Group(); moonFrame.position.set(-ROOM_W / 2 + 0.04, 2.9, 1.6); moonFrame.rotation.y = Math.PI / 2; room.add(moonFrame);
+  iPart(new THREE.BoxGeometry(0.9, 0.9, 0.06), R.darkWood, 0, 0, 0, 0, 0, 0, moonFrame);           // a framed picture of the moon
+  iPart(new THREE.PlaneGeometry(0.74, 0.74), rMat(0x2c2050), 0, 0, 0.035, 0, 0, 0, moonFrame);
+  iPart(new THREE.CircleGeometry(0.22, 18), rMat(0xfff2c0, { emissive: 0xffe08a, emissiveIntensity: 0.6 }), 0.05, 0.05, 0.04, 0, 0, 0, moonFrame);
+
+  // a round table with stools, potions, a candle and an open spellbook, on a braided rug
+  iPart(new THREE.CircleGeometry(1.9, 32), R.rug, 0.3, 0.012, 0.5, -Math.PI / 2);
+  var TBX = -1.2, TBZ = 0.9;
+  iPart(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 20), R.wood, TBX, 0.78, TBZ);
+  iPart(new THREE.CylinderGeometry(0.08, 0.12, 0.75, 8), R.darkWood, TBX, 0.38, TBZ);
+  iPart(new THREE.CylinderGeometry(0.35, 0.4, 0.05, 12), R.darkWood, TBX, 0.03, TBZ);
+  [[0.95, 0.3], [-0.6, 0.85]].forEach(function (st) {
+    iPart(new THREE.CylinderGeometry(0.26, 0.26, 0.08, 14), R.curtain, TBX + st[0], 0.48, TBZ + st[1]);
+    iPart(new THREE.CylinderGeometry(0.06, 0.08, 0.45, 6), R.darkWood, TBX + st[0], 0.22, TBZ + st[1]);
+  });
+  potion(TBX + 0.25, 0.82, TBZ - 0.2, 0x9ab8ff, 1.1); potion(TBX - 0.3, 0.82, TBZ - 0.1, 0xff8fd0, 0.8); potion(TBX + 0.1, 0.82, TBZ + 0.3, 0x7dff9a, 0.7);
+  candle(TBX - 0.15, 0.82, TBZ + 0.25, 0.22);
+  iPart(new THREE.BoxGeometry(0.42, 0.04, 0.3), R.cream, TBX - 0.2, 0.84, TBZ - 0.42, 0, 0.3, 0.06);
+  iPart(new THREE.BoxGeometry(0.44, 0.03, 0.32), R.curtain, TBX - 0.2, 0.82, TBZ - 0.42, 0, 0.3, 0);
+  inSolids.push([TBX, TBZ, 0.8]);
+
+  // a little bubbling cauldron in the right-hand corner
+  var KX = ROOM_W / 2 - 0.85, KZ = 1.5;
+  iPart(new THREE.SphereGeometry(0.45, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), R.iron, KX, 0.5, KZ);
+  iPart(new THREE.TorusGeometry(0.38, 0.05, 8, 20), R.iron, KX, 0.76, KZ, Math.PI / 2);
+  var inBrewMat = rMat(0xe0509f, { emissive: 0xc0307f, emissiveIntensity: 0.6, roughness: 0.2 });
+  iPart(new THREE.CircleGeometry(0.36, 18), inBrewMat, KX, 0.72, KZ, -Math.PI / 2);
+  var inBrewGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8fe0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+  inBrewGlow.position.set(KX, 0.95, KZ); inBrewGlow.scale.set(1.2, 1.2, 1); room.add(inBrewGlow);
+  inSolids.push([KX, KZ, 0.5]);
+
+  // a sleepy black cat curled up by the fire, with glowing eyes and a twitching tail
+  var cat = new THREE.Group(); cat.position.set(FPX + 1.55, 0, NW + 1.25); cat.rotation.y = -0.6; room.add(cat);
+  iPart(new THREE.SphereGeometry(0.26, 14, 10), R.cat, 0, 0.2, 0, 0, 0, 0, cat).scale.set(1.25, 0.8, 1);
+  iPart(new THREE.SphereGeometry(0.17, 14, 10), R.cat, 0.26, 0.38, 0.05, 0, 0, 0, cat);
+  [-1, 1].forEach(function (s) {
+    iPart(new THREE.ConeGeometry(0.06, 0.13, 4), R.cat, 0.27, 0.56, 0.05 + s * 0.09, 0, 0, s * 0.25, cat);
+    iPart(new THREE.SphereGeometry(0.03, 8, 6), R.catEye, 0.4, 0.41, 0.05 + s * 0.065, 0, 0, 0, cat);
+  });
+  var catTail = new THREE.Group(); catTail.position.set(-0.28, 0.12, 0); cat.add(catTail);
+  iPart(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-0.25, 0, 0.2), new THREE.Vector3(-0.05, 0.05, 0.4)), 10, 0.045, 6), R.cat, 0, 0, 0, 0, 0, 0, catTail);
+  inSolids.push([FPX + 1.55, NW + 1.25, 0.35]);
+
+  // potted plants by the door
+  [[-ROOM_W / 2 + 0.5, -NW - 0.55], [ROOM_W / 2 - 0.5, -NW - 0.55]].forEach(function (pp) {
+    iPart(new THREE.CylinderGeometry(0.24, 0.18, 0.4, 12), R.clay, pp[0], 0.2, pp[1]);
+    for (var l = 0; l < 7; l++) iPart(new THREE.SphereGeometry(0.16, 8, 6), R.leaf, pp[0] + Math.cos(l * 0.9) * 0.15, 0.5 + (l % 3) * 0.12, pp[1] + Math.sin(l * 0.9) * 0.15).scale.set(1, 1.3, 0.6);
+    inSolids.push([pp[0], pp[1], 0.3]);
+  });
+
+  // windows with pink curtains, softly lit (no view of the outside)
+  var panes = [];
+  [[1.9, NW + 0.03, 0], [ROOM_W / 2 - 0.03, 0.2, -Math.PI / 2]].forEach(function (wd) {
+    var wg = new THREE.Group(); wg.position.set(wd[0], 1.75, wd[1]); wg.rotation.y = wd[2]; room.add(wg);
+    var pane = iPart(new THREE.PlaneGeometry(0.9, 1.0), R.pane, 0, 0, 0.01, 0, 0, 0, wg); panes.push(pane);
+    iPart(new THREE.BoxGeometry(1.06, 0.08, 0.08), R.darkWood, 0, 0.54, 0.04, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(1.1, 0.1, 0.16), R.darkWood, 0, -0.54, 0.07, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.05, 1.0, 0.04), R.darkWood, 0, 0, 0.03, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(1.3, 0.06, 0.06), R.gold, 0, 0.68, 0.12, 0, 0, Math.PI / 2 * 0, wg);
+    [-1, 1].forEach(function (s) { iPart(new THREE.BoxGeometry(0.3, 1.3, 0.06), R.curtain, s * 0.55, 0.05, 0.12, 0, 0, s * -0.05, wg); });
+  });
+
+  // twinkly string lights along the top of the walls
+  var inLights = [];
+  function lightRun(x0, z0, x1, z1, n) {
+    for (var i = 0; i <= n; i++) {
+      var f = i / n, lx = x0 + (x1 - x0) * f, lz = z0 + (z1 - z0) * f, ly = ROOM_H - 0.25 - Math.sin((i % 4) / 4 * Math.PI) * 0.12;
+      var lm = rMat(i % 2 ? 0xffd27a : 0xff9be0, { emissive: i % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 1 });
+      iPart(new THREE.SphereGeometry(0.05, 8, 6), lm, lx, ly, lz);
+      var lh = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: i % 2 ? 0xffc060 : 0xff8fe0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      lh.position.set(lx, ly, lz); lh.scale.set(0.3, 0.3, 1); room.add(lh);
+      inLights.push({ s: lh, p: i * 1.3 + x0 });
+    }
+  }
+  lightRun(-ROOM_W / 2 + 0.1, NW + 0.1, ROOM_W / 2 - 0.1, NW + 0.1, 18);
+  lightRun(-ROOM_W / 2 + 0.1, NW + 0.1, -ROOM_W / 2 + 0.1, -NW - 0.3, 13);
+  lightRun(ROOM_W / 2 - 0.1, NW + 0.1, ROOM_W / 2 - 0.1, -NW - 0.3, 13);
+
+  // the front door (seen from inside) and the doormat you step on to go back out
+  iPart(new THREE.PlaneGeometry(1.1, 1.5), R.door, 0, 0.75, -NW - 0.02, 0, Math.PI, 0);
+  iPart(new THREE.CircleGeometry(0.55, 18, 0, Math.PI), R.door, 0, 1.5, -NW - 0.02, 0, Math.PI, 0);
+  var EXIT_Z = -NW - 0.6;
+  iPart(new THREE.PlaneGeometry(1.3, 0.7), R.mat, 0, 0.015, EXIT_Z, -Math.PI / 2);
+  var exitGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd6f4, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  exitGlow.position.set(0, 0.25, EXIT_Z); exitGlow.scale.set(1.6, 0.6, 1); room.add(exitGlow);
+
+  function updateInterior(dt, t) {
+    if (!indoors) return;
+    fireLight.intensity = 1.5 + Math.sin(t * 11) * 0.15 + Math.sin(t * 17.3) * 0.12;
+    flames.forEach(function (f) {
+      var k = 1 + Math.sin(t * 9 + f.p) * 0.12 + Math.sin(t * 15 + f.p * 2) * 0.08;
+      f.s.scale.set(f.base * k, f.base * 1.5 * (2 - k), 1);
+      f.s.position.y = f.y + Math.sin(t * 7 + f.p) * 0.02;
+    });
+    candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
+    inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
+    catTail.rotation.y = Math.sin(t * 1.3) * 0.35;
+    inBrewGlow.material.opacity = 0.45 + Math.sin(t * 3) * 0.08;
+    exitGlow.material.opacity = 0.25 + Math.sin(t * 2.5) * 0.1;
+  }
+
+  // Going in and out: walk up to the front door to go in, step on the doormat inside to come back out
+  var fadeBox = document.createElement('div');
+  fadeBox.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:#120a1c;opacity:0;pointer-events:none;transition:opacity 0.35s;border-radius:inherit;z-index:5;';
+  canvas.parentNode.appendChild(fadeBox);
+  var doorBusy = false, doorArmed = true, outsideCam = null;
+  var OUT_DOOR_X = HOUSE_X, OUT_DOOR_Z = HOUSE_Z + HD / 2 + 0.55;      // standing right in front of the door
+  function inRoom(x, z) { return Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
+  function useDoor(goIn) {
+    if (doorBusy) return;
+    doorBusy = true;
+    doorArmed = false;
+    walkTarget = null;
+    doorSound();
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      indoors = goIn;
+      if (goIn) {
+        interiorScene.add(player);
+        player.position.set(IN_X, 0, IN_Z + EXIT_Z - 1.0);
+        facing = Math.PI;                                           // facing into the room
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+        cam.dist = 7.5; cam.pitch = 0.85; cam.yaw = 0;
+      } else {
+        scene.add(player);
+        player.position.set(OUT_DOOR_X, 0, OUT_DOOR_Z + 1.0);
+        facing = 0;                                                 // facing out, away from the door
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+      }
+      cam.target.set(player.position.x, 0.8, player.position.z);   // jump the camera straight there
+      fadeBox.style.opacity = 0;
+      setTimeout(function () { doorBusy = false; }, 380);
+    }, 380);
+  }
+  function updateDoors() {
+    var px = player.position.x, pz = player.position.z;
+    var d = indoors ? dist(px, pz, IN_X, IN_Z + EXIT_Z) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
+    if (!doorArmed) { if (d > 0.85) doorArmed = true; return; }  // you have to step away before the door works again
+    if (d < 0.5) useDoor(!indoors);
+  }
+
   // ---------- Chopping trees ----------
   var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
   var REGROW_DAYS = 75;   // in-game days for a felled tree to grow all the way back
@@ -3816,7 +4107,28 @@ function startGame(THREE) {
       var when = 0.08 + i * 0.09 + Math.random() * 0.05, fr = 700 + Math.random() * 500;
       slideTone('sine', fr, fr * 2.2, 0.08 * (1 - i / 8), 0.06, when);
     }
+  }  function doorSound() { // the front door creaks open and bumps shut
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), wob = audioCtx.createOscillator(), wobAmt = audioCtx.createGain();
+    var f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, t0);
+    osc.frequency.linearRampToValueAtTime(420, t0 + 0.35);         // a little rising creak
+    wob.frequency.value = 22; wobAmt.gain.value = 18;
+    wob.connect(wobAmt); wobAmt.connect(osc.frequency);
+    f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 3;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+    osc.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); wob.start(t0);
+    osc.stop(t0 + 0.42); wob.stop(t0 + 0.42);
+    slideTone('sine', 140, 70, 0.35, 0.12, 0.42);                    // and a soft wooden bump as it closes
+    hissBurst(0.08, 'lowpass', 800, 0.7, 0.2, 0.003, 0.05, 0.42);
+    bellTone(2093, 0.025, 0.4, 0.46);                                // with a tiny magic chime
   }
+
 
 
 
@@ -4786,7 +5098,7 @@ function startGame(THREE) {
   }
 
   function castSpell() {
-    if (state.mana < SPELL_COST) return;
+    if (indoors || state.mana < SPELL_COST) return; // spells are for the garden, not the living room
     state.mana -= SPELL_COST;
     spellSound();
     var watered = 0;
@@ -5975,7 +6287,7 @@ function startGame(THREE) {
     var list = pointerList();
     if (list.length === 2) {
       var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
-      if (pinch > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * pinch / d, 6, 26);
+      if (pinch > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * pinch / d, indoors ? 5 : 6, indoors ? 10 : 26);
       pinch = d;
       return;
     }
@@ -6004,14 +6316,14 @@ function startGame(THREE) {
     raycaster.setFromCamera(ndc, camera);
     var hit = new THREE.Vector3();
     if (!raycaster.ray.intersectPlane(ground, hit)) return;
-    if (!onIsland(hit.x, hit.z)) return;
+    if (indoors ? !inRoom(hit.x, hit.z) : !onIsland(hit.x, hit.z)) return;
     walkTarget = hit;
-    ripple(hit.x, hit.z, 0xffffff, 0.6, 0.45);
+    if (!indoors) ripple(hit.x, hit.z, 0xffffff, 0.6, 0.45);
   }
 
   canvas.addEventListener('wheel', function (e) {
     e.preventDefault();
-    cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), 6, 26);
+    cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), indoors ? 5 : 6, indoors ? 10 : 26);
   }, { passive: false });
 
   // ---------- Every frame ----------
@@ -6036,6 +6348,19 @@ function startGame(THREE) {
       player.position.x += mx * SPEED * dt;
       player.position.z += mz * SPEED * dt;
 
+      if (indoors) { // inside the farmhouse: stay between the walls and bump into the furniture
+        var hw = ROOM_W / 2 - 0.35, hd = ROOM_D / 2 - 0.35;
+        player.position.x = Math.max(IN_X - hw, Math.min(IN_X + hw, player.position.x));
+        player.position.z = Math.max(IN_Z - hd, Math.min(IN_Z + hd, player.position.z));
+        inSolids.forEach(function (o) {
+          var dx = player.position.x - (IN_X + o[0]), dz = player.position.z - (IN_Z + o[1]);
+          var d = Math.hypot(dx, dz), min = o[2] + 0.35;
+          if (d < min && d > 0.0001) {
+            player.position.x = IN_X + o[0] + dx / d * min;
+            player.position.z = IN_Z + o[1] + dz / d * min;
+          }
+        });
+      } else {
       var fromCenter = islandR(player.position.x, player.position.z);
       if (fromCenter > ISLAND - 1.5) player.position.multiplyScalar((ISLAND - 1.5) / fromCenter); // stay on the island
       solids.forEach(function (o) {
@@ -6046,8 +6371,9 @@ function startGame(THREE) {
           player.position.z = o.z + dz / d * min;
         }
       });
+      }
       // No walking on water: slide along the shore instead
-      if (inLake(player.position.x, player.position.z)) {
+      if (!indoors && inLake(player.position.x, player.position.z)) {
         if (!inLake(player.position.x, beforeZ)) player.position.z = beforeZ;
         else if (!inLake(beforeX, player.position.z)) player.position.x = beforeX;
         else { player.position.x = beforeX; player.position.z = beforeZ; }
@@ -6060,7 +6386,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z);
+    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z);
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
@@ -6225,11 +6551,13 @@ function startGame(THREE) {
     updateClock(dt);
     var night = updateSky();
     updatePlayer(dt);
+    updateDoors();
+    updateInterior(dt, state.time);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
     updateCamera(dt);
-    renderer.render(scene, camera);
+    renderer.render(indoors ? interiorScene : scene, camera); // inside the house, only the room is drawn
   }
   renderer.setAnimationLoop(frame);
 
