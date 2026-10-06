@@ -7053,6 +7053,119 @@ function startGame(THREE) {
     camera.lookAt(cam.target);
   }
 
+  // ---------- Saving and loading ----------
+  // Your game is kept in this browser (localStorage): your bag, the time and day, mana, harvests,
+  // the garden, which trees, bushes and rocks are cut down and when, and where you're standing
+  var SAVE_KEY = 'everdawn-save-1';
+  function saveGame() {
+    var px = player.position.x, pz = player.position.z;
+    if (indoors) { px = OUT_DOOR_X; pz = OUT_DOOR_Z + 1.0; }          // saved inside the house? you'll load in at the front door
+    var data = {
+      v: 1,
+      state: { mana: state.mana, harvest: state.harvest, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
+      bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
+      player: { x: px, z: pz, facing: facing },
+      tiles: tiles.map(function (t) { return t.soil ? { crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet } : null; }),
+      scenery: allScenery.map(function (t) {                          // when each tree or bush was cut (null = standing)
+        var u = t.userData;
+        if (u.state === 'standing') return null;
+        return u.state === 'regrowing' ? u.felledAt : gameMinutes();
+      }),
+      rocks: mineable.map(function (r) { return r.state === 'whole' ? null : (r.state === 'regrowing' ? r.brokeAt : gameMinutes()); })
+    };
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      showToast('Game saved ✦');
+    } catch (err) {
+      showToast('Could not save here (this browser blocks saving)', 3000);
+    }
+  }
+  function clearTile(tile) {
+    if (tile.crop) { scene.remove(tile.crop); tile.crop = null; }
+    if (tile.drop) { scene.remove(tile.drop); tile.drop = null; }
+    if (tile.soil) { scene.remove(tile.soil); tile.soil = null; }
+    var ti = tilling.indexOf(tile);
+    if (ti >= 0) tilling.splice(ti, 1);
+    tile.wet = false; tile.stage = 0; tile.growth = 0;
+  }
+  function setSceneryCut(t, cutAt) {                                  // puts a tree or bush back to standing, or cut down at a given time
+    var u = t.userData;
+    if (u.proxy) { scene.remove(u.proxy); u.proxy = null; }           // tidy away a tree that was mid-fall
+    if (u.stump) { scene.remove(u.stump); u.stump = null; }
+    u.shudderT = undefined;
+    if (cutAt === null) {
+      u.state = 'standing'; u.hits = 0; u.solid.r = u.solidR; u.grassHidden = false;
+      setTreeGrowth(t, 1);
+      showHiddenGrass(u.solid, false);
+    } else {
+      u.state = 'regrowing'; u.felledAt = cutAt; u.shownK = -1; u.grassHidden = false; u.hits = 0;
+      u.solid.r = 0;
+      setTreeGrowth(t, 0);
+      showHiddenGrass(u.solid, true);
+    }
+  }
+  function setRockBroken(r, brokeAt) {
+    r.shakeT = undefined;
+    if (brokeAt === null) {
+      r.state = 'whole'; r.hits = 0; r.solid.r = r.solidR;
+      setRock(r, 1);
+      showHiddenGrass(r.solid, false);
+    } else {
+      r.state = 'regrowing'; r.brokeAt = brokeAt; r.shownK = -1; r.grassHidden = false; r.hits = 0;
+      r.solid.r = 0;
+      setRock(r, 0);
+      showHiddenGrass(r.solid, true);
+    }
+  }
+  function loadGame() {
+    var data = null;
+    try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (err) { data = null; }
+    if (!data || data.v !== 1) { showToast('No saved game yet', 2200); return; }
+    // the clock, mana and harvests
+    state.mana = data.state.mana; state.harvest = data.state.harvest;
+    state.minutes = data.state.minutes; state.day = data.state.day; state.petalDay = data.state.petalDay;
+    ui.harvest.textContent = state.harvest;
+    // your bag
+    for (var i = 0; i < BAG_SLOTS; i++) bag[i] = data.bag[i] ? { id: data.bag[i].id, count: data.bag[i].count } : null;
+    selectedSlot = data.selectedSlot; hotRow = data.hotRow || 0;
+    renderBag();
+    // the garden
+    tiles.forEach(function (tile, n) {
+      clearTile(tile);
+      var st = data.tiles[n];
+      if (!st) return;
+      tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
+      tile.ridges = [];
+      for (var r = 0; r < 3; r++) tile.ridges.push(place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil));
+      if (st.crop) {
+        tile.crop = makeCrop(tile);
+        tile.stage = st.stage; tile.growth = st.growth;
+        showStage(tile);
+        tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
+      }
+      setWet(tile, st.wet);
+    });
+    // trees, bushes and rocks
+    allScenery.forEach(function (t, n) { setSceneryCut(t, data.scenery[n] === undefined ? null : data.scenery[n]); });
+    mineable.forEach(function (r, n) { setRockBroken(r, data.rocks[n] === undefined ? null : data.rocks[n]); });
+    flushDirty();
+    // and you: back outside if you were in the house, standing where you saved
+    if (indoors) {
+      indoors = false;
+      scene.add(player);
+      if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+    }
+    walkTarget = null;
+    doorArmed = false;                                                // don't walk straight into the house if you saved by the door
+    player.position.set(data.player.x, 0, data.player.z);
+    facing = data.player.facing;
+    cam.target.set(player.position.x, 0.8, player.position.z);
+    popSound();
+    showToast('Game loaded ✦');
+  }
+  document.getElementById('btnSave').addEventListener('click', function () { saveGame(); focusGame(); });
+  document.getElementById('btnLoad').addEventListener('click', function () { loadGame(); focusGame(); });
+
   var clock = new THREE.Clock();
   cam.target.set(player.position.x, 0.8, player.position.z);
 
