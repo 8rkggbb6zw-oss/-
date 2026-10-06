@@ -2897,23 +2897,101 @@ function startGame(THREE) {
   makeWall('E', ROOM_W / 2, 0, -Math.PI / 2, ROOM_D);
   function wallPart(name, geo, mat, x, y, z, rx, ry, rz) { return iPart(geo, mat, x, y, z, rx, ry, rz, inWalls[name].g); }
 
-  // the fireplace on the back wall, with a crackling fire, candles and potions on the mantel
-  var FPX = -1.6;
-  iPart(new THREE.BoxGeometry(2.3, 2.1, 0.7), R.stone, FPX, 1.05, NW + 0.35);
-  iPart(new THREE.BoxGeometry(1.2, 0.95, 0.1), R.soot, FPX, 0.6, NW + 0.68);
-  iPart(new THREE.BoxGeometry(1.5, 1.4, 0.5), R.stone, FPX, 2.8, NW + 0.25);
-  iPart(new THREE.BoxGeometry(2.7, 0.14, 0.9), R.darkWood, FPX, 1.62, NW + 0.45);
-  iPart(new THREE.BoxGeometry(2.7, 0.1, 0.8), R.stone, FPX, 0.05, NW + 1.0);
-  [-0.25, 0.2].forEach(function (lx, n) { iPart(new THREE.CylinderGeometry(0.08, 0.08, 0.8, 7), R.wood, FPX + lx * 0.4, 0.18 + n * 0.06, NW + 0.62, 0, 0.3 - n * 0.6, Math.PI / 2); });
-  fireLight.position.set(IN_X + FPX, 0.8, IN_Z + NW + 1.1);
-  var flames = [];
-  [[0, 0.42, 0.55, 0xffb040], [-0.18, 0.36, 0.38, 0xff7a20], [0.2, 0.36, 0.4, 0xff7a20], [0, 0.5, 0.3, 0xfff0a0]].forEach(function (f, n) {
-    var fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: f[3], transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
-    fl.position.set(FPX + f[0], f[1], NW + 0.66);
-    fl.scale.set(f[2], f[2] * 1.5, 1);
-    room.add(fl);
-    flames.push({ s: fl, base: f[2], p: n * 1.9, y: f[1] });
+  // the fireplace on the back wall: a fieldstone surround with an arched opening, a glowing brick firebox,
+  // a crackling log fire on iron fire-dogs, a thick wooden mantel on carved brackets, and a chimney breast up to the ceiling
+  var FPX = -1.6, FP_D = 0.75, OPEN_W = 1.4, OPEN_H = 0.9;           // its middle, how far it sticks out, and the size of the opening
+  var FZ0 = NW, FZF = NW + FP_D;                                      // the back wall and the front face
+  [-1, 1].forEach(function (sd) {                                      // the stone piers either side of the opening
+    iPart(new THREE.BoxGeometry(0.6, 1.6, FP_D), R.stone, FPX + sd * (OPEN_W / 2 + 0.3), 0.8, FZ0 + FP_D / 2);
   });
+  var archShape = new THREE.Shape();                                   // the stonework over the opening, with an arched underside
+  archShape.moveTo(-OPEN_W / 2, OPEN_H); archShape.lineTo(-OPEN_W / 2, 1.6); archShape.lineTo(OPEN_W / 2, 1.6); archShape.lineTo(OPEN_W / 2, OPEN_H);
+  archShape.bezierCurveTo(OPEN_W / 2, OPEN_H + 0.3, OPEN_W / 4, OPEN_H + 0.38, 0, OPEN_H + 0.38);
+  archShape.bezierCurveTo(-OPEN_W / 4, OPEN_H + 0.38, -OPEN_W / 2, OPEN_H + 0.3, -OPEN_W / 2, OPEN_H);
+  var archGeo = new THREE.ExtrudeGeometry(archShape, { depth: FP_D, bevelEnabled: false, curveSegments: 12 });
+  var auv = archGeo.attributes.uv;
+  for (var au = 0; au < auv.count; au++) auv.setXY(au, auv.getX(au) * 0.6, auv.getY(au) * 0.6);
+  iPart(archGeo, R.stone, FPX, 0, FZ0);
+  iPart(new THREE.BoxGeometry(0.26, 0.3, 0.08), rMat(0xcfc6d6, { roughness: 0.9 }), FPX, OPEN_H + 0.5, FZF + 0.03);   // a pale keystone
+  iPart(new THREE.TorusGeometry(0.07, 0.018, 6, 14, Math.PI * 1.3), R.gold, FPX, OPEN_H + 0.5, FZF + 0.08, 0, 0, 0.9); // with a little gold moon
+  var brickTex = paintTexture(128, 128, function (g, w, h) {           // sooty bricks inside, glowing hot near the bottom
+    g.fillStyle = '#1c0f0c'; g.fillRect(0, 0, w, h);
+    for (var r = 0; r < 8; r++) for (var c = -1; c < 5; c++) {
+      var bx = c * 32 + (r % 2) * 16, by = r * 16, heat = Math.max(0, (r - 3) / 4);
+      g.fillStyle = 'rgb(' + Math.round(60 + heat * 150) + ',' + Math.round(26 + heat * 60) + ',' + Math.round(20 + heat * 10) + ')';
+      g.fillRect(bx + 1.5, by + 1.5, 29, 13);
+    }
+  });
+  var brickMat = rMat(0xffffff, { map: brickTex, emissive: 0xff5a1a, emissiveMap: brickTex, emissiveIntensity: 0.6, roughness: 1 });
+  iPart(new THREE.PlaneGeometry(OPEN_W, OPEN_H + 0.38), brickMat, FPX, (OPEN_H + 0.38) / 2, FZ0 + 0.06);                 // the back of the firebox
+  [-1, 1].forEach(function (sd) { iPart(new THREE.PlaneGeometry(FP_D - 0.06, OPEN_H + 0.38), brickMat, FPX + sd * OPEN_W / 2, (OPEN_H + 0.38) / 2, FZ0 + 0.06 + (FP_D - 0.06) / 2, 0, -sd * Math.PI / 2, 0); });
+  iPart(new THREE.PlaneGeometry(OPEN_W, FP_D), R.soot, FPX, 0.13, FZ0 + FP_D / 2, -Math.PI / 2);                         // the sooty floor of the firebox
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.6, 0.13, 0.75), R.stone, FPX, 0.065, FZF + 0.3);                               // the raised stone hearth
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.66, 0.04, 0.8), rMat(0x8c8494, { roughness: 0.7 }), FPX, 0.135, FZF + 0.3);    // with a smooth slab on top
+  // the mantel: a thick dark beam on two carved brackets
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.7, 0.18, 0.5), R.darkWood, FPX, 1.7, FZ0 + 0.55);
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.6, 0.05, 0.08), R.wood, FPX, 1.6, FZ0 + 0.79);
+  var corbel = new THREE.Shape();
+  corbel.moveTo(0, 0); corbel.lineTo(0.22, 0); corbel.quadraticCurveTo(0.22, -0.12, 0.1, -0.16); corbel.quadraticCurveTo(0.02, -0.22, 0, -0.32); corbel.lineTo(0, 0);
+  [-1, 1].forEach(function (sd) {
+    var cb = iPart(new THREE.ExtrudeGeometry(corbel, { depth: 0.12, bevelEnabled: false }), R.darkWood, FPX + sd * (OPEN_W / 2 + 0.55) - 0.06, 1.61, FZF, 0, -Math.PI / 2, 0);
+  });
+  // the chimney breast, stone all the way up
+  iPart(new THREE.BoxGeometry(OPEN_W + 0.9, ROOM_H - 1.79, 0.55), R.stone, FPX, (ROOM_H + 1.79) / 2, FZ0 + 0.275);
+  iPart(new THREE.TorusGeometry(0.22, 0.05, 6, 18, Math.PI * 1.3), R.gold, FPX, 2.6, FZ0 + 0.58, 0, 0, 0.9); // a gold moon on the chimney
+  // the fire: iron fire-dogs, three logs, glowing embers, dancing flames and rising sparks
+  var FIRE_Z = FZ0 + 0.38;
+  [-1, 1].forEach(function (sd) {
+    iPart(new THREE.BoxGeometry(0.05, 0.05, 0.5), R.iron, FPX + sd * 0.38, 0.2, FIRE_Z);
+    iPart(new THREE.BoxGeometry(0.05, 0.3, 0.05), R.iron, FPX + sd * 0.38, 0.3, FIRE_Z + 0.25);
+    iPart(new THREE.SphereGeometry(0.045, 10, 8), R.gold, FPX + sd * 0.38, 0.47, FIRE_Z + 0.25);
+  });
+  var logBark = rMat(0xffffff, { map: barkTex, roughness: 0.95 }), logEnd = rMat(0xc9a27a, { roughness: 0.9 });
+  [[0, 0.27, -0.06, 0.15, 0.09], [-0.05, 0.4, 0.06, -0.3, 0.075], [0.08, 0.37, 0.02, 0.45, 0.07]].forEach(function (lg) {
+    var lgm = iPart(new THREE.CylinderGeometry(lg[4], lg[4], 0.95, 10), [logBark, logEnd, logEnd], FPX + lg[0], lg[1], FIRE_Z + lg[2], 0, lg[3], Math.PI / 2);
+  });
+  var emberMat = rMat(0xff6a20, { emissive: 0xff5010, emissiveIntensity: 1.4 });
+  for (var em = 0; em < 14; em++) iPart(new THREE.SphereGeometry(0.03 + Math.random() * 0.025, 6, 5), emberMat, FPX + (Math.random() - 0.5) * 0.8, 0.16, FIRE_Z + (Math.random() - 0.5) * 0.35);
+  var emberGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff6a20, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+  emberGlow.position.set(FPX, 0.25, FIRE_Z + 0.1); emberGlow.scale.set(1.3, 0.5, 1); room.add(emberGlow);
+  var hearthGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff9a4a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  hearthGlow.position.set(FPX, 0.6, FZF + 0.5); hearthGlow.scale.set(2.6, 1.4, 1); room.add(hearthGlow);
+  fireLight.position.set(IN_X + FPX, 0.7, IN_Z + FZF + 0.4);
+  var flameGeo = new THREE.LatheGeometry([[0, 0], [0.09, 0.06], [0.11, 0.16], [0.08, 0.3], [0.04, 0.42], [0, 0.5]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 10);
+  var flameMats = [0xff5a10, 0xff8a20, 0xffc040, 0xfff0a0].map(function (c) { return new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }); });
+  var flames = [];
+  [[0, 1.2, 0], [-0.22, 0.95, 0], [0.22, 1.0, 1], [-0.1, 0.8, 2], [0.12, 0.75, 2], [0, 0.55, 3], [-0.3, 0.6, 1], [0.32, 0.55, 1]].forEach(function (f, n) {
+    var fm = iPart(flameGeo, flameMats[f[2]], FPX + f[0], 0.3, FIRE_Z + (n % 3 - 1) * 0.06);
+    flames.push({ m: fm, base: f[1], p: n * 1.7, x: f[0] });
+  });
+  [[0, 0.65, 0.9, 0xffb040], [0, 0.5, 0.5, 0xfff0a0]].forEach(function (gl) {                     // soft glows round the flames
+    var gs = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: gl[3], transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    gs.position.set(FPX + gl[0], gl[1], FIRE_Z + 0.15); gs.scale.set(gl[2], gl[2] * 1.3, 1); room.add(gs);
+  });
+  var fireSparks = [];
+  for (var sk = 0; sk < 14; sk++) {
+    var spk = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc060, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spk.scale.set(0.05, 0.05, 1); room.add(spk);
+    fireSparks.push({ s: spk, t: Math.random(), x: (Math.random() - 0.5) * 0.6, sp: 0.5 + Math.random() * 0.6 });
+  }
+  // a set of fire tools on the right and a basket of logs on the left
+  var TLX = FPX + OPEN_W / 2 + 0.95, TLZ = FZF + 0.25;
+  iPart(new THREE.CylinderGeometry(0.13, 0.15, 0.04, 12), R.iron, TLX, 0.02, TLZ);
+  iPart(new THREE.CylinderGeometry(0.018, 0.018, 0.85, 6), R.iron, TLX, 0.45, TLZ);
+  iPart(new THREE.SphereGeometry(0.04, 8, 6), R.gold, TLX, 0.9, TLZ);
+  iPart(new THREE.BoxGeometry(0.22, 0.02, 0.02), R.iron, TLX, 0.8, TLZ);
+  [[-0.1, 'poker'], [0.1, 'shovel']].forEach(function (tl) {
+    iPart(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 5), R.iron, TLX + tl[0], 0.43, TLZ + 0.02);
+    if (tl[1] === 'shovel') iPart(new THREE.BoxGeometry(0.1, 0.12, 0.015), R.iron, TLX + tl[0], 0.08, TLZ + 0.02);
+    else iPart(new THREE.ConeGeometry(0.02, 0.1, 5), R.iron, TLX + tl[0], 0.06, TLZ + 0.02, Math.PI, 0, 0);
+  });
+  var BKX = FPX - OPEN_W / 2 - 1.0, BKZ = FZF + 0.15;
+  iPart(new THREE.CylinderGeometry(0.32, 0.27, 0.36, 16, 1, true), rMat(0xb08a52, { roughness: 1, side: THREE.DoubleSide }), BKX, 0.18, BKZ);
+  iPart(new THREE.TorusGeometry(0.32, 0.025, 6, 20), rMat(0x8a6a3a), BKX, 0.36, BKZ, Math.PI / 2, 0, 0);
+  [[-0.12, 0.38, 0.2], [0.1, 0.4, -0.3], [0, 0.48, 0.6], [0.05, 0.33, 1.2]].forEach(function (bl) {
+    iPart(new THREE.CylinderGeometry(0.06, 0.06, 0.62, 8), [logBark, logEnd, logEnd], BKX + bl[0], bl[1], BKZ, 0, bl[2], Math.PI / 2 - 0.25);
+  });
+  // candles, potions and a glowing crystal ball along the mantel
   var candleGlows = [];
   function candle(x, y, z, hgt) {
     iPart(new THREE.CylinderGeometry(0.05, 0.05, hgt, 8), R.candle, x, y + hgt / 2, z);
@@ -2923,16 +3001,18 @@ function startGame(THREE) {
     room.add(cg);
     candleGlows.push(cg);
   }
-  candle(FPX - 1.0, 1.69, NW + 0.5, 0.3); candle(FPX - 0.8, 1.69, NW + 0.55, 0.2); candle(FPX + 1.0, 1.69, NW + 0.5, 0.26);
   function potion(x, y, z, color, size) { // a round glowing bottle with a cork
     var pm = rMat(color, { emissive: color, emissiveIntensity: 0.55, roughness: 0.15, transparent: true, opacity: 0.85 });
     iPart(new THREE.SphereGeometry(0.11 * size, 12, 10), pm, x, y + 0.11 * size, z);
     iPart(new THREE.CylinderGeometry(0.035 * size, 0.04 * size, 0.1 * size, 8), pm, x, y + 0.25 * size, z);
     iPart(new THREE.CylinderGeometry(0.04 * size, 0.035 * size, 0.05 * size, 8), R.wood, x, y + 0.32 * size, z);
   }
-  potion(FPX - 0.3, 1.69, NW + 0.5, 0x7dff9a, 1); potion(FPX + 0.35, 1.69, NW + 0.5, 0xff8fd0, 1.2);
-  iPart(new THREE.TorusGeometry(0.22, 0.05, 6, 18, Math.PI * 1.3), R.gold, FPX, 2.9, NW + 0.52, 0, 0, 0.9); // a gold moon above the fire
-  inSolids.push([FPX, NW + 0.5, 1.2]);
+  var MT = 1.79;                                                      // the top of the mantel
+  candle(FPX - 1.3, MT, FZ0 + 0.55, 0.32); candle(FPX - 1.12, MT, FZ0 + 0.6, 0.2); candle(FPX + 1.3, MT, FZ0 + 0.55, 0.26);
+  potion(FPX - 0.65, MT, FZ0 + 0.55, 0x7dff9a, 1); potion(FPX + 0.75, MT, FZ0 + 0.55, 0xff8fd0, 1.15);
+  iPart(new THREE.CylinderGeometry(0.06, 0.09, 0.08, 10), R.gold, FPX + 0.35, MT + 0.04, FZ0 + 0.55);
+  var crystal = iPart(new THREE.SphereGeometry(0.11, 16, 12), rMat(0xd8c4ff, { emissive: 0x9a6aff, emissiveIntensity: 0.7, roughness: 0.05, transparent: true, opacity: 0.85 }), FPX + 0.35, MT + 0.19, FZ0 + 0.55);
+  inSolids.push([FPX, FZ0 + 0.55, 1.3], [FPX - 1.1, FZF + 0.3, 0.45], [FPX + 1.1, FZF + 0.3, 0.45], [BKX, BKZ, 0.35], [TLX, TLZ, 0.18]);
 
   // a black four-poster bed in the corner: turned posts with gold finials, a tufted plum velvet headboard
   // with a gold moon, a starry quilted duvet draped over the sides, plump pillows, a throw and sheer drapes
@@ -3123,11 +3203,21 @@ function startGame(THREE) {
       W.g.visible = wallLook.dot(W.n) > 0;
     }
     fireLight.intensity = 1.5 + Math.sin(t * 11) * 0.15 + Math.sin(t * 17.3) * 0.12;
-    flames.forEach(function (f) {
-      var k = 1 + Math.sin(t * 9 + f.p) * 0.12 + Math.sin(t * 15 + f.p * 2) * 0.08;
-      f.s.scale.set(f.base * k, f.base * 1.5 * (2 - k), 1);
-      f.s.position.y = f.y + Math.sin(t * 7 + f.p) * 0.02;
+    flames.forEach(function (f) {                                       // flames lick upward and sway
+      var k = 1 + Math.sin(t * 9 + f.p) * 0.18 + Math.sin(t * 15.7 + f.p * 2) * 0.1;
+      f.m.scale.set(0.9 + Math.sin(t * 6 + f.p) * 0.1, f.base * k, 0.9);
+      f.m.rotation.z = Math.sin(t * 5 + f.p) * 0.12;
+      f.m.position.x = FPX + f.x + Math.sin(t * 4 + f.p) * 0.02;
     });
+    fireSparks.forEach(function (sp) {                                  // sparks drift up the chimney and wink out
+      sp.t += dt * sp.sp;
+      if (sp.t > 1) { sp.t -= 1; sp.x = (Math.random() - 0.5) * 0.6; }
+      sp.s.position.set(FPX + sp.x + Math.sin(sp.t * 9 + sp.sp * 5) * 0.06, 0.45 + sp.t * 0.85, FIRE_Z + 0.1);
+      sp.s.material.opacity = (1 - sp.t) * 0.9;
+    });
+    emberGlow.material.opacity = 0.65 + Math.sin(t * 3.1) * 0.1 + Math.sin(t * 7.7) * 0.06;
+    hearthGlow.material.opacity = 0.28 + Math.sin(t * 11) * 0.04;
+    crystal.material.emissiveIntensity = 0.6 + Math.sin(t * 1.6) * 0.25;
     candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
     inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
   }
