@@ -2707,7 +2707,13 @@ function startGame(THREE) {
   }
 
   // 3D models for things you can pick up
-  var sapMat = new THREE.MeshStandardMaterial({ color: 0xf0a030, emissive: 0xd07a10, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.9 });
+  var sapMat = new THREE.MeshStandardMaterial({ color: 0xf0a030, emissive: 0xd07a10, emissiveIntensity: 0.35, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.72 });
+  var sapCoreMat = new THREE.MeshStandardMaterial({ color: 0xffc04a, emissive: 0xffa020, emissiveIntensity: 0.9, roughness: 0.3 }); // glowing honey centre
+  var sapDripGeo = new THREE.SphereGeometry(0.028, 12, 8);
+  sapDripGeo.scale(1, 1.4, 1);
+  var sapShineGeo = new THREE.SphereGeometry(0.018, 10, 8);
+  sapShineGeo.scale(0.7, 1.4, 0.4);
+  var sapShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
   var sapGeo = new THREE.SphereGeometry(0.11, 16, 12);
   (function () { // pull the top of the ball up into a droplet point
     var pp = sapGeo.attributes.position;
@@ -2728,8 +2734,25 @@ function startGame(THREE) {
       m.rotation.x = Math.random() * Math.PI;  // roll, so the bark looks different on each
       m.rotation.z = 0.12;                      // a slight tilt, like a floating pickup
       g.add(m);
-    } else if (item === 'sap') {
+    } else if (item === 'sap') { // a glossy drop of amber: see-through shell, glowing honey centre, a little drip
       g.add(new THREE.Mesh(sapGeo, sapMat));
+      var core = new THREE.Mesh(sapGeo, sapCoreMat);
+      core.scale.setScalar(0.62);
+      core.position.y = -0.012;
+      g.add(core);
+      var drip = new THREE.Mesh(sapDripGeo, sapMat);    // a small drip hanging off the bottom
+      drip.position.set(0.03, -0.115, 0.01);
+      g.add(drip);
+      var shine1 = new THREE.Mesh(sapShineGeo, sapShineMat);
+      shine1.position.set(-0.04, 0.03, 0.075);
+      g.add(shine1);
+      var shine2 = new THREE.Mesh(sapShineGeo, sapShineMat);
+      shine2.scale.setScalar(0.45);
+      shine2.position.set(0.035, -0.04, 0.085);
+      g.add(shine2);
+      var sapGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb040, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sapGlow.scale.set(0.42, 0.42, 1);
+      g.add(sapGlow);
     } else if (item === 'acorn') {
       m = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 10), nutMat);
       m.scale.set(1, 1.35, 1);
@@ -2895,7 +2918,7 @@ function startGame(THREE) {
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
         L.mesh.traverse(function (o) { // free one-off shapes; shared ones stay
-          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && o.geometry !== sapDripGeo && o.geometry !== sapShineGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
         });
         scene.remove(L.shadow);
         L.glow.material.dispose();
@@ -3139,13 +3162,13 @@ function startGame(THREE) {
     toolHandle.visible = holding && held !== 'trimmers'; // the trimmers have their own short handle
     if (held !== heldShown) {  // swap the material in your hand
       heldItemGrp.traverse(function (o) { // free the old item's one-off shapes
-        if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+        if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && o.geometry !== sapDripGeo && o.geometry !== sapShineGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
       });
       while (heldItemGrp.children.length) heldItemGrp.remove(heldItemGrp.children[0]);
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed') { // seeds sit upright in your open palm
+        if (held === 'seed' || held === 'sap') { // seeds and sap sit upright in your open palm
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
