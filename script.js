@@ -2889,10 +2889,6 @@ function startGame(THREE) {
     }
   }
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
-  var moonFrame = new THREE.Group(); moonFrame.position.set(-1.6, 2.2, 0.05); inWalls.W.g.add(moonFrame);
-  iPart(new THREE.BoxGeometry(0.9, 0.9, 0.06), R.darkWood, 0, 0, 0, 0, 0, 0, moonFrame);           // a framed picture of the moon
-  iPart(new THREE.PlaneGeometry(0.74, 0.74), rMat(0x2c2050), 0, 0, 0.035, 0, 0, 0, moonFrame);
-  iPart(new THREE.CircleGeometry(0.22, 18), rMat(0xfff2c0, { emissive: 0xffe08a, emissiveIntensity: 0.6 }), 0.05, 0.05, 0.04, 0, 0, 0, moonFrame);
 
   // a round table with stools, potions, a candle and an open spellbook, on a braided rug
   iPart(new THREE.CircleGeometry(1.9, 32), R.rug, 0.3, 0.012, 0.5, -Math.PI / 2);
