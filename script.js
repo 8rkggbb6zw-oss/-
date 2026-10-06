@@ -444,13 +444,15 @@ function startGame(THREE) {
     g.fillStyle = '#7a5478';
     g.fillRect(0, 0, w, h);
     for (var i = 0; i < 260; i++) { // long twisting ridges in the bark
-      var x = Math.random() * w, y = Math.random() * h, len = 30 + Math.random() * 90;
+      var x = Math.random() * w, y = Math.random() * h, len = 30 + Math.random() * 90, end = (Math.random() - 0.5) * 6;
       g.strokeStyle = Math.random() < 0.55 ? 'rgba(45,22,48,0.55)' : 'rgba(205,165,205,0.3)';
       g.lineWidth = 1 + Math.random() * 3;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.bezierCurveTo(x + 6, y + len * 0.33, x - 6, y + len * 0.66, x + (Math.random() - 0.5) * 6, y + len);
-      g.stroke();
+      for (var ox = -w; ox <= w; ox += w) for (var oy = -h; oy <= h; oy += h) { // drawn again across every edge, so the bark repeats with no seam
+        g.beginPath();
+        g.moveTo(x + ox, y + oy);
+        g.bezierCurveTo(x + ox + 6, y + oy + len * 0.33, x + ox - 6, y + oy + len * 0.66, x + ox + end, y + oy + len);
+        g.stroke();
+      }
     }
   });
   var dawnVeins = dawnPaint(128, 256, function (g, w, h) {
@@ -460,12 +462,19 @@ function startGame(THREE) {
     g.shadowColor = '#fff';
     g.shadowBlur = 6;
     for (var i = 0; i < 6; i++) { // glowing magic veins winding up the bark
-      var x = Math.random() * w;
+      var x0 = Math.random() * w, p1 = Math.random() * 6.28, p2 = Math.random() * 6.28, p3 = Math.random() * 6.28;
+      var jag = [];                                  // little zigzags, the same at the top and bottom so the vein joins up
+      for (var j = 0; j < h / 16; j++) jag.push((Math.random() - 0.5) * 8);
       g.lineWidth = 1.5 + Math.random() * 2;
-      g.beginPath();
-      g.moveTo(x, h);
-      for (var y = h; y > -16; y -= 16) { x += (Math.random() - 0.5) * 16; g.lineTo(x, y); }
-      g.stroke();
+      for (var ox = -w; ox <= w; ox += w) {          // drawn again across the side edges, so it wraps round the trunk
+        g.beginPath();
+        for (var y = -32; y <= h + 32; y += 16) {    // the wiggle repeats exactly every h pixels: no seam where the picture tiles
+          var k = y / h * Math.PI * 2, n = ((y / 16) % jag.length + jag.length) % jag.length;
+          var x = x0 + ox + Math.sin(k + p1) * 12 + Math.sin(k * 2 + p2) * 6 + Math.sin(k * 3 + p3) * 3 + jag[n];
+          if (y === -32) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.stroke();
+      }
     }
   });
   dawnBark.wrapS = dawnBark.wrapT = dawnVeins.wrapS = dawnVeins.wrapT = THREE.RepeatWrapping;
@@ -3326,7 +3335,8 @@ function startGame(THREE) {
       hissBurst(0.08, 'bandpass', 700 + Math.random() * 1800, 2.5, 0.28 * (1 - i / 11), 0.002, 0.05, when);
       slideTone('sine', 240 + Math.random() * 200, 140, 0.12 * (1 - i / 11), 0.05, when);
     }
-  }  // Trimming sounds: a crisp "snip-snick" of the shears with a rustle of leaves, and a big leafy whoosh when the bush is cleared
+  }
+  // Trimming sounds: a crisp "snip-snick" of the shears with a rustle of leaves, and a big leafy whoosh when the bush is cleared
   function snipSound() {
     if (!audioCtx) return;
     var p = 0.92 + Math.random() * 0.16;
@@ -3343,7 +3353,8 @@ function startGame(THREE) {
     }
     hissBurst(0.6, 'lowpass', 900, 0.5, 0.18, 0.05, 0.45);            // the soft whoosh of the branches collapsing
     slideTone('sine', 120, 70, 0.18, 0.25, 0.05);                     // a gentle bump as it settles
-  }  // Spell sounds: a sparkly magical shimmer when you cast, and a soft chime as the sparkles land on each crop
+  }
+  // Spell sounds: a sparkly magical shimmer when you cast, and a soft chime as the sparkles land on each crop
   function spellSound() {
     if (!audioCtx) return;
     var t0 = audioCtx.currentTime;
@@ -3382,7 +3393,8 @@ function startGame(THREE) {
     var fr = notes[Math.floor(Math.random() * notes.length)];
     bellTone(fr, 0.05, 0.5, when);
     bellTone(fr * 1.5, 0.025, 0.35, when + 0.03);
-  }  // Mana sounds: soft twinkles that climb higher as the Dawn Tree fills your mana, and a bright chord when it's full
+  }
+  // Mana sounds: soft twinkles that climb higher as the Dawn Tree fills your mana, and a bright chord when it's full
   var MANA_NOTES = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349.3, 2637, 3136, 3520]; // a happy five-note scale, two octaves
   var manaChimeT = 0;
   function manaFillSound(fullness, dt) {
@@ -3401,7 +3413,8 @@ function startGame(THREE) {
       bellTone(fr * 1.005, 0.03, 0.9, i * 0.05 + 0.01);             // slightly detuned twin, for a soft chorus shimmer
     });
     for (var i = 0; i < 5; i++) bellTone(4000 + Math.random() * 2500, 0.02, 0.2, 0.25 + Math.random() * 0.5); // a few glints
-  }  // Garden sounds: a crunchy dig for tilling, a soft pat and a cheerful bloop for planting, a splash and drips for watering
+  }
+  // Garden sounds: a crunchy dig for tilling, a soft pat and a cheerful bloop for planting, a splash and drips for watering
   function tillSound() {
     if (!audioCtx) return;
     var p = 0.9 + Math.random() * 0.2;
