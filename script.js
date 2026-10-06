@@ -4807,24 +4807,103 @@ function startGame(THREE) {
   var ballGeo = new THREE.SphereGeometry(0.1, 10, 8);
   var dropGeo = new THREE.SphereGeometry(0.08, 10, 8);
 
-  function makeCrop(tile) {
-    var crop = new THREE.Group();
-    var stem = place(new THREE.Mesh(stemGeo, M.stem), 0, 0, 0, crop);
-    var leaves = new THREE.Group();
-    place(new THREE.Mesh(ballGeo, M.leaf), -0.13, 0, 0, leaves).scale.set(1.6, 0.4, 0.8);
-    place(new THREE.Mesh(ballGeo, M.leaf), 0.13, 0, 0, leaves).scale.set(1.6, 0.4, 0.8);
-    crop.add(leaves);
-    var bud = place(new THREE.Mesh(ballGeo, M.bud), 0, 0, 0, crop);
-    var bloom = new THREE.Group();
-    for (var i = 0; i < 5; i++) {
-      var a = (i / 5) * Math.PI * 2;
-      var p = place(new THREE.Mesh(ballGeo, M.petal), Math.cos(a) * 0.12, 0, Math.sin(a) * 0.12, bloom);
-      p.scale.set(1.25, 0.4, 0.75);
-      p.rotation.set(0, -a, 0.35);
+  // ---- Moonbloom crops: four detailed growth stages ----
+  // a shaped blade (leaf or petal) along +x, curving up at the tip and cupped at the edges, shaded from base to tip
+  function bladeGeo(len, wide, cup, edgeLift, inner, outer, vein) {
+    var g = new THREE.PlaneGeometry(1, 1, 4, 10), p = g.attributes.position, cols = [], cIn = new THREE.Color(inner), cOut = new THREE.Color(outer), c = new THREE.Color();
+    for (var i = 0; i < p.count; i++) {
+      var t = p.getY(i) + 0.5, across = p.getX(i) * 2;               // t: 0 at the base, 1 at the tip
+      var w = wide * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.7)), 0.6);
+      var z = across * w;
+      p.setXYZ(i, t * len, cup * t * t + z * z * edgeLift, z);
+      c.copy(cIn).lerp(cOut, Math.pow(t, 1.2));
+      if (vein && Math.abs(across) < 0.2) c.multiplyScalar(0.8);    // a darker vein down the middle
+      cols.push(c.r, c.g, c.b);
     }
-    place(new THREE.Mesh(ballGeo, M.center), 0, 0, 0, bloom).scale.setScalar(0.7);
-    crop.add(bloom);
-    crop.userData = { stem: stem, leaves: leaves, bud: bud, bloom: bloom };
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  var cropLeafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.7, side: THREE.DoubleSide });
+  var cropPetalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, emissive: 0xff6fcf, emissiveIntensity: 0.3, roughness: 0.45, side: THREE.DoubleSide });
+  var cropStemMat = new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.75 });
+  var cropStamenMat = new THREE.MeshStandardMaterial({ color: 0xffe9a8, emissive: 0xffc94d, emissiveIntensity: 0.8, roughness: 0.4 });
+  var cropGlowMat = new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff9be0, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+  var seedLeafGeo = bladeGeo(0.09, 0.05, 0.015, 1.5, 0x7ed37a, 0xa8e890, false);       // the two round baby leaves of a sprout
+  var cropLeafGeo = bladeGeo(0.26, 0.09, 0.05, 2.2, 0x3f8a3c, 0x8ad87a, true);          // proper pointed leaves
+  var cropBackPetal = bladeGeo(0.17, 0.075, 0.05, 2.4, 0xb47cff, 0xf3e3ff, false);     // the flower: lavender back petals...
+  var cropFrontPetal = bladeGeo(0.14, 0.068, 0.07, 2.4, 0xff6fcf, 0xffe6f6, false);    // ...and pink front ones
+  var sepalGeo = bladeGeo(0.09, 0.03, 0.06, 2, 0x4f9a48, 0x7ec86a, false);             // the little green cup round a bud
+  var cropBudGeo = (function () {                                      // a closed teardrop bud, lavender at the base, pink at the tip
+    var pts = [];
+    for (var i = 0; i <= 12; i++) { var t = i / 12; pts.push(new THREE.Vector2(Math.max(0.001, 0.07 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.8)), 0.8)), t * 0.2)); }
+    var g = new THREE.LatheGeometry(pts, 14), p = g.attributes.position, cols = [], a = new THREE.Color(0xc89cf8), b = new THREE.Color(0xff8fd8), c = new THREE.Color();
+    for (var j = 0; j < p.count; j++) {
+      var ang = Math.atan2(p.getZ(j), p.getX(j)), tw = p.getY(j) / 0.2;
+      c.copy(a).lerp(b, tw); c.multiplyScalar(0.9 + 0.1 * Math.cos(ang * 5 + tw * 3)); // faint twisted petal seams
+      cols.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    g.computeVertexNormals();
+    return g;
+  })();
+  var cropStemGeo = new THREE.CylinderGeometry(0.012, 0.018, 1, 6);
+  cropStemGeo.translate(0, 0.5, 0);
+  function leafPair(parent, y, size, turn, droop) {                    // two leaves opposite each other on the stem
+    [0, Math.PI].forEach(function (side) {
+      var lf = new THREE.Mesh(cropLeafGeo, cropLeafMat);
+      lf.position.y = y; lf.rotation.set(0, turn + side, droop); lf.scale.setScalar(size);
+      parent.add(lf);
+    });
+  }
+  function makeCrop(tile) {
+    var crop = new THREE.Group(), stages = [];
+    // 0: a sprout: two round seed leaves on a tiny stem, with the pearly seed shell still poking out of the soil
+    var s0 = new THREE.Group();
+    var st0 = new THREE.Mesh(cropStemGeo, cropStemMat); st0.scale.set(0.8, 0.1, 0.8); st0.rotation.z = 0.12; s0.add(st0);
+    [0, Math.PI].forEach(function (side) { var sl = new THREE.Mesh(seedLeafGeo, cropLeafMat); sl.position.set(-0.012, 0.1, 0); sl.rotation.set(0, side, 0.35); s0.add(sl); });
+    var shell = new THREE.Mesh(seedGeo, seedMat); shell.position.set(0.06, 0.005, 0.03); shell.rotation.set(1.2, 0, 0.5); shell.scale.setScalar(0.6); s0.add(shell);
+    var tw0 = new THREE.Sprite(cropGlowMat); tw0.position.y = 0.12; tw0.scale.set(0.15, 0.15, 1); s0.add(tw0);
+    stages.push(s0);
+    // 1: a young plant: a slim stem with two pairs of leaves and a little curled tip
+    var s1 = new THREE.Group();
+    var st1 = new THREE.Mesh(cropStemGeo, cropStemMat); st1.scale.set(1, 0.28, 1); s1.add(st1);
+    leafPair(s1, 0.08, 0.75, 0, 0.25); leafPair(s1, 0.17, 0.6, Math.PI / 2, 0.45);
+    [0, Math.PI].forEach(function (side) { var tl = new THREE.Mesh(seedLeafGeo, cropLeafMat); tl.position.y = 0.27; tl.rotation.set(0, side + 0.8, 1.0); tl.scale.setScalar(0.7); s1.add(tl); });
+    stages.push(s1);
+    // 2: budding: taller, three pairs of leaves, and a closed pink bud in a green cup, glowing softly
+    var s2 = new THREE.Group();
+    var st2 = new THREE.Mesh(cropStemGeo, cropStemMat); st2.scale.set(1.1, 0.5, 1.1); s2.add(st2);
+    leafPair(s2, 0.08, 1, 0, 0.15); leafPair(s2, 0.2, 0.85, Math.PI / 2, 0.3); leafPair(s2, 0.32, 0.65, Math.PI / 4, 0.55);
+    var bud = new THREE.Mesh(cropBudGeo, cropPetalMat); bud.position.y = 0.49; s2.add(bud);
+    for (var sp = 0; sp < 5; sp++) { var se = new THREE.Mesh(sepalGeo, cropLeafMat); se.position.y = 0.5; se.rotation.set(0, sp / 5 * Math.PI * 2, 1.1); s2.add(se); }
+    var g2 = new THREE.Sprite(cropGlowMat); g2.position.y = 0.6; g2.scale.set(0.35, 0.35, 1); s2.add(g2);
+    stages.push(s2);
+    // 3: in bloom: two rings of cupped petals, a golden heart with stamens and a crescent moon, and a soft glow
+    var s3 = new THREE.Group();
+    var st3 = new THREE.Mesh(cropStemGeo, cropStemMat); st3.scale.set(1.2, 0.62, 1.2); s3.add(st3);
+    leafPair(s3, 0.08, 1.1, 0, 0.1); leafPair(s3, 0.22, 0.95, Math.PI / 2, 0.25); leafPair(s3, 0.36, 0.75, Math.PI / 4, 0.45);
+    var head = new THREE.Group(); head.position.y = 0.62; head.rotation.x = 0.25; head.scale.setScalar(1.3); s3.add(head);
+    for (var pi = 0; pi < 12; pi++) {
+      var back = pi < 6, pet = new THREE.Mesh(back ? cropBackPetal : cropFrontPetal, cropPetalMat);
+      pet.rotation.set(0, (pi % 6) / 6 * Math.PI * 2 + (back ? Math.PI / 6 : 0), back ? 0.12 : 0.36);
+      pet.position.y = back ? -0.006 : 0.006;
+      head.add(pet);
+    }
+    var heart = new THREE.Mesh(ballGeo, M.center); heart.scale.set(0.38, 0.22, 0.38); heart.position.y = 0.02; head.add(heart);
+    for (var sm = 0; sm < 9; sm++) {
+      var sa = sm / 9 * Math.PI * 2, stamen = new THREE.Mesh(ballGeo, cropStamenMat);
+      stamen.scale.setScalar(0.08); stamen.position.set(Math.cos(sa) * 0.045, 0.04, Math.sin(sa) * 0.045); head.add(stamen);
+    }
+    var moon = new THREE.Mesh(seedMoonGeo, seedMoonMat); moon.scale.setScalar(1.4); moon.position.set(0, 0.055, 0.005); moon.rotation.set(-1.0, 0, 0.7); head.add(moon);
+    var g3 = new THREE.Sprite(cropGlowMat); g3.position.y = 0.66; g3.scale.set(0.6, 0.6, 1); s3.add(g3);
+    stages.push(s3);
+    stages.forEach(function (sg) { sg.traverse(function (o) { if (o.isMesh) { o.castShadow = true; } }); crop.add(sg); });
+    [s1, s2, s3].forEach(function (sg, n) {                         // a little rosette of leaves at the base, fuller as it grows
+      for (var r = 0; r < 4 + n; r++) { var rl = new THREE.Mesh(cropLeafGeo, cropLeafMat); rl.position.y = 0.01; rl.rotation.set(0, r / (4 + n) * Math.PI * 2 + 0.4, -0.15); rl.scale.setScalar(0.7 + n * 0.12); sg.add(rl); }
+    });
+    crop.scale.setScalar(1.35);                                        // a good size in the garden bed
+    crop.userData = { stages: stages };
     crop.position.set(tile.x, 0.12, tile.z);
     crop.rotation.y = Math.random() * Math.PI * 2;
     scene.add(crop);
@@ -4832,15 +4911,7 @@ function startGame(THREE) {
   }
 
   function showStage(tile) {
-    var parts = tile.crop.userData, s = tile.stage;
-    var h = [0.16, 0.36, 0.55, 0.7][s];
-    parts.stem.scale.y = h;
-    parts.leaves.position.y = h * 0.45;
-    parts.leaves.scale.setScalar([0.55, 1, 1.15, 1.25][s]);
-    parts.bud.visible = s === 2;
-    parts.bud.position.y = h;
-    parts.bloom.visible = s === 3;
-    parts.bloom.position.y = h;
+    tile.crop.userData.stages.forEach(function (sg, i) { sg.visible = i === tile.stage; });
   }
 
   function setWet(tile, wet) {
@@ -6670,6 +6741,8 @@ function startGame(THREE) {
       tile.drop.position.y = 1 + Math.sin(state.time * 3 + tile.x) * 0.08;
     });
     M.petal.emissiveIntensity = 0.3 + night * 0.6 + Math.sin(state.time * 3) * 0.1;
+    cropPetalMat.emissiveIntensity = 0.2 + night * 0.5 + Math.sin(state.time * 3) * 0.08; // moonblooms glow brighter at night
+    cropGlowMat.opacity = 0.3 + night * 0.4;
   }
 
   function updateWorld(dt, night) {
