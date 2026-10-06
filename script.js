@@ -2777,10 +2777,37 @@ function startGame(THREE) {
     g.strokeStyle = 'rgba(255,240,200,0.6)'; g.setLineDash([2, 2]);
     for (var i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, h); g.moveTo(0, i * 16); g.lineTo(w, i * 16); g.stroke(); }
   });
-  var rugTex = paintTexture(128, 128, function (g, w, h) {            // a round braided rug
-    var cols = ['#c85a9a', '#7a58b0', '#e8a0c8', '#5b3f8c', '#f0c8e0'];
-    for (var i = 8; i > 0; i--) { g.fillStyle = cols[i % cols.length]; g.beginPath(); g.arc(64, 64, i * 8, 0, Math.PI * 2); g.fill(); }
-    g.fillStyle = '#e8c86a'; g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 4 : 10, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } g.fill();
+  var rugTex = paintTexture(512, 512, function (g, w, h) {            // a braided rag rug: rings of plaited strands in plum, rose, cream and sage
+    var C = 256, RINGS = 11, R0 = 250, band = (R0 - 40) / RINGS;
+    var palette = [['#5b3a6e', '#6e4a82', '#4c2f5e'], ['#c97a9a', '#d68fab', '#b8688a'], ['#efe2cc', '#f7eedc', '#e2d2b8'],
+                   ['#8aa07a', '#9cb28b', '#788e69'], ['#a0688e', '#b37aa0', '#8e5a7d'], ['#e6b6c4', '#f0c7d3', '#d8a4b4']];
+    g.fillStyle = '#3e2a48'; g.beginPath(); g.arc(C, C, R0 + 4, 0, Math.PI * 2); g.fill();
+    for (var ring = 0; ring < RINGS; ring++) {
+      var r = R0 - ring * band - band / 2, cols = palette[(ring * 2 + (ring > 5 ? 1 : 0)) % palette.length];
+      var segs = Math.max(8, Math.round((Math.PI * 2 * r) / (band * 0.62)));
+      for (var sg = 0; sg < segs; sg++) {                              // little slanted plaits, leaning one way then the other
+        var a = (sg / segs) * Math.PI * 2, x = C + Math.cos(a) * r, y = C + Math.sin(a) * r;
+        g.save(); g.translate(x, y); g.rotate(a + (sg % 2 ? 0.55 : -0.55));
+        var strand = cols[sg % 3];
+        g.fillStyle = strand;
+        g.beginPath(); g.ellipse(0, 0, band * 0.52, band * 0.3, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.18)';                         // a soft highlight on each plait
+        g.beginPath(); g.ellipse(-band * 0.08, -band * 0.08, band * 0.3, band * 0.12, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+      }
+      g.strokeStyle = 'rgba(40,20,40,0.35)'; g.lineWidth = 1.5;         // the stitched seam between rings
+      g.beginPath(); g.arc(C, C, r - band / 2, 0, Math.PI * 2); g.stroke();
+    }
+    var mid = g.createRadialGradient(C, C, 0, C, C, 40);               // a cream middle with a little gold moon and stars
+    mid.addColorStop(0, '#fbf3e4'); mid.addColorStop(1, '#eadcc4');
+    g.fillStyle = mid; g.beginPath(); g.arc(C, C, 40, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#d9a83e'; g.beginPath(); g.arc(C - 4, C, 20, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f5ead6'; g.beginPath(); g.arc(C + 5, C - 5, 17, 0, Math.PI * 2); g.fill();
+    function star(x, y, r) { g.beginPath(); for (var p = 0; p < 10; p++) { var rr = p % 2 ? r * 0.42 : r, aa = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } g.fill(); }
+    g.fillStyle = '#d9a83e'; star(C + 20, C + 14, 7); star(C + 24, C - 18, 4.5); star(C + 6, C + 26, 3.5);
+    var edge = g.createRadialGradient(C, C, R0 * 0.75, C, C, R0 + 4);   // a gentle shade toward the rim, like a soft rolled edge
+    edge.addColorStop(0, 'rgba(0,0,0,0)'); edge.addColorStop(1, 'rgba(30,10,30,0.3)');
+    g.fillStyle = edge; g.beginPath(); g.arc(C, C, R0 + 4, 0, Math.PI * 2); g.fill();
   });
   function rMat(color, extra) {
     var o = { color: color, roughness: 0.8 };
@@ -2894,7 +2921,9 @@ function startGame(THREE) {
   inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
 
   // a round table with stools, potions, a candle and an open spellbook, on a braided rug
-  iPart(new THREE.CircleGeometry(1.9, 32), R.rug, 0.3, 0.012, 0.5, -Math.PI / 2);
+  var rugEdge = rMat(0x3e2a48, { roughness: 1 });                    // a soft thick oval rug, a little raised off the floor
+  var rugMesh = iPart(new THREE.CylinderGeometry(1.9, 1.93, 0.035, 48), [rugEdge, R.rug, rugEdge], 0.3, 0.018, 0.5);
+  rugMesh.scale.set(1.2, 1, 0.95);
   var TBX = -1.2, TBZ = 0.9;
   iPart(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 20), R.wood, TBX, 0.78, TBZ);
   iPart(new THREE.CylinderGeometry(0.08, 0.12, 0.75, 8), R.darkWood, TBX, 0.38, TBZ);
