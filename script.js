@@ -2980,10 +2980,23 @@ function startGame(THREE) {
       m = new THREE.Mesh(boulderGeos[2], stoneMat);
       m.scale.set(0.15, 0.12, 0.13);
       g.add(m);
-    } else if (item === 'coal') {
+    } else if (item === 'coal') { // a glossy faceted lump of coal with a couple of small chips and glints of shine
       m = new THREE.Mesh(coalGeo, coalMat);
       m.rotation.set(0.4, 0.3, 0.2);
       g.add(m);
+      [[0.1, -0.06, 0.05, 0.32], [-0.09, -0.07, 0.06, 0.24]].forEach(function (ch) { // little chips broken off the lump
+        var chip = new THREE.Mesh(coalGeo, coalMat);
+        chip.position.set(ch[0], ch[1], ch[2]);
+        chip.scale.setScalar(ch[3]);
+        chip.rotation.set(ch[0] * 20, ch[1] * 30, ch[2] * 10);
+        g.add(chip);
+      });
+      [[-0.04, 0.07, 0.11, 0.07], [0.06, 0.02, 0.13, 0.05], [-0.08, -0.01, 0.11, 0.04], [0.03, 0.09, 0.06, 0.035]].forEach(function (gl) { // sparkly glints on the facets
+        var glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xdfe8ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+        glint.position.set(gl[0], gl[1], gl[2]);
+        glint.scale.set(gl[3], gl[3], 1);
+        g.add(glint);
+      });
     } else if (item === 'pinecone') { // a woody cone: pointed scales spiralling round a dark core, pale worn tips, a little stem
       var CONE_TOP = 0.14, CONE_BOT = -0.15;
       var coneW = function (y) {                // an egg shape: rounded top, widest just above the middle, blunt point at the bottom
@@ -3094,9 +3107,41 @@ function startGame(THREE) {
   var hayStrawMat = new THREE.MeshStandardMaterial({ color: 0xe0b450, roughness: 0.9 });
   var hayStrawPaleMat = new THREE.MeshStandardMaterial({ color: 0xf6dc8a, roughness: 0.9 });
   var bandMat = new THREE.MeshStandardMaterial({ color: 0xb0402e, roughness: 0.8 });
-  var coalGeo = new THREE.IcosahedronGeometry(0.13, 0);
-  coalGeo.scale(1, 0.8, 0.9);
-  var coalMat = new THREE.MeshStandardMaterial({ color: 0x26262c, roughness: 0.35, metalness: 0.35, flatShading: true });
+  // a chunk of coal broken off a seam: big flat cleaved faces with softly rounded edges, dark and glossy
+  var coalGeo = (function () {
+    var cg = new THREE.IcosahedronGeometry(0.13, 4), cp = cg.attributes.position, v = new THREE.Vector3(), cols = [], cc = new THREE.Color();
+    var CUTS = [[0.1, 1, 0.15, 0.62], [0.9, 0.3, 0.4, 0.66], [-0.8, 0.5, 0.3, 0.7], [0.2, -0.3, 1, 0.68], [-0.3, 0.2, -1, 0.7],
+                [0.6, -0.9, -0.3, 0.6], [-0.7, -0.6, 0.4, 0.66], [0.5, 0.6, -0.7, 0.68], [-0.4, 0.7, 0.7, 0.72], [0.7, -0.1, 0.8, 0.74]];
+    var planes = CUTS.map(function (c) { return { n: new THREE.Vector3(c[0], c[1], c[2]).normalize(), d: c[3] }; });
+    for (var i = 0; i < cp.count; i++) {
+      v.fromBufferAttribute(cp, i).normalize();
+      for (var pi = 0; pi < planes.length; pi++) { // slice the ball flat wherever it pokes past a cleave plane
+        var over = v.dot(planes[pi].n) - planes[pi].d;
+        if (over > 0) v.addScaledVector(planes[pi].n, -over);
+      }
+      v.multiplyScalar(0.13 / 0.72);
+      cp.setXYZ(i, v.x * 1.1, v.y * 0.85, v.z);
+      var tone = 0.32 + 0.03 * Math.sin(v.x * 40 + v.y * 25) + 0.02 * Math.sin(v.z * 55 - v.y * 30); // faint natural variation, no patches
+      cc.setRGB(tone, tone, tone * 1.15);
+      cols.push(cc.r, cc.g, cc.b);
+    }
+    // smooth the shading: every copy of the same corner shares one averaged normal, so no flat triangles show
+    cg.computeVertexNormals();
+    var nAcc = {}, nrm = cg.attributes.normal, key;
+    for (i = 0; i < cp.count; i++) {
+      key = Math.round(cp.getX(i) * 1e4) + ',' + Math.round(cp.getY(i) * 1e4) + ',' + Math.round(cp.getZ(i) * 1e4);
+      if (!nAcc[key]) nAcc[key] = new THREE.Vector3();
+      nAcc[key].x += nrm.getX(i); nAcc[key].y += nrm.getY(i); nAcc[key].z += nrm.getZ(i);
+    }
+    for (i = 0; i < cp.count; i++) {
+      key = Math.round(cp.getX(i) * 1e4) + ',' + Math.round(cp.getY(i) * 1e4) + ',' + Math.round(cp.getZ(i) * 1e4);
+      v.copy(nAcc[key]).normalize();
+      nrm.setXYZ(i, v.x, v.y, v.z);
+    }
+    cg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    return cg;
+  })();
+  var coalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.3, metalness: 0 }); // glossy, so each flat face catches the light differently
   var PICKUP_GLOW = { fiber: 0xd8ffb0, hay: 0xffe6a0, wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8, stone: 0xe6eeff, coal: 0xffb070 };
   // Puts a floating, glowing pickup on the ground: walk into it to collect
   function dropPickup(item, amount, x, z, groundY, delay) {
@@ -3391,14 +3436,15 @@ function startGame(THREE) {
       if (held && !holding) {
         var model = pickupModel(held);
         model.scale.setScalar(held === 'wood' ? 0.6 : 1.1);
-        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone' || held === 'fiber' || held === 'hay') { // these sit upright in your hand
+        if (held === 'seed' || held === 'sap' || held === 'acorn' || held === 'pinecone' || held === 'fiber' || held === 'hay' || held === 'coal') { // these sit upright in your hand
           var palm = new THREE.Group();
           palm.rotation.x = 1.05;               // undoes the arm's angle, so they stand up
           palm.position.y = 0.04;
           model.scale.setScalar(0.95);
-          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : held === 'fiber' ? 0.13 : held === 'hay' ? 0.08 : 0.06; // pointed tips rest in the palm; fiber is held below its twine
+          model.position.y = held === 'acorn' ? 0.19 : held === 'pinecone' ? 0.2 : held === 'fiber' ? 0.13 : held === 'hay' ? 0.08 : held === 'coal' ? 0.08 : 0.06; // pointed tips rest in the palm; fiber is held below its twine
           if (held === 'fiber') model.rotation.z = -0.45; // the bundle leans out a little, like it does in the bag
           if (held === 'hay') { model.scale.setScalar(0.75); model.rotation.y = 0.5; } // a smaller bale, turned so you see its side and end
+          if (held === 'coal') model.scale.setScalar(0.8); // a lump that fits in your palm
           palm.add(model);
           heldItemGrp.add(palm);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
