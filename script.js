@@ -4001,7 +4001,7 @@ function startGame(THREE) {
     coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
     sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
     acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), fill: 92, info: 'Dropped by leafy trees.' },
-    pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), info: 'Dropped by pine trees.' }
+    pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), fill: 92, info: 'Dropped by pine trees.' }
   };
   // Little drawn pictures for items that don't have a good emoji
   function iconCanvas(draw) {
@@ -4702,12 +4702,74 @@ function startGame(THREE) {
   }
   function iconPinecone() {
     return iconCanvas(function (g) {
-      for (var row = 0; row < 6; row++) {
-        var y = 12 + row * 8, w = 8 + Math.sin((row + 0.5) / 6 * Math.PI) * 12;
-        for (var k = -1; k <= 1; k++) {
-          g.fillStyle = row % 2 ? '#8a5530' : '#a8683a';
-          g.beginPath(); g.ellipse(32 + k * w * 0.6, y, w * 0.45, 6, 0, 0, Math.PI * 2); g.fill();
-          g.strokeStyle = 'rgba(50,28,12,0.6)'; g.lineWidth = 1.2; g.stroke();
+      g.lineJoin = 'round';
+      g.lineCap = 'round';
+      g.translate(33, 33.9);                                 // centred and sized to fill the slot
+      g.scale(0.953, 0.953);
+      g.rotate(-0.38);                                        // tipped over a little, like it just fell
+      var TOP = -27, BOT = 27;
+      function halfW(y) {                                     // an egg shape: rounded top, widest just above the middle, blunt point at the bottom
+        var t = (y - TOP) / (BOT - TOP);
+        return 15.5 * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.8)), 0.65);
+      }
+      // the woody stem
+      g.strokeStyle = '#4a2a12'; g.lineWidth = 3.6;
+      g.beginPath(); g.moveTo(0, TOP + 4); g.quadraticCurveTo(-1, TOP - 3, 3.5, TOP - 6); g.stroke();
+      g.strokeStyle = '#9a6a3a'; g.lineWidth = 1.1;
+      g.beginPath(); g.moveTo(-0.6, TOP + 2); g.quadraticCurveTo(-1.4, TOP - 2.6, 3, TOP - 5.4); g.stroke();
+      // the dark core that shows between the scales, with a soft drop shadow
+      g.shadowColor = 'rgba(60,30,90,0.4)';
+      g.shadowBlur = 3.5;
+      g.shadowOffsetY = 2;
+      g.beginPath();
+      for (var y = TOP; y <= BOT; y += 1) g.lineTo(halfW(y) * 0.92, y);
+      for (y = BOT; y >= TOP; y -= 1) g.lineTo(-halfW(y) * 0.92, y);
+      g.closePath();
+      g.fillStyle = '#3a1e0c';
+      g.fill();
+      g.shadowColor = 'transparent';
+      // one woody scale: narrow where it tucks in, broad and pointed at its open tip
+      function scale(x, y, w, h, tilt, light) {
+        g.save();
+        g.translate(x, y);
+        g.rotate(tilt);
+        g.beginPath();
+        g.moveTo(-w * 0.28, -h * 0.5);
+        g.bezierCurveTo(-w * 0.62, -h * 0.05, -w * 0.58, h * 0.3, -w * 0.12, h * 0.46);
+        g.lineTo(0, h * 0.56);
+        g.lineTo(w * 0.12, h * 0.46);
+        g.bezierCurveTo(w * 0.58, h * 0.3, w * 0.62, -h * 0.05, w * 0.28, -h * 0.5);
+        g.closePath();
+        var sg = g.createLinearGradient(0, -h * 0.5, 0, h * 0.55);
+        sg.addColorStop(0, 'rgb(' + Math.round(70 * light) + ',' + Math.round(36 * light) + ',' + Math.round(14 * light) + ')');
+        sg.addColorStop(0.45, 'rgb(' + Math.round(150 * light) + ',' + Math.round(86 * light) + ',' + Math.round(40 * light) + ')');
+        sg.addColorStop(1, 'rgb(' + Math.round(222 * light) + ',' + Math.round(152 * light) + ',' + Math.round(86 * light) + ')');
+        g.fillStyle = sg;
+        g.fill();
+        g.strokeStyle = 'rgba(36,16,6,0.85)';
+        g.lineWidth = 0.8;
+        g.stroke();
+        if (w > 5) {
+          g.fillStyle = 'rgba(250,215,160,' + (0.55 * light).toFixed(2) + ')'; // the pale worn tip
+          g.beginPath(); g.moveTo(-w * 0.16, h * 0.3); g.lineTo(0, h * 0.5); g.lineTo(w * 0.16, h * 0.3); g.lineTo(0, h * 0.2); g.closePath(); g.fill();
+          g.strokeStyle = 'rgba(255,236,200,0.5)';             // a sunlit left edge
+          g.lineWidth = 0.7;
+          g.beginPath(); g.moveTo(-w * 0.42, -h * 0.05); g.quadraticCurveTo(-w * 0.44, h * 0.25, -w * 0.12, h * 0.42); g.stroke();
+          g.strokeStyle = 'rgba(50,24,8,0.55)';                // the ridge down the middle
+          g.beginPath(); g.moveTo(0, -h * 0.25); g.lineTo(0, h * 0.2); g.stroke();
+        }
+        g.restore();
+      }
+      // rows from the bottom up, each row tucked under the one above; scales around the sides flare outward
+      for (var row = 10; row >= 0; row--) {
+        var ry = TOP + 3 + row * 4.8, hw = halfW(ry + 2), n = row < 2 ? 3 : 5;
+        for (var k = 0; k <= n; k++) {
+          var a = -Math.PI / 2 + ((k + (row % 2) * 0.5) / n) * Math.PI;
+          if (a > Math.PI / 2 + 0.01) continue;
+          var face = Math.cos(a), side = Math.sin(a);
+          var light = 0.62 + 0.42 * Math.max(0, Math.cos(a + 0.6));   // lit from the upper left
+          var w = Math.max(3, hw * 0.75 * (0.4 + 0.6 * face) + 2);
+          scale(side * hw * 0.88, ry + 1.5 * (1 - face), w, 7.5 + hw * 0.12, -side * 0.85, light);
         }
       }
     });
