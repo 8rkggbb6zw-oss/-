@@ -2529,14 +2529,13 @@ function startGame(THREE) {
   hPart(new THREE.BoxGeometry(0.78, 0.14, 0.78), 'beam', HW / 2 - 0.88, TOP + 2.17, -0.7, 0, 0, -0.06);
   var CHIM_TOP = new THREE.Vector3(HW / 2 - 0.88, TOP + 2.3, -0.7);
 
-  // the round-topped purple door, with a gold knob, a crescent moon and a stone arch
+  // the round-topped purple door, with a gold knob and a stone arch
   var doorGeo = new THREE.BoxGeometry(1.0, 1.3, 0.1);
   hPart(doorGeo, 'door', 0, FOOT_H + 0.65, FRONT + 0.03);
   hPart(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 18, 1, false, -Math.PI / 2, Math.PI), 'door', 0, FOOT_H + 1.3, FRONT + 0.03, Math.PI / 2, 0, 0);
   hPart(new THREE.TorusGeometry(0.56, 0.09, 6, 18, Math.PI), 'stone', 0, FOOT_H + 1.3, FRONT + 0.06);
   [-1, 1].forEach(function (s) { hPart(new THREE.BoxGeometry(0.18, 1.3, 0.16), 'stone', s * 0.56, FOOT_H + 0.65, FRONT + 0.06); });
   hPart(new THREE.SphereGeometry(0.06, 10, 8), 'gold', 0.32, FOOT_H + 0.72, FRONT + 0.11);
-  hPart(new THREE.TorusGeometry(0.13, 0.035, 6, 16, Math.PI * 1.25), 'gold', 0, FOOT_H + 1.32, FRONT + 0.1, 0, 0, 0.8);
   hPart(new THREE.BoxGeometry(1.5, 0.4, 0.8), 'stone', 0, FOOT_H - 0.23, FRONT + 0.45);    // the front step
   hPart(new THREE.BoxGeometry(1.2, 0.04, 0.45), 'flowerPink', 0, FOOT_H - 0.01, FRONT + 0.5); // a little welcome mat
 
