@@ -3289,6 +3289,40 @@ function startGame(THREE) {
     hissBurst(0.7, 'highpass', 2600, 0.5, 0.18, 0.03, 0.5, 0.04);
     slideTone('sine', 70, 40, 0.3, 0.25, 0.16);                // a smaller bounce
   }
+  // Mining sounds: a bright metal-on-stone "tink" for each swing, a clattering rumble when the rock breaks
+  function bellTone(freq, vol, decay, when) { // one bell-like partial that rings and fades
+    var t0 = audioCtx.currentTime + (when || 0);
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + decay + 0.02);
+  }
+  function clinkSound() { // the pickaxe strikes stone
+    if (!audioCtx) return;
+    var p = 0.92 + Math.random() * 0.16;
+    bellTone(1870 * p, 0.16, 0.32);                                // the pick's metal ringing, with uneven overtones like real metal
+    bellTone(2790 * p, 0.09, 0.22);
+    bellTone(4310 * p, 0.05, 0.14);
+    hissBurst(0.06, 'bandpass', 3800 * p, 1.2, 0.35, 0.001, 0.03); // the sharp click of the strike
+    slideTone('sine', 170 * p, 95 * p, 0.32, 0.07);            // the dull knock of solid rock
+    hissBurst(0.16, 'highpass', 1800, 0.6, 0.12, 0.004, 0.11, 0.015); // grit and chips skittering away
+  }
+  function crumbleSound() { // the rock cracks apart and the rubble tumbles down
+    if (!audioCtx) return;
+    hissBurst(0.15, 'bandpass', 2400, 0.8, 0.5, 0.001, 0.08);    // the crack
+    slideTone('sine', 110, 45, 0.6, 0.4, 0.02);                  // a heavy thump
+    hissBurst(0.7, 'lowpass', 500, 0.7, 0.4, 0.02, 0.5, 0.03);   // the rumble
+    for (var i = 0; i < 9; i++) {                                // stones clattering, quieter as they settle
+      var when = 0.06 + i * 0.05 + Math.random() * 0.04;
+      hissBurst(0.08, 'bandpass', 700 + Math.random() * 1800, 2.5, 0.28 * (1 - i / 11), 0.002, 0.05, when);
+      slideTone('sine', 240 + Math.random() * 200, 140, 0.12 * (1 - i / 11), 0.05, when);
+    }
+  }
 
   // ---------- Mining rocks ----------
   var HITS_TO_BREAK = 10, COAL_CHANCE = 0.4;
@@ -3337,11 +3371,13 @@ function startGame(THREE) {
   function pickHits(r) {
     if (r.state !== 'whole') return;
     r.hits++;
+    clinkSound();
     var hx = r.x - Math.sin(facing) * r.size * 0.5, hz = r.z - Math.cos(facing) * r.size * 0.5;
     burst(hx, r.y + r.size * 0.4, hz, 0xa9a49a, 12, 2.6, 2, -8);  // stone chips
     burst(hx, r.y + r.size * 0.4, hz, 0xfff1c4, 4, 2, 1.5, -4);   // a few sparks
     if (r.hits < HITS_TO_BREAK) { r.shakeT = 0; return; }
     // Crumble! The rock bursts into rubble and sparkles, leaving stone (and maybe coal) behind
+    crumbleSound();
     r.state = 'crumbling';
     r.crumbleT = 0;
     burst(r.x, r.y + r.size * 0.3, r.z, 0x8f8c86, 30, 4 * Math.max(0.6, r.size), 2.5, -9);
