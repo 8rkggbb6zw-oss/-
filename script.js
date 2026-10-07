@@ -2020,6 +2020,76 @@ function startGame(THREE) {
   var bridgeGlass = new THREE.MeshStandardMaterial({ color: 0xfff1cc, emissive: 0xffc46a, emissiveIntensity: 1.1, roughness: 0.2, transparent: true, opacity: 0.9 });
   var bridgeCrystal = new THREE.MeshStandardMaterial({ color: 0xd9c6ff, emissive: 0x8a66e8, emissiveIntensity: 0.9, roughness: 0.15 });
   var bridgeGlows = [], bridgeDrifters = [];
+  // A floating crystal lantern: an aged bronze frame with six panes of smoky violet glass round a glowing amethyst,
+  // a crown of clear crystals on top and a crystal drop hanging beneath. It hovers, bobbing and turning slowly
+  var lanternBronze = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.38, metalness: 0.85 });
+  var lanternPane = new THREE.MeshStandardMaterial({ color: 0xc9b2ff, emissive: 0x7a3cff, emissiveIntensity: 0.35, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.38, side: THREE.DoubleSide, depthWrite: false });
+  var lanternCore = new THREE.MeshStandardMaterial({ color: 0xeedcff, emissive: 0xa45cff, emissiveIntensity: 1.6, roughness: 0.1 });
+  var lanternGem = new THREE.MeshStandardMaterial({ color: 0xe6d6ff, emissive: 0x7b4ad8, emissiveIntensity: 0.45, roughness: 0.04, metalness: 0.25, flatShading: true });
+  var gemGeo = new THREE.OctahedronGeometry(1, 0), bridgeLanterns = [];
+  function makeCrystalLantern(x, y, z, seedN) {
+    var lan = new THREE.Group(), body = new THREE.Group(), motes = [];
+    lan.add(body);
+    function add(geo, mat, px, py, pz, sx, sy, sz) { var m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); if (sx) m.scale.set(sx, sy, sz); body.add(m); return m; }
+    // the bronze frame: a stepped base, a waisted collar, a domed cap with a ring of little spires
+    add(new THREE.CylinderGeometry(0.075, 0.11, 0.03, 12), lanternBronze, 0, -0.19, 0);
+    add(new THREE.CylinderGeometry(0.115, 0.115, 0.022, 12), lanternBronze, 0, -0.168, 0);
+    add(new THREE.TorusGeometry(0.105, 0.009, 6, 24), lanternBronze, 0, -0.155, 0).rotation.x = Math.PI / 2;
+    add(new THREE.TorusGeometry(0.1, 0.009, 6, 24), lanternBronze, 0, 0.155, 0).rotation.x = Math.PI / 2;
+    add(new THREE.CylinderGeometry(0.105, 0.1, 0.025, 12), lanternBronze, 0, 0.17, 0);
+    var domePts = [[0.105, 0], [0.1, 0.03], [0.085, 0.07], [0.06, 0.1], [0.035, 0.12], [0.028, 0.14], [0.034, 0.155], [0.0, 0.16]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+    add(new THREE.LatheGeometry(domePts, 16), lanternBronze, 0, 0.18, 0);
+    for (var sp = 0; sp < 6; sp++) {                                  // small spires round the rim of the dome
+      var sa = sp / 6 * Math.PI * 2 + Math.PI / 6;
+      add(new THREE.ConeGeometry(0.008, 0.05, 4), lanternBronze, Math.cos(sa) * 0.1, 0.205, Math.sin(sa) * 0.1);
+    }
+    var pane = add(new THREE.CylinderGeometry(0.098, 0.098, 0.3, 6, 1, true), lanternPane, 0, 0, 0); // violet glass
+    pane.renderOrder = 2;
+    for (var bar = 0; bar < 6; bar++) {                                // twisted bronze ribs with a leaf-curl at the top
+      var ba = bar / 6 * Math.PI * 2;
+      add(new THREE.CylinderGeometry(0.007, 0.007, 0.31, 5), lanternBronze, Math.cos(ba) * 0.098, 0, Math.sin(ba) * 0.098);
+      var curl = add(new THREE.TorusGeometry(0.018, 0.004, 4, 10, Math.PI * 1.4), lanternBronze, Math.cos(ba) * 0.112, 0.125, Math.sin(ba) * 0.112);
+      curl.rotation.y = -ba + Math.PI / 2;
+    }
+    add(new THREE.TorusGeometry(0.1, 0.006, 6, 24), lanternBronze, 0, 0, 0).rotation.x = Math.PI / 2; // a band round the middle of the glass
+    // inside: a glowing amethyst point, standing in a tiny bronze cup, with smaller shards round it
+    add(new THREE.CylinderGeometry(0.03, 0.02, 0.025, 8), lanternBronze, 0, -0.13, 0);
+    var core = add(gemGeo, lanternCore, 0, -0.03, 0, 0.042, 0.1, 0.042);
+    [[0.03, -0.09, 0.01, 0.4], [-0.025, -0.095, 0.02, -0.5], [0.0, -0.095, -0.032, 0.2]].forEach(function (c) {
+      add(gemGeo, lanternCore, c[0], c[1], c[2], 0.016, 0.04, 0.016).rotation.z = c[3];
+    });
+    // a crown of clear crystals bursting from the top of the dome
+    [[0, 0.42, 0, 0.032, 0.1, 0, 0], [0.035, 0.38, 0.01, 0.022, 0.07, 0, -0.45], [-0.032, 0.375, 0.018, 0.02, 0.065, 0.3, 0.45], [0.008, 0.37, -0.036, 0.019, 0.06, -0.45, 0.1], [-0.02, 0.365, -0.022, 0.015, 0.045, -0.3, 0.5]].forEach(function (c) {
+      var gem = add(gemGeo, lanternGem, c[0], c[1], c[2], c[3], c[4], c[3]);
+      gem.rotation.set(c[5], 0.3, c[6]);
+    });
+    // beneath: a bronze finial and a chain of three crystal drops
+    add(new THREE.ConeGeometry(0.03, 0.06, 8), lanternBronze, 0, -0.235, 0).rotation.x = Math.PI;
+    add(new THREE.SphereGeometry(0.012, 8, 6), lanternBronze, 0, -0.27, 0);
+    add(gemGeo, lanternGem, 0, -0.31, 0, 0.022, 0.04, 0.022);
+    add(new THREE.SphereGeometry(0.006, 6, 4), lanternBronze, 0, -0.355, 0);
+    add(gemGeo, lanternGem, 0, -0.4, 0, 0.026, 0.055, 0.026);
+    var inner = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xd2a8ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    inner.scale.set(0.38, 0.5, 1);
+    lan.add(inner);
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x8f5cff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+    halo.scale.set(2.2, 2.2, 1);
+    lan.add(halo);
+    for (var mo = 0; mo < 4; mo++) {                                   // tiny sparks of light circling the lantern
+      var mote = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xe9d6ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+      mote.scale.set(0.06, 0.06, 1);
+      lan.add(mote);
+      motes.push({ s: mote, a: mo / 4 * Math.PI * 2, r: 0.2 + isle2Hash(seedN + mo) * 0.08, h: (isle2Hash(seedN * 3 + mo) - 0.5) * 0.3 });
+    }
+    var pool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), new THREE.MeshBasicMaterial({ map: dawnGlowTex, color: 0x9d6bff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
+    pool.rotation.x = -Math.PI / 2;                                      // a soft purple pool of light on the stone below
+    pool.position.set(x, y - 1.33, z);
+    scene.add(pool);
+    lan.position.set(x, y, z);
+    lan.scale.setScalar(1.45);                                          // a good size to see from across the bridge
+    scene.add(lan);
+    bridgeLanterns.push({ g: lan, body: body, core: core, inner: inner, halo: halo, pool: pool, motes: motes, y: y, p: seedN * 1.37 });
+  }
   var SLAB_L = 1.0, slabCount = Math.round((BRIDGE_Z1 - BRIDGE_Z0) / SLAB_L);
   var deckGeo = new THREE.BoxGeometry(BRIDGE_W - 0.5, 0.3, SLAB_L + 0.02);
   var beamGeo = new THREE.BoxGeometry(0.28, 0.6, SLAB_L + 0.02);       // the thick carved edge beam on each side
@@ -2077,54 +2147,48 @@ function startGame(THREE) {
         }
       }
     }
-    if (sb % 7 === 3) {                                               // tall iron lamp posts on stone plinths, in pairs
-      [-1, 1].forEach(function (sd) {
-        var lx = BRIDGE_X + sd * (BRIDGE_W / 2 - 0.14), ly = yc;
-        bridgePart(new THREE.BoxGeometry(0.36, 0.95, 0.36), bridgeWall, lx, ly + 0.36, zc);         // the plinth, rising through the rail
-        bridgePart(new THREE.BoxGeometry(0.44, 0.08, 0.44), bridgeCarved, lx, ly + 0.87, zc);        // its cap
-        bridgePart(new THREE.CylinderGeometry(0.035, 0.05, 1.5, 10), bridgeIron, lx, ly + 1.65, zc); // the iron post
-        bridgePart(new THREE.CylinderGeometry(0.09, 0.07, 0.08, 10), bridgeIron, lx, ly + 2.42, zc);
-        var glass = bridgePart(new THREE.CylinderGeometry(0.12, 0.09, 0.3, 6), bridgeGlass, lx, ly + 2.6, zc);
-        glass.castShadow = false;
-        bridgePart(new THREE.ConeGeometry(0.17, 0.16, 6), bridgeIron, lx, ly + 2.83, zc);            // the lantern's roof
-        bridgePart(new THREE.SphereGeometry(0.03, 8, 6), bridgeIron, lx, ly + 2.93, zc);
-        var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc878, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
-        lg.position.set(lx, ly + 2.6, zc);
-        lg.scale.set(1.6, 1.6, 1);
-        scene.add(lg);
-        bridgeGlows.push({ s: lg, p: sb + sd, lamp: true });
-      });
-    }
+    if (sb % 7 === 3) [-1, 1].forEach(function (sd) {                 // floating crystal lanterns above the rails, in pairs
+      makeCrystalLantern(BRIDGE_X + sd * (BRIDGE_W / 2 - 0.14), yc + 1.55, zc, sb * 2 + sd);
+    });
   }
   balusters.count = balN;
   balusters.castShadow = balusters.receiveShadow = true;
   balusters.frustumCulled = false;
   scene.add(balusters);
-  // Underneath: the bridge is one great arch of dressed stone, like an old stone viaduct, with no pillars because it
-  // floats. Its underside is a smooth curved vault of cut stone blocks, edged with a carved moulding, and hanging under
-  // it every few metres is a carved stone pendant with a lantern on a chain
-  var VAULT_T = 0.95;                                                   // how thick the arch of stone is under the deck
+  // Underneath: an old stone viaduct of round arches. Its piers never reached the ground: each one breaks off in jagged
+  // stone a few metres down, with broken blocks still floating beneath it. A lantern hangs under the crown of each arch
+  var PIER_GAP = 7, PIER_T = 1.1, ARCH_R = (PIER_GAP - PIER_T) / 2, DECK_UNDER = 0.27;
+  var piers = [];
+  for (var pz0 = BRIDGE_Z0 + 3.5 + PIER_GAP; pz0 < BRIDGE_Z1 - 4; pz0 += PIER_GAP) piers.push(pz0);
+  function underside(z) {                                               // how far below the deck the stone reaches at z: arches between the piers
+    var best = 0.7;
+    for (var i = 0; i < piers.length - 1; i++) {
+      var a = piers[i] + PIER_T / 2, b = piers[i + 1] - PIER_T / 2;
+      if (z >= a && z <= b) { var dz = z - (a + b) / 2; return 0.55 + ARCH_R - Math.sqrt(Math.max(0, ARCH_R * ARCH_R - dz * dz)); }
+    }
+    for (var j = 0; j < piers.length; j++) if (Math.abs(z - piers[j]) <= PIER_T / 2) return 0.55 + ARCH_R;
+    return best;                                                        // the short stretches at each end
+  }
   (function () {
-    var VZ0 = BRIDGE_Z0 + 2.0, VZ1 = BRIDGE_Z1 - 2.0, RINGS = 160, SEG = 24, pos = [], uv = [], idx = [];
-    var hw = BRIDGE_W / 2 - 0.02, R = 0.35;                             // half its width, and how rounded its lower edges are
-    var prof = [], len = 0;                                             // the cross-section: down one side, round the corner, across the vault, and back up
-    prof.push([-hw, 0]);
-    for (var k = 0; k <= 6; k++) { var a = Math.PI + k / 6 * Math.PI / 2; prof.push([-hw + R + Math.cos(a) * R, -VAULT_T + R + Math.sin(a) * R]); }
-    for (var k2 = 1; k2 < SEG - 14; k2++) { var f = k2 / (SEG - 14); prof.push([-hw + R + f * (2 * hw - 2 * R), -VAULT_T - Math.sin(f * Math.PI) * 0.12]); } // a gentle sag across the middle
-    for (var k3 = 0; k3 <= 6; k3++) { var a3 = Math.PI * 1.5 + k3 / 6 * Math.PI / 2; prof.push([hw - R + Math.cos(a3) * R, -VAULT_T + R + Math.sin(a3) * R]); }
-    prof.push([hw, 0]);
-    var arc = [0];
-    for (var q = 1; q < prof.length; q++) { len += Math.hypot(prof[q][0] - prof[q - 1][0], prof[q][1] - prof[q - 1][1]); arc.push(len); }
-    var along = 0, lastZ = VZ0, lastY = bridgeY(VZ0);
+    var VZ0 = BRIDGE_Z0 + 2.0, VZ1 = BRIDGE_Z1 - 2.0, RINGS = 420, pos = [], uv = [], idx = [];
+    var hw = BRIDGE_W / 2 - 0.02, R = 0.18, CORNER = 5, ACROSS = 10;
+    var along = 0, lastZ = VZ0, lastY = bridgeY(VZ0), W = 0;
     for (var r = 0; r <= RINGS; r++) {
-      var z = VZ0 + (VZ1 - VZ0) * r / RINGS, top = bridgeY(z) - 0.27;
+      var z = VZ0 + (VZ1 - VZ0) * r / RINGS, top = bridgeY(z) - DECK_UNDER, T = underside(z);
       along += Math.hypot(z - lastZ, bridgeY(z) - lastY); lastZ = z; lastY = bridgeY(z);
-      for (var p = 0; p < prof.length; p++) {
+      var prof = [[-hw, 0]];                                            // down one face, round the corner, across the soffit, round and back up
+      for (var k = 0; k <= CORNER; k++) { var a = Math.PI + k / CORNER * Math.PI / 2; prof.push([-hw + R + Math.cos(a) * R, -T + R + Math.sin(a) * R]); }
+      for (var k2 = 1; k2 < ACROSS; k2++) prof.push([-hw + R + k2 / ACROSS * (2 * hw - 2 * R), -T]);
+      for (var k3 = 0; k3 <= CORNER; k3++) { var a3 = Math.PI * 1.5 + k3 / CORNER * Math.PI / 2; prof.push([hw - R + Math.cos(a3) * R, -T + R + Math.sin(a3) * R]); }
+      prof.push([hw, 0]);
+      W = prof.length;
+      var arc = 0;
+      for (var p = 0; p < W; p++) {
+        if (p > 0) arc += Math.hypot(prof[p][0] - prof[p - 1][0], prof[p][1] - prof[p - 1][1]);
         pos.push(BRIDGE_X + prof[p][0], top + prof[p][1], z);
-        uv.push(arc[p] / 2, along / 2);                                  // the stone blocks keep their size the whole way along
+        uv.push(p === 0 || p === W - 1 ? along / 2 : arc / 2, along / 2);
       }
     }
-    var W = prof.length;
     for (var r2 = 0; r2 < RINGS; r2++) for (var s2 = 0; s2 < W - 1; s2++) {
       var p0 = r2 * W + s2, p1 = p0 + W;
       idx.push(p0, p0 + 1, p1, p0 + 1, p1 + 1, p1);
@@ -2137,36 +2201,69 @@ function startGame(THREE) {
     var vault = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: bridgeWallTex, bumpMap: bridgeWallTex, bumpScale: 0.025, roughness: 0.9, side: THREE.DoubleSide }));
     vault.castShadow = vault.receiveShadow = true;
     scene.add(vault);
-    [-1, 1].forEach(function (sd) {                                     // a carved moulding running along the lower edge on each side
-      var mp = [];
-      for (var mr = 0; mr <= 80; mr++) { var mz = VZ0 + (VZ1 - VZ0) * mr / 80; mp.push(new THREE.Vector3(BRIDGE_X + sd * (hw - 0.05), bridgeY(mz) - 0.27 - VAULT_T + 0.42, mz)); }
-      var mould = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(mp), 160, 0.07, 6, false), bridgeCarved);
-      mould.castShadow = true;
-      scene.add(mould);
-    });
   })();
-  var pendPts = [[0.42, 0], [0.4, -0.08], [0.3, -0.14], [0.32, -0.22], [0.24, -0.34], [0.16, -0.5], [0.18, -0.6], [0.12, -0.72], [0.06, -0.92], [0.02, -1.1], [0.0, -1.16]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
-  var pendGeo = new THREE.LatheGeometry(pendPts, 16);                  // a carved stone pendant, ringed and tapering to a point
-  for (var pz = BRIDGE_Z0 + 3.5 + 7; pz < BRIDGE_Z1 - 5; pz += 7) {
-    var py = bridgeY(pz) - 0.27 - VAULT_T - 0.08;
-    var pend = new THREE.Mesh(pendGeo, bridgeCarved);
-    pend.position.set(BRIDGE_X, py + 0.02, pz);
-    pend.castShadow = true;
-    scene.add(pend);
-    var chainLen = 0.7;
-    var chain = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, chainLen, 5), bridgeIron);
-    chain.position.set(BRIDGE_X, py - 1.16 - chainLen / 2, pz);
-    scene.add(chain);
-    var ly = py - 1.16 - chainLen - 0.18;
-    bridgePart(new THREE.ConeGeometry(0.16, 0.14, 6), bridgeIron, BRIDGE_X, ly + 0.2, pz);             // lantern roof
-    var hglass = bridgePart(new THREE.CylinderGeometry(0.11, 0.09, 0.28, 6), bridgeGlass, BRIDGE_X, ly, pz);
-    hglass.castShadow = false;
-    bridgePart(new THREE.CylinderGeometry(0.09, 0.05, 0.06, 6), bridgeIron, BRIDGE_X, ly - 0.17, pz);
+  function stoneBox(w, h, d) {                                          // a box whose stone blocks stay a sensible size
+    var g = new THREE.BoxGeometry(w, h, d), uvs = g.attributes.uv;
+    for (var i = 0; i < uvs.count; i++) {
+      var face = Math.floor(i / 4), fw = face < 2 ? d : w, fh = face === 2 || face === 3 ? d : h;
+      uvs.setXY(i, uvs.getX(i) * fw / 2, uvs.getY(i) * fh / 2);
+    }
+    return g;
+  }
+  var rubbleGeo = new THREE.DodecahedronGeometry(1, 0);
+  piers.forEach(function (pz, n) {
+    var top = bridgeY(pz) - DECK_UNDER - (0.55 + ARCH_R) + 0.02, pierH = 2.2 + isle2Hash(n * 3.1) * 1.4, pw = BRIDGE_W - 0.5;
+    var pier = new THREE.Mesh(stoneBox(pw, pierH, PIER_T), bridgeWall); // the pier, carrying on down below the arches
+    pier.position.set(BRIDGE_X, top - pierH / 2, pz);
+    pier.castShadow = pier.receiveShadow = true;
+    scene.add(pier);
+    var impost = new THREE.Mesh(stoneBox(pw + 0.16, 0.14, PIER_T + 0.16), bridgeCarved);   // a carved band where the arches spring from it
+    impost.position.set(BRIDGE_X, top + 0.02, pz);
+    impost.castShadow = true;
+    scene.add(impost);
+    var base = top - pierH;
+    for (var bk = 0; bk < 6; bk++) {                                    // the jagged broken end: stone blocks snapped off unevenly
+      var bs = 0.28 + isle2Hash(n * 13 + bk) * 0.3;
+      var chunkB = new THREE.Mesh(rubbleGeo, bridgeWall);
+      chunkB.scale.set(bs * 1.3, bs * (1.2 + isle2Hash(n * 5 + bk) * 1.4), bs);
+      chunkB.position.set(BRIDGE_X + (bk % 3 - 1) * pw * 0.32 + (isle2Hash(n + bk) - 0.5) * 0.2, base - bs * 0.5 * isle2Hash(n * 7 + bk), pz + (bk < 3 ? -0.22 : 0.22));
+      chunkB.rotation.set(isle2Hash(bk + n) * 2, isle2Hash(bk * 3 + n) * 3, isle2Hash(bk * 5 + n));
+      chunkB.castShadow = true;
+      scene.add(chunkB);
+    }
+    for (var fb = 0; fb < 3; fb++) {                                    // broken blocks still floating where they fell away
+      var blk = new THREE.Mesh(stoneBox(0.5, 0.36, 0.42), bridgeWall), bscale = 0.6 + isle2Hash(n * 17 + fb) * 0.7;
+      blk.scale.setScalar(bscale);
+      blk.position.set(BRIDGE_X + (isle2Hash(n * 19 + fb) - 0.5) * 2.2, base - 0.9 - fb * 0.7 - isle2Hash(n * 23 + fb) * 0.5, pz + (isle2Hash(n * 29 + fb) - 0.5) * 1.4);
+      blk.rotation.set(isle2Hash(fb + n * 2) * 3, isle2Hash(fb * 7 + n) * 3, isle2Hash(fb * 11 + n) * 3);
+      blk.castShadow = true;
+      scene.add(blk);
+      bridgeDrifters.push({ m: blk, y: blk.position.y, p: n * 2 + fb });
+    }
+    for (var iv = 0; iv < 4; iv++) {                                    // ivy climbing down the pier faces
+      if (isle2Hash(n * 31 + iv) < 0.4) continue;
+      var face = iv < 2 ? -1 : 1, ix = BRIDGE_X + (isle2Hash(n * 37 + iv) - 0.5) * pw * 0.8, ilen = 0.8 + isle2Hash(n * 41 + iv) * (pierH + 0.6);
+      for (var il = 0; il < Math.round(ilen * 8); il++) {
+        var t = il / (ilen * 8), leaf = bridgePart(vineLeafGeo, isle2Hash(il + n + iv) < 0.3 ? bridgeVineLight : bridgeVine,
+          ix + Math.sin(il * 0.7 + iv) * 0.06, top - il / 8, pz + face * (PIER_T / 2 + 0.03));
+        leaf.rotation.set(isle2Hash(il * 3 + n) * 3, isle2Hash(il + iv * 5) * 6, 0);
+        leaf.scale.set(1.2 - t * 0.5, 0.45, 1 - t * 0.4);
+        leaf.castShadow = false;
+      }
+    }
+  });
+  for (var ci = 0; ci < piers.length - 1; ci++) {                       // a lantern hanging from the crown of each arch
+    var cz = (piers[ci] + piers[ci + 1]) / 2, crownY = bridgeY(cz) - DECK_UNDER - underside(cz), chainLen = 0.55;
+    bridgePart(new THREE.CylinderGeometry(0.012, 0.012, chainLen, 5), bridgeIron, BRIDGE_X, crownY - chainLen / 2, cz);
+    var ly = crownY - chainLen - 0.18;
+    bridgePart(new THREE.ConeGeometry(0.16, 0.14, 6), bridgeIron, BRIDGE_X, ly + 0.2, cz);
+    bridgePart(new THREE.CylinderGeometry(0.11, 0.09, 0.28, 6), bridgeGlass, BRIDGE_X, ly, cz).castShadow = false;
+    bridgePart(new THREE.CylinderGeometry(0.09, 0.05, 0.06, 6), bridgeIron, BRIDGE_X, ly - 0.17, cz);
     var pg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc878, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
-    pg.position.set(BRIDGE_X, ly, pz);
+    pg.position.set(BRIDGE_X, ly, cz);
     pg.scale.set(1.6, 1.6, 1);
     scene.add(pg);
-    bridgeGlows.push({ s: pg, p: pz, lamp: true });
+    bridgeGlows.push({ s: pg, p: cz, lamp: true });
   }
   // a great arched gateway at each end: two massive stone piers, a semicircular arch of voussoirs with a carved keystone,
   // a cornice on top, and a lantern hanging from the arch
@@ -2210,6 +2307,24 @@ function startGame(THREE) {
   });
   function updateBridge(t, night) {
     bridgeGlass.emissiveIntensity = 0.5 + (night || 0) * 1.3;            // the lamps glow brighter after dark
+    var nt = night || 0;
+    lanternCore.emissiveIntensity = 1.8 + nt * 0.8;
+    lanternPane.emissiveIntensity = 0.6 + nt * 0.4;
+    bridgeLanterns.forEach(function (l) {                              // the crystal lanterns float, sway, turn slowly and shimmer
+      l.g.position.y = l.y + Math.sin(t * 1.1 + l.p) * 0.07;
+      l.body.rotation.y = t * 0.25 + l.p;
+      l.body.rotation.z = Math.sin(t * 0.8 + l.p) * 0.05;
+      l.core.rotation.y = -t * 0.9;
+      var pulse = Math.sin(t * 2.1 + l.p) * 0.5 + 0.5;
+      l.inner.material.opacity = 0.7 + nt * 0.2 + pulse * 0.1;
+      l.halo.material.opacity = 0.32 + nt * 0.3 + pulse * 0.06;
+      l.pool.material.opacity = 0.08 + nt * 0.22 + pulse * 0.04;
+      l.motes.forEach(function (m, i) {                                // the little sparks circle round
+        var ang = m.a + t * (0.6 + i * 0.15);
+        m.s.position.set(Math.cos(ang) * m.r, m.h + Math.sin(t * 1.3 + i) * 0.05, Math.sin(ang) * m.r);
+        m.s.material.opacity = 0.5 + Math.sin(t * 4 + i * 2 + l.p) * 0.4;
+      });
+    });
     bridgeGlows.forEach(function (gl) { gl.s.material.opacity = gl.crystal ? 0.3 + Math.sin(t * 1.6 + gl.p) * 0.12 : 0.15 + (night || 0) * 0.45 + Math.sin(t * 3 + gl.p) * 0.03; });
     bridgeDrifters.forEach(function (d) { d.m.position.y = d.y + Math.sin(t * 0.7 + d.p) * 0.12; d.m.rotation.y = t * 0.12 + d.p; });
   }
