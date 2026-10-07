@@ -6809,11 +6809,14 @@ function startGame(THREE) {
     slot.setAttribute('data-slot', i);
     if (bag[i]) {
       slot.appendChild(itemPicture(bag[i].id));
-      slot.setAttribute('aria-label', ITEMS[bag[i].id].name + ', ' + bag[i].count);
-      var count = document.createElement('span');
-      count.className = 'count';
-      count.textContent = bag[i].count;
-      slot.appendChild(count);
+      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe'; // tools don't show a count
+      slot.setAttribute('aria-label', ITEMS[bag[i].id].name + (isTool ? '' : ', ' + bag[i].count));
+      if (!isTool) {
+        var count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = bag[i].count;
+        slot.appendChild(count);
+      }
       slot.onclick = function () { selectedSlot = i; renderBag(); if (onPick) onPick(i); };
       slot.addEventListener('pointerdown', function (e) { startDrag(i, e); });
     } else {
