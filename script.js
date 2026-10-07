@@ -1866,6 +1866,113 @@ function startGame(THREE) {
   scene.add(flowerStems);
   scene.add(flowerHeads);
 
+  // ---------- The second island: a grassy island out to sea, past the front of yours ----------
+  // Not joined to your island yet; one day it'll be the town square. For now it's open grass, wildflowers and a few rocks
+  var ISLE2_X = 0, ISLE2_Z = 84, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
+  function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
+  function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
+  function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
+    var SEG = 160, pos = [], idx = [];
+    for (var i = 0; i <= SEG; i++) {
+      var a = (i / SEG) * Math.PI * 2, e = isle2Edge(a);
+      pos.push(ISLE2_X + Math.cos(a) * e * sTop, yTop, ISLE2_Z + Math.sin(a) * e * sTop, ISLE2_X + Math.cos(a) * e * sBot, yBot, ISLE2_Z + Math.sin(a) * e * sBot);
+    }
+    for (var j = 0; j < SEG; j++) { var k = j * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  scene.add(new THREE.Mesh(isle2Band(1.03, 0.92, 0, -2.4), sideMat));
+  scene.add(new THREE.Mesh(isle2Band(0.92, 0.3, -2.4, -8.4), cliffMat));
+  var isle2Top = (function () {                                       // the grassy top, coloured like your island's grass
+    var RINGS = 40, SEG = 160, pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
+    var grassA = new THREE.Color(0x8fcb68), grassB = new THREE.Color(0x5a9643), lush = new THREE.Color(0x4a8a3a), sunny = new THREE.Color(0xb8cf72);
+    for (var r = 0; r <= RINGS; r++) {
+      for (var sg = 0; sg <= SEG; sg++) {
+        var a = (sg / SEG) * Math.PI * 2, rr = (r / RINGS) * isle2Edge(a) * 1.03;
+        var x = ISLE2_X + Math.cos(a) * rr, z = ISLE2_Z + Math.sin(a) * rr;
+        pos.push(x, 0, z);
+        uv.push(x * 0.55, z * 0.55);
+        c.copy(grassA).lerp(grassB, noise(x * 0.8, z * 0.8) * 0.5 + 0.5);
+        var lushy = noise(x * 0.45 - 7, z * 0.45 + 2);
+        if (lushy > 0.15) c.lerp(lush, Math.min(0.7, (lushy - 0.15) * 1.4));
+        var patch = noise(x * 2.7 + 5, z * 2.7 - 3);
+        if (patch > 0.3) c.lerp(sunny, Math.min(0.8, (patch - 0.3) * 1.5));
+        c.multiplyScalar(0.94 + noise(x * 9, z * 9) * 0.06);
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var r2 = 0; r2 < RINGS; r2++) {
+      for (var s2 = 0; s2 < SEG; s2++) {
+        var p0 = r2 * (SEG + 1) + s2, p1 = p0 + SEG + 1;
+        idx.push(p0, p0 + 1, p1, p0 + 1, p1 + 1, p1);   // (wound so the grass faces up)
+      }
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return new THREE.Mesh(g, terrain.material);
+  })();
+  isle2Top.receiveShadow = true;
+  scene.add(isle2Top);
+  function onIsle2(x, z, margin) {
+    var dx = x - ISLE2_X, dz = z - ISLE2_Z;
+    return Math.pow(Math.pow(Math.abs(dx), ISLE2_SQ) + Math.pow(Math.abs(dz), ISLE2_SQ), 1 / ISLE2_SQ) < ISLE2 - margin;
+  }
+  var ISLE2_BLADES = 2600, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
+  for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // grass tufts all over
+    var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
+    if (!onIsle2(ix, iz, 0.6)) continue;
+    gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.5, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.5);
+    gQuat.setFromEuler(gEuler);
+    var igs = 0.6 + isle2Hash(ib * 9.1) * 0.9;
+    gScale.set(igs, igs * (0.6 + isle2Hash(ib * 4.4) * 0.9), igs);
+    gPos.set(ix, 0, iz);
+    gMatrix.compose(gPos, gQuat, gScale);
+    isle2Grass.setMatrixAt(i2n, gMatrix);
+    gColor.setHSL(0.24 + isle2Hash(ib * 6.2) * 0.07, 0.35 + isle2Hash(ib * 8.3) * 0.2, 0.55 + isle2Hash(ib * 2.2) * 0.2);
+    isle2Grass.setColorAt(i2n, gColor);
+    i2n++;
+  }
+  isle2Grass.count = i2n;
+  isle2Grass.frustumCulled = false;
+  isle2Grass.receiveShadow = true;
+  scene.add(isle2Grass);
+  var ISLE2_FLOWERS = 260, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
+  for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
+    var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
+    if (!onIsle2(fx, fz, 1) || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
+    wfE.set((fh - 0.5) * 0.3, isle2Hash(iw * 5.5) * 6.28, 0);
+    wfQ.setFromEuler(wfE);
+    wfS.setScalar(0.8 + fh * 0.6);
+    wfP.set(fx, 0, fz);
+    wfM.compose(wfP, wfQ, wfS);
+    isle2Stems.setMatrixAt(i2f, wfM);
+    isle2Heads.setMatrixAt(i2f, wfM);
+    isle2Heads.setColorAt(i2f, FLOWER_COLORS[Math.floor(isle2Hash(iw * 7.1) * FLOWER_COLORS.length)]);
+    i2f++;
+  }
+  isle2Stems.count = isle2Heads.count = i2f;
+  isle2Stems.frustumCulled = isle2Heads.frustumCulled = false;
+  scene.add(isle2Stems);
+  scene.add(isle2Heads);
+  var isle2RockMat = new THREE.MeshStandardMaterial({ color: 0x8f8a94, roughness: 0.9, flatShading: true });
+  [[-12, -9, 1.1], [13, -11, 0.8], [-14, 10, 0.9], [11, 12, 1.2], [15, 2, 0.6], [-6, 15, 0.55]].forEach(function (rk, n) { // a few mossy rocks round the edges
+    var rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rk[2], 1), isle2RockMat);
+    var rp = rock.geometry.attributes.position;
+    for (var v = 0; v < rp.count; v++) { var k = 0.85 + isle2Hash(n * 50 + v) * 0.3; rp.setXYZ(v, rp.getX(v) * k, rp.getY(v) * k * 0.7, rp.getZ(v) * k); }
+    rock.geometry.computeVertexNormals();
+    rock.position.set(ISLE2_X + rk[0], rk[2] * 0.25, ISLE2_Z + rk[1]);
+    rock.rotation.y = n * 1.7;
+    rock.castShadow = rock.receiveShadow = true;
+    scene.add(rock);
+  });
+
   // Small flat stones pressed into the dirt paths
   var PEBBLES = 160;
   var pebbleGeo = new THREE.IcosahedronGeometry(0.07, 1);
