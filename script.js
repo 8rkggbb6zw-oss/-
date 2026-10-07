@@ -2657,7 +2657,7 @@ function startGame(THREE) {
   // the round-topped purple door, with a gold knob and a stone arch
   var doorGeo = new THREE.BoxGeometry(1.0, 1.3, 0.1);
   hPart(doorGeo, 'door', 0, FOOT_H + 0.65, FRONT + 0.03);
-  hPart(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 18, 1, false, -Math.PI / 2, Math.PI), 'door', 0, FOOT_H + 1.3, FRONT + 0.03, Math.PI / 2, 0, 0);
+  hPart(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 18, 1, false, -Math.PI / 2, Math.PI), 'door', 0, FOOT_H + 1.3, FRONT + 0.03, -Math.PI / 2, 0, 0); // the rounded top, pointing up into the arch
   hPart(new THREE.TorusGeometry(0.56, 0.09, 6, 18, Math.PI), 'stone', 0, FOOT_H + 1.3, FRONT + 0.06);
   [-1, 1].forEach(function (s) { hPart(new THREE.BoxGeometry(0.18, 1.3, 0.16), 'stone', s * 0.56, FOOT_H + 0.65, FRONT + 0.06); });
   hPart(new THREE.SphereGeometry(0.06, 10, 8), 'gold', 0.32, FOOT_H + 0.72, FRONT + 0.11);
