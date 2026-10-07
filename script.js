@@ -1869,6 +1869,7 @@ function startGame(THREE) {
   // ---------- The second island: a grassy island out to sea, past the front of yours ----------
   // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
   var ISLE2_X = 0, ISLE2_Z = 100, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
+  var SHOP_X = ISLE2_X - 8, SHOP_Z = ISLE2_Z + 3, SHOP_TURN = Math.PI + 0.45; // the seed shop, off to one side, its door turned toward the bridge
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
   function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
@@ -1927,7 +1928,7 @@ function startGame(THREE) {
   var ISLE2_BLADES = 9000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
   for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
-    if (!onIsle2(ix, iz, 0.5)) continue;
+    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 3.4) continue; // (none growing through the shop floor)
     var meadow = noise(ix * 0.35 + 11, iz * 0.35 - 4);                 // some patches grow longer and lusher than others
     gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.6, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.6);
     gQuat.setFromEuler(gEuler);
@@ -1949,7 +1950,7 @@ function startGame(THREE) {
   var ISLE2_FLOWERS = 520, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
-    if (!onIsle2(fx, fz, 1) || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
+    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 3.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
     wfE.set((fh - 0.5) * 0.3, isle2Hash(iw * 5.5) * 6.28, 0);
     wfQ.setFromEuler(wfE);
     wfS.setScalar(0.8 + fh * 0.6);
@@ -3473,6 +3474,148 @@ function startGame(THREE) {
     scene.add(joined);
   });
 
+  // ---------- The seed shop, on the new island ----------
+  // A round, fancy little shop: a stone plinth, cream walls banded in gold, a tall swirling purple roof with a gold star on
+  // its spire, an arched door under a striped awning, round glowing windows, a hanging sign, glowing seed jars on
+  // display stands, crystal lanterns by the door, flower pots, and sparkles drifting round the roof
+  var shopGroup = new THREE.Group();
+  shopGroup.position.set(SHOP_X, 0, SHOP_Z);
+  shopGroup.rotation.y = SHOP_TURN;
+  scene.add(shopGroup);
+  function sp(geo, mat, x, y, z, rx, ry, rz) {
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    m.castShadow = m.receiveShadow = true;
+    shopGroup.add(m);
+    return m;
+  }
+  var SHOP_R = 2.6, SHOP_WALL = 3.0;
+  var shopWallMat = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xf6eefc, roughness: 0.9 });
+  var shopTrim = new THREE.MeshStandardMaterial({ color: 0x5b3f8f, roughness: 0.6 });
+  var shopRoofTex = shingleTex.clone(); shopRoofTex.needsUpdate = true;
+  shopRoofTex.wrapS = shopRoofTex.wrapT = THREE.RepeatWrapping; shopRoofTex.repeat.set(5, 3);
+  var shopRoofMat = new THREE.MeshStandardMaterial({ map: shopRoofTex, color: 0xd9c4ff, roughness: 0.75 });
+  sp(new THREE.CylinderGeometry(SHOP_R + 0.45, SHOP_R + 0.6, 0.35, 16), houseMats.stone, 0, 0.17, 0);      // stone plinth
+  sp(new THREE.CylinderGeometry(SHOP_R + 0.25, SHOP_R + 0.3, 0.12, 16), houseMats.stone, 0, 0.41, 0);
+  sp(new THREE.CylinderGeometry(SHOP_R, SHOP_R, SHOP_WALL, 16), shopWallMat, 0, 0.47 + SHOP_WALL / 2, 0);   // round walls
+  [0.62, 0.47 + SHOP_WALL - 0.1].forEach(function (y) {                                                     // gold bands round the walls
+    sp(new THREE.TorusGeometry(SHOP_R + 0.02, 0.05, 8, 48), houseMats.gold, 0, y, 0, Math.PI / 2, 0, 0);
+  });
+  for (var pl = 0; pl < 8; pl++) {                                                                         // purple pilasters round the wall
+    var pa = pl / 8 * Math.PI * 2 + Math.PI / 8;
+    if (Math.abs(Math.sin(pa)) > 0.95 && Math.cos(pa) > 0) continue;
+    sp(new THREE.BoxGeometry(0.18, SHOP_WALL - 0.2, 0.12), shopTrim, Math.sin(pa) * (SHOP_R + 0.02), 0.47 + SHOP_WALL / 2, Math.cos(pa) * (SHOP_R + 0.02), 0, pa, 0);
+  }
+  var ROOF_Y = 0.47 + SHOP_WALL;
+  var roofPts = [];                                                                                         // a tall roof that curves up into a twisting spire
+  for (var rp = 0; rp <= 14; rp++) { var rt = rp / 14; roofPts.push(new THREE.Vector2(Math.max(0.03, (SHOP_R + 0.7) * Math.pow(1 - rt, 1.6)), rt * 4.2)); }
+  var shopRoofGeo = new THREE.LatheGeometry(roofPts, 24), rpos = shopRoofGeo.attributes.position;
+  for (var rv = 0; rv < rpos.count; rv++) { var ry = rpos.getY(rv) / 4.2; rpos.setX(rv, rpos.getX(rv) + Math.pow(ry, 3) * 0.5); } // the very tip leans a little
+  shopRoofGeo.computeVertexNormals();
+  sp(shopRoofGeo, shopRoofMat, 0, ROOF_Y, 0);
+  sp(new THREE.TorusGeometry(SHOP_R + 0.62, 0.07, 8, 48), houseMats.gold, 0, ROOF_Y + 0.02, 0, Math.PI / 2, 0, 0); // gold rim on the eaves
+  var shopStar = sp(new THREE.OctahedronGeometry(0.26, 0), houseMats.gold, 0.5, ROOF_Y + 4.35, 0);
+  shopStar.scale.set(1, 1.3, 0.4);
+  var starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe08a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  starGlow.position.set(0.5, ROOF_Y + 4.35, 0); starGlow.scale.set(1.6, 1.6, 1);
+  shopGroup.add(starGlow);
+  for (var dm = 0; dm < 3; dm++) {                                                                         // little dormer windows peeking out of the roof
+    var da = Math.PI + (dm - 1) * 1.6;
+    var dx = Math.sin(da) * (SHOP_R - 0.3), dz = Math.cos(da) * (SHOP_R - 0.3);
+    var dorm = new THREE.Group(); dorm.position.set(dx, ROOF_Y + 0.9, dz); dorm.rotation.y = da; shopGroup.add(dorm);
+    var dw = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), houseMats.glass); dw.position.z = 0.42; dorm.add(dw);
+    var df = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.04, 6, 20), houseMats.gold); df.position.z = 0.43; dorm.add(df);
+    var dh = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.6, 4), shopRoofMat); dh.position.set(0, 0.45, 0.2); dh.rotation.y = Math.PI / 4; dorm.add(dh);
+  }
+  // the front: an arched door with a striped awning, round windows either side
+  var SHOP_FZ = SHOP_R - 0.05;
+  sp(new THREE.BoxGeometry(1.1, 1.5, 0.12), houseMats.door, 0, 0.47 + 0.75, SHOP_FZ);
+  sp(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 20, 1, false, -Math.PI / 2, Math.PI), houseMats.door, 0, 0.47 + 1.5, SHOP_FZ, -Math.PI / 2, 0, 0);
+  sp(new THREE.TorusGeometry(0.62, 0.08, 8, 24, Math.PI), houseMats.gold, 0, 0.47 + 1.5, SHOP_FZ + 0.06);
+  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.14, 1.5, 0.14), houseMats.gold, s * 0.62, 0.47 + 0.75, SHOP_FZ + 0.06); });
+  sp(new THREE.SphereGeometry(0.06, 10, 8), houseMats.gold, 0.35, 0.47 + 0.8, SHOP_FZ + 0.1);
+  sp(new THREE.BoxGeometry(1.2, 0.12, 0.6), houseMats.stone, 0, 0.41, SHOP_FZ + 0.45);                         // a step
+  var awnTex = paintTexture(64, 16, function (g, w, h) { for (var i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fdf3ff' : '#9a6ad8'; g.fillRect(i * 8, 0, 8, h); } });
+  var awnMat = new THREE.MeshStandardMaterial({ map: awnTex, roughness: 0.8, side: THREE.DoubleSide });
+  sp(new THREE.PlaneGeometry(2.0, 0.9), awnMat, 0, 0.47 + 2.45, SHOP_FZ + 0.4, -0.9, 0, 0);                      // the striped awning
+  for (var sc = 0; sc < 8; sc++) sp(new THREE.CircleGeometry(0.125, 12, 0, Math.PI), awnMat, -0.875 + sc * 0.25, 0.47 + 2.12, SHOP_FZ + 0.72, Math.PI, 0, 0); // scalloped edge
+  [-1, 1].forEach(function (s) {                                                                            // round glowing windows with gold frames
+    var wa = s * 0.75, wx = Math.sin(wa) * (SHOP_R + 0.01), wz = Math.cos(wa) * (SHOP_R + 0.01);
+    var win = new THREE.Group(); win.position.set(wx, 0.47 + 1.7, wz); win.rotation.y = wa; shopGroup.add(win);
+    var gl = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), houseMats.glass); gl.position.z = 0.02; win.add(gl);
+    var fr = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.07, 8, 28), houseMats.gold); fr.position.z = 0.04; win.add(fr);
+    [0, Math.PI / 2].forEach(function (r) { var bar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.03), houseMats.gold); bar.position.z = 0.05; bar.rotation.z = r; win.add(bar); });
+    var box = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.2, 0.3), shopTrim); box.position.set(0, -0.68, 0.15); win.add(box);
+    for (var f = 0; f < 5; f++) {                                                                           // a flower box under each window
+      var fl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3dc, 0xd9c4ff, 0xfff1b8][f % 3], emissive: [0xff7fc4, 0xa98cff, 0xffd36e][f % 3], emissiveIntensity: 0.3 }));
+      fl.position.set(-0.4 + f * 0.2, -0.52, 0.18); win.add(fl);
+    }
+  });
+  // the hanging sign on a gold bracket
+  var signTex = paintTexture(256, 160, function (g, w, h) {
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#5b3f9a'); bg.addColorStop(1, '#3d2a70');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 8; g.strokeRect(8, 8, w - 16, h - 16);
+    g.fillStyle = '#f2c14e'; g.font = 'bold 44px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Seeds', w / 2, h / 2 - 22);
+    g.font = '28px Fredoka, sans-serif'; g.fillStyle = '#fbe8ff'; g.fillText('✦ & Sprouts ✦', w / 2, h / 2 + 28);
+  });
+  var signMat = new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.6 });
+  var sa = 0.42, sx = Math.sin(sa) * (SHOP_R + 0.05), sz = Math.cos(sa) * (SHOP_R + 0.05);
+  var signArm = sp(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6), houseMats.gold, sx + Math.sin(sa) * 0.45, 0.47 + 2.75, sz + Math.cos(sa) * 0.45, 0, 0, Math.PI / 2);
+  signArm.rotation.y = -sa + Math.PI / 2;
+  var signBoard = new THREE.Group(); signBoard.position.set(sx + Math.sin(sa) * 0.75, 0.47 + 2.35, sz + Math.cos(sa) * 0.75); signBoard.rotation.y = sa + Math.PI / 2; shopGroup.add(signBoard);
+  var sb2 = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.53, 0.05), [shopTrim, shopTrim, shopTrim, shopTrim, signMat, signMat]); signBoard.add(sb2);
+  [-0.3, 0.3].forEach(function (cx) { var ch = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 4), houseMats.gold); ch.position.set(cx, 0.4, 0); signBoard.add(ch); });
+  // display stands either side of the door, with jars of glowing seeds
+  var jarGlass = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false });
+  var seedGlow = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.1 });
+  var shopJars = [];
+  [-1, 1].forEach(function (s) {
+    var tx = s * 1.55, tz = SHOP_FZ + 0.75;
+    sp(new THREE.CylinderGeometry(0.42, 0.36, 0.08, 16), shopTrim, tx, 0.82, tz);
+    sp(new THREE.CylinderGeometry(0.06, 0.1, 0.78, 8), houseMats.gold, tx, 0.42, tz);
+    sp(new THREE.CylinderGeometry(0.25, 0.28, 0.05, 12), houseMats.gold, tx, 0.04, tz);
+    for (var j = 0; j < 3; j++) {
+      var ja = j / 3 * Math.PI * 2, jx = tx + Math.cos(ja) * 0.2, jz = tz + Math.sin(ja) * 0.2;
+      var seeds = sp(new THREE.SphereGeometry(0.075, 10, 8), seedGlow, jx, 0.93, jz); seeds.scale.set(1, 0.7, 1);
+      var jar = sp(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14), jarGlass, jx, 0.99, jz); jar.castShadow = false;
+      sp(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 14), houseMats.gold, jx, 1.13, jz);
+      shopJars.push(seeds);
+    }
+  });
+  [[-1.6, 1.2], [1.6, 1.2], [-2.3, -0.4], [2.3, -0.4]].forEach(function (pp, n) {                          // potted flowers round the plinth
+    var px = pp[0], pz = SHOP_FZ + pp[1] - 0.6;
+    if (n > 1) { px = Math.sin(pp[0] > 0 ? 1.4 : -1.4) * (SHOP_R + 0.5); pz = Math.cos(pp[0] > 0 ? 1.4 : -1.4) * (SHOP_R + 0.5); }
+    else { px = pp[0] * 0.55; pz = SHOP_FZ + 0.4; }
+    if (n < 2) return;
+    sp(new THREE.CylinderGeometry(0.2, 0.15, 0.32, 10), houseMats.stone, px, 0.16, pz);
+    for (var b = 0; b < 6; b++) sp(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3dc, 0xd9c4ff, 0x9be08a][b % 3] }), px + Math.cos(b) * 0.1, 0.36 + (b % 2) * 0.06, pz + Math.sin(b) * 0.1);
+  });
+  // floating crystal lanterns either side of the door (shopGroup is turned, so work out where they land in the world)
+  [-1, 1].forEach(function (s) {
+    var lx = s * 0.95, lz = SHOP_FZ + 0.55, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
+    makeCrystalLantern(SHOP_X + lx * c + lz * si, 2.6, SHOP_Z - lx * si + lz * c, 90 + s);
+  });
+  var SHOP_SPARKS = 40, shopSparkGeo = new THREE.BufferGeometry(), shopSparkPos = new Float32Array(SHOP_SPARKS * 3);
+  shopSparkGeo.setAttribute('position', new THREE.BufferAttribute(shopSparkPos, 3));
+  var shopSparks = new THREE.Points(shopSparkGeo, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xf2e0ff, size: 0.25, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+  shopSparks.frustumCulled = false;
+  shopGroup.add(shopSparks);
+  function updateShopBuilding(t) {
+    shopStar.rotation.y = t * 0.8;
+    starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
+    seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
+    for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the roof
+      var k = (i / SHOP_SPARKS + t * 0.04) % 1, a = i * 2.4 + t * 0.3, r = (SHOP_R + 0.9) * (1 - k * 0.7);
+      shopSparkPos[i * 3] = Math.cos(a) * r; shopSparkPos[i * 3 + 1] = ROOF_Y - 0.5 + k * 5; shopSparkPos[i * 3 + 2] = Math.sin(a) * r;
+    }
+    shopSparkGeo.attributes.position.needsUpdate = true;
+  }
+  solids.push({ x: SHOP_X, z: SHOP_Z, r: SHOP_R + 0.55 });
+  [-1, 1].forEach(function (s) { var lx = s * 1.55, lz = SHOP_FZ + 0.75, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN); solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: 0.45 }); });
+
   // You bump into the house, the tower and the cauldron
   function houseToWorld(lx, lz) {
     var c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
@@ -4310,7 +4453,7 @@ function startGame(THREE) {
   var swingT = 9, swingTree = null, swingRock = null; // time since the last swing started, and what it's aimed at
   // ---------- Tilling soil with the hoe ----------
   var TILL_FIND_CHANCE = 0.15; // each time you till, a 15% chance of digging something up
-  var TILL_FINDS = ['stone', 'fiber', 'sap', 'acorn', 'pinecone', 'coal', 'hay', 'wood', 'seed'];
+  var TILL_FINDS = ['stone', 'fiber', 'sap', 'acorn', 'pinecone', 'coal', 'hay', 'wood'];
   var swingTile = null, tilling = [];
   function tillTile(tile) {
     if (swingT < SWING_TIME) return; // still mid-swing
@@ -6462,6 +6605,8 @@ function startGame(THREE) {
   function interact() {
     if (binOpen) { closeBin(); return; }
     if (nearBin()) { openBin(); return; }                         // next to the shipping bin: open it
+    if (shopOpen) { closeShop(); return; }
+    if (nearShop()) { openShop(); return; }                       // at the seed shop's door: open the shop
     var nearTree = treeInReach();
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var nearRock = heldItem() === 'pickaxe' ? rockInReach() : null;
@@ -6492,17 +6637,16 @@ function startGame(THREE) {
       burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
       plantSound();
     } else if (tile.stage === 3) {
-      if (!roomFor(['bloom', 'seed'])) { bagFull(); return; }    // no room: the flower waits in the soil until you make some
+      if (!roomFor(['bloom'])) { bagFull(); return; }    // no room: the flower waits in the soil until you make some
       scene.remove(tile.crop);
       scene.remove(tile.drop);
       tile.crop = null;
       setWet(tile, false);
       state.harvest += 1;
       addItem('bloom', 1);
-      addItem('seed', 2);
       burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
       popSound();
-      showToast('+1 Moonbloom 🌸  +2 Seeds 🌱');
+      showToast('+1 Moonbloom 🌸');
     } else if (!tile.wet) {
       setWet(tile, true);
       burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
@@ -6528,7 +6672,7 @@ function startGame(THREE) {
 
   // ---------- Bag (inventory) ----------
   var ITEMS = {
-    seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Every harvest gives you two seeds back.' },
+    seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Buy more at the seed shop on the new island.' },
     bloom: { name: 'Moonbloom', price: 60, icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', price: 40, icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
@@ -7873,6 +8017,65 @@ function startGame(THREE) {
     var lidTarget = binOpen ? -1.2 : 0;                          // the lid swings open while you use it
     binLid.rotation.x += (lidTarget - binLid.rotation.x) * Math.min(1, dt * 8);
   }
+  // ---------- The seed shop: walk up to its door to buy seeds with Star Coins ----------
+  var SEED_COST = 10;
+  var shopDoor = { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_R + 1.6), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_R + 1.6) };
+  var shopOpen = false;
+  function nearShop() { return !indoors && dist(player.position.x, player.position.z, shopDoor.x, shopDoor.z) < 1.9; }
+  var shopBtn = document.createElement('button');
+  shopBtn.type = 'button';
+  shopBtn.className = 'sleep-btn ship-btn';
+  shopBtn.innerHTML = '🌱 Seed Shop <kbd>E</kbd>';
+  canvas.parentNode.appendChild(shopBtn);
+  var shopBox = document.createElement('div');
+  shopBox.className = 'inventory ship shop';
+  shopBox.hidden = true;
+  shopBox.innerHTML = '<div class="inv-head"><b>🌱 Seeds &amp; Sprouts</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+    '<p class="ship-hint">Welcome, little witch! Every seed here was grown under the moon.</p>' +
+    '<div class="shop-item"><div class="slot shop-pic"></div><div class="shop-text"><b>Moonbloom Seed</b><span>Water it every day; after 4 watered days it blooms.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + SEED_COST + ' each</span></div></div>' +
+    '<div class="shop-buy"><button type="button" data-n="1">Buy 1</button><button type="button" data-n="5">Buy 5</button><button type="button" data-n="10">Buy 10</button></div>' +
+    '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(shopBox);
+  shopBox.querySelector('.shop-pic').appendChild(itemPicture('seed'));
+  paintCoinIcons(shopBox);
+  var shopCoins = shopBox.querySelector('.ship-total b'), shopBuyBtns = shopBox.querySelectorAll('.shop-buy button');
+  function renderShop() {
+    shopCoins.textContent = state.coins;
+    for (var i = 0; i < shopBuyBtns.length; i++) {
+      var n = +shopBuyBtns[i].getAttribute('data-n');
+      shopBuyBtns[i].innerHTML = 'Buy ' + n + ' · <img class="coin-icon" alt=""> ' + n * SEED_COST;
+      shopBuyBtns[i].disabled = state.coins < n * SEED_COST;
+    }
+    paintCoinIcons(shopBox);
+  }
+  function buySeeds(n) {
+    var cost = n * SEED_COST;
+    if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
+    if (!roomFor(['seed'])) { bagFull(); return; }
+    addItem('seed', n);
+    state.coins -= cost;
+    showCoins(true);
+    coinSound(n);
+    showToast('Bought ' + n + ' Moonbloom Seed' + (n > 1 ? 's' : '') + ' 🌱', 1800);
+    renderShop();
+  }
+  for (var sbi = 0; sbi < shopBuyBtns.length; sbi++) {
+    shopBuyBtns[sbi].addEventListener('click', function () { buySeeds(+this.getAttribute('data-n')); });
+  }
+  function openShop() { if (shopOpen) return; toggleBag(false); shopOpen = true; walkTarget = null; shopBox.hidden = false; renderShop(); }
+  function closeShop() { shopOpen = false; shopBox.hidden = true; }
+  shopBox.querySelector('.inv-close').addEventListener('click', function () { closeShop(); focusGame(); });
+  shopBtn.addEventListener('click', function () { openShop(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && shopOpen) closeShop(); });
+  function updateShop(dt) {
+    var near = nearShop();
+    if (shopOpen && !near) closeShop();
+    if (shopOpen && shopCoins.textContent !== String(state.coins)) renderShop(); // keep the prices up to date with your coins
+    var show = near && !shopOpen;
+    if (shopBtn.classList.contains('show') !== show) shopBtn.classList.toggle('show', show);
+    updateShopBuilding(state.time);
+  }
   // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
     var slot = document.createElement('button');
@@ -8502,6 +8705,7 @@ function startGame(THREE) {
     updateDoors();
     updateSleepButton();
     updateShipping(dt);
+    updateShop(dt);
     updateBridge(state.time, night);
     updateInterior(dt, state.time);
     updateCrops(dt, night);

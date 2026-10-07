@@ -342,3 +342,13 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
 .trash-btn:active { box-shadow: 0 1px 0 #d0607a; }
 .trash-btn.armed { background: linear-gradient(135deg, #ff6f8a, #ffb3c0); color: #fff; }
 
+/* The seed shop */
+.shop-item { display: flex; gap: 12px; align-items: center; margin: 4px 0 12px; }
+.shop-pic { width: 64px; flex: none; display: grid; place-items: center; }
+.shop-text { display: flex; flex-direction: column; gap: 3px; font-size: .85rem; }
+.shop-text b { font-size: 1rem; color: #5a3d9a; }
+.shop-price { font-weight: 600; color: #7a5cc8; }
+.shop-buy { display: flex; gap: 8px; }
+.shop-buy button { flex: 1; padding: 7px 8px; font-size: .85rem; white-space: nowrap; }
+.shop-buy button:disabled { opacity: .45; cursor: default; }
+
