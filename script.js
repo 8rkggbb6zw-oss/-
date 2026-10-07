@@ -7365,6 +7365,31 @@ function startGame(THREE) {
   document.getElementById('btnSave').addEventListener('click', function () { saveGame(); focusGame(); });
   document.getElementById('btnLoad').addEventListener('click', function () { loadGame(); focusGame(); });
 
+  // Full screen: the game fills the whole screen. Where the browser allows it (computers, Android, iPad) it also hides
+  // the browser bars; on iPhone it fills the browser window instead
+  var btnFull = document.getElementById('btnFull');
+  function realFullscreen() { return document.fullscreenElement || document.webkitFullscreenElement; }
+  function setFullScreen(on) {
+    document.body.classList.toggle('full', on);
+    btnFull.innerHTML = on ? '✕ Exit full screen <kbd>F</kbd>' : '⛶ Full screen <kbd>F</kbd>';
+    var root = document.documentElement;
+    try {
+      if (on && !realFullscreen()) {
+        var ask = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (ask) { var asked = ask.call(root); if (asked && asked.catch) asked.catch(function () {}); }
+      } else if (!on && realFullscreen()) {
+        var leave = document.exitFullscreen || document.webkitExitFullscreen;
+        if (leave) { var left = leave.call(document); if (left && left.catch) left.catch(function () {}); }
+      }
+    } catch (err) { /* the browser said no: the game still fills the window */ }
+    setTimeout(resize, 50);
+  }
+  function fullscreenChanged() { if (!realFullscreen() && document.body.classList.contains('full')) setFullScreen(false); } // pressed Esc
+  document.addEventListener('fullscreenchange', fullscreenChanged);
+  document.addEventListener('webkitfullscreenchange', fullscreenChanged);
+  btnFull.addEventListener('click', function () { setFullScreen(!document.body.classList.contains('full')); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyF' && !e.repeat) setFullScreen(!document.body.classList.contains('full')); });
+
   var clock = new THREE.Clock();
   cam.target.set(player.position.x, 0.8, player.position.z);
 
