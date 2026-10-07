@@ -3587,28 +3587,9 @@ function startGame(THREE) {
   sp(new THREE.ShapeGeometry(shopFan, 20), doorGlass, 0, BASE_H + 2.45, SD + 0.02).castShadow = false;       // a fanlight over the doors
   sp(new THREE.TorusGeometry(0.86, 0.05, 6, 24, Math.PI), houseMats.gold, 0, BASE_H + 2.45, SD + 0.04);
   for (var sfr = 1; sfr < 6; sfr++) sp(new THREE.BoxGeometry(0.03, 0.84, 0.03), houseMats.gold, Math.cos(sfr / 6 * Math.PI) * 0.42, BASE_H + 2.45 + Math.sin(sfr / 6 * Math.PI) * 0.42, SD + 0.05, 0, 0, sfr / 6 * Math.PI - Math.PI / 2);
-  // inside: raised beds of glowing moonblooms, a tall glowing tree in the middle, and floating orbs of light
-  var shopBedMat = new THREE.MeshStandardMaterial({ color: 0x6b4a32, roughness: 0.9 }), shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x5fae5a, roughness: 0.7 });
+  // leaf and flower colours for the potted topiaries
+  var shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x5fae5a, roughness: 0.7 });
   var bloomMatsS = [0xffb3dc, 0xd9c4ff, 0xfff1b8].map(function (c, i) { return new THREE.MeshStandardMaterial({ color: c, emissive: [0xff7fc4, 0xa98cff, 0xffd36e][i], emissiveIntensity: 0.6 }); });
-  [[-SW + 1.2, 0], [SW - 1.2, 0]].forEach(function (bp, bi) {
-    sp(new THREE.BoxGeometry(1.2, 0.5, SD * 2 - 1.2), shopBedMat, bp[0], BASE_H + 0.25, bp[1]);
-    for (var spl = 0; spl < 9; spl++) {
-      var spz = -SD + 0.9 + spl * (SD * 2 - 1.8) / 8, spx = bp[0] + (spl % 2 ? 0.25 : -0.25);
-      sp(new THREE.CylinderGeometry(0.015, 0.02, 0.5, 5), shopLeafMat, spx, BASE_H + 0.75, spz);
-      sp(new THREE.SphereGeometry(0.1, 6, 4), shopLeafMat, spx + 0.08, BASE_H + 0.6, spz, 0, 0, 0.6).scale.set(1.3, 0.35, 0.7);
-      sp(new THREE.SphereGeometry(0.11, 10, 8), bloomMatsS[(spl + bi) % 3], spx, BASE_H + 1.02, spz);
-    }
-  });
-  sp(new THREE.CylinderGeometry(0.12, 0.2, 2.6, 8), new THREE.MeshStandardMaterial({ color: 0x7a5a42, roughness: 0.9 }), 0, BASE_H + 1.3, -0.6);  // a little glowing tree under the shopDome
-  var treeGlowMat = new THREE.MeshStandardMaterial({ color: 0xf3c8ff, emissive: 0xc77dff, emissiveIntensity: 0.7, roughness: 0.6 });
-  [[0, 3.2, -0.6, 1.0], [0.6, 2.9, -0.3, 0.7], [-0.6, 2.9, -0.9, 0.7], [0.1, 3.7, -0.8, 0.6]].forEach(function (c) { sp(new THREE.IcosahedronGeometry(c[3], 1), treeGlowMat, c[0], BASE_H + c[1], c[2]); });
-  var shopOrbs = [];
-  for (var sob = 0; sob < 7; sob++) {
-    var shopOrb = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: [0xffc0ea, 0xc9a8ff, 0xffe6a8][sob % 3], transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
-    shopOrb.scale.set(0.5, 0.5, 1);
-    shopGroup.add(shopOrb);
-    shopOrbs.push({ s: shopOrb, a: sob / 7 * Math.PI * 2, r: 1.6 + (sob % 3) * 0.6, h: BASE_H + 2.2 + (sob % 2) * 0.9 });
-  }
   // display stands out front either side of the step, with jars of glowing seeds
   var shopJarGlass = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false });
   var seedGlow = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.1 });
@@ -3645,12 +3626,6 @@ function startGame(THREE) {
     shopStar.rotation.y = t * 0.8;
     starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
-    treeGlowMat.emissiveIntensity = 0.6 + Math.sin(t * 1.3) * 0.2;
-    shopOrbs.forEach(function (o, i) {
-      var a = o.a + t * 0.25;
-      o.s.position.set(Math.cos(a) * o.r, o.h + Math.sin(t * 1.1 + i) * 0.25, Math.sin(a) * o.r * 0.6 - 0.4);
-      o.s.material.opacity = 0.55 + Math.sin(t * 2 + i) * 0.25;
-    });
     for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the shopDome
       var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = (DOME_R + 1.2) * (1 - k * 0.6);
       shopSparkPos[i * 3] = Math.cos(a2) * r; shopSparkPos[i * 3 + 1] = DOME_Y - 0.5 + k * 5; shopSparkPos[i * 3 + 2] = Math.sin(a2) * r;
