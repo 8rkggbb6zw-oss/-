@@ -36,7 +36,7 @@ h1 {
 .spark { color: #ffb64d; display: inline-block; animation: twinkle 2.4s ease-in-out infinite; }
 @keyframes twinkle { 50% { transform: scale(1.25) rotate(20deg); opacity: .7; } }
 
-.stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.stats { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
 
 .stat {
   background: rgba(255, 255, 255, 0.75);

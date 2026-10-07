@@ -7258,7 +7258,10 @@ function startGame(THREE) {
   coinUi.title = 'Star Coins';
   coinUi.innerHTML = '<img class="coin-icon" alt=""> <b id="coins">0</b>';
   var statsBar = document.querySelector('.stats');
-  if (statsBar) statsBar.insertBefore(coinUi, statsBar.firstChild);
+  if (statsBar) {
+    statsBar.insertBefore(coinUi, statsBar.firstChild);
+    statsBar.style.flexWrap = 'nowrap';                        // coins, clock and mana all stay on one row
+  }
   var coinCount = coinUi.querySelector('b');
   function showCoins(bump) {
     coinCount.textContent = state.coins;
@@ -7288,7 +7291,11 @@ function startGame(THREE) {
   function paintCoinIcons(root) {                               // every coin picture uses the same drawn coin
     if (!coinPicture) coinPicture = iconCoin();
     var imgs = root.querySelectorAll('img.coin-icon');
-    for (var ci = 0; ci < imgs.length; ci++) imgs[ci].src = coinPicture;
+    for (var ci = 0; ci < imgs.length; ci++) {
+      imgs[ci].src = coinPicture;
+      imgs[ci].style.width = imgs[ci].style.height = '1.15em';   // a small coin, the same height as the writing beside it
+      imgs[ci].style.verticalAlign = '-0.22em';
+    }
   }
   paintCoinIcons(coinUi);
   showCoins(false);
