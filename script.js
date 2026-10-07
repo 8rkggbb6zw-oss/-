@@ -1965,6 +1965,104 @@ function startGame(THREE) {
   scene.add(isle2Stems);
   scene.add(isle2Heads);
 
+  // ---------- The floating stone bridge: from the south edge of your island out to the new island ----------
+  // Flagstone slabs hang in the air in a gentle arch with no pillars, each held up by a glowing rune stone underneath,
+  // with low stone curbs, little crystal lanterns along the way and a few small rocks drifting below
+  var BRIDGE_X = 0, BRIDGE_Z0 = 31.5, BRIDGE_Z1 = 80.5, BRIDGE_W = 2.2, BRIDGE_RISE = 1.4;
+  function onBridge(x, z) { return Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 - 0.25 && z > BRIDGE_Z0 - 1 && z < BRIDGE_Z1 + 1; }
+  function bridgeY(z) {                                               // the height of the walkway: level with the land at each end, arching up in the middle
+    var t = Math.max(0, Math.min(1, (z - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0)));
+    return 0.06 + Math.sin(t * Math.PI) * BRIDGE_RISE;
+  }
+  function nearBridgeLanding(x, z, r) { return Math.abs(x - BRIDGE_X) < 2.6 + r && z > BRIDGE_Z0 - 5 - r; } // keep the way onto the bridge clear
+  var bridgeStoneTex = paintTexture(128, 128, function (g, w, h) {    // weathered flagstone
+    g.fillStyle = '#a7a2ad'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 700; i++) {
+      var v = isle2Hash(i * 1.9 + 70);
+      g.fillStyle = v < 0.5 ? 'rgba(70,66,80,' + (0.08 + v * 0.2) + ')' : 'rgba(235,230,240,' + ((v - 0.5) * 0.3) + ')';
+      g.fillRect(isle2Hash(i * 3.7 + 70) * w, isle2Hash(i * 5.3 + 70) * h, 1 + v * 3, 1 + v * 2);
+    }
+    for (var m = 0; m < 9; m++) {                                     // patches of moss
+      g.fillStyle = 'rgba(110,150,80,0.25)';
+      g.beginPath(); g.ellipse(isle2Hash(m * 7.1 + 9) * w, isle2Hash(m * 2.3 + 9) * h, 6 + isle2Hash(m) * 10, 4 + isle2Hash(m * 4) * 6, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.strokeStyle = 'rgba(60,56,70,0.45)'; g.lineWidth = 1;          // a few fine cracks
+    for (var c = 0; c < 4; c++) { g.beginPath(); var cx = isle2Hash(c * 9.3) * w, cy = isle2Hash(c * 6.1) * h; g.moveTo(cx, cy); for (var k = 0; k < 4; k++) { cx += (isle2Hash(c * 11 + k) - 0.5) * 30; cy += (isle2Hash(c * 13 + k) - 0.5) * 30; g.lineTo(cx, cy); } g.stroke(); }
+  });
+  var bridgeStone = new THREE.MeshStandardMaterial({ map: bridgeStoneTex, roughness: 0.9 });
+  var bridgeCurb = new THREE.MeshStandardMaterial({ map: bridgeStoneTex, color: 0xc9c4d0, roughness: 0.85 });
+  var bridgeUnder = new THREE.MeshStandardMaterial({ color: 0x77727f, roughness: 0.95, flatShading: true });
+  var runeMat = new THREE.MeshBasicMaterial({ color: 0xb79cff, transparent: true, opacity: 0.85 });
+  var bridgeGlows = [], bridgeDrifters = [];
+  var SLAB_L = 1.0, slabCount = Math.round((BRIDGE_Z1 - BRIDGE_Z0) / SLAB_L);
+  for (var sb = 0; sb < slabCount; sb++) {
+    var z0 = BRIDGE_Z0 + sb * SLAB_L, zc = z0 + SLAB_L / 2, y0 = bridgeY(z0), y1 = bridgeY(z0 + SLAB_L), yc = (y0 + y1) / 2;
+    var tilt = Math.atan2(y1 - y0, SLAB_L);
+    var slab = new THREE.Mesh(new THREE.BoxGeometry(BRIDGE_W - 0.1 + (isle2Hash(sb) - 0.5) * 0.1, 0.18, SLAB_L - 0.07), bridgeStone);
+    slab.position.set(BRIDGE_X + (isle2Hash(sb * 3) - 0.5) * 0.05, yc - 0.09, zc);
+    slab.rotation.set(-tilt, (isle2Hash(sb * 5) - 0.5) * 0.03, (isle2Hash(sb * 7) - 0.5) * 0.02);
+    slab.castShadow = slab.receiveShadow = true;
+    scene.add(slab);
+    [-1, 1].forEach(function (sd) {                                  // the low curbs along each side
+      var curb = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, SLAB_L - 0.05), bridgeCurb);
+      curb.position.set(BRIDGE_X + sd * (BRIDGE_W / 2 - 0.06), yc + 0.07, zc);
+      curb.rotation.x = -tilt;
+      curb.castShadow = curb.receiveShadow = true;
+      scene.add(curb);
+    });
+    if (zc > 35 && zc < 77) {                                         // out over the water: each slab rides on a tapering rune stone
+      var underH = 1.1 + isle2Hash(sb * 4) * 0.6;
+      var under = new THREE.Mesh(new THREE.ConeGeometry(0.75 + isle2Hash(sb * 2) * 0.25, underH, 6), bridgeUnder);
+      under.rotation.set(Math.PI, sb, 0);
+      under.position.set(BRIDGE_X, yc - 0.18 - underH / 2, zc);
+      under.castShadow = true;
+      scene.add(under);
+      if (sb % 2 === 0) {                                             // with a glowing rune ring round it
+        var rune = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.025, 6, 24), runeMat);
+        rune.rotation.x = Math.PI / 2;
+        rune.position.set(BRIDGE_X, yc - 0.45, zc);
+        scene.add(rune);
+        var rg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xa98cff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+        rg.position.set(BRIDGE_X, yc - 0.55, zc);
+        rg.scale.set(1.8, 1.8, 1);
+        scene.add(rg);
+        bridgeGlows.push({ s: rg, p: sb * 0.7 });
+      }
+    }
+    if (sb % 6 === 3) {                                               // little crystal lanterns on the curbs, swapping sides
+      var side = Math.floor(sb / 6) % 2 ? 1 : -1, lx = BRIDGE_X + side * (BRIDGE_W / 2 - 0.06);
+      var post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 8), bridgeCurb);
+      post.position.set(lx, yc + 0.5, zc);
+      post.castShadow = true;
+      scene.add(post);
+      var crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), new THREE.MeshStandardMaterial({ color: 0xd8c8ff, emissive: 0x9a7cff, emissiveIntensity: 1.2, roughness: 0.2 }));
+      crystal.position.set(lx, yc + 0.98, zc);
+      crystal.scale.set(1, 1.6, 1);
+      scene.add(crystal);
+      var cg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xc4b0ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      cg.position.copy(crystal.position);
+      cg.scale.set(1.1, 1.1, 1);
+      scene.add(cg);
+      bridgeGlows.push({ s: cg, p: sb, crystal: crystal });
+    }
+  }
+  for (var dr = 0; dr < 9; dr++) {                                    // small rocks drifting in the air beneath the bridge
+    var drift = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + isle2Hash(dr * 3.3) * 0.25, 0), bridgeUnder);
+    var ddz = 38 + isle2Hash(dr * 1.7) * 36, ddx = BRIDGE_X + (isle2Hash(dr * 2.9) - 0.5) * 7;
+    drift.position.set(ddx, bridgeY(ddz) - 1.4 - isle2Hash(dr * 5.1) * 0.8, ddz);
+    drift.castShadow = true;
+    scene.add(drift);
+    bridgeDrifters.push({ m: drift, y: drift.position.y, p: dr * 1.3 });
+  }
+  function updateBridge(t) {
+    bridgeGlows.forEach(function (gl) {
+      gl.s.material.opacity = (gl.crystal ? 0.4 : 0.25) + Math.sin(t * 1.8 + gl.p) * 0.12;
+      if (gl.crystal) gl.crystal.rotation.y = t * 0.8 + gl.p;
+    });
+    bridgeDrifters.forEach(function (d) { d.m.position.y = d.y + Math.sin(t * 0.9 + d.p) * 0.15; d.m.rotation.y = t * 0.2 + d.p; });
+  }
+  function walkable(x, z) { return islandR(x, z) < ISLAND - 1.5 || onBridge(x, z) || onIsle2(x, z, 1.5); } // your island, the bridge, or the new island
+
   // Small flat stones pressed into the dirt paths
   var PEBBLES = 160;
   var pebbleGeo = new THREE.IcosahedronGeometry(0.07, 1);
@@ -5262,12 +5360,12 @@ function startGame(THREE) {
   allScenery.forEach(function (t) {
     var u = t.userData;
     var onBin = dist(u.solid.x, u.solid.z, binSpot.x, binSpot.z) < 1.6 + u.solidR * (trimmable.indexOf(t) >= 0 ? 1.6 : 0.8); // bushes spread wider than their trunk
-    if (!onBin && pathDist(u.solid.x, u.solid.z) > PATH_W + 0.35 + u.solidR * 0.7) return;
+    if (!onBin && !nearBridgeLanding(u.solid.x, u.solid.z, u.solidR) && pathDist(u.solid.x, u.solid.z) > PATH_W + 0.35 + u.solidR * 0.7) return;
     u.gone = true; u.state = 'gone'; u.solid.r = 0;
     setTreeGrowth(t, 0);
   });
   mineable.forEach(function (r) {
-    if (dist(r.x, r.z, binSpot.x, binSpot.z) > 1.4 + r.size && pathDist(r.x, r.z) > PATH_W + 0.3 + r.size * 0.6) return;
+    if (dist(r.x, r.z, binSpot.x, binSpot.z) > 1.4 + r.size && !nearBridgeLanding(r.x, r.z, r.size) && pathDist(r.x, r.z) > PATH_W + 0.3 + r.size * 0.6) return;
     r.gone = true; r.state = 'gone'; r.solid.r = 0;
     setRock(r, 0);
   });
@@ -5390,6 +5488,7 @@ function startGame(THREE) {
   }
   function canFarm(x, z) {                                    // is this tile's spot open ground you could till?
     if (onIsle2(x, z, -2)) return false;                       // never on the new island: that's for the town square
+    if (nearBridgeLanding(x, z, 0)) return false;              // or where the bridge lands
     var h = TILE / 2;
     var corners = [[x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h], [x, z]];
     for (var k = 0; k < corners.length; k++) {
@@ -7752,7 +7851,7 @@ function startGame(THREE) {
     raycaster.setFromCamera(ndc, camera);
     var hit = new THREE.Vector3();
     if (!raycaster.ray.intersectPlane(ground, hit)) return;
-    if (indoors ? !inRoom(hit.x, hit.z) : !onIsland(hit.x, hit.z)) return;
+    if (indoors ? !inRoom(hit.x, hit.z) : !walkable(hit.x, hit.z)) return;
     walkTarget = hit;
     if (!indoors) ripple(hit.x, hit.z, 0xffffff, 0.6, 0.45);
   }
@@ -7797,8 +7896,11 @@ function startGame(THREE) {
           }
         });
       } else {
-      var fromCenter = islandR(player.position.x, player.position.z);
-      if (fromCenter > ISLAND - 1.5) player.position.multiplyScalar((ISLAND - 1.5) / fromCenter); // stay on the island
+      if (!walkable(player.position.x, player.position.z)) {        // stay on the land and the bridge: slide along the edge
+        if (walkable(player.position.x, beforeZ)) player.position.z = beforeZ;
+        else if (walkable(beforeX, player.position.z)) player.position.x = beforeX;
+        else { player.position.x = beforeX; player.position.z = beforeZ; }
+      }
       solids.forEach(function (o) {
         var dx = player.position.x - o.x, dz = player.position.z - o.z;
         var d = Math.hypot(dx, dz), min = o.r + 0.35;
@@ -7822,7 +7924,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z); // up the porch steps
+    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z); // up the porch steps and over the bridge
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
@@ -8145,6 +8247,7 @@ function startGame(THREE) {
     updateDoors();
     updateSleepButton();
     updateShipping(dt);
+    updateBridge(state.time);
     updateInterior(dt, state.time);
     updateCrops(dt, night);
     updateWorld(dt, night);
