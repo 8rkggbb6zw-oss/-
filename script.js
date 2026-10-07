@@ -6019,52 +6019,40 @@ function startGame(THREE) {
     draw(c.getContext('2d'));
     return c.toDataURL();
   }
-  function iconCoin() {                                        // a Star Coin: a puffy gold star with a bevelled edge and a crescent moon stamped in the middle
+  function iconCoin() {                                        // a Star Coin: a pearly moonstone coin with a lavender rim, a glowing gold star and sparkles
     return iconCanvas(function (g) {
-      function starPath(cx, cy, r1, r2, round) {                       // a five-point star with softly rounded tips
-        var pts = [];
-        for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? r2 : r1; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+      function star(cx, cy, r1, r2) {
         g.beginPath();
-        for (var k = 0; k < 10; k++) {
-          var p0 = pts[(k + 9) % 10], p1 = pts[k], p2 = pts[(k + 1) % 10];
-          var ax = p1[0] + (p0[0] - p1[0]) * round, ay = p1[1] + (p0[1] - p1[1]) * round;
-          var bx = p1[0] + (p2[0] - p1[0]) * round, by = p1[1] + (p2[1] - p1[1]) * round;
-          if (k === 0) g.moveTo(ax, ay); else g.lineTo(ax, ay);
-          g.quadraticCurveTo(p1[0], p1[1], bx, by);
-        }
+        for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? r2 : r1; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
         g.closePath();
       }
-      g.shadowColor = 'rgba(120,60,0,0.45)'; g.shadowBlur = 4; g.shadowOffsetY = 2.5;
-      var edge = g.createLinearGradient(10, 6, 54, 60);                // the bevelled outer edge
-      edge.addColorStop(0, '#fff4b8'); edge.addColorStop(0.5, '#f0b030'); edge.addColorStop(1, '#a35c08');
-      g.fillStyle = edge; starPath(32, 34, 30, 14.5, 0.22); g.fill();
+      g.shadowColor = 'rgba(70,40,120,0.4)'; g.shadowBlur = 3; g.shadowOffsetY = 2;
+      var rim = g.createLinearGradient(8, 6, 56, 58);                  // the silvery-lavender rim
+      rim.addColorStop(0, '#ffffff'); rim.addColorStop(0.5, '#c9b8ee'); rim.addColorStop(1, '#7a62b8');
+      g.fillStyle = rim;
+      g.beginPath(); g.arc(32, 32, 29, 0, Math.PI * 2); g.fill();
       g.shadowColor = 'transparent';
-      var face = g.createRadialGradient(27, 27, 2, 32, 34, 24);         // the raised face
-      face.addColorStop(0, '#fffbe0'); face.addColorStop(0.45, '#ffd658'); face.addColorStop(1, '#e89e1c');
-      g.fillStyle = face; starPath(32, 34.5, 23.5, 11.5, 0.24); g.fill();
-      g.strokeStyle = 'rgba(160,90,10,0.5)'; g.lineWidth = 1;
-      starPath(32, 34.5, 23.5, 11.5, 0.24); g.stroke();
-      // a crescent moon stamped into the middle: a shadow, then the lit moon
-      function moon(cx, cy, r) {
-        g.beginPath();
-        g.arc(cx, cy, r, Math.PI * 0.32, Math.PI * 1.68, false);
-        g.arc(cx + r * 0.55, cy - r * 0.12, r * 0.74, Math.PI * 1.45, Math.PI * 0.6, true);
-        g.closePath();
-      }
-      g.fillStyle = 'rgba(130,60,0,0.8)'; moon(32, 36.6, 8.4); g.fill();
-      var mg = g.createLinearGradient(24, 28, 36, 42);
-      mg.addColorStop(0, '#ffffff'); mg.addColorStop(1, '#fff1c2');
-      g.fillStyle = mg; moon(31, 35.4, 8.4); g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.85)';                          // shine along the top-left arms
-      g.beginPath(); g.ellipse(17, 27, 3.5, 1.4, -0.4, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.ellipse(31, 12.5, 1.4, 3.5, 0, 0, Math.PI * 2); g.fill();
-      function twinkle(x, y, r) {                                      // little sparkles round it
-        g.fillStyle = '#fff6c0';
-        g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 0.25, y - r * 0.25); g.lineTo(x + r, y); g.lineTo(x + r * 0.25, y + r * 0.25);
-        g.lineTo(x, y + r); g.lineTo(x - r * 0.25, y + r * 0.25); g.lineTo(x - r, y); g.lineTo(x - r * 0.25, y - r * 0.25); g.closePath(); g.fill();
-      }
-      twinkle(53, 9, 4.5);
-      twinkle(9, 54, 3.2);
+      var pearl = g.createLinearGradient(12, 12, 52, 52);              // the shimmery moonstone face
+      pearl.addColorStop(0, '#fdf6ff'); pearl.addColorStop(0.35, '#e2d4ff'); pearl.addColorStop(0.6, '#cfe8ff'); pearl.addColorStop(0.8, '#ffd9f0'); pearl.addColorStop(1, '#bba4ec');
+      g.fillStyle = pearl;
+      g.beginPath(); g.arc(32, 32, 23, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(110,80,180,0.5)'; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(32, 32, 23, 0, Math.PI * 2); g.stroke();
+      var halo = g.createRadialGradient(32, 32, 1, 32, 32, 15);        // the star glows
+      halo.addColorStop(0, 'rgba(255,215,110,0.75)'); halo.addColorStop(1, 'rgba(255,215,110,0)');
+      g.fillStyle = halo; g.beginPath(); g.arc(32, 32, 15, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(90,60,150,0.45)'; star(32.8, 33.6, 14, 6); g.fill();   // its shadow, so it looks raised
+      var gold = g.createLinearGradient(20, 18, 44, 46);
+      gold.addColorStop(0, '#fffbe0'); gold.addColorStop(1, '#f2ac22');
+      g.fillStyle = gold; star(32, 32.5, 14, 6); g.fill();
+      [[14, 32, 2.2], [50, 30, 1.8], [32, 12, 1.6], [33, 52, 1.6]].forEach(function (d) { // four white sparkles round the star
+        var x = d[0], y = d[1], q = d[2] * 2;
+        g.fillStyle = '#ffffff';
+        g.beginPath(); g.moveTo(x, y - q); g.lineTo(x + q * 0.3, y); g.lineTo(x, y + q); g.lineTo(x - q * 0.3, y); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(x - q, y); g.lineTo(x, y + q * 0.3); g.lineTo(x + q, y); g.lineTo(x, y - q * 0.3); g.closePath(); g.fill();
+      });
+      g.fillStyle = 'rgba(255,255,255,0.8)';                           // a glint of shine
+      g.beginPath(); g.ellipse(20, 19, 6, 2.2, -0.7, 0, Math.PI * 2); g.fill();
     });
   }
   function iconSap() {

@@ -298,7 +298,7 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
 
 /* Star Coins: the counter in the top bar and the sell buttons in the bag */
 .coin-icon { width: 1.15em; height: 1.15em; vertical-align: -0.22em; }
-.coins b { color: #b07a10; }
+.coins b { color: #7a5cc8; }
 .coins.bump { animation: coin-bump .35s ease-out; }
 @keyframes coin-bump { 40% { transform: scale(1.18); } }
 .sell-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -308,9 +308,9 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
   padding: 6px 10px;
   font-size: .85rem;
   white-space: nowrap;
-  background: linear-gradient(135deg, #f2b632, #ffe9a0);
-  color: #6a4208;
-  box-shadow: 0 3px 0 #b07a10;
+  background: linear-gradient(135deg, #b9a2f0, #f3e6ff);
+  color: #4a2e8a;
+  box-shadow: 0 3px 0 #7a62b8;
 }
-.sell-btn:active { box-shadow: 0 1px 0 #b07a10; }
+.sell-btn:active { box-shadow: 0 1px 0 #7a62b8; }
 
