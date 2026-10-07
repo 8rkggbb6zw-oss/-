@@ -1965,101 +1965,244 @@ function startGame(THREE) {
   scene.add(isle2Stems);
   scene.add(isle2Heads);
 
-  // ---------- The floating stone bridge: from the south edge of your island out to the new island ----------
-  // Flagstone slabs hang in the air in a gentle arch with no pillars, each held up by a glowing rune stone underneath,
-  // with low stone curbs, little crystal lanterns along the way and a few small rocks drifting below
-  var BRIDGE_X = 0, BRIDGE_Z0 = 31.5, BRIDGE_Z1 = 80.5, BRIDGE_W = 2.2, BRIDGE_RISE = 1.4;
-  function onBridge(x, z) { return Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 - 0.25 && z > BRIDGE_Z0 - 1 && z < BRIDGE_Z1 + 1; }
+  // ---------- The grand floating bridge: from the south edge of your island out to the new island ----------
+  // A wide stone bridge in carved limestone, floating in a gentle arch with no pillars into the sea. Paved deck, thick
+  // carved edge beams, a balustrade of turned stone balusters with a handrail, tall iron lamp posts on stone plinths,
+  // a great arched gateway at each end, and under the deck a rugged rock keel with crystals glinting in it
+  var BRIDGE_X = 0, BRIDGE_Z0 = 31.5, BRIDGE_Z1 = 80.5, BRIDGE_W = 3.4, BRIDGE_RISE = 1.6;
+  function onBridge(x, z) { return Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 - 0.45 && z > BRIDGE_Z0 - 1 && z < BRIDGE_Z1 + 1; }
   function bridgeY(z) {                                               // the height of the walkway: level with the land at each end, arching up in the middle
     var t = Math.max(0, Math.min(1, (z - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0)));
     return 0.06 + Math.sin(t * Math.PI) * BRIDGE_RISE;
   }
-  function nearBridgeLanding(x, z, r) { return Math.abs(x - BRIDGE_X) < 2.6 + r && z > BRIDGE_Z0 - 5 - r; } // keep the way onto the bridge clear
-  var bridgeStoneTex = paintTexture(128, 128, function (g, w, h) {    // weathered flagstone
-    g.fillStyle = '#a7a2ad'; g.fillRect(0, 0, w, h);
-    for (var i = 0; i < 700; i++) {
-      var v = isle2Hash(i * 1.9 + 70);
-      g.fillStyle = v < 0.5 ? 'rgba(70,66,80,' + (0.08 + v * 0.2) + ')' : 'rgba(235,230,240,' + ((v - 0.5) * 0.3) + ')';
-      g.fillRect(isle2Hash(i * 3.7 + 70) * w, isle2Hash(i * 5.3 + 70) * h, 1 + v * 3, 1 + v * 2);
-    }
-    for (var m = 0; m < 9; m++) {                                     // patches of moss
-      g.fillStyle = 'rgba(110,150,80,0.25)';
-      g.beginPath(); g.ellipse(isle2Hash(m * 7.1 + 9) * w, isle2Hash(m * 2.3 + 9) * h, 6 + isle2Hash(m) * 10, 4 + isle2Hash(m * 4) * 6, 0, 0, Math.PI * 2); g.fill();
-    }
-    g.strokeStyle = 'rgba(60,56,70,0.45)'; g.lineWidth = 1;          // a few fine cracks
-    for (var c = 0; c < 4; c++) { g.beginPath(); var cx = isle2Hash(c * 9.3) * w, cy = isle2Hash(c * 6.1) * h; g.moveTo(cx, cy); for (var k = 0; k < 4; k++) { cx += (isle2Hash(c * 11 + k) - 0.5) * 30; cy += (isle2Hash(c * 13 + k) - 0.5) * 30; g.lineTo(cx, cy); } g.stroke(); }
+  function nearBridgeLanding(x, z, r) { return Math.abs(x - BRIDGE_X) < 3.6 + r && z > BRIDGE_Z0 - 6 - r; } // keep the way onto the bridge clear
+  function bridgeStoneTexture(base, blocksX, blocksY, mortar) {                 // dressed limestone blocks with weathering
+    return paintTexture(256, 256, function (g, w, h) {
+      g.fillStyle = mortar; g.fillRect(0, 0, w, h);
+      var bw = w / blocksX, bh = h / blocksY;
+      for (var r = 0; r < blocksY; r++) {
+        for (var c = -1; c <= blocksX; c++) {
+          var x0 = c * bw + (r % 2) * bw / 2, n = r * 31 + c;
+          var tone = 0.9 + isle2Hash(n * 1.7 + 3) * 0.16;
+          var col = base.map(function (v) { return Math.min(255, Math.round(v * tone)); });
+          g.fillStyle = 'rgb(' + col.join(',') + ')';
+          g.fillRect(x0 + 1.5, r * bh + 1.5, bw - 3, bh - 3);
+          for (var sp = 0; sp < 40; sp++) {                             // speckles and pits in the stone
+            var v = isle2Hash(n * 7 + sp * 3.3);
+            g.fillStyle = v < 0.5 ? 'rgba(60,55,50,' + (0.06 + v * 0.12) + ')' : 'rgba(255,255,250,' + ((v - 0.5) * 0.18) + ')';
+            g.fillRect(x0 + 2 + isle2Hash(n + sp * 1.9) * (bw - 4), r * bh + 2 + isle2Hash(n * 3 + sp * 2.7) * (bh - 4), 1 + v * 2, 1 + v * 1.5);
+          }
+          g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x0 + 1.5, r * bh + 1.5, bw - 3, 1.5);      // lit top edge
+          g.fillStyle = 'rgba(40,35,30,0.18)'; g.fillRect(x0 + 1.5, r * bh + bh - 3, bw - 3, 1.5);     // shadowed bottom edge
+        }
+      }
+      for (var m = 0; m < 12; m++) {                                    // a little moss and water staining
+        g.fillStyle = m % 3 ? 'rgba(90,110,60,0.12)' : 'rgba(80,70,60,0.1)';
+        g.beginPath(); g.ellipse(isle2Hash(m * 7.1 + 9) * w, isle2Hash(m * 2.3 + 9) * h, 8 + isle2Hash(m) * 18, 4 + isle2Hash(m * 4) * 10, 0, 0, Math.PI * 2); g.fill();
+      }
+    });
+  }
+  var bridgePaveTex = bridgeStoneTexture([196, 190, 178], 3, 4, '#77706a');
+  var bridgeWallTex = bridgeStoneTexture([206, 199, 186], 2, 3, '#8a837a');
+  bridgeWallTex.wrapS = bridgeWallTex.wrapT = THREE.RepeatWrapping;
+  var bridgeSmoothTex = bridgeStoneTexture([214, 208, 196], 1, 1, '#d0c8b8');
+  var bridgePave = new THREE.MeshStandardMaterial({ map: bridgePaveTex, bumpMap: bridgePaveTex, bumpScale: 0.02, roughness: 0.9 });
+  var bridgeWall = new THREE.MeshStandardMaterial({ map: bridgeWallTex, bumpMap: bridgeWallTex, bumpScale: 0.02, roughness: 0.88 });
+  var bridgeCarved = new THREE.MeshStandardMaterial({ map: bridgeSmoothTex, color: 0xf2ece0, roughness: 0.75 });
+  var keelRockTex = paintTexture(128, 128, function (g, w, h) {           // the rugged rock under the deck
+    g.fillStyle = '#6e6862'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 900; i++) { var v = isle2Hash(i * 2.1 + 5); g.fillStyle = v < 0.5 ? 'rgba(40,36,34,' + v * 0.5 + ')' : 'rgba(170,160,150,' + (v - 0.5) * 0.5 + ')'; g.fillRect(isle2Hash(i * 3.3) * w, isle2Hash(i * 5.9) * h, 2 + v * 3, 1 + v * 2); }
+    for (var s2 = 0; s2 < 10; s2++) { g.fillStyle = 'rgba(120,100,80,0.25)'; g.fillRect(0, isle2Hash(s2 * 4.4) * h, w, 2 + isle2Hash(s2) * 4); } // layered strata
   });
-  var bridgeStone = new THREE.MeshStandardMaterial({ map: bridgeStoneTex, roughness: 0.9 });
-  var bridgeCurb = new THREE.MeshStandardMaterial({ map: bridgeStoneTex, color: 0xc9c4d0, roughness: 0.85 });
-  var bridgeUnder = new THREE.MeshStandardMaterial({ color: 0x77727f, roughness: 0.95, flatShading: true });
-  var runeMat = new THREE.MeshBasicMaterial({ color: 0xb79cff, transparent: true, opacity: 0.85 });
+  keelRockTex.wrapS = keelRockTex.wrapT = THREE.RepeatWrapping;
+  var keelRockMat = new THREE.MeshStandardMaterial({ map: keelRockTex, bumpMap: keelRockTex, bumpScale: 0.05, roughness: 0.95, flatShading: true });
+  var bridgeIron = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.45, metalness: 0.7 });
+  var bridgeGlass = new THREE.MeshStandardMaterial({ color: 0xfff1cc, emissive: 0xffc46a, emissiveIntensity: 1.1, roughness: 0.2, transparent: true, opacity: 0.9 });
+  var bridgeCrystal = new THREE.MeshStandardMaterial({ color: 0xd9c6ff, emissive: 0x8a66e8, emissiveIntensity: 0.9, roughness: 0.15 });
   var bridgeGlows = [], bridgeDrifters = [];
   var SLAB_L = 1.0, slabCount = Math.round((BRIDGE_Z1 - BRIDGE_Z0) / SLAB_L);
+  var deckGeo = new THREE.BoxGeometry(BRIDGE_W - 0.5, 0.3, SLAB_L + 0.02);
+  var beamGeo = new THREE.BoxGeometry(0.28, 0.6, SLAB_L + 0.02);       // the thick carved edge beam on each side
+  var corniceGeo = new THREE.BoxGeometry(0.4, 0.08, SLAB_L + 0.02);    // a moulded lip along its top
+  var railGeo = new THREE.BoxGeometry(0.24, 0.1, SLAB_L + 0.02);       // the handrail
+  var balPts = [[0.07, 0], [0.07, 0.04], [0.045, 0.06], [0.06, 0.14], [0.075, 0.22], [0.06, 0.3], [0.035, 0.38], [0.045, 0.43], [0.065, 0.46], [0.065, 0.5]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+  var balGeo = new THREE.LatheGeometry(balPts, 10);                    // a turned stone baluster
+  var underBandGeo = new THREE.BoxGeometry(BRIDGE_W - 0.2, 0.5, SLAB_L + 0.02);   // the dressed stone just under the deck
+  var corbelGeo = new THREE.BoxGeometry(0.3, 0.32, 0.36);
+  var vineLeafGeo = new THREE.SphereGeometry(0.05, 6, 4), crystalGeo = new THREE.OctahedronGeometry(0.12, 0);
+  var bridgeVine = new THREE.MeshStandardMaterial({ color: 0x4f8f42, roughness: 0.85 });
+  var keelChunkMat = new THREE.MeshStandardMaterial({ vertexColors: true, bumpMap: keelRockTex, bumpScale: 0.05, roughness: 0.95, emissive: 0x16130f }); // (a touch of bounce light so the underside isn't black)
+  var rootMatB = new THREE.MeshStandardMaterial({ color: 0x6a4f3a, roughness: 0.95 });
+  var keelLight = new THREE.Color(0xa99f91), keelDeep = new THREE.Color(0x4b4540), keelMoss = new THREE.Color(0x5e7d44);
+  var bridgeVineLight = new THREE.MeshStandardMaterial({ color: 0x7ab35a, roughness: 0.85 });
+  var vineFlowerGeo = new THREE.SphereGeometry(0.035, 6, 5);
+  var bridgeVineFlowerA = new THREE.MeshStandardMaterial({ color: 0xf6c4dd, roughness: 0.6 }), bridgeVineFlowerB = new THREE.MeshStandardMaterial({ color: 0xfff6e8, roughness: 0.6 });
+  var BALS_PER = 3, balusters = new THREE.InstancedMesh(balGeo, bridgeCarved, slabCount * BALS_PER * 2), balN = 0, balM = new THREE.Matrix4(), balQ = new THREE.Quaternion(), balS = new THREE.Vector3(1, 1, 1), balP = new THREE.Vector3();
+  function bridgePart(geo, mat, x, y, z, rx) {
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.x = rx || 0;
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  }
   for (var sb = 0; sb < slabCount; sb++) {
     var z0 = BRIDGE_Z0 + sb * SLAB_L, zc = z0 + SLAB_L / 2, y0 = bridgeY(z0), y1 = bridgeY(z0 + SLAB_L), yc = (y0 + y1) / 2;
-    var tilt = Math.atan2(y1 - y0, SLAB_L);
-    var slab = new THREE.Mesh(new THREE.BoxGeometry(BRIDGE_W - 0.1 + (isle2Hash(sb) - 0.5) * 0.1, 0.18, SLAB_L - 0.07), bridgeStone);
-    slab.position.set(BRIDGE_X + (isle2Hash(sb * 3) - 0.5) * 0.05, yc - 0.09, zc);
-    slab.rotation.set(-tilt, (isle2Hash(sb * 5) - 0.5) * 0.03, (isle2Hash(sb * 7) - 0.5) * 0.02);
-    slab.castShadow = slab.receiveShadow = true;
-    scene.add(slab);
-    [-1, 1].forEach(function (sd) {                                  // the low curbs along each side
-      var curb = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.22, SLAB_L - 0.05), bridgeCurb);
-      curb.position.set(BRIDGE_X + sd * (BRIDGE_W / 2 - 0.06), yc + 0.07, zc);
-      curb.rotation.x = -tilt;
-      curb.castShadow = curb.receiveShadow = true;
-      scene.add(curb);
+    var tilt = -Math.atan2(y1 - y0, SLAB_L);
+    bridgePart(deckGeo, bridgePave, BRIDGE_X, yc - 0.15, zc, tilt);                                 // the paved deck
+    [-1, 1].forEach(function (sd) {
+      var ex = BRIDGE_X + sd * (BRIDGE_W / 2 - 0.14);
+      bridgePart(beamGeo, bridgeWall, ex, yc - 0.12, zc, tilt);                                     // edge beam
+      bridgePart(corniceGeo, bridgeCarved, ex + sd * 0.04, yc + 0.2, zc, tilt);                     // moulded lip
+      bridgePart(railGeo, bridgeCarved, ex, yc + 0.78, zc, tilt);                                   // handrail
+      for (var bl = 0; bl < BALS_PER; bl++) {                                                 // balusters between lip and rail
+        var bz = z0 + (bl + 0.5) / BALS_PER * SLAB_L;
+        balP.set(ex, bridgeY(bz) + 0.24, bz);
+        balS.set(1, 1.08, 1);
+        balM.compose(balP, balQ, balS);
+        balusters.setMatrixAt(balN++, balM);
+      }
     });
-    if (zc > 35 && zc < 77) {                                         // out over the water: each slab rides on a tapering rune stone
-      var underH = 1.1 + isle2Hash(sb * 4) * 0.6;
-      var under = new THREE.Mesh(new THREE.ConeGeometry(0.75 + isle2Hash(sb * 2) * 0.25, underH, 6), bridgeUnder);
-      under.rotation.set(Math.PI, sb, 0);
-      under.position.set(BRIDGE_X, yc - 0.18 - underH / 2, zc);
-      under.castShadow = true;
-      scene.add(under);
-      if (sb % 2 === 0) {                                             // with a glowing rune ring round it
-        var rune = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.025, 6, 24), runeMat);
-        rune.rotation.x = Math.PI / 2;
-        rune.position.set(BRIDGE_X, yc - 0.45, zc);
-        scene.add(rune);
-        var rg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xa98cff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
-        rg.position.set(BRIDGE_X, yc - 0.55, zc);
-        rg.scale.set(1.8, 1.8, 1);
-        scene.add(rg);
-        bridgeGlows.push({ s: rg, p: sb * 0.7 });
+    // underneath: a band of dressed stone just under the deck
+    bridgePart(underBandGeo, bridgeWall, BRIDGE_X, yc - 0.55, zc, tilt);
+    if (zc > 33.5 && zc < 78.5) {                                     // out over the water: craggy chunks of old floating rock holding the bridge up
+      var tz = (zc - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0), depth = 0.9 + Math.sin(tz * Math.PI) * 1.6;
+      var chunkGeo = new THREE.SphereGeometry(1, 22, 16);           // (a sphere's shading is smooth, so the rock looks weathered rather than boxy)
+      var kp = chunkGeo.attributes.position, kvec = new THREE.Vector3(), kcol = [], kc = new THREE.Color();
+      var chunkY = yc - 0.78;
+      for (var kv = 0; kv < kp.count; kv++) {                         // weathered rock: smooth lumps and ledges rather than spikes, flat on top, tapering below
+        kvec.set(kp.getX(kv), kp.getY(kv), kp.getZ(kv));
+        var lumpy = 1 + noise(kvec.x * 1.6 + sb * 0.7, kvec.z * 1.6 + kvec.y * 1.4) * 0.22 + noise(kvec.x * 4 + sb, kvec.y * 4 - kvec.z * 3) * 0.07;
+        var yv = Math.min(kvec.y, 0);
+        var narrow = 1 + yv * 0.45;
+        var ledge = Math.round(yv * depth * 3) / 3 * 0.25 + yv * depth * 0.75;   // a hint of stepped rock layers
+        var wx = kvec.x * lumpy * narrow * (BRIDGE_W / 2 - 0.1), wy = ledge * lumpy, wz = kvec.z * lumpy * narrow * 0.9;
+        kp.setXYZ(kv, wx, wy, wz);
+        var under = Math.min(1, -wy / (depth + 0.01));                 // 0 at the top, 1 at the bottom point
+        var band = Math.sin((chunkY + wy) * 6 + noise(wx * 2, zc * 0.4) * 1.5) * 0.5 + 0.5;
+        kc.setHex(0x7f776d).lerp(keelLight, band * 0.75);                // layers of sandstone and slate
+        kc.lerp(keelDeep, under * under * 0.6);                         // shadowy underneath
+        var mossy = Math.max(0, 1 - under * 4) * (0.5 + noise(wx * 3 + zc, wz * 3) * 0.6);
+        kc.lerp(keelMoss, Math.min(0.8, Math.max(0, mossy)));           // moss creeping over the top edges
+        kcol.push(kc.r, kc.g, kc.b);
+      }
+      chunkGeo.setAttribute('color', new THREE.Float32BufferAttribute(kcol, 3));
+      chunkGeo.computeVertexNormals();
+      var chunk = new THREE.Mesh(chunkGeo, keelChunkMat);
+      chunk.position.set(BRIDGE_X + (isle2Hash(sb * 3) - 0.5) * 0.2, chunkY, zc);
+      chunk.rotation.y = (isle2Hash(sb) - 0.5) * 0.4;
+      chunk.castShadow = chunk.receiveShadow = true;
+      scene.add(chunk);
+      if (isle2Hash(sb * 3.9) < 0.6) {                                // a smaller boulder hanging from the underside, still clinging on
+        var hang = new THREE.Mesh(chunkGeo, keelChunkMat), hangS = 0.25 + isle2Hash(sb * 6.3) * 0.25;
+        hang.scale.set(hangS, hangS * 0.8, hangS);
+        hang.position.set(BRIDGE_X + (isle2Hash(sb * 8.1) - 0.5) * 1.2, chunkY - depth * (0.55 + isle2Hash(sb * 2.2) * 0.25), zc + (isle2Hash(sb * 4.4) - 0.5) * 0.6);
+        hang.rotation.set(isle2Hash(sb) * 2, isle2Hash(sb * 2) * 6, 0);
+        hang.castShadow = true;
+        scene.add(hang);
+      }
+      for (var rtn = 0; rtn < 2; rtn++) {                              // old roots poking out of the rock and dangling down
+        if (isle2Hash(sb * 17 + rtn) < 0.45) continue;
+        var rlen = 0.4 + isle2Hash(sb * 19 + rtn) * 1.1, rx = BRIDGE_X + (isle2Hash(sb * 23 + rtn) - 0.5) * 1.6;
+        var rtop = chunkY - depth * (0.35 + isle2Hash(sb * 29 + rtn) * 0.35);
+        var rootB = bridgePart(new THREE.CylinderGeometry(0.03, 0.005, rlen, 5), rootMatB, rx, rtop - rlen / 2, zc + (isle2Hash(sb * 31 + rtn) - 0.5) * 0.6);
+        rootB.rotation.set((isle2Hash(sb * 37 + rtn) - 0.5) * 0.5, 0, (isle2Hash(sb * 41 + rtn) - 0.5) * 0.5);
+        rootB.castShadow = false;
+      }
+      var vines = 2 + Math.floor(isle2Hash(sb * 2.1) * 4);               // ivy trailing down off the rock and the stonework
+      for (var vn = 0; vn < vines; vn++) {
+        var vsd = isle2Hash(sb * 5 + vn) < 0.5 ? -1 : 1, vx = BRIDGE_X + vsd * (0.6 + isle2Hash(sb + vn * 4) * 1.0), vz = zc + (isle2Hash(sb * 9 + vn) - 0.5) * 0.9;
+        var vlen = 0.8 + isle2Hash(sb * 11 + vn) * 2.4 * (0.5 + depth / 3), vtop = yc - 0.6;
+        var sway = (isle2Hash(sb * 13 + vn) - 0.5) * 0.25;
+        bridgePart(new THREE.CylinderGeometry(0.014, 0.006, vlen, 4), bridgeVine, vx + sway / 2, vtop - vlen / 2, vz).rotation.z = sway / vlen;
+        for (var lv = 0; lv < Math.round(vlen * 7); lv++) {                // leaves all the way down, thinning toward the tip
+          var lt = lv / (vlen * 7), lf = bridgePart(vineLeafGeo, isle2Hash(lv * 5 + sb + vn) < 0.25 ? bridgeVineLight : bridgeVine,
+            vx + sway * lt + (isle2Hash(sb + vn + lv * 3) - 0.5) * 0.1, vtop - lv / 7 - 0.05, vz + (isle2Hash(sb * 2 + lv + vn) - 0.5) * 0.1);
+          lf.rotation.set(isle2Hash(lv * 3 + sb) * 3, isle2Hash(lv + sb * 5) * 6, 0);
+          lf.scale.set(1.1 - lt * 0.5, 0.4, 0.9 - lt * 0.4);
+          lf.castShadow = false;
+          if (isle2Hash(lv * 7 + sb * 3 + vn) < 0.06) {                  // now and then a tiny flower
+            var fw = bridgePart(vineFlowerGeo, isle2Hash(lv + vn) < 0.5 ? bridgeVineFlowerA : bridgeVineFlowerB, lf.position.x, lf.position.y, lf.position.z + 0.04);
+            fw.castShadow = false;
+          }
+        }
       }
     }
-    if (sb % 6 === 3) {                                               // little crystal lanterns on the curbs, swapping sides
-      var side = Math.floor(sb / 6) % 2 ? 1 : -1, lx = BRIDGE_X + side * (BRIDGE_W / 2 - 0.06);
-      var post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 8), bridgeCurb);
-      post.position.set(lx, yc + 0.5, zc);
-      post.castShadow = true;
-      scene.add(post);
-      var crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), new THREE.MeshStandardMaterial({ color: 0xd8c8ff, emissive: 0x9a7cff, emissiveIntensity: 1.2, roughness: 0.2 }));
-      crystal.position.set(lx, yc + 0.98, zc);
-      crystal.scale.set(1, 1.6, 1);
-      scene.add(crystal);
-      var cg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xc4b0ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-      cg.position.copy(crystal.position);
-      cg.scale.set(1.1, 1.1, 1);
-      scene.add(cg);
-      bridgeGlows.push({ s: cg, p: sb, crystal: crystal });
+    if (sb % 7 === 3) {                                               // tall iron lamp posts on stone plinths, in pairs
+      [-1, 1].forEach(function (sd) {
+        var lx = BRIDGE_X + sd * (BRIDGE_W / 2 - 0.14), ly = yc;
+        bridgePart(new THREE.BoxGeometry(0.36, 0.95, 0.36), bridgeWall, lx, ly + 0.36, zc);         // the plinth, rising through the rail
+        bridgePart(new THREE.BoxGeometry(0.44, 0.08, 0.44), bridgeCarved, lx, ly + 0.87, zc);        // its cap
+        bridgePart(new THREE.CylinderGeometry(0.035, 0.05, 1.5, 10), bridgeIron, lx, ly + 1.65, zc); // the iron post
+        bridgePart(new THREE.CylinderGeometry(0.09, 0.07, 0.08, 10), bridgeIron, lx, ly + 2.42, zc);
+        var glass = bridgePart(new THREE.CylinderGeometry(0.12, 0.09, 0.3, 6), bridgeGlass, lx, ly + 2.6, zc);
+        glass.castShadow = false;
+        bridgePart(new THREE.ConeGeometry(0.17, 0.16, 6), bridgeIron, lx, ly + 2.83, zc);            // the lantern's roof
+        bridgePart(new THREE.SphereGeometry(0.03, 8, 6), bridgeIron, lx, ly + 2.93, zc);
+        var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc878, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+        lg.position.set(lx, ly + 2.6, zc);
+        lg.scale.set(1.6, 1.6, 1);
+        scene.add(lg);
+        bridgeGlows.push({ s: lg, p: sb + sd, lamp: true });
+      });
     }
   }
-  for (var dr = 0; dr < 9; dr++) {                                    // small rocks drifting in the air beneath the bridge
-    var drift = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + isle2Hash(dr * 3.3) * 0.25, 0), bridgeUnder);
-    var ddz = 38 + isle2Hash(dr * 1.7) * 36, ddx = BRIDGE_X + (isle2Hash(dr * 2.9) - 0.5) * 7;
-    drift.position.set(ddx, bridgeY(ddz) - 1.4 - isle2Hash(dr * 5.1) * 0.8, ddz);
+  balusters.count = balN;
+  balusters.castShadow = balusters.receiveShadow = true;
+  balusters.frustumCulled = false;
+  scene.add(balusters);
+  // a great arched gateway at each end: two massive stone piers, a semicircular arch of voussoirs with a carved keystone,
+  // a cornice on top, and a lantern hanging from the arch
+  [[BRIDGE_Z0 + 0.7, 0], [BRIDGE_Z1 - 0.7, Math.PI]].forEach(function (end) {
+    var az = end[0], ay = bridgeY(az), gate = new THREE.Group();
+    gate.position.set(BRIDGE_X, ay, az);
+    gate.rotation.y = end[1];
+    var PIER_X = BRIDGE_W / 2 + 0.15, PIER_H = 2.6, SPAN = PIER_X - 0.3;
+    function gp(geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; gate.add(m); return m; }
+    [-1, 1].forEach(function (sd) {
+      gp(new THREE.BoxGeometry(0.85, 0.3, 0.85), bridgeCarved, sd * PIER_X, 0.15, 0);            // plinth
+      gp(new THREE.BoxGeometry(0.62, PIER_H, 0.62), bridgeWall, sd * PIER_X, PIER_H / 2 + 0.3, 0); // the pier
+      gp(new THREE.BoxGeometry(0.76, 0.14, 0.76), bridgeCarved, sd * PIER_X, PIER_H + 0.37, 0);  // impost
+    });
+    var archY = PIER_H + 0.44;
+    for (var v = 0; v < 13; v++) {                                     // the arch, built from wedge-shaped voussoirs
+      var a0 = v / 13 * Math.PI, a1 = (v + 1) / 13 * Math.PI;
+      var vs = new THREE.Shape(), R1 = SPAN + 0.3, R0 = SPAN - 0.25;
+      vs.moveTo(Math.cos(a0) * R0, Math.sin(a0) * R0); vs.lineTo(Math.cos(a0) * R1, Math.sin(a0) * R1);
+      vs.lineTo(Math.cos(a1) * R1, Math.sin(a1) * R1); vs.lineTo(Math.cos(a1) * R0, Math.sin(a1) * R0); vs.closePath();
+      var vg = new THREE.ExtrudeGeometry(vs, { depth: 0.56, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1 });
+      vg.translate(0, 0, -0.28);
+      var vm = gp(vg, v === 6 ? bridgeCarved : bridgeWall, 0, archY, 0);
+      if (v === 6) vm.scale.set(1.05, 1.08, 1.12);                     // the keystone stands proud
+    }
+    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.9, 0.22, 0.8), bridgeCarved, 0, archY + SPAN + 0.45, 0);   // the cornice
+    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.6, 0.3, 0.62), bridgeWall, 0, archY + SPAN + 0.69, 0);      // and the parapet over it
+    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.75, 0.1, 0.72), bridgeCarved, 0, archY + SPAN + 0.89, 0);
+    [-1, 1].forEach(function (sd) { gp(new THREE.SphereGeometry(0.16, 14, 10), bridgeCarved, sd * PIER_X, archY + SPAN + 1.1, 0); }); // stone finials
+    gp(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6), bridgeIron, 0, archY + SPAN - 0.5, 0);        // a lantern hanging under the keystone
+    var hl = gp(new THREE.CylinderGeometry(0.11, 0.08, 0.26, 6), bridgeGlass, 0, archY + SPAN - 0.86, 0);
+    hl.castShadow = false;
+    gp(new THREE.ConeGeometry(0.15, 0.13, 6), bridgeIron, 0, archY + SPAN - 0.67, 0);
+    var hg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc878, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+    hg.position.set(0, archY + SPAN - 0.86, 0);
+    hg.scale.set(1.5, 1.5, 1);
+    gate.add(hg);
+    bridgeGlows.push({ s: hg, p: az, lamp: true });
+    scene.add(gate);
+    solids.push({ x: BRIDGE_X - PIER_X, z: az, r: 0.45 }, { x: BRIDGE_X + PIER_X, z: az, r: 0.45 }); // you walk between the piers
+  });
+  for (var dr = 0; dr < 10; dr++) {                                   // a few rocks broken off the keel, drifting below
+    var drift = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25 + isle2Hash(dr * 3.3) * 0.35, 0), keelRockMat);
+    var ddz = 38 + isle2Hash(dr * 1.7) * 36, ddx = BRIDGE_X + (isle2Hash(dr * 2.9) - 0.5) * 9;
+    drift.position.set(ddx, bridgeY(ddz) - 2 - isle2Hash(dr * 5.1) * 1.2, ddz);
     drift.castShadow = true;
     scene.add(drift);
     bridgeDrifters.push({ m: drift, y: drift.position.y, p: dr * 1.3 });
   }
-  function updateBridge(t) {
-    bridgeGlows.forEach(function (gl) {
-      gl.s.material.opacity = (gl.crystal ? 0.4 : 0.25) + Math.sin(t * 1.8 + gl.p) * 0.12;
-      if (gl.crystal) gl.crystal.rotation.y = t * 0.8 + gl.p;
-    });
-    bridgeDrifters.forEach(function (d) { d.m.position.y = d.y + Math.sin(t * 0.9 + d.p) * 0.15; d.m.rotation.y = t * 0.2 + d.p; });
+  function updateBridge(t, night) {
+    bridgeGlass.emissiveIntensity = 0.5 + (night || 0) * 1.3;            // the lamps glow brighter after dark
+    bridgeGlows.forEach(function (gl) { gl.s.material.opacity = gl.crystal ? 0.3 + Math.sin(t * 1.6 + gl.p) * 0.12 : 0.15 + (night || 0) * 0.45 + Math.sin(t * 3 + gl.p) * 0.03; });
+    bridgeDrifters.forEach(function (d) { d.m.position.y = d.y + Math.sin(t * 0.7 + d.p) * 0.12; d.m.rotation.y = t * 0.12 + d.p; });
   }
   function walkable(x, z) { return islandR(x, z) < ISLAND - 1.5 || onBridge(x, z) || onIsle2(x, z, 1.5); } // your island, the bridge, or the new island
 
@@ -8247,7 +8390,7 @@ function startGame(THREE) {
     updateDoors();
     updateSleepButton();
     updateShipping(dt);
-    updateBridge(state.time);
+    updateBridge(state.time, night);
     updateInterior(dt, state.time);
     updateCrops(dt, night);
     updateWorld(dt, night);
