@@ -1867,7 +1867,7 @@ function startGame(THREE) {
   scene.add(flowerHeads);
 
   // ---------- The second island: a grassy island out to sea, past the front of yours ----------
-  // Not joined to your island yet; one day it'll be the town square. For now it's open grass, wildflowers and a few rocks
+  // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
   var ISLE2_X = 0, ISLE2_Z = 84, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
@@ -1924,18 +1924,21 @@ function startGame(THREE) {
     var dx = x - ISLE2_X, dz = z - ISLE2_Z;
     return Math.pow(Math.pow(Math.abs(dx), ISLE2_SQ) + Math.pow(Math.abs(dz), ISLE2_SQ), 1 / ISLE2_SQ) < ISLE2 - margin;
   }
-  var ISLE2_BLADES = 2600, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
-  for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // grass tufts all over
+  var ISLE2_BLADES = 9000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
+  for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
-    if (!onIsle2(ix, iz, 0.6)) continue;
-    gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.5, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.5);
+    if (!onIsle2(ix, iz, 0.5)) continue;
+    var meadow = noise(ix * 0.35 + 11, iz * 0.35 - 4);                 // some patches grow longer and lusher than others
+    gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.6, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.6);
     gQuat.setFromEuler(gEuler);
-    var igs = 0.6 + isle2Hash(ib * 9.1) * 0.9;
-    gScale.set(igs, igs * (0.6 + isle2Hash(ib * 4.4) * 0.9), igs);
+    var igs = 0.5 + isle2Hash(ib * 9.1) * 0.8 + Math.max(0, meadow) * 0.6;
+    var tall = isle2Hash(ib * 6.6) < 0.12 ? 1.6 : 1;                   // now and then a tall clump
+    gScale.set(igs, igs * (0.55 + isle2Hash(ib * 4.4) * 0.9) * tall, igs);
     gPos.set(ix, 0, iz);
     gMatrix.compose(gPos, gQuat, gScale);
     isle2Grass.setMatrixAt(i2n, gMatrix);
-    gColor.setHSL(0.24 + isle2Hash(ib * 6.2) * 0.07, 0.35 + isle2Hash(ib * 8.3) * 0.2, 0.55 + isle2Hash(ib * 2.2) * 0.2);
+    var sunny = isle2Hash(ib * 2.7) < 0.25;                           // a mix of deep greens and sunny yellow-greens
+    gColor.setHSL((sunny ? 0.19 : 0.25) + isle2Hash(ib * 6.2) * 0.06, 0.35 + isle2Hash(ib * 8.3) * 0.25, (sunny ? 0.6 : 0.42) + isle2Hash(ib * 2.2) * 0.22);
     isle2Grass.setColorAt(i2n, gColor);
     i2n++;
   }
@@ -1943,7 +1946,7 @@ function startGame(THREE) {
   isle2Grass.frustumCulled = false;
   isle2Grass.receiveShadow = true;
   scene.add(isle2Grass);
-  var ISLE2_FLOWERS = 260, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
+  var ISLE2_FLOWERS = 520, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
     if (!onIsle2(fx, fz, 1) || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
@@ -1961,17 +1964,6 @@ function startGame(THREE) {
   isle2Stems.frustumCulled = isle2Heads.frustumCulled = false;
   scene.add(isle2Stems);
   scene.add(isle2Heads);
-  var isle2RockMat = new THREE.MeshStandardMaterial({ color: 0x8f8a94, roughness: 0.9, flatShading: true });
-  [[-12, -9, 1.1], [13, -11, 0.8], [-14, 10, 0.9], [11, 12, 1.2], [15, 2, 0.6], [-6, 15, 0.55]].forEach(function (rk, n) { // a few mossy rocks round the edges
-    var rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rk[2], 1), isle2RockMat);
-    var rp = rock.geometry.attributes.position;
-    for (var v = 0; v < rp.count; v++) { var k = 0.85 + isle2Hash(n * 50 + v) * 0.3; rp.setXYZ(v, rp.getX(v) * k, rp.getY(v) * k * 0.7, rp.getZ(v) * k); }
-    rock.geometry.computeVertexNormals();
-    rock.position.set(ISLE2_X + rk[0], rk[2] * 0.25, ISLE2_Z + rk[1]);
-    rock.rotation.y = n * 1.7;
-    rock.castShadow = rock.receiveShadow = true;
-    scene.add(rock);
-  });
 
   // Small flat stones pressed into the dirt paths
   var PEBBLES = 160;
