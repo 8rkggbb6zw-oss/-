@@ -7190,6 +7190,34 @@ function startGame(THREE) {
     bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
       + (ITEMS[it.id].price && !isTool(it.id) ? ' Sells for ' + ITEMS[it.id].price + ' Star Coins in the shipping bin.' : '')
       : 'Tap an item to see what it is.';
+    updateTrashRow();
+  }
+  // Delete buttons under the item's description, for getting rid of something straight away (never your tools)
+  var trashRow = null, trashOne = null, trashAll = null, trashArmed = false;
+  function updateTrashRow() {
+    if (!trashRow) return;                                       // (the bag can be drawn before the buttons are made)
+    var it = bag[selectedSlot];
+    trashArmed = false;
+    trashRow.hidden = !it || isTool(it.id);
+    if (trashRow.hidden) return;
+    trashOne.textContent = '🗑 Delete 1';
+    trashAll.textContent = '🗑 Delete all ' + it.count;
+    trashAll.classList.remove('armed');
+    trashAll.hidden = it.count < 2;
+  }
+  function trashSelected(all) {
+    var it = bag[selectedSlot];
+    if (!it || isTool(it.id)) return;
+    if (all && !trashArmed) {                                    // deleting a whole stack needs a second tap, just in case
+      trashArmed = true;
+      trashAll.textContent = 'Tap again to delete all ' + it.count;
+      trashAll.classList.add('armed');
+      return;
+    }
+    var n = all ? it.count : 1, name = ITEMS[it.id].name;
+    takeItem(it.id, n);
+    if (audioCtx) hissBurst(0.18, 'bandpass', 900, 0.8, 0.12, 0.005, 0.15); // a soft poof
+    showToast('Deleted ' + n + ' ' + name, 1600);
   }
 
   // ---------- Star Coins: the island's money. Sell things from your bag to earn them ----------
@@ -7205,6 +7233,14 @@ function startGame(THREE) {
     if (bump) { coinUi.classList.remove('bump'); void coinUi.offsetWidth; coinUi.classList.add('bump'); } // a little hop when you earn some
   }
   function isTool(id) { return id === 'axe' || id === 'pickaxe' || id === 'trimmers' || id === 'hoe'; }
+  trashRow = document.createElement('div');
+  trashRow.className = 'trash-row';
+  trashRow.innerHTML = '<button type="button" class="trash-btn"></button><button type="button" class="trash-btn"></button>';
+  if (bagUi.box) bagUi.box.appendChild(trashRow);
+  trashOne = trashRow.children[0]; trashAll = trashRow.children[1];
+  trashOne.addEventListener('click', function () { trashSelected(false); });
+  trashAll.addEventListener('click', function () { trashSelected(true); });
+  updateTrashRow();
   function coinSound(n) {                                       // a bright jingle of coins: more coins, a longer jingle
     if (!audioCtx) return;
     var clinks = Math.min(6, 1 + Math.floor(n / 3));
