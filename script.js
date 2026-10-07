@@ -65,7 +65,8 @@ function startGame(THREE) {
   var IN_X = 0, IN_Z = 1000;                                          // where the inside of the farmhouse is built, far away from the island
   var HOUSE_DOOR_X = HOUSE_X + Math.sin(HOUSE_TURN) * 3.4, HOUSE_DOOR_Z = HOUSE_Z + Math.cos(HOUSE_TURN) * 3.4; // just outside the front door
   var MAX_MANA = 100, SPELL_COST = 35;
-  var STAGE_TIME = 6;              // seconds per growth stage while watered
+  var GROW_DAYS = 4;               // watered days for a moonbloom to grow from seed to flower
+  var STAGE_ON_DAY = [0, 1, 1, 2, 3]; // which growth stage it shows after each watered day: sprout, young, young, bud, bloom
   var SPEED = 4.4;
   var GAME_MINUTES_PER_SECOND = 8; // one in-game day = 3 real minutes
 
@@ -5733,7 +5734,7 @@ function startGame(THREE) {
 
   // ---------- Bag (inventory) ----------
   var ITEMS = {
-    seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
+    seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Every harvest gives you two seeds back.' },
     bloom: { name: 'Moonbloom', icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
@@ -7139,14 +7140,16 @@ function startGame(THREE) {
   function updateCrops(dt, night) {
     tiles.forEach(function (tile) {
       if (!tile.crop) return;
-      if (tile.wet && tile.wetDay !== farmDay()) setWet(tile, false); // a new day: the soil has dried out, water it again
-      if (tile.wet && tile.stage < 3) {
-        tile.growth += dt / STAGE_TIME;
-        if (tile.growth >= 1) {
-          tile.stage += 1;
-          tile.growth = 0;
-          showStage(tile);
-          burst(tile.x, 0.7, tile.z, tile.stage === 3 ? 0xffb3e6 : 0x9be08a, tile.stage === 3 ? 14 : 6, 1.2, 1.6, -2);
+      if (tile.wet && tile.wetDay !== farmDay()) {   // 6 am: a crop that was watered yesterday grows a day, then the soil dries out
+        setWet(tile, false);
+        if (tile.stage < 3) {
+          tile.growth = Math.min(GROW_DAYS, tile.growth + 1); // tile.growth counts the watered days so far
+          var newStage = STAGE_ON_DAY[tile.growth];
+          if (newStage !== tile.stage) {
+            tile.stage = newStage;
+            showStage(tile);
+            burst(tile.x, 0.7, tile.z, tile.stage === 3 ? 0xffb3e6 : 0x9be08a, tile.stage === 3 ? 14 : 6, 1.2, 1.6, -2);
+          }
         }
       }
       tile.crop.rotation.z = Math.sin(state.time * 1.6 + tile.x * 1.3 + tile.z) * 0.05;
@@ -7378,7 +7381,7 @@ function startGame(THREE) {
       for (var r = 0; r < 3; r++) tile.ridges.push(place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil));
       if (st.crop) {
         tile.crop = makeCrop(tile);
-        tile.stage = st.stage; tile.growth = st.growth;
+        tile.stage = st.stage; tile.growth = Math.max(Math.floor(st.growth), [0, 1, 3, 4][st.stage]); // older saves counted growth differently
         showStage(tile);
         tile.drop = place(new THREE.Mesh(dropGeo, M.drop), tile.x, 1, tile.z);
       }
