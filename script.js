@@ -3796,6 +3796,8 @@ function startGame(THREE) {
   // The hoe bites into the ground: the turf flips over into a mound of soil with furrows
   function hoeHits(tile) {
     if (tile.soil) return;
+    tile = keepTile(tile);
+    coverGrass(tile);
     tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
     tile.ridges = [];
     for (var r = 0; r < 3; r++) { // three furrows, raised one after another
@@ -4863,6 +4865,7 @@ function startGame(THREE) {
       } else if (r.state === 'regrowing') { // the rock slowly rises back out of the ground over many days
         var days = (gameMinutes() - r.brokeAt) / (24 * 60);
         if (days < SPROUT_DAYS) return;
+        if (r.shownK < 0 && soilNear(r.solid.x, r.solid.z, r.solidR)) { r.brokeAt = gameMinutes() - SPROUT_DAYS * 24 * 60; return; } // farmed over: it can't come back
         var g = Math.min(1, (days - SPROUT_DAYS) / (REGROW_DAYS - SPROUT_DAYS));
         var rk = 0.08 + 0.92 * g;
         if (g >= 1 || rk - r.shownK > 0.004) {
@@ -4964,6 +4967,7 @@ function startGame(THREE) {
       } else if (u.state === 'regrowing') { // a new tree grows back slowly over many in-game days
         var days = (gameMinutes() - u.felledAt) / (24 * 60);
         if (days < SPROUT_DAYS) return;
+        if (u.shownK < 0 && soilNear(u.solid.x, u.solid.z, u.solidR)) { u.felledAt = gameMinutes() - SPROUT_DAYS * 24 * 60; return; } // farmed over: it can't grow back
         var g = Math.min(1, (days - SPROUT_DAYS) / (REGROW_DAYS - SPROUT_DAYS));
         var k = 0.06 + 0.94 * g;
         if (g >= 1 || k - u.shownK > 0.004) { // only redraw when it has visibly grown, to keep the game fast
@@ -5171,20 +5175,81 @@ function startGame(THREE) {
   }
 
   // ---------- Garden tiles and crops ----------
-  var tiles = [];
-  for (var row = 0; row < ROWS; row++) {
-    for (var col = 0; col < COLS; col++) {
-      tiles.push({
-        x: FARM_X + (col - (COLS - 1) / 2) * TILE,
-        z: FARM_Z + (row - (ROWS - 1) / 2) * TILE,
-        soil: null, crop: null, drop: null, stage: 0, growth: 0, wet: false
-      });
+  // The whole island is farm land: it's split into a grid of tiles (lined up with the starting garden), and a tile
+  // is only remembered once you till it. Anywhere open can be tilled, including where a tree, rock or bush used to be.
+  var tiles = [], tileMap = {}, spareTile = null;
+  function tileKey(c, r) { return c + ',' + r; }
+  function makeTile(c, r) {
+    return { c: c, r: r, x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE, soil: null, crop: null, drop: null, stage: 0, growth: 0, wet: false };
+  }
+  function keepTile(tile) {                                   // a tile you've tilled is remembered from now on
+    var key = tileKey(tile.c, tile.r);
+    if (tileMap[key]) return tileMap[key];
+    tileMap[key] = tile;
+    tiles.push(tile);
+    return tile;
+  }
+  function inHouseYard(x, z) {                                // inside the farmhouse's picket fence
+    var dx = x - HOUSE_X, dz = z - HOUSE_Z, c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
+    var lx = dx * c - dz * s, lz = dx * s + dz * c;
+    return lx > FENCE_L - 0.7 && lx < FENCE_R + 0.7 && lz > FENCE_B - 0.7 && lz < FENCE_F + 0.7;
+  }
+  function canFarm(x, z) {                                    // is this tile's spot open ground you could till?
+    var h = TILE / 2;
+    var corners = [[x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h], [x, z]];
+    for (var k = 0; k < corners.length; k++) {
+      var cx = corners[k][0], cz = corners[k][1];
+      if (!onIsland(cx, cz) || onDock(cx, cz) || groundHeight(cx, cz) < -0.02) return false; // not in the lake, on the dock or off the edge
     }
+    if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.2) return false;   // the Dawn Tree's glade stays as it is
+    if (inHouseYard(x, z)) return false;                               // and so does the farmhouse yard
+    for (var i = 0; i < solids.length; i++) {                         // nothing standing in the way: trees, rocks, bushes, fence posts...
+      var sd = solids[i];
+      if (sd.r > 0 && dist(x, z, sd.x, sd.z) < sd.r + TILE * 0.65) return false;
+    }
+    return true;
   }
   function tileAt(x, z) {
-    var c = Math.round((x - FARM_X) / TILE + (COLS - 1) / 2);
-    var r = Math.round((z - FARM_Z) / TILE + (ROWS - 1) / 2);
-    return (c >= 0 && c < COLS && r >= 0 && r < ROWS) ? tiles[r * COLS + c] : null;
+    if (indoors) return null;
+    var c = Math.floor((x - FARM_X) / TILE), r = Math.floor((z - FARM_Z) / TILE);
+    var known = tileMap[tileKey(c, r)];
+    if (known) return known;
+    if (!spareTile || spareTile.c !== c || spareTile.r !== r) spareTile = makeTile(c, r); // a fresh, untilled tile
+    return canFarm(spareTile.x, spareTile.z) ? spareTile : null;
+  }
+  function tileByKey(c, r) { return tileMap[tileKey(c, r)] || keepTile(makeTile(c, r)); }
+  function soilNear(x, z, r) {                                // is there tilled soil over this spot? (then nothing grows back here)
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      if (t.soil && Math.abs(t.x - x) < r + TILE / 2 && Math.abs(t.z - z) < r + TILE / 2) return true;
+    }
+    return false;
+  }
+  function coverGrass(tile) {                                 // tuck away the grass and wildflowers under a tilled tile
+    var h = TILE * 0.5, m = new THREE.Matrix4(), p = new THREE.Vector3();
+    tile.grass = [];
+    for (var gi = 0; gi < grass.count; gi++) {
+      grass.getMatrixAt(gi, m);
+      if (m.elements[0] === 0 && m.elements[5] === 0) continue;       // already hidden
+      p.setFromMatrixPosition(m);
+      if (Math.abs(p.x - tile.x) < h && Math.abs(p.z - tile.z) < h) { tile.grass.push({ i: gi, m: m.clone(), f: false }); grass.setMatrixAt(gi, hideM); }
+    }
+    for (var fi = 0; fi < flowerHeads.count; fi++) {
+      flowerHeads.getMatrixAt(fi, m);
+      if (m.elements[0] === 0 && m.elements[5] === 0) continue;
+      p.setFromMatrixPosition(m);
+      if (Math.abs(p.x - tile.x) < h && Math.abs(p.z - tile.z) < h) { tile.grass.push({ i: fi, m: m.clone(), f: true }); flowerHeads.setMatrixAt(fi, hideM); flowerStems.setMatrixAt(fi, hideM); }
+    }
+    grass.instanceMatrix.needsUpdate = true;
+    flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
+  }
+  function uncoverGrass(tile) {                               // and bring it back if the soil goes
+    (tile.grass || []).forEach(function (b) {
+      if (b.f) { flowerHeads.setMatrixAt(b.i, b.m); flowerStems.setMatrixAt(b.i, b.m); } else grass.setMatrixAt(b.i, b.m);
+    });
+    tile.grass = [];
+    grass.instanceMatrix.needsUpdate = true;
+    flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
   }
 
   var soilGeo = new THREE.BoxGeometry(TILE * 0.9, 0.12, TILE * 0.9);
@@ -7341,6 +7406,7 @@ function startGame(THREE) {
 
     // Highlight the tile in front of you
     var tile = targetTile();
+    if (tile && !tile.soil && heldItem() !== 'hoe') tile = null; // on plain grass, only show where you'd dig when you're holding the hoe
     cursor.visible = !!tile;
     if (tile) {
       cursor.position.x = tile.x;
@@ -7407,7 +7473,7 @@ function startGame(THREE) {
       state: { mana: state.mana, harvest: state.harvest, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
-      tiles: tiles.map(function (t) { return t.soil ? { crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet } : null; }),
+      farm: tiles.filter(function (t) { return t.soil; }).map(function (t) { return { c: t.c, r: t.r, crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet }; }),
       scenery: allScenery.map(function (t) {                          // when each tree or bush was cut (null = standing)
         var u = t.userData;
         if (u.state === 'standing') return null;
@@ -7425,7 +7491,7 @@ function startGame(THREE) {
   function clearTile(tile) {
     if (tile.crop) { scene.remove(tile.crop); tile.crop = null; }
     if (tile.drop) { scene.remove(tile.drop); tile.drop = null; }
-    if (tile.soil) { scene.remove(tile.soil); tile.soil = null; }
+    if (tile.soil) { scene.remove(tile.soil); tile.soil = null; uncoverGrass(tile); }
     var ti = tilling.indexOf(tile);
     if (ti >= 0) tilling.splice(ti, 1);
     tile.wet = false; tile.stage = 0; tile.growth = 0;
@@ -7471,10 +7537,14 @@ function startGame(THREE) {
     selectedSlot = data.selectedSlot; hotRow = data.hotRow || 0;
     renderBag();
     // the garden
-    tiles.forEach(function (tile, n) {
-      clearTile(tile);
-      var st = data.tiles[n];
-      if (!st) return;
+    tiles.forEach(clearTile);
+    var farm = data.farm;
+    if (!farm && data.tiles) {                                        // a save from before the whole island was farm land: just the garden
+      farm = [];
+      data.tiles.forEach(function (st, n) { if (st) { st.c = n % COLS - COLS / 2; st.r = Math.floor(n / COLS) - ROWS / 2; farm.push(st); } });
+    }
+    (farm || []).forEach(function (st) {
+      var tile = tileByKey(st.c, st.r);
       tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
       tile.ridges = [];
       for (var r = 0; r < 3; r++) tile.ridges.push(place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil));
@@ -7489,6 +7559,7 @@ function startGame(THREE) {
     // trees, bushes and rocks
     allScenery.forEach(function (t, n) { setSceneryCut(t, data.scenery[n] === undefined ? null : data.scenery[n]); });
     mineable.forEach(function (r, n) { setRockBroken(r, data.rocks[n] === undefined ? null : data.rocks[n]); });
+    tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
     // and you: back outside if you were in the house, standing where you saved
     if (indoors) {
