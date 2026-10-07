@@ -4530,6 +4530,18 @@ function startGame(THREE) {
     logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: groundY, t: -delay, p: Math.random() * 6.28,
       item: item, amount: amount, hover: big ? FLOAT_H : FLOAT_H + 0.08 });
   }
+  // Picking things up: the message keeps a running count while you're collecting (+3 Sap, not +1 Sap three times),
+  // listing each kind you've picked up; it starts fresh once you've stopped for a moment
+  var tally = [], tallyAt = 0;
+  function pickupTally(item, amount) {
+    var now = Date.now();
+    if (now - tallyAt > 2600) tally = [];
+    tallyAt = now;
+    var found = null;
+    tally.forEach(function (t) { if (t.item === item) found = t; });
+    if (found) found.n += amount; else tally.push({ item: item, n: amount });
+    showToast(tally.map(function (t) { return '+' + t.n + ' ' + ITEMS[t.item].name + ' ' + ITEMS[t.item].icon; }).join('  ·  '), 2600);
+  }
   var FLOAT_H = 0.32;     // how high the logs hover
   var PICKUP_RANGE = 1.4; // how close you need to be to pick things up
   function updateLogs(dt) {
@@ -4550,7 +4562,7 @@ function startGame(THREE) {
       if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < PICKUP_RANGE) { // walked into it: collect
         if (!addItem(L.item, L.amount)) { bagFull(); continue; }  // no room: it stays where it is
         popSound();
-        showToast('+' + L.amount + ' ' + ITEMS[L.item].name + ' ' + ITEMS[L.item].icon);
+        pickupTally(L.item, L.amount);
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
         scene.remove(L.mesh);
         L.mesh.traverse(function (o) { // free one-off shapes; shared ones stay
