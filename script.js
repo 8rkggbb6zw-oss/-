@@ -269,10 +269,14 @@ function startGame(THREE) {
     return dist(px, pz, ax + dx * t, az + dz * t);
   }
 
-  // How far a point is from the nearest worn path (start → dock, start → Dawn Tree), a little wobbly
+  // The one worn dirt path: from the opening in the farmhouse's front gate, along the top of the island to the Dawn Tree
+  var PATH_PTS = [[HOUSE_X, HOUSE_Z + 4.9], [HOUSE_X, HOUSE_Z + 5.6], [HOUSE_X - 3, HOUSE_Z + 7.4], [HOUSE_X - 9, HOUSE_Z + 7.8], [HOUSE_X - 15, HOUSE_Z + 7.2],
+    [HOUSE_X - 21, HOUSE_Z + 7.7], [HOUSE_X - 27, HOUSE_Z + 7.0], [HOUSE_X - 32, HOUSE_Z + 5.4], [TREE_X, TREE_Z]];
+  // How far a point is from the path, a little wobbly
   function pathDist(x, z) {
-    var hx = FARM_X, hz = FARM_Z + 5;
-    return Math.min(segDist(x, z, hx, hz, dockStart.x, dockStart.z), segDist(x, z, hx, hz, TREE_X, TREE_Z), segDist(x, z, hx, hz, HOUSE_DOOR_X, HOUSE_DOOR_Z)) + noise(x * 1.3, z * 1.3) * 0.18;
+    var best = 99;
+    for (var i = 0; i < PATH_PTS.length - 1; i++) best = Math.min(best, segDist(x, z, PATH_PTS[i][0], PATH_PTS[i][1], PATH_PTS[i + 1][0], PATH_PTS[i + 1][1]));
+    return best + noise(x * 1.3, z * 1.3) * 0.18;
   }
   var PATH_W = 0.75; // half the width of the paths
 
@@ -1868,10 +1872,10 @@ function startGame(THREE) {
   pebbleGeo.scale(1, 0.3, 0.8);
   var pebbles = new THREE.InstancedMesh(pebbleGeo, new THREE.MeshStandardMaterial({ roughness: 0.9 }), PEBBLES);
   var pebbleCount = 0, pebC = new THREE.Color();
-  for (var pb = 0; pb < 3000 && pebbleCount < PEBBLES; pb++) {
+  for (var pb = 0; pb < 20000 && pebbleCount < PEBBLES; pb++) {
     var q1 = Math.sin(pb * 91.7) * 43758.5453, q2 = Math.sin(pb * 47.3) * 22578.1459, q3 = Math.sin(pb * 13.1) * 9631.73;
     q1 -= Math.floor(q1); q2 -= Math.floor(q2); q3 -= Math.floor(q3);
-    var pX = -17 + q1 * 34, pZ = -17 + q2 * 34;
+    var pX = -ISLAND + q1 * ISLAND * 2, pZ = -ISLAND + q2 * ISLAND * 2;
     if (pathDist(pX, pZ) > PATH_W * 0.85 || groundHeight(pX, pZ) < -0.02 || underDock(pX, pZ)) continue;
     wfE.set(0, q3 * 6.28, 0);
     wfQ.setFromEuler(wfE);
@@ -5082,6 +5086,18 @@ function startGame(THREE) {
     flushDirty();
   }
 
+  // Trees, bushes and rocks that happen to stand on the path are cleared away for good, so it's open all the way
+  allScenery.forEach(function (t) {
+    var u = t.userData;
+    if (pathDist(u.solid.x, u.solid.z) > PATH_W + 0.35 + u.solidR * 0.7) return;
+    u.gone = true; u.state = 'gone'; u.solid.r = 0;
+    setTreeGrowth(t, 0);
+  });
+  mineable.forEach(function (r) {
+    if (pathDist(r.x, r.z) > PATH_W + 0.3 + r.size * 0.6) return;
+    r.gone = true; r.state = 'gone'; r.solid.r = 0;
+    setRock(r, 0);
+  });
   // Hide grass blades that would poke up through rocks, trunks and bushes
   var hideM = new THREE.Matrix4().makeScale(0, 0, 0), bladeM = new THREE.Matrix4(), bladeP = new THREE.Vector3();
   for (var gb = 0; gb < grass.count; gb++) {
@@ -5101,6 +5117,7 @@ function startGame(THREE) {
   for (var fl = 0; fl < flowerHeads.count; fl++) { // same for the wildflowers
     flowerHeads.getMatrixAt(fl, bladeM);
     bladeP.setFromMatrixPosition(bladeM);
+    if (pathDist(bladeP.x, bladeP.z) < PATH_W + 0.2) { flowerHeads.setMatrixAt(fl, hideM); flowerStems.setMatrixAt(fl, hideM); continue; } // none on the path
     for (var sf = 0; sf < solids.length; sf++) {
       if (dist(bladeP.x, bladeP.z, solids[sf].x, solids[sf].z) < solids[sf].r + 0.1) {
         (solids[sf].flowers = solids[sf].flowers || []).push({ i: fl, m: bladeM.clone() });
@@ -5674,9 +5691,9 @@ function startGame(THREE) {
     pwrap.rotation.x = Math.PI / 2 + 0.35; // wound on a slant
   }
   axeArm.visible = false;
-  player.position.set(FARM_X, 0, FARM_Z + 5);
+  player.position.set(OUT_DOOR_X, 0, OUT_DOOR_Z + 0.9);   // you start on the farmhouse's front porch
   scene.add(player);
-  var facing = Math.PI; // looking toward the garden
+  var facing = 0; // looking out from the porch
   var walkTarget = null;
 
   var cursor = new THREE.Mesh(new THREE.RingGeometry(TILE * 0.56, TILE * 0.66, 4, 1),
@@ -7557,10 +7574,10 @@ function startGame(THREE) {
       farm: tiles.filter(function (t) { return t.soil; }).map(function (t) { return { c: t.c, r: t.r, crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet }; }),
       scenery: allScenery.map(function (t) {                          // when each tree or bush was cut (null = standing)
         var u = t.userData;
-        if (u.state === 'standing') return null;
+        if (u.state === 'standing' || u.gone) return null;
         return u.state === 'regrowing' ? u.felledAt : gameMinutes();
       }),
-      rocks: mineable.map(function (r) { return r.state === 'whole' ? null : (r.state === 'regrowing' ? r.brokeAt : gameMinutes()); })
+      rocks: mineable.map(function (r) { return r.state === 'whole' || r.gone ? null : (r.state === 'regrowing' ? r.brokeAt : gameMinutes()); })
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -7579,6 +7596,7 @@ function startGame(THREE) {
   }
   function setSceneryCut(t, cutAt) {                                  // puts a tree or bush back to standing, or cut down at a given time
     var u = t.userData;
+    if (u.gone) return;                                               // cleared for the path: it stays gone
     if (u.proxy) { scene.remove(u.proxy); u.proxy = null; }           // tidy away a tree that was mid-fall
     if (u.stump) { scene.remove(u.stump); u.stump = null; }
     u.shudderT = undefined;
@@ -7594,6 +7612,7 @@ function startGame(THREE) {
     }
   }
   function setRockBroken(r, brokeAt) {
+    if (r.gone) return;                                               // cleared for the path: it stays gone
     r.shakeT = undefined;
     if (brokeAt === null) {
       r.state = 'whole'; r.hits = 0; r.solid.r = r.solidR;
