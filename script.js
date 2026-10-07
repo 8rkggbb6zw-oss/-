@@ -2289,19 +2289,6 @@ function startGame(THREE) {
       var vm = gp(vg, v === 6 ? bridgeCarved : bridgeWall, 0, archY, 0);
       if (v === 6) vm.scale.set(1.05, 1.08, 1.12);                     // the keystone stands proud
     }
-    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.9, 0.22, 0.8), bridgeCarved, 0, archY + SPAN + 0.45, 0);   // the cornice
-    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.6, 0.3, 0.62), bridgeWall, 0, archY + SPAN + 0.69, 0);      // and the parapet over it
-    gp(new THREE.BoxGeometry(PIER_X * 2 + 0.75, 0.1, 0.72), bridgeCarved, 0, archY + SPAN + 0.89, 0);
-    [-1, 1].forEach(function (sd) { gp(new THREE.SphereGeometry(0.16, 14, 10), bridgeCarved, sd * PIER_X, archY + SPAN + 1.1, 0); }); // stone finials
-    gp(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6), bridgeIron, 0, archY + SPAN - 0.5, 0);        // a lantern hanging under the keystone
-    var hl = gp(new THREE.CylinderGeometry(0.11, 0.08, 0.26, 6), bridgeGlass, 0, archY + SPAN - 0.86, 0);
-    hl.castShadow = false;
-    gp(new THREE.ConeGeometry(0.15, 0.13, 6), bridgeIron, 0, archY + SPAN - 0.67, 0);
-    var hg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc878, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
-    hg.position.set(0, archY + SPAN - 0.86, 0);
-    hg.scale.set(1.5, 1.5, 1);
-    gate.add(hg);
-    bridgeGlows.push({ s: hg, p: az, lamp: true });
     scene.add(gate);
     solids.push({ x: BRIDGE_X - PIER_X, z: az, r: 0.45 }, { x: BRIDGE_X + PIER_X, z: az, r: 0.45 }); // you walk between the piers
   });
