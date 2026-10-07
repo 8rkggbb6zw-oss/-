@@ -238,7 +238,7 @@ function startGame(THREE) {
     new THREE.MeshStandardMaterial({ color: 0x8fd3ff, transparent: true, opacity: 0.85, roughness: 0.3 }));
   sea.rotation.x = -Math.PI / 2;
   sea.position.y = -1.4;
-  scene.add(sea);
+  // (no sea: the islands and the bridge float in the open sky)
 
   // A fine grass texture painted once, so the ground has detail up close; it tiles with no seams
   var groundCanvas = document.createElement('canvas');
@@ -2066,7 +2066,7 @@ function startGame(THREE) {
     // underneath: a band of dressed stone just under the deck
     bridgePart(underBandGeo, bridgeWall, BRIDGE_X, yc - 0.55, zc, tilt);
     if (zc > 33.5 && zc < 78.5) {                                     // out over the water: craggy chunks of old floating rock holding the bridge up
-      var tz = (zc - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0), depth = 0.9 + Math.sin(tz * Math.PI) * 1.6;
+      var tz = (zc - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0), depth = (0.9 + Math.sin(tz * Math.PI) * 1.6) * (0.8 + isle2Hash(sb * 5.5) * 0.9) + keelDepth(zc) * 0.4;
       var chunkGeo = new THREE.SphereGeometry(1, 22, 16);           // (a sphere's shading is smooth, so the rock looks weathered rather than boxy)
       var kp = chunkGeo.attributes.position, kvec = new THREE.Vector3(), kcol = [], kc = new THREE.Color();
       var chunkY = yc - 0.78;
@@ -2088,8 +2088,10 @@ function startGame(THREE) {
       }
       chunkGeo.setAttribute('color', new THREE.Float32BufferAttribute(kcol, 3));
       chunkGeo.computeVertexNormals();
-      var chunk = new THREE.Mesh(chunkGeo, keelChunkMat);
-      chunk.position.set(BRIDGE_X + (isle2Hash(sb * 3) - 0.5) * 0.2, chunkY, zc);
+      var chunk = new THREE.Mesh(chunkGeo, keelChunkMat), chunkS = 0.55 + isle2Hash(sb * 7.7) * 0.5;
+      chunk.visible = isle2Hash(sb * 2.6) < 0.45;                    // only some crags push down below the main rock, so the outline is irregular
+      chunk.scale.set(chunkS * 0.8, 1, chunkS * 1.2);
+      chunk.position.set(BRIDGE_X + (isle2Hash(sb * 3) - 0.5) * 0.4, chunkY - 0.6, zc);   // tucked up inside the main rock so only its rough bottom shows
       chunk.rotation.y = (isle2Hash(sb) - 0.5) * 0.4;
       chunk.castShadow = chunk.receiveShadow = true;
       scene.add(chunk);
@@ -2151,6 +2153,47 @@ function startGame(THREE) {
   balusters.castShadow = balusters.receiveShadow = true;
   balusters.frustumCulled = false;
   scene.add(balusters);
+  // The main body of floating rock under the whole bridge: one continuous mass with an uneven, craggy underside,
+  // a band of dark earth and roots right under the stonework, then layers of weathered rock
+  function keelDepth(z) {
+    var tz = Math.max(0, Math.min(1, (z - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0)));
+    return (0.6 + Math.sin(tz * Math.PI) * 2.1) * (0.75 + noise(z * 0.21, 3.7) * 0.45 + noise(z * 0.63, 9.1) * 0.2);
+  }
+  (function () {
+    var KZ0 = BRIDGE_Z0 + 2.2, KZ1 = BRIDGE_Z1 - 2.2, RINGS = 150, SEG = 36, pos = [], col = [], idx = [], c = new THREE.Color();
+    var soil = new THREE.Color(0x4e3b2c);
+    for (var r = 0; r <= RINGS; r++) {
+      var z = KZ0 + (KZ1 - KZ0) * r / RINGS, top = bridgeY(z) - 0.78, depth = keelDepth(z), halfW = BRIDGE_W / 2 - 0.1;
+      for (var sg = 0; sg <= SEG; sg++) {
+        var th = Math.PI + Math.PI * sg / SEG, cx = Math.cos(th), sy = Math.sin(th), under = -sy;
+        var crag = 1 + noise(z * 0.9 + cx * 2.5, sy * 3.5 + 7) * 0.2 + noise(z * 2.6 - cx * 5, sy * 6 + 2) * 0.09 + noise(z * 6 + cx * 9, sy * 9) * 0.03;
+        var drip = Math.pow(under, 2.5) * Math.max(0, noise(z * 1.1 + cx * 1.5, 11) + noise(z * 2.7, cx * 3 + 5) * 0.5) * 1.1; // uneven hanging points
+        var x = BRIDGE_X + cx * halfW * crag * (1 - 0.3 * under), y = top + sy * depth * crag - drip;
+        pos.push(x, y, z + noise(cx * 3 + z * 0.2, sy * 2) * 0.25);
+        var band = Math.sin(y * 6.5 + noise(z * 0.45, cx * 1.3) * 2.2) * 0.5 + 0.5;
+        c.copy(keelDeep).lerp(keelLight, 0.35 + band * 0.55);
+        c.multiplyScalar(0.9 + noise(z * 3 + cx * 4, sy * 4) * 0.12);        // patchy weathering
+        c.lerp(keelDeep, Math.min(1, under * under * 0.55));
+        var dirt = Math.max(0, 1 - (top - y) / 0.35);                         // dark earth right under the stonework
+        c.lerp(soil, Math.min(0.9, dirt));
+        var mossy = Math.max(0, 1 - under * 3.5) * Math.max(0, noise(z * 1.7, cx * 2 + 1) + 0.3);
+        c.lerp(keelMoss, Math.min(0.75, mossy));
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var r2 = 0; r2 < RINGS; r2++) for (var s2 = 0; s2 < SEG; s2++) {
+      var p0 = r2 * (SEG + 1) + s2, p1 = p0 + SEG + 1;
+      idx.push(p0, p1, p0 + 1, p0 + 1, p1, p1 + 1);
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    var mass = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, emissive: 0x16130f, side: THREE.DoubleSide }));
+    mass.castShadow = mass.receiveShadow = true;
+    scene.add(mass);
+  })();
   // a great arched gateway at each end: two massive stone piers, a semicircular arch of voussoirs with a carved keystone,
   // a cornice on top, and a lantern hanging from the arch
   [[BRIDGE_Z0 + 0.7, 0], [BRIDGE_Z1 - 0.7, Math.PI]].forEach(function (end) {
