@@ -26,6 +26,7 @@ function startGame(THREE) {
     clock: document.getElementById('clock'),
     day: document.getElementById('day'),
     mana: document.getElementById('mana'),
+    manaNum: document.getElementById('manaNum'),
     btnAct: document.getElementById('btnAct'),
     btnSpell: document.getElementById('btnSpell')
   };
@@ -7158,6 +7159,8 @@ function startGame(THREE) {
       if (state.mana >= MAX_MANA) manaFullSound();
     } else manaChimeT = 0;
     ui.mana.style.width = (state.mana / MAX_MANA * 100).toFixed(1) + '%';
+    var manaText = Math.floor(state.mana + 0.001) + ' / ' + MAX_MANA;   // the number under the bar, like 65 / 100
+    if (ui.manaNum && ui.manaNum.textContent !== manaText) ui.manaNum.textContent = manaText;
 
     // Lake: moving water, bobbing lily pads, the odd ripple
     waterUniforms.uTime.value = t;
