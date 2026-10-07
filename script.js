@@ -5200,8 +5200,10 @@ function startGame(THREE) {
     tile.crop.userData.stages.forEach(function (sg, i) { sg.visible = i === tile.stage; });
   }
 
+  function farmDay() { return state.day - (state.minutes < 6 * 60 ? 1 : 0); } // a farm day runs from 6 am to 6 am
   function setWet(tile, wet) {
     tile.wet = wet;
+    if (wet) tile.wetDay = farmDay();           // watered soil stays wet until 6 am tomorrow
     if (tile.soil) tile.soil.traverse(function (o) { if (o.isMesh) o.material = wet ? M.soilWet : M.soilDry; });
   }
 
@@ -7114,6 +7116,7 @@ function startGame(THREE) {
   function updateCrops(dt, night) {
     tiles.forEach(function (tile) {
       if (!tile.crop) return;
+      if (tile.wet && tile.wetDay !== farmDay()) setWet(tile, false); // a new day: the soil has dried out, water it again
       if (tile.wet && tile.stage < 3) {
         tile.growth += dt / STAGE_TIME;
         if (tile.growth >= 1) {
@@ -7121,7 +7124,6 @@ function startGame(THREE) {
           tile.growth = 0;
           showStage(tile);
           burst(tile.x, 0.7, tile.z, tile.stage === 3 ? 0xffb3e6 : 0x9be08a, tile.stage === 3 ? 14 : 6, 1.2, 1.6, -2);
-          if (tile.stage < 3) setWet(tile, false); // thirsty again
         }
       }
       tile.crop.rotation.z = Math.sin(state.time * 1.6 + tile.x * 1.3 + tile.z) * 0.05;
