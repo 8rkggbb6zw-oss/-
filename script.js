@@ -334,7 +334,6 @@ function startGame(THREE) {
   }));
   terrain.receiveShadow = true;
   scene.add(terrain);
-  place(new THREE.Mesh(new THREE.BoxGeometry(COLS * TILE + 0.8, 0.04, ROWS * TILE + 0.8), M.garden), FARM_X, 0.01, FARM_Z);
 
   var solids = []; // things you bump into: {x, z, r}
 
@@ -1758,8 +1757,8 @@ function startGame(THREE) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
       'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
   };
-  var BLADES = 3000, OUTER_BLADES = 9000;
-  var grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, BLADES + OUTER_BLADES);
+  var BLADES = 3000, OUTER_BLADES = 9000, GARDEN_BLADES = 260;
+  var grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, BLADES + OUTER_BLADES + GARDEN_BLADES);
   var gMatrix = new THREE.Matrix4(), gQuat = new THREE.Quaternion(), gEuler = new THREE.Euler();
   var gScale = new THREE.Vector3(), gPos = new THREE.Vector3(), gColor = new THREE.Color();
   var blades = 0;
@@ -1790,6 +1789,20 @@ function startGame(THREE) {
     gMatrix.compose(gPos, gQuat, gScale);
     grass.setMatrixAt(blades, gMatrix);
     gColor.setHSL(0.24 + outerRand() * 0.07, 0.35 + outerRand() * 0.2, 0.55 + outerRand() * 0.2);
+    grass.setColorAt(blades, gColor);
+    blades++;
+  }
+  for (var gb2 = 0; gb2 < GARDEN_BLADES; gb2++) { // grass over the old garden patch, with its own random numbers so nothing else moves
+    var gh = function (k) { var v = Math.sin((gb2 + 1) * 12.9898 + k * 78.233) * 43758.5453; return v - Math.floor(v); };
+    var gpx = FARM_X + (gh(1) - 0.5) * (COLS * TILE + 1), gpz = FARM_Z + (gh(2) - 0.5) * (ROWS * TILE + 1);
+    gEuler.set((gh(3) - 0.5) * 0.5, gh(4) * Math.PI, (gh(5) - 0.5) * 0.5);
+    gQuat.setFromEuler(gEuler);
+    var pgs = 0.6 + gh(6) * 0.9;
+    gScale.set(pgs, pgs * (0.6 + gh(7) * 0.9), pgs);
+    gPos.set(gpx, groundHeight(gpx, gpz), gpz);
+    gMatrix.compose(gPos, gQuat, gScale);
+    grass.setMatrixAt(blades, gMatrix);
+    gColor.setHSL(0.24 + gh(8) * 0.07, 0.35 + gh(9) * 0.2, 0.55 + gh(10) * 0.2);
     grass.setColorAt(blades, gColor);
     blades++;
   }
