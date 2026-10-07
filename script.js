@@ -3185,7 +3185,7 @@ function startGame(THREE) {
   });
   var brickMat = rMat(0xffffff, { map: brickTex, emissive: 0xff5a1a, emissiveMap: brickTex, emissiveIntensity: 0.6, roughness: 1 });
   iPart(new THREE.PlaneGeometry(OPEN_W, OPEN_H + 0.38), brickMat, FPX, (OPEN_H + 0.38) / 2, FZ0 + 0.06);                 // the back of the firebox
-  [-1, 1].forEach(function (sd) { iPart(new THREE.PlaneGeometry(FP_D - 0.06, OPEN_H + 0.38), brickMat, FPX + sd * OPEN_W / 2, (OPEN_H + 0.38) / 2, FZ0 + 0.06 + (FP_D - 0.06) / 2, 0, -sd * Math.PI / 2, 0); });
+  [-1, 1].forEach(function (sd) { iPart(new THREE.PlaneGeometry(FP_D - 0.06, OPEN_H + 0.38), brickMat, FPX + sd * (OPEN_W / 2 - 0.015), (OPEN_H + 0.38) / 2, FZ0 + 0.06 + (FP_D - 0.06) / 2, 0, -sd * Math.PI / 2, 0); }); // the side walls, just inside the stone so they don't flicker
   iPart(new THREE.PlaneGeometry(OPEN_W, FP_D), R.soot, FPX, 0.13, FZ0 + FP_D / 2, -Math.PI / 2);                         // the sooty floor of the firebox
   iPart(new THREE.BoxGeometry(OPEN_W + 1.6, 0.13, 0.75), R.stone, FPX, 0.065, FZF + 0.3);                               // the raised stone hearth
   iPart(new THREE.BoxGeometry(OPEN_W + 1.66, 0.04, 0.8), rMat(0x8c8494, { roughness: 0.7 }), FPX, 0.135, FZF + 0.3);    // with a smooth slab on top
