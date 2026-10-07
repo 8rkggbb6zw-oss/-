@@ -6019,29 +6019,52 @@ function startGame(THREE) {
     draw(c.getContext('2d'));
     return c.toDataURL();
   }
-  function iconCoin() {                                        // a shiny gold Star Coin with a raised star in the middle
+  function iconCoin() {                                        // a Star Coin: a puffy gold star with a bevelled edge and a crescent moon stamped in the middle
     return iconCanvas(function (g) {
-      var rim = g.createLinearGradient(8, 6, 56, 58);
-      rim.addColorStop(0, '#fff2a8'); rim.addColorStop(0.5, '#f2b632'); rim.addColorStop(1, '#a8620c');
-      g.fillStyle = rim;
-      g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
-      var face = g.createRadialGradient(26, 24, 2, 32, 32, 24);
-      face.addColorStop(0, '#fff6c4'); face.addColorStop(0.55, '#ffcf4a'); face.addColorStop(1, '#d99015');
-      g.fillStyle = face;
-      g.beginPath(); g.arc(32, 32, 22, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = 'rgba(150,80,10,0.45)'; g.lineWidth = 1.2;
-      g.beginPath(); g.arc(32, 32, 22, 0, Math.PI * 2); g.stroke();
-      function star(cx, cy, r1, r2) {
+      function starPath(cx, cy, r1, r2, round) {                       // a five-point star with softly rounded tips
+        var pts = [];
+        for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? r2 : r1; pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
         g.beginPath();
-        for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? r2 : r1; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+        for (var k = 0; k < 10; k++) {
+          var p0 = pts[(k + 9) % 10], p1 = pts[k], p2 = pts[(k + 1) % 10];
+          var ax = p1[0] + (p0[0] - p1[0]) * round, ay = p1[1] + (p0[1] - p1[1]) * round;
+          var bx = p1[0] + (p2[0] - p1[0]) * round, by = p1[1] + (p2[1] - p1[1]) * round;
+          if (k === 0) g.moveTo(ax, ay); else g.lineTo(ax, ay);
+          g.quadraticCurveTo(p1[0], p1[1], bx, by);
+        }
         g.closePath();
       }
-      g.fillStyle = 'rgba(140,70,5,0.5)'; star(33.2, 34, 13, 5.6); g.fill();   // the star's shadow, so it looks stamped in
-      var st = g.createLinearGradient(20, 18, 44, 46);
-      st.addColorStop(0, '#fffbe0'); st.addColorStop(1, '#f5b52a');
-      g.fillStyle = st; star(32, 32.5, 13, 5.6); g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.8)';                                   // a glint of shine
-      g.beginPath(); g.ellipse(20, 18, 6, 2.5, -0.7, 0, Math.PI * 2); g.fill();
+      g.shadowColor = 'rgba(120,60,0,0.45)'; g.shadowBlur = 4; g.shadowOffsetY = 2.5;
+      var edge = g.createLinearGradient(10, 6, 54, 60);                // the bevelled outer edge
+      edge.addColorStop(0, '#fff4b8'); edge.addColorStop(0.5, '#f0b030'); edge.addColorStop(1, '#a35c08');
+      g.fillStyle = edge; starPath(32, 34, 30, 14.5, 0.22); g.fill();
+      g.shadowColor = 'transparent';
+      var face = g.createRadialGradient(27, 27, 2, 32, 34, 24);         // the raised face
+      face.addColorStop(0, '#fffbe0'); face.addColorStop(0.45, '#ffd658'); face.addColorStop(1, '#e89e1c');
+      g.fillStyle = face; starPath(32, 34.5, 23.5, 11.5, 0.24); g.fill();
+      g.strokeStyle = 'rgba(160,90,10,0.5)'; g.lineWidth = 1;
+      starPath(32, 34.5, 23.5, 11.5, 0.24); g.stroke();
+      // a crescent moon stamped into the middle: a shadow, then the lit moon
+      function moon(cx, cy, r) {
+        g.beginPath();
+        g.arc(cx, cy, r, Math.PI * 0.32, Math.PI * 1.68, false);
+        g.arc(cx + r * 0.55, cy - r * 0.12, r * 0.74, Math.PI * 1.45, Math.PI * 0.6, true);
+        g.closePath();
+      }
+      g.fillStyle = 'rgba(130,60,0,0.8)'; moon(32, 36.6, 8.4); g.fill();
+      var mg = g.createLinearGradient(24, 28, 36, 42);
+      mg.addColorStop(0, '#ffffff'); mg.addColorStop(1, '#fff1c2');
+      g.fillStyle = mg; moon(31, 35.4, 8.4); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.85)';                          // shine along the top-left arms
+      g.beginPath(); g.ellipse(17, 27, 3.5, 1.4, -0.4, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(31, 12.5, 1.4, 3.5, 0, 0, Math.PI * 2); g.fill();
+      function twinkle(x, y, r) {                                      // little sparkles round it
+        g.fillStyle = '#fff6c0';
+        g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r * 0.25, y - r * 0.25); g.lineTo(x + r, y); g.lineTo(x + r * 0.25, y + r * 0.25);
+        g.lineTo(x, y + r); g.lineTo(x - r * 0.25, y + r * 0.25); g.lineTo(x - r, y); g.lineTo(x - r * 0.25, y - r * 0.25); g.closePath(); g.fill();
+      }
+      twinkle(53, 9, 4.5);
+      twinkle(9, 54, 3.2);
     });
   }
   function iconSap() {
@@ -7136,7 +7159,7 @@ function startGame(THREE) {
   var sellOne = sellRow.children[0], sellAll = sellRow.children[1];
   function updateSellRow() {
     if (!sellRow) return;                                        // (the bag can be drawn before this part is set up)
-    var it = bag[selectedSlot], price = it ? ITEMS[it.id].price : 0;
+    var it = bag[selectedSlot], price = it && !isTool(it.id) ? ITEMS[it.id].price : 0;
     sellRow.hidden = !price;                                   // tools can't be sold
     if (!price) return;
     sellOne.innerHTML = 'Sell 1 · <img class="coin-icon" alt=""> ' + price;
@@ -7144,9 +7167,10 @@ function startGame(THREE) {
     sellAll.hidden = it.count < 2;
     paintCoinIcons(sellRow);
   }
+  function isTool(id) { return id === 'axe' || id === 'pickaxe' || id === 'trimmers' || id === 'hoe'; }
   function sellSelected(all) {
     var it = bag[selectedSlot];
-    if (!it || !ITEMS[it.id].price) return;
+    if (!it || isTool(it.id) || !ITEMS[it.id].price) return;   // never sell your tools
     var n = all ? it.count : 1, earned = ITEMS[it.id].price * n, name = ITEMS[it.id].name;
     if (!takeItem(it.id, n)) return;
     state.coins += earned;
