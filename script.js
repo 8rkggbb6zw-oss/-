@@ -6910,6 +6910,17 @@ function startGame(THREE) {
     renderHotbar();
   }
   if (hotUi.row) hotUi.row.addEventListener('click', function () { nextRow(); focusGame(); });
+  function stepSlot(dir) { // select the next slot that has something in it, flipping the hotbar to its row
+    var at = selectedSlot >= 0 ? selectedSlot : (dir > 0 ? hotRow * ROW_SIZE - 1 : hotRow * ROW_SIZE + ROW_SIZE);
+    for (var tries = 0; tries < BAG_SLOTS; tries++) {
+      at = (at + dir + BAG_SLOTS) % BAG_SLOTS;
+      if (bag[at]) break;
+    }
+    if (!bag[at]) return;                       // the bag is empty
+    selectedSlot = at;
+    hotRow = Math.floor(at / ROW_SIZE);
+    renderBag();
+  }
 
   function renderBag() {
     renderHotbar();
@@ -6945,6 +6956,7 @@ function startGame(THREE) {
     if (e.repeat) return;
     if (e.code === 'KeyI') toggleBag();
     if (e.code === 'KeyR') nextRow();
+    if (e.code === 'Tab') { e.preventDefault(); stepSlot(e.shiftKey ? -1 : 1); } // Tab steps to your next item, Shift+Tab goes back
     // number keys 1-4 pick that slot in the hotbar's current row (pressing it again unselects it)
     var num = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
     if (num >= 0) {
