@@ -23,7 +23,6 @@ function showToast(message, ms) {
 function startGame(THREE) {
   var canvas = document.getElementById('game');
   var ui = {
-    harvest: document.getElementById('harvest'),
     clock: document.getElementById('clock'),
     day: document.getElementById('day'),
     mana: document.getElementById('mana'),
@@ -5701,7 +5700,6 @@ function startGame(THREE) {
       tile.crop = null;
       setWet(tile, false);
       state.harvest += 1;
-      ui.harvest.textContent = state.harvest;
       addItem('bloom', 1);
       addItem('seed', 2);
       burst(tile.x, 0.8, tile.z, 0xffb3e6, 22, 3, 3, -4);
@@ -7323,7 +7321,6 @@ function startGame(THREE) {
     // the clock, mana and harvests
     state.mana = data.state.mana; state.harvest = data.state.harvest;
     state.minutes = data.state.minutes; state.day = data.state.day; state.petalDay = data.state.petalDay;
-    ui.harvest.textContent = state.harvest;
     // your bag
     for (var i = 0; i < BAG_SLOTS; i++) bag[i] = data.bag[i] ? { id: data.bag[i].id, count: data.bag[i].count } : null;
     selectedSlot = data.selectedSlot; hotRow = data.hotRow || 0;
