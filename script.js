@@ -4548,7 +4548,7 @@ function startGame(THREE) {
       var sh = 1 - (L.mesh.position.y - L.ground - L.hover) * 0.5; // the shadow grows as the log comes down
       L.shadow.material.opacity = 0.2 * Math.max(0.2, Math.min(1, sh));
       if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < PICKUP_RANGE) { // walked into it: collect
-        if (!addItem(L.item, L.amount)) continue;
+        if (!addItem(L.item, L.amount)) { bagFull(); continue; }  // no room: it stays where it is
         popSound();
         showToast('+' + L.amount + ' ' + ITEMS[L.item].name + ' ' + ITEMS[L.item].icon);
         burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
@@ -6005,7 +6005,8 @@ function startGame(THREE) {
     var tile = targetTile();
     if (!tile) {
       if (nearTree) return;
-      if (state.inTreeZone && state.petalDay !== state.day && addItem('petal', 1)) {
+      if (state.inTreeZone && state.petalDay !== state.day) {
+        if (!addItem('petal', 1)) { bagFull(); return; }
         state.petalDay = state.day;
         burst(TREE_X, 2.5, TREE_Z, 0xffb3f0, 18, 2, 1, -2);
         popSound();
@@ -6025,6 +6026,7 @@ function startGame(THREE) {
       burst(tile.x, 0.3, tile.z, 0x7ed37a, 8, 1.2, 1.4, -4);
       plantSound();
     } else if (tile.stage === 3) {
+      if (!roomFor(['bloom', 'seed'])) { bagFull(); return; }    // no room: the flower waits in the soil until you make some
       scene.remove(tile.crop);
       scene.remove(tile.drop);
       tile.crop = null;
@@ -7170,6 +7172,24 @@ function startGame(THREE) {
     }
     return false;
   }
+  // Is there room in the bag for all of these kinds of item? (each one either joins a stack or needs an empty slot)
+  function roomFor(ids) {
+    var empty = 0, need = 0, i;
+    for (i = 0; i < BAG_SLOTS; i++) if (!bag[i]) empty++;
+    ids.forEach(function (id) { if (!bagCount(id)) need++; });
+    return need <= empty;
+  }
+  // The bag is full: a message and a soft "uh-oh" (not over and over while you stand next to something)
+  var bagFullAt = -99;
+  function bagFull() {
+    if (state.time - bagFullAt < 2.5) return;
+    bagFullAt = state.time;
+    showToast('🎒 Inventory full!', 1800);
+    if (!audioCtx) return;
+    bellTone(659, 0.09, 0.35, 0);       // two soft notes, the second lower
+    bellTone(523, 0.09, 0.5, 0.14);
+    bellTone(1046, 0.025, 0.25, 0);
+  }
   // Takes items out of the bag; returns false if you don't have enough
   function takeItem(id, n) {
     for (var i = 0; i < BAG_SLOTS; i++) {
@@ -7335,7 +7355,7 @@ function startGame(THREE) {
   function unshipItem(n) {                                      // take a stack back out of the bin, if your bag has room
     var st = shipBin[n];
     if (!st) return;
-    if (!addItem(st.id, st.count)) { showToast('Your bag is full', 1800); return; }
+    if (!addItem(st.id, st.count)) { bagFull(); return; }
     shipBin.splice(n, 1);
     renderShip();
     popSound();
