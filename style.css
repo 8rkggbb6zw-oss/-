@@ -239,3 +239,17 @@ kbd {
   pointer-events: none;
 }
 
+/* the Sleep button that appears when you stand by your bed */
+.sleep-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 130px;
+  transform: translate(-50%, 10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  background: linear-gradient(135deg, #5b4aa8, #c79bff);
+  box-shadow: 0 4px 0 #3e2f80, 0 6px 14px rgba(40, 20, 90, 0.4);
+  z-index: 4;
+}
+.sleep-btn.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }

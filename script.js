@@ -3470,10 +3470,9 @@ function startGame(THREE) {
   // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
   var sleepBtn = document.createElement('button');
   sleepBtn.type = 'button';
+  sleepBtn.className = 'sleep-btn';
   sleepBtn.innerHTML = '🌙 Sleep <kbd>Z</kbd>';
-  sleepBtn.style.cssText = 'position:absolute;left:50%;bottom:130px;transform:translateX(-50%);z-index:4;display:none;' +   // floats over the game, hidden until you're by the bed
-    'background:linear-gradient(135deg,#5b4aa8,#c79bff);box-shadow:0 4px 0 #3e2f80,0 6px 14px rgba(40,20,90,0.4);';
-  document.querySelector('.frame').appendChild(sleepBtn);
+  canvas.parentNode.appendChild(sleepBtn);
   var sleeping = false;
   function nearBed() {
     if (!indoors) return false;
@@ -3503,8 +3502,8 @@ function startGame(THREE) {
   sleepBtn.addEventListener('click', function () { goToSleep(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyZ') goToSleep(); });
   function updateSleepButton() {
-    var show = nearBed() && !sleeping ? 'block' : 'none';
-    if (sleepBtn.style.display !== show) sleepBtn.style.display = show;
+    var show = nearBed() && !sleeping;
+    if (sleepBtn.classList.contains('show') !== show) sleepBtn.classList.toggle('show', show);
   }
 
 
