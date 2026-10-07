@@ -5756,6 +5756,7 @@ function startGame(THREE) {
   function canFarm(x, z) {                                    // is this tile's spot open ground you could till?
     if (onIsle2(x, z, -2)) return false;                       // never on the new island: that's for the town square
     if (nearBridgeLanding(x, z, 0)) return false;              // or where the bridge lands
+    if (onBridge(x, z) || (Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + TILE && z > BRIDGE_Z0 - 2 && z < BRIDGE_Z1 + 2)) return false; // or on the bridge itself
     var h = TILE / 2;
     var corners = [[x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h], [x, z]];
     for (var k = 0; k < corners.length; k++) {
