@@ -1868,7 +1868,7 @@ function startGame(THREE) {
 
   // ---------- The second island: a grassy island out to sea, past the front of yours ----------
   // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
-  var ISLE2_X = 0, ISLE2_Z = 84, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
+  var ISLE2_X = 0, ISLE2_Z = 100, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
   function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
@@ -5389,6 +5389,7 @@ function startGame(THREE) {
     return lx > FENCE_L - 0.7 && lx < FENCE_R + 0.7 && lz > FENCE_B - 0.7 && lz < FENCE_F + 0.7;
   }
   function canFarm(x, z) {                                    // is this tile's spot open ground you could till?
+    if (onIsle2(x, z, -2)) return false;                       // never on the new island: that's for the town square
     var h = TILE / 2;
     var corners = [[x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h], [x, z]];
     for (var k = 0; k < corners.length; k++) {
