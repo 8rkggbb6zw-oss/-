@@ -314,3 +314,16 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
 }
 .sell-btn:active { box-shadow: 0 1px 0 #7a62b8; }
 
+/* The shipping bin: your bag on one side, what's in the bin on the other */
+.inventory.ship { width: min(540px, 94%); max-height: 92%; overflow-y: auto; }
+.ship-hint { margin: 0 2px 10px; font-size: .82rem; line-height: 1.35; opacity: .85; }
+.ship-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ship-cols h4 { margin: 0 0 6px; font-size: .9rem; color: #7b4fd6; }
+.ship-bin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 190px; overflow-y: auto; align-content: start; }
+.ship .slot { font-size: 1.4rem; }
+.ship .slot.locked { opacity: .35; }
+.ship .slot.empty { pointer-events: none; }
+.ship-empty { grid-column: 1 / -1; margin: 6px 0; font-size: .85rem; opacity: .7; }
+.ship-total { margin: 10px 2px 0; font-weight: 600; color: #5a3d9a; }
+@media (max-width: 560px) { .ship-cols { grid-template-columns: 1fr; } }
+

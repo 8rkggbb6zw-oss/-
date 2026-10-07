@@ -2941,6 +2941,66 @@ function startGame(THREE) {
   fenceRun(FENCE_R, FENCE_B, FENCE_R, FENCE_F);  // right side
   fenceRun(FENCE_R, FENCE_F, GATE, FENCE_F);     // front, right of the gate
 
+  // The shipping bin, just outside the fence on the far right: a sleek, modern black bin. Matte black with a fluted front,
+  // a recessed plinth so it seems to float, a flat lid with a brushed-steel bar handle, a steel hinge along the back,
+  // and an engraved steel label (the lid swings open when you use it)
+  var BIN_X = FENCE_R + 1.15, BIN_Z = FRONT + 1.0, BIN_W = 1.2, BIN_H = 0.66, BIN_D = 0.78, BIN_FOOT = 0.07;
+  function roundedBox(w, h, d, r) {                                   // a box with crisp but slightly softened edges
+    var sh = new THREE.Shape(), x = -w / 2 + r, y = -h / 2 + r, iw = w - 2 * r, ih = h - 2 * r;
+    sh.moveTo(x, y); sh.lineTo(x + iw, y); sh.lineTo(x + iw, y + ih); sh.lineTo(x, y + ih); sh.lineTo(x, y);
+    var g = new THREE.ExtrudeGeometry(sh, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r, bevelSegments: 3, curveSegments: 4 });
+    g.translate(0, 0, -(d - 2 * r) / 2);
+    return g;
+  }
+  var brushedTex = paintTexture(128, 64, function (g, w, h) {        // brushed steel: fine horizontal streaks
+    g.fillStyle = '#b9bcc2'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 220; i++) {
+      g.fillStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(60,64,72,0.14)';
+      g.fillRect(Math.random() * w, Math.random() * h, 20 + Math.random() * 60, 1);
+    }
+  });
+  houseMats.binBlack = new THREE.MeshStandardMaterial({ color: 0x1d1d22, roughness: 0.5, metalness: 0.15 });
+  houseMats.binPlinth = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.8 });
+  houseMats.binSteel = new THREE.MeshStandardMaterial({ map: brushedTex, roughness: 0.3, metalness: 0.35 });
+  houseMats.binDark = new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 1 });
+  var binLabelTex = paintTexture(256, 64, function (g, w, h) {       // the label: brushed steel with engraved letters
+    g.drawImage(brushedTex.image, 0, 0, w, h);
+    g.font = '600 30px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (g.letterSpacing !== undefined) g.letterSpacing = '6px';
+    g.fillStyle = 'rgba(255,255,255,0.55)'; g.fillText('SHIPPING', w / 2 + 0.8, h / 2 + 1.8); // the lit lower edge of the engraving
+    g.fillStyle = '#2a2c32'; g.fillText('SHIPPING', w / 2, h / 2 + 1);
+  });
+  houseMats.binLabel = new THREE.MeshStandardMaterial({ map: binLabelTex, roughness: 0.35, metalness: 0.3 });
+  var BODY_Y = BIN_FOOT + BIN_H / 2;
+  hPart(roundedBox(BIN_W - 0.1, BIN_FOOT + 0.01, BIN_D - 0.1, 0.01), 'binPlinth', BIN_X, BIN_FOOT / 2, BIN_Z);   // the recessed plinth
+  hPart(roundedBox(BIN_W, BIN_H, BIN_D, 0.025), 'binBlack', BIN_X, BODY_Y, BIN_Z);                           // the body
+  var FLUTES = 18, fluteGeo = new THREE.CylinderGeometry(0.022, 0.022, BIN_H - 0.12, 10, 1, false, 0, Math.PI);
+  for (var fl = 0; fl < FLUTES; fl++) {                                                                        // vertical fluting across the front
+    var flx = BIN_X - BIN_W / 2 + 0.07 + fl * (BIN_W - 0.14) / (FLUTES - 1);
+    hPart(fluteGeo, 'binBlack', flx, BODY_Y - 0.01, BIN_Z + BIN_D / 2, 0, -Math.PI / 2, 0).scale.set(1, 1, 0.45);
+  }
+  hPart(new THREE.BoxGeometry(0.52, 0.13, 0.012), 'binLabel', BIN_X, BODY_Y + 0.08, BIN_Z + BIN_D / 2 + 0.018); // the steel label
+  hPart(new THREE.PlaneGeometry(BIN_W - 0.06, BIN_D - 0.06), 'binDark', BIN_X, BIN_FOOT + BIN_H + 0.002, BIN_Z, -Math.PI / 2, 0, 0); // the inside
+  hPart(new THREE.CylinderGeometry(0.013, 0.013, BIN_W - 0.1, 10), 'binSteel', BIN_X, BIN_FOOT + BIN_H + 0.004, BIN_Z - BIN_D / 2 - 0.012, 0, 0, Math.PI / 2); // the hinge along the back
+  // the lid: a flat black slab with a slim steel bar handle, hinged along the back edge
+  var binLid = new THREE.Group();
+  binLid.position.set(BIN_X, BIN_FOOT + BIN_H + 0.004, BIN_Z - BIN_D / 2 - 0.012);
+  var lidSlab = new THREE.Mesh(roundedBox(BIN_W + 0.03, 0.05, BIN_D + 0.03, 0.015), new THREE.MeshStandardMaterial({ color: 0x232328, roughness: 0.42, metalness: 0.2 }));
+  lidSlab.position.set(0, 0.025, (BIN_D + 0.03) / 2);
+  lidSlab.castShadow = lidSlab.receiveShadow = true;
+  binLid.add(lidSlab);
+  var handleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.34, 12), houseMats.binSteel);    // the bar handle
+  handleBar.rotation.z = Math.PI / 2;
+  handleBar.position.set(0, 0.025, BIN_D + 0.03 + 0.035);
+  binLid.add(handleBar);
+  [-1, 1].forEach(function (sx) {                                       // on two little standoffs
+    var post = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.04, 8), houseMats.binSteel);
+    post.rotation.x = Math.PI / 2;
+    post.position.set(sx * 0.15, 0.025, BIN_D + 0.03 + 0.016);
+    binLid.add(post);
+  });
+  houseLive.add(binLid);
+
   // Join the still parts into a few meshes (one per material) so the house stays fast
   house.updateMatrixWorld(true);
   var houseByMat = {};
@@ -2967,7 +3027,7 @@ function startGame(THREE) {
     var c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
     return { x: HOUSE_X + lx * c + lz * s, z: HOUSE_Z - lx * s + lz * c };
   }
-  var houseBumps = [[TX, TZ, TR + 0.2], [CX, CZ, 0.55], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]];
+  var houseBumps = [[TX, TZ, TR + 0.2], [CX, CZ, 0.55], [BIN_X - 0.3, BIN_Z, 0.5], [BIN_X + 0.3, BIN_Z, 0.5], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]];
   for (var hbx = -2.9; hbx <= 2.95; hbx += 1.45) { houseBumps.push([hbx, -0.85, 1.15], [hbx, 0.85, 1.15]); } // two rows of bumpers fill the house's footprint
   fencePosts.forEach(function (fp) { houseBumps.push([fp[0], fp[1], 0.24]); }); // and you can't walk through the fence
   houseBumps.forEach(function (c) {
@@ -5086,15 +5146,17 @@ function startGame(THREE) {
     flushDirty();
   }
 
-  // Trees, bushes and rocks that happen to stand on the path are cleared away for good, so it's open all the way
+  // Trees, bushes and rocks that happen to stand on the path (or where the shipping bin sits) are cleared away for good
+  var binSpot = houseToWorld(BIN_X, BIN_Z);
   allScenery.forEach(function (t) {
     var u = t.userData;
-    if (pathDist(u.solid.x, u.solid.z) > PATH_W + 0.35 + u.solidR * 0.7) return;
+    var onBin = dist(u.solid.x, u.solid.z, binSpot.x, binSpot.z) < 1.6 + u.solidR * (trimmable.indexOf(t) >= 0 ? 1.6 : 0.8); // bushes spread wider than their trunk
+    if (!onBin && pathDist(u.solid.x, u.solid.z) > PATH_W + 0.35 + u.solidR * 0.7) return;
     u.gone = true; u.state = 'gone'; u.solid.r = 0;
     setTreeGrowth(t, 0);
   });
   mineable.forEach(function (r) {
-    if (pathDist(r.x, r.z) > PATH_W + 0.3 + r.size * 0.6) return;
+    if (dist(r.x, r.z, binSpot.x, binSpot.z) > 1.4 + r.size && pathDist(r.x, r.z) > PATH_W + 0.3 + r.size * 0.6) return;
     r.gone = true; r.state = 'gone'; r.solid.r = 0;
     setRock(r, 0);
   });
@@ -5932,6 +5994,8 @@ function startGame(THREE) {
   }
 
   function interact() {
+    if (binOpen) { closeBin(); return; }
+    if (nearBin()) { openBin(); return; }                         // next to the shipping bin: open it
     var nearTree = treeInReach();
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var nearRock = heldItem() === 'pickaxe' ? rockInReach() : null;
@@ -7124,8 +7188,8 @@ function startGame(THREE) {
   function describeSlot() {
     var it = bag[selectedSlot];
     bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
+      + (ITEMS[it.id].price && !isTool(it.id) ? ' Sells for ' + ITEMS[it.id].price + ' Star Coins in the shipping bin.' : '')
       : 'Tap an item to see what it is.';
-    updateSellRow();
   }
 
   // ---------- Star Coins: the island's money. Sell things from your bag to earn them ----------
@@ -7140,34 +7204,7 @@ function startGame(THREE) {
     coinCount.textContent = state.coins;
     if (bump) { coinUi.classList.remove('bump'); void coinUi.offsetWidth; coinUi.classList.add('bump'); } // a little hop when you earn some
   }
-  var sellRow = document.createElement('div');                 // under the item's description in the bag
-  sellRow.className = 'sell-row';
-  sellRow.innerHTML = '<button type="button" class="sell-btn" data-n="1"></button><button type="button" class="sell-btn" data-n="all"></button>';
-  if (bagUi.box) bagUi.box.appendChild(sellRow);
-  var sellOne = sellRow.children[0], sellAll = sellRow.children[1];
-  function updateSellRow() {
-    if (!sellRow) return;                                        // (the bag can be drawn before this part is set up)
-    var it = bag[selectedSlot], price = it && !isTool(it.id) ? ITEMS[it.id].price : 0;
-    sellRow.hidden = !price;                                   // tools can't be sold
-    if (!price) return;
-    sellOne.innerHTML = 'Sell 1 · <img class="coin-icon" alt=""> ' + price;
-    sellAll.innerHTML = 'Sell all ' + it.count + ' · <img class="coin-icon" alt=""> ' + price * it.count;
-    sellAll.hidden = it.count < 2;
-    paintCoinIcons(sellRow);
-  }
   function isTool(id) { return id === 'axe' || id === 'pickaxe' || id === 'trimmers' || id === 'hoe'; }
-  function sellSelected(all) {
-    var it = bag[selectedSlot];
-    if (!it || isTool(it.id) || !ITEMS[it.id].price) return;   // never sell your tools
-    var n = all ? it.count : 1, earned = ITEMS[it.id].price * n, name = ITEMS[it.id].name;
-    if (!takeItem(it.id, n)) return;
-    state.coins += earned;
-    showCoins(true);
-    coinSound(n);
-    showToast('Sold ' + n + ' ' + name + ' for ' + earned + ' Star Coins ✦');
-  }
-  sellOne.addEventListener('click', function () { sellSelected(false); });
-  sellAll.addEventListener('click', function () { sellSelected(true); });
   function coinSound(n) {                                       // a bright jingle of coins: more coins, a longer jingle
     if (!audioCtx) return;
     var clinks = Math.min(6, 1 + Math.floor(n / 3));
@@ -7187,6 +7224,126 @@ function startGame(THREE) {
   }
   paintCoinIcons(coinUi);
   showCoins(false);
+
+  // ---------- The shipping bin: put things in to sell them. They sell at 6 am the next morning ----------
+  var shipBin = [];                                             // what's in the bin: [{ id, count }], as many kinds as you like
+  var lastFarmDay = null;                                       // so we notice when 6 am comes round
+  var binOpen = false;
+  var binWorld = houseToWorld(BIN_X, BIN_Z);
+  function nearBin() { return !indoors && dist(player.position.x, player.position.z, binWorld.x, binWorld.z) < 1.9; }
+  var shipBtn = document.createElement('button');               // pops up when you're next to the bin
+  shipBtn.type = 'button';
+  shipBtn.className = 'sleep-btn ship-btn';
+  shipBtn.innerHTML = '📦 Shipping Bin <kbd>E</kbd>';
+  canvas.parentNode.appendChild(shipBtn);
+  var shipBox = document.createElement('div');                  // the bin screen: your bag on one side, the bin on the other
+  shipBox.className = 'inventory ship';
+  shipBox.hidden = true;
+  shipBox.innerHTML = '<div class="inv-head"><b>📦 Shipping Bin</b><button type="button" class="inv-close" aria-label="Close the shipping bin">✕</button></div>' +
+    '<p class="ship-hint">Tap something in your bag to put it in the bin, or tap it in the bin to take it back out. Everything in the bin sells at 6 am tomorrow.</p>' +
+    '<div class="ship-cols"><div><h4>Your bag</h4><div class="inv-grid ship-bag"></div></div>' +
+    '<div><h4>In the bin</h4><div class="ship-bin"></div></div></div>' +
+    '<p class="ship-total">Sells at 6 am for <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(shipBox);
+  paintCoinIcons(shipBox);
+  var shipBagGrid = shipBox.querySelector('.ship-bag'), shipBinGrid = shipBox.querySelector('.ship-bin'), shipTotal = shipBox.querySelector('.ship-total b');
+  shipBox.querySelector('.inv-close').addEventListener('click', function () { closeBin(); focusGame(); });
+  function binValue() {
+    var total = 0;
+    shipBin.forEach(function (st) { total += ITEMS[st.id].price * st.count; });
+    return total;
+  }
+  function shipSlot(id, count, locked) {                        // one square showing an item and how many
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'slot' + (locked ? ' locked' : '');
+    b.appendChild(itemPicture(id));
+    if (!isTool(id)) { var c = document.createElement('span'); c.className = 'count'; c.textContent = count; b.appendChild(c); } // tools don't show a count
+    b.title = ITEMS[id].name + (locked ? ' (tools can\'t be shipped)' : '');
+    return b;
+  }
+  function renderShip() {
+    if (shipBox.hidden) return;
+    shipBagGrid.innerHTML = '';
+    bag.forEach(function (it, i) {
+      if (!it) { var e = document.createElement('div'); e.className = 'slot empty'; shipBagGrid.appendChild(e); return; }
+      var locked = isTool(it.id) || !ITEMS[it.id].price;
+      var b = shipSlot(it.id, it.count, locked);
+      b.addEventListener('click', function () {
+        if (locked) { showToast('Tools can\'t go in the shipping bin', 1800); return; }
+        shipItem(i);
+      });
+      shipBagGrid.appendChild(b);
+    });
+    shipBinGrid.innerHTML = '';
+    if (!shipBin.length) shipBinGrid.innerHTML = '<p class="ship-empty">The bin is empty.</p>';
+    shipBin.forEach(function (st, n) {
+      var b = shipSlot(st.id, st.count, false);
+      b.addEventListener('click', function () { unshipItem(n); });
+      shipBinGrid.appendChild(b);
+    });
+    shipTotal.textContent = binValue();
+  }
+  function shipItem(i) {                                        // the whole stack from that bag slot goes in the bin
+    var it = bag[i];
+    if (!it || isTool(it.id) || !ITEMS[it.id].price) return;
+    var found = null;
+    shipBin.forEach(function (st) { if (st.id === it.id) found = st; });
+    if (found) found.count += it.count; else shipBin.push({ id: it.id, count: it.count });
+    bag[i] = null;
+    if (selectedSlot === i) selectedSlot = -1;
+    renderBag();
+    renderShip();
+    binThunk();
+  }
+  function unshipItem(n) {                                      // take a stack back out of the bin, if your bag has room
+    var st = shipBin[n];
+    if (!st) return;
+    if (!addItem(st.id, st.count)) { showToast('Your bag is full', 1800); return; }
+    shipBin.splice(n, 1);
+    renderShip();
+    popSound();
+  }
+  function binThunk() {                                         // a soft wooden thunk as things drop into the crate
+    if (!audioCtx) return;
+    hissBurst(0.12, 'lowpass', 500, 0.6, 0.25, 0.002, 0.08);
+    slideTone('triangle', 180, 90, 0.25, 0.12);
+  }
+  function openBin() {
+    if (binOpen) return;
+    toggleBag(false);
+    binOpen = true;
+    walkTarget = null;
+    shipBox.hidden = false;
+    renderShip();
+  }
+  function closeBin() {
+    binOpen = false;
+    shipBox.hidden = true;
+  }
+  shipBtn.addEventListener('click', function () { openBin(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && binOpen) closeBin(); });
+  function payOutBin() {                                        // 6 am: everything in the bin is sold
+    var total = binValue();
+    if (!total) return;
+    shipBin = [];
+    state.coins += total;
+    showCoins(true);
+    coinSound(20);
+    showToast('☀ Your shipping bin sold for ' + total + ' Star Coins!', 3600);
+    renderShip();
+  }
+  function updateShipping(dt) {
+    var fd = farmDay();
+    if (lastFarmDay === null) lastFarmDay = fd;
+    if (fd !== lastFarmDay) { lastFarmDay = fd; payOutBin(); }  // a new morning has come
+    var near = nearBin();
+    if (binOpen && !near) closeBin();                            // walk away and it closes
+    var show = near && !binOpen;
+    if (shipBtn.classList.contains('show') !== show) shipBtn.classList.toggle('show', show);
+    var lidTarget = binOpen ? -1.2 : 0;                          // the lid swings open while you use it
+    binLid.rotation.x += (lidTarget - binLid.rotation.x) * Math.min(1, dt * 8);
+  }
   // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
     var slot = document.createElement('button');
@@ -7668,6 +7825,7 @@ function startGame(THREE) {
       state: { mana: state.mana, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
+      shipBin: shipBin,
       farm: tiles.filter(function (t) { return t.soil; }).map(function (t) { return { c: t.c, r: t.r, crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet }; }),
       scenery: allScenery.map(function (t) {                          // when each tree or bush was cut (null = standing)
         var u = t.userData;
@@ -7730,6 +7888,7 @@ function startGame(THREE) {
     state.mana = data.state.mana; state.harvest = data.state.harvest;
     state.minutes = data.state.minutes; state.day = data.state.day; state.petalDay = data.state.petalDay;
     state.coins = data.state.coins || 0; showCoins(false);
+    shipBin = data.shipBin || []; lastFarmDay = farmDay(); closeBin();
     // your bag
     for (var i = 0; i < BAG_SLOTS; i++) bag[i] = data.bag[i] ? { id: data.bag[i].id, count: data.bag[i].count } : null;
     selectedSlot = data.selectedSlot; hotRow = data.hotRow || 0;
@@ -7810,6 +7969,7 @@ function startGame(THREE) {
     updatePlayer(dt);
     updateDoors();
     updateSleepButton();
+    updateShipping(dt);
     updateInterior(dt, state.time);
     updateCrops(dt, night);
     updateWorld(dt, night);
