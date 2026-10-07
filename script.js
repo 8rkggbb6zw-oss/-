@@ -1869,7 +1869,7 @@ function startGame(THREE) {
   // ---------- The second island: a grassy island out to sea, past the front of yours ----------
   // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
   var ISLE2_X = 0, ISLE2_Z = 100, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
-  var SHOP_X = ISLE2_X - 8, SHOP_Z = ISLE2_Z + 3, SHOP_TURN = Math.PI + 0.45; // the seed shop, off to one side, its door turned toward the bridge
+  var SHOP_X = ISLE2_X - 8, SHOP_Z = ISLE2_Z + 4, SHOP_TURN = Math.PI + 0.45, SHOP_HW = 4.6, SHOP_HD = 3.2; // the seed shop, off to one side, its door turned toward the bridge
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
   function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
@@ -1928,7 +1928,7 @@ function startGame(THREE) {
   var ISLE2_BLADES = 9000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
   for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
-    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 3.4) continue; // (none growing through the shop floor)
+    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9) continue; // (none growing through the shop floor)
     var meadow = noise(ix * 0.35 + 11, iz * 0.35 - 4);                 // some patches grow longer and lusher than others
     gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.6, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.6);
     gQuat.setFromEuler(gEuler);
@@ -1950,7 +1950,7 @@ function startGame(THREE) {
   var ISLE2_FLOWERS = 520, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
-    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 3.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
+    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
     wfE.set((fh - 0.5) * 0.3, isle2Hash(iw * 5.5) * 6.28, 0);
     wfQ.setFromEuler(wfE);
     wfS.setScalar(0.8 + fh * 0.6);
@@ -3475,9 +3475,9 @@ function startGame(THREE) {
   });
 
   // ---------- The seed shop, on the new island ----------
-  // A round, fancy little shop: a stone plinth, cream walls banded in gold, a tall swirling purple roof with a gold star on
-  // its spire, an arched door under a striped awning, round glowing windows, a hanging sign, glowing seed jars on
-  // display stands, crystal lanterns by the door, flower pots, and sparkles drifting round the roof
+  // A grand glass conservatory: a stone base, glass walls in a white-and-gold iron frame, a long glass vaulted roof with a
+  // glass shopDome rising from the middle, a columned entrance with a glowing sign, glowing moonbloom beds and floating orbs
+  // inside, seed-jar stands and crystal lanterns by the door, and sparkles drifting round the shopDome
   var shopGroup = new THREE.Group();
   shopGroup.position.set(SHOP_X, 0, SHOP_Z);
   shopGroup.rotation.y = SHOP_TURN;
@@ -3490,131 +3490,180 @@ function startGame(THREE) {
     shopGroup.add(m);
     return m;
   }
-  var SHOP_R = 2.6, SHOP_WALL = 3.0;
-  var shopWallMat = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xf6eefc, roughness: 0.9 });
-  var shopTrim = new THREE.MeshStandardMaterial({ color: 0x5b3f8f, roughness: 0.6 });
-  var shopRoofTex = shingleTex.clone(); shopRoofTex.needsUpdate = true;
-  shopRoofTex.wrapS = shopRoofTex.wrapT = THREE.RepeatWrapping; shopRoofTex.repeat.set(5, 3);
-  var shopRoofMat = new THREE.MeshStandardMaterial({ map: shopRoofTex, color: 0xd9c4ff, roughness: 0.75 });
-  sp(new THREE.CylinderGeometry(SHOP_R + 0.45, SHOP_R + 0.6, 0.35, 16), houseMats.stone, 0, 0.17, 0);      // stone plinth
-  sp(new THREE.CylinderGeometry(SHOP_R + 0.25, SHOP_R + 0.3, 0.12, 16), houseMats.stone, 0, 0.41, 0);
-  sp(new THREE.CylinderGeometry(SHOP_R, SHOP_R, SHOP_WALL, 16), shopWallMat, 0, 0.47 + SHOP_WALL / 2, 0);   // round walls
-  [0.62, 0.47 + SHOP_WALL - 0.1].forEach(function (y) {                                                     // gold bands round the walls
-    sp(new THREE.TorusGeometry(SHOP_R + 0.02, 0.05, 8, 48), houseMats.gold, 0, y, 0, Math.PI / 2, 0, 0);
+  var SW = SHOP_HW, SD = SHOP_HD, BASE_H = 0.45, KNEE = 0.7, SHOP_WALL_H = 3.0;     // half width, half depth, plinth, low stone wall, glass wall height
+  var WALL_TOP = BASE_H + KNEE + SHOP_WALL_H;
+  var shopFrame = new THREE.MeshStandardMaterial({ color: 0xf7f2ea, roughness: 0.35, metalness: 0.3 });
+  var shopGlassMat = new THREE.MeshStandardMaterial({ color: 0xd8f0ff, emissive: 0x6a9ccf, emissiveIntensity: 0.08, roughness: 0.03, metalness: 0.2, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
+  var shopStone = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xd8d2cc, roughness: 0.9 });
+  // the stone base and low stone walls
+  sp(new THREE.BoxGeometry(SW * 2 + 0.9, BASE_H, SD * 2 + 0.9), houseMats.stone, 0, BASE_H / 2, 0);
+  sp(new THREE.BoxGeometry(SW * 2 + 0.6, 0.08, SD * 2 + 0.6), shopStone, 0, BASE_H + 0.04, 0);
+  [[0, SD, SW * 2, 0.3], [0, -SD, SW * 2, 0.3], [SW, 0, 0.3, SD * 2], [-SW, 0, 0.3, SD * 2]].forEach(function (w) {
+    sp(new THREE.BoxGeometry(w[2] + 0.3, KNEE, w[3] + (w[3] > 1 ? 0.3 : 0)), shopStone, w[0], BASE_H + KNEE / 2, w[1]);
+    sp(new THREE.BoxGeometry(w[2] + 0.42, 0.08, w[3] + (w[3] > 1 ? 0.42 : 0.12)), shopFrame, w[0], BASE_H + KNEE + 0.04, w[1]);
   });
-  for (var pl = 0; pl < 8; pl++) {                                                                         // purple pilasters round the wall
-    var pa = pl / 8 * Math.PI * 2 + Math.PI / 8;
-    if (Math.abs(Math.sin(pa)) > 0.95 && Math.cos(pa) > 0) continue;
-    sp(new THREE.BoxGeometry(0.18, SHOP_WALL - 0.2, 0.12), shopTrim, Math.sin(pa) * (SHOP_R + 0.02), 0.47 + SHOP_WALL / 2, Math.cos(pa) * (SHOP_R + 0.02), 0, pa, 0);
+  // glass walls with iron mullions
+  var GY = BASE_H + KNEE + 0.08 + SHOP_WALL_H / 2;
+  sp(new THREE.BoxGeometry(SW * 2, SHOP_WALL_H, 0.04), shopGlassMat, 0, GY, -SD).castShadow = false;
+  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.04, SHOP_WALL_H, SD * 2), shopGlassMat, s * SW, GY, 0).castShadow = false; });
+  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(SW - 1.3, SHOP_WALL_H, 0.04), shopGlassMat, s * (SW + 1.3) / 2, GY, SD).castShadow = false; });
+  for (var smx = -SW; smx <= SW + 0.01; smx += SW / 5) {                 // upright mullions, front and back
+    [-1, 1].forEach(function (s) { if (s > 0 && Math.abs(smx) < 1.3) return; sp(new THREE.BoxGeometry(0.07, SHOP_WALL_H, 0.1), shopFrame, smx, GY, s * SD); });
   }
-  var ROOF_Y = 0.47 + SHOP_WALL;
-  var roofPts = [];                                                                                         // a tall roof that curves up into a twisting spire
-  for (var rp = 0; rp <= 14; rp++) { var rt = rp / 14; roofPts.push(new THREE.Vector2(Math.max(0.03, (SHOP_R + 0.7) * Math.pow(1 - rt, 1.6)), rt * 4.2)); }
-  var shopRoofGeo = new THREE.LatheGeometry(roofPts, 24), rpos = shopRoofGeo.attributes.position;
-  for (var rv = 0; rv < rpos.count; rv++) { var ry = rpos.getY(rv) / 4.2; rpos.setX(rv, rpos.getX(rv) + Math.pow(ry, 3) * 0.5); } // the very tip leans a little
-  shopRoofGeo.computeVertexNormals();
-  sp(shopRoofGeo, shopRoofMat, 0, ROOF_Y, 0);
-  sp(new THREE.TorusGeometry(SHOP_R + 0.62, 0.07, 8, 48), houseMats.gold, 0, ROOF_Y + 0.02, 0, Math.PI / 2, 0, 0); // gold rim on the eaves
-  var shopStar = sp(new THREE.OctahedronGeometry(0.26, 0), houseMats.gold, 0.5, ROOF_Y + 4.35, 0);
+  for (var smz = -SD; smz <= SD + 0.01; smz += SD / 3) [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.1, SHOP_WALL_H, 0.07), shopFrame, s * SW, GY, smz); });
+  [BASE_H + KNEE + 1.3, WALL_TOP].forEach(function (y) {              // transoms running round, and the gold wall-plate on top
+    var gold = y === WALL_TOP;
+    var m = gold ? houseMats.gold : shopFrame, t = gold ? 0.12 : 0.06;
+    sp(new THREE.BoxGeometry(SW * 2 + 0.1, t, 0.12), m, 0, y, -SD);
+    sp(new THREE.BoxGeometry(SW * 2 + 0.1, t, 0.12), m, 0, y, SD);
+    [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.12, t, SD * 2 + 0.1), m, s * SW, y, 0); });
+  });
+  // the long glass vaulted roof, with white ribs, and a gold ridge
+  var shopVault = sp(new THREE.CylinderGeometry(SD, SD, SW * 2, 32, 1, true, -Math.PI / 2, Math.PI), shopGlassMat, 0, WALL_TOP, 0, 0, 0, Math.PI / 2);
+  shopVault.scale.set(0.75, 1, 1); shopVault.castShadow = false;
+  for (var srb = 0; srb <= 10; srb++) {
+    var shopRib = sp(new THREE.TorusGeometry(SD, 0.05, 6, 32, Math.PI), shopFrame, -SW + srb * SW / 5, WALL_TOP, 0, 0, Math.PI / 2, 0);
+    shopRib.scale.set(1, 0.75, 1);
+  }
+  [-1, 1].forEach(function (s) {                                       // the glass end walls of the shopVault
+    var endShape = new THREE.Shape(); endShape.absarc(0, 0, SD, 0, Math.PI, false); endShape.lineTo(-SD, 0);
+    var end = sp(new THREE.ShapeGeometry(endShape, 24), shopGlassMat, s * SW, WALL_TOP, 0, 0, Math.PI / 2, 0);
+    end.scale.set(1, 0.75, 1); end.castShadow = false;
+  });
+  sp(new THREE.BoxGeometry(SW * 2 + 0.2, 0.1, 0.14), houseMats.gold, 0, WALL_TOP + SD * 0.75, 0);
+  // the glass shopDome rising from the middle of the roof, on a drum, crowned with a gold finial and a star
+  var DOME_Y = WALL_TOP + SD * 0.75 - 0.3, DOME_R = 2.2;
+  sp(new THREE.CylinderGeometry(DOME_R, DOME_R, 1.0, 32, 1, true), shopGlassMat, 0, DOME_Y + 0.5, 0).castShadow = false;
+  for (var sdr = 0; sdr < 16; sdr++) { var sdra = sdr / 16 * Math.PI * 2; sp(new THREE.BoxGeometry(0.07, 1.0, 0.07), shopFrame, Math.cos(sdra) * DOME_R, DOME_Y + 0.5, Math.sin(sdra) * DOME_R); }
+  sp(new THREE.TorusGeometry(DOME_R, 0.07, 8, 48), houseMats.gold, 0, DOME_Y + 1.0, 0, Math.PI / 2, 0, 0);
+  sp(new THREE.TorusGeometry(DOME_R, 0.06, 8, 48), shopFrame, 0, DOME_Y, 0, Math.PI / 2, 0, 0);
+  var shopDome = sp(new THREE.SphereGeometry(DOME_R, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), shopGlassMat, 0, DOME_Y + 1.0, 0);
+  shopDome.scale.set(1, 1.15, 1); shopDome.castShadow = false;
+  for (var dk = 0; dk < 8; dk++) {                                     // white ribs up the shopDome
+    var dRib = sp(new THREE.TorusGeometry(DOME_R, 0.045, 6, 24, Math.PI / 2), shopFrame, 0, DOME_Y + 1.0, 0, 0, dk / 8 * Math.PI * 2, 0);
+    dRib.scale.set(1, 1.15, 1);
+  }
+  var FIN_Y = DOME_Y + 1.0 + DOME_R * 1.15;
+  sp(new THREE.CylinderGeometry(0.22, 0.32, 0.25, 12), houseMats.gold, 0, FIN_Y + 0.08, 0);
+  sp(new THREE.SphereGeometry(0.16, 14, 10), houseMats.gold, 0, FIN_Y + 0.34, 0);
+  sp(new THREE.CylinderGeometry(0.03, 0.05, 0.6, 8), houseMats.gold, 0, FIN_Y + 0.75, 0);
+  var shopStar = sp(new THREE.OctahedronGeometry(0.3, 0), houseMats.gold, 0, FIN_Y + 1.2, 0);
   shopStar.scale.set(1, 1.3, 0.4);
   var starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe08a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
-  starGlow.position.set(0.5, ROOF_Y + 4.35, 0); starGlow.scale.set(1.6, 1.6, 1);
+  starGlow.position.set(0, FIN_Y + 1.2, 0); starGlow.scale.set(2, 2, 1);
   shopGroup.add(starGlow);
-  for (var dm = 0; dm < 3; dm++) {                                                                         // little dormer windows peeking out of the roof
-    var da = Math.PI + (dm - 1) * 1.6;
-    var dx = Math.sin(da) * (SHOP_R - 0.3), dz = Math.cos(da) * (SHOP_R - 0.3);
-    var dorm = new THREE.Group(); dorm.position.set(dx, ROOF_Y + 0.9, dz); dorm.rotation.y = da; shopGroup.add(dorm);
-    var dw = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), houseMats.glass); dw.position.z = 0.42; dorm.add(dw);
-    var df = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.04, 6, 20), houseMats.gold); df.position.z = 0.43; dorm.add(df);
-    var dh = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.6, 4), shopRoofMat); dh.position.set(0, 0.45, 0.2); dh.rotation.y = Math.PI / 4; dorm.add(dh);
-  }
-  // the front: an arched door with a striped awning, round windows either side
-  var SHOP_FZ = SHOP_R - 0.05;
-  sp(new THREE.BoxGeometry(1.1, 1.5, 0.12), houseMats.door, 0, 0.47 + 0.75, SHOP_FZ);
-  sp(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 20, 1, false, -Math.PI / 2, Math.PI), houseMats.door, 0, 0.47 + 1.5, SHOP_FZ, -Math.PI / 2, 0, 0);
-  sp(new THREE.TorusGeometry(0.62, 0.08, 8, 24, Math.PI), houseMats.gold, 0, 0.47 + 1.5, SHOP_FZ + 0.06);
-  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.14, 1.5, 0.14), houseMats.gold, s * 0.62, 0.47 + 0.75, SHOP_FZ + 0.06); });
-  sp(new THREE.SphereGeometry(0.06, 10, 8), houseMats.gold, 0.35, 0.47 + 0.8, SHOP_FZ + 0.1);
-  sp(new THREE.BoxGeometry(1.2, 0.12, 0.6), houseMats.stone, 0, 0.41, SHOP_FZ + 0.45);                         // a step
-  var awnTex = paintTexture(64, 16, function (g, w, h) { for (var i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fdf3ff' : '#9a6ad8'; g.fillRect(i * 8, 0, 8, h); } });
-  var awnMat = new THREE.MeshStandardMaterial({ map: awnTex, roughness: 0.8, side: THREE.DoubleSide });
-  sp(new THREE.PlaneGeometry(2.0, 0.9), awnMat, 0, 0.47 + 2.45, SHOP_FZ + 0.4, -0.9, 0, 0);                      // the striped awning
-  for (var sc = 0; sc < 8; sc++) sp(new THREE.CircleGeometry(0.125, 12, 0, Math.PI), awnMat, -0.875 + sc * 0.25, 0.47 + 2.12, SHOP_FZ + 0.72, Math.PI, 0, 0); // scalloped edge
-  [-1, 1].forEach(function (s) {                                                                            // round glowing windows with gold frames
-    var wa = s * 0.75, wx = Math.sin(wa) * (SHOP_R + 0.01), wz = Math.cos(wa) * (SHOP_R + 0.01);
-    var win = new THREE.Group(); win.position.set(wx, 0.47 + 1.7, wz); win.rotation.y = wa; shopGroup.add(win);
-    var gl = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24), houseMats.glass); gl.position.z = 0.02; win.add(gl);
-    var fr = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.07, 8, 28), houseMats.gold); fr.position.z = 0.04; win.add(fr);
-    [0, Math.PI / 2].forEach(function (r) { var bar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.03), houseMats.gold); bar.position.z = 0.05; bar.rotation.z = r; win.add(bar); });
-    var box = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.2, 0.3), shopTrim); box.position.set(0, -0.68, 0.15); win.add(box);
-    for (var f = 0; f < 5; f++) {                                                                           // a flower box under each window
-      var fl = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3dc, 0xd9c4ff, 0xfff1b8][f % 3], emissive: [0xff7fc4, 0xa98cff, 0xffd36e][f % 3], emissiveIntensity: 0.3 }));
-      fl.position.set(-0.4 + f * 0.2, -0.52, 0.18); win.add(fl);
+  // the columned entrance: a stone portico with two white columns, a gold-trimmed arch, double glass doors and a sign
+  var SHOP_FZ = SD + 0.9;
+  sp(new THREE.BoxGeometry(2.8, 0.15, 1.9), shopStone, 0, BASE_H + 0.07, SD + 0.55);
+  sp(new THREE.BoxGeometry(2.4, 0.18, 0.9), houseMats.stone, 0, 0.09, SD + 1.7);                         // a broad step
+  [-1, 1].forEach(function (s) {
+    sp(new THREE.BoxGeometry(0.42, 0.25, 0.42), shopStone, s * 1.1, BASE_H + 0.27, SHOP_FZ);
+    var shopCol = sp(new THREE.CylinderGeometry(0.16, 0.19, 3.3, 16), shopFrame, s * 1.1, BASE_H + 0.4 + 1.65, SHOP_FZ);
+    sp(new THREE.BoxGeometry(0.44, 0.16, 0.44), houseMats.gold, s * 1.1, BASE_H + 0.4 + 3.38, SHOP_FZ);
+    sp(new THREE.TorusGeometry(0.19, 0.03, 6, 16), houseMats.gold, s * 1.1, BASE_H + 0.75, SHOP_FZ, Math.PI / 2, 0, 0);
+  });
+  var PORCH_TOP = BASE_H + 0.4 + 3.46;
+  sp(new THREE.BoxGeometry(2.9, 0.3, 1.9), shopStone, 0, PORCH_TOP + 0.15, SD + 0.55);                     // the entablature
+  sp(new THREE.BoxGeometry(3.0, 0.08, 2.0), houseMats.gold, 0, PORCH_TOP + 0.34, SD + 0.55);
+  var shopPed = new THREE.Shape(); shopPed.moveTo(-1.5, 0); shopPed.lineTo(1.5, 0); shopPed.quadraticCurveTo(1.3, 0.75, 0, 0.9); shopPed.quadraticCurveTo(-1.3, 0.75, -1.5, 0);
+  sp(new THREE.ExtrudeGeometry(shopPed, { depth: 1.8, bevelEnabled: false }), shopStone, 0, PORCH_TOP + 0.38, SD - 0.35);
+  var shopSignTex = paintTexture(512, 128, function (g, w, h) {           // the sign across the front
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#4e3592'); bg.addColorStop(1, '#2f2066');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 7; g.strokeRect(7, 7, w - 14, h - 14);
+    g.fillStyle = '#f7d36a'; g.font = 'bold 60px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('✦ Seeds & Sprouts ✦', w / 2, h / 2 + 3);
+  });
+  var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, emissive: 0xffffff, emissiveMap: shopSignTex, emissiveIntensity: 0.35, roughness: 0.5 });
+  sp(new THREE.PlaneGeometry(2.6, 0.65), shopSignMat, 0, PORCH_TOP + 0.16, SD + 1.51);
+  var doorGlass = new THREE.MeshStandardMaterial({ color: 0xe8f6ff, emissive: 0xffd9a0, emissiveIntensity: 0.25, roughness: 0.05, transparent: true, opacity: 0.45, depthWrite: false });
+  [-1, 1].forEach(function (s) {                                       // double glass doors in gold frames
+    sp(new THREE.BoxGeometry(0.8, 2.3, 0.04), doorGlass, s * 0.42, BASE_H + 0.15 + 1.15, SD + 0.02).castShadow = false;
+    [[0, 2.3, 0.82, 0.06], [0, 0, 0.82, 0.06], [0, 1.15, 0.82, 0.04]].forEach(function (b) { sp(new THREE.BoxGeometry(b[2], b[3], 0.07), houseMats.gold, s * 0.42, BASE_H + 0.15 + b[1], SD + 0.03); });
+    [-0.4, 0.4].forEach(function (e) { sp(new THREE.BoxGeometry(0.06, 2.3, 0.07), houseMats.gold, s * 0.42 + e, BASE_H + 0.15 + 1.15, SD + 0.03); });
+    sp(new THREE.SphereGeometry(0.05, 10, 8), houseMats.gold, s * 0.08, BASE_H + 1.3, SD + 0.08);
+  });
+  var shopFan = new THREE.Shape(); shopFan.absarc(0, 0, 0.84, 0, Math.PI, false); shopFan.lineTo(-0.84, 0);
+  sp(new THREE.ShapeGeometry(shopFan, 20), doorGlass, 0, BASE_H + 2.45, SD + 0.02).castShadow = false;       // a fanlight over the doors
+  sp(new THREE.TorusGeometry(0.86, 0.05, 6, 24, Math.PI), houseMats.gold, 0, BASE_H + 2.45, SD + 0.04);
+  for (var sfr = 1; sfr < 6; sfr++) sp(new THREE.BoxGeometry(0.03, 0.84, 0.03), houseMats.gold, Math.cos(sfr / 6 * Math.PI) * 0.42, BASE_H + 2.45 + Math.sin(sfr / 6 * Math.PI) * 0.42, SD + 0.05, 0, 0, sfr / 6 * Math.PI - Math.PI / 2);
+  // inside: raised beds of glowing moonblooms, a tall glowing tree in the middle, and floating orbs of light
+  var shopBedMat = new THREE.MeshStandardMaterial({ color: 0x6b4a32, roughness: 0.9 }), shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x5fae5a, roughness: 0.7 });
+  var bloomMatsS = [0xffb3dc, 0xd9c4ff, 0xfff1b8].map(function (c, i) { return new THREE.MeshStandardMaterial({ color: c, emissive: [0xff7fc4, 0xa98cff, 0xffd36e][i], emissiveIntensity: 0.6 }); });
+  [[-SW + 1.2, 0], [SW - 1.2, 0]].forEach(function (bp, bi) {
+    sp(new THREE.BoxGeometry(1.2, 0.5, SD * 2 - 1.2), shopBedMat, bp[0], BASE_H + 0.25, bp[1]);
+    for (var spl = 0; spl < 9; spl++) {
+      var spz = -SD + 0.9 + spl * (SD * 2 - 1.8) / 8, spx = bp[0] + (spl % 2 ? 0.25 : -0.25);
+      sp(new THREE.CylinderGeometry(0.015, 0.02, 0.5, 5), shopLeafMat, spx, BASE_H + 0.75, spz);
+      sp(new THREE.SphereGeometry(0.1, 6, 4), shopLeafMat, spx + 0.08, BASE_H + 0.6, spz, 0, 0, 0.6).scale.set(1.3, 0.35, 0.7);
+      sp(new THREE.SphereGeometry(0.11, 10, 8), bloomMatsS[(spl + bi) % 3], spx, BASE_H + 1.02, spz);
     }
   });
-  // the hanging sign on a gold bracket
-  var signTex = paintTexture(256, 160, function (g, w, h) {
-    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#5b3f9a'); bg.addColorStop(1, '#3d2a70');
-    g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#f2c14e'; g.lineWidth = 8; g.strokeRect(8, 8, w - 16, h - 16);
-    g.fillStyle = '#f2c14e'; g.font = 'bold 44px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('Seeds', w / 2, h / 2 - 22);
-    g.font = '28px Fredoka, sans-serif'; g.fillStyle = '#fbe8ff'; g.fillText('✦ & Sprouts ✦', w / 2, h / 2 + 28);
-  });
-  var signMat = new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.6 });
-  var sa = 0.42, sx = Math.sin(sa) * (SHOP_R + 0.05), sz = Math.cos(sa) * (SHOP_R + 0.05);
-  var signArm = sp(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6), houseMats.gold, sx + Math.sin(sa) * 0.45, 0.47 + 2.75, sz + Math.cos(sa) * 0.45, 0, 0, Math.PI / 2);
-  signArm.rotation.y = -sa + Math.PI / 2;
-  var signBoard = new THREE.Group(); signBoard.position.set(sx + Math.sin(sa) * 0.75, 0.47 + 2.35, sz + Math.cos(sa) * 0.75); signBoard.rotation.y = sa + Math.PI / 2; shopGroup.add(signBoard);
-  var sb2 = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.53, 0.05), [shopTrim, shopTrim, shopTrim, shopTrim, signMat, signMat]); signBoard.add(sb2);
-  [-0.3, 0.3].forEach(function (cx) { var ch = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.3, 4), houseMats.gold); ch.position.set(cx, 0.4, 0); signBoard.add(ch); });
-  // display stands either side of the door, with jars of glowing seeds
-  var jarGlass = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false });
+  sp(new THREE.CylinderGeometry(0.12, 0.2, 2.6, 8), new THREE.MeshStandardMaterial({ color: 0x7a5a42, roughness: 0.9 }), 0, BASE_H + 1.3, -0.6);  // a little glowing tree under the shopDome
+  var treeGlowMat = new THREE.MeshStandardMaterial({ color: 0xf3c8ff, emissive: 0xc77dff, emissiveIntensity: 0.7, roughness: 0.6 });
+  [[0, 3.2, -0.6, 1.0], [0.6, 2.9, -0.3, 0.7], [-0.6, 2.9, -0.9, 0.7], [0.1, 3.7, -0.8, 0.6]].forEach(function (c) { sp(new THREE.IcosahedronGeometry(c[3], 1), treeGlowMat, c[0], BASE_H + c[1], c[2]); });
+  var shopOrbs = [];
+  for (var sob = 0; sob < 7; sob++) {
+    var shopOrb = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: [0xffc0ea, 0xc9a8ff, 0xffe6a8][sob % 3], transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    shopOrb.scale.set(0.5, 0.5, 1);
+    shopGroup.add(shopOrb);
+    shopOrbs.push({ s: shopOrb, a: sob / 7 * Math.PI * 2, r: 1.6 + (sob % 3) * 0.6, h: BASE_H + 2.2 + (sob % 2) * 0.9 });
+  }
+  // display stands out front either side of the step, with jars of glowing seeds
+  var shopJarGlass = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false });
   var seedGlow = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.1 });
-  var shopJars = [];
-  [-1, 1].forEach(function (s) {
-    var tx = s * 1.55, tz = SHOP_FZ + 0.75;
-    sp(new THREE.CylinderGeometry(0.42, 0.36, 0.08, 16), shopTrim, tx, 0.82, tz);
-    sp(new THREE.CylinderGeometry(0.06, 0.1, 0.78, 8), houseMats.gold, tx, 0.42, tz);
-    sp(new THREE.CylinderGeometry(0.25, 0.28, 0.05, 12), houseMats.gold, tx, 0.04, tz);
+  var standXs = [-2.3, 2.3];
+  standXs.forEach(function (tx) {
+    var tz = SD + 1.6;
+    sp(new THREE.CylinderGeometry(0.42, 0.36, 0.08, 16), shopFrame, tx, 0.86, tz);
+    sp(new THREE.CylinderGeometry(0.06, 0.1, 0.82, 8), houseMats.gold, tx, 0.43, tz);
+    sp(new THREE.CylinderGeometry(0.25, 0.28, 0.05, 12), houseMats.gold, tx, 0.03, tz);
     for (var j = 0; j < 3; j++) {
       var ja = j / 3 * Math.PI * 2, jx = tx + Math.cos(ja) * 0.2, jz = tz + Math.sin(ja) * 0.2;
-      var seeds = sp(new THREE.SphereGeometry(0.075, 10, 8), seedGlow, jx, 0.93, jz); seeds.scale.set(1, 0.7, 1);
-      var jar = sp(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14), jarGlass, jx, 0.99, jz); jar.castShadow = false;
-      sp(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 14), houseMats.gold, jx, 1.13, jz);
-      shopJars.push(seeds);
+      sp(new THREE.SphereGeometry(0.075, 10, 8), seedGlow, jx, 0.97, jz).scale.set(1, 0.7, 1);
+      sp(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14), shopJarGlass, jx, 1.03, jz).castShadow = false;
+      sp(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 14), houseMats.gold, jx, 1.17, jz);
     }
   });
-  [[-1.6, 1.2], [1.6, 1.2], [-2.3, -0.4], [2.3, -0.4]].forEach(function (pp, n) {                          // potted flowers round the plinth
-    var px = pp[0], pz = SHOP_FZ + pp[1] - 0.6;
-    if (n > 1) { px = Math.sin(pp[0] > 0 ? 1.4 : -1.4) * (SHOP_R + 0.5); pz = Math.cos(pp[0] > 0 ? 1.4 : -1.4) * (SHOP_R + 0.5); }
-    else { px = pp[0] * 0.55; pz = SHOP_FZ + 0.4; }
-    if (n < 2) return;
-    sp(new THREE.CylinderGeometry(0.2, 0.15, 0.32, 10), houseMats.stone, px, 0.16, pz);
-    for (var b = 0; b < 6; b++) sp(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3dc, 0xd9c4ff, 0x9be08a][b % 3] }), px + Math.cos(b) * 0.1, 0.36 + (b % 2) * 0.06, pz + Math.sin(b) * 0.1);
+  // potted topiaries at the corners
+  [[-SW - 0.1, SD + 0.1], [SW + 0.1, SD + 0.1], [-SW - 0.1, -SD - 0.1], [SW + 0.1, -SD - 0.1]].forEach(function (c) {
+    sp(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 12), shopStone, c[0], BASE_H + 0.25, c[1]);
+    sp(new THREE.SphereGeometry(0.42, 14, 10), shopLeafMat, c[0], BASE_H + 0.85, c[1]);
+    for (var b = 0; b < 5; b++) sp(new THREE.SphereGeometry(0.06, 8, 6), bloomMatsS[b % 3], c[0] + Math.cos(b * 1.3) * 0.38, BASE_H + 0.8 + (b % 2) * 0.2, c[1] + Math.sin(b * 1.3) * 0.38);
   });
-  // floating crystal lanterns either side of the door (shopGroup is turned, so work out where they land in the world)
+  // floating crystal lanterns either side of the entrance (shopGroup is turned, so work out where they land in the world)
   [-1, 1].forEach(function (s) {
-    var lx = s * 0.95, lz = SHOP_FZ + 0.55, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
-    makeCrystalLantern(SHOP_X + lx * c + lz * si, 2.6, SHOP_Z - lx * si + lz * c, 90 + s);
+    var lx = s * 1.55, lz = SD + 1.3, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
+    makeCrystalLantern(SHOP_X + lx * c + lz * si, 3.1, SHOP_Z - lx * si + lz * c, 90 + s);
   });
-  var SHOP_SPARKS = 40, shopSparkGeo = new THREE.BufferGeometry(), shopSparkPos = new Float32Array(SHOP_SPARKS * 3);
+  var SHOP_SPARKS = 50, shopSparkGeo = new THREE.BufferGeometry(), shopSparkPos = new Float32Array(SHOP_SPARKS * 3);
   shopSparkGeo.setAttribute('position', new THREE.BufferAttribute(shopSparkPos, 3));
-  var shopSparks = new THREE.Points(shopSparkGeo, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xf2e0ff, size: 0.25, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+  var shopSparks = new THREE.Points(shopSparkGeo, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xf2e0ff, size: 0.3, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
   shopSparks.frustumCulled = false;
   shopGroup.add(shopSparks);
   function updateShopBuilding(t) {
     shopStar.rotation.y = t * 0.8;
     starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
-    for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the roof
-      var k = (i / SHOP_SPARKS + t * 0.04) % 1, a = i * 2.4 + t * 0.3, r = (SHOP_R + 0.9) * (1 - k * 0.7);
-      shopSparkPos[i * 3] = Math.cos(a) * r; shopSparkPos[i * 3 + 1] = ROOF_Y - 0.5 + k * 5; shopSparkPos[i * 3 + 2] = Math.sin(a) * r;
+    treeGlowMat.emissiveIntensity = 0.6 + Math.sin(t * 1.3) * 0.2;
+    shopOrbs.forEach(function (o, i) {
+      var a = o.a + t * 0.25;
+      o.s.position.set(Math.cos(a) * o.r, o.h + Math.sin(t * 1.1 + i) * 0.25, Math.sin(a) * o.r * 0.6 - 0.4);
+      o.s.material.opacity = 0.55 + Math.sin(t * 2 + i) * 0.25;
+    });
+    for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the shopDome
+      var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = (DOME_R + 1.2) * (1 - k * 0.6);
+      shopSparkPos[i * 3] = Math.cos(a2) * r; shopSparkPos[i * 3 + 1] = DOME_Y - 0.5 + k * 5; shopSparkPos[i * 3 + 2] = Math.sin(a2) * r;
     }
     shopSparkGeo.attributes.position.needsUpdate = true;
   }
-  solids.push({ x: SHOP_X, z: SHOP_Z, r: SHOP_R + 0.55 });
-  [-1, 1].forEach(function (s) { var lx = s * 1.55, lz = SHOP_FZ + 0.75, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN); solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: 0.45 }); });
+  (function () {                                                       // you bump into the building, its front steps' stands and the corner pots
+    var c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
+    function solidAt(lx, lz, r) { solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: r }); }
+    for (var x = -SW; x <= SW + 0.01; x += 1.2) for (var z = -SD; z <= SD + 0.01; z += 1.2) solidAt(x, z, 0.95);
+    standXs.forEach(function (tx) { solidAt(tx, SD + 1.6, 0.45); });
+    solidAt(-1.1, SD + 0.9, 0.3); solidAt(1.1, SD + 0.9, 0.3);
+  })();
 
   // You bump into the house, the tower and the cauldron
   function houseToWorld(lx, lz) {
@@ -8019,7 +8068,7 @@ function startGame(THREE) {
   }
   // ---------- The seed shop: walk up to its door to buy seeds with Star Coins ----------
   var SEED_COST = 10;
-  var shopDoor = { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_R + 1.6), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_R + 1.6) };
+  var shopDoor = { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + 2.3), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + 2.3) };
   var shopOpen = false;
   function nearShop() { return !indoors && dist(player.position.x, player.position.z, shopDoor.x, shopDoor.z) < 1.9; }
   var shopBtn = document.createElement('button');
