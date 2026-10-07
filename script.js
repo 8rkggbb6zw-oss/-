@@ -5890,34 +5890,49 @@ function startGame(THREE) {
   }
   function iconPetal() {
     return iconCanvas(function (g) {
-      // a soft pink glow behind the petal
-      var halo = g.createRadialGradient(32, 32, 2, 32, 32, 30);
-      halo.addColorStop(0, 'rgba(255,150,220,0.6)');
-      halo.addColorStop(1, 'rgba(255,150,220,0)');
+      // a warm sunrise glow behind the petal: gold in the middle fading to rose
+      var halo = g.createRadialGradient(32, 30, 2, 32, 32, 31);
+      halo.addColorStop(0, 'rgba(255,214,150,0.75)');
+      halo.addColorStop(0.5, 'rgba(255,160,205,0.4)');
+      halo.addColorStop(1, 'rgba(255,160,205,0)');
       g.fillStyle = halo;
       g.fillRect(0, 0, 64, 64);
+      // soft rays of dawn light fanning out behind it
       g.save();
-      g.translate(32, 33);
-      g.rotate(0.55);
-      // one cherry-blossom petal: narrow at the base, round shoulders, a little notch at the tip
+      g.translate(32, 32);
+      for (var r = 0; r < 12; r++) {
+        g.rotate(Math.PI / 6);
+        var ray = g.createLinearGradient(0, 0, 0, -30);
+        ray.addColorStop(0, 'rgba(255,222,140,0.75)');
+        ray.addColorStop(1, 'rgba(255,236,170,0)');
+        g.fillStyle = ray;
+        g.beginPath(); g.moveTo(-2.4, 0); g.lineTo(0, -31); g.lineTo(2.4, 0); g.fill();
+      }
+      g.restore();
+      g.save();
+      g.translate(32, 34);
+      g.rotate(-0.5);
+      // the petal: a slim base swelling to a wide rounded top with a soft dip in the middle
       function petalPath() {
         g.beginPath();
-        g.moveTo(0, 27);
-        g.bezierCurveTo(11, 21, 18, 6, 17.5, -11);
-        g.bezierCurveTo(17, -23, 10, -28, 3.5, -26);
-        g.quadraticCurveTo(1.2, -24.5, 0, -22.5);
-        g.quadraticCurveTo(-1.2, -24.5, -3.5, -26);
-        g.bezierCurveTo(-10, -28, -17, -23, -17.5, -11);
-        g.bezierCurveTo(-18, 6, -11, 21, 0, 27);
+        g.moveTo(0, 25);
+        g.bezierCurveTo(9, 20, 17, 7, 17, -7);
+        g.bezierCurveTo(17, -19, 11, -25, 5, -24);
+        g.bezierCurveTo(2.5, -24, 1, -22.8, 0, -22);
+        g.bezierCurveTo(-1, -22.8, -2.5, -24, -5, -24);
+        g.bezierCurveTo(-11, -25, -17, -19, -17, -7);
+        g.bezierCurveTo(-17, 7, -9, 20, 0, 25);
         g.closePath();
       }
-      g.shadowColor = 'rgba(150,40,120,0.35)';
-      g.shadowBlur = 3;
+      g.shadowColor = 'rgba(170,60,120,0.45)';
+      g.shadowBlur = 4;
       g.shadowOffsetY = 2;
-      var body = g.createLinearGradient(0, 27, 0, -26);
-      body.addColorStop(0, '#ff3fa9');
-      body.addColorStop(0.45, '#ff9ad8');
-      body.addColorStop(1, '#fff0f8');
+      // colours of the sunrise: deep rose at the base, pink, then peach and a golden glow at the top
+      var body = g.createLinearGradient(0, 25, 0, -24);
+      body.addColorStop(0, '#d92a7c');
+      body.addColorStop(0.35, '#ff62ae');
+      body.addColorStop(0.7, '#ff9fa6');
+      body.addColorStop(1, '#ffd27e');
       g.fillStyle = body;
       petalPath();
       g.fill();
@@ -5925,55 +5940,63 @@ function startGame(THREE) {
       g.save();
       petalPath();
       g.clip();
-      // the right half sits in shadow so the petal looks cupped
-      var cup = g.createLinearGradient(-6, 0, 22, 0);
-      cup.addColorStop(0, 'rgba(200,50,150,0)');
-      cup.addColorStop(1, 'rgba(200,50,150,0.3)');
-      g.fillStyle = cup;
-      g.fillRect(-24, -30, 48, 60);
-      // a pearly sheen down the left side
-      var sheen = g.createRadialGradient(-8, -6, 1, -8, -6, 14);
-      sheen.addColorStop(0, 'rgba(255,255,255,0.7)');
-      sheen.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = sheen;
-      g.fillRect(-24, -30, 48, 60);
-      // fine veins fanning out from the base
-      g.strokeStyle = 'rgba(215,60,145,0.45)';
-      g.lineWidth = 0.9;
+      // a pearly inner light in the upper middle
+      var pearl = g.createRadialGradient(-3, -9, 1, -2, -6, 15);
+      pearl.addColorStop(0, 'rgba(255,255,245,0.55)');
+      pearl.addColorStop(1, 'rgba(255,255,245,0)');
+      g.fillStyle = pearl;
+      g.fillRect(-20, -28, 40, 56);
+      // the right edge curls back into shadow
+      var curl = g.createLinearGradient(6, 0, 18, 0);
+      curl.addColorStop(0, 'rgba(190,40,120,0)');
+      curl.addColorStop(1, 'rgba(190,40,120,0.35)');
+      g.fillStyle = curl;
+      g.fillRect(-20, -28, 40, 56);
+      // fine golden veins fanning up from the base
+      g.strokeStyle = 'rgba(255,240,190,0.75)';
+      g.lineWidth = 0.8;
       g.lineCap = 'round';
-      [-12, -6, 0, 6, 12].forEach(function (vx) {
+      [-10, -5, 0, 5, 10].forEach(function (vx) {
         g.beginPath();
-        g.moveTo(0, 24);
-        g.quadraticCurveTo(vx * 0.35, 4, vx, vx === 0 ? -17 : -14 + Math.abs(vx) * 0.3);
+        g.moveTo(0, 22);
+        g.quadraticCurveTo(vx * 0.3, 6, vx, -15 + Math.abs(vx) * 0.4);
         g.stroke();
       });
       g.restore();
-      g.strokeStyle = 'rgba(205,55,140,0.6)';
-      g.lineWidth = 1.1;
+      // a bright golden rim along the top edge, like the first light catching it
+      g.save();
+      petalPath();
+      g.clip();
+      g.strokeStyle = 'rgba(255,248,210,0.9)';
+      g.lineWidth = 2.5;
       petalPath();
       g.stroke();
-      // a dewdrop resting on the petal
-      var dew = g.createRadialGradient(-6.5, 3, 0.5, -6, 4, 4.2);
-      dew.addColorStop(0, 'rgba(255,255,255,0.95)');
-      dew.addColorStop(0.6, 'rgba(255,225,245,0.55)');
-      dew.addColorStop(1, 'rgba(230,120,190,0.5)');
-      g.fillStyle = dew;
-      g.beginPath(); g.ellipse(-6, 4, 4, 3.6, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#ffffff';
-      g.beginPath(); g.arc(-7.3, 2.6, 1.1, 0, Math.PI * 2); g.fill();
+      g.restore();
+      g.strokeStyle = 'rgba(200,60,130,0.55)';
+      g.lineWidth = 1;
+      petalPath();
+      g.stroke();
+      // a tiny golden sun charm glowing at the base
+      var sun = g.createRadialGradient(0, 20, 0.5, 0, 20, 3.6);
+      sun.addColorStop(0, '#fffbe0');
+      sun.addColorStop(0.5, '#ffd76a');
+      sun.addColorStop(1, 'rgba(255,190,80,0)');
+      g.fillStyle = sun;
+      g.beginPath(); g.arc(0, 20, 3.6, 0, Math.PI * 2); g.fill();
       g.restore();
       // sparkles
-      function sparkle(x, y, r) {
-        g.fillStyle = '#fff3a0';
+      function sparkle(x, y, r, c) {
+        g.fillStyle = c;
         g.beginPath();
         g.moveTo(x, y - r); g.lineTo(x + r * 0.25, y - r * 0.25); g.lineTo(x + r, y); g.lineTo(x + r * 0.25, y + r * 0.25);
         g.lineTo(x, y + r); g.lineTo(x - r * 0.25, y + r * 0.25); g.lineTo(x - r, y); g.lineTo(x - r * 0.25, y - r * 0.25);
         g.closePath();
         g.fill();
       }
-      sparkle(53, 9, 5);
-      sparkle(10, 50, 3.5);
-      sparkle(55, 44, 3);
+      sparkle(51, 10, 5, '#fff6b0');
+      sparkle(12, 50, 3.5, '#ffe0f2');
+      sparkle(54, 46, 3, '#fff6b0');
+      sparkle(13, 14, 2.5, '#ffffff');
     });
   }
   function iconAxe() {
