@@ -70,7 +70,7 @@ function startGame(THREE) {
   var SPEED = 4.4;
   var GAME_MINUTES_PER_SECOND = 8; // one in-game day = 3 real minutes
 
-  var state = { mana: MAX_MANA, harvest: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
+  var state = { mana: MAX_MANA, harvest: 0, coins: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
 
   // Same "random" island every time
   var seed = 12345;
@@ -5996,21 +5996,21 @@ function startGame(THREE) {
 
   // ---------- Bag (inventory) ----------
   var ITEMS = {
-    seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Every harvest gives you two seeds back.' },
-    bloom: { name: 'Moonbloom', icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
-    petal: { name: 'Dawn Petal', icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
+    seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Every harvest gives you two seeds back.' },
+    bloom: { name: 'Moonbloom', price: 60, icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
+    petal: { name: 'Dawn Petal', price: 40, icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
-    wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
+    wood: { name: 'Wood', price: 2, icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
     hoe: { name: 'Hoe', icon: '🪏', img: iconHoe(), fill: 95, info: 'Select it in your hotbar, then press Interact on garden soil to till it. Sometimes you dig something up!' },
     trimmers: { name: 'Hedge Trimmers', icon: '✂️', img: iconTrimmers(), fill: 93, info: 'Select them in your hotbar, then press Interact next to a bush. Ten snips trim a bush.' },
-    fiber: { name: 'Fiber', icon: '🌿', img: iconFiber(), fill: 92, info: 'Tough green strands trimmed from bushes.' },
-    hay: { name: 'Hay', icon: '🌾', img: iconHay(), fill: 92, info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
-    stone: { name: 'Stone', icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
-    coal: { name: 'Coal', icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
-    sap: { name: 'Sap', icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
-    acorn: { name: 'Acorn', icon: '🌰', img: iconAcorn(), fill: 92, info: 'Dropped by leafy trees.' },
-    pinecone: { name: 'Pinecone', icon: '🌲', img: iconPinecone(), fill: 92, info: 'Dropped by pine trees.' }
+    fiber: { name: 'Fiber', price: 3, icon: '🌿', img: iconFiber(), fill: 92, info: 'Tough green strands trimmed from bushes.' },
+    hay: { name: 'Hay', price: 4, icon: '🌾', img: iconHay(), fill: 92, info: 'Bushes have a 50% chance of dropping a bundle of hay.' },
+    stone: { name: 'Stone', price: 2, icon: '🪨', info: 'Broken from rocks. Bigger rocks give more.' },
+    coal: { name: 'Coal', price: 8, icon: '⚫', img: iconCoal(), info: 'Rocks have a 40% chance of dropping a lump of coal.' },
+    sap: { name: 'Sap', price: 6, icon: '🍯', img: iconSap(), info: 'Sticky golden sap. Every tree drops 3.' },
+    acorn: { name: 'Acorn', price: 4, icon: '🌰', img: iconAcorn(), fill: 92, info: 'Dropped by leafy trees.' },
+    pinecone: { name: 'Pinecone', price: 4, icon: '🌲', img: iconPinecone(), fill: 92, info: 'Dropped by pine trees.' }
   };
   // Little drawn pictures for items that don't have a good emoji
   function iconCanvas(draw) {
@@ -6018,6 +6018,31 @@ function startGame(THREE) {
     c.width = c.height = 64;
     draw(c.getContext('2d'));
     return c.toDataURL();
+  }
+  function iconCoin() {                                        // a shiny gold Star Coin with a raised star in the middle
+    return iconCanvas(function (g) {
+      var rim = g.createLinearGradient(8, 6, 56, 58);
+      rim.addColorStop(0, '#fff2a8'); rim.addColorStop(0.5, '#f2b632'); rim.addColorStop(1, '#a8620c');
+      g.fillStyle = rim;
+      g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
+      var face = g.createRadialGradient(26, 24, 2, 32, 32, 24);
+      face.addColorStop(0, '#fff6c4'); face.addColorStop(0.55, '#ffcf4a'); face.addColorStop(1, '#d99015');
+      g.fillStyle = face;
+      g.beginPath(); g.arc(32, 32, 22, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(150,80,10,0.45)'; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(32, 32, 22, 0, Math.PI * 2); g.stroke();
+      function star(cx, cy, r1, r2) {
+        g.beginPath();
+        for (var i = 0; i < 10; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? r2 : r1; g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+        g.closePath();
+      }
+      g.fillStyle = 'rgba(140,70,5,0.5)'; star(33.2, 34, 13, 5.6); g.fill();   // the star's shadow, so it looks stamped in
+      var st = g.createLinearGradient(20, 18, 44, 46);
+      st.addColorStop(0, '#fffbe0'); st.addColorStop(1, '#f5b52a');
+      g.fillStyle = st; star(32, 32.5, 13, 5.6); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.8)';                                   // a glint of shine
+      g.beginPath(); g.ellipse(20, 18, 6, 2.5, -0.7, 0, Math.PI * 2); g.fill();
+    });
   }
   function iconSap() {
     return iconCanvas(function (g) {
@@ -7089,7 +7114,67 @@ function startGame(THREE) {
     var it = bag[selectedSlot];
     bagUi.info.textContent = it ? ITEMS[it.id].icon + ' ' + ITEMS[it.id].name + ' × ' + it.count + ' — ' + ITEMS[it.id].info
       : 'Tap an item to see what it is.';
+    updateSellRow();
   }
+
+  // ---------- Star Coins: the island's money. Sell things from your bag to earn them ----------
+  var coinUi = document.createElement('div');                  // the coin counter in the top bar, next to the clock
+  coinUi.className = 'stat coins';
+  coinUi.title = 'Star Coins';
+  coinUi.innerHTML = '<img class="coin-icon" alt=""> <b id="coins">0</b>';
+  var statsBar = document.querySelector('.stats');
+  if (statsBar) statsBar.insertBefore(coinUi, statsBar.firstChild);
+  var coinCount = coinUi.querySelector('b');
+  function showCoins(bump) {
+    coinCount.textContent = state.coins;
+    if (bump) { coinUi.classList.remove('bump'); void coinUi.offsetWidth; coinUi.classList.add('bump'); } // a little hop when you earn some
+  }
+  var sellRow = document.createElement('div');                 // under the item's description in the bag
+  sellRow.className = 'sell-row';
+  sellRow.innerHTML = '<button type="button" class="sell-btn" data-n="1"></button><button type="button" class="sell-btn" data-n="all"></button>';
+  if (bagUi.box) bagUi.box.appendChild(sellRow);
+  var sellOne = sellRow.children[0], sellAll = sellRow.children[1];
+  function updateSellRow() {
+    if (!sellRow) return;                                        // (the bag can be drawn before this part is set up)
+    var it = bag[selectedSlot], price = it ? ITEMS[it.id].price : 0;
+    sellRow.hidden = !price;                                   // tools can't be sold
+    if (!price) return;
+    sellOne.innerHTML = 'Sell 1 · <img class="coin-icon" alt=""> ' + price;
+    sellAll.innerHTML = 'Sell all ' + it.count + ' · <img class="coin-icon" alt=""> ' + price * it.count;
+    sellAll.hidden = it.count < 2;
+    paintCoinIcons(sellRow);
+  }
+  function sellSelected(all) {
+    var it = bag[selectedSlot];
+    if (!it || !ITEMS[it.id].price) return;
+    var n = all ? it.count : 1, earned = ITEMS[it.id].price * n, name = ITEMS[it.id].name;
+    if (!takeItem(it.id, n)) return;
+    state.coins += earned;
+    showCoins(true);
+    coinSound(n);
+    showToast('Sold ' + n + ' ' + name + ' for ' + earned + ' Star Coins ✦');
+  }
+  sellOne.addEventListener('click', function () { sellSelected(false); });
+  sellAll.addEventListener('click', function () { sellSelected(true); });
+  function coinSound(n) {                                       // a bright jingle of coins: more coins, a longer jingle
+    if (!audioCtx) return;
+    var clinks = Math.min(6, 1 + Math.floor(n / 3));
+    for (var c = 0; c < clinks; c++) {
+      var w = c * 0.07;
+      bellTone(2637 + (c % 2) * 500, 0.06, 0.25, w);
+      bellTone(3951 + (c % 3) * 300, 0.03, 0.18, w + 0.01);
+    }
+    bellTone(1568, 0.05, 0.6, clinks * 0.07);
+    bellTone(2349, 0.04, 0.7, clinks * 0.07 + 0.02);
+  }
+  var coinPicture = null;
+  function paintCoinIcons(root) {                               // every coin picture uses the same drawn coin
+    if (!coinPicture) coinPicture = iconCoin();
+    var imgs = root.querySelectorAll('img.coin-icon');
+    for (var ci = 0; ci < imgs.length; ci++) imgs[ci].src = coinPicture;
+  }
+  paintCoinIcons(coinUi);
+  showCoins(false);
   // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
     var slot = document.createElement('button');
@@ -7568,7 +7653,7 @@ function startGame(THREE) {
     if (indoors) { px = OUT_DOOR_X; pz = OUT_DOOR_Z + 1.0; }          // saved inside the house? you'll load in at the front door
     var data = {
       v: 1,
-      state: { mana: state.mana, harvest: state.harvest, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
+      state: { mana: state.mana, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
       farm: tiles.filter(function (t) { return t.soil; }).map(function (t) { return { c: t.c, r: t.r, crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet }; }),
@@ -7632,6 +7717,7 @@ function startGame(THREE) {
     // the clock, mana and harvests
     state.mana = data.state.mana; state.harvest = data.state.harvest;
     state.minutes = data.state.minutes; state.day = data.state.day; state.petalDay = data.state.petalDay;
+    state.coins = data.state.coins || 0; showCoins(false);
     // your bag
     for (var i = 0; i < BAG_SLOTS; i++) bag[i] = data.bag[i] ? { id: data.bag[i].id, count: data.bag[i].count } : null;
     selectedSlot = data.selectedSlot; hotRow = data.hotRow || 0;

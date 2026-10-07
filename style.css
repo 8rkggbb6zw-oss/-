@@ -295,3 +295,22 @@ body.full .help { display: none; }
   text-shadow: 0 0 3px #fff, 0 0 6px #fff;   /* a soft glow so it's easy to read over the game */
 }
 body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(40, 20, 90, 0.9); } /* white over the game in full screen */
+
+/* Star Coins: the counter in the top bar and the sell buttons in the bag */
+.coin-icon { width: 1.15em; height: 1.15em; vertical-align: -0.22em; }
+.coins b { color: #b07a10; }
+.coins.bump { animation: coin-bump .35s ease-out; }
+@keyframes coin-bump { 40% { transform: scale(1.18); } }
+.sell-row { display: flex; gap: 8px; margin-top: 8px; }
+.sell-row[hidden], .sell-btn[hidden] { display: none; }
+.sell-btn {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: .85rem;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #f2b632, #ffe9a0);
+  color: #6a4208;
+  box-shadow: 0 3px 0 #b07a10;
+}
+.sell-btn:active { box-shadow: 0 1px 0 #b07a10; }
+
