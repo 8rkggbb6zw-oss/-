@@ -2583,7 +2583,6 @@ function startGame(THREE) {
     stem: new THREE.MeshStandardMaterial({ color: 0x4f7a32, roughness: 0.8 }),
     straw: new THREE.MeshStandardMaterial({ color: 0xd9b25a, roughness: 0.9 }),
     iron: new THREE.MeshStandardMaterial({ color: 0x24222c, roughness: 0.45, metalness: 0.5 }),
-    brew: new THREE.MeshStandardMaterial({ color: 0x7dff9a, emissive: 0x3fe070, emissiveIntensity: 0.8, roughness: 0.2 }),
     flowerPink: new THREE.MeshStandardMaterial({ color: 0xff8fd0, roughness: 0.6 }),
     flowerBlue: new THREE.MeshStandardMaterial({ color: 0x9ab8ff, roughness: 0.6 }),
     leaf: new THREE.MeshStandardMaterial({ color: 0x5aa84a, roughness: 0.8 }),
@@ -2782,27 +2781,112 @@ function startGame(THREE) {
   hPart(new THREE.ConeGeometry(0.2, 0.5, 10), 'straw', BRX + 0.17, 0.2, BRZ, 0, 0, 0.18);                    // bristles
   hPart(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), 'flowerPink', BRX + 0.13, 0.43, BRZ, 0, 0, 0.18);   // a ribbon tying them
 
-  // a bubbling cauldron on a little fire, out front to the right
+  // a bubbling cauldron on a little fire, out front to the right: a round-bellied iron pot with a rolled rim, side handles,
+  // a band of little gold moons, three curled legs, a swirling green potion with a ladle, steam, and flames in a ring of stones
   var CX = HW / 2 + 0.95, CZ = FRONT + 1.4;
-  hPart(new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.7), 'iron', CX, 0.55, CZ);
-  hPart(new THREE.TorusGeometry(0.42, 0.06, 8, 20), 'iron', CX, 0.84, CZ, Math.PI / 2, 0, 0);
-  [0, 2.1, 4.2].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6), 'iron', CX + Math.cos(a) * 0.32, 0.12, CZ + Math.sin(a) * 0.32); });
+  houseMats.cauldron = new THREE.MeshStandardMaterial({ color: 0x2b2833, roughness: 0.42, metalness: 0.55, side: THREE.DoubleSide });
+  houseMats.cauldronIn = new THREE.MeshStandardMaterial({ color: 0x151319, roughness: 0.8, metalness: 0.2, side: THREE.BackSide });
+  houseMats.hearth = new THREE.MeshStandardMaterial({ color: 0x8a8590, roughness: 0.95 });
+  houseMats.ladle = new THREE.MeshStandardMaterial({ color: 0x9a6a40, roughness: 0.75 });
+  var potProfile = [[0, 0.2], [0.2, 0.21], [0.36, 0.27], [0.47, 0.38], [0.52, 0.5], [0.51, 0.62], [0.46, 0.73], [0.41, 0.8], [0.4, 0.84], [0.43, 0.87]];
+  var potPts = potProfile.map(function (pt) { return new THREE.Vector2(pt[0], pt[1]); });
+  hPart(new THREE.LatheGeometry(potPts, 28), 'cauldron', CX, 0, CZ);                              // the round iron belly
+  hPart(new THREE.LatheGeometry(potPts.map(function (v) { return new THREE.Vector2(v.x * 0.97, v.y + 0.005); }), 28), 'cauldronIn', CX, 0, CZ); // its darker inside
+  hPart(new THREE.TorusGeometry(0.435, 0.045, 10, 30), 'cauldron', CX, 0.875, CZ, Math.PI / 2, 0, 0); // a thick rolled rim
+  hPart(new THREE.TorusGeometry(0.52, 0.022, 6, 32), 'cauldron', CX, 0.52, CZ, Math.PI / 2, 0, 0);    // a raised band round the belly
+  for (var mr = 0; mr < 8; mr++) {                                                               // little gold moon studs on the band
+    var ma = mr / 8 * Math.PI * 2 + 0.2;
+    hPart(new THREE.SphereGeometry(0.03, 8, 6), 'gold', CX + Math.cos(ma) * 0.535, 0.52, CZ + Math.sin(ma) * 0.535);
+  }
+  [0, Math.PI].forEach(function (ha) {                                                           // two ring handles on little ears
+    var hx = CX + Math.cos(ha) * 0.47, hz = CZ + Math.sin(ha) * 0.47;
+    hPart(new THREE.BoxGeometry(0.08, 0.07, 0.1), 'cauldron', hx, 0.76, hz, 0, -ha, 0);
+    hPart(new THREE.TorusGeometry(0.085, 0.018, 6, 14), 'cauldron', CX + Math.cos(ha) * 0.55, 0.69, CZ + Math.sin(ha) * 0.55, 0, Math.PI / 2 - ha, 0);
+  });
+  [0.5, 2.6, 4.7].forEach(function (la) {                                                       // three legs that curl out into round feet
+    var lx = Math.cos(la), lz = Math.sin(la);
+    hPart(new THREE.CylinderGeometry(0.045, 0.035, 0.26, 8), 'cauldron', CX + lx * 0.27, 0.15, CZ + lz * 0.27, lz * 0.45, 0, -lx * 0.45);
+    hPart(new THREE.SphereGeometry(0.05, 10, 8), 'cauldron', CX + lx * 0.33, 0.04, CZ + lz * 0.33);
+  });
+  // a ring of stones round the fire, with crossed logs underneath
+  for (var hs = 0; hs < 9; hs++) {
+    var hsa = hs / 9 * Math.PI * 2;
+    var hst = hPart(new THREE.DodecahedronGeometry(0.09, 0), 'hearth', CX + Math.cos(hsa) * 0.62, 0.05, CZ + Math.sin(hsa) * 0.62, hs, hs * 2, 0);
+    hst.scale.set(1.2, 0.7, 1);
+  }
   [0.4, 1.9, 3.3].forEach(function (a) { hPart(new THREE.CylinderGeometry(0.05, 0.05, 0.6, 6), 'beam', CX, 0.05, CZ, Math.PI / 2, a, 0); }); // firewood
-  var brew = new THREE.Mesh(new THREE.CircleGeometry(0.4, 18), houseMats.brew);
+  // the potion: a swirl of greens with brighter streaks and tiny sparkles, slowly turning
+  var brewTex = paintTexture(128, 128, function (g, w, h) {
+    var base = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    base.addColorStop(0, '#b8ffcf'); base.addColorStop(0.45, '#4fe08a'); base.addColorStop(1, '#13753f');
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    g.lineCap = 'round';
+    for (var sw = 0; sw < 5; sw++) {                                   // swirling streaks
+      g.strokeStyle = sw % 2 ? 'rgba(220,255,230,0.55)' : 'rgba(30,140,90,0.5)';
+      g.lineWidth = 3 + sw % 3;
+      g.beginPath();
+      for (var k = 0; k <= 40; k++) {
+        var ang = sw * 1.26 + k * 0.12, rad = 6 + k * 1.3;
+        if (k === 0) g.moveTo(64 + Math.cos(ang) * rad, 64 + Math.sin(ang) * rad); else g.lineTo(64 + Math.cos(ang) * rad, 64 + Math.sin(ang) * rad);
+      }
+      g.stroke();
+    }
+    for (var sp = 0; sp < 40; sp++) {                                   // sparkly flecks, a few lilac
+      g.fillStyle = sp % 4 ? 'rgba(255,255,255,0.8)' : 'rgba(220,170,255,0.9)';
+      g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 0.8 + Math.random() * 1.2, 0, Math.PI * 2); g.fill();
+    }
+  });
+  var brewMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: brewTex, emissive: 0x2fb865, emissiveMap: brewTex, emissiveIntensity: 0.35, roughness: 0.15 });
+  var brew = new THREE.Mesh(new THREE.CircleGeometry(0.41, 28), brewMat);
   brew.rotation.x = -Math.PI / 2;
   brew.position.set(CX, 0.8, CZ);
   houseLive.add(brew);
-  var brewGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x7dff9a, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
-  brewGlow.scale.set(1.4, 1.4, 1); brewGlow.position.set(CX, 1.0, CZ);
+  // a wooden ladle resting in the potion
+  var ladle = new THREE.Group();
+  ladle.position.set(CX + 0.12, 0.8, CZ - 0.05);
+  ladle.rotation.set(0.2, 0.6, -0.55);
+  var ladleHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.028, 0.75, 8), houseMats.ladle);
+  ladleHandle.position.y = 0.3;
+  ladle.add(ladleHandle);
+  var ladleKnob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), houseMats.ladle);
+  ladleKnob.position.y = 0.68;
+  ladle.add(ladleKnob);
+  houseLive.add(ladle);
+  var brewGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x46e07e, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
+  brewGlow.scale.set(1.3, 1.3, 1); brewGlow.position.set(CX, 1.0, CZ);
   houseLive.add(brewGlow);
   var fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8a30, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
-  fireGlow.scale.set(0.8, 0.6, 1); fireGlow.position.set(CX, 0.12, CZ);
+  fireGlow.scale.set(1.0, 0.7, 1); fireGlow.position.set(CX, 0.14, CZ);
   houseLive.add(fireGlow);
+  // little flames licking up round the bottom of the pot
+  var cauldronFlames = [];
+  var flameMatOut = new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.85 });
+  var flameMatIn = new THREE.MeshBasicMaterial({ color: 0xffe066 });
+  [[0.18, 0], [-0.1, 0.15], [-0.08, -0.17], [0.02, 0.02], [0.2, -0.16]].forEach(function (fp, n) {
+    var fl = new THREE.Group();
+    fl.position.set(CX + fp[0], 0.06, CZ + fp[1]);
+    var outer = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.24, 8), flameMatOut);
+    outer.position.y = 0.12;
+    fl.add(outer);
+    var inner = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.13, 6), flameMatIn);
+    inner.position.y = 0.07;
+    fl.add(inner);
+    houseLive.add(fl);
+    cauldronFlames.push({ g: fl, p: n * 1.7 });
+  });
+  var bubbleMat = new THREE.MeshStandardMaterial({ color: 0xc8ffd8, emissive: 0x3fe070, emissiveIntensity: 0.45, roughness: 0.1, transparent: true, opacity: 0.85 });
   var bubbles = [];
-  for (var bb = 0; bb < 6; bb++) {
-    var bub = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), houseMats.brew);
+  for (var bb = 0; bb < 7; bb++) {
+    var bub = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), bubbleMat);
     houseLive.add(bub);
-    bubbles.push({ m: bub, t: bb / 6, x: (Math.random() - 0.5) * 0.45, z: (Math.random() - 0.5) * 0.45 });
+    bubbles.push({ m: bub, t: bb / 7, x: (Math.random() - 0.5) * 0.5, z: (Math.random() - 0.5) * 0.5 });
+  }
+  // wisps of green steam curling up out of the pot
+  var brewSteam = [];
+  for (var bs = 0; bs < 6; bs++) {
+    var wisp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xb8ffd0, transparent: true, opacity: 0, depthWrite: false }));
+    houseLive.add(wisp);
+    brewSteam.push({ s: wisp, t: bs / 6, a: bs * 1.1 });
   }
 
   // lavender smoke curling out of the chimney
@@ -2884,14 +2968,29 @@ function startGame(THREE) {
       L.bulb.material.emissiveIntensity = (0.4 + night * 1.1) * tw;
       L.halo.material.opacity = (0.12 + night * 0.5) * tw;
     });
-    brewGlow.material.opacity = 0.3 + night * 0.35 + Math.sin(t * 3) * 0.06;
+    brewGlow.material.opacity = 0.12 + night * 0.4 + Math.sin(t * 3) * 0.05;          // a soft glow by day, brighter at night
+    brewMat.emissiveIntensity = 0.3 + night * 0.5;
+    brew.rotation.z = -t * 0.25;                                                       // the potion slowly swirls
     fireGlow.material.opacity = 0.45 + Math.sin(t * 13) * 0.1 + Math.sin(t * 7.3) * 0.08;
+    cauldronFlames.forEach(function (f) {                                              // the flames flicker and dance
+      var k = 0.8 + Math.sin(t * 11 + f.p) * 0.18 + Math.sin(t * 17.3 + f.p * 2) * 0.1;
+      f.g.scale.set(1, k, 1);
+      f.g.rotation.z = Math.sin(t * 6 + f.p) * 0.12;
+    });
     bubbles.forEach(function (b) {                                                     // bubbles rise, swell and pop
       b.t += dt * 0.7;
-      if (b.t > 1) { b.t -= 1; b.x = (Math.random() - 0.5) * 0.45; b.z = (Math.random() - 0.5) * 0.45; }
-      b.m.position.set(CX + b.x, 0.8 + b.t * 0.12, CZ + b.z);
+      if (b.t > 1) { b.t -= 1; b.x = (Math.random() - 0.5) * 0.5; b.z = (Math.random() - 0.5) * 0.5; }
+      b.m.position.set(CX + b.x, 0.8 + b.t * 0.08, CZ + b.z);
       b.m.scale.setScalar(0.3 + b.t * 0.9);
       b.m.visible = b.t < 0.92;
+    });
+    brewSteam.forEach(function (w) {                                                   // steam drifts up, grows and fades
+      w.t += dt * 0.28;
+      if (w.t > 1) w.t -= 1;
+      var k = w.t;
+      w.s.position.set(CX + Math.sin(k * 4 + w.a) * 0.18, 0.95 + k * 1.3, CZ + Math.cos(k * 3 + w.a) * 0.18);
+      w.s.scale.setScalar(0.25 + k * 0.6);
+      w.s.material.opacity = Math.sin(k * Math.PI) * 0.32;
     });
     smoke.forEach(function (p) {                                                       // puffs drift up, grow and fade
       p.t += dt * 0.16;
