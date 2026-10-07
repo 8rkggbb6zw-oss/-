@@ -3572,7 +3572,7 @@ function startGame(THREE) {
     g.fillStyle = bg; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#f2c14e'; g.lineWidth = 7; g.strokeRect(7, 7, w - 14, h - 14);
     g.fillStyle = '#f7d36a'; g.font = 'bold 60px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('✦ Seeds & Sprouts ✦', w / 2, h / 2 + 3);
+    g.fillText('✦ Whimsy & Bloom ✦', w / 2, h / 2 + 3);
   });
   var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, emissive: 0xffffff, emissiveMap: shopSignTex, emissiveIntensity: 0.35, roughness: 0.5 });
   sp(new THREE.PlaneGeometry(2.6, 0.65), shopSignMat, 0, PORCH_TOP + 0.16, SD + 1.51);
@@ -6721,7 +6721,7 @@ function startGame(THREE) {
 
   // ---------- Bag (inventory) ----------
   var ITEMS = {
-    seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Buy more at the seed shop on the new island.' },
+    seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Buy more at Whimsy & Bloom, the seed shop on the new island.' },
     bloom: { name: 'Moonbloom', price: 60, icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
     petal: { name: 'Dawn Petal', price: 40, icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
@@ -8074,12 +8074,12 @@ function startGame(THREE) {
   var shopBtn = document.createElement('button');
   shopBtn.type = 'button';
   shopBtn.className = 'sleep-btn ship-btn';
-  shopBtn.innerHTML = '🌱 Seed Shop <kbd>E</kbd>';
+  shopBtn.innerHTML = '🌱 Whimsy &amp; Bloom <kbd>E</kbd>';
   canvas.parentNode.appendChild(shopBtn);
   var shopBox = document.createElement('div');
   shopBox.className = 'inventory ship shop';
   shopBox.hidden = true;
-  shopBox.innerHTML = '<div class="inv-head"><b>🌱 Seeds &amp; Sprouts</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+  shopBox.innerHTML = '<div class="inv-head"><b>🌱 Whimsy &amp; Bloom</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
     '<p class="ship-hint">Welcome, little witch! Every seed here was grown under the moon.</p>' +
     '<div class="shop-item"><div class="slot shop-pic"></div><div class="shop-text"><b>Moonbloom Seed</b><span>Water it every day; after 4 watered days it blooms.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + SEED_COST + ' each</span></div></div>' +
