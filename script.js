@@ -3467,6 +3467,45 @@ function startGame(THREE) {
     if (!doorArmed) { if (d > 0.85) doorArmed = true; return; }  // you have to step away before the door works again
     if (d < 0.5) useDoor(!indoors);
   }
+  // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
+  var sleepBtn = document.createElement('button');
+  sleepBtn.type = 'button';
+  sleepBtn.className = 'sleep-btn';
+  sleepBtn.innerHTML = '🌙 Sleep <kbd>Z</kbd>';
+  canvas.parentNode.appendChild(sleepBtn);
+  var sleeping = false;
+  function nearBed() {
+    if (!indoors) return false;
+    var lx = player.position.x - IN_X - BX, lz = player.position.z - IN_Z - MZ;  // from the middle of the bed
+    return Math.abs(lx) < BED_W / 2 + 0.9 && Math.abs(lz) < BED_L / 2 + 0.6;
+  }
+  function goToSleep() {
+    if (sleeping || doorBusy || !nearBed()) return;
+    sleeping = true;
+    walkTarget = null;
+    sleepSound();
+    fadeBox.style.transition = 'opacity 0.9s';
+    fadeBox.style.opacity = 1;
+    showToast('Zzz…', 1600);
+    setTimeout(function () {
+      if (state.minutes >= 6 * 60) state.day += 1;                    // wake at 6 am the next morning
+      state.minutes = 6 * 60;                                          // (fall asleep after midnight and it's 6 am that same morning)
+      state.mana = MAX_MANA;                                           // well rested: full mana
+      updateClock(0);
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('Good morning! ☀ Day ' + state.day, 2600);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = false; }, 900);
+      }, 1200);
+    }, 1000);
+  }
+  sleepBtn.addEventListener('click', function () { goToSleep(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyZ') goToSleep(); });
+  function updateSleepButton() {
+    var show = nearBed() && !sleeping;
+    if (sleepBtn.classList.contains('show') !== show) sleepBtn.classList.toggle('show', show);
+  }
+
 
   // ---------- Chopping trees ----------
   var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
@@ -4542,7 +4581,11 @@ function startGame(THREE) {
       var when = 0.08 + i * 0.09 + Math.random() * 0.05, fr = 700 + Math.random() * 500;
       slideTone('sine', fr, fr * 2.2, 0.08 * (1 - i / 8), 0.06, when);
     }
-  }  function doorSound() { // the front door creaks open and bumps shut
+  }  function sleepSound() { // a soft, sleepy lullaby: three gentle falling notes
+    if (!audioCtx) return;
+    [784, 659.3, 523.3].forEach(function (fr, i) { bellTone(fr, 0.06, 1.1, i * 0.35); bellTone(fr * 2, 0.015, 0.7, i * 0.35 + 0.01); });
+  }
+  function doorSound() { // the front door creaks open and bumps shut
     if (!audioCtx) return;
     var t0 = audioCtx.currentTime;
     var osc = audioCtx.createOscillator(), wob = audioCtx.createOscillator(), wobAmt = audioCtx.createGain();
@@ -7176,6 +7219,7 @@ function startGame(THREE) {
     var night = updateSky();
     updatePlayer(dt);
     updateDoors();
+    updateSleepButton();
     updateInterior(dt, state.time);
     updateCrops(dt, night);
     updateWorld(dt, night);
