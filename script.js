@@ -4109,11 +4109,71 @@ function startGame(THREE) {
         t.position.set(tw[0], tw[1], 0.02);
         g.add(t);
       });
-    } else if (item === 'petal') { // a curled, shimmering Dawn Petal
-      m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), petalMat);
-      m.scale.set(1, 0.25, 0.65);
-      m.rotation.z = 0.4;
-      g.add(m);
+    } else if (item === 'petal') { // a Dawn Petal: a cupped cherry-blossom petal with a notched tip, deep pink at the base fading to pearl, fine veins and a dewdrop
+      var PCOLS = 12, PROWS = 18, PLEN = 0.25, PWIDE = 0.075;
+      var petalSpot = function (u, v) {           // u: -1..1 across the petal, v: 0 at the base to 1 at the tip
+        var w = PWIDE * Math.pow(Math.sin(Math.PI / 2 * Math.min(1, (v + 0.04) / 0.78)), 0.8);
+        var len = PLEN - 0.045 * (1 - Math.sqrt(1 - u * u)) - 0.016 * Math.exp(-(u / 0.13) * (u / 0.13)); // rounded shoulders and a notch at the tip
+        var x = u * w, y = -PLEN / 2 + v * len;
+        var z = 5 * x * x - 1.4 * Math.pow(Math.max(0, y - 0.02), 2) + 0.4 * (y + PLEN / 2) * x; // cupped across, the tip curling back, a little twist
+        return [x, y, z];
+      };
+      var pPos = [], pCol = [], pIdx = [];
+      var pBase = new THREE.Color(0xff4fb4), pMid = new THREE.Color(0xff9ad8), pTip = new THREE.Color(0xfff0f8), pc = new THREE.Color();
+      for (var pr = 0; pr <= PROWS; pr++) {
+        for (var pq = 0; pq <= PCOLS; pq++) {
+          var pu = pq / PCOLS * 2 - 1, pv = pr / PROWS, spot = petalSpot(pu, pv);
+          pPos.push(spot[0], spot[1], spot[2]);
+          if (pv < 0.45) pc.copy(pBase).lerp(pMid, pv / 0.45); else pc.copy(pMid).lerp(pTip, (pv - 0.45) / 0.55);
+          pc.lerp(pTip, Math.abs(pu) * 0.25 * pv);              // the edges are a touch paler
+          pCol.push(pc.r, pc.g, pc.b);
+        }
+      }
+      for (pr = 0; pr < PROWS; pr++) {
+        for (pq = 0; pq < PCOLS; pq++) {
+          var pa = pr * (PCOLS + 1) + pq, pb = pa + PCOLS + 1;
+          pIdx.push(pa, pb, pa + 1, pa + 1, pb, pb + 1);
+        }
+      }
+      var petalGeo2 = new THREE.BufferGeometry();
+      petalGeo2.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+      petalGeo2.setAttribute('color', new THREE.Float32BufferAttribute(pCol, 3));
+      petalGeo2.setIndex(pIdx);
+      petalGeo2.computeVertexNormals();
+      var dawnPetal = new THREE.Mesh(petalGeo2, new THREE.MeshStandardMaterial({ vertexColors: true, emissive: 0xff5cc0, emissiveIntensity: 0.35, roughness: 0.35, side: THREE.DoubleSide }));
+      var petalBody = new THREE.Group();           // the petal, its veins and dewdrop, tilted together
+      petalBody.rotation.z = 0.12;
+      g.add(petalBody);
+      petalBody.add(dawnPetal);
+      var veinMat = new THREE.LineBasicMaterial({ color: 0xe0559f, transparent: true, opacity: 0.55 });
+      [-0.55, -0.28, 0, 0.28, 0.55].forEach(function (vu) {      // fine veins fanning out from the base, on both faces
+        [-0.0015, 0.0015].forEach(function (side) {
+          var vp = [];
+          for (var vs = 0; vs <= 10; vs++) {
+            var vv = vs / 10 * (vu === 0 ? 0.74 : 0.64), at = petalSpot(vu * Math.min(1, vv * 1.4), vv);
+            vp.push(new THREE.Vector3(at[0], at[1], at[2] + side));
+          }
+          petalBody.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vp), veinMat));
+        });
+      });
+      var dewSpot = petalSpot(-0.3, 0.55);
+      var dew = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd6f0, emissiveIntensity: 0.3, roughness: 0.05, transparent: true, opacity: 0.6 }));
+      dew.scale.set(1, 1, 0.6);
+      dew.position.set(dewSpot[0], dewSpot[1], dewSpot[2] + 0.007);
+      petalBody.add(dew);
+      var dewShine = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffffff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+      dewShine.scale.set(0.018, 0.018, 1);
+      dewShine.position.set(dewSpot[0] - 0.004, dewSpot[1] + 0.005, dewSpot[2] + 0.02);
+      petalBody.add(dewShine);
+      var petalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8fd8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      petalGlow.scale.set(0.36, 0.36, 1);
+      g.add(petalGlow);
+      [[0.1, 0.1], [-0.1, -0.04], [0.07, -0.11]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.03, 0.03, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
     } else if (item === 'stone') {
       m = new THREE.Mesh(boulderGeos[2], stoneMat);
       m.scale.set(0.15, 0.12, 0.13);
@@ -4839,6 +4899,14 @@ function startGame(THREE) {
           if (held === 'coal') model.scale.setScalar(0.8); // a lump that fits in your palm
           palm.add(model);
           heldItemGrp.add(palm);
+        } else if (held === 'petal') { // pinched at its narrow base, standing up with its cupped face turned out
+          var petalUp = new THREE.Group();
+          petalUp.rotation.x = 1.05;            // undoes the arm's angle, so the petal points up
+          petalUp.position.y = 0.06;
+          model.position.y = 0.13;              // the base of the petal is at the hand
+          model.rotation.y = -0.6;
+          petalUp.add(model);
+          heldItemGrp.add(petalUp);
         } else if (held === 'bloom') { // held by the bottom of its stem, with the flower standing up
           var upright = new THREE.Group();
           upright.rotation.x = 1.05;            // undoes the arm's angle, so the flower points up
@@ -5666,7 +5734,7 @@ function startGame(THREE) {
   var ITEMS = {
     seed: { name: 'Moonbloom Seed', icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil. Every harvest gives you two seeds back.' },
     bloom: { name: 'Moonbloom', icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
-    petal: { name: 'Dawn Petal', icon: '🌺', info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
+    petal: { name: 'Dawn Petal', icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
     pickaxe: { name: 'Pickaxe', icon: '⛏️', img: iconPickaxe(), fill: 80, info: 'Select it in your hotbar, then press Interact next to a rock. Ten hits break a rock.' },
@@ -5817,6 +5885,94 @@ function startGame(THREE) {
       sparkle(54, 10, 5);
       sparkle(9, 44, 3.5);
       sparkle(56, 36, 3);
+    });
+  }
+  function iconPetal() {
+    return iconCanvas(function (g) {
+      // a soft pink glow behind the petal
+      var halo = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+      halo.addColorStop(0, 'rgba(255,150,220,0.6)');
+      halo.addColorStop(1, 'rgba(255,150,220,0)');
+      g.fillStyle = halo;
+      g.fillRect(0, 0, 64, 64);
+      g.save();
+      g.translate(32, 33);
+      g.rotate(0.55);
+      // one cherry-blossom petal: narrow at the base, round shoulders, a little notch at the tip
+      function petalPath() {
+        g.beginPath();
+        g.moveTo(0, 27);
+        g.bezierCurveTo(11, 21, 18, 6, 17.5, -11);
+        g.bezierCurveTo(17, -23, 10, -28, 3.5, -26);
+        g.quadraticCurveTo(1.2, -24.5, 0, -22.5);
+        g.quadraticCurveTo(-1.2, -24.5, -3.5, -26);
+        g.bezierCurveTo(-10, -28, -17, -23, -17.5, -11);
+        g.bezierCurveTo(-18, 6, -11, 21, 0, 27);
+        g.closePath();
+      }
+      g.shadowColor = 'rgba(150,40,120,0.35)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 2;
+      var body = g.createLinearGradient(0, 27, 0, -26);
+      body.addColorStop(0, '#ff3fa9');
+      body.addColorStop(0.45, '#ff9ad8');
+      body.addColorStop(1, '#fff0f8');
+      g.fillStyle = body;
+      petalPath();
+      g.fill();
+      g.shadowColor = 'transparent';
+      g.save();
+      petalPath();
+      g.clip();
+      // the right half sits in shadow so the petal looks cupped
+      var cup = g.createLinearGradient(-6, 0, 22, 0);
+      cup.addColorStop(0, 'rgba(200,50,150,0)');
+      cup.addColorStop(1, 'rgba(200,50,150,0.3)');
+      g.fillStyle = cup;
+      g.fillRect(-24, -30, 48, 60);
+      // a pearly sheen down the left side
+      var sheen = g.createRadialGradient(-8, -6, 1, -8, -6, 14);
+      sheen.addColorStop(0, 'rgba(255,255,255,0.7)');
+      sheen.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = sheen;
+      g.fillRect(-24, -30, 48, 60);
+      // fine veins fanning out from the base
+      g.strokeStyle = 'rgba(215,60,145,0.45)';
+      g.lineWidth = 0.9;
+      g.lineCap = 'round';
+      [-12, -6, 0, 6, 12].forEach(function (vx) {
+        g.beginPath();
+        g.moveTo(0, 24);
+        g.quadraticCurveTo(vx * 0.35, 4, vx, vx === 0 ? -17 : -14 + Math.abs(vx) * 0.3);
+        g.stroke();
+      });
+      g.restore();
+      g.strokeStyle = 'rgba(205,55,140,0.6)';
+      g.lineWidth = 1.1;
+      petalPath();
+      g.stroke();
+      // a dewdrop resting on the petal
+      var dew = g.createRadialGradient(-6.5, 3, 0.5, -6, 4, 4.2);
+      dew.addColorStop(0, 'rgba(255,255,255,0.95)');
+      dew.addColorStop(0.6, 'rgba(255,225,245,0.55)');
+      dew.addColorStop(1, 'rgba(230,120,190,0.5)');
+      g.fillStyle = dew;
+      g.beginPath(); g.ellipse(-6, 4, 4, 3.6, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.arc(-7.3, 2.6, 1.1, 0, Math.PI * 2); g.fill();
+      g.restore();
+      // sparkles
+      function sparkle(x, y, r) {
+        g.fillStyle = '#fff3a0';
+        g.beginPath();
+        g.moveTo(x, y - r); g.lineTo(x + r * 0.25, y - r * 0.25); g.lineTo(x + r, y); g.lineTo(x + r * 0.25, y + r * 0.25);
+        g.lineTo(x, y + r); g.lineTo(x - r * 0.25, y + r * 0.25); g.lineTo(x - r, y); g.lineTo(x - r * 0.25, y - r * 0.25);
+        g.closePath();
+        g.fill();
+      }
+      sparkle(53, 9, 5);
+      sparkle(10, 50, 3.5);
+      sparkle(55, 44, 3);
     });
   }
   function iconAxe() {
