@@ -3797,9 +3797,6 @@ function startGame(THREE) {
   var TILL_FIND_CHANCE = 0.15; // each time you till, a 15% chance of digging something up
   var TILL_FINDS = ['stone', 'fiber', 'sap', 'acorn', 'pinecone', 'coal', 'hay', 'wood', 'seed'];
   var swingTile = null, tilling = [];
-  var ridgeGeo = new THREE.CylinderGeometry(0.07, 0.07, TILE * 0.82, 8, 1, false, 0, Math.PI);
-  ridgeGeo.rotateZ(Math.PI / 2);
-  ridgeGeo.rotateX(-Math.PI / 2); // a half-round ridge lying across the plot
   function tillTile(tile) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
@@ -3811,13 +3808,7 @@ function startGame(THREE) {
     if (tile.soil) return;
     tile = keepTile(tile);
     coverGrass(tile);
-    tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
-    tile.ridges = [];
-    for (var r = 0; r < 3; r++) { // three furrows, raised one after another
-      var ridge = place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil);
-      ridge.scale.set(1, 0.001, 1);
-      tile.ridges.push(ridge);
-    }
+    buildSoil(tile, true);                    // three furrows, raised one after another
     tile.soil.scale.set(0.6, 0.05, 0.6);
     tile.tillT = 0;
     tilling.push(tile);
@@ -5265,7 +5256,84 @@ function startGame(THREE) {
     flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
   }
 
-  var soilGeo = new THREE.BoxGeometry(TILE * 0.9, 0.12, TILE * 0.9);
+  // ---- Tilled soil: a soft mound of crumbly earth with three lumpy furrows and a few pebbles ----
+  function soilHash(n) { var v = Math.sin(n * 12.9898) * 43758.5453; return v - Math.floor(v); }
+  var soilTex = paintTexture(128, 128, function (g, w, h) {
+    g.fillStyle = '#8c5d3c'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 900; i++) {                                   // crumbly grains, darker and lighter
+      var gx = soilHash(i * 3.1) * w, gy = soilHash(i * 7.3) * h, gr = 0.6 + soilHash(i * 1.7) * 1.6, light = soilHash(i * 5.9);
+      g.fillStyle = light < 0.5 ? 'rgba(60,34,18,' + (0.25 + light * 0.5) + ')' : 'rgba(190,140,100,' + ((light - 0.5) * 0.6) + ')';
+      g.beginPath(); g.arc(gx, gy, gr, 0, Math.PI * 2); g.fill();
+    }
+    for (var c = 0; c < 40; c++) {                                    // little clods with a lit top and a shadow underneath
+      var cx = soilHash(c * 9.7) * w, cy = soilHash(c * 4.3) * h, cr = 2 + soilHash(c * 2.2) * 3;
+      g.fillStyle = 'rgba(50,28,14,0.45)'; g.beginPath(); g.ellipse(cx + 0.8, cy + 1.2, cr, cr * 0.75, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#9a6a46'; g.beginPath(); g.ellipse(cx, cy, cr, cr * 0.75, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(220,170,120,0.35)'; g.beginPath(); g.ellipse(cx - cr * 0.3, cy - cr * 0.3, cr * 0.45, cr * 0.3, 0, 0, Math.PI * 2); g.fill();
+    }
+    for (var s2 = 0; s2 < 14; s2++) {                                 // tiny grey stones
+      g.fillStyle = soilHash(s2 * 6.6) < 0.5 ? '#a8a29a' : '#7f786f';
+      g.beginPath(); g.arc(soilHash(s2 * 8.8) * w, soilHash(s2 * 3.9) * h, 1 + soilHash(s2) * 1.2, 0, Math.PI * 2); g.fill();
+    }
+  });
+  M.soilDry = new THREE.MeshStandardMaterial({ map: soilTex, vertexColors: true, roughness: 0.97 });
+  M.soilWet = new THREE.MeshStandardMaterial({ map: soilTex, vertexColors: true, color: 0x7a5c50, roughness: 0.45, metalness: 0.05 }); // dark and glistening
+  var SOIL_W = TILE * 0.94, SOIL_H = 0.1;
+  var soilGeo = (function () {                                        // a mound with a flat-ish top and soft rounded edges that sink into the grass
+    var g = new THREE.PlaneGeometry(SOIL_W, SOIL_W, 14, 14);
+    g.rotateX(-Math.PI / 2);
+    var p = g.attributes.position, cols = [], half = SOIL_W / 2;
+    for (var i = 0; i < p.count; i++) {
+      var x = p.getX(i), z = p.getZ(i);
+      var e = Math.min(half - Math.abs(x), half - Math.abs(z)) / 0.16; // how far in from the edge
+      var k = Math.min(1, Math.max(0, e)); k = k * k * (3 - 2 * k);
+      var lump = (Math.sin(x * 23 + z * 7) + Math.sin(z * 19 - x * 11)) * 0.006;
+      p.setY(i, (SOIL_H + lump) * k);
+      var shade = 0.62 + 0.38 * k + lump * 4;                          // darker and damper at the edges
+      cols.push(shade, shade * 0.97, shade * 0.95);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    g.computeVertexNormals();
+    return g;
+  })();
+  var ridgeGeo = (function () {                                       // a lumpy furrow with rounded ends, lying across the plot
+    var len = TILE * 0.8, g = new THREE.CylinderGeometry(0.1, 0.1, len, 12, 12, false, 0, Math.PI);
+    var p = g.attributes.position, cols = [];
+    for (var i = 0; i < p.count; i++) {
+      var x = p.getX(i), y = p.getY(i), z = p.getZ(i), t = y / (len / 2);
+      var taper = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(t), 5)));
+      var wob = 1 + 0.14 * Math.sin(y * 31 + Math.atan2(z, x) * 3) + 0.08 * Math.sin(y * 57);
+      p.setXYZ(i, x * taper * wob, y, z * taper * wob);
+      var sh = 0.72 + 0.28 * Math.max(0, x / 0.1);                    // the tops of the furrows catch the light
+      cols.push(sh, sh * 0.97, sh * 0.95);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    g.rotateZ(Math.PI / 2);                                           // lying across the plot, its rounded back up
+    g.computeVertexNormals();
+    return g;
+  })();
+  var pebbleGeo = new THREE.DodecahedronGeometry(0.035, 0);
+  var pebbleMats = [new THREE.MeshStandardMaterial({ color: 0xa9a39b, roughness: 0.8 }), new THREE.MeshStandardMaterial({ color: 0x7d766e, roughness: 0.85 })];
+  function buildSoil(tile, rising) {                                  // the soil, furrows and pebbles for one tilled tile
+    var seedN = tile.c * 31.7 + tile.r * 17.3;
+    tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.005, tile.z);
+    tile.soil.rotation.y = soilHash(seedN) < 0.5 ? 0 : Math.PI;       // so neighbouring tiles don't look identical
+    tile.soil.receiveShadow = true;
+    tile.ridges = [];
+    for (var r = 0; r < 3; r++) {
+      var ridge = place(new THREE.Mesh(ridgeGeo, M.soilDry), (soilHash(seedN + r) - 0.5) * 0.06, SOIL_H - 0.03, (r - 1) * TILE * 0.29, tile.soil);
+      ridge.rotation.y = (soilHash(seedN + r * 3) - 0.5) * 0.06;
+      if (rising) ridge.scale.set(1, 0.001, 1);
+      tile.ridges.push(ridge);
+    }
+    var count = 2 + Math.floor(soilHash(seedN + 9) * 3);
+    for (var pb = 0; pb < count; pb++) {
+      var peb = place(new THREE.Mesh(pebbleGeo, pebbleMats[pb % 2]), (soilHash(seedN + pb * 5.1) - 0.5) * SOIL_W * 0.75, SOIL_H + 0.03, (soilHash(seedN + pb * 7.7) - 0.5) * SOIL_W * 0.75, tile.soil);
+      peb.userData.pebble = true;
+      peb.rotation.set(pb, pb * 2, 0);
+      peb.scale.set(1, 0.6, 0.8 + soilHash(seedN + pb) * 0.5);
+    }
+  }
   var stemGeo = new THREE.CylinderGeometry(0.035, 0.05, 1, 6);
   stemGeo.translate(0, 0.5, 0);
   var ballGeo = new THREE.SphereGeometry(0.1, 10, 8);
@@ -5382,7 +5450,7 @@ function startGame(THREE) {
   function setWet(tile, wet) {
     tile.wet = wet;
     if (wet) tile.wetDay = farmDay();           // watered soil stays wet until 6 am tomorrow
-    if (tile.soil) tile.soil.traverse(function (o) { if (o.isMesh) o.material = wet ? M.soilWet : M.soilDry; });
+    if (tile.soil) tile.soil.traverse(function (o) { if (o.isMesh && !o.userData.pebble) o.material = wet ? M.soilWet : M.soilDry; }); // (the pebbles stay pebbles)
   }
 
   // ---------- The mage (you!) ----------
@@ -7558,9 +7626,7 @@ function startGame(THREE) {
     }
     (farm || []).forEach(function (st) {
       var tile = tileByKey(st.c, st.r);
-      tile.soil = place(new THREE.Mesh(soilGeo, M.soilDry), tile.x, 0.06, tile.z);
-      tile.ridges = [];
-      for (var r = 0; r < 3; r++) tile.ridges.push(place(new THREE.Mesh(ridgeGeo, M.soilDry), 0, 0.06, (r - 1) * TILE * 0.28, tile.soil));
+      buildSoil(tile, false);
       if (st.crop) {
         tile.crop = makeCrop(tile);
         tile.stage = st.stage; tile.growth = Math.max(Math.floor(st.growth), [0, 1, 3, 4][st.stage]); // older saves counted growth differently
