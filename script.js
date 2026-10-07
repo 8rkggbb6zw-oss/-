@@ -2618,21 +2618,21 @@ function startGame(THREE) {
   // the steep roof, with its ends filled in and a ridge along the top
   var RISE = 2.1, OVER = 0.45, halfRun = FRONT + OVER;           // the roof slopes from the ridge down past the wall tops to the eaves
   var pitch = Math.atan2(RISE, FRONT), slabLen = halfRun / Math.cos(pitch), EAVE_Y = TOP - RISE * OVER / FRONT;
-  var roofGeo = new THREE.BoxGeometry(HW + 0.8, 0.16, slabLen);
+  var roofGeo = new THREE.BoxGeometry(HW + 0.4, 0.16, slabLen);    // it hangs over the right end, but stops at the left wall where the tower stands
   var ruv = roofGeo.attributes.uv;
-  for (var ru = 0; ru < ruv.count; ru++) ruv.setXY(ru, ruv.getX(ru) * (HW + 0.8) / 1.1, ruv.getY(ru) * slabLen / 1.1); // shingles keep their size
+  for (var ru = 0; ru < ruv.count; ru++) ruv.setXY(ru, ruv.getX(ru) * (HW + 0.4) / 1.1, ruv.getY(ru) * slabLen / 1.1); // shingles keep their size
   [-1, 1].forEach(function (s) {
     var nY = Math.cos(pitch) * 0.08, nZ = Math.sin(pitch) * 0.08 * s;  // nudged up so its underside sits on the walls
-    hPart(roofGeo, 'roof', 0, (TOP + RISE + EAVE_Y) / 2 + nY, s * halfRun / 2 + nZ, s * pitch, 0, 0);
+    hPart(roofGeo, 'roof', 0.2, (TOP + RISE + EAVE_Y) / 2 + nY, s * halfRun / 2 + nZ, s * pitch, 0, 0);
   });
   var gable = new THREE.Shape();                                    // the triangle of wall under each end of the roof
   gable.moveTo(-FRONT, 0); gable.lineTo(FRONT, 0); gable.lineTo(0, RISE); gable.lineTo(-FRONT, 0);
   var gableGeo = new THREE.ExtrudeGeometry(gable, { depth: 0.12, bevelEnabled: false });
   [-1, 1].forEach(function (s) { hPart(gableGeo, 'plaster', s * (HW / 2 - 0.06) - 0.06, TOP, 0, 0, Math.PI / 2, 0); });
-  hPart(new THREE.CylinderGeometry(0.11, 0.11, HW + 0.9, 8), 'hat', 0, TOP + RISE + 0.1, 0, 0, 0, Math.PI / 2); // the ridge
+  hPart(new THREE.CylinderGeometry(0.11, 0.11, HW + 0.45, 8), 'hat', 0.225, TOP + RISE + 0.1, 0, 0, 0, Math.PI / 2); // the ridge
 
   // the round tower on the left with a crooked witch-hat roof, a little brim and a gold star on top
-  var TX = -HW / 2 - 0.55, TZ = 0.35, TR = 0.95, TH = TOP + RISE + 0.35; // tall enough that its hat clears the roof
+  var TR = 0.95, TX = -HW / 2 - TR + 0.05, TZ = 0.35, TH = TOP + RISE + 0.35; // standing right against the left wall, tall enough that its hat clears the roof
   hPart(new THREE.CylinderGeometry(TR + 0.1, TR + 0.15, FOOT_H + 0.8, 16), 'stone', TX, (FOOT_H - 0.8) / 2, TZ);
   hPart(new THREE.CylinderGeometry(TR, TR, TH - FOOT_H, 16), 'plaster', TX, FOOT_H + (TH - FOOT_H) / 2, TZ);
   hPart(new THREE.CylinderGeometry(TR + 0.04, TR + 0.04, 0.14, 16), 'beam', TX, TH - 0.07, TZ);
@@ -2739,7 +2739,7 @@ function startGame(THREE) {
   // string lights along the front of the roof
   var houseLights = [];
   for (var sl = 0; sl < 15; sl++) {
-    var lx = -HW / 2 - 0.3 + sl * (HW + 0.6) / 14, sag = Math.sin((sl % 5) / 5 * Math.PI) * 0.12;
+    var lx = -HW / 2 + 0.15 + sl * (HW + 0.15) / 14, sag = Math.sin((sl % 5) / 5 * Math.PI) * 0.12;
     var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: sl % 2 ? 0xffd27a : 0xff9be0, emissive: sl % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 0.8 }));
     bulb.position.set(lx, EAVE_Y - 0.08 - sag, FRONT + OVER - 0.05);
     houseLive.add(bulb);
@@ -2904,7 +2904,7 @@ function startGame(THREE) {
     cap.scale.set(1, 0.7, 1);
   });
   // a white picket fence all the way round the yard, with a gap at the front for the path
-  var FENCE_L = -HW / 2 - 2.1, FENCE_R = HW / 2 + 1.8, FENCE_B = -FRONT - 1.2, FENCE_F = FRONT + 2.3, GATE = 1.5;
+  var FENCE_L = -HW / 2 - 2.6, FENCE_R = HW / 2 + 1.8, FENCE_B = -FRONT - 1.2, FENCE_F = FRONT + 2.3, GATE = 1.5;
   var fencePosts = [];
   function fenceRun(x0, z0, x1, z1) {
     var len = dist(x0, z0, x1, z1), n = Math.max(1, Math.round(len / 0.45)), ang = Math.atan2(x1 - x0, z1 - z0);
