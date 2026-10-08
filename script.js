@@ -1885,21 +1885,39 @@ function startGame(THREE) {
   // the stone path from the end of the bridge to Whimsy & Bloom's front steps: a gentle curve through these points
   var SP_PTS = [[0, 80.6], [-0.2, 84.5], [-1.6, 89], [-4.4, 93.4], [-7.6, 96.9], [SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + 0.62), SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + 0.62)]];
   var SP_W = 0.95;                                                     // half the width of the path
-  var spLine = (function () {                                          // the curve, cut into many short steps
-    var c = new THREE.CatmullRomCurve3(SP_PTS.map(function (q) { return new THREE.Vector3(q[0], 0, q[1]); }));
-    return c.getSpacedPoints(160).map(function (v) { return [v.x, v.z]; });
-  })();
-  function stonePathDist(x, z) {
-    if (x > 3 || x < -13 || z < 78 || z > 103) return 99;               // nowhere near it: skip the sums
+  // the doctor's office: across the square from Whimsy & Bloom, on the right as you come off the bridge, its door turned toward the bridge
+  var CLINIC_X = ISLE2_X + 13, CLINIC_Z = 113, CLINIC_TURN = Math.PI + 0.3, CLINIC_HW = 5, CLINIC_HD = 3.8;
+  function clinicFront(d) { return { x: CLINIC_X + Math.sin(CLINIC_TURN) * (CLINIC_HD + d), z: CLINIC_Z + Math.cos(CLINIC_TURN) * (CLINIC_HD + d) }; }
+  function clinicLocal(x, z) {                                         // a spot in the clinic's own directions: x across its front, z out of its door
+    var dx = x - CLINIC_X, dz = z - CLINIC_Z, c = Math.cos(CLINIC_TURN), si = Math.sin(CLINIC_TURN);
+    return [dx * c - dz * si, dx * si + dz * c];
+  }
+  function onClinicLot(x, z, m) { var l = clinicLocal(x, z); return Math.abs(l[0]) < CLINIC_HW + 0.95 + m && l[1] > -CLINIC_HD - 0.95 - m && l[1] < CLINIC_HD + (Math.abs(l[0]) < 1.8 ? 1.9 : 0.95) + m; }   // the building, its porch and its flower beds
+  // a second stone path, branching off the first just past the bridge and curving across to the clinic's front steps
+  var CP_PTS = [[-0.05, 83.2], [2.6, 87.3], [6.2, 92.6], [8.9, 98.2], [10.3, 103.4], [clinicFront(1.75).x, clinicFront(1.75).z]];
+  function stoneCurve(pts, n) {                                        // a curve through the points, cut into many short steps
+    var c = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], 0, q[1]); }));
+    return c.getSpacedPoints(n).map(function (v) { return [v.x, v.z]; });
+  }
+  var spLine = stoneCurve(SP_PTS, 160), cpLine = stoneCurve(CP_PTS, 170);
+  function lineBox(line) {                                             // the box round a path, so far-off spots can skip the sums
+    var b = [1e9, -1e9, 1e9, -1e9];
+    line.forEach(function (q) { b[0] = Math.min(b[0], q[0] - 3); b[1] = Math.max(b[1], q[0] + 3); b[2] = Math.min(b[2], q[1] - 3); b[3] = Math.max(b[3], q[1] + 3); });
+    return b;
+  }
+  var spBox = lineBox(spLine), cpBox = lineBox(cpLine);
+  function lineDist(line, box, x, z) {
+    if (x < box[0] || x > box[1] || z < box[2] || z > box[3]) return 99;   // nowhere near it
     var best = 1e9;
-    for (var i = 0; i < spLine.length - 1; i++) {
-      var ax = spLine[i][0], az = spLine[i][1], dx = spLine[i + 1][0] - ax, dz = spLine[i + 1][1] - az;
+    for (var i = 0; i < line.length - 1; i++) {
+      var ax = line[i][0], az = line[i][1], dx = line[i + 1][0] - ax, dz = line[i + 1][1] - az;
       var t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
       var ex = x - ax - dx * t, ez = z - az - dz * t, dd = ex * ex + ez * ez;
       if (dd < best) best = dd;
     }
     return Math.sqrt(best);
   }
+  function stonePathDist(x, z) { return Math.min(lineDist(spLine, spBox, x, z), lineDist(cpLine, cpBox, x, z)); }   // how far to the nearest stone path
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
   function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
@@ -1958,7 +1976,7 @@ function startGame(THREE) {
   var ISLE2_BLADES = 26000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
   for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
-    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9 || stonePathDist(ix, iz) < SP_W + 0.15) continue; // (none growing through the shop floor)
+    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9 || onClinicLot(ix, iz, 0.2) || stonePathDist(ix, iz) < SP_W + 0.15) continue; // (none growing through the shop floor)
     var meadow = noise(ix * 0.35 + 11, iz * 0.35 - 4);                 // some patches grow longer and lusher than others
     gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.6, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.6);
     gQuat.setFromEuler(gEuler);
@@ -1980,7 +1998,7 @@ function startGame(THREE) {
   var ISLE2_FLOWERS = 1500, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
-    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || stonePathDist(fx, fz) < SP_W + 0.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
+    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || onClinicLot(fx, fz, 0.6) || stonePathDist(fx, fz) < SP_W + 0.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
     wfE.set((fh - 0.5) * 0.3, isle2Hash(iw * 5.5) * 6.28, 0);
     wfQ.setFromEuler(wfE);
     wfS.setScalar(0.8 + fh * 0.6);
@@ -4144,6 +4162,7 @@ function startGame(THREE) {
     pathLampMat.emissiveIntensity = 0.3 + glow * 1.6;                   // the path's lanterns light up at night
     for (var plg = 0; plg < pathLanternGlows.length; plg++) pathLanternGlows[plg].material.opacity = glow * 0.75;
     shopCrystal.rotation.y = -t * 0.6;
+    updateClinicBuilding(t, glow);
     starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
     crystalGlow.material.opacity = 0.45 + glow * 0.3 + Math.sin(t * 2.4) * 0.1;
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
@@ -4166,6 +4185,659 @@ function startGame(THREE) {
     for (var fx = -SW; fx <= SW + 0.01; fx += 0.5) if (Math.abs(fx) > 0.7) solidAt(fx, SD - 0.25, 0.4);   // the shopfront, with a gap for the door
     solidAt(0, SD - 0.6, 0.35);                                        // the door itself: walk up to it and in you go
     topiaryXs.forEach(function (tx) { solidAt(tx, TOPIARY_Z, 0.32); });
+  })();
+
+  // ---------- The doctor's office, on the town square ----------
+  // Everdawn Clinic: a tidy cottage surgery in soft sage clapboard with crisp white trim and a coral clay-tiled roof. A
+  // white columned porch shelters the teal front door, with a painted sign, brass lanterns, clipped bay trees in pots,
+  // six-over-six windows with louvred shutters and flower boxes, a bench, a brick chimney and a heart weathervane.
+  // Its windows glow warmly at night
+  var clinicGroup = new THREE.Group();
+  clinicGroup.position.set(CLINIC_X, 0, CLINIC_Z);
+  clinicGroup.rotation.y = CLINIC_TURN;
+  scene.add(clinicGroup);
+  function clPart(geo, mat, x, y, z, rx, ry, rz, parent) {
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    m.castShadow = m.receiveShadow = true;
+    (parent || clinicGroup).add(m);
+    return m;
+  }
+  var CW = CLINIC_HW, CD = CLINIC_HD, CL_PLINTH = 0.3, CL_WALL_H = 3.4, CL_TOP = CL_PLINTH + CL_WALL_H;
+  var CL_WIN_Y = 2.05, CL_WIN_W = 1.6, CL_WIN_H = 1.5;                 // the middle height and size of each window (they line up with the windows inside)
+  var CL_RD = CD + 0.45, CL_RH = 2.0;                                  // the roof: how far it reaches front and back, and how tall it is
+
+  // painted textures
+  var clSidingTex = paintTexture(256, 256, function (g, w, h) {       // sage clapboard: overlapping boards, each with a shadow under its lip
+    for (var r = 0; r < 16; r++) {
+      var y = r * 16, l = 68 + isle2Hash(r * 3.1 + 900) * 5;
+      var bg = g.createLinearGradient(0, y, 0, y + 16);
+      bg.addColorStop(0, 'hsl(132,22%,' + (l - 1) + '%)'); bg.addColorStop(0.3, 'hsl(132,24%,' + (l + 6) + '%)'); bg.addColorStop(1, 'hsl(132,22%,' + (l + 10) + '%)');
+      g.fillStyle = bg; g.fillRect(0, y, w, 16);
+      g.fillStyle = 'rgba(40,60,45,0.4)'; g.fillRect(0, y + 14.5, w, 1.5);
+    }
+    for (var i = 0; i < 1400; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i * 1.9) * 0.08 + ')'; g.fillRect(isle2Hash(i * 2.7) * w, isle2Hash(i * 3.9) * h, 3 + isle2Hash(i) * 8, 1); }   // brush strokes in the paint
+  });
+  var clTileTex = paintTexture(256, 256, function (g, w, h) {         // coral clay roof tiles, each row overlapping the one below
+    g.fillStyle = '#6a3226'; g.fillRect(0, 0, w, h);
+    for (var r = 0; r < 8; r++) for (var c = -1; c < 9; c++) {
+      var x = c * 32 + (r % 2) * 16, y = r * 32, l = 50 + isle2Hash(r * 13 + c * 7 + 950) * 12;
+      var tg = g.createLinearGradient(x, 0, x + 30, 0);
+      tg.addColorStop(0, 'hsl(12,50%,' + (l - 11) + '%)'); tg.addColorStop(0.5, 'hsl(14,56%,' + l + '%)'); tg.addColorStop(1, 'hsl(12,50%,' + (l - 13) + '%)');
+      g.fillStyle = tg; g.beginPath(); g.moveTo(x + 1, y); g.lineTo(x + 31, y); g.lineTo(x + 31, y + 25); g.quadraticCurveTo(x + 16, y + 33, x + 1, y + 25); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(x + 2, y + 27, 28, 4);
+    }
+    for (var i = 0; i < 500; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,230,200' : '60,30,20') + ',0.12)'; g.fillRect(isle2Hash(i * 2.1) * w, isle2Hash(i * 3.3) * h, 2, 2); }   // weathering
+    for (var st = 0; st < 40; st++) {                                   // faint rain streaks running down the tiles
+      var sx = isle2Hash(st * 4.3 + 7) * w, sy = isle2Hash(st * 2.9) * h, sl = 20 + isle2Hash(st) * 50;
+      var sg = g.createLinearGradient(0, sy, 0, sy + sl); sg.addColorStop(0, 'rgba(40,25,20,0.16)'); sg.addColorStop(1, 'rgba(40,25,20,0)');
+      g.fillStyle = sg; g.fillRect(sx, sy, 2 + isle2Hash(st * 9) * 3, sl);
+    }
+    for (var lc = 0; lc < 70; lc++) {                                   // little spots of pale lichen
+      g.fillStyle = 'rgba(' + (isle2Hash(lc) > 0.5 ? '220,214,160' : '170,180,130') + ',' + (0.25 + isle2Hash(lc * 3) * 0.3) + ')';
+      g.beginPath(); g.arc(isle2Hash(lc * 5.1) * w, isle2Hash(lc * 6.7) * h, 1 + isle2Hash(lc * 8.3) * 2.5, 0, Math.PI * 2); g.fill();
+    }
+  });
+  var clShutterTex = paintTexture(64, 192, function (g, w, h) {       // a teal louvred shutter
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, h);
+    for (var y = 12; y < h - 12; y += 7) {
+      var lg = g.createLinearGradient(0, y, 0, y + 7); lg.addColorStop(0, '#4f9a90'); lg.addColorStop(0.7, '#2f6f68'); lg.addColorStop(1, '#1d4a45');
+      g.fillStyle = lg; g.fillRect(8, y, w - 16, 7);
+    }
+    g.fillStyle = '#3b7f77'; g.fillRect(0, 0, w, 10); g.fillRect(0, h - 10, w, 10); g.fillRect(0, h / 2 - 4, w, 8); g.fillRect(0, 0, 7, h); g.fillRect(w - 7, 0, 7, h);
+  });
+  function clSignPaint(g, w, h, metalOnly) {                          // a hand-painted teal board with raised gilded letters and enamel hearts
+    if (metalOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+    else {
+      var base = g.createLinearGradient(0, 0, 0, h); base.addColorStop(0, '#2a6a62'); base.addColorStop(0.5, '#1f5850'); base.addColorStop(1, '#174640');
+      g.fillStyle = base; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 320; i++) {                                  // the wood grain showing through the paint
+        var gy = isle2Hash(i * 1.7 + 40) * h, lite = isle2Hash(i * 3.1 + 40) > 0.5;
+        g.strokeStyle = lite ? 'rgba(140,200,185,' + (0.04 + isle2Hash(i) * 0.06) + ')' : 'rgba(5,25,22,' + (0.08 + isle2Hash(i) * 0.1) + ')';
+        g.lineWidth = 0.6 + isle2Hash(i * 5) * 1.6;
+        g.beginPath(); var x0 = isle2Hash(i * 2.3 + 40) * w * 0.7; g.moveTo(x0, gy);
+        g.bezierCurveTo(x0 + 200, gy + (isle2Hash(i * 7) - 0.5) * 8, x0 + 420, gy - (isle2Hash(i * 9) - 0.5) * 8, x0 + 300 + isle2Hash(i * 11) * 600, gy + (isle2Hash(i * 13) - 0.5) * 5);
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, h * 0.5 - 1, w, 2);   // the joint between the two boards
+      var vig = g.createLinearGradient(0, 0, 0, h); vig.addColorStop(0, 'rgba(0,0,0,0.3)'); vig.addColorStop(0.18, 'rgba(0,0,0,0)'); vig.addColorStop(0.82, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.38)');
+      g.fillStyle = vig; g.fillRect(0, 0, w, h);
+      for (var sc = 0; sc < 50; sc++) { g.strokeStyle = 'rgba(220,240,230,0.06)'; g.lineWidth = 1; var sx = isle2Hash(sc * 17 + 3) * w, sy = isle2Hash(sc * 19 + 3) * h; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 8 + isle2Hash(sc) * 24, sy + (isle2Hash(sc * 3) - 0.5) * 4); g.stroke(); }   // little scuffs
+    }
+    function gold(y0, y1) {
+      if (metalOnly) return '#fff';
+      var gg = g.createLinearGradient(0, y0, 0, y1);
+      gg.addColorStop(0, '#fff5c8'); gg.addColorStop(0.3, '#ecc054'); gg.addColorStop(0.55, '#a87824'); gg.addColorStop(0.78, '#f2d06c'); gg.addColorStop(1, '#7e5814');
+      return gg;
+    }
+    function gild(text, x, y, size, italic, spacing) {                 // letters with a shadow, a dark bevel edge and a gold face
+      g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; g.textBaseline = 'middle';
+      var chars = text.split(''), widths = chars.map(function (c) { return g.measureText(c).width + (spacing || 0); });
+      var total = widths.reduce(function (a2, b2) { return a2 + b2; }, 0) - (spacing || 0), cx = x - total / 2;
+      chars.forEach(function (c, k) {
+        if (!metalOnly) {
+          g.save(); g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowOffsetX = size * 0.04; g.shadowOffsetY = size * 0.06; g.shadowBlur = size * 0.08;
+          g.fillStyle = '#4a3008'; g.fillText(c, cx + 1.5, y + 2); g.restore();
+        }
+        g.fillStyle = gold(y - size * 0.5, y + size * 0.5); g.fillText(c, cx, y);
+        if (!metalOnly) { g.strokeStyle = 'rgba(255,248,215,0.5)'; g.lineWidth = 1; g.strokeText(c, cx - 0.6, y - 1); }
+        cx += widths[k];
+      });
+    }
+    function rrect(m, r) { g.beginPath(); g.moveTo(m + r, m); g.lineTo(w - m - r, m); g.quadraticCurveTo(w - m, m, w - m, m + r); g.lineTo(w - m, h - m - r); g.quadraticCurveTo(w - m, h - m, w - m - r, h - m); g.lineTo(m + r, h - m); g.quadraticCurveTo(m, h - m, m, h - m - r); g.lineTo(m, m + r); g.quadraticCurveTo(m, m, m + r, m); g.stroke(); }
+    g.strokeStyle = metalOnly ? '#fff' : gold(0, h); g.lineWidth = 6; rrect(18, 26);   // a gold pinstripe border, doubled
+    g.lineWidth = 2; rrect(32, 18);
+    function heart(cx, cy, s2) {                                        // a raised enamel heart with a gold rim and a white cross
+      g.beginPath(); g.moveTo(cx, cy + s2 * 0.9); g.bezierCurveTo(cx - s2 * 1.3, cy, cx - s2 * 0.8, cy - s2, cx, cy - s2 * 0.35); g.bezierCurveTo(cx + s2 * 0.8, cy - s2, cx + s2 * 1.3, cy, cx, cy + s2 * 0.9); g.closePath();
+      if (metalOnly) { g.strokeStyle = '#fff'; g.lineWidth = 9; g.stroke(); return; }
+      g.save(); g.shadowColor = 'rgba(0,0,0,0.55)'; g.shadowOffsetY = 6; g.shadowBlur = 10; g.fillStyle = '#7a2030'; g.fill(); g.restore();
+      var hg = g.createRadialGradient(cx - s2 * 0.35, cy - s2 * 0.45, 4, cx, cy, s2 * 1.3); hg.addColorStop(0, '#ffb4c4'); hg.addColorStop(0.45, '#e8607c'); hg.addColorStop(1, '#9c2a42');
+      g.fillStyle = hg; g.fill();
+      g.strokeStyle = gold(cy - s2, cy + s2); g.lineWidth = 9; g.stroke();
+      g.fillStyle = '#fbf8f0'; g.fillRect(cx - s2 * 0.11, cy - s2 * 0.44, s2 * 0.22, s2 * 0.76); g.fillRect(cx - s2 * 0.36, cy - s2 * 0.17, s2 * 0.72, s2 * 0.22);
+      g.fillStyle = 'rgba(255,255,255,0.45)'; g.beginPath(); g.ellipse(cx - s2 * 0.42, cy - s2 * 0.42, s2 * 0.22, s2 * 0.1, -0.6, 0, Math.PI * 2); g.fill();   // the shine on the enamel
+    }
+    heart(190, h / 2 + 8, 92); heart(w - 190, h / 2 + 8, 92);
+    gild('Everdawn Clinic', w / 2, h / 2 - 34, 168, true, 2);
+    gild('DOCTOR\u2019S OFFICE', w / 2, h / 2 + 108, 44, false, 14);
+    g.strokeStyle = metalOnly ? '#fff' : '#c99a3a'; g.lineWidth = 3;
+    [-1, 1].forEach(function (d) {                                     // little rules and diamonds either side of the small letters
+      var ex = w / 2 + d * 300;
+      g.beginPath(); g.moveTo(ex, h / 2 + 108); g.lineTo(ex + d * 150, h / 2 + 108); g.stroke();
+      g.fillStyle = metalOnly ? '#fff' : '#e3b54c'; g.beginPath(); g.moveTo(ex + d * 166, h / 2 + 98); g.lineTo(ex + d * 176, h / 2 + 108); g.lineTo(ex + d * 166, h / 2 + 118); g.lineTo(ex + d * 156, h / 2 + 108); g.closePath(); g.fill();
+    });
+  }
+  var clSignTex = paintTexture(2048, 360, function (g, w, h) { clSignPaint(g, w, h, false); });
+  var clSignMetal = paintTexture(2048, 360, function (g, w, h) { clSignPaint(g, w, h, true); });
+  clSignTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  var clScaleTex = paintTexture(256, 256, function (g, w, h) {       // fish-scale shingles for the gables, in soft cream
+    g.fillStyle = '#b8b0a0'; g.fillRect(0, 0, w, h);
+    for (var r = 9; r >= -1; r--) for (var c = -1; c < 9; c++) {
+      var cx = c * 32 + 16 + (r % 2 ? 16 : 0), y0 = r * 28 - 8, l = 86 + isle2Hash(r * 5 + c * 3 + 990) * 6;
+      g.fillStyle = 'hsl(40,30%,' + l + '%)';
+      g.beginPath(); g.moveTo(cx - 16, y0); g.lineTo(cx - 16, y0 + 18); g.arc(cx, y0 + 18, 16, Math.PI, 0, true); g.lineTo(cx + 16, y0); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(90,80,60,0.45)'; g.lineWidth = 1.5; g.stroke();
+    }
+  });
+  function clBumpy(tex, bump, rough) {                                // the painted texture doubles as a bump map, so board lips and tile edges catch the light
+    return new THREE.MeshStandardMaterial({ map: tex, bumpMap: tex, bumpScale: bump, roughness: rough });
+  }
+  function clRealGlass(cw, ch, curtains) {                            // window glass: the sky and clouds reflected by day, with sheer curtains behind; a warm lit room at night
+    function paint(g, w, h, night) {
+      if (night) {
+        var warm = g.createRadialGradient(w / 2, h * 0.55, 4, w / 2, h * 0.55, Math.max(w, h) * 0.8);
+        warm.addColorStop(0, '#ffe9bc'); warm.addColorStop(0.55, '#f2bd78'); warm.addColorStop(1, '#9a6036');
+        g.fillStyle = warm; g.fillRect(0, 0, w, h);
+      } else {
+        var sky = g.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, '#d4e6f2'); sky.addColorStop(0.42, '#8eaabb'); sky.addColorStop(0.62, '#4c5e66'); sky.addColorStop(1, '#2b3236');
+        g.fillStyle = sky; g.fillRect(0, 0, w, h);
+        for (var c = 0; c < 6; c++) {                                   // soft clouds caught in the glass
+          var cx = isle2Hash(c * 3.1 + cw) * w, cy = h * (0.08 + isle2Hash(c * 5.3 + ch) * 0.25), cr = w * (0.12 + isle2Hash(c) * 0.12);
+          var cg = g.createRadialGradient(cx, cy, 1, cx, cy, cr); cg.addColorStop(0, 'rgba(255,255,255,0.55)'); cg.addColorStop(1, 'rgba(255,255,255,0)');
+          g.fillStyle = cg; g.fillRect(0, 0, w, h);
+        }
+        g.fillStyle = 'rgba(40,70,40,0.35)';                            // the reflected tops of the grass and trees across the square
+        for (var t = 0; t < w; t += 3) { var th = h * (0.5 + Math.sin(t * 0.13) * 0.03 + isle2Hash(t) * 0.04); g.fillRect(t, th, 3, h * 0.12); }
+      }
+      if (curtains) {                                                   // sheer cream curtains gathered at the sides, and a valance
+        [[0, 1], [w, -1]].forEach(function (cc) {
+          var cg2 = g.createLinearGradient(cc[0], 0, cc[0] + cc[1] * w * 0.3, 0);
+          cg2.addColorStop(0, night ? 'rgba(250,236,210,0.95)' : 'rgba(236,228,214,0.75)'); cg2.addColorStop(1, 'rgba(236,228,214,0)');
+          g.fillStyle = cg2; g.fillRect(0, h * 0.06, w, h);
+          g.strokeStyle = night ? 'rgba(160,110,70,0.35)' : 'rgba(120,110,100,0.35)'; g.lineWidth = 1.5;
+          for (var f = 0; f < 5; f++) { var fx = cc[0] + cc[1] * (4 + f * w * 0.05); g.beginPath(); g.moveTo(fx, h * 0.08); g.quadraticCurveTo(fx + cc[1] * 6, h * 0.5, fx, h); g.stroke(); }
+        });
+        g.fillStyle = night ? 'rgba(240,220,190,0.95)' : 'rgba(230,222,208,0.8)'; g.fillRect(0, 0, w, h * 0.09);
+      }
+      var streak = g.createLinearGradient(0, 0, w, h);                  // a bright sheen across the pane
+      streak.addColorStop(0.28, 'rgba(255,255,255,0)'); streak.addColorStop(0.36, 'rgba(255,255,255,' + (night ? 0.08 : 0.3) + ')'); streak.addColorStop(0.41, 'rgba(255,255,255,0.04)'); streak.addColorStop(0.47, 'rgba(255,255,255,' + (night ? 0.05 : 0.18) + ')'); streak.addColorStop(0.53, 'rgba(255,255,255,0)');
+      g.fillStyle = streak; g.fillRect(0, 0, w, h);
+    }
+    var day = paintTexture(cw, ch, function (g, w, h) { paint(g, w, h, false); });
+    var nite = paintTexture(cw, ch, function (g, w, h) { paint(g, w, h, true); });
+    var m = new THREE.MeshStandardMaterial({ map: day, emissive: 0xffffff, emissiveMap: nite, emissiveIntensity: 0.03, roughness: 0.04, metalness: 0.3 });
+    shopNightGlass.push(m);
+    return m;
+  }
+  // materials
+  var CL = {
+    siding: clBumpy(shopTiled(clSidingTex, 3.5, 1.17), 0.025, 0.7),
+    sidingSide: clBumpy(shopTiled(clSidingTex, 2.6, 1.17), 0.025, 0.7),
+    gable: clBumpy(shopTiled(clScaleTex, 1 / 1.2, 1 / 1.05), 0.03, 0.75),
+    tiles: clBumpy(shopTiled(clTileTex, 4.5, 2), 0.05, 0.62),
+    trim: new THREE.MeshStandardMaterial({ color: 0xf8f6f0, roughness: 0.55 }),
+    teal: new THREE.MeshStandardMaterial({ color: 0x2f6f68, roughness: 0.4 }),
+    shutter: new THREE.MeshStandardMaterial({ map: clShutterTex, roughness: 0.6 }),
+    brick: new THREE.MeshStandardMaterial({ map: shopTiled(stoneWallTex, 1, 1.5), color: 0xd89a84, roughness: 0.9 }),
+    sign: new THREE.MeshStandardMaterial({ map: clSignTex, metalnessMap: clSignMetal, metalness: 0.35, roughness: 0.4, emissive: 0xe8b54a, emissiveMap: clSignMetal, emissiveIntensity: 0.25 }),   // the gilding catches the light
+    soil: new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }),
+    terracotta: new THREE.MeshStandardMaterial({ color: 0xc0704a, roughness: 0.85 }),
+    bay: new THREE.MeshStandardMaterial({ color: 0x3f7a3e, roughness: 0.8, flatShading: true }),
+    wood: new THREE.MeshStandardMaterial({ color: 0x9a6a42, roughness: 0.7 }),
+    lamp: new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0xffc870, emissiveIntensity: 0.3, roughness: 0.3 })
+  };
+  var clGlass = clRealGlass(256, 240, true), clDoorGlass = clRealGlass(128, 160, false);
+  // leafy foliage: lots of small leaves set over the surface of a shape, around a dark core, so shrubs and trees look
+  // full and soft rather than faceted
+  var clLeafGeo = new THREE.SphereGeometry(0.05, 6, 4); clLeafGeo.scale(1, 0.25, 0.6);
+  var clLeafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
+  var clRoseGeo = (function () {                                       // a rose: a cup of overlapping petals round a tight bud
+    var pts = [];
+    for (var i = 0; i <= 8; i++) { var t = i / 8; pts.push(new THREE.Vector2(0.012 + Math.sin(t * Math.PI * 0.6) * 0.04 + t * 0.006, t * 0.045 - Math.sin(t * Math.PI) * 0.004)); }
+    return new THREE.LatheGeometry(pts, 9);
+  })();
+  var clLeafy = [], clCores = [];
+  function clFoliage(cx, cy, cz, rx, ry, rz, n, seed, list) {
+    var out = list || clLeafy;
+    if (!list) clCores.push([cx, cy, cz, rx * 0.86, ry * 0.86, rz * 0.86]);
+    for (var i = 0; i < n; i++) {
+      var u = isle2Hash(seed + i * 1.37), v = isle2Hash(seed * 1.3 + i * 2.11), th = u * Math.PI * 2, ph = Math.acos(2 * v - 1), k = 0.92 + isle2Hash(seed + i * 3.7) * 0.12;
+      out.push([cx + Math.sin(ph) * Math.cos(th) * rx * k, cy + Math.cos(ph) * ry * k, cz + Math.sin(ph) * Math.sin(th) * rz * k, u * 6, v * 6, isle2Hash(i + seed) * 6, isle2Hash(seed + i * 5.9)]);
+    }
+  }
+
+  // the brick plinth, the clapboard walls with white corner boards, and the trim along the top and bottom
+  clPart(new THREE.BoxGeometry(CW * 2 + 0.3, CL_PLINTH, CD * 2 + 0.3), CL.brick, 0, CL_PLINTH / 2, 0);
+  clPart(new THREE.BoxGeometry(CW * 2, CL_WALL_H, 0.2), CL.siding, 0, CL_PLINTH + CL_WALL_H / 2, CD - 0.1);
+  clPart(new THREE.BoxGeometry(CW * 2, CL_WALL_H, 0.2), CL.siding, 0, CL_PLINTH + CL_WALL_H / 2, -CD + 0.1);
+  [-1, 1].forEach(function (s) { clPart(new THREE.BoxGeometry(0.2, CL_WALL_H, CD * 2 - 0.4), CL.sidingSide, s * (CW - 0.1), CL_PLINTH + CL_WALL_H / 2, 0); });
+  clPart(new THREE.BoxGeometry(CW * 2 - 0.4, 0.1, CD * 2 - 0.4), CL.trim, 0, CL_TOP - 0.05, 0);                            // a lid, so nothing shows through under the roof
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { clPart(new THREE.BoxGeometry(0.26, CL_WALL_H, 0.26), CL.trim, c[0] * (CW - 0.1), CL_PLINTH + CL_WALL_H / 2, c[1] * (CD - 0.1)); });
+  clPart(new THREE.BoxGeometry(CW * 2 + 0.12, 0.16, CD * 2 + 0.12), CL.trim, 0, CL_PLINTH + 0.08, 0);                       // the water table
+  clPart(new THREE.BoxGeometry(CW * 2 + 0.12, 0.34, CD * 2 + 0.12), CL.trim, 0, CL_TOP + 0.08, 0);                           // the frieze board under the eaves
+
+  // the coral tiled gable roof, with clapboard gable ends, white fascia boards, a ridge cap, a chimney and a weathervane
+  var clSlope = Math.atan2(CL_RH, CL_RD), clSlopeLen = Math.sqrt(CL_RD * CL_RD + CL_RH * CL_RH);
+  [-1, 1].forEach(function (s) {
+    clPart(new THREE.BoxGeometry(CW * 2 + 0.7, 0.14, clSlopeLen + 0.1), CL.tiles, 0, CL_TOP + CL_RH / 2 + 0.07, s * CL_RD / 2, s * clSlope, 0, 0);
+    clPart(new THREE.BoxGeometry(CW * 2 + 0.74, 0.2, 0.06), CL.trim, 0, CL_TOP - 0.02, s * (CL_RD + 0.02));                  // fascia along the eaves
+    var gh0 = CL_RH * (1 - CD / CL_RD), gs = new THREE.Shape();      // the gable end: a pentagon of clapboard up under the roof
+    gs.moveTo(-CD, 0); gs.lineTo(CD, 0); gs.lineTo(CD, gh0); gs.lineTo(0, CL_RH); gs.lineTo(-CD, gh0); gs.lineTo(-CD, 0);
+    clPart(new THREE.ShapeGeometry(gs), CL.gable, s * (CW - 0.02), CL_TOP, 0, 0, s * Math.PI / 2, 0);
+    [-1, 1].forEach(function (e) {                                      // white barge boards up the roof's edges
+      clPart(new THREE.BoxGeometry(0.1, 0.26, clSlopeLen + 0.1), CL.trim, s * (CW + 0.36), CL_TOP + CL_RH / 2 + 0.02, e * CL_RD / 2, e * clSlope, 0, 0);
+    });
+    clPart(new THREE.CircleGeometry(0.42, 28), clGlass, s * (CW + 0.0), CL_TOP + 0.85, 0, 0, s * Math.PI / 2, 0);            // a round window up in each gable
+    clPart(new THREE.TorusGeometry(0.44, 0.06, 8, 28), CL.trim, s * (CW + 0.02), CL_TOP + 0.85, 0, 0, s * Math.PI / 2, 0);
+    clPart(new THREE.BoxGeometry(0.04, 0.84, 0.04), CL.trim, s * (CW + 0.03), CL_TOP + 0.85, 0);
+    clPart(new THREE.BoxGeometry(0.04, 0.04, 0.84), CL.trim, s * (CW + 0.03), CL_TOP + 0.85, 0);
+  });
+  clPart(new THREE.CylinderGeometry(0.12, 0.12, CW * 2 + 0.7, 10), CL.terracotta, 0, CL_TOP + CL_RH + 0.12, 0, 0, 0, Math.PI / 2);   // ridge tiles
+  clPart(new THREE.BoxGeometry(0.75, 2.4, 0.75), CL.brick, 3.0, CL_TOP + 1.9, -1.6);                                        // the chimney
+  clPart(new THREE.BoxGeometry(0.9, 0.14, 0.9), CL.trim, 3.0, CL_TOP + 3.12, -1.6);
+  [-0.16, 0.16].forEach(function (o) { clPart(new THREE.CylinderGeometry(0.09, 0.11, 0.3, 10), CL.terracotta, 3.0 + o, CL_TOP + 3.33, -1.6); });
+  var CL_VANE_Y = CL_TOP + CL_RH + 1.35;                               // a heart-shaped weathervane, on top of the cupola
+  clPart(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 6), houseMats.gold, -1.6, CL_VANE_Y + 0.55, 0);
+  clPart(new THREE.SphereGeometry(0.07, 10, 8), houseMats.gold, -1.6, CL_VANE_Y + 0.5, 0);
+  clPart(new THREE.BoxGeometry(0.7, 0.02, 0.02), houseMats.gold, -1.6, CL_VANE_Y + 0.75, 0);
+  clPart(new THREE.BoxGeometry(0.02, 0.02, 0.7), houseMats.gold, -1.6, CL_VANE_Y + 0.75, 0);
+  var clHeartShape = new THREE.Shape();
+  clHeartShape.moveTo(0, -0.16); clHeartShape.bezierCurveTo(-0.24, 0, -0.15, 0.18, 0, 0.07); clHeartShape.bezierCurveTo(0.15, 0.18, 0.24, 0, 0, -0.16);
+  var clVane = clPart(new THREE.ExtrudeGeometry(clHeartShape, { depth: 0.02, bevelEnabled: false }), houseMats.gold, -1.6, CL_VANE_Y + 1.12, 0);
+
+  // windows: six-over-six sashes with white casings, teal louvred shutters and a flower box below each one
+  var clBlooms = [], clLeaves = [];
+  function clWindow(x, z, ry) {
+    var wg = new THREE.Group(); wg.position.set(x, CL_WIN_Y, z); wg.rotation.y = ry; clinicGroup.add(wg);
+    var W = CL_WIN_W, H = CL_WIN_H;
+    clPart(new THREE.PlaneGeometry(W, H), clGlass, 0, 0, 0.02, 0, 0, 0, wg);
+    [1 / 3, 2 / 3].forEach(function (f) { clPart(new THREE.BoxGeometry(0.035, H, 0.04), CL.trim, -W / 2 + f * W, 0, 0.04, 0, 0, 0, wg); });
+    [0.25, 0.75].forEach(function (f) { clPart(new THREE.BoxGeometry(W, 0.035, 0.04), CL.trim, 0, -H / 2 + f * H, 0.04, 0, 0, 0, wg); });
+    clPart(new THREE.BoxGeometry(W, 0.07, 0.07), CL.trim, 0, 0, 0.05, 0, 0, 0, wg);                                         // the meeting rail between the sashes
+    [[0, H / 2 + 0.07, W + 0.28, 0.14], [0, -H / 2 - 0.05, W + 0.28, 0.1], [-W / 2 - 0.07, 0, 0.14, H], [W / 2 + 0.07, 0, 0.14, H]].forEach(function (f) {
+      clPart(new THREE.BoxGeometry(f[2], f[3], 0.1), CL.trim, f[0], f[1], 0.05, 0, 0, 0, wg);
+    });
+    clPart(new THREE.BoxGeometry(W + 0.5, 0.08, 0.16), CL.trim, 0, H / 2 + 0.18, 0.08, 0, 0, 0, wg);                       // a little crown over the top
+    clPart(new THREE.BoxGeometry(W + 0.4, 0.06, 0.22), CL.trim, 0, -H / 2 - 0.12, 0.11, 0, 0, 0, wg);                      // the sill
+    [-1, 1].forEach(function (s) {                                      // shutters, folded back against the wall
+      clPart(new THREE.BoxGeometry(0.56, H + 0.08, 0.05), CL.shutter, s * (W / 2 + 0.44), 0, 0.03, 0, 0, 0, wg);
+      [-0.4, 0.4].forEach(function (hy) { clPart(new THREE.BoxGeometry(0.1, 0.03, 0.02), houseMats.iron, s * (W / 2 + 0.2), hy * H, 0.07, 0, 0, 0, wg); });
+    });
+    var bx = W + 0.2, by = -H / 2 - 0.36;                               // the flower box
+    clPart(new THREE.BoxGeometry(bx, 0.3, 0.3), CL.trim, 0, by, 0.2, 0, 0, 0, wg);
+    clPart(new THREE.BoxGeometry(bx - 0.08, 0.02, 0.24), CL.soil, 0, by + 0.15, 0.2, 0, 0, 0, wg);
+    clPart(new THREE.BoxGeometry(bx + 0.04, 0.04, 0.33), CL.teal, 0, by + 0.15, 0.2, 0, 0, 0, wg);
+    var c = Math.cos(ry), si = Math.sin(ry), n0 = x * 7 + z * 3;
+    function put(list, a, b, cc, extra) { list.push([x + a * c + cc * si, CL_WIN_Y + b, z - a * si + cc * c, extra]); }
+    for (var k = 0; k < 26; k++) {
+      var fa = (isle2Hash(n0 + k * 1.7) - 0.5) * (bx - 0.15), fz = 0.12 + isle2Hash(n0 + k * 2.3) * 0.18;
+      put(clLeaves, fa, by + 0.2 + isle2Hash(n0 + k) * 0.08, fz, isle2Hash(n0 + k * 4.1));
+      if (k % 2) put(clBlooms, fa, by + 0.27 + isle2Hash(n0 + k * 5.3) * 0.08, fz + 0.04, k % 6 === 1 ? 0 : k % 6 === 3 ? 1 : 2);
+    }
+    for (var iv = 0; iv < 5; iv++) {                                    // a little ivy tumbling over the front
+      for (var t = 0; t < 4; t++) put(clLeaves, -bx / 2 + 0.2 + iv * (bx - 0.4) / 4, by + 0.1 - t * 0.09, 0.37 + t * 0.01, isle2Hash(iv * 3 + t));
+    }
+  }
+  [-2.9, 2.9].forEach(function (wx) { clWindow(wx, CD, 0); });
+  clWindow(-CW, 0, -Math.PI / 2); clWindow(CW, 0, Math.PI / 2);
+  clWindow(-2.6, -CD, Math.PI); clWindow(2.6, -CD, Math.PI);
+  var clDummy = new THREE.Object3D(), clCol = new THREE.Color();
+  var clLeafIM = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), clLeaves.length);
+  clLeaves.forEach(function (q, i) {
+    clDummy.position.set(q[0], q[1], q[2]); clDummy.rotation.set(q[3] * 4, q[3] * 7, 0); clDummy.scale.set(1, 0.7, 1); clDummy.updateMatrix();
+    clLeafIM.setMatrixAt(i, clDummy.matrix); clLeafIM.setColorAt(i, clCol.setHSL(0.27 + q[3] * 0.06, 0.45, 0.26 + q[3] * 0.12));
+  });
+  clLeafIM.castShadow = true; clinicGroup.add(clLeafIM);
+  var CL_BLOOM_COLS = [0xf6a6c8, 0xfaf6ee, 0xc8b4ec];
+  var clBloomIM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.05, 8, 5), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), clBlooms.length);
+  clBlooms.forEach(function (q, i) {
+    clDummy.position.set(q[0], q[1], q[2]); clDummy.rotation.set(0, 0, 0); clDummy.scale.set(1, 0.6, 1); clDummy.updateMatrix();
+    clBloomIM.setMatrixAt(i, clDummy.matrix); clBloomIM.setColorAt(i, clCol.set(CL_BLOOM_COLS[q[3]]));
+  });
+  clinicGroup.add(clBloomIM);
+
+  // the front door: teal, with a glass panel, raised panels below, a brass knob and kick plate, and a transom light above
+  clPart(new THREE.BoxGeometry(1.5, 2.75, 0.12), CL.trim, 0, CL_PLINTH + 1.375, CD + 0.02);                                // the door casing
+  clPart(new THREE.BoxGeometry(1.2, 2.3, 0.08), CL.teal, 0, CL_PLINTH + 1.15, CD + 0.07);
+  clPart(new THREE.PlaneGeometry(0.76, 0.9), clDoorGlass, 0, CL_PLINTH + 1.6, CD + 0.115);
+  [[0, 1.15, 0.84, 0.05], [0, 2.07, 0.84, 0.05], [-0.4, 1.6, 0.05, 0.96], [0.4, 1.6, 0.05, 0.96], [0, 1.6, 0.03, 0.9], [0, 1.6, 0.8, 0.03]].forEach(function (b) {
+    clPart(new THREE.BoxGeometry(b[2], b[3], 0.03), CL.trim, b[0], CL_PLINTH + b[1], CD + 0.125);
+  });
+  [-0.27, 0.27].forEach(function (px) { clPart(new THREE.BoxGeometry(0.42, 0.6, 0.03), new THREE.MeshStandardMaterial({ color: 0x3b7f77, roughness: 0.45 }), px, CL_PLINTH + 0.6, CD + 0.12); });
+  clPart(new THREE.BoxGeometry(1.0, 0.16, 0.02), houseMats.gold, 0, CL_PLINTH + 0.12, CD + 0.12);
+  clPart(new THREE.SphereGeometry(0.055, 10, 8), houseMats.gold, 0.45, CL_PLINTH + 1.1, CD + 0.16);
+  clPart(new THREE.PlaneGeometry(1.2, 0.3), clGlass, 0, CL_PLINTH + 2.48, CD + 0.09);
+  [-0.3, 0, 0.3].forEach(function (tx) { clPart(new THREE.BoxGeometry(0.03, 0.3, 0.03), CL.trim, tx, CL_PLINTH + 2.48, CD + 0.1); });
+  clPart(new THREE.BoxGeometry(0.34, 0.1, 0.02), houseMats.gold, 0, CL_PLINTH + 1.02, CD + 0.14);                          // a little brass name plate on the door
+
+  // the porch: a stone floor and step, two white columns, a beam with the sign on it, and a pediment roof
+  var PORCH_D = 1.45, PORCH_W = 1.7, CL_COL_X = 1.4, CL_BEAM_Y = 2.95;
+  clPart(new THREE.BoxGeometry(PORCH_W * 2, CL_PLINTH, PORCH_D), houseMats.stone, 0, CL_PLINTH / 2, CD + PORCH_D / 2);
+  clPart(new THREE.BoxGeometry(PORCH_W * 2 + 0.06, 0.04, PORCH_D + 0.03), CL.trim, 0, CL_PLINTH, CD + PORCH_D / 2);
+  clPart(new THREE.BoxGeometry(PORCH_W * 2 - 0.4, CL_PLINTH / 2, 0.32), houseMats.stone, 0, CL_PLINTH / 4, CD + PORCH_D + 0.16);   // the step down
+  clPart(new THREE.BoxGeometry(1.1, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a5a5a, roughness: 1 }), 0, CL_PLINTH + 0.03, CD + 0.5);   // a doormat
+  [-1, 1].forEach(function (s) {
+    var cx = s * CL_COL_X, cz = CD + PORCH_D - 0.25;
+    clPart(new THREE.BoxGeometry(0.36, 0.14, 0.36), CL.trim, cx, CL_PLINTH + 0.07, cz);
+    clPart(new THREE.CylinderGeometry(0.15, 0.13, 0.08, 16), CL.trim, cx, CL_PLINTH + 0.18, cz);
+    clPart(new THREE.CylinderGeometry(0.11, 0.135, CL_BEAM_Y - CL_PLINTH - 0.4, 16), CL.trim, cx, (CL_BEAM_Y + CL_PLINTH) / 2, cz);
+    clPart(new THREE.CylinderGeometry(0.16, 0.12, 0.12, 16), CL.trim, cx, CL_BEAM_Y - 0.14, cz);
+    clPart(new THREE.BoxGeometry(0.34, 0.06, 0.34), CL.trim, cx, CL_BEAM_Y - 0.05, cz);
+  });
+  clPart(new THREE.BoxGeometry(PORCH_W * 2 + 0.2, 0.62, PORCH_D + 0.1), CL.trim, 0, CL_BEAM_Y + 0.31, CD + PORCH_D / 2);   // the beam
+  var clLampGlows = [];
+  var CSZ = CD + PORCH_D + 0.05, CSY = CL_BEAM_Y + 0.31;               // the sign: a board on the front of the beam, in a white moulded frame with a gold bead
+  clPart(new THREE.BoxGeometry(3.3, 0.58, 0.05), CL.teal, 0, CSY, CSZ + 0.025);
+  clPart(new THREE.PlaneGeometry(3.2, 0.56), CL.sign, 0, CSY, CSZ + 0.052);
+  [[0, 0.3, 3.42, 0.06], [0, -0.3, 3.42, 0.06], [-1.68, 0, 0.06, 0.66], [1.68, 0, 0.06, 0.66]].forEach(function (f) {
+    clPart(new THREE.BoxGeometry(f[2], f[3], 0.07), CL.trim, f[0], CSY + f[1], CSZ + 0.06);
+    clPart(new THREE.BoxGeometry(f[2] > 1 ? 3.3 : 0.018, f[3] > 0.1 ? 0.56 : 0.018, 0.02), houseMats.gold, f[0] * 0.985, CSY + f[1] * 0.9, CSZ + 0.09);
+  });
+  [-1, 1].forEach(function (s2) { clPart(new THREE.SphereGeometry(0.05, 12, 8), houseMats.gold, s2 * 1.68, CSY, CSZ + 0.1); });   // brass rosettes on the frame's ends
+  var clSignLampInner = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.2, side: THREE.BackSide });
+  [-0.9, 0.9].forEach(function (lx) {                                  // two little brass gooseneck lamps lighting the sign
+    var y0 = CSY + 0.33, z0 = CSZ + 0.08;
+    clPart(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 12), houseMats.gold, lx, y0 + 0.01, z0);
+    var neck = new THREE.CatmullRomCurve3([new THREE.Vector3(lx, y0, z0), new THREE.Vector3(lx, y0 + 0.16, z0 + 0.04), new THREE.Vector3(lx, y0 + 0.22, z0 + 0.2), new THREE.Vector3(lx, y0 + 0.15, z0 + 0.36)]);
+    clPart(new THREE.TubeGeometry(neck, 14, 0.012, 6), houseMats.gold, 0, 0, 0);
+    clPart(new THREE.SphereGeometry(0.08, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), houseMats.gold, lx, y0 + 0.13, z0 + 0.38, 0.75, 0, 0).scale.set(1.3, 0.8, 1);
+    var inner = clPart(new THREE.SphereGeometry(0.076, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), clSignLampInner, lx, y0 + 0.13, z0 + 0.38, 0.75, 0, 0);
+    inner.scale.set(1.3, 0.8, 1); inner.castShadow = false;
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd9a0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(lx, y0 + 0.06, z0 + 0.34); lg.scale.set(0.6, 0.6, 1); clinicGroup.add(lg); clLampGlows.push(lg);
+  });
+  var clPedShape = new THREE.Shape();                                  // the pediment: a little triangular gable over the porch
+  clPedShape.moveTo(-PORCH_W - 0.2, 0); clPedShape.lineTo(PORCH_W + 0.2, 0); clPedShape.lineTo(0, 0.8); clPedShape.lineTo(-PORCH_W - 0.2, 0);
+  clPart(new THREE.ExtrudeGeometry(clPedShape, { depth: PORCH_D + 0.2, bevelEnabled: false }), CL.trim, 0, CL_BEAM_Y + 0.62, CD - 0.1);
+  var clPedAng = Math.atan2(0.8, PORCH_W + 0.2), clPedLen = Math.sqrt(0.64 + Math.pow(PORCH_W + 0.2, 2));
+  [-1, 1].forEach(function (s) {
+    clPart(new THREE.BoxGeometry(clPedLen + 0.12, 0.08, PORCH_D + 0.35), CL.tiles, s * (PORCH_W + 0.2) / 2, CL_BEAM_Y + 0.62 + 0.42, CD + PORCH_D / 2 + 0.05, 0, 0, -s * clPedAng);
+  });
+  clPart(new THREE.CircleGeometry(0.22, 24), CL.teal, 0, CL_BEAM_Y + 0.93, CD + PORCH_D + 0.12);                         // a round teal plaque with a gold heart
+  clPart(new THREE.ExtrudeGeometry(clHeartShape, { depth: 0.015, bevelEnabled: false }), houseMats.gold, 0, CL_BEAM_Y + 0.93, CD + PORCH_D + 0.125).scale.set(0.8, 0.8, 1);
+
+  // brass lanterns either side of the door, bay trees in terracotta pots, and a bench under the left window
+  [-1, 1].forEach(function (s) {
+    var lx = s * 0.98, ly = CL_PLINTH + 1.95;
+    clPart(new THREE.BoxGeometry(0.12, 0.2, 0.04), houseMats.gold, lx, ly, CD + 0.12);
+    clPart(new THREE.CylinderGeometry(0.015, 0.015, 0.2, 6), houseMats.gold, lx, ly, CD + 0.22, Math.PI / 2, 0, 0);
+    clPart(new THREE.CylinderGeometry(0.09, 0.07, 0.24, 6), CL.lamp, lx, ly - 0.02, CD + 0.34);
+    clPart(new THREE.ConeGeometry(0.12, 0.12, 6), houseMats.gold, lx, ly + 0.16, CD + 0.34);
+    clPart(new THREE.CylinderGeometry(0.06, 0.08, 0.04, 6), houseMats.gold, lx, ly - 0.15, CD + 0.34);
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(lx, ly, CD + 0.36); lg.scale.set(1.2, 1.2, 1); clinicGroup.add(lg); clLampGlows.push(lg);
+    var tx = s * (PORCH_W + 0.55), tz = CD + 0.75;                    // a clipped bay tree, a ball on a bare stem
+    clPart(new THREE.CylinderGeometry(0.28, 0.2, 0.5, 16), CL.terracotta, tx, 0.25, tz);
+    clPart(new THREE.TorusGeometry(0.28, 0.035, 6, 16), CL.terracotta, tx, 0.48, tz, Math.PI / 2, 0, 0);
+    clPart(new THREE.CylinderGeometry(0.25, 0.25, 0.02, 14), CL.soil, tx, 0.46, tz);
+    clPart(new THREE.CylinderGeometry(0.025, 0.035, 0.9, 6), CL.wood, tx, 0.9, tz);
+    clFoliage(tx, 1.5, tz, 0.42, 0.42, 0.42, 420, s * 31 + 7);         // a dense ball of small glossy bay leaves
+  });
+  var clBench = new THREE.Group(); clBench.position.set(-3.5, 0, CD + 1.35); clinicGroup.add(clBench);
+  for (var cbs = 0; cbs < 4; cbs++) clPart(new THREE.BoxGeometry(1.5, 0.04, 0.09), CL.wood, 0, 0.45, -0.15 + cbs * 0.1, 0, 0, 0, clBench);
+  for (var cbb = 0; cbb < 3; cbb++) clPart(new THREE.BoxGeometry(1.5, 0.08, 0.035), CL.wood, 0, 0.62 + cbb * 0.12, -0.24, -0.15, 0, 0, clBench);
+  [-0.68, 0.68].forEach(function (bx) {
+    clPart(new THREE.BoxGeometry(0.04, 0.45, 0.04), houseMats.iron, bx, 0.225, 0.17, 0, 0, 0, clBench);
+    clPart(new THREE.BoxGeometry(0.04, 0.88, 0.04), houseMats.iron, bx, 0.44, -0.24, -0.15, 0, 0, clBench);
+    clPart(new THREE.BoxGeometry(0.04, 0.04, 0.46), houseMats.iron, bx, 0.62, -0.02, 0, 0, 0, clBench);
+  });
+
+  // ----- the finer details -----
+  var clCopper = new THREE.MeshStandardMaterial({ color: 0xb87a4a, roughness: 0.35, metalness: 0.7 });
+  var clMulch = new THREE.MeshStandardMaterial({ color: 0x5a3a26, roughness: 1 });
+  var clDummy2 = new THREE.Object3D(), clCol2 = new THREE.Color();
+  function clInstanced(geo, mat, list, place) {                       // one batch for many little pieces (each q: x, y, z, then extras)
+    var im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach(function (q, i) {
+      clDummy2.position.set(q[0], q[1], q[2]); clDummy2.rotation.set(0, 0, 0); clDummy2.scale.set(1, 1, 1);
+      var c = place ? place(q) : undefined;
+      clDummy2.updateMatrix(); im.setMatrixAt(i, clDummy2.matrix);
+      if (c !== undefined) im.setColorAt(i, clCol2.set(c));
+    });
+    im.castShadow = true; im.receiveShadow = true;
+    clinicGroup.add(im);
+    return im;
+  }
+
+  // rounded tile ends along the front and back eaves, and the ridge
+  var clTileEnds = [];
+  for (var tex2 = -CW - 0.3; tex2 <= CW + 0.31; tex2 += 0.22) { clTileEnds.push([tex2, CL_TOP + 0.14, CL_RD - 0.08, 1], [tex2, CL_TOP + 0.14, -CL_RD + 0.08, -1]); }
+  clInstanced(new THREE.CylinderGeometry(0.075, 0.075, 0.3, 10), CL.terracotta, clTileEnds, function (q) { clDummy2.rotation.x = q[3] * (clSlope - Math.PI / 2); });
+  // dentils: a row of little white blocks under the eaves, front and back
+  var clDentils = [];
+  for (var cdx = -CW + 0.1; cdx <= CW - 0.09; cdx += 0.2) { clDentils.push([cdx, CL_TOP - 0.15, CD + 0.1], [cdx, CL_TOP - 0.15, -CD - 0.1]); }
+  clInstanced(new THREE.BoxGeometry(0.09, 0.1, 0.09), CL.trim, clDentils);
+  clPart(new THREE.BoxGeometry(CW * 2 + 0.16, 0.04, 0.05), CL.trim, 0, CL_TOP - 0.2, CD + 0.1);
+  clPart(new THREE.BoxGeometry(CW * 2 + 0.16, 0.04, 0.05), CL.trim, 0, CL_TOP - 0.2, -CD - 0.1);
+  // carved brackets under the eaves at each corner of the gable ends
+  [-1, 1].forEach(function (s) {
+    [-1, 1].forEach(function (e) {
+      var bx = s * (CW + 0.06), bz = e * (CD + 0.05);
+      clPart(new THREE.BoxGeometry(0.1, 0.42, 0.1), CL.trim, bx, CL_TOP - 0.1, bz);
+      clPart(new THREE.BoxGeometry(0.1, 0.1, 0.36), CL.trim, bx, CL_TOP + 0.06, bz + e * 0.17);
+      clPart(new THREE.BoxGeometry(0.08, 0.06, 0.36), CL.trim, bx, CL_TOP - 0.06, bz + e * 0.14, e * 0.7, 0, 0);
+    });
+  });
+
+  // copper gutters along the front and back eaves, with downpipes at the corners and stone splash blocks
+  [-1, 1].forEach(function (e) {
+    var gz = e * (CL_RD + 0.08);
+    clPart(new THREE.CylinderGeometry(0.07, 0.07, CW * 2 + 0.7, 10), clCopper, 0, CL_TOP - 0.06, gz, 0, 0, Math.PI / 2);
+    [-1, 1].forEach(function (s) {
+      var px = s * (CW + 0.2);
+      clPart(new THREE.CylinderGeometry(0.04, 0.04, 0.62, 8), clCopper, px, CL_TOP - 0.3, e * (CD + 0.32), e * 0.9, 0, 0);
+      clPart(new THREE.CylinderGeometry(0.04, 0.04, CL_TOP - 0.7, 8), clCopper, px, (CL_TOP - 0.5) / 2 + 0.1, e * (CD + 0.08));
+      [0.8, 1.9, 3.0].forEach(function (by) { clPart(new THREE.BoxGeometry(0.1, 0.03, 0.1), clCopper, px, by, e * (CD + 0.06)); });
+      clPart(new THREE.CylinderGeometry(0.04, 0.04, 0.2, 8), clCopper, px, 0.14, e * (CD + 0.16), e * Math.PI / 2.6, 0, 0);
+      clPart(new THREE.BoxGeometry(0.22, 0.04, 0.38), houseMats.stone, px, 0.02, e * (CD + 0.35));
+    });
+  });
+
+  // two dormer windows on the front of the roof
+  var clDormerGlass = clRealGlass(128, 128, true);
+  function clRoofY(z) { return CL_TOP + CL_RH * (1 - Math.abs(z) / CL_RD); }
+  [-3.1, 3.1].forEach(function (dx) {
+    var fz = CD - 0.55, bz = 1.0, top = clRoofY(fz) + 0.95, dw = 1.25;
+    clPart(new THREE.BoxGeometry(dw, top - clRoofY(fz) + 0.6, fz - bz), CL.siding, dx, (top + clRoofY(fz) - 0.6) / 2, (fz + bz) / 2);
+    [-1, 1].forEach(function (s) { clPart(new THREE.BoxGeometry(0.12, top - clRoofY(fz) + 0.1, 0.12), CL.trim, dx + s * (dw / 2 - 0.02), (top + clRoofY(fz) - 0.1) / 2, fz + 0.02); });
+    var rise = 0.55, half = dw / 2 + 0.18, ang = Math.atan2(rise, half), slen = Math.sqrt(rise * rise + half * half);
+    [-1, 1].forEach(function (s) {                                    // its own little gable roof
+      clPart(new THREE.BoxGeometry(slen + 0.06, 0.08, fz - bz + 0.35), CL.tiles, dx + s * half / 2, top + rise / 2 + 0.03, (fz + bz) / 2 + 0.17, 0, 0, -s * ang);
+      clPart(new THREE.BoxGeometry(slen + 0.06, 0.12, 0.05), CL.trim, dx + s * half / 2, top + rise / 2 - 0.02, fz + 0.36, 0, 0, -s * ang);
+    });
+    var gs = new THREE.Shape(); gs.moveTo(-dw / 2, 0); gs.lineTo(dw / 2, 0); gs.lineTo(0, rise * (dw / 2) / half); gs.lineTo(-dw / 2, 0);
+    clPart(new THREE.ShapeGeometry(gs), CL.gable, dx, top, fz + 0.005);
+    clPart(new THREE.CylinderGeometry(0.06, 0.06, fz - bz + 0.35, 8), CL.terracotta, dx, top + rise + 0.07, (fz + bz) / 2 + 0.17, Math.PI / 2, 0, 0);
+    var wy = top - 0.42;                                              // its window: a little sash with a white surround
+    clPart(new THREE.PlaneGeometry(0.62, 0.62), clDormerGlass, dx, wy, fz + 0.02);
+    clPart(new THREE.BoxGeometry(0.03, 0.62, 0.03), CL.trim, dx, wy, fz + 0.035);
+    clPart(new THREE.BoxGeometry(0.62, 0.03, 0.03), CL.trim, dx, wy, fz + 0.035);
+    [[0, 0.36, 0.84, 0.1], [0, -0.36, 0.84, 0.1], [-0.36, 0, 0.1, 0.62], [0.36, 0, 0.1, 0.62]].forEach(function (f) { clPart(new THREE.BoxGeometry(f[2], f[3], 0.07), CL.trim, dx + f[0], wy + f[1], fz + 0.03); });
+    clPart(new THREE.BoxGeometry(0.95, 0.05, 0.16), CL.trim, dx, wy - 0.42, fz + 0.07);
+    clPart(new THREE.SphereGeometry(0.05, 10, 8), houseMats.gold, dx, top + rise + 0.16, fz + 0.36);   // a gold finial on the peak
+  });
+
+  // a little cupola on the ridge, with louvred sides and a copper roof, carrying the weathervane
+  var CUP_X = -1.6, CUP_Y = CL_TOP + CL_RH;
+  clPart(new THREE.BoxGeometry(0.8, 0.5, 0.8), CL.trim, CUP_X, CUP_Y + 0.05, 0);
+  clPart(new THREE.BoxGeometry(0.66, 0.55, 0.66), CL.siding, CUP_X, CUP_Y + 0.55, 0);
+  [[0, 0.34, 0], [Math.PI / 2, 0, 0.34], [Math.PI, 0, -0.34], [-Math.PI / 2, -0.34, 0]].forEach(function (f, k) {
+    clPart(new THREE.BoxGeometry(0.4, 0.42, 0.02), CL.shutter, CUP_X + (k === 1 ? 0.34 : k === 3 ? -0.34 : 0), CUP_Y + 0.55, k === 0 ? 0.34 : k === 2 ? -0.34 : 0, 0, f[0], 0);
+  });
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { clPart(new THREE.BoxGeometry(0.08, 0.6, 0.08), CL.trim, CUP_X + c[0] * 0.33, CUP_Y + 0.55, c[1] * 0.33); });
+  clPart(new THREE.BoxGeometry(0.82, 0.06, 0.82), CL.trim, CUP_X, CUP_Y + 0.86, 0);
+  clPart(new THREE.ConeGeometry(0.6, 0.5, 4), new THREE.MeshStandardMaterial({ color: 0x5fa890, roughness: 0.5, metalness: 0.5 }), CUP_X, CUP_Y + 1.14, 0, 0, Math.PI / 4, 0);   // a verdigris copper cap
+  clPart(new THREE.SphereGeometry(0.06, 10, 8), houseMats.gold, CUP_X, CUP_Y + 1.4, 0);
+
+  // porch railings between the columns and the wall, with turned balusters
+  [-1, 1].forEach(function (s) {
+    var rx = s * CL_COL_X, z0 = CD + 0.05, z1 = CD + PORCH_D - 0.38;
+    clPart(new THREE.BoxGeometry(0.08, 0.06, z1 - z0), CL.trim, rx, CL_PLINTH + 0.86, (z0 + z1) / 2);
+    clPart(new THREE.BoxGeometry(0.06, 0.05, z1 - z0), CL.trim, rx, CL_PLINTH + 0.12, (z0 + z1) / 2);
+    for (var bz = z0 + 0.1; bz < z1 - 0.05; bz += 0.13) clPart(new THREE.CylinderGeometry(0.022, 0.03, 0.7, 8), CL.trim, rx, CL_PLINTH + 0.49, bz);
+  });
+  // a lattice skirt round the porch floor
+  var clLatticeTex = paintTexture(64, 32, function (g, w, h) {
+    g.fillStyle = '#3a2a22'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f4f1ea'; g.lineWidth = 3;
+    for (var x = -32; x < w + 32; x += 12) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.moveTo(x, h); g.lineTo(x + h, 0); g.stroke(); }
+  });
+  clLatticeTex.wrapS = THREE.RepeatWrapping; clLatticeTex.repeat.set(5, 1);
+  clPart(new THREE.PlaneGeometry(PORCH_W * 2 - 0.1, 0.2), new THREE.MeshStandardMaterial({ map: clLatticeTex, roughness: 0.8 }), 0, 0.12, CD + PORCH_D + 0.005);
+  // climbing roses twining up the porch columns
+  var clRoseLeaves = [], clRoses = [];
+  [-1, 1].forEach(function (s) {
+    var cx = s * CL_COL_X, cz = CD + PORCH_D - 0.25;
+    for (var k = 0; k < 340; k++) {                                     // leafy canes wandering up the column, thicker in clumps
+      var h = 0.3 + Math.pow(isle2Hash(k * 1.31 + s * 5), 0.8) * (CL_BEAM_Y - 0.4), a = h * 2.2 + s + (isle2Hash(k * 2.7 + s) - 0.5) * 2.6;
+      var clump = 0.5 + 0.5 * Math.sin(h * 3.1 + s * 2), r = 0.15 + isle2Hash(k * 3.9 + s) * (0.05 + clump * 0.08);
+      if (isle2Hash(k * 5.3 + s) > 0.45 + clump * 0.5) continue;
+      clRoseLeaves.push([cx + Math.cos(a) * r, h, cz + Math.sin(a) * r, isle2Hash(k * 13 + s)]);
+      if (isle2Hash(k * 17 + s * 3) > 0.8 && clump > 0.4) clRoses.push([cx + Math.cos(a) * (r + 0.035), h + 0.02, cz + Math.sin(a) * (r + 0.035), isle2Hash(k * 7 + s)]);
+    }
+    for (var bx = 0; bx < 30; bx++) {                                  // and spilling along the beam
+      var ba = isle2Hash(bx * 3.7 + s * 11);
+      clRoseLeaves.push([cx - s * bx * 0.03, CL_BEAM_Y - 0.03 - ba * 0.14, CD + PORCH_D - 0.02 + isle2Hash(bx + s) * 0.06, ba]);   // trailing under the beam, clear of the sign
+      if (bx % 3 === 0) clRoses.push([cx - s * bx * 0.03, CL_BEAM_Y - 0.08 - ba * 0.1, CD + PORCH_D + 0.03, ba]);
+    }
+  });
+  clInstanced(clLeafGeo, clLeafMat, clRoseLeaves, function (q) {
+    clDummy2.rotation.set(q[3] * 5, q[3] * 9, q[3] * 3); return clCol2.setHSL(0.27 + q[3] * 0.05, 0.42, 0.22 + q[3] * 0.1).getHex();
+  });
+  clInstanced(clRoseGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), clRoses, function (q) {   // cupped blooms of layered petals
+    clDummy2.rotation.set(q[3] * 2 - 1, q[3] * 6, 0); clDummy2.scale.setScalar(0.8 + q[3] * 0.5); return [0xf28aa8, 0xfbd0dc, 0xe0607a][Math.floor(q[3] * 3)];
+  });
+
+  // a wreath on the front door, with a pink bow
+  var clWreath = [];
+  for (var wk = 0; wk < 40; wk++) { var wa = wk / 40 * Math.PI * 2; clWreath.push([Math.cos(wa) * 0.17, CL_PLINTH + 1.62 + Math.sin(wa) * 0.17, CD + 0.17, isle2Hash(wk * 3.3)]); }
+  clInstanced(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), clWreath, function (q) {
+    clDummy2.rotation.set(q[3] * 6, q[3] * 4, 0); return clCol2.setHSL(0.3 + q[3] * 0.04, 0.4, 0.22 + q[3] * 0.08).getHex();
+  });
+  for (var wb = 0; wb < 8; wb++) { var wba = wb * 0.79 + 0.2; clPart(new THREE.SphereGeometry(0.022, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), Math.cos(wba) * 0.19, CL_PLINTH + 1.62 + Math.sin(wba) * 0.19, CD + 0.21); }
+  var clBowMat = new THREE.MeshStandardMaterial({ color: 0xf28aa8, roughness: 0.6 });
+  [-1, 1].forEach(function (s) {
+    clPart(new THREE.SphereGeometry(0.06, 10, 8), clBowMat, s * 0.07, CL_PLINTH + 1.44, CD + 0.22).scale.set(1.2, 0.7, 0.5);
+    clPart(new THREE.BoxGeometry(0.04, 0.16, 0.02), clBowMat, s * 0.04, CL_PLINTH + 1.34, CD + 0.21, 0, 0, s * 0.3);
+  });
+
+  // a hanging sign on a wrought-iron bracket at the front corner, so you can spot the clinic from along the path
+  var clBladeTex = paintTexture(256, 256, function (g, w, h) {
+    g.fillStyle = '#fbf8f0'; g.beginPath(); g.arc(w / 2, h / 2, 120, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2f6f68'; g.lineWidth = 12; g.stroke();
+    g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.beginPath(); g.arc(w / 2, h / 2, 104, 0, Math.PI * 2); g.stroke();
+    var cx = w / 2, cy = h / 2 - 6, s = 62;
+    g.fillStyle = '#e0607a'; g.beginPath(); g.moveTo(cx, cy + s * 0.9); g.bezierCurveTo(cx - s * 1.3, cy, cx - s * 0.8, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.8, cy - s, cx + s * 1.3, cy, cx, cy + s * 0.9); g.fill();
+    g.fillStyle = '#fff'; g.fillRect(cx - 8, cy - 28, 16, 50); g.fillRect(cx - 24, cy - 11, 48, 16);
+    g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 26px Georgia, serif'; g.fillText('CLINIC', cx, h - 42);
+  });
+  var clBladeMat = new THREE.MeshStandardMaterial({ map: clBladeTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5 });
+  var CBX = CW - 0.35, CBY = CL_PLINTH + 2.75;
+  clPart(new THREE.BoxGeometry(0.03, 0.03, 1.0), houseMats.iron, CBX, CBY, CD + 0.5);
+  clPart(new THREE.BoxGeometry(0.025, 0.025, 0.7), houseMats.iron, CBX, CBY - 0.22, CD + 0.36, -0.6, 0, 0);
+  clPart(new THREE.TorusGeometry(0.12, 0.012, 6, 16, Math.PI * 1.5), houseMats.iron, CBX, CBY - 0.1, CD + 0.2, 0, Math.PI / 2, 0);
+  clPart(new THREE.BoxGeometry(0.06, 0.3, 0.1), houseMats.iron, CBX, CBY - 0.1, CD + 0.03);
+  [0.3, 0.86].forEach(function (cz) { clPart(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 4), houseMats.gold, CBX, CBY - 0.07, CD + cz); });
+  var clBlade = clPart(new THREE.PlaneGeometry(0.72, 0.72), clBladeMat, CBX, CBY - 0.48, CD + 0.58, 0, Math.PI / 2, 0);
+  clBlade.castShadow = false;
+
+  // flower beds of dark mulch all round the foundations: clipped boxwood balls, mophead hydrangeas and little white flowers,
+  // edged with stone
+  var clBox = [], clBedSpots = [], clHydLeaf = [], clHyd = [], clDaisy = [], clEdge = [];
+  function clBed(x0, z0, x1, z1, seed) {
+    var w = x1 - x0, d = z1 - z0, along = w > d, len = along ? w : d;
+    clPart(new THREE.BoxGeometry(w, 0.05, d), clMulch, (x0 + x1) / 2, 0.025, (z0 + z1) / 2).castShadow = false;
+    for (var e = 0; e < len; e += 0.3) {                               // a row of edging stones along the outer side
+      var ex = along ? x0 + e + 0.15 : (x0 + x1) / 2 + (x0 + x1 > 0 ? 1 : -1) * (w / 2), ez = along ? (z0 + z1) / 2 + (z0 + z1 > 0 ? 1 : -1) * (d / 2) : z0 + e + 0.15;
+      clEdge.push([ex, 0.05, ez, along ? 0 : 1, isle2Hash(seed + e * 7)]);
+    }
+    for (var k = 0; k * 1.05 < len - 0.4; k++) {
+      var f = 0.5 + k * 1.05, px = along ? x0 + f : (x0 + x1) / 2, pz = along ? (z0 + z1) / 2 : z0 + f, n = seed + k * 13;
+      if (dist(px, pz, 2.25, CD + 0.75) < 0.6 || dist(px, pz, -2.25, CD + 0.75) < 0.6) continue;   // leave room for the bay trees
+      clBedSpots.push([px, pz]);
+      if (k % 2 === 0) clBox.push([px, 0.28, pz, 0.3 + isle2Hash(n) * 0.06]);
+      else {                                                          // a hydrangea: a leafy mound with big round flower heads
+        var hc = isle2Hash(n * 1.7) > 0.5 ? 0 : 1;
+        for (var l = 0; l < 14; l++) clHydLeaf.push([px + (isle2Hash(n + l) - 0.5) * 0.55, 0.12 + isle2Hash(n + l * 2) * 0.3, pz + (isle2Hash(n + l * 3) - 0.5) * 0.45, isle2Hash(n + l * 5)]);
+        for (var hh = 0; hh < 5; hh++) clHyd.push([px + (isle2Hash(n + hh * 7) - 0.5) * 0.45, 0.42 + isle2Hash(n + hh * 11) * 0.12, pz + (isle2Hash(n + hh * 13) - 0.5) * 0.35, hc, isle2Hash(n + hh)]);
+      }
+      for (var dz = 0; dz < 6; dz++) clDaisy.push([px + (along ? 0.5 : 0) + (isle2Hash(n + dz * 17) - 0.5) * 0.4, 0.08 + isle2Hash(n + dz) * 0.05, pz + (along ? 0 : 0.5) + (isle2Hash(n + dz * 19) - 0.5) * 0.3, isle2Hash(n + dz * 23)]);
+    }
+  }
+  clBed(-CW - 0.1, CD + 0.12, -PORCH_W - 0.05, CD + 0.95, 1100);
+  clBed(PORCH_W + 0.05, CD + 0.12, CW + 0.1, CD + 0.95, 1200);
+  clBed(-CW - 0.95, -CD - 0.1, -CW - 0.12, CD + 0.95, 1300);
+  clBed(CW + 0.12, -CD - 0.1, CW + 0.95, CD + 0.95, 1400);
+  clBed(-CW - 0.1, -CD - 0.95, CW + 0.1, -CD - 0.12, 1500);
+  clInstanced(new THREE.BoxGeometry(0.3, 0.1, 0.16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), clEdge, function (q) {
+    clDummy2.rotation.y = q[3] * Math.PI / 2 + (q[4] - 0.5) * 0.08; return clCol2.setHSL(0.08, 0.06, 0.62 + q[4] * 0.12).getHex();
+  });
+  clBox.forEach(function (q, i) { clFoliage(q[0], q[1], q[2], q[3], q[3] * 0.88, q[3], 150, 900 + i * 17); });   // clipped boxwood: tiny leaves packed into a ball
+  var clHydLeaves = [];
+  clHydLeaf.forEach(function (q, i) { if (i % 2 === 0) clFoliage(q[0], q[1] + 0.05, q[2], 0.2, 0.14, 0.18, 26, 400 + i * 7, clHydLeaves); });
+  clInstanced(clLeafGeo, clLeafMat, clHydLeaves, function (q) {      // the hydrangeas' broad leaves, a fresher green
+    clDummy2.rotation.set(q[3], q[4], q[5]); clDummy2.scale.setScalar(1.9); return clCol2.setHSL(0.27, 0.45, 0.26 + q[6] * 0.12).getHex();
+  });
+  var clFlorets = [];                                                  // each mophead: a dome of tiny four-petalled florets
+  clHyd.forEach(function (q, i) {
+    for (var f = 0; f < 36; f++) {
+      var u = isle2Hash(i * 41 + f * 1.3), v = isle2Hash(i * 43 + f * 2.1), th = u * Math.PI * 2, ph = Math.acos(1 - v * 1.3);
+      clFlorets.push([q[0] + Math.sin(ph) * Math.cos(th) * 0.11, q[1] + Math.cos(ph) * 0.09, q[2] + Math.sin(ph) * Math.sin(th) * 0.11, q[3], q[4], u, v]);
+    }
+  });
+  clInstanced(new THREE.CylinderGeometry(0.026, 0.02, 0.012, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), clFlorets, function (q) {
+    clDummy2.rotation.set((q[6] - 0.5) * 2, q[5] * 6, (q[5] - 0.5) * 2);
+    return q[3] ? clCol2.setHSL(0.6 + q[4] * 0.08 + q[6] * 0.03, 0.5, 0.64 + q[5] * 0.1).getHex() : clCol2.setHSL(0.93 + q[4] * 0.04, 0.55, 0.74 + q[5] * 0.1).getHex();
+  });
+  clInstanced(clLeafGeo, clLeafMat, clLeafy, function (q) {          // every leaf of the bay trees and boxwoods
+    clDummy2.rotation.set(q[3], q[4], q[5]); clDummy2.scale.setScalar(1.1 + q[6] * 0.5); return clCol2.setHSL(0.28 + q[6] * 0.04, 0.42, 0.2 + q[6] * 0.14).getHex();
+  });
+  clInstanced(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshStandardMaterial({ color: 0x23401f, roughness: 0.9 }), clCores, function (q) { clDummy2.scale.set(q[3], q[4], q[5]); });
+  clInstanced(new THREE.CylinderGeometry(0.035, 0.03, 0.012, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), clDaisy, function (q) {
+    clDummy2.rotation.set((q[3] - 0.5) * 0.6, 0, (q[3] - 0.5) * 0.4); return q[3] > 0.7 ? 0xfff1b8 : 0xfbfaf6;
+  });
+
+  // an A-frame chalkboard out front, and a teal mailbox on a post by the path
+  var clBoardTex = paintTexture(128, 160, function (g, w, h) {
+    g.fillStyle = '#2a3430'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i * 1.3) * 0.05 + ')'; g.fillRect(isle2Hash(i * 2.2) * w, isle2Hash(i * 3.1) * h, 3, 1); }
+    g.fillStyle = '#f7f3ea'; g.textAlign = 'center';
+    g.font = 'italic 16px Georgia, serif'; g.fillText('The doctor', w / 2, 34);
+    g.font = 'bold 30px Georgia, serif'; g.fillText('is IN', w / 2, 68);
+    g.fillStyle = '#f28aa8'; g.beginPath(); var cx = w / 2, cy = 98, s = 16; g.moveTo(cx, cy + s * 0.9); g.bezierCurveTo(cx - s * 1.3, cy, cx - s * 0.8, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.8, cy - s, cx + s * 1.3, cy, cx, cy + s * 0.9); g.fill();
+    g.fillStyle = '#bfe0d4'; g.font = '12px Georgia, serif'; g.fillText('Open 6am – 6pm', w / 2, 140);
+  });
+  var clBoard = new THREE.Group(); clBoard.position.set(2.1, 0, CD + 2.35); clBoard.rotation.y = -0.5; clinicGroup.add(clBoard);
+  [-1, 1].forEach(function (s) {
+    var pg = new THREE.Group(); pg.position.set(0, 0, s * 0.12); pg.rotation.x = s * 0.2; clBoard.add(pg);
+    clPart(new THREE.BoxGeometry(0.5, 0.82, 0.03), CL.wood, 0, 0.42, 0, 0, 0, 0, pg);
+    clPart(new THREE.PlaneGeometry(0.42, 0.62), new THREE.MeshStandardMaterial({ map: clBoardTex, roughness: 0.9 }), 0, 0.46, s * 0.017, 0, s < 0 ? Math.PI : 0, 0, pg);
+  });
+  var clMail = new THREE.Group(); clMail.position.set(-2.0, 0, CD + 2.4); clMail.rotation.y = 0.4; clinicGroup.add(clMail);
+  clPart(new THREE.BoxGeometry(0.08, 1.0, 0.08), CL.trim, 0, 0.5, 0, 0, 0, 0, clMail);
+  clPart(new THREE.BoxGeometry(0.22, 0.03, 0.42), CL.trim, 0, 1.0, 0, 0, 0, 0, clMail);
+  clPart(new THREE.BoxGeometry(0.2, 0.15, 0.4), CL.teal, 0, 1.09, 0, 0, 0, 0, clMail);
+  clPart(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 16, 1, false, 0, Math.PI), CL.teal, 0, 1.165, 0, Math.PI / 2, 0, Math.PI / 2, clMail);
+  clPart(new THREE.BoxGeometry(0.015, 0.16, 0.04), new THREE.MeshStandardMaterial({ color: 0xe0607a, roughness: 0.5 }), 0.11, 1.18, -0.12, 0, 0, 0, clMail);
+  clPart(new THREE.BoxGeometry(0.015, 0.05, 0.08), new THREE.MeshStandardMaterial({ color: 0xe0607a, roughness: 0.5 }), 0.11, 1.25, -0.1, 0, 0, 0, clMail);
+  clPart(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 10), houseMats.gold, 0, 1.12, 0.21, Math.PI / 2, 0, 0, clMail);
+
+  function updateClinicBuilding(t, glow) {                            // the lanterns light up at night, and the weathervane turns in the breeze
+    CL.lamp.emissiveIntensity = 0.3 + glow * 1.5;
+    CL.sign.emissiveIntensity = 0.25 + glow * 0.45;                    // the little lamps make the gold letters shine at night
+    clSignLampInner.emissiveIntensity = 0.2 + glow * 1.2;
+    for (var i = 0; i < clLampGlows.length; i++) clLampGlows[i].material.opacity = glow * 0.8;
+    clVane.rotation.y = Math.sin(t * 0.21) * 0.9 + Math.sin(t * 0.53) * 0.3;
+  }
+  function clinicStepHeight(x, z) {                                   // how high the clinic's porch and step lift you
+    var l = clinicLocal(x, z);
+    if (Math.abs(l[0]) > PORCH_W || l[1] < CD - 0.6 || l[1] > CD + PORCH_D + 0.32) return 0;
+    return l[1] < CD + PORCH_D ? CL_PLINTH : CL_PLINTH / 2;
+  }
+  (function () {                                                       // you bump into the walls, the columns, the bay trees and the bench
+    var c = Math.cos(CLINIC_TURN), si = Math.sin(CLINIC_TURN);
+    function solidAt(lx, lz, r) { solids.push({ x: CLINIC_X + lx * c + lz * si, z: CLINIC_Z - lx * si + lz * c, r: r }); }
+    for (var x = -CW + 0.4; x <= CW - 0.39; x += 1.2) for (var z = -CD + 0.4; z <= CD - 1.1; z += 1.2) solidAt(x, z, 0.95);
+    for (var x2 = -CW; x2 <= CW + 0.01; x2 += 0.5) if (Math.abs(x2) > 0.7) solidAt(x2, CD - 0.25, 0.4);   // the front wall, with a gap for the door
+    for (var z2 = -CD; z2 <= CD; z2 += 0.5) { solidAt(-CW + 0.25, z2, 0.4); solidAt(CW - 0.25, z2, 0.4); }
+    solidAt(0, CD - 0.6, 0.35);                                        // the door itself: walk up to it and in you go
+    [-1, 1].forEach(function (s) { solidAt(s * CL_COL_X, CD + PORCH_D - 0.25, 0.2); solidAt(s * (PORCH_W + 0.55), CD + 0.75, 0.42); });
+    solidAt(-3.9, CD + 1.35, 0.35); solidAt(-3.1, CD + 1.35, 0.35);
+    clBedSpots.forEach(function (b) { solidAt(b[0], b[1], 0.35); });   // the shrubs in the flower beds
+    solidAt(2.1, CD + 2.35, 0.3); solidAt(-2.0, CD + 2.4, 0.12);       // the chalkboard and the mailbox
   })();
 
   // ---------- The stone path to Whimsy & Bloom ----------
@@ -4206,6 +4878,11 @@ function startGame(THREE) {
     }
     function dataTex(arr) { var t = new THREE.DataTexture(arr, PW, PH, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true; return t; }
     var paveTex = dataTex(pave), paveBump = dataTex(bump);
+    var iron = new THREE.MeshStandardMaterial({ color: 0x24222a, roughness: 0.45, metalness: 0.6 });
+    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 }), shroomStem = new THREE.MeshStandardMaterial({ color: 0xf2ece0 });
+    var paveMat = new THREE.MeshStandardMaterial({ map: paveTex, bumpMap: paveBump, bumpScale: 0.03, roughness: 0.88, side: THREE.DoubleSide });
+    var paveMat2 = paveMat.clone(); paveMat2.polygonOffset = true; paveMat2.polygonOffsetFactor = -2; paveMat2.polygonOffsetUnits = -2;   // where the two paths meet, the branch lies neatly on top
+    function layPath(spLine, other, otherBox, branch) {                 // spLine: this path; other: the path it mustn't plant flowers on
     var pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
     for (var k = 0; k < spLine.length; k++) {
       var a = spLine[Math.max(0, k - 1)], b = spLine[Math.min(spLine.length - 1, k + 1)];
@@ -4219,22 +4896,22 @@ function startGame(THREE) {
     paveGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     paveGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     paveGeo.setIndex(idx); paveGeo.computeVertexNormals();
-    var paveMesh = new THREE.Mesh(paveGeo, new THREE.MeshStandardMaterial({ map: paveTex, bumpMap: paveBump, bumpScale: 0.03, roughness: 0.88, side: THREE.DoubleSide }));
+    var paveMesh = new THREE.Mesh(paveGeo, branch ? paveMat2 : paveMat);
     paveMesh.receiveShadow = true; scene.add(paveMesh);
     // kerbs of dressed stone along both sides, and the plants, mushrooms and lanterns beyond them
     var kerbs = [], blooms = [], lav = [], leaves = [], shrooms = [], lamps = [];
-    var gap = 0, row = 0, lampRun = 0, lampSide = 1;
+    var gap = 0, row = 0, lampRun = 0, lampSide = 1, walked = 0, end = spLine[spLine.length - 1];
     for (var j = 1; j < spLine.length; j++) {
       var p0 = spLine[j - 1], p1 = spLine[j], sx = p1[0] - p0[0], sz = p1[1] - p0[1], sl = Math.sqrt(sx * sx + sz * sz);
-      gap += sl; lampRun += sl;
+      gap += sl; lampRun += sl; walked += sl;
       var ux = sx / sl, uz = sz / sl, nx2 = -uz, nz2 = ux, turn = Math.atan2(ux, uz);
-      var nearShop = dist(p1[0], p1[1], SP_PTS[SP_PTS.length - 1][0], SP_PTS[SP_PTS.length - 1][1]) < 1.1;
-      if (lampRun > 4.6 && p1[1] > 83 && !nearShop) { lampRun = 0; lamps.push([p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55)]); lampSide = -lampSide; }
+      var nearShop = dist(p1[0], p1[1], end[0], end[1]) < 1.1, onOther = function (ex2) { return lineDist(other, otherBox, p1[0] + nx2 * ex2, p1[1] + nz2 * ex2) < SP_W + 0.35; };
+      if (lampRun > 4.6 && walked > 2.4 && !nearShop && !onOther(lampSide * (SP_W + 0.55))) { lampRun = 0; lamps.push([p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55)]); lampSide = -lampSide; }
       if (gap < 0.46) continue;
       gap = 0; row++;
       for (var e = -1; e <= 1; e += 2) {
-        if (!nearShop) kerbs.push([p1[0] + nx2 * e * (SP_W + 0.07), p1[1] + nz2 * e * (SP_W + 0.07), turn, H(row * 19 + e)]);
-        if (nearShop || p1[1] < 82.5) continue;                        // keep the ends clear for the steps and the bridge
+        if (!nearShop && !onOther(e * (SP_W + 0.07))) kerbs.push([p1[0] + nx2 * e * (SP_W + 0.07), p1[1] + nz2 * e * (SP_W + 0.07), turn, H(row * 19 + e)]);
+        if (nearShop || walked < 1.9 || onOther(e * (SP_W + 0.42))) continue;   // keep the ends clear for the steps and the bridge, and the other path clear
         var gx2 = p1[0] + nx2 * e * (SP_W + 0.42), gz2 = p1[1] + nz2 * e * (SP_W + 0.42), kind = H(row * 29 + e);
         for (var lf = 0; lf < 6; lf++) leaves.push([gx2 + (H(row * 31 + lf + e) - 0.5) * 0.42, gz2 + (H(row * 37 + lf - e) - 0.5) * 0.42, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
         if (kind < 0.45) for (var lv = 0; lv < 6; lv++) lav.push([gx2 + (H(row * 43 + lv + e) - 0.5) * 0.32, gz2 + (H(row * 47 + lv - e) - 0.5) * 0.32, 0.34 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
@@ -4271,7 +4948,6 @@ function startGame(THREE) {
     });
     batch(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshStandardMaterial({ color: 0xe8b84a }), blooms, function (q) { dummy.position.set(q[0], q[2] + 0.012, q[1]); });
     batch(new THREE.CylinderGeometry(0.005, 0.006, 1, 4), new THREE.MeshStandardMaterial({ color: 0x4f7a3e }), blooms, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.scale.set(1, q[2], 1); });
-    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 }), shroomStem = new THREE.MeshStandardMaterial({ color: 0xf2ece0 });
     shrooms.forEach(function (m) {
       for (var t = 0; t < 3; t++) {
         var mx = m[0] + Math.cos(t * 2.1) * 0.08, mz = m[1] + Math.sin(t * 2.1) * 0.08, mh = 0.07 + t * 0.025;
@@ -4280,7 +4956,6 @@ function startGame(THREE) {
       }
     });
     // wrought-iron lantern posts that glow warm at night
-    var iron = new THREE.MeshStandardMaterial({ color: 0x24222a, roughness: 0.45, metalness: 0.6 });
     lamps.forEach(function (lp) {
       var g = new THREE.Group(); g.position.set(lp[0], 0, lp[1]); scene.add(g);
       function part(geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; }
@@ -4296,6 +4971,9 @@ function startGame(THREE) {
       glowS.position.set(0, 1.72, 0); glowS.scale.set(1.4, 1.4, 1); g.add(glowS); pathLanternGlows.push(glowS);
       solids.push({ x: lp[0], z: lp[1], r: 0.18 });
     });
+    }
+    layPath(spLine, cpLine, cpBox, false);                              // to Whimsy & Bloom
+    layPath(cpLine, spLine, spBox, true);                               // and to the clinic
   })();
 
   // You bump into the house, the tower and the cauldron
@@ -4857,7 +5535,7 @@ function startGame(THREE) {
 
   var wallLook = new THREE.Vector3();
   function updateInterior(dt, t) {
-    if (!indoors || inShop) return;
+    if (!indoors || inShop || inClinic) return;
     for (var wn in inWalls) { // hide any wall the camera is behind, windows and all, so it never blocks the view
       var W = inWalls[wn];
       wallLook.set(camera.position.x - IN_X - W.c.x, 0, camera.position.z - IN_Z - W.c.z);
@@ -4889,8 +5567,8 @@ function startGame(THREE) {
   canvas.parentNode.appendChild(fadeBox);
   var doorBusy = false, doorArmed = true, outsideCam = null;
   var OUT_DOOR_X = HOUSE_X, OUT_DOOR_Z = HOUSE_Z + HD / 2 + 0.55;      // standing right in front of the door
-  function inRoom(x, z) { return inShop ? inShopRoom(x, z) : Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
-  function useDoor(goIn, toShop) {                                   // toShop: the seed shop's door rather than the farmhouse's
+  function inRoom(x, z) { return inClinic ? inClinicRoom(x, z) : inShop ? inShopRoom(x, z) : Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
+  function useDoor(goIn, toShop) {                                   // toShop: true for the seed shop's door, 'clinic' for the clinic's, or nothing for the farmhouse's
     if (doorBusy) return;
     doorBusy = true;
     doorArmed = false;
@@ -4898,11 +5576,15 @@ function startGame(THREE) {
     doorSound();
     fadeBox.style.opacity = 1;
     setTimeout(function () {
-      var leftShop = inShop;
+      var leftShop = inShop, leftClinic = inClinic;
       indoors = goIn;
-      inShop = goIn && !!toShop;
+      inShop = goIn && toShop === true;
+      inClinic = goIn && toShop === 'clinic';
       if (goIn) {
-        if (inShop) {
+        if (inClinic) {
+          clinicScene.add(player);
+          player.position.set(CIN_X, 0, CIN_Z + CIN_EXIT_Z - 1.0);
+        } else if (inShop) {
           shopScene.add(player);
           player.position.set(SIN_X, 0, SIN_Z + SIN_EXIT_Z - 1.0);
         } else {
@@ -4911,10 +5593,14 @@ function startGame(THREE) {
         }
         facing = Math.PI;                                           // facing into the room
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
-        cam.dist = inShop ? 8.5 : 7.5; cam.pitch = 0.85; cam.yaw = 0;
+        cam.dist = inShop || inClinic ? 8.5 : 7.5; cam.pitch = 0.85; cam.yaw = 0;
       } else {
         scene.add(player);
-        if (leftShop) {
+        if (leftClinic) {
+          var cOut = clinicFront(2.3);
+          player.position.set(cOut.x, 0, cOut.z);
+          facing = CLINIC_TURN;                                     // facing out, away from the clinic
+        } else if (leftShop) {
           var out = shopFront(2.0);
           player.position.set(out.x, 0, out.z);
           facing = SHOP_TURN;                                       // facing out, away from the shop
@@ -4932,10 +5618,12 @@ function startGame(THREE) {
   function updateDoors() {
     var px = player.position.x, pz = player.position.z;
     var dShop = indoors ? (inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99) : dist(px, pz, shopDoor.x, shopDoor.z);
-    var d = indoors ? (inShop ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
-    if (!doorArmed) { if (Math.min(d, dShop) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
+    var dClinic = indoors ? (inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99) : dist(px, pz, clinicDoor.x, clinicDoor.z);
+    var d = indoors ? (inShop || inClinic ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
+    if (!doorArmed) { if (Math.min(d, dShop, dClinic) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
     if (d < 0.5) useDoor(!indoors);
     else if (dShop < (indoors ? 0.5 : 0.22)) useDoor(!indoors, true);   // outside, you have to climb right up to the shop door
+    else if (dClinic < (indoors ? 0.5 : 0.22)) useDoor(!indoors, 'clinic');
   }
   // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
   var sleepBtn = document.createElement('button');
@@ -5006,7 +5694,7 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
-      indoors = true; inShop = false;                                   // carried home, next to your bed
+      indoors = true; inShop = false; inClinic = false;                 // carried home, next to your bed
       interiorScene.add(player);
       player.position.set(IN_X + BX - BED_W / 2 - 0.55, 0, IN_Z + MZ);
       facing = -Math.PI / 2;
@@ -9737,10 +10425,561 @@ function startGame(THREE) {
     return Math.abs(lx) < CNT_W / 2 + 0.4 + m && lz > CNT_Z + 0.3 && lz < CNT_Z + 1.9 + m;
   }
 
+  // ---------- Inside the clinic ----------
+  // Its own room, drawn instead of the island while you're inside, just like the farmhouse and Whimsy & Bloom. A bright,
+  // friendly doctor's office: a cream-and-mint checked floor, mint beadboard below a white chair rail, and windows that
+  // look out on the real square. On the left, the waiting room (a reception desk with a computer, a bell and a jar of
+  // lollipops, upholstered chairs, a magazine table on a rug, a water cooler and big leafy plants); on the right, the
+  // doctor's corner (a desk with a laptop and stethoscope, a padded exam table with its paper roll behind a curtain on a
+  // ceiling track, a sink, a cabinet of glowing tonics, an eye chart, a heart poster and a balance scale). Walk back to
+  // the door to leave
+  var clinicScene = new THREE.Scene();
+  clinicScene.background = new THREE.Color(0x1c1228);
+  var CIN_X = 400, CIN_Z = 1000, CIN_W = CLINIC_HW * 2, CIN_D = CLINIC_HD * 2, CIN_H = 3.4;   // far from everything; the same size as the building outside
+  var inClinic = false;
+  var clinicRoom = new THREE.Group();
+  clinicRoom.position.set(CIN_X, 0, CIN_Z);
+  clinicScene.add(clinicRoom);
+  clinicScene.add(new THREE.HemisphereLight(0xfffaf2, 0x8c9488, 0.66));
+  var ciSun = new THREE.DirectionalLight(0xfff0dc, 0.5);               // daylight slanting in through the windows
+  ciSun.position.set(CIN_X - 6, 8, CIN_Z + 5);
+  ciSun.target.position.set(CIN_X + 1, 0, CIN_Z - 0.5);
+  ciSun.castShadow = true;
+  ciSun.shadow.mapSize.set(2048, 2048);
+  ciSun.shadow.camera.left = -8; ciSun.shadow.camera.right = 8; ciSun.shadow.camera.top = 7; ciSun.shadow.camera.bottom = -7;
+  ciSun.shadow.camera.near = 1; ciSun.shadow.camera.far = 25;
+  ciSun.shadow.bias = -0.0006; ciSun.shadow.normalBias = 0.02;
+  clinicScene.add(ciSun); clinicScene.add(ciSun.target);
+  var ciLamp = new THREE.PointLight(0xfff4e6, 0.5, 13);                // the ceiling lights
+  ciLamp.position.set(CIN_X - 2.4, 3.1, CIN_Z + 0.6);
+  clinicScene.add(ciLamp);
+  var ciLamp2 = new THREE.PointLight(0xfff4e6, 0.5, 13);
+  ciLamp2.position.set(CIN_X + 2.6, 3.1, CIN_Z - 0.4);
+  clinicScene.add(ciLamp2);
+  function ciPart(geo, mat, x, y, z, rx, ry, rz, parent) {            // one piece of the clinic room (x, z from the middle of the floor)
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    m.castShadow = !mat.transparent && !mat.emissiveMap;
+    m.receiveShadow = true;
+    (parent || clinicRoom).add(m);
+    return m;
+  }
+  var ciSolids = [];                                                  // things you bump into (room positions: x, z, radius)
+
+  // painted textures
+  var ciFloorTex = paintTexture(512, 512, function (g, w, h) {        // cream and pale mint vinyl tiles, with a soft speckle
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      g.fillStyle = (r + c) % 2 ? '#cfe2d6' : '#f1ece0'; g.fillRect(c * 64, r * 64, 64, 64);
+      var sh = g.createLinearGradient(c * 64, r * 64, c * 64 + 64, r * 64 + 64); sh.addColorStop(0, 'rgba(255,255,255,0.12)'); sh.addColorStop(1, 'rgba(0,0,0,0.04)');
+      g.fillStyle = sh; g.fillRect(c * 64, r * 64, 64, 64);
+    }
+    for (var i = 0; i < 5000; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '90,100,90' : '255,255,255') + ',' + isle2Hash(i * 1.3) * 0.18 + ')'; g.fillRect(isle2Hash(i * 2.1) * w, isle2Hash(i * 3.7) * h, 1.5, 1.5); }
+    g.strokeStyle = 'rgba(120,130,120,0.35)'; g.lineWidth = 1.2;
+    for (var k = 0; k <= 8; k++) { g.beginPath(); g.moveTo(k * 64, 0); g.lineTo(k * 64, h); g.moveTo(0, k * 64); g.lineTo(w, k * 64); g.stroke(); }
+  });
+  ciFloorTex.wrapS = ciFloorTex.wrapT = THREE.RepeatWrapping; ciFloorTex.repeat.set(CIN_W / 3.2, CIN_D / 3.2);
+  ciFloorTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var ciBeadTex = paintTexture(256, 64, function (g, w, h) {          // mint beadboard: narrow tongue-and-groove boards
+    for (var x = 0; x < w; x += 16) {
+      var bg = g.createLinearGradient(x, 0, x + 16, 0); bg.addColorStop(0, '#9fc7b4'); bg.addColorStop(0.2, '#b9dccb'); bg.addColorStop(0.85, '#b2d6c4'); bg.addColorStop(1, '#8fb8a5');
+      g.fillStyle = bg; g.fillRect(x, 0, 16, h);
+      g.fillStyle = 'rgba(40,70,60,0.35)'; g.fillRect(x, 0, 1.5, h);
+    }
+  });
+  ciBeadTex.wrapS = THREE.RepeatWrapping;
+  var ciPlasterTex = paintTexture(128, 128, function (g, w, h) {
+    g.fillStyle = '#f7f4ee'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 1200; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,140,130') + ',' + (isle2Hash(i * 1.7) * 0.06) + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
+  });
+  ciPlasterTex.wrapS = ciPlasterTex.wrapT = THREE.RepeatWrapping;
+  var ciRugTex = paintTexture(256, 192, function (g, w, h) {          // a soft wool rug with a border and little hearts
+    g.fillStyle = '#e9d9c4'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#2f6f68'; g.lineWidth = 10; g.strokeRect(10, 10, w - 20, h - 20);
+    g.strokeStyle = '#e0889a'; g.lineWidth = 3; g.strokeRect(24, 24, w - 48, h - 48);
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 6; c++) {
+      var hx = 50 + c * 32, hy = 52 + r * 30;
+      g.fillStyle = (r + c) % 2 ? 'rgba(224,136,154,0.7)' : 'rgba(47,111,104,0.5)';
+      g.beginPath(); g.moveTo(hx, hy + 6); g.bezierCurveTo(hx - 9, hy, hx - 6, hy - 7, hx, hy - 2); g.bezierCurveTo(hx + 6, hy - 7, hx + 9, hy, hx, hy + 6); g.fill();
+    }
+    for (var i = 0; i < 2500; i++) { g.fillStyle = 'rgba(80,60,40,' + isle2Hash(i) * 0.08 + ')'; g.fillRect(isle2Hash(i * 1.9) * w, isle2Hash(i * 2.9) * h, 1, 1); }
+  });
+  var ciCurtainTex = paintTexture(64, 64, function (g, w, h) {        // pale blue curtain cloth with tiny white dots
+    g.fillStyle = '#a9cbe0'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,0.7)';
+    for (var y = 4; y < h; y += 16) for (var x = 4 + (y % 32 ? 8 : 0); x < w; x += 16) { g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill(); }
+  });
+  ciCurtainTex.wrapS = ciCurtainTex.wrapT = THREE.RepeatWrapping; ciCurtainTex.repeat.set(3, 12);
+  var ciScreenTex = paintTexture(160, 100, function (g, w, h) {       // the reception computer: the day's appointments
+    g.fillStyle = '#eef6f4'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, 14);
+    g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.fillText('Appointments', 6, 10);
+    for (var r = 0; r < 6; r++) {
+      g.fillStyle = r % 2 ? '#dcebe6' : '#f6faf9'; g.fillRect(4, 18 + r * 13, w - 8, 12);
+      g.fillStyle = '#5a6a66'; g.font = '8px sans-serif'; g.fillText((9 + r) + ':00', 8, 27 + r * 13);
+      g.fillStyle = ['#e0889a', '#8fc7b0', '#a9cbe0'][r % 3]; g.fillRect(40, 21 + r * 13, 40 + isle2Hash(r) * 60, 6);
+    }
+  });
+  var ciLaptopTex = paintTexture(128, 80, function (g, w, h) {        // the doctor's laptop: a heartbeat on the screen
+    g.fillStyle = '#122a2a'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(80,200,170,0.25)'; g.lineWidth = 1;
+    for (var x = 0; x < w; x += 12) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+    g.strokeStyle = '#6dffcf'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 44);
+    [[30, 44], [36, 40], [40, 44], [46, 44], [50, 14], [55, 64], [59, 44], [74, 44], [80, 38], [86, 44], [128, 44]].forEach(function (p) { g.lineTo(p[0], p[1]); });
+    g.stroke();
+    g.fillStyle = '#6dffcf'; g.font = 'bold 12px sans-serif'; g.fillText('72 ♥', 92, 20);
+  });
+  var ciEyeTex = paintTexture(128, 192, function (g, w, h) {          // an eye chart: rows of letters, getting smaller
+    g.fillStyle = '#fbfaf6'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#1e1e22'; g.textAlign = 'center';
+    var rows = ['E', 'F P', 'T O Z', 'L P E D', 'P E C F D', 'E D F C Z P', 'F E L O P Z D'], sz = [44, 26, 20, 15, 12, 10, 8], y = 8;
+    rows.forEach(function (t, k) { y += sz[k] + 6; g.font = 'bold ' + sz[k] + 'px sans-serif'; g.fillText(t, w / 2, y); });
+    g.fillStyle = '#e0607a'; g.fillRect(12, h - 14, w - 24, 2);
+  });
+  var ciHeartTex = paintTexture(160, 220, function (g, w, h) {        // a friendly poster of the heart
+    g.fillStyle = '#fdf6ec'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 15px Georgia, serif'; g.fillText('Your Heart', w / 2, 22);
+    var cx = w / 2, cy = 110, s = 50;
+    var hg = g.createRadialGradient(cx - 10, cy - 20, 5, cx, cy, s * 1.4); hg.addColorStop(0, '#f27a8e'); hg.addColorStop(1, '#a8243e');
+    g.fillStyle = hg;
+    g.beginPath(); g.moveTo(cx, cy + s * 0.95); g.bezierCurveTo(cx - s * 1.4, cy, cx - s * 0.85, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.85, cy - s, cx + s * 1.4, cy, cx, cy + s * 0.95); g.fill();
+    g.strokeStyle = '#4a7ad0'; g.lineWidth = 6; g.beginPath(); g.moveTo(cx - 12, cy - 30); g.quadraticCurveTo(cx - 14, cy - 64, cx - 34, cy - 70); g.stroke();
+    g.strokeStyle = '#d04a5a'; g.beginPath(); g.moveTo(cx + 6, cy - 32); g.quadraticCurveTo(cx + 4, cy - 70, cx + 30, cy - 66); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 5, cy - 18); g.quadraticCurveTo(cx + 8, cy + 10, cx - 4, cy + 34); g.stroke();
+    g.fillStyle = '#5a5a5a'; g.font = '10px sans-serif';
+    ['Eat your greens', 'Take a walk each day', 'Sleep well'].forEach(function (t, k) { g.fillText('♥ ' + t, w / 2, 178 + k * 14); });
+  });
+  var ciWashTex = paintTexture(128, 96, function (g, w, h) {          // a little sign over the sink
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#2f6f68'; g.lineWidth = 4; g.strokeRect(3, 3, w - 6, h - 6);
+    g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 15px sans-serif'; g.fillText('Please wash', w / 2, 30); g.fillText('your hands', w / 2, 50);
+    g.fillStyle = '#7ab8e0'; for (var b = 0; b < 5; b++) { g.beginPath(); g.arc(30 + b * 17, 72 + (b % 2) * 6, 5 + (b % 3), 0, Math.PI * 2); g.fill(); }
+  });
+  var ciDiplomaTex = paintTexture(128, 96, function (g, w, h) {
+    g.fillStyle = '#f6efdc'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = '#3a2a1e'; g.textAlign = 'center'; g.font = 'italic bold 13px Georgia, serif'; g.fillText('Doctor of', w / 2, 32); g.fillText('Medicine', w / 2, 48);
+    g.fillStyle = '#c9445e'; g.beginPath(); g.arc(w / 2, 70, 9, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#7a6a5a'; g.fillRect(20, 84, 30, 1); g.fillRect(w - 50, 84, 30, 1);
+  });
+  var ciMagTex = paintTexture(128, 128, function (g, w, h) {          // magazine covers, four to a texture
+    [['#e0889a', 'Bloom'], ['#7ab8e0', 'Tides'], ['#8fc7b0', 'Herbs'], ['#f2c14e', 'Stars']].forEach(function (m, k) {
+      var x = (k % 2) * 64, y = Math.floor(k / 2) * 64;
+      g.fillStyle = m[0]; g.fillRect(x, y, 64, 64);
+      g.fillStyle = 'rgba(255,255,255,0.85)'; g.font = 'bold 14px Georgia, serif'; g.textAlign = 'center'; g.fillText(m[1], x + 32, y + 18);
+      g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(x + 32, y + 42, 14, 0, Math.PI * 2); g.fill();
+    });
+  });
+
+  // materials
+  var CI = {
+    floor: new THREE.MeshStandardMaterial({ map: ciFloorTex, roughness: 0.4, metalness: 0.02 }),
+    white: new THREE.MeshStandardMaterial({ color: 0xf8f7f3, roughness: 0.5 }),
+    mint: new THREE.MeshStandardMaterial({ color: 0x9fcab6, roughness: 0.55 }),
+    teal: new THREE.MeshStandardMaterial({ color: 0x2f6f68, roughness: 0.45 }),
+    tealVinyl: new THREE.MeshStandardMaterial({ color: 0x3f8a80, roughness: 0.35 }),
+    coral: new THREE.MeshStandardMaterial({ color: 0xe0889a, roughness: 0.8 }),
+    wood: new THREE.MeshStandardMaterial({ color: 0xb88a5a, roughness: 0.55 }),
+    darkWood: new THREE.MeshStandardMaterial({ color: 0x6a4630, roughness: 0.6 }),
+    steel: new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.25, metalness: 0.8 }),
+    black: new THREE.MeshStandardMaterial({ color: 0x24242a, roughness: 0.4, metalness: 0.3 }),
+    brass: new THREE.MeshStandardMaterial({ color: 0xd4a84e, emissive: 0x5a3e0c, emissiveIntensity: 0.2, metalness: 0.8, roughness: 0.28 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0xeef7ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.28, depthWrite: false }),
+    paper: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }),
+    leaf: new THREE.MeshStandardMaterial({ color: 0x3f7a3e, roughness: 0.6, side: THREE.DoubleSide }),
+    clay: new THREE.MeshStandardMaterial({ color: 0xc0704a, roughness: 0.85 }),
+    soil: new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }),
+    light: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff6e6, emissiveIntensity: 0.9 })
+  };
+
+  // the floor and ceiling
+  ciPart(new THREE.PlaneGeometry(CIN_W, CIN_D), CI.floor, 0, 0, 0, -Math.PI / 2).castShadow = false;
+  ciPart(new THREE.PlaneGeometry(CIN_W, CIN_D), new THREE.MeshStandardMaterial({ color: 0xf6f4f0, roughness: 0.95 }), 0, CIN_H, 0, Math.PI / 2).castShadow = false;   // faces down, so it never blocks the camera above
+
+  // the walls: warm white plaster over mint beadboard, with a white chair rail and skirting. Each wall is its own group
+  // (its local +z points into the room). The window openings show the real island outside, drawn live just like the
+  // windows in Whimsy & Bloom
+  var ciWalls = {};
+  var CI_WIN_Y = 2.05, CI_WIN_W = 1.6, CI_WIN_H = 1.5;                 // the same as the windows outside
+  var CI_HOLES = { N: [-2.6, 2.6], S: [-2.9, 2.9], W: [0], E: [0] };  // where the windows are along each wall
+  function ciWall(name, x, z, ry, len) {
+    var wgp = new THREE.Group();
+    wgp.position.set(x, 0, z); wgp.rotation.y = ry;
+    clinicRoom.add(wgp);
+    ciWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
+    var wallTex = ciPlasterTex.clone(); wallTex.needsUpdate = true; wallTex.repeat.set(len / 1.5, CIN_H / 1.5);
+    var plasterMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 });
+    var shape = new THREE.Shape(); shape.moveTo(-len / 2, 0); shape.lineTo(len / 2, 0); shape.lineTo(len / 2, CIN_H); shape.lineTo(-len / 2, CIN_H); shape.lineTo(-len / 2, 0);
+    CI_HOLES[name].forEach(function (hx) {
+      var x0 = hx - CI_WIN_W / 2, x1 = hx + CI_WIN_W / 2, y0 = CI_WIN_Y - CI_WIN_H / 2, y1 = CI_WIN_Y + CI_WIN_H / 2;
+      var hp = new THREE.Path(); hp.moveTo(x0, y0); hp.lineTo(x0, y1); hp.lineTo(x1, y1); hp.lineTo(x1, y0); hp.lineTo(x0, y0);
+      shape.holes.push(hp);
+      var mask = ciPart(new THREE.PlaneGeometry(CI_WIN_W, CI_WIN_H), siWindowMask, hx, CI_WIN_Y, -0.005, 0, 0, 0, wgp);   // the view outside
+      mask.castShadow = false; mask.receiveShadow = false;
+      var WT = 0.3;                                                    // the wall's thickness, seen in the sides of the opening
+      [[0, CI_WIN_H / 2, CI_WIN_W, 0.02], [0, -CI_WIN_H / 2, CI_WIN_W, 0.02], [-CI_WIN_W / 2, 0, 0.02, CI_WIN_H], [CI_WIN_W / 2, 0, 0.02, CI_WIN_H]].forEach(function (rv) {
+        ciPart(new THREE.BoxGeometry(rv[2], rv[3], WT), plasterMat, hx + rv[0], CI_WIN_Y + rv[1], -WT / 2, 0, 0, 0, wgp);
+      });
+      ciWindowFrame(wgp, hx);
+    });
+    ciPart(new THREE.ShapeGeometry(shape), plasterMat, 0, 0, 0, 0, 0, 0, wgp);
+    var beadTex = ciBeadTex.clone(); beadTex.needsUpdate = true; beadTex.repeat.set(len / 1.4, 1);
+    ciPart(new THREE.BoxGeometry(len, 1.0, 0.025), new THREE.MeshStandardMaterial({ map: beadTex, roughness: 0.6 }), 0, 0.5, 0.0125, 0, 0, 0, wgp);
+    ciPart(new THREE.BoxGeometry(len, 0.06, 0.06), CI.white, 0, 1.02, 0.03, 0, 0, 0, wgp);                                // the chair rail
+    ciPart(new THREE.BoxGeometry(len, 0.13, 0.045), CI.white, 0, 0.065, 0.035, 0, 0, 0, wgp);                             // the skirting
+    ciPart(new THREE.BoxGeometry(len, 0.09, 0.07), CI.white, 0, CIN_H - 0.045, 0.035, 0, 0, 0, wgp);                      // the cornice
+    return wgp;
+  }
+  function ciWindowFrame(wgp, hx) {                                   // inside a window: six-over-six sashes, a white casing, a sill and a linen blind
+    var W = CI_WIN_W, H = CI_WIN_H, y = CI_WIN_Y;
+    ciPart(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, roughness: 0.05, metalness: 0.3, depthWrite: false }), hx, y, 0.03, 0, 0, 0, wgp).renderOrder = 3;
+    [1 / 3, 2 / 3].forEach(function (f) { ciPart(new THREE.BoxGeometry(0.03, H, 0.035), CI.white, hx - W / 2 + f * W, y, 0.02, 0, 0, 0, wgp); });
+    [0.25, 0.75].forEach(function (f) { ciPart(new THREE.BoxGeometry(W, 0.03, 0.035), CI.white, hx, y - H / 2 + f * H, 0.02, 0, 0, 0, wgp); });
+    ciPart(new THREE.BoxGeometry(W, 0.06, 0.06), CI.white, hx, y, 0.03, 0, 0, 0, wgp);
+    ciPart(new THREE.BoxGeometry(0.1, 0.025, 0.03), CI.brass, hx, y + 0.045, 0.07, 0, 0, 0, wgp);                       // the sash lock
+    var cw = 0.11, d = 0.12;
+    [[0, H / 2 + cw / 2, W + cw * 2, cw], [-W / 2 - cw / 2, 0, cw, H], [W / 2 + cw / 2, 0, cw, H]].forEach(function (f) {
+      ciPart(new THREE.BoxGeometry(f[2], f[3], d), CI.white, hx + f[0], y + f[1], d / 2, 0, 0, 0, wgp);
+    });
+    ciPart(new THREE.BoxGeometry(W + cw * 2 + 0.1, 0.05, 0.22), CI.white, hx, y - H / 2 - 0.025, 0.11, 0, 0, 0, wgp);    // the sill
+    ciPart(new THREE.BoxGeometry(W + cw * 2, 0.09, 0.03), CI.white, hx, y - H / 2 - 0.09, 0.015, 0, 0, 0, wgp);
+    var blind = new THREE.PlaneGeometry(W + 0.06, 0.34, 1, 6), bp = blind.attributes.position;   // a linen roman blind, pulled up in soft folds
+    for (var v = 0; v < bp.count; v++) bp.setZ(v, Math.abs(Math.sin((bp.getY(v) + 0.17) / 0.34 * Math.PI * 3)) * 0.04);
+    blind.computeVertexNormals();
+    ciPart(blind, new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.95, side: THREE.DoubleSide }), hx, y + H / 2 - 0.15, 0.07, 0, 0, 0, wgp);
+  }
+  var CNW = -CIN_D / 2;
+  ciWall('N', 0, CNW, 0, CIN_W);
+  ciWall('S', 0, -CNW, Math.PI, CIN_W);
+  ciWall('W', -CIN_W / 2, 0, Math.PI / 2, CIN_D);
+  ciWall('E', CIN_W / 2, 0, -Math.PI / 2, CIN_D);
+  function ciWallPart(name, geo, mat, x, y, z, rx, ry, rz) { return ciPart(geo, mat, x, y, z, rx, ry, rz, ciWalls[name].g); }
+  function ciFramed(name, x, y, w, h, tex, frameMat) {                 // a framed picture or sign on a wall (x along the wall, from the room's middle)
+    ciWallPart(name, new THREE.BoxGeometry(w + 0.08, h + 0.08, 0.03), frameMat || CI.darkWood, x, y, 0.015);
+    ciWallPart(name, new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }), x, y, 0.032);
+    ciWallPart(name, new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.07, depthWrite: false }), x, y, 0.036);
+  }
+
+  // the front door, seen from inside: teal, with a glass panel that looks out on the square
+  ciWallPart('S', new THREE.BoxGeometry(1.5, 2.55, 0.06), CI.white, 0, 1.275, 0.03);
+  ciWallPart('S', new THREE.BoxGeometry(1.2, 2.3, 0.06), CI.teal, 0, 1.15, 0.07);
+  ciPart(new THREE.PlaneGeometry(0.76, 0.9), siWindowMask, 0, 1.6, 0.105, 0, 0, 0, ciWalls.S.g).castShadow = false;
+  [[0, 1.15, 0.84, 0.05], [0, 2.07, 0.84, 0.05], [-0.4, 1.6, 0.05, 0.96], [0.4, 1.6, 0.05, 0.96], [0, 1.6, 0.03, 0.9], [0, 1.6, 0.8, 0.03]].forEach(function (b) {
+    ciWallPart('S', new THREE.BoxGeometry(b[2], b[3], 0.03), CI.white, b[0], b[1], 0.115);
+  });
+  [-0.27, 0.27].forEach(function (px) { ciWallPart('S', new THREE.BoxGeometry(0.42, 0.6, 0.03), CI.tealVinyl, px, 0.6, 0.11); });
+  ciWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), CI.brass, -0.45, 1.1, 0.14);
+  ciPart(new THREE.BoxGeometry(1.1, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a5a5a, roughness: 1 }), 0, 0.01, CIN_D / 2 - 0.45);   // a doormat
+  var CIN_EXIT_Z = CIN_D / 2 - 0.6;
+  // a round clock over the door
+  ciWallPart('S', new THREE.CylinderGeometry(0.24, 0.24, 0.05, 32), CI.white, 0, 2.95, 0.03, Math.PI / 2, 0, 0);
+  ciWallPart('S', new THREE.TorusGeometry(0.24, 0.025, 8, 32), CI.teal, 0, 2.95, 0.055);
+  for (var cih = 0; cih < 12; cih++) { var cha = cih / 12 * Math.PI * 2; ciWallPart('S', new THREE.BoxGeometry(0.015, cih % 3 ? 0.03 : 0.05, 0.01), CI.black, Math.sin(cha) * 0.19, 2.95 + Math.cos(cha) * 0.19, 0.06, 0, 0, -cha); }
+  var ciHourHand = ciWallPart('S', new THREE.BoxGeometry(0.018, 0.11, 0.01), CI.black, 0, 2.95, 0.065);
+  var ciMinHand = ciWallPart('S', new THREE.BoxGeometry(0.012, 0.17, 0.01), CI.black, 0, 2.95, 0.07);
+  [ciHourHand, ciMinHand].forEach(function (hnd) { hnd.geometry.translate(0, hnd.geometry.parameters.height / 2 - 0.01, 0); });
+
+
+  // ----- the waiting room, on the left -----
+  // the reception desk: teal panels with white trim, a wooden top and a raised ledge, facing the door
+  var RCP_X = -2.6, RCP_Z = -0.7, RCP_L = 2.6;
+  ciPart(new THREE.BoxGeometry(RCP_L, 1.0, 0.1), CI.teal, RCP_X, 0.5, RCP_Z + 0.3);
+  for (var rp = 0; rp < 4; rp++) ciPart(new THREE.BoxGeometry(RCP_L / 4 - 0.14, 0.62, 0.03), CI.tealVinyl, RCP_X - RCP_L / 2 + (rp + 0.5) * RCP_L / 4, 0.48, RCP_Z + 0.36);   // raised panels
+  ciPart(new THREE.BoxGeometry(RCP_L + 0.06, 0.12, 0.08), CI.white, RCP_X, 0.06, RCP_Z + 0.34);
+  [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(0.1, 1.0, 0.7), CI.teal, RCP_X + s * (RCP_L / 2 - 0.05), 0.5, RCP_Z); });
+  ciPart(new THREE.BoxGeometry(RCP_L + 0.1, 0.05, 0.78), CI.wood, RCP_X, 0.78, RCP_Z - 0.02);                           // the desk top behind
+  ciPart(new THREE.BoxGeometry(RCP_L + 0.16, 0.05, 0.32), CI.white, RCP_X, 1.07, RCP_Z + 0.32);                          // the ledge at the front
+  ciPart(new THREE.BoxGeometry(RCP_L, 0.29, 0.06), CI.white, RCP_X, 0.93, RCP_Z + 0.2);
+  // on the ledge: a brass bell, a jar of lollipops, a sign-in clipboard and a little orchid
+  ciPart(new THREE.CylinderGeometry(0.06, 0.07, 0.015, 16), CI.black, RCP_X + 0.7, 1.1, RCP_Z + 0.33);
+  ciPart(new THREE.SphereGeometry(0.055, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), CI.brass, RCP_X + 0.7, 1.105, RCP_Z + 0.33);
+  ciPart(new THREE.SphereGeometry(0.012, 8, 6), CI.brass, RCP_X + 0.7, 1.165, RCP_Z + 0.33);
+  ciPart(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 20), CI.glass, RCP_X - 0.75, 1.21, RCP_Z + 0.33);
+  ciPart(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 20), CI.coral, RCP_X - 0.75, 1.335, RCP_Z + 0.33);
+  for (var lp = 0; lp < 9; lp++) {
+    var la = lp * 2.4, lr = 0.04 + (lp % 3) * 0.015;
+    ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.18, 4), CI.paper, RCP_X - 0.75 + Math.cos(la) * lr * 0.6, 1.22, RCP_Z + 0.33 + Math.sin(la) * lr * 0.6, Math.sin(la) * 0.2, 0, Math.cos(la) * 0.2);
+    ciPart(new THREE.SphereGeometry(0.028, 10, 8), new THREE.MeshStandardMaterial({ color: [0xff6a8a, 0xffd04a, 0x7ad0a0, 0x9a8aff][lp % 4], roughness: 0.2 }), RCP_X - 0.75 + Math.cos(la) * lr, 1.16 + (lp % 3) * 0.05, RCP_Z + 0.33 + Math.sin(la) * lr);
+  }
+  ciPart(new THREE.BoxGeometry(0.24, 0.012, 0.32), CI.darkWood, RCP_X + 0.1, 1.1, RCP_Z + 0.32, 0, 0.15, 0);
+  ciPart(new THREE.BoxGeometry(0.2, 0.004, 0.27), CI.paper, RCP_X + 0.1, 1.108, RCP_Z + 0.33, 0, 0.15, 0);
+  ciPart(new THREE.BoxGeometry(0.08, 0.02, 0.03), CI.steel, RCP_X + 0.1 - 0.02, 1.115, RCP_Z + 0.19, 0, 0.15, 0);
+  ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 5), CI.black, RCP_X + 0.28, 1.11, RCP_Z + 0.34, Math.PI / 2, 0.6, 0);
+  // behind the ledge: the computer, a keyboard and mouse, a telephone, a pen pot and a stack of files
+  ciPart(new THREE.BoxGeometry(0.62, 0.38, 0.03), CI.black, RCP_X - 0.2, 1.1, RCP_Z - 0.2, 0, 0, 0);
+  ciPart(new THREE.PlaneGeometry(0.57, 0.33), new THREE.MeshStandardMaterial({ map: ciScreenTex, emissive: 0xffffff, emissiveMap: ciScreenTex, emissiveIntensity: 0.7 }), RCP_X - 0.2, 1.1, RCP_Z - 0.184, 0, Math.PI, 0);
+  ciPart(new THREE.BoxGeometry(0.05, 0.25, 0.04), CI.black, RCP_X - 0.2, 0.9, RCP_Z - 0.24);
+  ciPart(new THREE.BoxGeometry(0.22, 0.015, 0.16), CI.black, RCP_X - 0.2, 0.81, RCP_Z - 0.25);
+  ciPart(new THREE.BoxGeometry(0.44, 0.02, 0.14), CI.white, RCP_X - 0.2, 0.815, RCP_Z - 0.48);
+  ciPart(new THREE.SphereGeometry(0.03, 10, 6), CI.white, RCP_X + 0.15, 0.815, RCP_Z - 0.48).scale.set(1, 0.5, 1.4);
+  ciPart(new THREE.BoxGeometry(0.2, 0.06, 0.2), CI.white, RCP_X - 1.0, 0.835, RCP_Z - 0.3, 0, 0.3, 0);
+  ciPart(new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8), CI.white, RCP_X - 1.0, 0.89, RCP_Z - 0.3, 0, 0.3, Math.PI / 2);
+  ciPart(new THREE.CylinderGeometry(0.04, 0.035, 0.1, 12), CI.coral, RCP_X + 0.65, 0.85, RCP_Z - 0.3);
+  [0, 1, 2].forEach(function (k) { ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.15, 4), [CI.teal, CI.black, CI.coral][k], RCP_X + 0.65 + (k - 1) * 0.015, 0.92, RCP_Z - 0.3, (k - 1) * 0.15, 0, (k - 1) * 0.2); });
+  [0, 1, 2, 3].forEach(function (k) { ciPart(new THREE.BoxGeometry(0.32, 0.025, 0.24), [CI.mint, CI.coral, CI.white, CI.tealVinyl][k], RCP_X + 0.95, 0.815 + k * 0.026, RCP_Z - 0.3, 0, (isle2Hash(k + 70) - 0.5) * 0.3, 0); });
+  // the receptionist's swivel chair
+  function ciOfficeChair(x, z, ry) {
+    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; clinicRoom.add(g);
+    for (var a = 0; a < 5; a++) { var an = a / 5 * Math.PI * 2; ciPart(new THREE.BoxGeometry(0.04, 0.03, 0.3), CI.black, Math.sin(an) * 0.14, 0.06, Math.cos(an) * 0.14, 0, an, 0, g); ciPart(new THREE.SphereGeometry(0.03, 8, 6), CI.black, Math.sin(an) * 0.28, 0.03, Math.cos(an) * 0.28, 0, 0, 0, g); }
+    ciPart(new THREE.CylinderGeometry(0.025, 0.025, 0.4, 8), CI.steel, 0, 0.27, 0, 0, 0, 0, g);
+    ciPart(new THREE.BoxGeometry(0.5, 0.09, 0.48), CI.tealVinyl, 0, 0.5, 0, 0, 0, 0, g);
+    ciPart(new THREE.BoxGeometry(0.46, 0.5, 0.07), CI.tealVinyl, 0, 0.82, -0.24, -0.08, 0, 0, g);
+    ciPart(new THREE.BoxGeometry(0.04, 0.3, 0.04), CI.black, 0, 0.62, -0.22, 0, 0, 0, g);
+  }
+  ciOfficeChair(RCP_X - 0.3, RCP_Z - 0.85, Math.PI - 0.3);
+  ciSolids.push([RCP_X - 0.9, RCP_Z, 0.55], [RCP_X, RCP_Z, 0.55], [RCP_X + 0.9, RCP_Z, 0.55], [RCP_X - 0.3, RCP_Z - 0.85, 0.35]);
+  // a hanging "Reception" sign above the desk
+  var ciRecTex = paintTexture(256, 64, function (g, w, h) {
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 30px Georgia, serif'; g.fillText('Reception', w / 2, h / 2 + 2);
+  });
+  ciPart(new THREE.BoxGeometry(1.0, 0.25, 0.03), new THREE.MeshStandardMaterial({ map: ciRecTex, roughness: 0.6 }), RCP_X, 2.55, RCP_Z + 0.1);
+  [-0.4, 0.4].forEach(function (sx) { ciPart(new THREE.CylinderGeometry(0.004, 0.004, CIN_H - 2.68, 4), CI.brass, RCP_X + sx, (CIN_H + 2.68) / 2, RCP_Z + 0.1); });
+  // filing cabinets under the back window, with binders and a tray of letters on top
+  [-3.25, -1.95].forEach(function (fx) {
+    ciPart(new THREE.BoxGeometry(1.2, 0.86, 0.5), CI.white, fx, 0.43, CNW + 0.27);
+    [0.24, 0.62].forEach(function (dy) {
+      ciPart(new THREE.BoxGeometry(1.12, 0.34, 0.02), CI.mint, fx, dy, CNW + 0.53);
+      ciPart(new THREE.BoxGeometry(0.22, 0.03, 0.03), CI.brass, fx, dy + 0.1, CNW + 0.555);
+      ciPart(new THREE.BoxGeometry(0.12, 0.05, 0.005), CI.paper, fx, dy + 0.02, CNW + 0.545);
+    });
+  });
+  for (var bd = 0; bd < 11; bd++) {
+    var bw = 0.065 + isle2Hash(bd * 3.3) * 0.02, bh = 0.28 + isle2Hash(bd * 1.7) * 0.05;
+    ciPart(new THREE.BoxGeometry(bw, bh, 0.26), [CI.teal, CI.coral, CI.mint, CI.white, CI.tealVinyl][bd % 5], -3.75 + bd * 0.08, 0.86 + bh / 2, CNW + 0.24, 0, 0, bd === 10 ? 0.25 : 0);
+  }
+  ciPart(new THREE.BoxGeometry(0.36, 0.06, 0.28), CI.wood, -1.7, 0.89, CNW + 0.26);
+  ciPart(new THREE.BoxGeometry(0.3, 0.02, 0.22), CI.paper, -1.7, 0.92, CNW + 0.26);
+  ciSolids.push([-3.25, CNW + 0.27, 0.6], [-1.95, CNW + 0.27, 0.6]);
+
+  // upholstered waiting chairs along the left wall, under the window, with a magazine table on a rug
+  function ciArmchair(x, z, ry, mat) {
+    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; clinicRoom.add(g);
+    [[-0.27, -0.24], [0.27, -0.24], [-0.27, 0.24], [0.27, 0.24]].forEach(function (l) { ciPart(new THREE.CylinderGeometry(0.022, 0.016, 0.22, 8), CI.wood, l[0], 0.11, l[1], 0, 0, 0, g); });
+    ciPart(new THREE.BoxGeometry(0.62, 0.08, 0.6), CI.wood, 0, 0.26, 0, 0, 0, 0, g);
+    ciPart(new THREE.BoxGeometry(0.52, 0.12, 0.54), mat, 0, 0.36, 0.02, 0, 0, 0, g);
+    ciPart(new THREE.BoxGeometry(0.56, 0.5, 0.12), mat, 0, 0.62, -0.24, -0.1, 0, 0, g);
+    [-1, 1].forEach(function (s) {
+      ciPart(new THREE.BoxGeometry(0.06, 0.24, 0.56), CI.wood, s * 0.3, 0.42, 0, 0, 0, 0, g);
+      ciPart(new THREE.BoxGeometry(0.09, 0.03, 0.58), CI.wood, s * 0.3, 0.55, 0.01, 0, 0, 0, g);
+    });
+  }
+  [[0.95, CI.coral], [1.75, CI.tealVinyl], [2.55, CI.coral]].forEach(function (c) { ciArmchair(-CIN_W / 2 + 0.42, c[0], Math.PI / 2, c[1]); ciSolids.push([-CIN_W / 2 + 0.42, c[0], 0.36]); });
+  ciPart(new THREE.PlaneGeometry(2.0, 1.5), new THREE.MeshStandardMaterial({ map: ciRugTex, roughness: 1 }), -3.0, 0.006, 1.75, -Math.PI / 2).castShadow = false;
+  var MAG_X = -3.15, MAG_Z = 1.75;
+  ciPart(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 28), CI.wood, MAG_X, 0.42, MAG_Z);
+  ciPart(new THREE.CylinderGeometry(0.05, 0.08, 0.4, 10), CI.darkWood, MAG_X, 0.2, MAG_Z);
+  ciPart(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 20), CI.darkWood, MAG_X, 0.015, MAG_Z);
+  [0, 1, 2].forEach(function (k) {                                     // a fan of magazines
+    var mg = new THREE.BoxGeometry(0.2, 0.008, 0.27), uvA = mg.attributes.uv;
+    for (var v = 0; v < uvA.count; v++) uvA.setXY(v, (k % 2) * 0.5 + uvA.getX(v) * 0.5, (k < 2 ? 0.5 : 0) + uvA.getY(v) * 0.5);
+    ciPart(mg, new THREE.MeshStandardMaterial({ map: ciMagTex, roughness: 0.6 }), MAG_X - 0.08 + k * 0.07, 0.445 + k * 0.009, MAG_Z + (k - 1) * 0.04, 0, -0.4 + k * 0.35, 0);
+  });
+  ciPart(new THREE.CylinderGeometry(0.04, 0.05, 0.14, 12), CI.glass, MAG_X + 0.15, 0.51, MAG_Z - 0.12);                  // a little vase of daisies
+  for (var dz = 0; dz < 5; dz++) {
+    var da = dz * 1.3;
+    ciPart(new THREE.CylinderGeometry(0.003, 0.003, 0.2, 4), CI.leaf, MAG_X + 0.15 + Math.cos(da) * 0.02, 0.56, MAG_Z - 0.12 + Math.sin(da) * 0.02, Math.sin(da) * 0.25, 0, Math.cos(da) * 0.25);
+    ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 10), CI.paper, MAG_X + 0.15 + Math.cos(da) * 0.06, 0.66 + (dz % 2) * 0.02, MAG_Z - 0.12 + Math.sin(da) * 0.06, 0.4, 0, 0);
+    ciPart(new THREE.SphereGeometry(0.012, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf2c14e }), MAG_X + 0.15 + Math.cos(da) * 0.06, 0.665 + (dz % 2) * 0.02, MAG_Z - 0.12 + Math.sin(da) * 0.06);
+  }
+  ciSolids.push([MAG_X, MAG_Z, 0.36]);
+  // a heart poster over the chairs, on the left wall (along the left wall, x on the wall is minus the room's z)
+  ciFramed('W', -2.0, 2.05, 0.55, 0.75, ciHeartTex, CI.white);
+  // a water cooler by the door, with a stack of paper cups
+  var WC_X = -1.45, WC_Z = CIN_D / 2 - 0.35;
+  ciPart(new THREE.BoxGeometry(0.34, 0.95, 0.34), CI.white, WC_X, 0.475, WC_Z);
+  ciPart(new THREE.BoxGeometry(0.2, 0.12, 0.02), CI.black, WC_X, 0.78, WC_Z - 0.17);
+  [-0.05, 0.05].forEach(function (tx, k) { ciPart(new THREE.BoxGeometry(0.035, 0.05, 0.04), k ? new THREE.MeshStandardMaterial({ color: 0x4a8ad0 }) : new THREE.MeshStandardMaterial({ color: 0xd04a5a }), WC_X + tx, 0.82, WC_Z - 0.19); });
+  ciPart(new THREE.CylinderGeometry(0.15, 0.15, 0.4, 20), new THREE.MeshStandardMaterial({ color: 0x9fd0f0, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55 }), WC_X, 1.17, WC_Z);
+  ciPart(new THREE.CylinderGeometry(0.15, 0.06, 0.08, 20), new THREE.MeshStandardMaterial({ color: 0x9fd0f0, roughness: 0.05, transparent: true, opacity: 0.55 }), WC_X, 0.99, WC_Z);
+  ciPart(new THREE.CylinderGeometry(0.035, 0.03, 0.25, 12), CI.paper, WC_X + 0.22, 0.75, WC_Z, 0, 0, 0);
+  ciSolids.push([WC_X, WC_Z, 0.3]);
+  // big leafy plants in the corners
+  function ciPlant(x, z, s) {
+    ciPart(new THREE.CylinderGeometry(0.24 * s, 0.18 * s, 0.42 * s, 18), CI.white, x, 0.21 * s, z);
+    ciPart(new THREE.TorusGeometry(0.24 * s, 0.02 * s, 6, 18), CI.teal, x, 0.4 * s, z, Math.PI / 2, 0, 0);
+    ciPart(new THREE.CylinderGeometry(0.22 * s, 0.22 * s, 0.02, 16), CI.soil, x, 0.39 * s, z);
+    for (var l = 0; l < 11; l++) {
+      var a = l * 2.4 + x, up = 0.35 + isle2Hash(l + x * 3) * 0.75, out = 0.12 + isle2Hash(l * 2 + z) * 0.25;
+      var lx = x + Math.cos(a) * out * s, lz = z + Math.sin(a) * out * s, ly = (0.4 + up) * s;
+      ciPart(new THREE.CylinderGeometry(0.008 * s, 0.01 * s, up * s, 5), CI.leaf, (x + lx) / 2, (0.4 * s + ly) / 2, (z + lz) / 2, Math.sin(a) * out * 1.2, 0, -Math.cos(a) * out * 1.2);
+      var leaf = ciPart(new THREE.CircleGeometry(0.17 * s, 14), CI.leaf, lx + Math.cos(a) * 0.08 * s, ly, lz + Math.sin(a) * 0.08 * s, 0, 0, 0);
+      leaf.rotation.set(-Math.PI / 2 + 0.6, 0, 0); leaf.rotation.order = 'YXZ'; leaf.rotation.y = -a + Math.PI / 2; leaf.scale.set(0.7, 1.2, 1);
+    }
+  }
+  ciPlant(-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 1.25); ciSolids.push([-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 0.35]);
+  ciPlant(1.45, CIN_D / 2 - 0.4, 1.1); ciSolids.push([1.45, CIN_D / 2 - 0.4, 0.32]);
+
+  // ----- the doctor's corner, on the right -----
+  // the doctor's desk, facing the room, with a laptop, a lamp, a stethoscope, folders and a mug of tea
+  var DD_X = 3.55, DD_Z = 1.55;
+  ciPart(new THREE.BoxGeometry(1.7, 0.05, 0.8), CI.wood, DD_X, 0.76, DD_Z);
+  ciPart(new THREE.BoxGeometry(0.5, 0.72, 0.74), CI.white, DD_X + 0.55, 0.37, DD_Z);
+  [0.18, 0.42, 0.64].forEach(function (dy) { ciPart(new THREE.BoxGeometry(0.44, 0.2, 0.02), CI.mint, DD_X + 0.55, dy, DD_Z + 0.375); ciPart(new THREE.BoxGeometry(0.12, 0.02, 0.03), CI.brass, DD_X + 0.55, dy + 0.04, DD_Z + 0.39); });
+  [[-0.8, -0.35], [-0.8, 0.35]].forEach(function (l) { ciPart(new THREE.BoxGeometry(0.05, 0.74, 0.05), CI.wood, DD_X + l[0], 0.37, DD_Z + l[1]); });
+  ciPart(new THREE.BoxGeometry(1.6, 0.3, 0.02), CI.wood, DD_X - 0.05, 0.55, DD_Z + 0.36);   // the modesty panel
+  ciPart(new THREE.BoxGeometry(0.42, 0.015, 0.3), CI.steel, DD_X - 0.2, 0.79, DD_Z - 0.05, 0, 0.2, 0);                  // the laptop
+  var ciLap = new THREE.Group(); ciLap.position.set(DD_X - 0.2 - Math.sin(0.2) * 0.15, 0.795, DD_Z - 0.05 - Math.cos(0.2) * 0.15); ciLap.rotation.set(0, 0.2, 0); clinicRoom.add(ciLap);
+  ciPart(new THREE.BoxGeometry(0.42, 0.28, 0.012), CI.steel, 0, 0.14, 0, -0.25, 0, 0, ciLap);
+  ciPart(new THREE.PlaneGeometry(0.38, 0.24), new THREE.MeshStandardMaterial({ map: ciLaptopTex, emissive: 0xffffff, emissiveMap: ciLaptopTex, emissiveIntensity: 0.8 }), 0, 0.14, 0.007, -0.25, 0, 0, ciLap);
+  ciPart(new THREE.CylinderGeometry(0.08, 0.09, 0.02, 16), CI.teal, DD_X + 0.6, 0.79, DD_Z - 0.2);                       // a desk lamp
+  ciPart(new THREE.CylinderGeometry(0.01, 0.01, 0.4, 6), CI.brass, DD_X + 0.6, 0.98, DD_Z - 0.2, 0.25, 0, 0);
+  ciPart(new THREE.ConeGeometry(0.1, 0.13, 18, 1, true), CI.teal, DD_X + 0.6, 1.15, DD_Z - 0.1, 0.5, 0, 0);
+  ciPart(new THREE.SphereGeometry(0.035, 10, 8), CI.light, DD_X + 0.6, 1.12, DD_Z - 0.08);
+  var steth = new THREE.Group(); steth.position.set(DD_X + 0.2, 0.795, DD_Z + 0.15); clinicRoom.add(steth);           // the stethoscope, coiled on the desk
+  ciPart(new THREE.TorusGeometry(0.12, 0.008, 6, 32, Math.PI * 1.6), CI.black, 0, 0.005, 0, Math.PI / 2, 0, 0, steth);
+  ciPart(new THREE.TorusGeometry(0.07, 0.006, 6, 24, Math.PI * 1.2), CI.steel, 0.02, 0.008, -0.02, Math.PI / 2, 0, 2, steth);
+  ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.015, 16), CI.steel, 0.12, 0.008, 0.05, 0, 0, 0, steth);
+  ciPart(new THREE.CylinderGeometry(0.022, 0.022, 0.018, 16), CI.black, 0.12, 0.012, 0.05, 0, 0, 0, steth);
+  [0, 1].forEach(function (k) { ciPart(new THREE.BoxGeometry(0.24, 0.02, 0.32), k ? CI.coral : CI.mint, DD_X - 0.65, 0.795 + k * 0.022, DD_Z + 0.05, 0, -0.2 + k * 0.15, 0); });
+  ciPart(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 14), CI.white, DD_X + 0.35, 0.83, DD_Z - 0.25);
+  ciPart(new THREE.TorusGeometry(0.025, 0.007, 6, 12), CI.white, DD_X + 0.39, 0.83, DD_Z - 0.25, 0, Math.PI / 2, 0);
+  ciPart(new THREE.CylinderGeometry(0.034, 0.034, 0.005, 14), new THREE.MeshStandardMaterial({ color: 0x8a5a2a, roughness: 0.2 }), DD_X + 0.35, 0.87, DD_Z - 0.25);
+  ciOfficeChair(DD_X - 0.1, DD_Z - 0.75, 0.15);
+  ciArmchair(DD_X - 0.3, DD_Z + 1.05, Math.PI - 0.15, CI.tealVinyl);                                                    // a chair for you, across the desk
+  ciSolids.push([DD_X - 0.45, DD_Z, 0.5], [DD_X + 0.4, DD_Z, 0.5], [DD_X - 0.1, DD_Z - 0.75, 0.32], [DD_X - 0.3, DD_Z + 1.05, 0.36]);
+  ciFramed('E', DD_Z - 0.35, 2.0, 0.42, 0.32, ciDiplomaTex, CI.darkWood);                                                // diplomas over the desk (along the right wall, x on the wall is the room's z)
+  ciFramed('E', DD_Z + 0.25, 2.0, 0.42, 0.32, ciDiplomaTex, CI.darkWood);
+  ciFramed('E', 2.85, 1.75, 0.42, 0.66, ciEyeTex, CI.teal);                                                             // the eye chart
+
+  // the exam table under the back window, with its paper roll, a pillow, a step and a rolling stool, behind a curtain
+  var EX_X = 2.65, EX_Z = CNW + 0.6, EX_L = 1.9;
+  ciPart(new THREE.BoxGeometry(EX_L - 0.1, 0.55, 0.62), CI.white, EX_X, 0.275, EX_Z);
+  [-0.55, 0, 0.55].forEach(function (dx) { ciPart(new THREE.BoxGeometry(0.5, 0.2, 0.02), CI.mint, EX_X + dx, 0.35, EX_Z + 0.315); ciPart(new THREE.BoxGeometry(0.14, 0.02, 0.03), CI.steel, EX_X + dx, 0.4, EX_Z + 0.33); });
+  ciPart(new THREE.BoxGeometry(EX_L - 0.45, 0.14, 0.7), CI.tealVinyl, EX_X + 0.2, 0.62, EX_Z);
+  ciPart(new THREE.BoxGeometry(0.6, 0.14, 0.7), CI.tealVinyl, EX_X - EX_L / 2 + 0.3, 0.72, EX_Z, 0, 0, -0.35);           // the raised back rest
+  ciPart(new THREE.BoxGeometry(EX_L - 0.5, 0.004, 0.5), CI.paper, EX_X + 0.15, 0.692, EX_Z);
+  ciPart(new THREE.BoxGeometry(0.55, 0.004, 0.5), CI.paper, EX_X - EX_L / 2 + 0.32, 0.795, EX_Z, 0, 0, -0.35);
+  ciPart(new THREE.CylinderGeometry(0.06, 0.06, 0.54, 16), CI.paper, EX_X + EX_L / 2 - 0.08, 0.64, EX_Z, Math.PI / 2, 0, 0);   // the paper roll
+  ciPart(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 6), CI.steel, EX_X + EX_L / 2 - 0.08, 0.64, EX_Z, Math.PI / 2, 0, 0);
+  ciPart(new THREE.SphereGeometry(0.2, 16, 10), CI.paper, EX_X - EX_L / 2 + 0.28, 0.88, EX_Z).scale.set(0.8, 0.35, 1.2);
+  ciPart(new THREE.BoxGeometry(0.5, 0.18, 0.3), CI.steel, EX_X + 0.2, 0.09, EX_Z + 0.55);                                // a step up
+  ciPart(new THREE.BoxGeometry(0.46, 0.02, 0.26), CI.black, EX_X + 0.2, 0.185, EX_Z + 0.55);
+  var stool = new THREE.Group(); stool.position.set(1.65, 0, -1.75); clinicRoom.add(stool);
+  for (var sa = 0; sa < 5; sa++) { var san = sa / 5 * Math.PI * 2; ciPart(new THREE.BoxGeometry(0.03, 0.03, 0.22), CI.steel, Math.sin(san) * 0.1, 0.05, Math.cos(san) * 0.1, 0, san, 0, stool); }
+  ciPart(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8), CI.steel, 0, 0.25, 0, 0, 0, 0, stool);
+  ciPart(new THREE.CylinderGeometry(0.19, 0.18, 0.07, 20), CI.tealVinyl, 0, 0.48, 0, 0, 0, 0, stool);
+  ciSolids.push([EX_X - 0.5, EX_Z, 0.45], [EX_X + 0.5, EX_Z, 0.45], [EX_X + 0.2, EX_Z + 0.55, 0.25], [1.65, -1.75, 0.22]);
+  // a blood pressure gauge and a box of gloves on the back wall beside the window
+  ciWallPart('N', new THREE.BoxGeometry(0.3, 0.38, 0.05), CI.white, 4.3, 1.55, 0.025);
+  ciWallPart('N', new THREE.CylinderGeometry(0.11, 0.11, 0.03, 24), CI.white, 4.3, 1.6, 0.06, Math.PI / 2, 0, 0);
+  ciWallPart('N', new THREE.CircleGeometry(0.095, 24), new THREE.MeshStandardMaterial({ color: 0xfbfaf4, roughness: 0.5 }), 4.3, 1.6, 0.076);
+  ciWallPart('N', new THREE.BoxGeometry(0.008, 0.08, 0.004), CI.coral, 4.3 + 0.02, 1.62, 0.08, 0, 0, -0.5);
+  ciWallPart('N', new THREE.TorusGeometry(0.1, 0.01, 6, 20, Math.PI * 1.4), CI.black, 4.3, 1.32, 0.07, 0, 0, Math.PI);
+  ciWallPart('N', new THREE.BoxGeometry(0.26, 0.13, 0.12), CI.white, 4.3, 1.0 + 0.24, 0.07);
+  ciWallPart('N', new THREE.BoxGeometry(0.22, 0.04, 0.005), new THREE.MeshStandardMaterial({ color: 0x9ab8ff }), 4.3, 1.27, 0.131);
+  // the sink: a white cabinet with a basin, a tall tap, soap, a mirror and a sign
+  var SK_X = CIN_W / 2 - 0.3, SK_Z = -2.25;
+  ciPart(new THREE.BoxGeometry(0.58, 0.86, 1.2), CI.white, SK_X, 0.43, SK_Z);
+  [-0.29, 0.29].forEach(function (dz) { ciPart(new THREE.BoxGeometry(0.02, 0.7, 0.56), CI.mint, SK_X - 0.3, 0.43, SK_Z + dz); ciPart(new THREE.BoxGeometry(0.03, 0.12, 0.02), CI.steel, SK_X - 0.32, 0.65, SK_Z + dz * 0.2); });
+  ciPart(new THREE.BoxGeometry(0.62, 0.04, 1.24), new THREE.MeshStandardMaterial({ color: 0xe8ece8, roughness: 0.3 }), SK_X, 0.88, SK_Z);
+  ciPart(new THREE.CylinderGeometry(0.2, 0.15, 0.08, 24, 1, true), CI.white, SK_X - 0.02, 0.87, SK_Z);
+  ciPart(new THREE.CircleGeometry(0.15, 20), CI.steel, SK_X - 0.02, 0.835, SK_Z, -Math.PI / 2, 0, 0);
+  ciPart(new THREE.CylinderGeometry(0.015, 0.015, 0.3, 8), CI.steel, SK_X + 0.2, 1.05, SK_Z);
+  ciPart(new THREE.TorusGeometry(0.1, 0.015, 8, 16, Math.PI), CI.steel, SK_X + 0.1, 1.2, SK_Z, 0, 0, 0);
+  ciPart(new THREE.BoxGeometry(0.1, 0.02, 0.02), CI.steel, SK_X + 0.2, 1.0, SK_Z + 0.05, 0, 0, 0.3);
+  ciPart(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0xf2b8c8, roughness: 0.2 }), SK_X + 0.12, 0.97, SK_Z + 0.42);
+  ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), CI.white, SK_X + 0.12, 1.06, SK_Z + 0.42);
+  ciWallPart('E', new THREE.BoxGeometry(0.66, 0.55, 0.03), CI.white, SK_Z, 1.65, 0.015);                                // the mirror (on the right wall)
+  ciWallPart('E', new THREE.PlaneGeometry(0.58, 0.47), new THREE.MeshStandardMaterial({ color: 0xcfe0ea, roughness: 0.02, metalness: 0.9 }), SK_Z, 1.65, 0.032);
+  ciFramed('E', SK_Z, 2.25, 0.36, 0.27, ciWashTex, CI.teal);
+  ciWallPart('E', new THREE.BoxGeometry(0.28, 0.32, 0.12), CI.white, SK_Z + 0.62, 1.55, 0.06);                         // a paper towel holder
+  ciWallPart('E', new THREE.BoxGeometry(0.2, 0.02, 0.06), CI.paper, SK_Z + 0.62, 1.38, 0.1);
+  ciSolids.push([SK_X, SK_Z - 0.35, 0.4], [SK_X, SK_Z + 0.35, 0.4]);
+  // a cabinet of tonics between the back windows: a cupboard below and a glass-fronted cabinet of glowing bottles above
+  var MC_Z = CNW;
+  ciPart(new THREE.BoxGeometry(1.3, 0.88, 0.5), CI.white, 0, 0.44, MC_Z + 0.25);
+  [-0.32, 0.32].forEach(function (dx) { ciPart(new THREE.BoxGeometry(0.6, 0.74, 0.02), CI.mint, dx, 0.44, MC_Z + 0.51); ciPart(new THREE.BoxGeometry(0.02, 0.12, 0.03), CI.brass, dx * 0.2, 0.6, MC_Z + 0.53); });
+  ciPart(new THREE.BoxGeometry(1.36, 0.04, 0.54), CI.wood, 0, 0.9, MC_Z + 0.27);
+  ciPart(new THREE.BoxGeometry(1.2, 1.3, 0.32), CI.white, 0, 1.95, MC_Z + 0.16);
+  ciPart(new THREE.BoxGeometry(1.1, 1.2, 0.02), new THREE.MeshStandardMaterial({ color: 0xe8f0ec, roughness: 0.8 }), 0, 1.95, MC_Z + 0.02);
+  var ciTonics = [];
+  [1.42, 1.85, 2.28].forEach(function (shy, k) {
+    ciPart(new THREE.BoxGeometry(1.1, 0.02, 0.28), CI.white, 0, shy - 0.02, MC_Z + 0.16);
+    for (var b = 0; b < 6; b++) {
+      var bx = -0.45 + b * 0.18 + (isle2Hash(b + k * 7) - 0.5) * 0.04, bh = 0.14 + isle2Hash(b * 3 + k) * 0.1, col = [0xc89aff, 0x7ad0b0, 0xff9ab8, 0x8ac8ff, 0xffd27a][(b + k) % 5];
+      var tm = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.15, transparent: true, opacity: 0.88 });
+      ciTonics.push(tm);
+      ciPart(b % 3 ? new THREE.CylinderGeometry(0.045, 0.05, bh, 14) : new THREE.SphereGeometry(0.06, 14, 10), tm, bx, shy + (b % 3 ? bh / 2 : 0.06), MC_Z + 0.16);
+      ciPart(new THREE.CylinderGeometry(0.018, 0.022, 0.04, 8), CI.wood, bx, shy + (b % 3 ? bh : 0.11) + 0.02, MC_Z + 0.16);
+    }
+  });
+  [-0.3, 0.3].forEach(function (dx) {                                  // the glass doors in white frames
+    ciPart(new THREE.PlaneGeometry(0.54, 1.18), CI.glass, dx, 1.95, MC_Z + 0.33).renderOrder = 2;
+    [[0, 0.6, 0.58, 0.04], [0, -0.6, 0.58, 0.04], [-0.28, 0, 0.04, 1.2], [0.28, 0, 0.04, 1.2]].forEach(function (f) { ciPart(new THREE.BoxGeometry(f[2], f[3], 0.03), CI.white, dx + f[0], 1.95 + f[1], MC_Z + 0.33); });
+    ciPart(new THREE.SphereGeometry(0.018, 8, 6), CI.brass, dx * 0.15, 1.95, MC_Z + 0.355);
+  });
+  var mcGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xc8a0ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  mcGlow.position.set(0, 1.9, MC_Z + 0.3); mcGlow.scale.set(1.6, 1.6, 1); clinicRoom.add(mcGlow);
+  ciSolids.push([-0.35, MC_Z + 0.3, 0.4], [0.35, MC_Z + 0.3, 0.4]);
+  // a doctor's balance scale in the front corner
+  var SC_X = CIN_W / 2 - 0.45, SC_Z = CIN_D / 2 - 0.5;
+  ciPart(new THREE.BoxGeometry(0.42, 0.08, 0.5), CI.white, SC_X, 0.04, SC_Z);
+  ciPart(new THREE.BoxGeometry(0.36, 0.01, 0.42), CI.black, SC_X, 0.085, SC_Z);
+  ciPart(new THREE.BoxGeometry(0.06, 1.35, 0.06), CI.white, SC_X + 0.12, 0.72, SC_Z - 0.2);
+  ciPart(new THREE.BoxGeometry(0.14, 0.2, 0.08), CI.white, SC_X + 0.12, 1.38, SC_Z - 0.2);
+  ciPart(new THREE.BoxGeometry(0.5, 0.03, 0.03), CI.steel, SC_X - 0.05, 1.3, SC_Z - 0.2);
+  ciPart(new THREE.BoxGeometry(0.03, 0.05, 0.05), CI.black, SC_X - 0.1, 1.3, SC_Z - 0.2);
+  ciPart(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), CI.steel, SC_X + 0.12, 1.75, SC_Z - 0.2);
+  ciPart(new THREE.BoxGeometry(0.22, 0.015, 0.06), CI.steel, SC_X + 0.04, 2.0, SC_Z - 0.2);
+  ciSolids.push([SC_X, SC_Z, 0.3]);
+
+  // a ceiling track with pale blue curtains, pulled back on either side of the exam corner
+  var CT_X = 0.9, CT_Z = -0.9, CT_Y = CIN_H - 0.08;
+  ciPart(new THREE.BoxGeometry(0.04, 0.03, -CNW + CT_Z), CI.steel, CT_X, CT_Y, (CNW + CT_Z) / 2);
+  ciPart(new THREE.BoxGeometry(CIN_W / 2 - CT_X, 0.03, 0.04), CI.steel, (CT_X + CIN_W / 2) / 2, CT_Y, CT_Z);
+  var ciCurtainMat = new THREE.MeshStandardMaterial({ map: ciCurtainTex, roughness: 0.95, side: THREE.DoubleSide });
+  function ciCurtain(x, z, ry, w) {                                     // a gathered curtain hanging from the track
+    var geo = new THREE.PlaneGeometry(w, CT_Y - 0.32, 24, 10), p = geo.attributes.position;
+    for (var v = 0; v < p.count; v++) p.setZ(v, Math.sin(p.getX(v) / w * Math.PI * 7) * 0.06);
+    geo.computeVertexNormals();
+    ciPart(geo, ciCurtainMat, x, 0.32 + (CT_Y - 0.32) / 2, z, 0, ry, 0);
+    for (var r = 0; r < 7; r++) ciPart(new THREE.TorusGeometry(0.02, 0.004, 4, 10), CI.steel, x + Math.cos(ry) * (r / 6 - 0.5) * w, CT_Y - 0.03, z - Math.sin(ry) * (r / 6 - 0.5) * w, 0, ry + Math.PI / 2, 0);
+  }
+  ciCurtain(CT_X, CNW + 0.45, Math.PI / 2, 0.7);
+  ciCurtain(CIN_W / 2 - 0.45, CT_Z, 0, 0.7);
+  ciSolids.push([CT_X, CNW + 0.45, 0.2], [CIN_W / 2 - 0.45, CT_Z, 0.25]);
+
+  for (var ciWn in ciWalls) ciWalls[ciWn].g.traverse(function (o) { o.castShadow = false; });   // the walls and what's on them don't block the daylight
+  var ciLook = new THREE.Vector3();
+  function updateClinicInterior(t) {
+    if (!inClinic) return;
+    for (var wn in ciWalls) {                                           // hide any wall the camera is behind, so it never blocks the view
+      var W = ciWalls[wn];
+      ciLook.set(camera.position.x - CIN_X - W.c.x, 0, camera.position.z - CIN_Z - W.c.z);
+      W.g.visible = ciLook.dot(W.n) > 0;
+    }
+    var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
+    ciSun.intensity = 0.5 * (1 - nt);                                   // daylight only comes in through the windows by day
+    for (var i = 0; i < ciTonics.length; i++) ciTonics[i].emissiveIntensity = 0.45 + Math.sin(t * 1.8 + i) * 0.15;
+    mcGlow.material.opacity = 0.3 + Math.sin(t * 1.3) * 0.06;
+    var mins = state.minutes % 720;                                     // the clock on the wall keeps the island's time
+    ciHourHand.rotation.z = -mins / 720 * Math.PI * 2;
+    ciMinHand.rotation.z = -(state.minutes % 60) / 60 * Math.PI * 2;
+  }
+  function inClinicRoom(x, z) { return Math.abs(x - CIN_X) < CIN_W / 2 - 0.35 && Math.abs(z - CIN_Z) < CIN_D / 2 - 0.35; }
+  // the windows look out on the real island, just like the shop's
+  function drawClinicView() {
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    shopViewMap.makeTranslation(CLINIC_X, 0, CLINIC_Z).multiply(shopViewTmp.makeRotationY(CLINIC_TURN)).multiply(shopViewTmp.makeTranslation(-CIN_X, 0, -CIN_Z));
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    clinicGroup.visible = false;                                      // you're inside it, so don't draw its own outside walls in the way
+    renderer.setRenderTarget(shopViewTarget);
+    renderer.render(scene, shopViewCam);
+    renderer.setRenderTarget(null);
+    clinicGroup.visible = true;
+  }
+
   // ---------- The seed shop: step up to the counter inside to buy seeds with Star Coins ----------
   var SEED_COST = 10;
   function shopFront(d) { return { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + d), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + d) }; }
-  var shopDoor = shopFront(0.12);                                     // walk up the steps to the front door to go in
+  var shopDoor = shopFront(0.12);
+  var clinicDoor = clinicFront(0.12);                                 // and up onto the clinic's porch to its door                                     // walk up the steps to the front door to go in
   function shopStepHeight(x, z) {                                     // how high the shop's front steps lift you
     var dx = x - SHOP_X, dz = z - SHOP_Z, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
     var lx = dx * c - dz * si, lz = dx * si + dz * c;                  // into the shop's own directions
@@ -10116,7 +11355,21 @@ function startGame(THREE) {
     g.beginPath(); g.arc(0, 0, 6, 0, Math.PI * 2); g.fillStyle = '#c89aff'; g.fill();                       // the crystal spire
     g.restore();
     label('Whimsy & Bloom', SHOP_X, SHOP_Z, SHOP_HD * K + 30);              // below the shop, clear of its teleport pin
-    label('Town Square', ISLE2_X + 10, ISLE2_Z + 10, 0, 26);
+    // Everdawn Clinic: its coral tiled roof with the ridge along it, the white porch and a heart on the ridge
+    var cpm = mapXY(CLINIC_X, CLINIC_Z);
+    g.save(); g.translate(cpm[0], cpm[1]); g.rotate(-CLINIC_TURN);
+    g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-CLINIC_HW * K + 8, -CLINIC_HD * K + 10, CLINIC_HW * K * 2, CLINIC_HD * K * 2);
+    g.fillStyle = '#b8583e'; g.fillRect(-CLINIC_HW * K - 3, -(CLINIC_HD + 0.45) * K, CLINIC_HW * K * 2 + 6, (CLINIC_HD + 0.45) * K);
+    g.fillStyle = '#d87a5a'; g.fillRect(-CLINIC_HW * K - 3, 0, CLINIC_HW * K * 2 + 6, (CLINIC_HD + 0.45) * K);
+    g.fillStyle = 'rgba(255,255,255,0.12)'; for (var tr = -CLINIC_HD; tr < CLINIC_HD; tr += 0.6) g.fillRect(-CLINIC_HW * K - 3, tr * K, CLINIC_HW * K * 2 + 6, 1.5);
+    g.fillStyle = '#c0704a'; g.fillRect(-CLINIC_HW * K - 3, -2, CLINIC_HW * K * 2 + 6, 4);                                      // the ridge
+    g.fillStyle = '#f4f1ea'; g.fillRect(-1.7 * K, (CLINIC_HD + 0.45) * K, 3.4 * K, 1.3 * K);                                    // the porch
+    g.fillStyle = '#d6cfc4'; g.fillRect(-1.5 * K, (CLINIC_HD + 1.75) * K, 3 * K, 0.35 * K);                                     // its step
+    g.fillStyle = '#e0607a'; g.beginPath(); g.moveTo(0, 7); g.bezierCurveTo(-11, 0, -7, -8, 0, -3); g.bezierCurveTo(7, -8, 11, 0, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.fillRect(-1.2, -4, 2.4, 7); g.fillRect(-3.5, -1.6, 7, 2.4);
+    g.restore();
+    label('Everdawn Clinic', CLINIC_X, CLINIC_Z, CLINIC_HD * K + 36);
+    label('Town Square', ISLE2_X - 4, ISLE2_Z + 18, 0, 26);
     // teleport pins: a glowing purple marker on each place you can teleport to
     var pinPulse = 1 + Math.sin(Date.now() / 300) * 0.08;
     TELEPORTS.forEach(function (d) {
@@ -10135,8 +11388,8 @@ function startGame(THREE) {
     });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
-    if (indoors) you = inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
-    var yp = mapXY(you.x, you.z), fa = indoors ? (inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    if (indoors) you = inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
     var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
     g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
@@ -10189,7 +11442,8 @@ function startGame(THREE) {
   var TELEPORTS = [
     { name: 'Your House', icon: '🏡', spot: function () { return { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1.3, face: 0, view: 0 }; } },
     { name: 'The Dawn Tree', icon: '🌸', spot: function () { return { x: TREE_X + 2.4, z: TREE_Z + 2.4, face: Math.atan2(-1, -1), view: Math.atan2(1, 1) }; } },
-    { name: 'Whimsy & Bloom', icon: '🌱', spot: function () { var f = shopFront(1.8); return { x: f.x, z: f.z, face: SHOP_TURN + Math.PI, view: SHOP_TURN }; } }
+    { name: 'Whimsy & Bloom', icon: '🌱', spot: function () { var f = shopFront(1.8); return { x: f.x, z: f.z, face: SHOP_TURN + Math.PI, view: SHOP_TURN }; } },
+    { name: 'Everdawn Clinic', icon: '🩺', spot: function () { var f = clinicFront(2.6); return { x: f.x, z: f.z, face: CLINIC_TURN + Math.PI, view: CLINIC_TURN }; } }
   ];
   var teleporting = false;
   var tpBtn = document.createElement('button');
@@ -10220,7 +11474,7 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (indoors) {                                                  // stepping out of the house or the shop
-        indoors = false; inShop = false;
+        indoors = false; inShop = false; inClinic = false;
         scene.add(player);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; }
       }
@@ -10368,11 +11622,11 @@ function startGame(THREE) {
       player.position.z += mz * SPEED * dt;
 
       if (indoors) { // inside the farmhouse or the seed shop: stay between the walls and bump into the furniture
-        var rx0 = inShop ? SIN_X : IN_X, rz0 = inShop ? SIN_Z : IN_Z;
-        var hw = (inShop ? SIN_W : ROOM_W) / 2 - 0.35, hd = (inShop ? SIN_D : ROOM_D) / 2 - 0.35;
+        var rx0 = inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
+        var hw = (inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.35, hd = (inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.35;
         player.position.x = Math.max(rx0 - hw, Math.min(rx0 + hw, player.position.x));
         player.position.z = Math.max(rz0 - hd, Math.min(rz0 + hd, player.position.z));
-        (inShop ? shopInSolids : inSolids).forEach(function (o) {
+        (inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
           var dx = player.position.x - (rx0 + o[0]), dz = player.position.z - (rz0 + o[1]);
           var d = Math.hypot(dx, dz), min = o[2] + 0.35;
           if (d < min && d > 0.0001) {
@@ -10409,7 +11663,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z); // up the porch and shop steps, and over the bridge
+    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
@@ -10583,6 +11837,7 @@ function startGame(THREE) {
     var px = player.position.x, pz = player.position.z;
     if (indoors) { px = OUT_DOOR_X; pz = OUT_DOOR_Z + 1.0; }          // saved inside the house? you'll load in at the front door
     if (inShop) { var so = shopFront(2.0); px = so.x; pz = so.z; }    // saved inside the shop? you'll load in outside its door
+    if (inClinic) { var co = clinicFront(2.3); px = co.x; pz = co.z; } // and the same for the clinic
     var data = {
       v: 1,
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
@@ -10684,6 +11939,7 @@ function startGame(THREE) {
     if (indoors) {
       indoors = false;
       inShop = false;
+      inClinic = false;
       scene.add(player);
       if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
     }
@@ -10743,8 +11999,10 @@ function startGame(THREE) {
     updateWorld(dt, night);
     updateEffects(dt);
     updateCamera(dt);
+    updateClinicInterior(state.time);
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
-    renderer.render(indoors ? (inShop ? shopScene : interiorScene) : scene, camera); // inside the house or the shop, only that room is drawn
+    if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
+    renderer.render(indoors ? (inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
 
