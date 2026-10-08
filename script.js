@@ -8789,6 +8789,10 @@ function startGame(THREE) {
     g.fillStyle = shade; g.fillRect(0, 0, w, h);
   });
   var shopInWalls = {};
+  // Like the farmhouse, the shop is a room of its own with darkness all round it: the garden outside is only drawn
+  // where you look through a window. Each window opening marks its glass on the screen (the stencil), and the
+  // garden only draws inside those marks, so you never see it past the walls
+  var siWindowMask = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
   var SI_HOLES = {                                                     // window openings cut right through the walls: middle x, middle y, width, height
     W: [[-0.3, 1.95, 3.4, 2.3]],
     S: [[-2.425, 1.525, 2.95, 1.85], [2.425, 1.525, 2.95, 1.85]]
@@ -8804,6 +8808,8 @@ function startGame(THREE) {
     (SI_HOLES[name] || []).forEach(function (hl) {
       var hp = new THREE.Path(); hp.moveTo(hl[0] - hl[2] / 2, hl[1] - hl[3] / 2); hp.lineTo(hl[0] - hl[2] / 2, hl[1] + hl[3] / 2); hp.lineTo(hl[0] + hl[2] / 2, hl[1] + hl[3] / 2); hp.lineTo(hl[0] + hl[2] / 2, hl[1] - hl[3] / 2); hp.lineTo(hl[0] - hl[2] / 2, hl[1] - hl[3] / 2);
       wallShape.holes.push(hp);
+      var mask = siPart(new THREE.PlaneGeometry(hl[2], hl[3]), siWindowMask, hl[0], hl[1], 0, 0, 0, 0, wgp);   // marks the glass, so the garden only shows through it
+      mask.renderOrder = -10; mask.castShadow = false; mask.receiveShadow = false;
       var WT = 0.32;                                                   // the thickness of the wall, seen in the sides of the opening
       [[0, hl[3] / 2, hl[2], 0.02], [0, -hl[3] / 2, hl[2], 0.02], [-hl[2] / 2, 0, 0.02, hl[3]], [hl[2] / 2, 0, 0.02, hl[3]]].forEach(function (rv) {
         siPart(new THREE.BoxGeometry(rv[2], rv[3], WT), plasterMat, hl[0] + rv[0], hl[1] + rv[1], -WT / 2, 0, 0, 0, wgp).castShadow = false;
@@ -9313,6 +9319,7 @@ function startGame(THREE) {
   siInstances(new THREE.SphereGeometry(0.035, 8, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), siVines, function (q, c) { return c.setHSL(0.25 + q[6] * 0.05, 0.45, 0.32 + q[6] * 0.14); });
 
   // ---- the garden outside the shop, seen for real through the windows: sky, clouds, hills, trees, a fence, flower beds and a path
+  var sgFirstChild = shopRoom.children.length, sgBlack = SI.black.clone();
   var sgMats = [];                                                     // garden materials that darken at night
   function sgMat(color, extra) { var m = new THREE.MeshStandardMaterial({ color: color, roughness: 0.85 }); for (var k in extra) m[k] = extra[k]; m.userData.base = new THREE.Color(color); sgMats.push(m); return m; }
   var sgSkyTex = paintTexture(8, 256, function (g, w, h) {
@@ -9404,9 +9411,9 @@ function startGame(THREE) {
   var sgLampGlass = new THREE.MeshStandardMaterial({ color: 0xfff2d0, emissive: 0xffc870, emissiveIntensity: 0 }), sgLampGlows = [];
   [-1.3, 1.3].forEach(function (lx) {
     var lz = SIN_D / 2 + 3.5;
-    siPart(new THREE.CylinderGeometry(0.04, 0.06, 2.2, 8), SI.black, lx, 1.1, lz);
+    siPart(new THREE.CylinderGeometry(0.04, 0.06, 2.2, 8), sgBlack, lx, 1.1, lz);
     siPart(new THREE.BoxGeometry(0.2, 0.26, 0.2), sgLampGlass, lx, 2.33, lz);
-    siPart(new THREE.ConeGeometry(0.18, 0.14, 4), SI.black, lx, 2.53, lz, 0, Math.PI / 4, 0);
+    siPart(new THREE.ConeGeometry(0.18, 0.14, 4), sgBlack, lx, 2.53, lz, 0, Math.PI / 4, 0);
     var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
     lg.position.set(lx, 2.33, lz); lg.scale.set(1.4, 1.4, 1); shopRoom.add(lg); sgLampGlows.push(lg);
   });
@@ -9423,6 +9430,15 @@ function startGame(THREE) {
   var sgStarGeo = new THREE.BufferGeometry(); sgStarGeo.setAttribute('position', new THREE.Float32BufferAttribute(sgStarPos, 3));
   var sgStars = new THREE.Points(sgStarGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0, depthWrite: false }));
   shopRoom.add(sgStars);
+  var sgGarden = new THREE.Group();                                    // gather the whole garden up, and only draw it through the windows
+  shopRoom.children.slice(sgFirstChild).forEach(function (o) { sgGarden.add(o); });
+  shopRoom.add(sgGarden);
+  sgGarden.traverse(function (o) {
+    if (!o.material) return;
+    o.material.stencilWrite = true; o.material.stencilRef = 1; o.material.stencilFunc = THREE.EqualStencilFunc;
+    o.material.stencilFail = o.material.stencilZFail = o.material.stencilZPass = THREE.KeepStencilOp;
+  });
+  sgSky.renderOrder = -5;
   var sgNightSky = new THREE.Color(0x141a3a), sgDaySky = new THREE.Color(0xffffff);
   function updateShopGarden(t) {                                       // day and night outside the windows
     var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
