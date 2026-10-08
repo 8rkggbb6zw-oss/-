@@ -9964,13 +9964,23 @@ function startGame(THREE) {
   var mapKey = document.createElement('div');
   mapKey.className = 'inv-info';
   mapKey.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.78rem;';
-  mapKey.innerHTML = '<span><b style="color:#7b4fd6">🧙</b> You</span><span><span style="color:#8a5a3c">■</span> Farm soil</span><span><span style="color:#e98ab6">●</span> Ready to pick</span><span><span style="color:#3f8a3a">●</span> Trees</span><span><span style="color:#8c8c96">●</span> Rocks</span>';
+  mapKey.innerHTML = '<span style="flex-basis:100%;color:#7b4fd6;font-weight:600">📍 Tap a pin to teleport there (' + 20 + ' mana)</span><span><b style="color:#7b4fd6">🧙</b> You</span><span><span style="color:#8a5a3c">■</span> Farm soil</span><span><span style="color:#e98ab6">●</span> Ready to pick</span><span><span style="color:#3f8a3a">●</span> Trees</span><span><span style="color:#8c8c96">●</span> Rocks</span>';
   mapKey.insertBefore(mapFind, mapKey.firstChild);
   mapBox.style.display = mapKey.style.display = 'none';
   if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(mapBox, bagUi.grid.nextSibling); bagUi.grid.parentNode.insertBefore(mapKey, mapBox.nextSibling); }
   (function () {                                                       // drag the map with the mouse (fingers already scroll it)
     var dragAt = null;
-    mapBox.addEventListener('mousedown', function (e) { dragAt = { x: e.clientX, y: e.clientY, l: mapBox.scrollLeft, t: mapBox.scrollTop }; mapBox.style.cursor = 'grabbing'; e.preventDefault(); });
+    var dragged = false;
+    mapBox.addEventListener('mousedown', function (e) { dragAt = { x: e.clientX, y: e.clientY, l: mapBox.scrollLeft, t: mapBox.scrollTop }; dragged = false; mapBox.style.cursor = 'grabbing'; e.preventDefault(); });
+    window.addEventListener('mousemove', function (e) { if (dragAt && Math.abs(e.clientX - dragAt.x) + Math.abs(e.clientY - dragAt.y) > 6) dragged = true; });
+    mapCanvas.addEventListener('click', function (e) {                // tap a pin to teleport there
+      if (dragged) { dragged = false; return; }
+      var r = mapCanvas.getBoundingClientRect(), cx = (e.clientX - r.left) * (mapCanvas.width / r.width), cy = (e.clientY - r.top) * (mapCanvas.height / r.height);
+      for (var i = 0; i < TELEPORTS.length; i++) {
+        var sp3 = TELEPORTS[i].spot(), pp = mapXY(sp3.x, sp3.z);
+        if (Math.abs(cx - pp[0]) < 40 && cy > pp[1] - 90 && cy < pp[1] + 26) { teleportTo(i); return; }
+      }
+    });
     window.addEventListener('mousemove', function (e) { if (!dragAt) return; mapBox.scrollLeft = dragAt.l - (e.clientX - dragAt.x); mapBox.scrollTop = dragAt.t - (e.clientY - dragAt.y); mapFollow = false; });
     window.addEventListener('mouseup', function () { if (dragAt) { dragAt = null; mapBox.style.cursor = 'grab'; } });
     mapBox.addEventListener('touchstart', function () { mapFollow = false; }, { passive: true });
@@ -10105,8 +10115,24 @@ function startGame(THREE) {
     g.fillStyle = '#b79ce6'; g.fillRect(-4 * K, SHOP_HD * K - 2, 3 * K, 6); g.fillRect(1 * K, SHOP_HD * K - 2, 3 * K, 6);   // the awnings
     g.beginPath(); g.arc(0, 0, 6, 0, Math.PI * 2); g.fillStyle = '#c89aff'; g.fill();                       // the crystal spire
     g.restore();
-    label('Whimsy & Bloom', SHOP_X, SHOP_Z, -SHOP_HD * K - 26);
+    label('Whimsy & Bloom', SHOP_X, SHOP_Z, SHOP_HD * K + 30);              // below the shop, clear of its teleport pin
     label('New Island', ISLE2_X + 6, ISLE2_Z + 14, 0);
+    // teleport pins: a glowing purple marker on each place you can teleport to
+    var pinPulse = 1 + Math.sin(Date.now() / 300) * 0.08;
+    TELEPORTS.forEach(function (d) {
+      var sp2 = d.spot(), pp = mapXY(sp2.x, sp2.z), R = 24 * pinPulse;
+      var pg = g.createRadialGradient(pp[0], pp[1] - 40, 4, pp[0], pp[1] - 40, 54); pg.addColorStop(0, 'rgba(200,150,255,0.6)'); pg.addColorStop(1, 'rgba(200,150,255,0)');
+      g.fillStyle = pg; g.beginPath(); g.arc(pp[0], pp[1] - 30, 54, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(pp[0], pp[1], 9, 4, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(40,20,70,0.35)'; g.fill();   // its shadow
+      g.beginPath(); g.moveTo(pp[0], pp[1]);                                                                          // a teardrop pin
+      g.bezierCurveTo(pp[0] - R * 0.5, pp[1] - R * 0.9, pp[0] - R, pp[1] - R * 1.3, pp[0] - R, pp[1] - R * 1.9);
+      g.arc(pp[0], pp[1] - R * 1.9, R, Math.PI, 0);
+      g.bezierCurveTo(pp[0] + R, pp[1] - R * 1.3, pp[0] + R * 0.5, pp[1] - R * 0.9, pp[0], pp[1]);
+      g.closePath(); g.fillStyle = '#7b4fd6'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
+      g.beginPath(); g.arc(pp[0], pp[1] - R * 1.9, R * 0.72, 0, Math.PI * 2); g.fillStyle = '#fff'; g.fill();
+      g.font = Math.round(R * 1.05) + 'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(d.icon, pp[0], pp[1] - R * 1.88);
+      g.font = 'bold 13px Fredoka, sans-serif'; g.lineWidth = 4; g.strokeStyle = 'rgba(255,255,255,0.95)'; g.strokeText('✨ Teleport', pp[0], pp[1] + 14); g.fillStyle = '#7b4fd6'; g.fillText('✨ Teleport', pp[0], pp[1] + 14);
+    });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
     if (indoors) you = inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
@@ -10154,6 +10180,65 @@ function startGame(THREE) {
   if (bagUi.open) bagUi.open.addEventListener('click', function () { toggleBag(); });
   if (bagUi.close) bagUi.close.addEventListener('click', function () { toggleBag(false); focusGame(); });
   renderBag();
+
+  // ---------- Teleport spell ----------
+  // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
+  // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
+  // anywhere, even indoors
+  var TELEPORT_COST = 20;
+  var TELEPORTS = [
+    { name: 'Your House', icon: '🏡', spot: function () { return { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1.3, face: 0, view: 0 }; } },
+    { name: 'The Dawn Tree', icon: '🌸', spot: function () { return { x: TREE_X + 2.4, z: TREE_Z + 2.4, face: Math.atan2(-1, -1), view: Math.atan2(1, 1) }; } },
+    { name: 'Whimsy & Bloom', icon: '🌱', spot: function () { var f = shopFront(1.8); return { x: f.x, z: f.z, face: SHOP_TURN + Math.PI, view: SHOP_TURN }; } }
+  ];
+  var teleporting = false;
+  var tpBtn = document.createElement('button');
+  tpBtn.type = 'button'; tpBtn.id = 'btnTeleport'; tpBtn.innerHTML = 'Teleport <kbd>T</kbd>';
+  if (ui.btnSpell && ui.btnSpell.parentNode) ui.btnSpell.parentNode.insertBefore(tpBtn, ui.btnSpell.nextSibling);
+  function openTeleport() {                                           // the world map, with its teleport pins
+    if (teleporting || sleeping || doorBusy) return;
+    if (binOpen) closeBin(); if (shopOpen) closeShop();
+    if (bagUi.box && !bagUi.box.hidden && mapPage) { toggleBag(false); return; }   // pressing it again closes the map
+    toggleBag(true); showMapPage(true);
+    if (state.mana < TELEPORT_COST) showToast('Teleporting needs ' + TELEPORT_COST + ' mana. Visit the Dawn Tree to refill it.', 2400);
+  }
+  function teleportSwirl(x, z) {                                       // a rising spiral of purple and gold sparkles
+    burst(x, 0.3, z, 0xc89aff, 26, 2.2, 3.2, -1.5);
+    burst(x, 1.0, z, 0xffe08a, 16, 1.6, 2.4, -1);
+  }
+  function teleportTo(n) {
+    if (teleporting || sleeping) return;
+    if (state.mana < TELEPORT_COST) { showToast('Not enough mana to teleport (you need ' + TELEPORT_COST + ')', 2000); return; }
+    var d = TELEPORTS[n], to = d.spot();
+    toggleBag(false);
+    teleporting = true; walkTarget = null; keys = {};
+    state.mana -= TELEPORT_COST;
+    spellSound();
+    if (!indoors) teleportSwirl(player.position.x, player.position.z);
+    fadeBox.style.background = '#2a1a4a';
+    fadeBox.style.transition = 'opacity 0.5s';
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (indoors) {                                                  // stepping out of the house or the shop
+        indoors = false; inShop = false;
+        scene.add(player);
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; }
+      }
+      player.position.set(to.x, 0, to.z);
+      facing = to.face;
+      cam.target.set(to.x, 0.8, to.z);
+      cam.yaw = to.view;                                              // turn the camera to show where you've arrived
+      doorArmed = false;                                               // don't walk straight through a door you land beside
+      teleportSwirl(to.x, to.z);
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('✨ ' + d.name, 1600);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; fadeBox.style.background = '#120a1c'; teleporting = false; }, 550);
+      }, 250);
+    }, 550);
+  }
+  tpBtn.addEventListener('click', function () { openTeleport(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyT' && !e.repeat) openTeleport(); });
 
   // ---------- Keyboard ----------
   var keys = {};
