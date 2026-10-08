@@ -8792,7 +8792,33 @@ function startGame(THREE) {
   // Like the farmhouse, the shop is a room of its own with darkness all round it: the garden outside is only drawn
   // where you look through a window. Each window opening marks its glass on the screen (the stencil), and the
   // garden only draws inside those marks, so you never see it past the walls
-  var siWindowMask = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+  // The windows look out on the real island: each frame (while you're inside) the island is drawn from the spot outside
+  // that matches where you're standing in the shop, into a hidden picture, and the window openings show that picture
+  var shopViewTarget = new THREE.WebGLRenderTarget(4, 4);
+  var shopViewSize = new THREE.Vector2();
+  var siWindowMask = new THREE.ShaderMaterial({
+    uniforms: { tView: { value: shopViewTarget.texture }, uSize: { value: new THREE.Vector2(4, 4) } },
+    vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform sampler2D tView; uniform vec2 uSize; void main() { gl_FragColor = texture2D(tView, gl_FragCoord.xy / uSize); }'
+  });
+  var shopViewCam = new THREE.PerspectiveCamera();
+  shopViewCam.matrixAutoUpdate = false;
+  var shopViewMap = new THREE.Matrix4(), shopViewTmp = new THREE.Matrix4();
+  function drawShopView() {                                           // called just before the shop room is drawn
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    // the room's walls line up with the shop's outside walls: its side wall with the shop's side, its front wall with the shopfront
+    shopViewMap.makeTranslation(SHOP_X, 0, SHOP_Z).multiply(shopViewTmp.makeRotationY(SHOP_TURN)).multiply(shopViewTmp.makeTranslation(SIN_W / 2 - SHOP_HW - SIN_X, 0, SHOP_HD - SIN_D / 2 - SIN_Z));
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    shopGroup.visible = false;                                        // you're inside it, so don't draw the shop's own outside walls in the way
+    renderer.setRenderTarget(shopViewTarget);
+    renderer.render(scene, shopViewCam);
+    renderer.setRenderTarget(null);
+    shopGroup.visible = true;
+  }
   var SI_HOLES = {                                                     // window openings cut right through the walls: middle x, middle y, width, height
     W: [[-0.3, 1.95, 3.4, 2.3]],
     S: [[-2.425, 1.525, 2.95, 1.85], [2.425, 1.525, 2.95, 1.85]]
@@ -8808,8 +8834,8 @@ function startGame(THREE) {
     (SI_HOLES[name] || []).forEach(function (hl) {
       var hp = new THREE.Path(); hp.moveTo(hl[0] - hl[2] / 2, hl[1] - hl[3] / 2); hp.lineTo(hl[0] - hl[2] / 2, hl[1] + hl[3] / 2); hp.lineTo(hl[0] + hl[2] / 2, hl[1] + hl[3] / 2); hp.lineTo(hl[0] + hl[2] / 2, hl[1] - hl[3] / 2); hp.lineTo(hl[0] - hl[2] / 2, hl[1] - hl[3] / 2);
       wallShape.holes.push(hp);
-      var mask = siPart(new THREE.PlaneGeometry(hl[2], hl[3]), siWindowMask, hl[0], hl[1], 0, 0, 0, 0, wgp);   // marks the glass, so the garden only shows through it
-      mask.renderOrder = -10; mask.castShadow = false; mask.receiveShadow = false;
+      var mask = siPart(new THREE.PlaneGeometry(hl[2], hl[3]), siWindowMask, hl[0], hl[1], -0.005, 0, 0, 0, wgp);   // the view outside, in the window opening
+      mask.castShadow = false; mask.receiveShadow = false;
       var WT = 0.32;                                                   // the thickness of the wall, seen in the sides of the opening
       [[0, hl[3] / 2, hl[2], 0.02], [0, -hl[3] / 2, hl[2], 0.02], [-hl[2] / 2, 0, 0.02, hl[3]], [hl[2] / 2, 0, 0.02, hl[3]]].forEach(function (rv) {
         siPart(new THREE.BoxGeometry(rv[2], rv[3], WT), plasterMat, hl[0] + rv[0], hl[1] + rv[1], -WT / 2, 0, 0, 0, wgp).castShadow = false;
@@ -9318,136 +9344,8 @@ function startGame(THREE) {
   });
   siInstances(new THREE.SphereGeometry(0.035, 8, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), siVines, function (q, c) { return c.setHSL(0.25 + q[6] * 0.05, 0.45, 0.32 + q[6] * 0.14); });
 
-  // ---- the garden outside the shop, seen for real through the windows: sky, clouds, hills, trees, a fence, flower beds and a path
-  var sgFirstChild = shopRoom.children.length, sgBlack = SI.black.clone();
-  var sgMats = [];                                                     // garden materials that darken at night
-  function sgMat(color, extra) { var m = new THREE.MeshStandardMaterial({ color: color, roughness: 0.85 }); for (var k in extra) m[k] = extra[k]; m.userData.base = new THREE.Color(color); sgMats.push(m); return m; }
-  var sgSkyTex = paintTexture(8, 256, function (g, w, h) {
-    var sk = g.createLinearGradient(0, 0, 0, h); sk.addColorStop(0, '#4f98d8'); sk.addColorStop(0.42, '#96c8ec'); sk.addColorStop(0.5, '#e6f2f6'); sk.addColorStop(1, '#e6f2f6');
-    g.fillStyle = sk; g.fillRect(0, 0, w, h);
-  });
-  var sgSky = new THREE.Mesh(new THREE.SphereGeometry(90, 32, 16), new THREE.MeshBasicMaterial({ map: sgSkyTex, side: THREE.BackSide, depthWrite: false }));
-  sgSky.renderOrder = -1; shopRoom.add(sgSky);
-  var sgGrassTex = paintTexture(128, 128, function (g, w, h) {
-    g.fillStyle = '#7bb35e'; g.fillRect(0, 0, w, h);
-    for (var i = 0; i < 1400; i++) { var gx = isle2Hash(i * 1.7) * w, gy = isle2Hash(i * 2.3) * h; g.strokeStyle = isle2Hash(i) > 0.5 ? 'rgba(170,220,120,0.6)' : 'rgba(50,90,40,0.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + (isle2Hash(i * 3) - 0.5) * 3, gy - 3 - isle2Hash(i * 5) * 4); g.stroke(); }
-  });
-  sgGrassTex.wrapS = sgGrassTex.wrapT = THREE.RepeatWrapping; sgGrassTex.repeat.set(70, 70);
-  siPart(new THREE.PlaneGeometry(160, 160), sgMat(0xffffff, { map: sgGrassTex, roughness: 1 }), 0, -0.03, 0, -Math.PI / 2).castShadow = false;
-  var sgPathTex = paintTexture(128, 256, function (g, w, h) {         // a path of worn flagstones
-    g.fillStyle = '#8a8478'; g.fillRect(0, 0, w, h);
-    for (var r = 0; r < 8; r++) for (var c = 0; c < 2; c++) {
-      var l = 70 + isle2Hash(r * 5 + c) * 14;
-      g.fillStyle = 'hsl(35,8%,' + l + '%)'; g.fillRect(c * 64 + (r % 2) * 16 + 4, r * 32 + 4, 56, 25);
-    }
-  });
-  sgPathTex.wrapS = sgPathTex.wrapT = THREE.RepeatWrapping; sgPathTex.repeat.set(1, 18);
-  siPart(new THREE.PlaneGeometry(1.5, 60), sgMat(0xffffff, { map: sgPathTex, roughness: 0.95 }), 0, -0.02, SIN_D / 2 + 30, -Math.PI / 2).castShadow = false;
-  [[8, 0], [5, 270], [7, 215]].forEach(function (hc, k) {           // gentle hills far away, paler in the distance
-    for (var hl = 0; hl < 9; hl++) {
-      var ha = (hc[1] + hl * 22 - 90) * Math.PI / 180 + k, hr = 48 + k * 10 + isle2Hash(hl + k * 9) * 8;
-      var hill = siPart(new THREE.SphereGeometry(14 + isle2Hash(hl * 3 + k) * 8, 16, 10), sgMat(['#93c08a', '#a9cca0', '#bcd5c0'][k]), Math.cos(ha) * hr, -2, Math.sin(ha) * hr);
-      hill.scale.y = 0.32 + isle2Hash(hl + k) * 0.15; hill.castShadow = false;
-    }
-  });
-  var sgTrunk = sgMat(0x6a4a32), sgLeafMats = [0x4d8a3c, 0x5f9c45, 0x3f7a36, 0x6aa84e].map(function (c) { return sgMat(c, { flatShading: true }); });
-  function sgTree(x, z, sz, n) {                                       // a round leafy tree, or now and then a tall pine
-    if (n % 4 === 3) {
-      siPart(new THREE.CylinderGeometry(0.1 * sz, 0.16 * sz, 1.2 * sz, 7), sgTrunk, x, 0.6 * sz, z);
-      for (var c = 0; c < 4; c++) siPart(new THREE.ConeGeometry((1.3 - c * 0.28) * sz, 1.5 * sz, 9), sgLeafMats[2], x, (1.3 + c * 0.85) * sz, z, 0, c, 0);
-      return;
-    }
-    siPart(new THREE.CylinderGeometry(0.12 * sz, 0.2 * sz, 2.2 * sz, 8), sgTrunk, x, 1.1 * sz, z);
-    for (var b = 0; b < 8; b++) {
-      var a = b * 2.4 + n, d = (b ? 0.7 : 0) * sz;
-      siPart(new THREE.IcosahedronGeometry((0.75 + isle2Hash(n * 7 + b) * 0.35) * sz, 1), sgLeafMats[(n + b) % 4], x + Math.cos(a) * d, (2.6 + (b % 3) * 0.35 - (b ? 0.2 : -0.3)) * sz, z + Math.sin(a) * d);
-    }
-  }
-  for (var sgT = 0; sgT < 30; sgT++) {
-    var tw = sgT < 15, ta = isle2Hash(sgT * 3.7), tb = isle2Hash(sgT * 5.3);
-    var tx = tw ? -11 - ta * 26 : -18 + ta * 36, tz = tw ? -18 + tb * 30 : 12 + tb * 26;
-    if (!tw && Math.abs(tx) < 2.5) tx += tx < 0 ? -3 : 3;              // keep the path clear
-    sgTree(tx, tz, 0.9 + isle2Hash(sgT * 9.1) * 0.7, sgT);
-  }
-  // a white picket fence round the garden, with a gap for the path
-  var sgPickets = [], sgWhite = sgMat(0xf4f1ea, { roughness: 0.6 });
-  for (var pz = -12; pz <= 9; pz += 0.32) sgPickets.push([-9, pz]);
-  for (var px = -9; px <= 12; px += 0.32) if (Math.abs(px) > 1.0) sgPickets.push([px, 9]);
-  var sgPicketGeo = new THREE.BoxGeometry(0.09, 0.9, 0.03); sgPicketGeo.translate(0, 0.45, 0);
-  var sgPick = new THREE.InstancedMesh(sgPicketGeo, sgWhite, sgPickets.length), sgTip = new THREE.InstancedMesh(new THREE.ConeGeometry(0.065, 0.12, 4), sgWhite, sgPickets.length);
-  sgPickets.forEach(function (pk, i) {
-    var turn = pk[0] === -9 ? Math.PI / 2 : 0;
-    siDummy.position.set(pk[0], 0, pk[1]); siDummy.rotation.set(0, turn, 0); siDummy.scale.set(1, 1, 1); siDummy.updateMatrix(); sgPick.setMatrixAt(i, siDummy.matrix);
-    siDummy.position.y = 0.95; siDummy.rotation.set(0, turn + Math.PI / 4, 0); siDummy.scale.set(1, 1, 0.45); siDummy.updateMatrix(); sgTip.setMatrixAt(i, siDummy.matrix);
-  });
-  siDummy.rotation.set(0, 0, 0); siDummy.scale.set(1, 1, 1);
-  shopRoom.add(sgPick); shopRoom.add(sgTip);
-  [0.3, 0.7].forEach(function (ry) {
-    siPart(new THREE.BoxGeometry(0.04, 0.06, 21), sgWhite, -9.03, ry, -1.5);
-    [[-5, 8], [6.5, 11]].forEach(function (rr) { siPart(new THREE.BoxGeometry(rr[1], 0.06, 0.04), sgWhite, rr[0], ry, 9.03); });
-  });
-  // flower beds along the outside of the shop walls and the fence: leafy mounds full of blooms
-  var sgLeafSpots = [], sgBloomSpots = [];
-  function sgBed(x0, z0, x1, z1, n0) {
-    var len = Math.sqrt((x1 - x0) * (x1 - x0) + (z1 - z0) * (z1 - z0)), n = Math.floor(len / 0.18);
-    for (var i = 0; i < n; i++) {
-      var f = (i + isle2Hash(n0 + i)) / n, bx = x0 + (x1 - x0) * f + (isle2Hash(n0 + i * 3) - 0.5) * 0.4, bz = z0 + (z1 - z0) * f + (isle2Hash(n0 + i * 5) - 0.5) * 0.4;
-      sgLeafSpots.push([bx, 0.12, bz, 0.22 + isle2Hash(n0 + i * 7) * 0.12, isle2Hash(n0 + i)]);
-      for (var b = 0; b < 4; b++) sgBloomSpots.push([bx + (isle2Hash(n0 + i * 11 + b) - 0.5) * 0.35, 0.28 + isle2Hash(n0 + i + b * 2) * 0.12, bz + (isle2Hash(n0 + i * 13 + b) - 0.5) * 0.35, isle2Hash(n0 + i * 17 + b)]);
-    }
-  }
-  sgBed(-SIN_W / 2 - 0.7, -SIN_D / 2, -SIN_W / 2 - 0.7, SIN_D / 2, 100);          // under the side window
-  sgBed(-SIN_W / 2, SIN_D / 2 + 0.7, -1.2, SIN_D / 2 + 0.7, 200);                 // under the front windows, either side of the door
-  sgBed(1.2, SIN_D / 2 + 0.7, SIN_W / 2, SIN_D / 2 + 0.7, 300);
-  sgBed(-8.5, -11, -8.5, 8.5, 400); sgBed(-8.5, 8.5, -1.3, 8.5, 500); sgBed(1.3, 8.5, 11, 8.5, 600);
-  var sgLeaves = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), sgMat(0xffffff, { flatShading: true }), sgLeafSpots.length), sgC = new THREE.Color();
-  sgLeafSpots.forEach(function (q, i) { siDummy.position.set(q[0], q[1], q[2]); siDummy.scale.set(q[3], q[3] * 0.7, q[3]); siDummy.updateMatrix(); sgLeaves.setMatrixAt(i, siDummy.matrix); sgLeaves.setColorAt(i, sgC.setHSL(0.27 + q[4] * 0.06, 0.45, 0.26 + q[4] * 0.12)); });
-  shopRoom.add(sgLeaves);
-  var sgBlooms = new THREE.InstancedMesh(new THREE.SphereGeometry(0.055, 8, 6), sgMat(0xffffff), sgBloomSpots.length);
-  sgBloomSpots.forEach(function (q, i) { siDummy.position.set(q[0], q[1], q[2]); siDummy.scale.set(1, 0.7, 1); siDummy.updateMatrix(); sgBlooms.setMatrixAt(i, siDummy.matrix); sgBlooms.setColorAt(i, sgC.set([0xf2a6c8, 0xfff1b8, 0xc8b4ec, 0xffffff, 0xe0608c][Math.floor(q[3] * 5)])); });
-  siDummy.scale.set(1, 1, 1);
-  shopRoom.add(sgBlooms);
-  // two lamp posts by the path that light up at night
-  var sgLampGlass = new THREE.MeshStandardMaterial({ color: 0xfff2d0, emissive: 0xffc870, emissiveIntensity: 0 }), sgLampGlows = [];
-  [-1.3, 1.3].forEach(function (lx) {
-    var lz = SIN_D / 2 + 3.5;
-    siPart(new THREE.CylinderGeometry(0.04, 0.06, 2.2, 8), sgBlack, lx, 1.1, lz);
-    siPart(new THREE.BoxGeometry(0.2, 0.26, 0.2), sgLampGlass, lx, 2.33, lz);
-    siPart(new THREE.ConeGeometry(0.18, 0.14, 4), sgBlack, lx, 2.53, lz, 0, Math.PI / 4, 0);
-    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-    lg.position.set(lx, 2.33, lz); lg.scale.set(1.4, 1.4, 1); shopRoom.add(lg); sgLampGlows.push(lg);
-  });
-  // soft clouds drifting across the sky, and stars that come out at night
-  var sgClouds = [];
-  for (var sgCl = 0; sgCl < 9; sgCl++) {
-    var cl = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false, fog: false }));
-    var ca = (isle2Hash(sgCl * 4.4) * 200 + 70) * Math.PI / 180, cd = 60 + isle2Hash(sgCl) * 15;
-    cl.position.set(Math.cos(ca) * cd, 14 + isle2Hash(sgCl * 2.2) * 14, Math.sin(ca) * cd); cl.scale.set(26 + isle2Hash(sgCl * 3) * 16, 10, 1);
-    cl.renderOrder = 0; shopRoom.add(cl); sgClouds.push({ s: cl, a: ca, d: cd });
-  }
-  var sgStarPos = [];
-  for (var sgS = 0; sgS < 400; sgS++) { var sa = isle2Hash(sgS * 1.9) * Math.PI * 2, se = 0.1 + isle2Hash(sgS * 2.7) * 1.3; sgStarPos.push(Math.cos(sa) * Math.cos(se) * 85, Math.sin(se) * 85, Math.sin(sa) * Math.cos(se) * 85); }
-  var sgStarGeo = new THREE.BufferGeometry(); sgStarGeo.setAttribute('position', new THREE.Float32BufferAttribute(sgStarPos, 3));
-  var sgStars = new THREE.Points(sgStarGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0, depthWrite: false }));
-  shopRoom.add(sgStars);
-  var sgGarden = new THREE.Group();                                    // gather the whole garden up, and only draw it through the windows
-  shopRoom.children.slice(sgFirstChild).forEach(function (o) { sgGarden.add(o); });
-  shopRoom.add(sgGarden);
-  sgGarden.traverse(function (o) {
-    if (!o.material) return;
-    o.material.stencilWrite = true; o.material.stencilRef = 1; o.material.stencilFunc = THREE.EqualStencilFunc;
-    o.material.stencilFail = o.material.stencilZFail = o.material.stencilZPass = THREE.KeepStencilOp;
-  });
-  sgSky.renderOrder = -5;
-  var sgNightSky = new THREE.Color(0x141a3a), sgDaySky = new THREE.Color(0xffffff);
-  function updateShopGarden(t) {                                       // day and night outside the windows
+  function updateShopGarden(t) {                                       // daylight only comes in through the windows by day
     var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
-    sgSky.material.color.copy(sgDaySky).lerp(sgNightSky, nt);
-    sgMats.forEach(function (m) { m.color.copy(m.userData.base).multiplyScalar(1 - nt * 0.72); });
-    sgClouds.forEach(function (c, k) { var a = c.a + t * 0.004 + k; c.s.position.x = Math.cos(c.a + t * 0.003) * c.d; c.s.position.z = Math.sin(c.a + t * 0.003) * c.d; c.s.material.opacity = 0.9 * (1 - nt * 0.85); });
-    sgStars.material.opacity = nt * 0.9;
-    sgLampGlass.emissiveIntensity = nt * 1.4;
-    sgLampGlows.forEach(function (g) { g.material.opacity = nt * 0.7; });
     shopInSun.intensity = 0.55 * (1 - nt);
   }
   for (var siWn in shopInWalls) shopInWalls[siWn].g.traverse(function (o) { o.castShadow = false; });   // the walls and what's on them don't block the daylight
@@ -10181,6 +10079,7 @@ function startGame(THREE) {
     updateWorld(dt, night);
     updateEffects(dt);
     updateCamera(dt);
+    if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     renderer.render(indoors ? (inShop ? shopScene : interiorScene) : scene, camera); // inside the house or the shop, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
