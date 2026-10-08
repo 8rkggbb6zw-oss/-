@@ -6939,9 +6939,9 @@ function startGame(THREE) {
   }
 
   function interact() {
-    if (binOpen) { closeBin(); return; }
+    if (binOpen) { if (!menuJustOpened()) closeBin(); return; }
     if (nearBin()) { openBin(); return; }                         // next to the shipping bin: open it
-    if (shopOpen) { closeShop(); return; }
+    if (shopOpen) { if (!menuJustOpened()) closeShop(); return; }
     if (nearShop()) { openShop(); return; }                       // at the seed shop's door: open the shop
     var nearTree = treeInReach();
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
@@ -8237,9 +8237,10 @@ function startGame(THREE) {
   // ---------- The shipping bin: put things in to sell them. They sell at 6 am the next morning ----------
   var shipBin = [];                                             // what's in the bin: [{ id, count }], as many kinds as you like
   var lastFarmDay = null;                                       // so we notice when 6 am comes round
-  var binOpen = false;
+  var binOpen = false, menuOpenedAt = 0;                         // when a menu last opened, so a double tap can't snap it shut
+  function menuJustOpened() { return Date.now() - menuOpenedAt < 600; }
   var binWorld = houseToWorld(BIN_X, BIN_Z);
-  function nearBin() { return !indoors && dist(player.position.x, player.position.z, binWorld.x, binWorld.z) < 1.9; }
+  function nearBin(range) { return !indoors && dist(player.position.x, player.position.z, binWorld.x, binWorld.z) < (range || 1.9); }
   var shipBtn = document.createElement('button');               // pops up when you're next to the bin
   shipBtn.type = 'button';
   shipBtn.className = 'sleep-btn ship-btn';
@@ -8322,6 +8323,7 @@ function startGame(THREE) {
     if (binOpen) return;
     toggleBag(false);
     binOpen = true;
+    menuOpenedAt = Date.now();
     walkTarget = null;
     shipBox.hidden = false;
     renderShip();
@@ -8330,7 +8332,7 @@ function startGame(THREE) {
     binOpen = false;
     shipBox.hidden = true;
   }
-  shipBtn.addEventListener('click', function () { openBin(); });
+  shipBtn.addEventListener('click', function () { openBin(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && binOpen) closeBin(); });
   function payOutBin() {                                        // 6 am: everything in the bin is sold
     var total = binValue();
@@ -8347,7 +8349,7 @@ function startGame(THREE) {
     if (lastFarmDay === null) lastFarmDay = fd;
     if (fd !== lastFarmDay) { lastFarmDay = fd; payOutBin(); }  // a new morning has come
     var near = nearBin();
-    if (binOpen && !near) closeBin();                            // walk away and it closes
+    if (binOpen && !nearBin(3.2)) closeBin();                    // it stays open until you really walk away
     var show = near && !binOpen;
     if (shipBtn.classList.contains('show') !== show) shipBtn.classList.toggle('show', show);
     var lidTarget = binOpen ? -1.2 : 0;                          // the lid swings open while you use it
@@ -8729,10 +8731,10 @@ function startGame(THREE) {
     siBigJar.rotation.y = t * 0.3;
   }
   function inShopRoom(x, z) { return Math.abs(x - SIN_X) < SIN_W / 2 - 0.35 && Math.abs(z - SIN_Z) < SIN_D / 2 - 0.35; }
-  function atShopCounter() {                                          // standing in front of the counter
+  function atShopCounter(margin) {                                    // standing in front of the counter (margin: how far past it still counts)
     if (!inShop) return false;
-    var lx = player.position.x - SIN_X, lz = player.position.z - SIN_Z;
-    return Math.abs(lx) < CNT_W / 2 + 0.4 && lz > CNT_Z + 0.3 && lz < CNT_Z + 1.9;
+    var lx = player.position.x - SIN_X, lz = player.position.z - SIN_Z, m = margin || 0;
+    return Math.abs(lx) < CNT_W / 2 + 0.4 + m && lz > CNT_Z + 0.3 && lz < CNT_Z + 1.9 + m;
   }
 
   // ---------- The seed shop: step up to the counter inside to buy seeds with Star Coins ----------
@@ -8740,7 +8742,7 @@ function startGame(THREE) {
   function shopFront(d) { return { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + d), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + d) }; }
   var shopDoor = shopFront(1.05);                                     // step up to the front door to go in
   var shopOpen = false;
-  function nearShop() { return atShopCounter(); }
+  function nearShop(margin) { return atShopCounter(margin); }
   var shopBtn = document.createElement('button');
   shopBtn.type = 'button';
   shopBtn.className = 'sleep-btn ship-btn';
@@ -8782,14 +8784,14 @@ function startGame(THREE) {
   for (var sbi = 0; sbi < shopBuyBtns.length; sbi++) {
     shopBuyBtns[sbi].addEventListener('click', function () { buySeeds(+this.getAttribute('data-n')); });
   }
-  function openShop() { if (shopOpen) return; toggleBag(false); shopOpen = true; walkTarget = null; shopBox.hidden = false; renderShop(); }
+  function openShop() { if (shopOpen) return; toggleBag(false); shopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; shopBox.hidden = false; renderShop(); }
   function closeShop() { shopOpen = false; shopBox.hidden = true; }
   shopBox.querySelector('.inv-close').addEventListener('click', function () { closeShop(); focusGame(); });
-  shopBtn.addEventListener('click', function () { openShop(); });
+  shopBtn.addEventListener('click', function () { openShop(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && shopOpen) closeShop(); });
   function updateShop(dt) {
     var near = nearShop();
-    if (shopOpen && !near) closeShop();
+    if (shopOpen && !nearShop(1.2)) closeShop();                 // it stays open until you really walk away from the counter
     if (shopOpen && shopCoins.textContent !== String(state.coins)) renderShop(); // keep the prices up to date with your coins
     var show = near && !shopOpen;
     if (shopBtn.classList.contains('show') !== show) shopBtn.classList.toggle('show', show);
@@ -9024,6 +9026,7 @@ function startGame(THREE) {
   canvas.addEventListener('pointercancel', pointerEnd);
 
   function tapToWalk(e) {
+    if (binOpen || shopOpen) return;                                  // a tap while a menu is open doesn't walk you away from it
     var rect = canvas.getBoundingClientRect();
     var ndc = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
