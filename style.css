@@ -157,6 +157,8 @@ kbd {
   -webkit-backdrop-filter: blur(6px);
 }
 .inventory[hidden] { display: none; }
+/* menus sit above the hotbar and the pop-up buttons, and scroll inside the game if the screen is short */
+.inventory { z-index: 6; max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain; }
 
 .inv-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: #7b4fd6; font-size: 1.1rem; }
 

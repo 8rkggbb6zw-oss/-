@@ -3180,7 +3180,7 @@ function startGame(THREE) {
   // the front porch: a stone landing at the door and two steps down to the path, each with a smooth slab on top
   PORCH_STEPS.forEach(function (st) {
     var top = st[0], z0 = FRONT + st[1], z1 = FRONT + st[2], wide = st[3];
-    hPart(new THREE.BoxGeometry(wide, top + 0.2, z1 - z0), 'stone', 0, (top - 0.2) / 2, (z0 + z1) / 2);
+    hPart(new THREE.BoxGeometry(wide, top + 0.17, z1 - z0), 'stone', 0, (top - 0.23) / 2, (z0 + z1) / 2);   // its top tucked just under the slab, so the two never flicker
     hPart(new THREE.BoxGeometry(wide + 0.06, 0.04, z1 - z0 + 0.05), 'porchSlab', 0, top - 0.02, (z0 + z1) / 2 + 0.02);
   });
 
@@ -11173,11 +11173,17 @@ function startGame(THREE) {
     }
     describeSlot();
   }
-  function toggleBag(open) {
+  function toggleBag(open, onMap) {                                  // onMap: open it on the world map page instead of the bag
     if (!bagUi.box) return;
-    bagUi.box.hidden = open === undefined ? !bagUi.box.hidden : !open;
-    if (!bagUi.box.hidden) renderBag();
-    if (!bagUi.box.hidden && mapPage) showMapPage(true);              // the map shows where you are now
+    var show = open === undefined ? bagUi.box.hidden : !!open;
+    if (show) {
+      if (typeof binOpen !== 'undefined' && binOpen) closeBin();      // only one menu open at a time
+      if (typeof shopOpen !== 'undefined' && shopOpen) closeShop();
+      walkTarget = null;
+    }
+    bagUi.box.hidden = !show;
+    if (show) { renderBag(); showMapPage(!!onMap); }                  // the map (if shown) starts on where you are now
+    else if (mapPage) showMapPage(false);                             // closing it always goes back to the bag page next time
   }
   // ---------- World map: a second page in the bag ----------
   // Press "Next ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
@@ -11428,9 +11434,9 @@ function startGame(THREE) {
       }, 300);
     }
   }
-  mapBtn.addEventListener('click', function () { showMapPage(!mapPage); });
-  mapFind.addEventListener('click', function () { mapFollow = true; centreMapOnYou(drawMap()); });
-  if (bagUi.open) bagUi.open.addEventListener('click', function () { toggleBag(); });
+  mapBtn.addEventListener('click', function () { showMapPage(!mapPage); focusGame(); });
+  mapFind.addEventListener('click', function () { mapFollow = true; centreMapOnYou(drawMap()); focusGame(); });
+  if (bagUi.open) bagUi.open.addEventListener('click', function () { toggleBag(); focusGame(); });   // (focus back on the game, so Space doesn't press the button again)
   if (bagUi.close) bagUi.close.addEventListener('click', function () { toggleBag(false); focusGame(); });
   renderBag();
 
@@ -11453,7 +11459,8 @@ function startGame(THREE) {
     if (teleporting || sleeping || doorBusy) return;
     if (binOpen) closeBin(); if (shopOpen) closeShop();
     if (bagUi.box && !bagUi.box.hidden && mapPage) { toggleBag(false); return; }   // pressing it again closes the map
-    toggleBag(true); showMapPage(true);
+    if (bagUi.box && !bagUi.box.hidden) showMapPage(true);            // the bag's already open: flip to its map page
+    else toggleBag(true, true);
     if (state.mana < TELEPORT_COST) showToast('Teleporting needs ' + TELEPORT_COST + ' mana. Visit the Dawn Tree to refill it.', 2400);
   }
   function teleportSwirl(x, z) {                                       // a rising spiral of purple and gold sparkles
@@ -11663,7 +11670,9 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
+    var footY = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
+    var stepUp = footY - player.position.y;                             // ease up and down steps instead of popping, but snap after a door or a teleport
+    player.position.y = Math.abs(stepUp) > 0.5 ? footY : player.position.y + stepUp * Math.min(1, dt * 16);
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
