@@ -3475,169 +3475,466 @@ function startGame(THREE) {
   });
 
   // ---------- The seed shop, on the new island ----------
-  // A grand glass conservatory: a stone base, glass walls in a white-and-gold iron frame, a long glass vaulted roof with a
-  // glass shopDome rising from the middle, a columned entrance with a glowing sign, glowing moonbloom beds and floating orbs
-  // inside, seed-jar stands and crystal lanterns by the door, and sparkles drifting round the shopDome
+  // A fancy storybook boutique: cream stone walls with corner quoins, a plum-and-gold painted shopfront with two big
+  // glowing display windows full of seed jars, striped scalloped awnings, a fish-scale slate mansard roof with arched
+  // dormers and a round window, gold cresting, a glowing crystal spire, a hanging blade sign, flower boxes,
+  // climbing roses and a chalkboard out front. Its windows glow warmly at night
   var shopGroup = new THREE.Group();
   shopGroup.position.set(SHOP_X, 0, SHOP_Z);
   shopGroup.rotation.y = SHOP_TURN;
   scene.add(shopGroup);
-  function sp(geo, mat, x, y, z, rx, ry, rz) {
+  function sp(geo, mat, x, y, z, rx, ry, rz, parent) {
     var m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
     m.rotation.set(rx || 0, ry || 0, rz || 0);
     m.castShadow = m.receiveShadow = true;
-    shopGroup.add(m);
+    (parent || shopGroup).add(m);
     return m;
   }
-  var SW = SHOP_HW, SD = SHOP_HD, BASE_H = 0.45, KNEE = 0.7, SHOP_WALL_H = 3.0;     // half width, half depth, plinth, low stone wall, glass wall height
-  var WALL_TOP = BASE_H + KNEE + SHOP_WALL_H;
-  var shopFrame = new THREE.MeshStandardMaterial({ color: 0xf7f2ea, roughness: 0.35, metalness: 0.3 });
-  var shopGlassMat = new THREE.MeshStandardMaterial({ color: 0xd8f0ff, emissive: 0x6a9ccf, emissiveIntensity: 0.08, roughness: 0.03, metalness: 0.2, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
-  var shopStone = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xd8d2cc, roughness: 0.9 });
-  // the stone base and low stone walls
-  sp(new THREE.BoxGeometry(SW * 2 + 0.9, BASE_H, SD * 2 + 0.9), houseMats.stone, 0, BASE_H / 2, 0);
-  sp(new THREE.BoxGeometry(SW * 2 + 0.6, 0.08, SD * 2 + 0.6), shopStone, 0, BASE_H + 0.04, 0);
-  [[0, SD, SW * 2, 0.3], [0, -SD, SW * 2, 0.3], [SW, 0, 0.3, SD * 2], [-SW, 0, 0.3, SD * 2]].forEach(function (w) {
-    sp(new THREE.BoxGeometry(w[2] + 0.3, KNEE, w[3] + (w[3] > 1 ? 0.3 : 0)), shopStone, w[0], BASE_H + KNEE / 2, w[1]);
-    sp(new THREE.BoxGeometry(w[2] + 0.42, 0.08, w[3] + (w[3] > 1 ? 0.42 : 0.12)), shopFrame, w[0], BASE_H + KNEE + 0.04, w[1]);
-  });
-  // glass walls with iron mullions
-  var GY = BASE_H + KNEE + 0.08 + SHOP_WALL_H / 2;
-  sp(new THREE.BoxGeometry(SW * 2, SHOP_WALL_H, 0.04), shopGlassMat, 0, GY, -SD).castShadow = false;
-  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.04, SHOP_WALL_H, SD * 2), shopGlassMat, s * SW, GY, 0).castShadow = false; });
-  [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(SW - 1.3, SHOP_WALL_H, 0.04), shopGlassMat, s * (SW + 1.3) / 2, GY, SD).castShadow = false; });
-  for (var smx = -SW; smx <= SW + 0.01; smx += SW / 5) {                 // upright mullions, front and back
-    [-1, 1].forEach(function (s) { if (s > 0 && Math.abs(smx) < 1.3) return; sp(new THREE.BoxGeometry(0.07, SHOP_WALL_H, 0.1), shopFrame, smx, GY, s * SD); });
+  var SW = SHOP_HW, SD = SHOP_HD, SHOP_PLINTH = 0.3, SHOP_WALL_H = 3.4;   // half width, half depth, stone plinth, wall height
+  var WALL_TOP = SHOP_PLINTH + SHOP_WALL_H;
+  var shopGlowList = [];
+  function shopTiled(tex, rx, ry, ox, oy) {
+    var t = tex.clone(); t.needsUpdate = true;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); t.offset.set(ox || 0, oy || 0);
+    return t;
   }
-  for (var smz = -SD; smz <= SD + 0.01; smz += SD / 3) [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.1, SHOP_WALL_H, 0.07), shopFrame, s * SW, GY, smz); });
-  [BASE_H + KNEE + 1.3, WALL_TOP].forEach(function (y) {              // transoms running round, and the gold wall-plate on top
-    var gold = y === WALL_TOP;
-    var m = gold ? houseMats.gold : shopFrame, t = gold ? 0.12 : 0.06;
-    sp(new THREE.BoxGeometry(SW * 2 + 0.1, t, 0.12), m, 0, y, -SD);
-    sp(new THREE.BoxGeometry(SW * 2 + 0.1, t, 0.12), m, 0, y, SD);
-    [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.12, t, SD * 2 + 0.1), m, s * SW, y, 0); });
+
+  // painted textures
+  var shopAshlarTex = paintTexture(256, 256, function (g, w, h) {      // cream stone blocks
+    g.fillStyle = '#cbbfac'; g.fillRect(0, 0, w, h);
+    for (var r = 0; r < 8; r++) for (var c = -1; c < 4; c++) {
+      var x = c * 64 + (r % 2) * 32, l = 84 + isle2Hash(r * 7 + c * 13 + 400) * 6;
+      g.fillStyle = 'hsl(36,32%,' + l + '%)'; g.fillRect(x + 2, r * 32 + 2, 61, 29);
+    }
+    for (var i = 0; i < 900; i++) { g.fillStyle = 'rgba(120,100,80,' + (0.05 + isle2Hash(i) * 0.08) + ')'; g.fillRect(isle2Hash(i * 3.3) * w, isle2Hash(i * 5.7) * h, 1.5, 1.5); }
   });
-  // the long glass vaulted roof, with white ribs, and a gold ridge
-  var shopVault = sp(new THREE.CylinderGeometry(SD, SD, SW * 2, 32, 1, true, -Math.PI / 2, Math.PI), shopGlassMat, 0, WALL_TOP, 0, 0, 0, Math.PI / 2);
-  shopVault.scale.set(0.75, 1, 1); shopVault.castShadow = false;
-  for (var srb = 0; srb <= 10; srb++) {
-    var shopRib = sp(new THREE.TorusGeometry(SD, 0.05, 6, 32, Math.PI), shopFrame, -SW + srb * SW / 5, WALL_TOP, 0, 0, Math.PI / 2, 0);
-    shopRib.scale.set(1, 0.75, 1);
-  }
-  [-1, 1].forEach(function (s) {                                       // the glass end walls of the shopVault
-    var endShape = new THREE.Shape(); endShape.absarc(0, 0, SD, 0, Math.PI, false); endShape.lineTo(-SD, 0);
-    var end = sp(new THREE.ShapeGeometry(endShape, 24), shopGlassMat, s * SW, WALL_TOP, 0, 0, Math.PI / 2, 0);
-    end.scale.set(1, 0.75, 1); end.castShadow = false;
-  });
-  sp(new THREE.BoxGeometry(SW * 2 + 0.2, 0.1, 0.14), houseMats.gold, 0, WALL_TOP + SD * 0.75, 0);
-  // the glass shopDome rising from the middle of the roof, on a drum, crowned with a gold finial and a star
-  var DOME_Y = WALL_TOP + SD * 0.75 - 0.3, DOME_R = 2.2;
-  sp(new THREE.CylinderGeometry(DOME_R, DOME_R, 1.0, 32, 1, true), shopGlassMat, 0, DOME_Y + 0.5, 0).castShadow = false;
-  for (var sdr = 0; sdr < 16; sdr++) { var sdra = sdr / 16 * Math.PI * 2; sp(new THREE.BoxGeometry(0.07, 1.0, 0.07), shopFrame, Math.cos(sdra) * DOME_R, DOME_Y + 0.5, Math.sin(sdra) * DOME_R); }
-  sp(new THREE.TorusGeometry(DOME_R, 0.07, 8, 48), houseMats.gold, 0, DOME_Y + 1.0, 0, Math.PI / 2, 0, 0);
-  sp(new THREE.TorusGeometry(DOME_R, 0.06, 8, 48), shopFrame, 0, DOME_Y, 0, Math.PI / 2, 0, 0);
-  var shopDome = sp(new THREE.SphereGeometry(DOME_R, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), shopGlassMat, 0, DOME_Y + 1.0, 0);
-  shopDome.scale.set(1, 1.15, 1); shopDome.castShadow = false;
-  for (var dk = 0; dk < 8; dk++) {                                     // white ribs up the shopDome
-    var dRib = sp(new THREE.TorusGeometry(DOME_R, 0.045, 6, 24, Math.PI / 2), shopFrame, 0, DOME_Y + 1.0, 0, 0, dk / 8 * Math.PI * 2, 0);
-    dRib.scale.set(1, 1.15, 1);
-  }
-  var FIN_Y = DOME_Y + 1.0 + DOME_R * 1.15;
-  sp(new THREE.CylinderGeometry(0.22, 0.32, 0.25, 12), houseMats.gold, 0, FIN_Y + 0.08, 0);
-  sp(new THREE.SphereGeometry(0.16, 14, 10), houseMats.gold, 0, FIN_Y + 0.34, 0);
-  sp(new THREE.CylinderGeometry(0.03, 0.05, 0.6, 8), houseMats.gold, 0, FIN_Y + 0.75, 0);
-  var shopStar = sp(new THREE.OctahedronGeometry(0.3, 0), houseMats.gold, 0, FIN_Y + 1.2, 0);
-  shopStar.scale.set(1, 1.3, 0.4);
-  var starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe08a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
-  starGlow.position.set(0, FIN_Y + 1.2, 0); starGlow.scale.set(2, 2, 1);
-  shopGroup.add(starGlow);
-  // the columned entrance: a stone portico with two white columns, a gold-trimmed arch, double glass doors and a sign
-  var SHOP_FZ = SD + 0.9;
-  sp(new THREE.BoxGeometry(2.8, 0.15, 1.9), shopStone, 0, BASE_H + 0.07, SD + 0.55);
-  sp(new THREE.BoxGeometry(2.4, 0.18, 0.9), houseMats.stone, 0, 0.09, SD + 1.7);                         // a broad step
-  [-1, 1].forEach(function (s) {
-    sp(new THREE.BoxGeometry(0.42, 0.25, 0.42), shopStone, s * 1.1, BASE_H + 0.27, SHOP_FZ);
-    var shopCol = sp(new THREE.CylinderGeometry(0.16, 0.19, 3.3, 16), shopFrame, s * 1.1, BASE_H + 0.4 + 1.65, SHOP_FZ);
-    sp(new THREE.BoxGeometry(0.44, 0.16, 0.44), houseMats.gold, s * 1.1, BASE_H + 0.4 + 3.38, SHOP_FZ);
-    sp(new THREE.TorusGeometry(0.19, 0.03, 6, 16), houseMats.gold, s * 1.1, BASE_H + 0.75, SHOP_FZ, Math.PI / 2, 0, 0);
-  });
-  var PORCH_TOP = BASE_H + 0.4 + 3.46;
-  sp(new THREE.BoxGeometry(2.9, 0.3, 1.9), shopStone, 0, PORCH_TOP + 0.15, SD + 0.55);                     // the entablature
-  sp(new THREE.BoxGeometry(3.0, 0.08, 2.0), houseMats.gold, 0, PORCH_TOP + 0.34, SD + 0.55);
-  var shopPed = new THREE.Shape(); shopPed.moveTo(-1.5, 0); shopPed.lineTo(1.5, 0); shopPed.quadraticCurveTo(1.3, 0.75, 0, 0.9); shopPed.quadraticCurveTo(-1.3, 0.75, -1.5, 0);
-  sp(new THREE.ExtrudeGeometry(shopPed, { depth: 1.8, bevelEnabled: false }), shopStone, 0, PORCH_TOP + 0.38, SD - 0.35);
-  var shopSignTex = paintTexture(512, 128, function (g, w, h) {           // the sign across the front
-    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#4e3592'); bg.addColorStop(1, '#2f2066');
-    g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#f2c14e'; g.lineWidth = 7; g.strokeRect(7, 7, w - 14, h - 14);
-    g.fillStyle = '#f7d36a'; g.font = 'bold 60px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('✦ Whimsy & Bloom ✦', w / 2, h / 2 + 3);
-  });
-  var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, emissive: 0xffffff, emissiveMap: shopSignTex, emissiveIntensity: 0.35, roughness: 0.5 });
-  sp(new THREE.PlaneGeometry(2.6, 0.65), shopSignMat, 0, PORCH_TOP + 0.16, SD + 1.51);
-  var doorGlass = new THREE.MeshStandardMaterial({ color: 0xe8f6ff, emissive: 0xffd9a0, emissiveIntensity: 0.25, roughness: 0.05, transparent: true, opacity: 0.45, depthWrite: false });
-  [-1, 1].forEach(function (s) {                                       // double glass doors in gold frames
-    sp(new THREE.BoxGeometry(0.8, 2.3, 0.04), doorGlass, s * 0.42, BASE_H + 0.15 + 1.15, SD + 0.02).castShadow = false;
-    [[0, 2.3, 0.82, 0.06], [0, 0, 0.82, 0.06], [0, 1.15, 0.82, 0.04]].forEach(function (b) { sp(new THREE.BoxGeometry(b[2], b[3], 0.07), houseMats.gold, s * 0.42, BASE_H + 0.15 + b[1], SD + 0.03); });
-    [-0.4, 0.4].forEach(function (e) { sp(new THREE.BoxGeometry(0.06, 2.3, 0.07), houseMats.gold, s * 0.42 + e, BASE_H + 0.15 + 1.15, SD + 0.03); });
-    sp(new THREE.SphereGeometry(0.05, 10, 8), houseMats.gold, s * 0.08, BASE_H + 1.3, SD + 0.08);
-  });
-  var shopFan = new THREE.Shape(); shopFan.absarc(0, 0, 0.84, 0, Math.PI, false); shopFan.lineTo(-0.84, 0);
-  sp(new THREE.ShapeGeometry(shopFan, 20), doorGlass, 0, BASE_H + 2.45, SD + 0.02).castShadow = false;       // a fanlight over the doors
-  sp(new THREE.TorusGeometry(0.86, 0.05, 6, 24, Math.PI), houseMats.gold, 0, BASE_H + 2.45, SD + 0.04);
-  for (var sfr = 1; sfr < 6; sfr++) sp(new THREE.BoxGeometry(0.03, 0.84, 0.03), houseMats.gold, Math.cos(sfr / 6 * Math.PI) * 0.42, BASE_H + 2.45 + Math.sin(sfr / 6 * Math.PI) * 0.42, SD + 0.05, 0, 0, sfr / 6 * Math.PI - Math.PI / 2);
-  // leaf and flower colours for the potted topiaries
-  var shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x5fae5a, roughness: 0.7 });
-  var bloomMatsS = [0xffb3dc, 0xd9c4ff, 0xfff1b8].map(function (c, i) { return new THREE.MeshStandardMaterial({ color: c, emissive: [0xff7fc4, 0xa98cff, 0xffd36e][i], emissiveIntensity: 0.6 }); });
-  // display stands out front either side of the step, with jars of glowing seeds
-  var shopJarGlass = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, transparent: true, opacity: 0.35, depthWrite: false });
-  var seedGlow = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.1 });
-  var standXs = [-2.3, 2.3];
-  standXs.forEach(function (tx) {
-    var tz = SD + 1.6;
-    sp(new THREE.CylinderGeometry(0.42, 0.36, 0.08, 16), shopFrame, tx, 0.86, tz);
-    sp(new THREE.CylinderGeometry(0.06, 0.1, 0.82, 8), houseMats.gold, tx, 0.43, tz);
-    sp(new THREE.CylinderGeometry(0.25, 0.28, 0.05, 12), houseMats.gold, tx, 0.03, tz);
-    for (var j = 0; j < 3; j++) {
-      var ja = j / 3 * Math.PI * 2, jx = tx + Math.cos(ja) * 0.2, jz = tz + Math.sin(ja) * 0.2;
-      sp(new THREE.SphereGeometry(0.075, 10, 8), seedGlow, jx, 0.97, jz).scale.set(1, 0.7, 1);
-      sp(new THREE.CylinderGeometry(0.1, 0.1, 0.26, 14), shopJarGlass, jx, 1.03, jz).castShadow = false;
-      sp(new THREE.CylinderGeometry(0.11, 0.11, 0.04, 14), houseMats.gold, jx, 1.17, jz);
+  var shopSlateTex = paintTexture(256, 256, function (g, w, h) {       // fish-scale slates, laid from the bottom up
+    g.fillStyle = '#2c3038'; g.fillRect(0, 0, w, h);
+    for (var r = 16; r >= -1; r--) for (var c = -1; c < 9; c++) {
+      var cx = c * 32 + 16 + (r % 2 ? 16 : 0), y0 = r * 16 - 10, l = 33 + isle2Hash(r * 11 + c * 3 + 77) * 12;
+      g.fillStyle = 'hsl(' + (215 + isle2Hash(r + c * 5) * 20) + ',9%,' + l + '%)';
+      g.beginPath(); g.moveTo(cx - 16, y0); g.lineTo(cx - 16, y0 + 12); g.arc(cx, y0 + 12, 16, Math.PI, 0, true); g.lineTo(cx + 16, y0); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(30,25,45,0.55)'; g.lineWidth = 1.5; g.stroke();
+      g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(cx - 12, y0 + 14, 10, 3);
     }
   });
-  // potted topiaries at the corners
-  [[-SW - 0.1, SD + 0.1], [SW + 0.1, SD + 0.1], [-SW - 0.1, -SD - 0.1], [SW + 0.1, -SD - 0.1]].forEach(function (c) {
-    sp(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 12), shopStone, c[0], BASE_H + 0.25, c[1]);
-    sp(new THREE.SphereGeometry(0.42, 14, 10), shopLeafMat, c[0], BASE_H + 0.85, c[1]);
-    for (var b = 0; b < 5; b++) sp(new THREE.SphereGeometry(0.06, 8, 6), bloomMatsS[b % 3], c[0] + Math.cos(b * 1.3) * 0.38, BASE_H + 0.8 + (b % 2) * 0.2, c[1] + Math.sin(b * 1.3) * 0.38);
+  var shopDisplayTex = paintTexture(512, 320, function (g, w, h) {    // a cosy lit shop window full of seeds
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#e9d6bc'); bg.addColorStop(1, '#cfa77a');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    var warm = g.createRadialGradient(w / 2, h * 0.55, 10, w / 2, h * 0.55, w * 0.6);
+    warm.addColorStop(0, 'rgba(255,240,200,0.8)'); warm.addColorStop(1, 'rgba(255,240,200,0)');
+    g.fillStyle = warm; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(120,80,40,0.5)'; g.lineWidth = 1.5;               // a string of fairy lights
+    g.beginPath(); g.moveTo(20, 84); g.quadraticCurveTo(w / 2, 120, w - 20, 84); g.stroke();
+    for (var f = 1; f < 14; f++) {
+      var ft = f / 14, fx = 20 + ft * (w - 40), fy = 84 + 4 * ft * (1 - ft) * 36 * 0.95 + 4;
+      var fl = g.createRadialGradient(fx, fy, 0, fx, fy, 9); fl.addColorStop(0, 'rgba(255,236,170,1)'); fl.addColorStop(1, 'rgba(255,236,170,0)');
+      g.fillStyle = fl; g.fillRect(fx - 9, fy - 9, 18, 18);
+    }
+    var shelves = [180, 262];
+    shelves.forEach(function (sy, si2) {
+      for (var j = 0; j < 9; j++) {                                      // jars, seed packets and little pots along each shelf
+        var jx = 44 + j * 52 + (si2 ? 22 : 0), kind = Math.floor(isle2Hash(j * 5 + si2 * 31 + 3) * 3);
+        if (jx > w - 40) continue;
+        if (kind === 0) {
+          g.fillStyle = 'rgba(235,245,255,0.55)'; g.fillRect(jx - 15, sy - 46, 30, 46);
+          var sg = g.createRadialGradient(jx, sy - 16, 2, jx, sy - 16, 18); sg.addColorStop(0, '#f3e2ff'); sg.addColorStop(1, '#9a5ce8');
+          g.fillStyle = sg; g.fillRect(jx - 13, sy - 28, 26, 27);
+          g.fillStyle = '#e8b84a'; g.fillRect(jx - 17, sy - 52, 34, 7);
+        } else if (kind === 1) {
+          var pc = ['#f7b8d8', '#c9b3ef', '#bfe6c8', '#ffe3a3'][j % 4];
+          g.fillStyle = pc; g.fillRect(jx - 14, sy - 40, 28, 40);
+          g.fillStyle = '#ffffff'; g.beginPath(); g.arc(jx, sy - 24, 7, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#e8a6d0'; g.beginPath(); g.arc(jx, sy - 24, 3.5, 0, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(80,50,110,0.6)'; g.fillRect(jx - 10, sy - 10, 20, 3);
+        } else {
+          g.fillStyle = '#c47b52'; g.beginPath(); g.moveTo(jx - 13, sy - 24); g.lineTo(jx + 13, sy - 24); g.lineTo(jx + 10, sy); g.lineTo(jx - 10, sy); g.closePath(); g.fill();
+          g.fillStyle = '#5fae5a'; g.beginPath(); g.arc(jx, sy - 34, 13, 0, Math.PI * 2); g.fill();
+          g.fillStyle = ['#ffb3dc', '#d9c4ff', '#fff1b8'][j % 3];
+          for (var b = 0; b < 4; b++) { g.beginPath(); g.arc(jx + Math.cos(b * 1.7) * 8, sy - 36 + Math.sin(b * 1.7) * 7, 3.5, 0, Math.PI * 2); g.fill(); }
+        }
+      }
+      g.fillStyle = '#7a4e34'; g.fillRect(16, sy, w - 32, 9);                  // the shelf, and its shadow
+      g.fillStyle = 'rgba(90,50,30,0.25)'; g.fillRect(16, sy + 9, w - 32, 10);
+    });
+    g.fillStyle = '#d9a63c'; g.font = 'italic bold 30px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Moonbloom Seeds', w / 2, h - 26);
+    var sheen = g.createLinearGradient(0, 0, w, h);                     // a soft reflection across the glass
+    sheen.addColorStop(0.3, 'rgba(255,255,255,0)'); sheen.addColorStop(0.42, 'rgba(255,255,255,0.22)'); sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
+    g.fillStyle = sheen; g.fillRect(0, 0, w, h);
+    var depth = g.createLinearGradient(0, 0, 0, h);                     // shade the top and bottom so the window looks deep
+    depth.addColorStop(0, 'rgba(60,35,20,0.45)'); depth.addColorStop(0.3, 'rgba(60,35,20,0)'); depth.addColorStop(0.85, 'rgba(60,35,20,0)'); depth.addColorStop(1, 'rgba(60,35,20,0.3)');
+    g.fillStyle = depth; g.fillRect(0, 0, w, h);
+    [0, w].forEach(function (ex) { var side = g.createLinearGradient(ex, 0, w / 2, 0); side.addColorStop(0, 'rgba(60,35,20,0.35)'); side.addColorStop(0.35, 'rgba(60,35,20,0)'); g.fillStyle = side; g.fillRect(0, 0, w, h); });
+    g.strokeStyle = '#3b2a4a'; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(0, 64); g.lineTo(w, 64); g.stroke();
+    for (var m = 1; m < 6; m++) { g.lineWidth = 4; g.beginPath(); g.moveTo(m * w / 6, 0); g.lineTo(m * w / 6, 64); g.stroke(); }
+    g.lineWidth = 7; [w / 3, w * 2 / 3].forEach(function (mx) { g.beginPath(); g.moveTo(mx, 64); g.lineTo(mx, h); g.stroke(); });
+    g.lineWidth = 14; g.strokeRect(0, 0, w, h);
   });
-  // floating crystal lanterns either side of the entrance (shopGroup is turned, so work out where they land in the world)
+  var shopArchTex = paintTexture(128, 282, function (g, w, h) {        // an arched window with lilac curtains, lit from inside
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#fff0d4'); bg.addColorStop(1, '#efc994');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#b89ce0';
+    [[0, 1], [w, -1]].forEach(function (c) {
+      g.beginPath(); g.moveTo(c[0], 40); g.quadraticCurveTo(c[0] + c[1] * 40, 120, c[0] + c[1] * 18, 170); g.quadraticCurveTo(c[0] + c[1] * 30, 230, c[0] + c[1] * 26, h); g.lineTo(c[0], h); g.closePath(); g.fill();
+    });
+    g.fillStyle = '#e8b84a'; g.fillRect(14, 166, 12, 6); g.fillRect(w - 26, 166, 12, 6);
+    var sheen = g.createLinearGradient(0, 0, w, h); sheen.addColorStop(0.35, 'rgba(255,255,255,0)'); sheen.addColorStop(0.45, 'rgba(255,255,255,0.25)'); sheen.addColorStop(0.55, 'rgba(255,255,255,0)');
+    g.fillStyle = sheen; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f5efe3'; g.lineWidth = 5;
+    g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.moveTo(0, h * 0.42); g.lineTo(w, h * 0.42); g.moveTo(0, h * 0.71); g.lineTo(w, h * 0.71); g.stroke();
+    g.beginPath(); g.moveTo(0, 58); g.lineTo(w, 58); g.stroke();
+    for (var a = 1; a < 4; a++) { var an = Math.PI + a / 4 * Math.PI; g.beginPath(); g.moveTo(w / 2, 58); g.lineTo(w / 2 + Math.cos(an) * 64, 58 + Math.sin(an) * 64); g.stroke(); }
+  });
+  var shopRoseTex = paintTexture(256, 256, function (g, w, h) {        // a plain round window, lit from inside
+    var cx = w / 2, cy = h / 2, R = w / 2 - 2;
+    var bg = g.createRadialGradient(cx, cy + 20, 10, cx, cy, R); bg.addColorStop(0, '#fbe6c4'); bg.addColorStop(1, '#c9a070');
+    g.fillStyle = bg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    var sheen = g.createLinearGradient(0, 0, w, h); sheen.addColorStop(0.3, 'rgba(255,255,255,0)'); sheen.addColorStop(0.42, 'rgba(255,255,255,0.3)'); sheen.addColorStop(0.52, 'rgba(255,255,255,0)');
+    g.fillStyle = sheen; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#f5efe3'; g.lineWidth = 7;
+    g.beginPath(); g.moveTo(cx - R, cy); g.lineTo(cx + R, cy); g.moveTo(cx, cy - R); g.lineTo(cx, cy + R); g.stroke();
+    g.lineWidth = 5; g.beginPath(); g.arc(cx, cy, R * 0.45, 0, Math.PI * 2); g.stroke();
+  });
+  var shopStripeTex = paintTexture(256, 64, function (g, w, h) {       // lilac and cream awning stripes, with scalloped edge
+    for (var i = 0; i < 8; i++) {
+      g.fillStyle = i % 2 ? '#efe7da' : '#8f7fae';
+      g.fillRect(i * 32, 0, 32, 40);
+      g.beginPath(); g.arc(i * 32 + 16, 40, 16, 0, Math.PI); g.fill();
+    }
+    g.globalCompositeOperation = 'source-atop';
+    for (var k = 0; k < 2560; k++) { g.fillStyle = 'rgba(0,0,0,' + (isle2Hash(k * 2.3) * 0.05) + ')'; g.fillRect(isle2Hash(k) * w, isle2Hash(k * 1.7) * 56, 1, 1); }   // a canvas weave
+    for (var j = 0; j < 4; j++) {                                       // soft folds in the cloth
+      var fold = g.createLinearGradient(j * 64, 0, j * 64 + 64, 0);
+      fold.addColorStop(0, 'rgba(0,0,0,0.14)'); fold.addColorStop(0.5, 'rgba(255,255,255,0.06)'); fold.addColorStop(1, 'rgba(0,0,0,0.14)');
+      g.fillStyle = fold; g.fillRect(j * 64, 0, 64, h);
+    }
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = '#b8954a'; g.fillRect(0, 0, w, 4);
+  });
+  var shopCrestTex = paintTexture(512, 64, function (g, w, h) {        // gold iron cresting
+    g.strokeStyle = g.fillStyle = '#f2c14e'; g.lineWidth = 4;
+    g.fillRect(0, h - 10, w, 8);
+    for (var x0 = 0; x0 < w; x0 += 64) {
+      var cx = x0 + 32;
+      g.beginPath(); g.moveTo(cx, h - 10); g.lineTo(cx, 12); g.stroke();
+      g.beginPath(); g.moveTo(cx, 2); g.lineTo(cx + 6, 10); g.lineTo(cx, 18); g.lineTo(cx - 6, 10); g.closePath(); g.fill();
+      g.beginPath(); g.arc(cx - 12, h - 26, 10, -Math.PI * 0.2, Math.PI * 1.2); g.stroke();
+      g.beginPath(); g.arc(cx + 12, h - 26, 10, -Math.PI * 0.2, Math.PI * 1.2); g.stroke();
+      g.beginPath(); g.arc(cx, 30, 5, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.moveTo(x0, h - 10); g.lineTo(x0, h - 30); g.stroke();
+      g.beginPath(); g.arc(x0, h - 33, 4, 0, Math.PI * 2); g.fill();
+    }
+  });
+
+  // materials
+  var shopAshlar = new THREE.MeshStandardMaterial({ map: shopTiled(shopAshlarTex, 3, 1.4), roughness: 0.9 });
+  var shopTrim = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xfaf5ea, roughness: 0.8 });
+  var shopPaint = new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.42, metalness: 0.05 });
+  var shopPaintLight = new THREE.MeshStandardMaterial({ color: 0x55405f, roughness: 0.42 });
+  var shopSlate = new THREE.MeshStandardMaterial({ map: shopTiled(shopSlateTex, 14, 3), roughness: 0.7, metalness: 0.1 });
+  function shopGlow(tex, emissive) {                                  // lit glass, brighter at night
+    var m = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.1 });
+    if (emissive !== false) shopGlowList.push(m);
+    return m;
+  }
+
+  // the stone plinth, the cream stone walls and the corner quoins
+  sp(new THREE.BoxGeometry(SW * 2 + 0.3, SHOP_PLINTH, SD * 2 + 0.3), houseMats.stone, 0, SHOP_PLINTH / 2, 0);
+  sp(new THREE.BoxGeometry(SW * 2, SHOP_WALL_H, SD * 2), shopAshlar, 0, SHOP_PLINTH + SHOP_WALL_H / 2, 0);
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+    for (var q = 0; q < 7; q++) {
+      var longX = q % 2 === 0;
+      sp(new THREE.BoxGeometry(longX ? 0.62 : 0.36, 0.44, longX ? 0.36 : 0.62), shopTrim, c[0] * (SW - (longX ? 0.29 : 0.16)), SHOP_PLINTH + 0.25 + q * 0.48, c[1] * (SD - (longX ? 0.16 : 0.29)));
+    }
+  });
+  sp(new THREE.BoxGeometry(SW * 2 + 0.5, 0.22, SD * 2 + 0.5), shopTrim, 0, WALL_TOP + 0.05, 0);                 // the cornice
+  sp(new THREE.BoxGeometry(SW * 2 + 0.36, 0.06, SD * 2 + 0.36), houseMats.gold, 0, WALL_TOP - 0.09, 0);
+  sp(new THREE.BoxGeometry(SW * 2 + 0.2, 0.1, SD * 2 + 0.2), shopTrim, 0, SHOP_PLINTH + 0.05, 0);
+
+  // arched windows with stone surrounds, keystones and sills
+  function shopArchPath(path, r, hRect, y0) {
+    path.moveTo(-r, y0); path.lineTo(r, y0); path.lineTo(r, hRect); path.absarc(0, hRect, r, 0, Math.PI, false); path.lineTo(-r, y0);
+    return path;
+  }
+  function shopArchWindow(x, y, z, ry, w, hRect, frameMat, parent) {
+    var win = new THREE.Group(), r = w / 2;
+    win.position.set(x, y, z); win.rotation.y = ry;
+    (parent || shopGroup).add(win);
+    var tex = shopTiled(shopArchTex, 1 / w, 1 / (hRect + r), 0.5, 0);
+    sp(new THREE.ShapeGeometry(shopArchPath(new THREE.Shape(), r, hRect, 0), 20), shopGlow(tex), 0, 0, 0.01, 0, 0, 0, win);
+    var frame = shopArchPath(new THREE.Shape(), r + 0.12, hRect, -0.12);
+    frame.holes.push(shopArchPath(new THREE.Path(), r, hRect, 0));
+    sp(new THREE.ExtrudeGeometry(frame, { depth: 0.1, bevelEnabled: false, curveSegments: 20 }), frameMat || shopTrim, 0, 0, 0, 0, 0, 0, win);
+    sp(new THREE.BoxGeometry(0.2, 0.24, 0.14), frameMat || shopTrim, 0, hRect + r + 0.06, 0.05, 0, 0, 0, win);   // keystone
+    sp(new THREE.BoxGeometry(w + 0.4, 0.08, 0.22), frameMat || shopTrim, 0, -0.14, 0.08, 0, 0, 0, win);          // sill
+    return win;
+  }
   [-1, 1].forEach(function (s) {
-    var lx = s * 1.55, lz = SD + 1.3, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
-    makeCrystalLantern(SHOP_X + lx * c + lz * si, 3.1, SHOP_Z - lx * si + lz * c, 90 + s);
+    [-1.4, 1.4].forEach(function (wz) { shopArchWindow(s * (SW + 0.01), 1.05, wz, s * Math.PI / 2, 1.0, 1.7); });
+    shopArchWindow(s * 2.4, 1.05, -SD - 0.01, Math.PI, 1.0, 1.7);
   });
-  var SHOP_SPARKS = 50, shopSparkGeo = new THREE.BufferGeometry(), shopSparkPos = new Float32Array(SHOP_SPARKS * 3);
+
+  // the plum-and-gold shopfront: pilasters, panelled stall risers, two big display windows, a glass door and the sign
+  var SHOP_FZ = SD;
+  [-4.05, -0.8, 0.8, 4.05].forEach(function (px) {
+    sp(new THREE.BoxGeometry(0.3, 2.6, 0.18), shopPaint, px, SHOP_PLINTH + 1.3, SHOP_FZ + 0.09);
+    sp(new THREE.BoxGeometry(0.38, 0.2, 0.24), shopPaint, px, SHOP_PLINTH + 0.1, SHOP_FZ + 0.1);
+    sp(new THREE.BoxGeometry(0.38, 0.1, 0.24), houseMats.gold, px, SHOP_PLINTH + 2.62, SHOP_FZ + 0.1);
+    sp(new THREE.BoxGeometry(0.14, 1.6, 0.04), shopPaintLight, px, SHOP_PLINTH + 1.3, SHOP_FZ + 0.19);
+  });
+  var shopDisplayMat = shopGlow(shopDisplayTex);
+  [-1, 1].forEach(function (s) {
+    var cx = s * 2.425;
+    sp(new THREE.BoxGeometry(2.95, 0.6, 0.12), shopPaint, cx, SHOP_PLINTH + 0.3, SHOP_FZ + 0.06);              // stall riser
+    sp(new THREE.BoxGeometry(2.5, 0.34, 0.04), shopPaintLight, cx, SHOP_PLINTH + 0.3, SHOP_FZ + 0.13);
+    sp(new THREE.BoxGeometry(2.56, 0.04, 0.05), houseMats.gold, cx, SHOP_PLINTH + 0.49, SHOP_FZ + 0.14);
+    sp(new THREE.BoxGeometry(2.56, 0.04, 0.05), houseMats.gold, cx, SHOP_PLINTH + 0.11, SHOP_FZ + 0.14);
+    sp(new THREE.PlaneGeometry(2.95, 1.85), shopDisplayMat, cx, SHOP_PLINTH + 0.6 + 0.925, SHOP_FZ + 0.03);
+    sp(new THREE.BoxGeometry(3.05, 0.07, 0.26), shopPaint, cx, SHOP_PLINTH + 0.62, SHOP_FZ + 0.13);           // window sill
+  });
+  var shopDoorGlass = new THREE.MeshStandardMaterial({ color: 0xfff0d6, emissive: 0xffd9a0, emissiveIntensity: 0.4, roughness: 0.1 });
+  shopGlowList.push(shopDoorGlass);
+  sp(new THREE.BoxGeometry(1.3, 2.2, 0.08), houseMats.door, 0, SHOP_PLINTH + 1.1, SHOP_FZ + 0.02);
+  sp(new THREE.PlaneGeometry(0.8, 1.05), shopDoorGlass, 0, SHOP_PLINTH + 1.5, SHOP_FZ + 0.065);
+  [[0, 0.98, 0.86, 0.05], [0, 2.03, 0.86, 0.05], [-0.41, 1.5, 0.05, 1.1], [0.41, 1.5, 0.05, 1.1], [0, 1.5, 0.03, 1.05], [0, 0.18, 1.1, 0.16]].forEach(function (b) {
+    sp(new THREE.BoxGeometry(b[2], b[3], 0.04), houseMats.gold, b[0], SHOP_PLINTH + b[1], SHOP_FZ + 0.075);
+  });
+  sp(new THREE.SphereGeometry(0.055, 10, 8), houseMats.gold, 0.45, SHOP_PLINTH + 1.05, SHOP_FZ + 0.11);
+  sp(new THREE.PlaneGeometry(1.3, 0.3), shopDoorGlass, 0, SHOP_PLINTH + 2.4, SHOP_FZ + 0.02);                  // transom light over the door
+  sp(new THREE.BoxGeometry(1.3, 0.05, 0.06), houseMats.gold, 0, SHOP_PLINTH + 2.24, SHOP_FZ + 0.06);
+  // the fascia sign and its cornice
+  var shopSignTex = paintTexture(1040, 100, function (g, w, h) {
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#5a3d8a'); bg.addColorStop(1, '#3a2560');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12);
+    g.fillStyle = '#f7d36a'; g.font = 'italic bold 66px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Whimsy & Bloom', w / 2, h / 2 + 4);
+    g.font = '34px Georgia, serif'; g.fillText('✦  SEEDS  ✦', 150, h / 2 + 2); g.fillText('✦  BLOOMS  ✦', w - 150, h / 2 + 2);
+  });
+  var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, emissive: 0xffffff, emissiveMap: shopSignTex, emissiveIntensity: 0.3, roughness: 0.45 });
+  sp(new THREE.BoxGeometry(8.6, 0.62, 0.16), shopPaint, 0, SHOP_PLINTH + 2.98, SHOP_FZ + 0.1);
+  sp(new THREE.PlaneGeometry(8.2, 0.52), shopSignMat, 0, SHOP_PLINTH + 2.98, SHOP_FZ + 0.185);
+  sp(new THREE.BoxGeometry(8.9, 0.12, 0.34), shopPaint, 0, SHOP_PLINTH + 3.35, SHOP_FZ + 0.12);
+  sp(new THREE.BoxGeometry(8.8, 0.04, 0.3), houseMats.gold, 0, SHOP_PLINTH + 3.27, SHOP_FZ + 0.13);
+  // striped awnings with scalloped fronts over the display windows
+  var AW_DROP = 0.44, AW_OUT = 0.87, awAng = Math.atan2(AW_DROP, AW_OUT), awLen = Math.sqrt(AW_DROP * AW_DROP + AW_OUT * AW_OUT);
+  var shopAwningMat = new THREE.MeshStandardMaterial({ map: shopTiled(shopStripeTex, 2.5, 0.6, 0, 0.4), roughness: 0.85, side: THREE.DoubleSide });
+  var shopValanceMat = new THREE.MeshStandardMaterial({ map: shopTiled(shopStripeTex, 2.5, 1), roughness: 0.85, side: THREE.DoubleSide, alphaTest: 0.5 });
+  var AW_TOP = SHOP_PLINTH + 2.62;
+  [-1, 1].forEach(function (s) {
+    var cx = s * 2.425;
+    sp(new THREE.PlaneGeometry(3.1, awLen), shopAwningMat, cx, AW_TOP - AW_DROP / 2, SHOP_FZ + 0.18 + AW_OUT / 2, -(Math.PI / 2 - awAng), 0, 0);
+    sp(new THREE.PlaneGeometry(3.1, 0.26), shopValanceMat, cx, AW_TOP - AW_DROP - 0.12, SHOP_FZ + 0.18 + AW_OUT);
+    sp(new THREE.CylinderGeometry(0.025, 0.025, 3.12, 8), houseMats.gold, cx, AW_TOP - AW_DROP, SHOP_FZ + 0.18 + AW_OUT, 0, 0, Math.PI / 2);
+    [-1.55, 1.55].forEach(function (e) { sp(new THREE.BoxGeometry(0.03, 0.03, awLen), houseMats.gold, cx + e, AW_TOP - AW_DROP / 2, SHOP_FZ + 0.18 + AW_OUT / 2, awAng, 0, 0); });
+  });
+
+  // the fish-scale slate mansard roof, with gold cresting where it turns flatter, and chimneys
+  function shopFrustum(bottomHW, bottomHD, topK, h, y, mat) {
+    var geo = new THREE.CylinderGeometry(Math.SQRT2 * topK, Math.SQRT2, 1, 4, 1, true);
+    geo.rotateY(Math.PI / 4);
+    geo = geo.toNonIndexed(); geo.computeVertexNormals();
+    var m = sp(geo, mat, 0, y + h / 2, 0);
+    m.scale.set(bottomHW, h, bottomHD);
+    return m;
+  }
+  var ROOF_HW = SW + 0.22, ROOF_HD = SD + 0.22, MANS_H = 2.2, MANS_K = 0.8, ROOF_Y = WALL_TOP + 0.16;
+  var BREAK_Y = ROOF_Y + MANS_H, TOP_K = 0.55, TOP_H = 0.65, ROOF_TOP = BREAK_Y + TOP_H;
+  shopFrustum(ROOF_HW, ROOF_HD, MANS_K, MANS_H, ROOF_Y, shopSlate);
+  shopFrustum(ROOF_HW * MANS_K, ROOF_HD * MANS_K, TOP_K / MANS_K, TOP_H, BREAK_Y, shopSlate);
+  sp(new THREE.BoxGeometry(ROOF_HW * TOP_K * 2, 0.06, ROOF_HD * TOP_K * 2), shopSlate, 0, ROOF_TOP, 0);
+  sp(new THREE.BoxGeometry(ROOF_HW * MANS_K * 2 + 0.1, 0.1, ROOF_HD * MANS_K * 2 + 0.1), shopTrim, 0, BREAK_Y, 0);
+  var shopBX = ROOF_HW * MANS_K, shopBZ = ROOF_HD * MANS_K;
+  [[0, shopBZ, shopBX * 2, 0], [0, -shopBZ, shopBX * 2, Math.PI], [shopBX, 0, shopBZ * 2, Math.PI / 2], [-shopBX, 0, shopBZ * 2, -Math.PI / 2]].forEach(function (c) {
+    var cm = new THREE.MeshStandardMaterial({ map: shopTiled(shopCrestTex, c[2] / 2.4, 1), emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.4, alphaTest: 0.5, side: THREE.DoubleSide });
+    sp(new THREE.PlaneGeometry(c[2], 0.3), cm, c[0], BREAK_Y + 0.2, c[1], 0, c[3], 0).castShadow = false;
+  });
+  [[-2.3, -1.5], [2.3, -1.5]].forEach(function (c) {
+    sp(new THREE.BoxGeometry(0.62, 2.3, 0.62), shopAshlar, c[0], BREAK_Y + 0.4, c[1]);
+    sp(new THREE.BoxGeometry(0.8, 0.12, 0.8), shopTrim, c[0], BREAK_Y + 1.6, c[1]);
+    [-0.14, 0.14].forEach(function (o) { sp(new THREE.CylinderGeometry(0.09, 0.11, 0.32, 10), houseMats.roof, c[0] + o, BREAK_Y + 1.8, c[1]); });
+  });
+  // dormers: small arched ones, and a big one in the middle of the front with a round window
+  function shopDormer(x, z, ry, big) {
+    var d = new THREE.Group(), bw = big ? 2.0 : 1.3, bh = big ? 1.8 : 1.3, depth = 1.3;
+    d.position.set(x, ROOF_Y - 0.02, z); d.rotation.y = ry;
+    shopGroup.add(d);
+    sp(new THREE.BoxGeometry(bw, bh, depth), shopSlate, 0, bh / 2, -depth / 2, 0, 0, 0, d);
+    sp(new THREE.BoxGeometry(bw + 0.04, bh, 0.06), shopTrim, 0, bh / 2, 0.01, 0, 0, 0, d);
+    [-1, 1].forEach(function (s) { sp(new THREE.BoxGeometry(0.14, bh, 0.12), shopTrim, s * (bw / 2 - 0.02), bh / 2, 0.04, 0, 0, 0, d); });
+    var rr = bw / 2 + 0.12;
+    sp(new THREE.CylinderGeometry(rr, rr, depth + 0.1, 20, 1, false, Math.PI / 2, Math.PI), shopSlate, 0, bh, -depth / 2 + 0.05, Math.PI / 2, 0, 0, d).scale.set(1, 1, 0.75);
+    var ar = sp(new THREE.TorusGeometry(rr, 0.06, 6, 20, Math.PI), shopTrim, 0, bh, 0.06, 0, 0, 0, d);
+    ar.scale.set(1, 0.75, 1);
+    sp(new THREE.ConeGeometry(0.05, 0.3, 6), houseMats.gold, 0, bh + rr * 0.75 + 0.15, 0.02, 0, 0, 0, d);
+    if (big) {
+      var rose = sp(new THREE.CircleGeometry(0.6, 32), shopGlow(shopRoseTex), 0, bh / 2 + 0.05, 0.06, 0, 0, 0, d);
+      sp(new THREE.TorusGeometry(0.63, 0.05, 8, 40), houseMats.gold, 0, bh / 2 + 0.05, 0.08, 0, 0, 0, d);
+      sp(new THREE.TorusGeometry(0.74, 0.08, 8, 40), shopTrim, 0, bh / 2 + 0.05, 0.06, 0, 0, 0, d);
+      sp(new THREE.BoxGeometry(0.18, 0.24, 0.12), shopTrim, 0, bh / 2 + 0.83, 0.08, 0, 0, 0, d);
+    } else {
+      shopArchWindow(0, 0.24, 0.04, 0, 0.66, 0.5, shopTrim, d);
+    }
+    return d;
+  }
+  shopDormer(0, ROOF_HD - 0.02, 0, true);
+  [-2.9, 2.9].forEach(function (x) { shopDormer(x, ROOF_HD - 0.02, 0, false); });
+  [-1, 1].forEach(function (s) { shopDormer(s * (ROOF_HW - 0.02), 0, s * Math.PI / 2, false); });
+  shopDormer(0, -ROOF_HD + 0.02, Math.PI, false);
+  // a gold spire on the roof, with a glowing crystal and a turning star
+  var SPIRE_Y = ROOF_TOP + 0.03;
+  sp(new THREE.CylinderGeometry(0.3, 0.38, 0.2, 12), houseMats.gold, 0, SPIRE_Y + 0.1, 0);
+  sp(new THREE.SphereGeometry(0.16, 14, 10), houseMats.gold, 0, SPIRE_Y + 0.32, 0);
+  sp(new THREE.CylinderGeometry(0.025, 0.06, 1.2, 8), houseMats.gold, 0, SPIRE_Y + 0.95, 0);
+  var seedGlow = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.1 });
+  var shopCrystal = sp(new THREE.OctahedronGeometry(0.2, 0), seedGlow, 0, SPIRE_Y + 0.85, 0);
+  shopCrystal.scale.set(1, 1.7, 1);
+  var crystalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xb98cff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+  crystalGlow.position.set(0, SPIRE_Y + 0.85, 0); crystalGlow.scale.set(1.8, 1.8, 1);
+  shopGroup.add(crystalGlow);
+  var shopStar = sp(new THREE.OctahedronGeometry(0.26, 0), houseMats.gold, 0, SPIRE_Y + 1.75, 0);
+  shopStar.scale.set(1, 1.3, 0.4);
+  var starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe08a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  starGlow.position.set(0, SPIRE_Y + 1.75, 0); starGlow.scale.set(2, 2, 1);
+  shopGroup.add(starGlow);
+
+  // a hanging blade sign on a gold bracket at the corner
+  var shopBladeTex = paintTexture(256, 256, function (g, w, h) {
+    var cx = w / 2, cy = h / 2;
+    g.fillStyle = '#4f3270'; g.beginPath(); g.arc(cx, cy, 124, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#f2c14e'; g.lineWidth = 8; g.beginPath(); g.arc(cx, cy, 112, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#7a4e34'; g.beginPath(); g.ellipse(cx, cy + 46, 34, 20, 0, 0, Math.PI * 2); g.fill();       // a seed sprouting
+    g.strokeStyle = '#7fd07a'; g.lineWidth = 8; g.beginPath(); g.moveTo(cx, cy + 34); g.quadraticCurveTo(cx - 6, cy - 10, cx, cy - 40); g.stroke();
+    g.fillStyle = '#7fd07a';
+    g.beginPath(); g.ellipse(cx - 30, cy - 26, 30, 13, -0.5, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(cx + 30, cy - 40, 30, 13, 0.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f7d36a'; g.font = '40px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('✦', cx + 54, cy - 72); g.fillText('✦', cx - 60, cy + 4);
+  });
+  var shopBladeMat = new THREE.MeshStandardMaterial({ map: shopBladeTex, emissive: 0xffffff, emissiveMap: shopBladeTex, emissiveIntensity: 0.2, roughness: 0.5, side: THREE.DoubleSide, transparent: true, alphaTest: 0.5 });
+  var BLADE_X = SW + 0.12, BLADE_Y = SHOP_PLINTH + 3.62;
+  sp(new THREE.BoxGeometry(0.05, 0.05, 1.05), houseMats.gold, BLADE_X, BLADE_Y, SHOP_FZ + 0.52);
+  sp(new THREE.TorusGeometry(0.16, 0.025, 6, 16, Math.PI * 1.5), houseMats.gold, BLADE_X, BLADE_Y - 0.17, SHOP_FZ + 0.18, 0, Math.PI / 2, 0);
+  sp(new THREE.SphereGeometry(0.05, 8, 6), houseMats.gold, BLADE_X, BLADE_Y, SHOP_FZ + 1.06);
+  [0.32, 0.82].forEach(function (cz) { sp(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 4), houseMats.gold, BLADE_X, BLADE_Y - 0.1, SHOP_FZ + cz); });
+  sp(new THREE.CircleGeometry(0.38, 32), shopBladeMat, BLADE_X, BLADE_Y - 0.56, SHOP_FZ + 0.57, 0, Math.PI / 2, 0);
+  sp(new THREE.TorusGeometry(0.39, 0.025, 6, 32), houseMats.gold, BLADE_X, BLADE_Y - 0.56, SHOP_FZ + 0.57, 0, Math.PI / 2, 0);
+
+  // stone steps up to the door
+  sp(new THREE.BoxGeometry(1.8, SHOP_PLINTH, 0.3), shopTrim, 0, SHOP_PLINTH / 2, SHOP_FZ + 0.15);
+  sp(new THREE.BoxGeometry(2.0, SHOP_PLINTH / 2, 0.28), houseMats.stone, 0, SHOP_PLINTH / 4, SHOP_FZ + 0.44);
+  sp(new THREE.BoxGeometry(0.9, 0.02, 0.26), new THREE.MeshStandardMaterial({ color: 0x6b5340, roughness: 1 }), 0, SHOP_PLINTH + 0.01, SHOP_FZ + 0.16);
+
+  // flower boxes under the display windows and the side windows, climbing roses up the front corners
+  var shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x3f6e3a, roughness: 0.8, flatShading: true });
+  var bloomMatsS = [0xf2a6c8, 0xc8b4ec, 0xfaf2dc].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }); });
+  var shopDummy = new THREE.Object3D(), shopLeafSpots = [], shopBloomSpots = [[], [], []];
+  function shopPlanter(x, y, z, lx, lz, seedN) {
+    sp(new THREE.BoxGeometry(lx, 0.3, lz), shopPaint, x, y + 0.15, z);
+    sp(new THREE.BoxGeometry(lx + 0.06, 0.04, lz + 0.06), houseMats.gold, x, y + 0.31, z);
+    var len = Math.max(lx, lz), n = Math.floor(len / 0.14);
+    for (var i = 0; i < n; i++) {
+      var f = (i + 0.5) / n - 0.5, px = lx > lz ? x + f * lx : x, pz = lx > lz ? z : z + f * lz, r = isle2Hash(seedN + i * 3.1);
+      shopLeafSpots.push([px, y + 0.38, pz, 0.11 + r * 0.05]);
+      for (var b = 0; b < 2; b++) {
+        var rb = isle2Hash(seedN + i * 7.7 + b);
+        shopBloomSpots[Math.floor(rb * 3)].push([px + (rb - 0.5) * 0.16, y + 0.45 + isle2Hash(rb * 91) * 0.08, pz + (isle2Hash(rb * 37) - 0.5) * 0.14]);
+      }
+    }
+  }
+  [-1, 1].forEach(function (s) {
+    shopPlanter(s * 2.425, 0, SHOP_FZ + 0.32, 2.9, 0.3, 300 + s * 50);
+    [-1.4, 1.4].forEach(function (wz, k) { shopPlanter(s * (SW + 0.17), 0.55, wz, 0.24, 1.2, 500 + s * 50 + k * 20); });
+    for (var v = 0; v < 70; v++) {                                     // climbing roses up the front corners
+      var rv = isle2Hash(v * 4.1 + s * 9), vy = 0.4 + v / 70 * 3.2;
+      var vx = s * (SW + 0.06 + rv * 0.1), vz = SHOP_FZ - 0.35 + isle2Hash(v * 2.7) * 0.5;
+      shopLeafSpots.push([vx, vy, vz, 0.07 + rv * 0.06]);
+      if (v % 3 === 0) shopBloomSpots[v % 2 ? 2 : 0].push([vx + s * 0.05, vy + 0.04, vz + 0.06]);
+    }
+  });
+  var shopLeafSpread = [];                                             // break each clump into a few small, differently-green leafy bits
+  shopLeafSpots.forEach(function (q, i) {
+    for (var j = 0; j < 4; j++) {
+      var h1 = isle2Hash(i * 4.3 + j), h2 = isle2Hash(i * 2.9 + j * 7), h3 = isle2Hash(i * 6.1 + j * 3);
+      shopLeafSpread.push([q[0] + (h1 - 0.5) * q[3] * 1.4, q[1] + (h2 - 0.4) * q[3], q[2] + (h3 - 0.5) * q[3] * 1.4, q[3] * (0.45 + h1 * 0.3), h2 * 6, h3]);
+    }
+  });
+  var shopLeaves = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), shopLeafSpread.length);
+  var shopLeafCol = new THREE.Color();
+  shopLeafSpread.forEach(function (q, i) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.rotation.set(q[4], q[4] * 1.3, 0); shopDummy.scale.set(q[3], q[3] * 0.6, q[3]); shopDummy.updateMatrix();
+    shopLeaves.setMatrixAt(i, shopDummy.matrix);
+    shopLeaves.setColorAt(i, shopLeafCol.setHSL(0.27 + q[5] * 0.06, 0.38, 0.22 + q[5] * 0.12));
+  });
+  shopDummy.rotation.set(0, 0, 0);
+  shopGroup.add(shopLeaves);
+  shopBloomSpots.forEach(function (list, c) {
+    var im = new THREE.InstancedMesh(new THREE.SphereGeometry(0.05, 8, 6), bloomMatsS[c], list.length);
+    list.forEach(function (q, i) { shopDummy.position.set(q[0], q[1], q[2]); shopDummy.scale.set(1, 1, 1); shopDummy.updateMatrix(); im.setMatrixAt(i, shopDummy.matrix); });
+    shopGroup.add(im);
+  });
+
+  // potted topiaries by the door, and a chalkboard out front
+  var topiaryXs = [-1.3, 1.3], TOPIARY_Z = SHOP_FZ + 0.5;
+  topiaryXs.forEach(function (tx, k) {
+    sp(new THREE.CylinderGeometry(0.26, 0.2, 0.46, 14), shopTrim, tx, 0.23, TOPIARY_Z);
+    sp(new THREE.TorusGeometry(0.26, 0.03, 6, 20), houseMats.gold, tx, 0.44, TOPIARY_Z, Math.PI / 2, 0, 0);
+    sp(new THREE.IcosahedronGeometry(0.3, 1), shopLeafMat, tx, 0.86, TOPIARY_Z);
+    for (var b = 0; b < 14; b++) {                                     // lots of little tufts make it look clipped and leafy
+      var ba = b * 2.4 + k, bh = (isle2Hash(b * 3 + k * 17) - 0.5) * 0.5, br = Math.sqrt(1 - bh * bh * 3.2) * 0.27;
+      sp(new THREE.IcosahedronGeometry(0.1 + isle2Hash(b + k * 9) * 0.04, 0), shopLeafMat, tx + Math.cos(ba) * br, 0.86 + bh * 0.6, TOPIARY_Z + Math.sin(ba) * br, ba, ba * 0.7, 0);
+    }
+  });
+  var shopChalkTex = paintTexture(160, 220, function (g, w, h) {
+    g.fillStyle = '#2f3833'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,0.06)'; for (var i = 0; i < 40; i++) g.fillRect(isle2Hash(i) * w, isle2Hash(i * 3) * h, 20, 2);
+    g.fillStyle = '#f4efe6'; g.textAlign = 'center'; g.font = 'bold 22px Georgia, serif';
+    g.fillText('Moonbloom', w / 2, 46); g.fillText('Seeds', w / 2, 72);
+    g.fillStyle = '#f7d36a'; g.font = 'bold 30px Georgia, serif'; g.fillText('10 ✦', w / 2, 118);
+    g.fillStyle = '#f4efe6'; g.font = '16px Georgia, serif'; g.fillText('each', w / 2, 140);
+    g.fillStyle = '#f7b8d8'; g.beginPath(); g.arc(w / 2, 180, 10, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#a8e0a0'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, 190); g.lineTo(w / 2, 210); g.stroke();
+  });
+  var shopChalk = new THREE.MeshStandardMaterial({ map: shopChalkTex, roughness: 0.9 });
+  var CHALK_X = 2.3, CHALK_Z = SHOP_FZ + 1.9;
+  [-1, 1].forEach(function (s) {
+    var tilt = -s * 0.2, bz = CHALK_Z + s * 0.14;
+    sp(new THREE.BoxGeometry(0.62, 0.9, 0.04), houseMats.door, CHALK_X, 0.45, bz, tilt, 0, 0);
+    sp(new THREE.PlaneGeometry(0.5, 0.7), shopChalk, CHALK_X, 0.47, bz + s * 0.025, tilt, s > 0 ? 0 : Math.PI, 0);
+  });
+  // floating crystal lanterns above the topiaries (shopGroup is turned, so work out where they land in the world)
+  topiaryXs.forEach(function (tx, k) {
+    var lz = TOPIARY_Z, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
+    makeCrystalLantern(SHOP_X + tx * c + lz * si, 1.95, SHOP_Z - tx * si + lz * c, 90 + k);
+  });
+  var SHOP_SPARKS = 40, shopSparkGeo = new THREE.BufferGeometry(), shopSparkPos = new Float32Array(SHOP_SPARKS * 3);
   shopSparkGeo.setAttribute('position', new THREE.BufferAttribute(shopSparkPos, 3));
-  var shopSparks = new THREE.Points(shopSparkGeo, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xf2e0ff, size: 0.3, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+  var shopSparks = new THREE.Points(shopSparkGeo, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xf2e0ff, size: 0.28, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
   shopSparks.frustumCulled = false;
   shopGroup.add(shopSparks);
   function updateShopBuilding(t) {
+    var hr = state.minutes / 60, glow = hr < 6 ? 1 : hr < 7 ? 7 - hr : hr < 18.5 ? 0 : hr < 19.5 ? hr - 18.5 : 1;   // 0 by day, 1 at night
     shopStar.rotation.y = t * 0.8;
+    shopCrystal.rotation.y = -t * 0.6;
     starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
+    crystalGlow.material.opacity = 0.45 + glow * 0.3 + Math.sin(t * 2.4) * 0.1;
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
-    for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the shopDome
-      var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = (DOME_R + 1.2) * (1 - k * 0.6);
-      shopSparkPos[i * 3] = Math.cos(a2) * r; shopSparkPos[i * 3 + 1] = DOME_Y - 0.5 + k * 5; shopSparkPos[i * 3 + 2] = Math.sin(a2) * r;
+    for (var g = 0; g < shopGlowList.length; g++) shopGlowList[g].emissiveIntensity = 0.3 + glow * 0.65;
+    for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the spire
+      var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = 2.2 * (1 - k * 0.7);
+      shopSparkPos[i * 3] = Math.cos(a2) * r; shopSparkPos[i * 3 + 1] = BREAK_Y - 0.2 + k * 3.5; shopSparkPos[i * 3 + 2] = Math.sin(a2) * r;
     }
     shopSparkGeo.attributes.position.needsUpdate = true;
   }
-  (function () {                                                       // you bump into the building, its front steps' stands and the corner pots
+  (function () {                                                       // you bump into the building, the topiaries and the chalkboard
     var c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
     function solidAt(lx, lz, r) { solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: r }); }
     for (var x = -SW; x <= SW + 0.01; x += 1.2) for (var z = -SD; z <= SD + 0.01; z += 1.2) solidAt(x, z, 0.95);
-    standXs.forEach(function (tx) { solidAt(tx, SD + 1.6, 0.45); });
-    solidAt(-1.1, SD + 0.9, 0.3); solidAt(1.1, SD + 0.9, 0.3);
+    topiaryXs.forEach(function (tx) { solidAt(tx, TOPIARY_Z, 0.32); });
+    solidAt(CHALK_X, CHALK_Z, 0.4);
   })();
 
   // You bump into the house, the tower and the cauldron
