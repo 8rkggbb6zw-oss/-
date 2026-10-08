@@ -459,6 +459,30 @@ function startGame(THREE) {
     paint(cv.getContext('2d'), w, h);
     return new THREE.CanvasTexture(cv);
   }
+  // Soft see-through textures (glows, smoke, steam, glass sheen) are built pixel by pixel instead of drawn on a canvas:
+  // canvas gradients get tiny random noise on some screens (like iPhones), which shows up as rainbow-coloured dots
+  // in the faint, almost-invisible parts. Here every pixel is pure white and only how see-through it is changes.
+  function alphaTex(w, h, alphaAt) {
+    var data = new Uint8Array(w * h * 4);
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+      var i = (y * w + x) * 4, a = alphaAt((x + 0.5) / w, (y + 0.5) / h);
+      data[i] = data[i + 1] = data[i + 2] = 255;
+      data[i + 3] = Math.round(Math.max(0, Math.min(1, a)) * 255);
+    }
+    var tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+    tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true;
+    tex.needsUpdate = true;
+    return tex;
+  }
+  function stopsAt(t, stops) {                                         // a smooth step between [position, value] pairs, like a gradient
+    if (t <= stops[0][0]) return stops[0][1];
+    for (var i = 1; i < stops.length; i++) if (t <= stops[i][0]) {
+      var k = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
+      return stops[i - 1][1] + (stops[i][1] - stops[i - 1][1]) * k;
+    }
+    return stops[stops.length - 1][1];
+  }
+  function radialAlphaTex(stops) { return alphaTex(64, 64, function (u, v) { return stopsAt(Math.sqrt((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5)) * 2, stops); }); }
   var dawnBark = dawnPaint(128, 256, function (g, w, h) {
     g.fillStyle = '#7a5478';
     g.fillRect(0, 0, w, h);
@@ -710,14 +734,7 @@ function startGame(THREE) {
   });
 
   // Soft glows: inside the canopy, and on glowing orbs hanging from the branches
-  var dawnGlowTex = dawnPaint(64, 64, function (g) {
-    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(0.35, 'rgba(255,255,255,0.45)');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 64, 64);
-  });
+  var dawnGlowTex = radialAlphaTex([[0, 1], [0.35, 0.45], [1, 0]]);
   function dawnGlow(color, size, opacity) {
     var sp = new THREE.Sprite(new THREE.SpriteMaterial({
       map: dawnGlowTex, color: color, transparent: true, opacity: opacity,
@@ -1425,16 +1442,7 @@ function startGame(THREE) {
   ];
 
   // Soft round glow texture, drawn once on a little canvas
-  var glowCanvas = document.createElement('canvas');
-  glowCanvas.width = glowCanvas.height = 64;
-  var gctx = glowCanvas.getContext('2d');
-  var grad = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255,255,255,1)');
-  grad.addColorStop(0.35, 'rgba(255,255,255,0.4)');
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-  gctx.fillStyle = grad;
-  gctx.fillRect(0, 0, 64, 64);
-  var glowTexture = new THREE.CanvasTexture(glowCanvas);
+  var glowTexture = radialAlphaTex([[0, 1], [0.35, 0.4], [1, 0]]);
 
   // Fish body radius along its length: u = 0 at the tail, 1 at the nose
   function fishRadius(u) { return 0.012 + 0.085 * Math.pow(Math.sin(Math.PI * u), 0.8) * (0.55 + 0.45 * u); }
@@ -3344,18 +3352,18 @@ function startGame(THREE) {
     bubbles.push({ m: bub, t: bb / 7, x: (Math.random() - 0.5) * 0.5, z: (Math.random() - 0.5) * 0.5 });
   }
   // soft billowy puffs for steam and smoke: lots of overlapping smooth blobs, no specks
-  var smokeTex = paintTexture(128, 128, function (g, w, h) {
-    for (var b = 0; b < 16; b++) {
-      var a = isle2Hash(b * 2.3) * Math.PI * 2, d = isle2Hash(b * 4.1) * 26, bx = w / 2 + Math.cos(a) * d, by = h / 2 + Math.sin(a) * d * 0.8, br = 22 + isle2Hash(b * 6.7) * 18;
-      var bg = g.createRadialGradient(bx, by, 0, bx, by, br);
-      bg.addColorStop(0, 'rgba(255,255,255,0.32)'); bg.addColorStop(0.6, 'rgba(255,255,255,0.14)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  var smokeBlobs = [];
+  for (var smB = 0; smB < 16; smB++) {
+    var sba = isle2Hash(smB * 2.3) * Math.PI * 2, sbd = isle2Hash(smB * 4.1) * 26;
+    smokeBlobs.push([64 + Math.cos(sba) * sbd, 64 + Math.sin(sba) * sbd * 0.8, 22 + isle2Hash(smB * 6.7) * 18]);
+  }
+  var smokeTex = alphaTex(128, 128, function (u, v) {                   // a soft, billowy puff: lots of overlapping smooth blobs, fading softly at the edges
+    var x = u * 128, y = v * 128, a = 0;
+    for (var i = 0; i < smokeBlobs.length; i++) {
+      var b = smokeBlobs[i], d = Math.sqrt((x - b[0]) * (x - b[0]) + (y - b[1]) * (y - b[1])) / b[2];
+      a += stopsAt(d, [[0, 0.32], [0.6, 0.14], [1, 0]]);
     }
-    g.globalCompositeOperation = 'destination-in';                    // fade softly to nothing at the edges
-    var edge = g.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w / 2);
-    edge.addColorStop(0, 'rgba(0,0,0,1)'); edge.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = edge; g.fillRect(0, 0, w, h);
-    g.globalCompositeOperation = 'source-over';
+    return Math.min(1, a) * stopsAt(Math.sqrt((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5)) * 2, [[0, 1], [0.2, 1], [1, 0]]);
   });
   // wisps of pale green steam curling up out of the pot
   var brewSteam = [];
@@ -6354,18 +6362,7 @@ function startGame(THREE) {
 
   // ---------- Fireflies at night ----------
   // Each firefly has a soft glowing halo and a bright little centre, and blinks at its own pace
-  var flyGlowCanvas = document.createElement('canvas');
-  flyGlowCanvas.width = flyGlowCanvas.height = 64;
-  (function (g) {
-    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(0.2, 'rgba(255,255,255,0.6)');
-    grad.addColorStop(0.5, 'rgba(255,255,255,0.15)');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 64, 64);
-  })(flyGlowCanvas.getContext('2d'));
-  var flyGlowTex = new THREE.CanvasTexture(flyGlowCanvas);
+  var flyGlowTex = radialAlphaTex([[0, 1], [0.2, 0.6], [0.5, 0.15], [1, 0]]);
   var FLY_COUNT = 180;
   function fireflyLayer(size) {
     var geo = new THREE.BufferGeometry();
@@ -8671,11 +8668,8 @@ function startGame(THREE) {
   var siViewTex = paintTexture(1024, 700, function (g, w, h) { siViewPaint(g, w, h, 1); });
   var siFrontViewTex = paintTexture(640, 400, function (g, w, h) { siViewPaint(g, w, h, 2); });
   var siDoorViewTex = paintTexture(256, 336, function (g, w, h) { siViewPaint(g, w, h, 3); });
-  var siGlassTex = paintTexture(256, 256, function (g, w, h) {         // reflections on the glass, see-through everywhere else
-    var st = g.createLinearGradient(0, 0, w, h);
-    st.addColorStop(0.15, 'rgba(255,255,255,0)'); st.addColorStop(0.26, 'rgba(255,255,255,0.22)'); st.addColorStop(0.31, 'rgba(255,255,255,0.04)'); st.addColorStop(0.38, 'rgba(255,255,255,0.14)'); st.addColorStop(0.46, 'rgba(255,255,255,0)');
-    st.addColorStop(0.7, 'rgba(255,255,255,0)'); st.addColorStop(0.76, 'rgba(255,255,255,0.1)'); st.addColorStop(0.82, 'rgba(255,255,255,0)');
-    g.fillStyle = st; g.fillRect(0, 0, w, h);
+  var siGlassTex = alphaTex(128, 128, function (u, v) {               // reflections on the glass, see-through everywhere else
+    return stopsAt((u + v) / 2, [[0.15, 0], [0.26, 0.22], [0.31, 0.04], [0.38, 0.14], [0.46, 0], [0.7, 0], [0.76, 0.1], [0.82, 0]]);
   });
   var siPaneMat = new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, roughness: 0.05, metalness: 0.3, depthWrite: false });
   var siTintMat = new THREE.MeshStandardMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.08, roughness: 0.05, metalness: 0.4, depthWrite: false });
