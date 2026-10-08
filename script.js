@@ -8378,7 +8378,7 @@ function startGame(THREE) {
   shopInSun.shadow.camera.near = 1; shopInSun.shadow.camera.far = 25;
   shopInSun.shadow.bias = -0.0006; shopInSun.shadow.normalBias = 0.02;
   shopScene.add(shopInSun); shopScene.add(shopInSun.target);
-  var shopInLamp = new THREE.PointLight(0xffe2b8, 0.7, 10);           // warm light under the brass lamps
+  var shopInLamp = new THREE.PointLight(0xffe2b8, 0.45, 9);           // warm light under the brass lamps
   shopInLamp.position.set(SIN_X + 2.4, 2.3, SIN_Z - 1.4);
   shopScene.add(shopInLamp);
   var shopInLamp2 = new THREE.PointLight(0xfff4e6, 0.5, 14);          // soft daylight across the room
@@ -8415,38 +8415,8 @@ function startGame(THREE) {
         x += len;
       }
     }
-    var R = 0.17, HW = Math.sqrt(3) * R;                               // hexagon tiles (metres)
-    function tiled(fx, fz, n) {                                        // the ragged patch round the counter and out toward the door
-      var a = Math.pow((fx - 2.6) / 3.1, 2) + Math.pow((fz + 1.2) / 2.3, 2);
-      var b = Math.pow((fx - 1.2) / 1.5, 2) + Math.pow((fz - 1.0) / 1.2, 2);
-      var c = Math.pow((fx - 3.6) / 1.6, 2) + Math.pow((fz - 1.4) / 1.1, 2);
-      return Math.min(a, b, c) < 1 + (isle2Hash(n) - 0.5) * 0.7;
-    }
-    var n = 0;
-    for (var row = 0; row * 1.5 * R < 8.4; row++) for (var col = 0; col * HW < 11.4; col++) {
-      n++;
-      var hx = col * HW + (row % 2 ? HW / 2 : 0) - 5.5, hz = row * 1.5 * R - 4;
-      if (!tiled(hx, hz, n * 1.31)) continue;
-      var px = (hx + 5.5) * SI_PPM, py = (hz + 4) * SI_PPM, pr = R * SI_PPM;
-      g.save(); g.beginPath();
-      for (var v = 0; v < 6; v++) { var va = Math.PI / 6 + v * Math.PI / 3; g.lineTo(px + Math.cos(va) * pr, py + Math.sin(va) * pr); }
-      g.closePath();
-      var mg = g.createLinearGradient(px - pr, py - pr, px + pr, py + pr); mg.addColorStop(0, '#e2e0dc'); mg.addColorStop(1, '#cbc9c4');
-      g.fillStyle = mg; g.fill();
-      g.clip();
-      g.strokeStyle = 'rgba(105,105,112,0.4)'; g.lineWidth = 1.4;
-      for (var vn = 0; vn < 3; vn++) {
-        var sx = px - pr + isle2Hash(n * 7 + vn) * pr * 2, sy = py - pr;
-        g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + (isle2Hash(n + vn * 3) - 0.5) * pr * 2, py - pr * 0.3, sx + (isle2Hash(n * 2 + vn) - 0.5) * pr * 2, py + pr * 0.3, sx + (isle2Hash(n * 5) - 0.5) * pr, py + pr); g.stroke();
-      }
-      g.restore();
-      g.strokeStyle = '#a3a19b'; g.lineWidth = 4;
-      g.beginPath();
-      for (var v2 = 0; v2 <= 6; v2++) { var va2 = Math.PI / 6 + v2 * Math.PI / 3; g.lineTo(px + Math.cos(va2) * pr, py + Math.sin(va2) * pr); }
-      g.stroke();
-    }
   });
-  siFloorTex.anisotropy = 4;
+  siFloorTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   var siMarbleTex = paintTexture(256, 128, function (g, w, h) {       // white marble with soft grey veins
     g.fillStyle = '#f3f2ef'; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(140,140,148,0.3)'; g.lineWidth = 1.2;
@@ -8501,6 +8471,58 @@ function startGame(THREE) {
     pinkWire: new THREE.MeshStandardMaterial({ color: 0xe8b4bc, roughness: 0.5, metalness: 0.4 })
   };
   siPart(new THREE.PlaneGeometry(SIN_W, SIN_D), SI.floor, 0, 0, 0, -Math.PI / 2);
+  // white marble hexagon tiles spilling round the counter: each tile is its own little shape sitting in grey grout,
+  // so the grout lines stay crisp from any distance instead of blurring away
+  var siTileTex = paintTexture(256, 256, function (g, w, h) {
+    g.fillStyle = '#e9e7e2'; g.fillRect(0, 0, w, h);
+    for (var c = 0; c < 30; c++) {                                     // soft cloudy patches
+      var cg = g.createRadialGradient(isle2Hash(c) * w, isle2Hash(c * 2.7) * h, 2, isle2Hash(c) * w, isle2Hash(c * 2.7) * h, 20 + isle2Hash(c * 5) * 40);
+      cg.addColorStop(0, 'rgba(200,198,194,0.35)'); cg.addColorStop(1, 'rgba(200,198,194,0)');
+      g.fillStyle = cg; g.fillRect(0, 0, w, h);
+    }
+    for (var v = 0; v < 10; v++) {                                     // grey veins
+      g.strokeStyle = 'rgba(110,110,118,' + (0.25 + isle2Hash(v * 3) * 0.3) + ')'; g.lineWidth = 0.8 + isle2Hash(v) * 1.4;
+      var x = isle2Hash(v * 9) * w, y = 0;
+      g.beginPath(); g.moveTo(x, y);
+      while (y < h) { x += (isle2Hash(v * 13 + y) - 0.5) * 22; y += 10; g.lineTo(x, y); }
+      g.stroke();
+    }
+  });
+  siTileTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var SI_HEX_R = 0.17, SI_HEX_W = Math.sqrt(3) * SI_HEX_R;
+  function siTiled(fx, fz, n) {                                       // the ragged patch round the counter and out toward the door
+    var a = Math.pow((fx - 2.6) / 3.1, 2) + Math.pow((fz + 1.2) / 2.3, 2);
+    var b = Math.pow((fx - 1.2) / 1.5, 2) + Math.pow((fz - 1.0) / 1.2, 2);
+    var c = Math.pow((fx - 3.6) / 1.6, 2) + Math.pow((fz - 1.4) / 1.1, 2);
+    return Math.min(a, b, c) < 1 + (isle2Hash(n) - 0.5) * 0.7;
+  }
+  var siTilePos = [], siTileUv = [], siTileCol = [], siGroutPos = [], siHexN = 0;
+  function siHex(list, cx, cz, r, y, uvs, cols, ou, ov, shade) {
+    for (var v = 0; v < 6; v++) {
+      var a0 = Math.PI / 6 + v * Math.PI / 3, a1 = a0 + Math.PI / 3;
+      list.push(cx, y, cz, cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r, cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r);   // wound to face up
+      if (uvs) uvs.push(ou, ov, ou + Math.cos(a1) * 0.13, ov - Math.sin(a1) * 0.13, ou + Math.cos(a0) * 0.13, ov - Math.sin(a0) * 0.13);
+      if (cols) for (var k = 0; k < 3; k++) cols.push(shade, shade, shade * 0.995);
+    }
+  }
+  for (var siRow = 0; siRow * 1.5 * SI_HEX_R < 8.4; siRow++) for (var siCol2 = 0; siCol2 * SI_HEX_W < 11.4; siCol2++) {
+    siHexN++;
+    var shx = siCol2 * SI_HEX_W + (siRow % 2 ? SI_HEX_W / 2 : 0) - 5.5, shz = siRow * 1.5 * SI_HEX_R - 4;
+    if (!siTiled(shx, shz, siHexN * 1.31) || Math.abs(shx) > SIN_W / 2 - 0.05 || Math.abs(shz) > SIN_D / 2 - 0.05) continue;
+    siHex(siGroutPos, shx, shz, SI_HEX_R * 1.02, 0.006, null, null);
+    siHex(siTilePos, shx, shz, SI_HEX_R * 0.93, 0.012, siTileUv, siTileCol, 0.17 + isle2Hash(siHexN * 3.3) * 0.66, 0.17 + isle2Hash(siHexN * 7.1) * 0.66, 0.93 + isle2Hash(siHexN * 2.2) * 0.07);
+  }
+  function siFlat(pos, uv, col) {
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    var nrm = []; for (var i = 0; i < pos.length; i += 3) nrm.push(0, 1, 0);
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    if (uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    if (col) geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    return geo;
+  }
+  siPart(siFlat(siGroutPos), new THREE.MeshStandardMaterial({ color: 0x9a968e, roughness: 1 }), 0, 0, 0).castShadow = false;
+  siPart(siFlat(siTilePos, siTileUv, siTileCol), new THREE.MeshStandardMaterial({ map: siTileTex, vertexColors: true, color: 0xf2f0ec, roughness: 0.62 }), 0, 0, 0).castShadow = false;
 
   // the walls: plain bright white, with a white skirting board. Each wall is its own group (its local +z points into the room)
   var siPlasterTex = paintTexture(128, 256, function (g, w, h) {
