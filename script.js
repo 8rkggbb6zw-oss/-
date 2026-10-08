@@ -9121,30 +9121,147 @@ function startGame(THREE) {
   siPart(new THREE.BoxGeometry(CNT_W, 0.95, 0.62), SI.marble, CNT_X, 0.475, CNT_Z);
   siPart(new THREE.BoxGeometry(CNT_W + 0.08, 0.06, 0.72), SI.black, CNT_X, 0.98, CNT_Z + 0.02);
   siPart(new THREE.BoxGeometry(CNT_W - 0.04, 0.06, 0.58), SI.black, CNT_X, 0.03, CNT_Z);
-  var till = new THREE.Group(); till.position.set(CNT_X + 0.6, 1.01, CNT_Z - 0.1); till.rotation.y = -0.3; shopRoom.add(till);
-  siPart(new THREE.BoxGeometry(0.4, 0.28, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.3, 0, -0.15, 0, 0, till);
-  siPart(new THREE.PlaneGeometry(0.36, 0.24), new THREE.MeshStandardMaterial({ color: 0x9fc4e8, emissive: 0x6a9ccf, emissiveIntensity: 0.5 }), 0, 0.3, 0.012, -0.15, 0, 0, till);
-  siPart(new THREE.BoxGeometry(0.04, 0.18, 0.04), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.09, -0.03, 0, 0, 0, till);
-  siPart(new THREE.BoxGeometry(0.18, 0.015, 0.14), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.008, -0.03, 0, 0, 0, till);
-  siPart(new THREE.BoxGeometry(0.09, 0.03, 0.15), SI.black, -0.3, 0.02, 0.1, 0.3, 0.2, 0, till);                      // the card reader
-  siPart(new THREE.CylinderGeometry(0.13, 0.08, 0.08, 18), SI.wood, CNT_X - 0.1, 1.05, CNT_Z + 0.05);                 // a wooden bowl of seed pods
-  for (var siPod = 0; siPod < 6; siPod++) siPart(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a4030, roughness: 0.8 }), CNT_X - 0.1 + Math.cos(siPod) * 0.06, 1.1, CNT_Z + 0.05 + Math.sin(siPod) * 0.06);
-  var lilyX = CNT_X - 1.05, lilyZ = CNT_Z - 0.05;                     // a white peace lily in a pot
-  siPart(new THREE.CylinderGeometry(0.12, 0.1, 0.2, 14), SI.white, lilyX, 1.11, lilyZ);
-  for (var siLf = 0; siLf < 9; siLf++) {
-    var la = siLf * 0.7, ll = 0.25 + isle2Hash(siLf) * 0.15;
-    siPart(new THREE.CylinderGeometry(0.006, 0.006, ll, 4), SI.leaf, lilyX + Math.cos(la) * 0.05, 1.21 + ll / 2, lilyZ + Math.sin(la) * 0.05, Math.sin(la) * 0.4, 0, Math.cos(la) * 0.4);
-    siPart(new THREE.SphereGeometry(0.09, 10, 6), SI.leaf, lilyX + Math.cos(la) * 0.16, 1.21 + ll, lilyZ + Math.sin(la) * 0.16, 0.3, -la, 0.5).scale.set(0.5, 0.15, 1.3);
-    if (siLf % 3 === 0) siPart(new THREE.SphereGeometry(0.06, 10, 6), SI.white, lilyX + Math.cos(la + 0.4) * 0.1, 1.27 + ll, lilyZ + Math.sin(la + 0.4) * 0.1, 0.4, la, 0).scale.set(0.6, 1.4, 0.3);
+  // ---- things on the counter
+  var CT = 1.01;                                                       // the top of the counter
+  var ctSteel = new THREE.MeshStandardMaterial({ color: 0xd2d4d8, metalness: 0.8, roughness: 0.28 });
+  var ctDark = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.4, metalness: 0.2 });
+  // the till: a tablet on a swivel stand, showing the shop's seed menu, with a card reader and a receipt printer
+  var ctScreenTex = paintTexture(256, 176, function (g, w, h) {
+    g.fillStyle = '#f7f4fb'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#5a3d8a'; g.fillRect(0, 0, w, 26);
+    g.fillStyle = '#f7d36a'; g.font = 'italic bold 15px Georgia, serif'; g.fillText('Whimsy & Bloom', 10, 18);
+    g.fillStyle = '#ffffff'; g.font = '11px sans-serif'; g.textAlign = 'right'; g.fillText('11:00', w - 10, 17); g.textAlign = 'left';
+    var tiles = [['#f6d9e2', '#e98ab6', 'Moonbloom'], ['#ece4f6', '#a98ad8', 'Starbell'], ['#f8ead6', '#f0965a', 'Dawn Poppy'], ['#e2efdc', '#8cc76a', 'Glowcress'], ['#f4f2ec', '#c9c3e6', 'Mistlily'], ['#efe6d8', '#b08a5a', 'Tonic']];
+    tiles.forEach(function (t, i) {
+      var x = 8 + (i % 3) * 56, y = 34 + Math.floor(i / 3) * 62;
+      g.fillStyle = t[0]; g.fillRect(x, y, 50, 54);
+      g.fillStyle = t[1]; g.beginPath(); g.arc(x + 25, y + 22, 12, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + 25, y + 22, 4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#3a2a4a'; g.font = '8px sans-serif'; g.textAlign = 'center'; g.fillText(t[2], x + 25, y + 47); g.textAlign = 'left';
+    });
+    g.fillStyle = '#ffffff'; g.fillRect(178, 34, 70, 116); g.strokeStyle = '#ddd5e8'; g.strokeRect(178, 34, 70, 116);
+    g.fillStyle = '#3a2a4a'; g.font = 'bold 10px sans-serif'; g.fillText('Order', 184, 48);
+    g.font = '9px sans-serif'; g.fillText('Moonbloom x5', 184, 64); g.fillText('Tonic x1', 184, 78);
+    g.fillStyle = '#ddd5e8'; g.fillRect(184, 112, 58, 1);
+    g.fillStyle = '#3a2a4a'; g.font = 'bold 10px sans-serif'; g.fillText('Total 58', 184, 126);
+    g.fillStyle = '#7a5cc8'; g.fillRect(184, 132, 58, 14); g.fillStyle = '#fff'; g.font = 'bold 9px sans-serif'; g.fillText('PAY', 203, 143);
+  });
+  var till = new THREE.Group(); till.position.set(CNT_X + 0.6, CT, CNT_Z - 0.1); till.rotation.y = -0.3; shopRoom.add(till);
+  siPart(new THREE.CylinderGeometry(0.075, 0.085, 0.015, 24), ctSteel, 0, 0.008, -0.03, 0, 0, 0, till);           // the round base
+  siPart(new THREE.CylinderGeometry(0.018, 0.022, 0.17, 12), ctSteel, 0, 0.1, -0.03, 0, 0, 0, till);               // the neck
+  siPart(new THREE.SphereGeometry(0.03, 12, 8), ctSteel, 0, 0.19, -0.03, 0, 0, 0, till);                            // the swivel
+  var tab = new THREE.Group(); tab.position.set(0, 0.29, -0.01); tab.rotation.x = -0.35; till.add(tab);
+  siPart(new THREE.BoxGeometry(0.38, 0.27, 0.014), ctDark, 0, 0, 0, 0, 0, 0, tab);
+  siPart(new THREE.BoxGeometry(0.39, 0.28, 0.008), ctSteel, 0, 0, -0.008, 0, 0, 0, tab);
+  siPart(new THREE.PlaneGeometry(0.35, 0.24), new THREE.MeshStandardMaterial({ map: ctScreenTex, emissive: 0xffffff, emissiveMap: ctScreenTex, emissiveIntensity: 0.6, roughness: 0.15 }), 0, 0, 0.0075, 0, 0, 0, tab);
+  siPart(new THREE.SphereGeometry(0.003, 6, 4), ctSteel, 0, 0.127, 0.008, 0, 0, 0, tab);                           // the camera dot
+  var ctKeyTex = paintTexture(64, 112, function (g, w, h) {             // a card reader: little screen and keypad
+    g.fillStyle = '#26262a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#9fd0b8'; g.fillRect(8, 8, w - 16, 26); g.fillStyle = '#1d3a2a'; g.font = 'bold 10px sans-serif'; g.fillText('58 ✦', 14, 25);
+    for (var k = 0; k < 12; k++) { g.fillStyle = k === 9 ? '#c84a4a' : k === 11 ? '#4aa86a' : '#4a4a50'; g.fillRect(8 + (k % 3) * 17, 42 + Math.floor(k / 3) * 16, 13, 12); }
+  });
+  var reader = new THREE.Group(); reader.position.set(CNT_X + 0.4, CT, CNT_Z + 0.22); reader.rotation.set(0, 0.25, 0); shopRoom.add(reader);
+  siPart(new THREE.BoxGeometry(0.07, 0.022, 0.12), ctDark, 0, 0.011, 0, 0, 0, 0, reader);                          // its cradle
+  var rbody = siPart(new THREE.BoxGeometry(0.065, 0.016, 0.115), ctDark, 0, 0.035, -0.01, -0.45, 0, 0, reader);
+  siPart(new THREE.PlaneGeometry(0.058, 0.1), new THREE.MeshStandardMaterial({ map: ctKeyTex, roughness: 0.4 }), 0, 0.0085, 0, -Math.PI / 2, 0, 0, rbody);
+  var printer = new THREE.Group(); printer.position.set(CNT_X + 1.0, CT, CNT_Z - 0.15); printer.rotation.y = -0.2; shopRoom.add(printer);   // the receipt printer, with a curl of paper
+  siPart(new THREE.BoxGeometry(0.13, 0.09, 0.15), new THREE.MeshStandardMaterial({ color: 0xf2f0ec, roughness: 0.5 }), 0, 0.045, 0, 0, 0, 0, printer);
+  siPart(new THREE.BoxGeometry(0.135, 0.012, 0.09), ctDark, 0, 0.096, -0.02, 0.1, 0, 0, printer);
+  siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 16, 1, true, 0, Math.PI * 1.3), new THREE.MeshStandardMaterial({ color: 0xfbfaf6, roughness: 0.9, side: THREE.DoubleSide }), 0, 0.12, 0.05, 0, 0, Math.PI / 2, printer);
+  siPart(new THREE.SphereGeometry(0.004, 6, 4), new THREE.MeshBasicMaterial({ color: 0x44ff88 }), 0.05, 0.07, 0.076, 0, 0, 0, printer);
+  // a turned wooden bowl of seed pods, with a little brass scoop
+  var ctBowlGeo = new THREE.LatheGeometry([[0, 0], [0.06, 0], [0.065, 0.006], [0.1, 0.03], [0.128, 0.065], [0.132, 0.08], [0.122, 0.08], [0.116, 0.065], [0.09, 0.034], [0.05, 0.016], [0, 0.014]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 32);
+  var ctGrainTex = paintTexture(256, 32, function (g, w, h) {
+    g.fillStyle = '#9a6a42'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 40; i++) { g.strokeStyle = isle2Hash(i) > 0.5 ? 'rgba(70,40,20,0.35)' : 'rgba(200,150,100,0.3)'; g.lineWidth = 1 + isle2Hash(i * 3) * 2; g.beginPath(); var y = isle2Hash(i * 7) * h; g.moveTo(0, y); g.bezierCurveTo(w * 0.3, y + 4, w * 0.6, y - 4, w, y); g.stroke(); }
+  });
+  ctGrainTex.wrapS = THREE.RepeatWrapping;
+  siPart(ctBowlGeo, new THREE.MeshStandardMaterial({ map: ctGrainTex, roughness: 0.45, side: THREE.DoubleSide }), CNT_X - 0.1, CT, CNT_Z + 0.05);
+  var ctPodMat = new THREE.MeshStandardMaterial({ color: 0x6a4030, roughness: 0.55 }), ctPodMat2 = new THREE.MeshStandardMaterial({ color: 0x8a5a38, roughness: 0.55 });
+  for (var siPod = 0; siPod < 14; siPod++) {                          // seed pods: plump, ridged, with a curly tip
+    var pa = siPod * 2.4, pr = siPod < 6 ? 0.03 : siPod < 12 ? 0.065 : 0.0, py = CT + 0.05 + (siPod < 6 ? 0.03 : siPod < 12 ? 0.012 : 0.05);
+    var pod = new THREE.Group(); pod.position.set(CNT_X - 0.1 + Math.cos(pa) * pr, py, CNT_Z + 0.05 + Math.sin(pa) * pr); pod.rotation.set(isle2Hash(siPod) * 1.2, pa, 0.6 + isle2Hash(siPod * 3)); shopRoom.add(pod);
+    siPart(new THREE.SphereGeometry(0.026, 10, 8), siPod % 2 ? ctPodMat : ctPodMat2, 0, 0, 0, 0, 0, 0, pod).scale.set(0.8, 1.25, 0.8);
+    for (var rg = 0; rg < 4; rg++) siPart(new THREE.TorusGeometry(0.0215, 0.0025, 4, 12, Math.PI), ctPodMat, 0, 0, 0, 0, rg * Math.PI / 4, 0, pod).scale.set(1, 1.5, 1);
+    siPart(new THREE.ConeGeometry(0.006, 0.025, 6), new THREE.MeshStandardMaterial({ color: 0x4a7a3a }), 0, 0.04, 0, 0.3, 0, 0, pod);
   }
-  for (var siAb = 0; siAb < 3; siAb++) {                               // little amber bottles
-    var abx = CNT_X + 1.2 - siAb * 0.11;
-    siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 10), SI.amber, abx, 1.07, CNT_Z + 0.15);
-    siPart(new THREE.CylinderGeometry(0.015, 0.015, 0.04, 8), SI.black, abx, 1.15, CNT_Z + 0.15);
+  var scoop = new THREE.Group(); scoop.position.set(CNT_X + 0.04, CT + 0.065, CNT_Z + 0.08); scoop.rotation.set(0, 0.5, -0.45); shopRoom.add(scoop);
+  siPart(new THREE.SphereGeometry(0.028, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), SI.brass, 0, 0, 0, 0, 0, Math.PI / 2, scoop).material = new THREE.MeshStandardMaterial({ color: 0xd4a84e, metalness: 0.8, roughness: 0.3, side: THREE.DoubleSide });
+  siPart(new THREE.CylinderGeometry(0.005, 0.006, 0.1, 8), SI.wood, 0.075, 0, 0, 0, 0, Math.PI / 2, scoop);
+  // a white peace lily in a ceramic pot: long stems, glossy pointed leaves with a midrib, and white hooded flowers
+  var lilyX = CNT_X - 1.05, lilyZ = CNT_Z - 0.05;
+  siPart(new THREE.LatheGeometry([[0, 0], [0.085, 0], [0.09, 0.01], [0.11, 0.17], [0.118, 0.19], [0.118, 0.205], [0.108, 0.205], [0.104, 0.19], [0, 0.19]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 28), new THREE.MeshStandardMaterial({ color: 0xf6f4f0, roughness: 0.3 }), lilyX, CT, lilyZ);
+  siPart(new THREE.CircleGeometry(0.104, 20), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 1 }), lilyX, CT + 0.188, lilyZ, -Math.PI / 2);
+  var lilyLeafTex = paintTexture(64, 160, function (g, w, h) {
+    g.beginPath(); g.moveTo(w / 2, h); g.bezierCurveTo(0, h * 0.7, 2, h * 0.25, w / 2, 0); g.bezierCurveTo(w - 2, h * 0.25, w, h * 0.7, w / 2, h); g.closePath();
+    var lg = g.createLinearGradient(0, 0, w, 0); lg.addColorStop(0, '#1f4a1c'); lg.addColorStop(0.5, '#3f7a34'); lg.addColorStop(1, '#244f20');
+    g.fillStyle = lg; g.fill();
+    g.save(); g.clip();
+    g.strokeStyle = 'rgba(160,210,130,0.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 4); g.stroke();
+    g.strokeStyle = 'rgba(140,190,110,0.3)'; g.lineWidth = 1;
+    for (var v = 0; v < 10; v++) { var vy = h - 12 - v * 14; [-1, 1].forEach(function (d) { g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + d * 14, vy - 10, w / 2 + d * 26, vy - 26); g.stroke(); }); }
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(w / 2 - 12, 0, 8, h);
+    g.restore();
+  });
+  var lilyLeafMat = new THREE.MeshStandardMaterial({ map: lilyLeafTex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.3 });
+  var lilyLeafGeo = new THREE.PlaneGeometry(1, 1, 2, 6); lilyLeafGeo.translate(0, 0.5, 0);
+  (function () { var lp = lilyLeafGeo.attributes.position; for (var i = 0; i < lp.count; i++) lp.setZ(i, -lp.getX(i) * lp.getX(i) * 0.6 + lp.getY(i) * lp.getY(i) * 0.25); lilyLeafGeo.computeVertexNormals(); })();
+  var lilySpathe = new THREE.MeshStandardMaterial({ color: 0xfbfaf4, roughness: 0.35, side: THREE.DoubleSide });
+  for (var siLf = 0; siLf < 12; siLf++) {
+    var la = siLf * 2.39, lean = 0.35 + isle2Hash(siLf) * 0.35, sl = 0.16 + isle2Hash(siLf * 3) * 0.12;
+    var stem = new THREE.Group(); stem.position.set(lilyX, CT + 0.19, lilyZ); stem.rotation.order = 'YXZ'; stem.rotation.set(lean * 0.5, la, 0); shopRoom.add(stem);
+    siPart(new THREE.CylinderGeometry(0.004, 0.006, sl, 5), SI.leaf, 0, sl / 2, 0, 0, 0, 0, stem);
+    var leaf = siPart(lilyLeafGeo, lilyLeafMat, 0, sl, 0, lean, 0, 0, stem);
+    leaf.scale.set(0.07 + isle2Hash(siLf * 5) * 0.02, 0.17 + isle2Hash(siLf * 7) * 0.05, 0.07);
   }
-  var siBigJar = siPart(new THREE.CylinderGeometry(0.1, 0.1, 0.16, 14), SI.glowSeed, CNT_X + 0.15, 1.09, CNT_Z + 0.12);
-  siPart(new THREE.CylinderGeometry(0.11, 0.11, 0.26, 16), SI.glass, CNT_X + 0.15, 1.14, CNT_Z + 0.12);
-  siPart(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), SI.brass, CNT_X + 0.15, 1.28, CNT_Z + 0.12);
+  for (var siFl = 0; siFl < 3; siFl++) {                              // the flowers: a white hood curling round a creamy spike, on a tall stem
+    var fa = siFl * 2.1 + 0.4, fh = 0.36 + siFl * 0.05;
+    var fl = new THREE.Group(); fl.position.set(lilyX, CT + 0.19, lilyZ); fl.rotation.set(0.18, fa, 0); shopRoom.add(fl);
+    siPart(new THREE.CylinderGeometry(0.003, 0.004, fh, 5), SI.leaf, 0, fh / 2, 0, 0, 0, 0, fl);
+    var lilyHood = siPart(new THREE.SphereGeometry(0.045, 14, 10, 0, Math.PI * 1.25, 0, Math.PI * 0.75), lilySpathe, 0, fh + 0.045, 0, 0, Math.PI * 0.4, 0, fl);
+    lilyHood.scale.set(0.75, 1.45, 0.45);
+    siPart(new THREE.CylinderGeometry(0.008, 0.01, 0.055, 8), new THREE.MeshStandardMaterial({ color: 0xf2ecc8, roughness: 0.8 }), 0, fh + 0.035, 0.01, 0, 0, 0, fl);
+  }
+  // little apothecary bottles of bloom tonic with labels and droppers
+  for (var siAb = 0; siAb < 3; siAb++) {
+    var ab = new THREE.Group(); ab.position.set(CNT_X + 1.25 - siAb * 0.1, CT, CNT_Z + 0.17); ab.scale.setScalar(0.62); ab.rotation.y = -0.4 + siAb * 0.3; shopRoom.add(ab);
+    siPart(siBottleGeo, SI.amber, 0, 0, 0, 0, 0, 0, ab);
+    siPart(new THREE.CylinderGeometry(0.0515, 0.0515, 0.075, 18, 1, true), new THREE.MeshStandardMaterial({ map: siTonicTex, roughness: 0.85 }), 0, 0.095, 0, 0, 0, 0, ab);
+    siPart(new THREE.CylinderGeometry(0.022, 0.022, 0.03, 12), SI.black, 0, 0.245, 0, 0, 0, 0, ab);
+    siPart(new THREE.SphereGeometry(0.018, 10, 8), new THREE.MeshStandardMaterial({ color: 0x1e1e20, roughness: 0.45 }), 0, 0.27, 0, 0, 0, 0, ab).scale.set(1, 1.5, 1);
+  }
+  // the big jar of glowing moon seeds, with a cork lid tied with twine and a kraft label
+  var siBigJar = siPart(new THREE.CylinderGeometry(0.098, 0.098, 0.16, 24), new THREE.MeshStandardMaterial({ map: siSeedTex, color: 0xe2c8ff, emissive: 0xa45cff, emissiveMap: siSeedTex, emissiveIntensity: 0.6, roughness: 0.7 }), CNT_X + 0.15, CT + 0.085, CNT_Z + 0.12);
+  siPart(new THREE.CylinderGeometry(0.098, 0.098, 0.004, 24), new THREE.MeshStandardMaterial({ map: siSeedTex, color: 0xe2c8ff, emissive: 0xa45cff, emissiveIntensity: 0.4 }), CNT_X + 0.15, CT + 0.166, CNT_Z + 0.12);
+  siPart(new THREE.LatheGeometry([[0, 0], [0.1, 0], [0.11, 0.01], [0.11, 0.24], [0.1, 0.26], [0.085, 0.27], [0.085, 0.29]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 32), SI.glass, CNT_X + 0.15, CT, CNT_Z + 0.12).castShadow = false;
+  siPart(new THREE.CylinderGeometry(0.083, 0.078, 0.05, 24), new THREE.MeshStandardMaterial({ color: 0xb48a5e, roughness: 0.95 }), CNT_X + 0.15, CT + 0.305, CNT_Z + 0.12);   // the cork
+  siPart(new THREE.TorusGeometry(0.087, 0.004, 6, 32), new THREE.MeshStandardMaterial({ color: 0xc9b08a, roughness: 1 }), CNT_X + 0.15, CT + 0.28, CNT_Z + 0.12, Math.PI / 2, 0, 0);   // twine
+  siPart(new THREE.TorusGeometry(0.087, 0.004, 6, 32), new THREE.MeshStandardMaterial({ color: 0xc9b08a, roughness: 1 }), CNT_X + 0.15, CT + 0.272, CNT_Z + 0.12, Math.PI / 2, 0, 0);
+  siPart(new THREE.CylinderGeometry(0.1115, 0.1115, 0.07, 32, 1, true, -0.7, 1.4), new THREE.MeshStandardMaterial({ map: siJarLabelTex, roughness: 0.9, side: THREE.DoubleSide }), CNT_X + 0.15, CT + 0.13, CNT_Z + 0.12);
+  // a brass service bell, and a leather ledger with a pen
+  siPart(new THREE.CylinderGeometry(0.045, 0.05, 0.012, 20), new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.5 }), CNT_X - 0.55, CT + 0.006, CNT_Z + 0.2);
+  siPart(new THREE.SphereGeometry(0.04, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), SI.brass, CNT_X - 0.55, CT + 0.012, CNT_Z + 0.2).scale.set(1, 0.85, 1);
+  siPart(new THREE.CylinderGeometry(0.004, 0.006, 0.02, 8), SI.brass, CNT_X - 0.55, CT + 0.055, CNT_Z + 0.2);
+  siPart(new THREE.SphereGeometry(0.008, 10, 8), SI.brass, CNT_X - 0.55, CT + 0.068, CNT_Z + 0.2);
+  var ledger = new THREE.Group(); ledger.position.set(CNT_X - 0.55, CT, CNT_Z - 0.12); ledger.rotation.y = 0.25; shopRoom.add(ledger);
+  var ldTex = paintTexture(128, 96, function (g, w, h) {
+    g.fillStyle = '#f6f0e2'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(w / 2 - 1, 0, 2, h);
+    g.strokeStyle = 'rgba(120,150,200,0.45)'; g.lineWidth = 0.8; for (var y = 12; y < h; y += 8) { g.beginPath(); g.moveTo(4, y); g.lineTo(w - 4, y); g.stroke(); }
+    g.strokeStyle = 'rgba(60,40,90,0.7)'; g.lineWidth = 1;
+    for (var r = 0; r < 9; r++) [6, w / 2 + 6].forEach(function (x0) { g.beginPath(); g.moveTo(x0, 10 + r * 8); for (var x = 0; x < 30 + isle2Hash(r + x0) * 20; x += 3) g.lineTo(x0 + x, 10 + r * 8 + Math.sin(x * 1.3 + r) * 1.2); g.stroke(); });
+  });
+  siPart(new THREE.BoxGeometry(0.3, 0.012, 0.22), new THREE.MeshStandardMaterial({ color: 0x6a2f36, roughness: 0.6 }), 0, 0.006, 0, 0, 0, 0, ledger);
+  siPart(new THREE.BoxGeometry(0.29, 0.01, 0.21), new THREE.MeshStandardMaterial({ color: 0xf2ecdc, roughness: 0.9 }), 0, 0.016, 0, 0, 0, 0, ledger);
+  siPart(new THREE.PlaneGeometry(0.28, 0.2), new THREE.MeshStandardMaterial({ map: ldTex, roughness: 0.9 }), 0, 0.0215, 0, -Math.PI / 2, 0, 0, ledger);
+  siPart(new THREE.BoxGeometry(0.005, 0.003, 0.2), new THREE.MeshStandardMaterial({ color: 0x8a2a3a }), 0.02, 0.023, 0.02, 0, 0, 0, ledger);   // the ribbon
+  siPart(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 8), SI.black, 0.08, 0.03, -0.02, Math.PI / 2, 0.5, 0, ledger);
+  siPart(new THREE.ConeGeometry(0.005, 0.02, 8), SI.brass, 0.08 - Math.sin(0.5) * 0.085, 0.03, -0.02 - Math.cos(0.5) * 0.085, -Math.PI / 2, 0.5, 0, ledger);
+  // a stack of kraft paper seed bags and a spool of twine, ready for wrapping
+  for (var siKb = 0; siKb < 5; siKb++) siPart(new THREE.BoxGeometry(0.16, 0.006, 0.22), new THREE.MeshStandardMaterial({ color: siKb % 2 ? 0xc9a678 : 0xbf9a6a, roughness: 0.95 }), CNT_X + 0.62, CT + 0.003 + siKb * 0.006, CNT_Z + 0.2, 0, (isle2Hash(siKb) - 0.5) * 0.15, 0);
+  siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0xd2bc94, roughness: 1 }), CNT_X + 0.88, CT + 0.025, CNT_Z + 0.24);
+  siPart(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 16), SI.wood, CNT_X + 0.88, CT + 0.003, CNT_Z + 0.24);
+  siPart(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 16), SI.wood, CNT_X + 0.88, CT + 0.053, CNT_Z + 0.24);
   for (var siC = CNT_X - 1.0; siC <= CNT_X + 1.01; siC += 0.67) shopInSolids.push([siC, CNT_Z, 0.45]);
 
   // a little white side table with amber bottles and a box, and a pink wire stool
