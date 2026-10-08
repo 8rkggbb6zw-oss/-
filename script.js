@@ -8368,7 +8368,16 @@ function startGame(THREE) {
   var shopRoom = new THREE.Group();
   shopRoom.position.set(SIN_X, 0, SIN_Z);
   shopScene.add(shopRoom);
-  shopScene.add(new THREE.HemisphereLight(0xffffff, 0xb8ad9e, 1.0));
+  shopScene.add(new THREE.HemisphereLight(0xfffaf2, 0x8c8070, 0.62));
+  var shopInSun = new THREE.DirectionalLight(0xfff0dc, 0.55);       // daylight slanting in through the big window, casting soft shadows
+  shopInSun.position.set(SIN_X - 7, 8, SIN_Z + 3);
+  shopInSun.target.position.set(SIN_X + 1, 0, SIN_Z - 0.5);
+  shopInSun.castShadow = true;
+  shopInSun.shadow.mapSize.set(2048, 2048);
+  shopInSun.shadow.camera.left = -8; shopInSun.shadow.camera.right = 8; shopInSun.shadow.camera.top = 7; shopInSun.shadow.camera.bottom = -7;
+  shopInSun.shadow.camera.near = 1; shopInSun.shadow.camera.far = 25;
+  shopInSun.shadow.bias = -0.0006; shopInSun.shadow.normalBias = 0.02;
+  shopScene.add(shopInSun); shopScene.add(shopInSun.target);
   var shopInLamp = new THREE.PointLight(0xffe2b8, 0.7, 10);           // warm light under the brass lamps
   shopInLamp.position.set(SIN_X + 2.4, 2.3, SIN_Z - 1.4);
   shopScene.add(shopInLamp);
@@ -8379,6 +8388,8 @@ function startGame(THREE) {
     var m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
     m.rotation.set(rx || 0, ry || 0, rz || 0);
+    m.castShadow = !mat.transparent && !mat.emissiveMap;               // glass and windows let the light through
+    m.receiveShadow = true;
     (parent || shopRoom).add(m);
     return m;
   }
@@ -8420,16 +8431,16 @@ function startGame(THREE) {
       g.save(); g.beginPath();
       for (var v = 0; v < 6; v++) { var va = Math.PI / 6 + v * Math.PI / 3; g.lineTo(px + Math.cos(va) * pr, py + Math.sin(va) * pr); }
       g.closePath();
-      var mg = g.createLinearGradient(px - pr, py - pr, px + pr, py + pr); mg.addColorStop(0, '#f7f7f5'); mg.addColorStop(1, '#e6e6e3');
+      var mg = g.createLinearGradient(px - pr, py - pr, px + pr, py + pr); mg.addColorStop(0, '#e2e0dc'); mg.addColorStop(1, '#cbc9c4');
       g.fillStyle = mg; g.fill();
       g.clip();
-      g.strokeStyle = 'rgba(120,120,128,0.28)'; g.lineWidth = 1.2;
-      for (var vn = 0; vn < 2; vn++) {
+      g.strokeStyle = 'rgba(105,105,112,0.4)'; g.lineWidth = 1.4;
+      for (var vn = 0; vn < 3; vn++) {
         var sx = px - pr + isle2Hash(n * 7 + vn) * pr * 2, sy = py - pr;
         g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + (isle2Hash(n + vn * 3) - 0.5) * pr * 2, py - pr * 0.3, sx + (isle2Hash(n * 2 + vn) - 0.5) * pr * 2, py + pr * 0.3, sx + (isle2Hash(n * 5) - 0.5) * pr, py + pr); g.stroke();
       }
       g.restore();
-      g.strokeStyle = '#c7c6c2'; g.lineWidth = 3;
+      g.strokeStyle = '#a3a19b'; g.lineWidth = 4;
       g.beginPath();
       for (var v2 = 0; v2 <= 6; v2++) { var va2 = Math.PI / 6 + v2 * Math.PI / 3; g.lineTo(px + Math.cos(va2) * pr, py + Math.sin(va2) * pr); }
       g.stroke();
@@ -8492,13 +8503,21 @@ function startGame(THREE) {
   siPart(new THREE.PlaneGeometry(SIN_W, SIN_D), SI.floor, 0, 0, 0, -Math.PI / 2);
 
   // the walls: plain bright white, with a white skirting board. Each wall is its own group (its local +z points into the room)
+  var siPlasterTex = paintTexture(128, 256, function (g, w, h) {
+    g.fillStyle = '#f5f3ef'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 1600; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,140,130') + ',' + (isle2Hash(i * 1.7) * 0.06) + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
+    var shade = g.createLinearGradient(0, 0, 0, h);                    // a little darker up by the ceiling and down by the floor
+    shade.addColorStop(0, 'rgba(90,80,70,0.14)'); shade.addColorStop(0.18, 'rgba(90,80,70,0)'); shade.addColorStop(0.85, 'rgba(90,80,70,0)'); shade.addColorStop(1, 'rgba(90,80,70,0.12)');
+    g.fillStyle = shade; g.fillRect(0, 0, w, h);
+  });
   var shopInWalls = {};
   function siWall(name, x, z, ry, len) {
     var wgp = new THREE.Group();
     wgp.position.set(x, 0, z); wgp.rotation.y = ry;
     shopRoom.add(wgp);
     shopInWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
-    siPart(new THREE.PlaneGeometry(len, SIN_H), SI.wall, 0, SIN_H / 2, 0, 0, 0, 0, wgp);
+    var wallTex = siPlasterTex.clone(); wallTex.needsUpdate = true; wallTex.wrapS = THREE.RepeatWrapping; wallTex.repeat.set(len / 1.5, 1);
+    siPart(new THREE.PlaneGeometry(len, SIN_H), new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 }), 0, SIN_H / 2, 0, 0, 0, 0, wgp).castShadow = false;
     siPart(new THREE.BoxGeometry(len, 0.12, 0.03), SI.white, 0, 0.06, 0.015, 0, 0, 0, wgp);
     return wgp;
   }
@@ -8523,16 +8542,29 @@ function startGame(THREE) {
     siPart(new THREE.TorusGeometry(0.08, 0.012, 6, 14, Math.PI * 1.5), SI.black, lx, 0.62, lz - c[1] * 0.08, 0, Math.PI / 2, 0);
   });
   siPart(new THREE.BoxGeometry(0.66, 0.015, 2.0), SI.black, TBL_X, 0.25, 0.3);
-  function siOrchid(x, z, y, s) {                                     // a white-and-blue pot of magenta orchids
-    siPart(new THREE.CylinderGeometry(0.11 * s, 0.09 * s, 0.18 * s, 14), SI.white, x, y + 0.09 * s, z);
+  var siOrchidLeaf = new THREE.MeshStandardMaterial({ color: 0x2f5a2c, roughness: 0.45 });
+  var siPetal = new THREE.MeshStandardMaterial({ color: 0xc8399a, roughness: 0.55, side: THREE.DoubleSide });
+  var siPetalLight = new THREE.MeshStandardMaterial({ color: 0xe07ac0, roughness: 0.55, side: THREE.DoubleSide });
+  function siOrchid(x, z, y, s) {                                     // a white-and-blue pot of magenta orchids on arching stems
+    siPart(new THREE.CylinderGeometry(0.11 * s, 0.09 * s, 0.18 * s, 16), SI.white, x, y + 0.09 * s, z);
     siPart(new THREE.TorusGeometry(0.105 * s, 0.012 * s, 6, 16), SI.blue, x, y + 0.12 * s, z, Math.PI / 2, 0, 0);
-    for (var lf = 0; lf < 4; lf++) siPart(new THREE.IcosahedronGeometry(0.07 * s, 0), SI.leaf, x + Math.cos(lf * 1.6) * 0.08 * s, y + 0.2 * s, z + Math.sin(lf * 1.6) * 0.08 * s, lf, lf, 0).scale.set(1.6, 0.3, 0.7);
+    siPart(new THREE.CylinderGeometry(0.1 * s, 0.1 * s, 0.01, 14), new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 1 }), x, y + 0.175 * s, z);
+    for (var lf = 0; lf < 4; lf++) {                                   // broad glossy leaves fanning out of the pot
+      var la = lf * 1.7 + x;
+      siPart(new THREE.SphereGeometry(0.1 * s, 12, 6), siOrchidLeaf, x + Math.cos(la) * 0.08 * s, y + 0.2 * s, z + Math.sin(la) * 0.08 * s, 0, -la, 0.25).scale.set(1.1, 0.12, 0.45);
+    }
     for (var st = 0; st < 2; st++) {
-      var sa = st * 2.4 + x, sh = (0.45 + st * 0.12) * s;
-      siPart(new THREE.CylinderGeometry(0.006, 0.006, sh, 4), SI.leaf, x + Math.cos(sa) * 0.03, y + 0.18 * s + sh / 2, z + Math.sin(sa) * 0.03);
-      for (var fl = 0; fl < 5; fl++) {
-        var fy = y + 0.18 * s + sh - fl * 0.06 * s, fo = 0.04 + fl * 0.025;
-        siPart(new THREE.SphereGeometry(0.035 * s, 8, 6), SI.orchid, x + Math.cos(sa) * (0.03 + fo * s), fy, z + Math.sin(sa) * (0.03 + fo * s)).scale.set(1.3, 1, 0.5);
+      var sa = st * 2.6 + x * 3, sh = (0.42 + st * 0.12) * s, bx = x + Math.cos(sa) * 0.02, bz = z + Math.sin(sa) * 0.02, y0 = y + 0.18 * s;
+      siPart(new THREE.CylinderGeometry(0.005, 0.006, sh, 5), SI.leaf, bx, y0 + sh / 2, bz);
+      for (var fl = 0; fl < 6; fl++) {                                 // the spray arches over and the flowers hang along it
+        var k = fl / 5, ax = bx + Math.cos(sa) * k * 0.2 * s, az = bz + Math.sin(sa) * k * 0.2 * s, ay = y0 + sh + Math.sin(k * Math.PI * 0.8) * 0.06 * s - k * k * 0.12 * s;
+        siPart(new THREE.CylinderGeometry(0.004, 0.004, 0.05 * s, 4), SI.leaf, ax, ay, az, 0, -sa, Math.PI / 2 - 0.3);
+        var fg = new THREE.Group(); fg.position.set(ax, ay - 0.02 * s, az); fg.rotation.set(0, -sa + Math.PI / 2, 0.2); shopRoom.add(fg);
+        for (var pt = 0; pt < 5; pt++) {
+          var pa = pt / 5 * Math.PI * 2;
+          siPart(new THREE.CircleGeometry(0.022 * s, 10), pt % 2 ? siPetalLight : siPetal, Math.cos(pa) * 0.018 * s, Math.sin(pa) * 0.018 * s, 0, 0, 0, pa, fg).scale.set(1.3, 0.9, 1);
+        }
+        siPart(new THREE.SphereGeometry(0.008 * s, 6, 4), SI.white, 0, 0, 0.004, 0, 0, 0, fg);
       }
     }
   }
@@ -8586,6 +8618,7 @@ function startGame(THREE) {
       siDummy.updateMatrix(); im.setMatrixAt(i, siDummy.matrix);
       if (colorOf) im.setColorAt(i, colorOf(q, siCol));
     });
+    im.castShadow = !mat.transparent; im.receiveShadow = true;
     shopRoom.add(im);
     return im;
   }
@@ -8685,10 +8718,13 @@ function startGame(THREE) {
   // a tall leafy plant in the front corner, and a framed print by the counter
   var siCornerX = SIN_W / 2 - 0.55, siCornerZ = SIN_D / 2 - 0.6;
   siPart(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 16), SI.white, siCornerX, 0.25, siCornerZ);
-  siPart(new THREE.CylinderGeometry(0.03, 0.04, 1.3, 6), SI.wood, siCornerX, 1.1, siCornerZ);
-  for (var siPl = 0; siPl < 16; siPl++) {
-    var pla = siPl * 2.4, plh = 0.9 + (siPl / 16) * 1.0, plr = 0.18 + (1 - siPl / 16) * 0.12;
-    siPart(new THREE.IcosahedronGeometry(0.16, 0), SI.leaf, siCornerX + Math.cos(pla) * plr, plh, siCornerZ + Math.sin(pla) * plr, 0.4, -pla, 0.3).scale.set(0.9, 0.25, 1.4);
+  siPart(new THREE.CylinderGeometry(0.25, 0.25, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 1 }), siCornerX, 0.49, siCornerZ);
+  siPart(new THREE.CylinderGeometry(0.022, 0.035, 1.5, 7), new THREE.MeshStandardMaterial({ color: 0x7a6250, roughness: 0.9 }), siCornerX, 1.2, siCornerZ);
+  var siFigLeaf = new THREE.MeshStandardMaterial({ color: 0x2e5a26, roughness: 0.4, metalness: 0.05 });
+  for (var siPl = 0; siPl < 22; siPl++) {                              // big violin-shaped leaves spiralling up the trunk
+    var pla = siPl * 2.4, plh = 0.95 + (siPl / 22) * 1.15, plr = 0.13 + (1 - siPl / 22) * 0.06;
+    var fig = siPart(new THREE.SphereGeometry(0.15, 12, 8), siFigLeaf, siCornerX + Math.cos(pla) * plr, plh, siCornerZ + Math.sin(pla) * plr, 0, -pla, 0.45 - (siPl % 3) * 0.2);
+    fig.scale.set(1.25, 0.1, 0.85 + isle2Hash(siPl) * 0.25);
   }
   shopInSolids.push([siCornerX, siCornerZ, 0.4]);
   siWallPart('E', new THREE.BoxGeometry(0.5, 0.62, 0.03), SI.black, -1.2, 1.75, 0.015);
@@ -8727,15 +8763,17 @@ function startGame(THREE) {
   var siVines = [];
   [[-3.4, 0.6, 1.2], [-3.4, 1.6, 0.8], [-2.4, CNT_Z, 1.2], [3.6, CNT_Z, 0.8], [4.6, CNT_Z, 1.3], [-0.9, CNT_Z, 0.9], [-3.4, -3.2, 1.1], [-3.4, 2.8, 1.0], [1.0, CNT_Z, 0.7]].forEach(function (vn, k) {
     for (var s = 0; s < 3; s++) {                                       // a few strands per vine, each with little leaves
-      var len = vn[2] * (0.6 + isle2Hash(k * 7 + s) * 0.5), ox = (s - 1) * 0.12;
-      for (var v = 0; v < len / 0.06; v++) {
-        var iv = isle2Hash(k * 31 + s * 7 + v);
-        siVines.push([vn[0] + ox + Math.sin(v * 0.7 + s) * 0.05, RAIL_Y - 0.05 - v * 0.06, vn[1] + Math.cos(v * 0.9 + s) * 0.05, 1, 1, 1, iv, iv * 3, iv * 6]);
+      var len = vn[2] * (0.6 + isle2Hash(k * 7 + s) * 0.5), ox = (s - 1) * 0.1;
+      siPart(new THREE.CylinderGeometry(0.003, 0.003, len, 4), SI.leaf, vn[0] + ox, RAIL_Y - 0.05 - len / 2, vn[1]);
+      for (var v = 0; v < len / 0.05; v++) {
+        var iv = isle2Hash(k * 31 + s * 7 + v), side = v % 2 ? 1 : -1;
+        siVines.push([vn[0] + ox + side * 0.03, RAIL_Y - 0.05 - v * 0.05, vn[1] + (iv - 0.5) * 0.05, 0.7 + iv * 0.5, 0.18, 1.0 + iv * 0.5, iv, 0.6 * side, iv * 6]);
       }
     }
   });
-  siInstances(new THREE.IcosahedronGeometry(0.045, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), siVines, function (q, c) { return c.setHSL(0.27 + q[6] * 0.06, 0.4, 0.27 + q[6] * 0.12); }).scale.set(1, 1, 1);
+  siInstances(new THREE.SphereGeometry(0.035, 8, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }), siVines, function (q, c) { return c.setHSL(0.25 + q[6] * 0.05, 0.45, 0.32 + q[6] * 0.14); });
 
+  for (var siWn in shopInWalls) shopInWalls[siWn].g.traverse(function (o) { o.castShadow = false; });   // the walls and what's on them don't block the daylight
   var siLook = new THREE.Vector3();
   function updateShopInterior(t) {
     if (!inShop) return;
