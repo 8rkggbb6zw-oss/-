@@ -4141,6 +4141,8 @@ function startGame(THREE) {
   function updateShopBuilding(t) {
     var hr = state.minutes / 60, glow = hr < 6 ? 1 : hr < 7 ? 7 - hr : hr < 18.5 ? 0 : hr < 19.5 ? hr - 18.5 : 1;   // 0 by day, 1 at night
     shopStar.rotation.y = t * 0.8;
+    pathLampMat.emissiveIntensity = 0.3 + glow * 1.6;                   // the path's lanterns light up at night
+    for (var plg = 0; plg < pathLanternGlows.length; plg++) pathLanternGlows[plg].material.opacity = glow * 0.75;
     shopCrystal.rotation.y = -t * 0.6;
     starGlow.material.opacity = 0.45 + Math.sin(t * 2) * 0.12;
     crystalGlow.material.opacity = 0.45 + glow * 0.3 + Math.sin(t * 2.4) * 0.1;
@@ -4167,57 +4169,77 @@ function startGame(THREE) {
   })();
 
   // ---------- The stone path to Whimsy & Bloom ----------
-  // Irregular pale flagstones laid in mossy soil, edged with little rounded cobbles, with lavender, daisies and
-  // pink blooms growing along both sides, and a few tiny glowing mushrooms tucked in the borders
+  // A paved garden walk: weathered flagstones fitted together with moss growing in the joints, laid between kerbs of
+  // dressed stone, with lavender, flowers and little glowing mushrooms along both sides, and iron lanterns that light
+  // the way at night
+  var pathLanternGlows = [];
+  var pathLampMat = new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0xffc870, emissiveIntensity: 0.3, roughness: 0.3 });
   (function () {
-    var dummy = new THREE.Object3D(), col = new THREE.Color(), n = 0;
+    var dummy = new THREE.Object3D(), col = new THREE.Color();
     function H(k) { return isle2Hash(k * 1.37 + 812); }
-    // the mossy soil bed the stones sit in
-    var bedPos = [], bedCol = [], bedIdx = [], soil = new THREE.Color(0x6a5a3e), moss = new THREE.Color(0x5e7e3e);
-    for (var i = 0; i < spLine.length; i++) {
-      var a = spLine[Math.max(0, i - 1)], b = spLine[Math.min(spLine.length - 1, i + 1)];
-      var tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
-      for (var sd = -1; sd <= 1; sd += 2) {
-        var w = SP_W + 0.12 + Math.sin(i * 0.9 + sd) * 0.06;
-        bedPos.push(spLine[i][0] + nx * w * sd, 0.012, spLine[i][1] + nz * w * sd);
-        col.copy(soil).lerp(moss, 0.4 + H(i * 2 + sd) * 0.4); bedCol.push(col.r, col.g, col.b);
+    // the paving: crazy-paved flagstones worked out pixel by pixel, so the joints stay crisp; it tiles along the path
+    var PW = 256, PH = 512, cells = [];
+    for (var gy = 0; gy < 8; gy++) for (var gx = 0; gx < 4; gx++) cells.push([(gx + 0.15 + H(gx * 7 + gy * 13) * 0.7) * 64, (gy + 0.15 + H(gx * 11 + gy * 5 + 3) * 0.7) * 64, H(gx * 3 + gy * 17 + 9)]);
+    var pave = new Uint8Array(PW * PH * 4), bump = new Uint8Array(PW * PH * 4);
+    for (var py = 0; py < PH; py++) for (var px = 0; px < PW; px++) {
+      var d1 = 1e9, d2 = 1e9, best = null;
+      for (var c = 0; c < cells.length; c++) for (var wy = -1; wy <= 1; wy++) {   // wrap top to bottom so it tiles along the path
+        var cx = cells[c][0], cy = cells[c][1] + wy * PH, dx = px - cx, dy = py - cy, dd = dx * dx + dy * dy;
+        if (dd < d1) { d2 = d1; d1 = dd; best = cells[c]; } else if (dd < d2) d2 = dd;
       }
-      if (i) { var k = i * 2; bedIdx.push(k - 2, k, k - 1, k - 1, k, k + 1); }
+      var edge = Math.sqrt(d2) - Math.sqrt(d1), i = (py * PW + px) * 4;
+      var grain = isle2Hash(px * 3.1 + py * 7.7) * 14 + Math.sin(px * 0.21 + best[2] * 9) * Math.cos(py * 0.17) * 6;
+      var r, g, bl, h;
+      if (edge < 3.2) {                                                // the joints: dark soil with moss growing in them
+        var mossy = isle2Hash(Math.floor(px / 6) * 5.3 + Math.floor(py / 6) * 2.9) > 0.35;
+        r = mossy ? 86 : 74; g = mossy ? 112 : 64; bl = mossy ? 58 : 50; h = 40;
+        r += grain * 0.6; g += grain * 0.6; bl += grain * 0.3;
+      } else {                                                         // a flagstone: warm grey-cream, each one a slightly different shade
+        var shade = 168 + best[2] * 46, bevel = Math.min(1, (edge - 3.2) / 6);
+        r = shade + 8 + grain; g = shade + grain; bl = shade - 14 + grain * 0.8;
+        r *= 0.82 + bevel * 0.18; g *= 0.82 + bevel * 0.18; bl *= 0.82 + bevel * 0.18;   // edges worn down and a touch darker
+        if (isle2Hash(px * 1.7 + py * 2.3) > 0.985) { r -= 40; g -= 36; bl -= 30; }       // little pits and flecks
+        h = 150 + bevel * 100;
+      }
+      pave[i] = Math.max(0, Math.min(255, r)); pave[i + 1] = Math.max(0, Math.min(255, g)); pave[i + 2] = Math.max(0, Math.min(255, bl)); pave[i + 3] = 255;
+      bump[i] = bump[i + 1] = bump[i + 2] = Math.max(0, Math.min(255, h + grain)); bump[i + 3] = 255;
     }
-    var bedGeo = new THREE.BufferGeometry();
-    bedGeo.setAttribute('position', new THREE.Float32BufferAttribute(bedPos, 3));
-    bedGeo.setAttribute('color', new THREE.Float32BufferAttribute(bedCol, 3));
-    bedGeo.setIndex(bedIdx); bedGeo.computeVertexNormals();
-    var bed = new THREE.Mesh(bedGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide }));
-    bed.receiveShadow = true; scene.add(bed);
-    // flagstones: rounded, irregular slabs with bevelled edges, a few across the path at each step, staggered like real paving
-    var slabGeo = new THREE.CylinderGeometry(1, 1.04, 1, 9, 1);
-    (function () { var p = slabGeo.attributes.position; for (var v = 0; v < p.count; v++) { var x = p.getX(v), z = p.getZ(v), a2 = Math.atan2(z, x), r = 0.82 + 0.18 * Math.sin(a2 * 3 + 1.3) * Math.cos(a2 * 2); if (Math.abs(x) + Math.abs(z) > 0.01) { p.setX(v, x * r); p.setZ(v, z * r); } } slabGeo.computeVertexNormals(); })();
-    var slabs = [], cobbles = [], blooms = [], lav = [], leaves = [], shrooms = [];
-    var along = 0, row = 0;
+    function dataTex(arr) { var t = new THREE.DataTexture(arr, PW, PH, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true; return t; }
+    var paveTex = dataTex(pave), paveBump = dataTex(bump);
+    var pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
+    for (var k = 0; k < spLine.length; k++) {
+      var a = spLine[Math.max(0, k - 1)], b = spLine[Math.min(spLine.length - 1, k + 1)];
+      var tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
+      if (k) run += Math.sqrt(Math.pow(spLine[k][0] - spLine[k - 1][0], 2) + Math.pow(spLine[k][1] - spLine[k - 1][1], 2));
+      pos.push(spLine[k][0] - nx * SP_W, 0.02, spLine[k][1] - nz * SP_W, spLine[k][0] + nx * SP_W, 0.02, spLine[k][1] + nz * SP_W);
+      uv.push(0, run / (W * 2), 1, run / (W * 2));
+      if (k) { var q = k * 2; idx.push(q - 2, q, q - 1, q - 1, q, q + 1); }
+    }
+    var paveGeo = new THREE.BufferGeometry();
+    paveGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    paveGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    paveGeo.setIndex(idx); paveGeo.computeVertexNormals();
+    var paveMesh = new THREE.Mesh(paveGeo, new THREE.MeshStandardMaterial({ map: paveTex, bumpMap: paveBump, bumpScale: 0.03, roughness: 0.88, side: THREE.DoubleSide }));
+    paveMesh.receiveShadow = true; scene.add(paveMesh);
+    // kerbs of dressed stone along both sides, and the plants, mushrooms and lanterns beyond them
+    var kerbs = [], blooms = [], lav = [], leaves = [], shrooms = [], lamps = [];
+    var gap = 0, row = 0, lampRun = 0, lampSide = 1;
     for (var j = 1; j < spLine.length; j++) {
       var p0 = spLine[j - 1], p1 = spLine[j], sx = p1[0] - p0[0], sz = p1[1] - p0[1], sl = Math.sqrt(sx * sx + sz * sz);
-      along += sl;
+      gap += sl; lampRun += sl;
       var ux = sx / sl, uz = sz / sl, nx2 = -uz, nz2 = ux, turn = Math.atan2(ux, uz);
-      if (along < 0.62) continue;
-      along = 0; row++;
-      var cnt = row % 2 ? 3 : 2, off = row % 2 ? 0 : 0.32;
-      for (var c2 = 0; c2 < cnt; c2++) {
-        var acr = (cnt === 3 ? (c2 - 1) * 0.6 : (c2 - 0.5) * 0.66) + (H(row * 7 + c2) - 0.5) * 0.1;
-        if (Math.abs(acr) > SP_W - 0.18) continue;
-        var size = 0.27 + H(row * 3 + c2 * 5) * 0.06;
-        slabs.push([p1[0] + nx2 * acr + ux * (H(row + c2 * 9) - 0.5) * 0.08, p1[1] + nz2 * acr + uz * (H(row + c2 * 9) - 0.5) * 0.08, size * (1.05 + H(row * 11 + c2) * 0.25), size, turn + H(row * 13 + c2) * 6.28, H(row * 17 + c2)]);
-      }
-      for (var e = -1; e <= 1; e += 2) {                                 // edging cobbles, and plants growing along the edge
-        var ex = p1[0] + nx2 * e * (SP_W + 0.08), ez = p1[1] + nz2 * e * (SP_W + 0.08);
-        cobbles.push([ex, ez, 0.09 + H(row * 5 + e) * 0.04, H(row * 19 + e)]);
-        cobbles.push([ex + ux * 0.31, ez + uz * 0.31, 0.08 + H(row * 6 + e) * 0.04, H(row * 23 + e)]);
-        if (dist(p1[0], p1[1], SP_PTS[SP_PTS.length - 1][0], SP_PTS[SP_PTS.length - 1][1]) < 1.2 || p1[1] < 82.5) continue;   // keep the ends clear for the steps and the bridge
-        var gx = p1[0] + nx2 * e * (SP_W + 0.45), gz = p1[1] + nz2 * e * (SP_W + 0.45), kind = H(row * 29 + e);
-        for (var lf = 0; lf < 5; lf++) leaves.push([gx + (H(row * 31 + lf + e) - 0.5) * 0.45, gz + (H(row * 37 + lf - e) - 0.5) * 0.45, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
-        if (kind < 0.4) for (var lv = 0; lv < 5; lv++) lav.push([gx + (H(row * 43 + lv + e) - 0.5) * 0.3, gz + (H(row * 47 + lv - e) - 0.5) * 0.3, 0.32 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
-        else for (var bl = 0; bl < 4; bl++) blooms.push([gx + (H(row * 61 + bl + e) - 0.5) * 0.4, gz + (H(row * 67 + bl - e) - 0.5) * 0.4, 0.13 + H(row * 71 + bl) * 0.08, kind < 0.7 ? 0 : (bl % 2 ? 1 : 2)]);
-        if (H(row * 73 + e) > 0.86) shrooms.push([gx + nx2 * e * 0.25, gz + nz2 * e * 0.25]);
+      var nearShop = dist(p1[0], p1[1], SP_PTS[SP_PTS.length - 1][0], SP_PTS[SP_PTS.length - 1][1]) < 1.1;
+      if (lampRun > 4.6 && p1[1] > 83 && !nearShop) { lampRun = 0; lamps.push([p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55)]); lampSide = -lampSide; }
+      if (gap < 0.46) continue;
+      gap = 0; row++;
+      for (var e = -1; e <= 1; e += 2) {
+        if (!nearShop) kerbs.push([p1[0] + nx2 * e * (SP_W + 0.07), p1[1] + nz2 * e * (SP_W + 0.07), turn, H(row * 19 + e)]);
+        if (nearShop || p1[1] < 82.5) continue;                        // keep the ends clear for the steps and the bridge
+        var gx2 = p1[0] + nx2 * e * (SP_W + 0.42), gz2 = p1[1] + nz2 * e * (SP_W + 0.42), kind = H(row * 29 + e);
+        for (var lf = 0; lf < 6; lf++) leaves.push([gx2 + (H(row * 31 + lf + e) - 0.5) * 0.42, gz2 + (H(row * 37 + lf - e) - 0.5) * 0.42, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
+        if (kind < 0.45) for (var lv = 0; lv < 6; lv++) lav.push([gx2 + (H(row * 43 + lv + e) - 0.5) * 0.32, gz2 + (H(row * 47 + lv - e) - 0.5) * 0.32, 0.34 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
+        else for (var bl2 = 0; bl2 < 5; bl2++) blooms.push([gx2 + (H(row * 61 + bl2 + e) - 0.5) * 0.42, gz2 + (H(row * 67 + bl2 - e) - 0.5) * 0.42, 0.13 + H(row * 71 + bl2) * 0.09, kind < 0.72 ? 0 : (bl2 % 2 ? 1 : 2)]);
+        if (H(row * 73 + e) > 0.88) shrooms.push([gx2 + nx2 * e * 0.22, gz2 + nz2 * e * 0.22]);
       }
     }
     function batch(geo, mat, list, put) {
@@ -4227,17 +4249,11 @@ function startGame(THREE) {
       im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
       return im;
     }
-    var stoneTex = paintTexture(128, 128, function (g, w, h) {         // weathered stone: soft mottling and a few dark flecks
-      g.fillStyle = '#d8d2c6'; g.fillRect(0, 0, w, h);
-      for (var i = 0; i < 900; i++) { var v = isle2Hash(i * 3.7); g.fillStyle = v > 0.6 ? 'rgba(255,255,255,0.18)' : v > 0.25 ? 'rgba(120,110,100,0.12)' : 'rgba(70,64,60,0.22)'; g.fillRect(isle2Hash(i * 1.3) * w, isle2Hash(i * 2.1) * h, 1 + v * 3, 1 + v * 2); }
-    });
-    batch(slabGeo, new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.85 }), slabs, function (q) {
-      dummy.position.set(q[0], 0.035, q[1]); dummy.rotation.set(0, q[4], 0); dummy.scale.set(q[2], 0.05, q[3]);
-      return new THREE.Color().setHSL(0.09 + q[5] * 0.05, 0.08 + q[5] * 0.08, 0.72 + q[5] * 0.14).getHex();
-    });
-    batch(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), cobbles, function (q) {
-      dummy.position.set(q[0], 0.03, q[1]); dummy.rotation.set(0, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.55, q[2] * 0.85);
-      return new THREE.Color().setHSL(0.08, 0.06, 0.55 + q[3] * 0.2).getHex();
+    var kerbGeo = new THREE.BoxGeometry(0.12, 0.1, 0.42, 1, 1, 1);
+    (function () { var kp = kerbGeo.attributes.position; for (var v = 0; v < kp.count; v++) if (kp.getY(v) > 0) { kp.setX(v, kp.getX(v) * 0.82); kp.setZ(v, kp.getZ(v) * 0.94); } kerbGeo.computeVertexNormals(); })();   // softly bevelled tops
+    batch(kerbGeo, new THREE.MeshStandardMaterial({ map: paveTex, roughness: 0.85, color: 0xe8e2d8 }), kerbs, function (q) {
+      dummy.position.set(q[0], 0.045, q[1]); dummy.rotation.set(0, q[2] + (q[3] - 0.5) * 0.06, (q[3] - 0.5) * 0.04);
+      return new THREE.Color().setHSL(0.09, 0.08, 0.7 + q[3] * 0.14).getHex();
     });
     batch(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: true }), leaves, function (q) {
       dummy.position.set(q[0], q[2] * 0.6, q[1]); dummy.rotation.set(q[3] * 3, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.7, q[2]);
@@ -4246,23 +4262,39 @@ function startGame(THREE) {
     batch(new THREE.CylinderGeometry(0.006, 0.008, 1, 4), new THREE.MeshStandardMaterial({ color: 0x5a7a48 }), lav, function (q) {
       dummy.position.set(q[0], q[2] / 2, q[1]); dummy.rotation.set(q[3], 0, -q[3] * 0.7); dummy.scale.set(1, q[2], 1);
     });
-    batch(new THREE.CylinderGeometry(0.018, 0.012, 0.13, 6), new THREE.MeshStandardMaterial({ color: 0x9a78dc, roughness: 0.7 }), lav, function (q) {
+    batch(new THREE.CylinderGeometry(0.018, 0.012, 0.14, 6), new THREE.MeshStandardMaterial({ color: 0x9a78dc, roughness: 0.7 }), lav, function (q) {
       dummy.position.set(q[0] + Math.sin(-q[3] * 0.7) * -q[2] * 0.4, q[2] - 0.04, q[1] + Math.sin(q[3]) * q[2] * 0.4); dummy.rotation.set(q[3], 0, -q[3] * 0.7);
     });
     var petalCols = [0xf6a6c8, 0xfaf6ee, 0xffe08a];
-    var flowerGeo = new THREE.CylinderGeometry(0.055, 0.03, 0.02, 7);
-    batch(flowerGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), blooms, function (q) {
+    batch(new THREE.CylinderGeometry(0.055, 0.03, 0.02, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), blooms, function (q) {
       dummy.position.set(q[0], q[2], q[1]); dummy.rotation.set((q[2] - 0.17) * 3, q[0] * 5, 0); return petalCols[q[3]];
     });
     batch(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshStandardMaterial({ color: 0xe8b84a }), blooms, function (q) { dummy.position.set(q[0], q[2] + 0.012, q[1]); });
     batch(new THREE.CylinderGeometry(0.005, 0.006, 1, 4), new THREE.MeshStandardMaterial({ color: 0x4f7a3e }), blooms, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.scale.set(1, q[2], 1); });
-    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 });
+    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 }), shroomStem = new THREE.MeshStandardMaterial({ color: 0xf2ece0 });
     shrooms.forEach(function (m) {
       for (var t = 0; t < 3; t++) {
         var mx = m[0] + Math.cos(t * 2.1) * 0.08, mz = m[1] + Math.sin(t * 2.1) * 0.08, mh = 0.07 + t * 0.025;
-        var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, mh, 6), new THREE.MeshStandardMaterial({ color: 0xf2ece0 })); stem.position.set(mx, mh / 2, mz); scene.add(stem);
+        var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, mh, 6), shroomStem); stem.position.set(mx, mh / 2, mz); scene.add(stem);
         var cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), shroomCap); cap.position.set(mx, mh, mz); cap.scale.y = 0.7; scene.add(cap);
       }
+    });
+    // wrought-iron lantern posts that glow warm at night
+    var iron = new THREE.MeshStandardMaterial({ color: 0x24222a, roughness: 0.45, metalness: 0.6 });
+    lamps.forEach(function (lp) {
+      var g = new THREE.Group(); g.position.set(lp[0], 0, lp[1]); scene.add(g);
+      function part(geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; }
+      part(new THREE.CylinderGeometry(0.11, 0.14, 0.12, 8), iron, 0, 0.06, 0);
+      part(new THREE.CylinderGeometry(0.025, 0.035, 1.5, 8), iron, 0, 0.84, 0);
+      part(new THREE.TorusGeometry(0.04, 0.008, 6, 12), iron, 0, 0.5, 0).rotation.x = Math.PI / 2;
+      part(new THREE.CylinderGeometry(0.1, 0.08, 0.03, 8), iron, 0, 1.6, 0);
+      part(new THREE.CylinderGeometry(0.075, 0.06, 0.2, 6), pathLampMat, 0, 1.72, 0);
+      [0, 1, 2, 3, 4, 5].forEach(function (s2) { var ba = s2 / 6 * Math.PI * 2; part(new THREE.BoxGeometry(0.008, 0.2, 0.008), iron, Math.cos(ba) * 0.075, 1.72, Math.sin(ba) * 0.075); });
+      part(new THREE.ConeGeometry(0.12, 0.12, 6), iron, 0, 1.88, 0);
+      part(new THREE.SphereGeometry(0.02, 8, 6), iron, 0, 1.96, 0);
+      var glowS = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glowS.position.set(0, 1.72, 0); glowS.scale.set(1.4, 1.4, 1); g.add(glowS); pathLanternGlows.push(glowS);
+      solids.push({ x: lp[0], z: lp[1], r: 0.18 });
     });
   })();
 
