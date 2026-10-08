@@ -8945,8 +8945,79 @@ function startGame(THREE) {
   for (var siPl = 0; siPl < 15; siPl++) siFigLeaf(siTrunk, 0.32 + siPl / 14 * 0.68, siPl);
   siBranches.forEach(function (c, k) { for (var j = 0; j < 6; j++) siFigLeaf(c, 0.25 + j / 5 * 0.75, 40 + k * 10 + j); });
   shopInSolids.push([siCornerX, siCornerZ, 0.4]);
-  siWallPart('E', new THREE.BoxGeometry(0.5, 0.62, 0.03), SI.black, -1.2, 1.75, 0.015);
-  siWallPart('E', new THREE.PlaneGeometry(0.4, 0.52), new THREE.MeshStandardMaterial({ map: shopBladeTex, roughness: 0.7 }), -1.2, 1.75, 0.035);
+  // a framed vintage botanical print of a moonbloom, on aged paper, behind a white mat and glass
+  var siPrintTex = paintTexture(512, 672, function (g, w, h) {
+    g.fillStyle = '#efe5d0'; g.fillRect(0, 0, w, h);                  // old paper, with speckles and a few foxing spots
+    for (var i = 0; i < 2500; i++) { g.fillStyle = 'rgba(120,90,50,' + (isle2Hash(i) * 0.06) + ')'; g.fillRect(isle2Hash(i * 1.3) * w, isle2Hash(i * 2.9) * h, 1.5, 1.5); }
+    for (var f = 0; f < 9; f++) { var fx = isle2Hash(f * 5) * w, fy = isle2Hash(f * 7) * h, fr = 4 + isle2Hash(f) * 10; var fg2 = g.createRadialGradient(fx, fy, 0, fx, fy, fr); fg2.addColorStop(0, 'rgba(150,100,50,0.18)'); fg2.addColorStop(1, 'rgba(150,100,50,0)'); g.fillStyle = fg2; g.fillRect(fx - fr, fy - fr, fr * 2, fr * 2); }
+    var vig = g.createRadialGradient(w / 2, h / 2, w * 0.3, w / 2, h / 2, w * 0.8); vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(110,80,40,0.25)');
+    g.fillStyle = vig; g.fillRect(0, 0, w, h);
+    var INK = '#4a3524';
+    g.strokeStyle = INK; g.lineWidth = 2; g.strokeRect(22, 22, w - 44, h - 44); g.lineWidth = 0.8; g.strokeRect(28, 28, w - 56, h - 56);
+    g.fillStyle = INK; g.textAlign = 'center';
+    g.font = 'bold 26px Georgia, serif'; g.fillText('M O O N B L O O M', w / 2, 70);
+    g.font = 'italic 20px Georgia, serif'; g.fillText('Lunaflora noctis', w / 2, 96);
+    g.font = '13px Georgia, serif'; g.fillText('PL. XII', 64, 56);
+    function leaf(x, y, ang, len, wid) {                               // a watercolour leaf, inked, with a midrib and veins
+      g.save(); g.translate(x, y); g.rotate(ang);
+      g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(wid, -len * 0.25, wid * 0.8, -len * 0.75, 0, -len); g.bezierCurveTo(-wid * 0.8, -len * 0.75, -wid, -len * 0.25, 0, 0);
+      var lg3 = g.createLinearGradient(-wid, 0, wid, 0); lg3.addColorStop(0, '#5f8f4a'); lg3.addColorStop(0.5, '#86b06a'); lg3.addColorStop(1, '#4c7a3c');
+      g.fillStyle = lg3; g.globalAlpha = 0.85; g.fill(); g.globalAlpha = 1;
+      g.strokeStyle = INK; g.lineWidth = 1.2; g.stroke();
+      g.lineWidth = 0.9; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -len * 0.95); g.stroke();
+      g.lineWidth = 0.5;
+      for (var v = 1; v < 7; v++) { var vy = -len * v / 7.5; [-1, 1].forEach(function (d) { g.beginPath(); g.moveTo(0, vy); g.quadraticCurveTo(d * wid * 0.4, vy - len * 0.05, d * wid * 0.62, vy - len * 0.12); g.stroke(); }); }
+      g.restore();
+    }
+    function petal(cx, cy, ang, len, wid, k) {                         // a petal, deep violet at its base fading to pale pink, with fine veins
+      g.save(); g.translate(cx, cy); g.rotate(ang);
+      g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(wid, -len * 0.2, wid * 1.1, -len * 0.8, 0, -len); g.bezierCurveTo(-wid * 1.1, -len * 0.8, -wid, -len * 0.2, 0, 0);
+      var pg = g.createLinearGradient(0, 0, 0, -len); pg.addColorStop(0, '#6a3f9e'); pg.addColorStop(0.45, '#b98ad8'); pg.addColorStop(1, '#f2d6ec');
+      g.fillStyle = pg; g.globalAlpha = 0.92; g.fill(); g.globalAlpha = 1;
+      g.strokeStyle = INK; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = 'rgba(80,40,90,0.45)'; g.lineWidth = 0.6;
+      for (var v = -2; v <= 2; v++) { g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(v * wid * 0.25, -len * 0.5, v * wid * 0.35, -len * 0.9); g.stroke(); }
+      g.restore();
+    }
+    // the stem, curving up from the bulb, with a side shoot carrying a bud
+    g.strokeStyle = '#5a7a3e'; g.lineWidth = 5; g.beginPath(); g.moveTo(w / 2, 540); g.bezierCurveTo(w / 2 - 20, 440, w / 2 + 25, 330, w / 2, 240); g.stroke();
+    g.strokeStyle = INK; g.lineWidth = 0.8; g.beginPath(); g.moveTo(w / 2 - 2.5, 540); g.bezierCurveTo(w / 2 - 22, 440, w / 2 + 22, 330, w / 2 - 2.5, 240); g.stroke();
+    g.strokeStyle = '#5a7a3e'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 + 6, 380); g.quadraticCurveTo(w / 2 + 70, 350, w / 2 + 95, 290); g.stroke();
+    leaf(w / 2 - 6, 470, -0.9, 120, 30); leaf(w / 2 + 4, 430, 0.95, 110, 28); leaf(w / 2 - 2, 360, -0.7, 95, 24); leaf(w / 2 + 14, 330, 0.6, 80, 20);
+    for (var b = 0; b < 3; b++) petal(w / 2 + 95, 292, -0.5 + b * 0.5, 34, 9, b);    // the bud
+    g.fillStyle = '#6a8a4a'; g.beginPath(); g.ellipse(w / 2 + 95, 296, 9, 6, 0.3, 0, Math.PI * 2); g.fill(); g.strokeStyle = INK; g.lineWidth = 0.8; g.stroke();
+    for (var p = 0; p < 7; p++) petal(w / 2, 238, p / 7 * Math.PI * 2, 78 + isle2Hash(p) * 10, 24, p);   // the open flower
+    for (var st = 0; st < 14; st++) {                                   // stamens with golden tips
+      var sa = st / 14 * Math.PI * 2, sl = 16 + isle2Hash(st * 3) * 8;
+      g.strokeStyle = '#b8902e'; g.lineWidth = 1; g.beginPath(); g.moveTo(w / 2, 238); g.lineTo(w / 2 + Math.cos(sa) * sl, 238 + Math.sin(sa) * sl); g.stroke();
+      g.fillStyle = '#e6b84a'; g.beginPath(); g.arc(w / 2 + Math.cos(sa) * sl, 238 + Math.sin(sa) * sl, 2.4, 0, Math.PI * 2); g.fill();
+    }
+    g.fillStyle = '#f3d27a'; g.beginPath(); g.arc(w / 2, 238, 6, 0, Math.PI * 2); g.fill(); g.strokeStyle = INK; g.stroke();
+    // the bulb and its fine roots
+    var bg2 = g.createRadialGradient(w / 2 - 6, 548, 2, w / 2, 556, 24); bg2.addColorStop(0, '#e8d2b0'); bg2.addColorStop(1, '#a87a4e');
+    g.fillStyle = bg2; g.beginPath(); g.moveTo(w / 2, 528); g.bezierCurveTo(w / 2 + 28, 540, w / 2 + 26, 572, w / 2, 574); g.bezierCurveTo(w / 2 - 26, 572, w / 2 - 28, 540, w / 2, 528); g.fill();
+    g.strokeStyle = INK; g.lineWidth = 1; g.stroke();
+    g.lineWidth = 0.6;
+    for (var r = 0; r < 12; r++) { var rx = w / 2 - 16 + r * 3; g.beginPath(); g.moveTo(rx, 572); g.bezierCurveTo(rx + (isle2Hash(r) - 0.5) * 30, 588, rx + (isle2Hash(r * 2) - 0.5) * 40, 600, rx + (isle2Hash(r * 3) - 0.5) * 50, 612); g.stroke(); }
+    // little study drawings: a glowing seed and a single petal, labelled
+    g.fillStyle = '#c9a8e8'; g.beginPath(); g.ellipse(100, 560, 14, 20, 0.3, 0, Math.PI * 2); g.fill(); g.strokeStyle = INK; g.lineWidth = 1; g.stroke();
+    g.strokeStyle = 'rgba(90,50,120,0.5)'; g.beginPath(); g.moveTo(94, 545); g.quadraticCurveTo(102, 560, 98, 578); g.stroke();
+    petal(w - 104, 590, 0.25, 60, 16, 9);
+    g.fillStyle = INK; g.font = 'italic 13px Georgia, serif'; g.fillText('fig. 2 — seed', 100, 600); g.fillText('fig. 3 — petal', w - 104, 610);
+    g.fillStyle = 'rgba(214,170,70,0.8)';                              // a few gold flecks of magic
+    for (var sp2 = 0; sp2 < 12; sp2++) { var sx2 = w / 2 + (isle2Hash(sp2 * 4) - 0.5) * 260, sy2 = 140 + isle2Hash(sp2 * 6) * 160; g.beginPath(); g.arc(sx2, sy2, 1.5 + isle2Hash(sp2) * 1.5, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = INK; g.font = 'italic 14px Georgia, serif'; g.fillText('Whimsy & Bloom · Everdawn', w / 2, h - 40);
+  });
+  siPrintTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var PRINT_X = -1.2, PRINT_Y = 1.8;
+  [[0, 0.385, 0.66, 0.05], [0, -0.385, 0.66, 0.05], [-0.305, 0, 0.05, 0.82], [0.305, 0, 0.05, 0.82]].forEach(function (f) {    // a slim black frame with a gold inner lip
+    siWallPart('E', new THREE.BoxGeometry(f[2], f[3], 0.04), SI.black, PRINT_X + f[0], PRINT_Y + f[1], 0.02);
+    siWallPart('E', new THREE.BoxGeometry(f[2] > 0.1 ? 0.57 : 0.008, f[3] > 0.1 ? 0.73 : 0.008, 0.01), SI.brass, PRINT_X + f[0] * 0.92, PRINT_Y + f[1] * 0.94, 0.036);
+  });
+  siWallPart('E', new THREE.PlaneGeometry(0.58, 0.74), new THREE.MeshStandardMaterial({ color: 0xf7f5ef, roughness: 0.95 }), PRINT_X, PRINT_Y, 0.012);   // the white mat
+  siWallPart('E', new THREE.BoxGeometry(0.4, 0.525, 0.004), new THREE.MeshStandardMaterial({ color: 0xd8d3c8, roughness: 0.95 }), PRINT_X, PRINT_Y, 0.013);   // the mat's bevelled edge
+  siWallPart('E', new THREE.PlaneGeometry(0.38, 0.5), new THREE.MeshStandardMaterial({ map: siPrintTex, roughness: 0.85 }), PRINT_X, PRINT_Y, 0.0155);
+  siWallPart('E', new THREE.PlaneGeometry(0.58, 0.74), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.08, depthWrite: false }), PRINT_X, PRINT_Y, 0.034);   // the glass
 
   // the shop front from inside: the two big display windows and the door you came in by
   [-2.425, 2.425].forEach(function (wx) {
