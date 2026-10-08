@@ -10504,12 +10504,6 @@ function startGame(THREE) {
     }
     for (var i = 0; i < 2500; i++) { g.fillStyle = 'rgba(80,60,40,' + isle2Hash(i) * 0.08 + ')'; g.fillRect(isle2Hash(i * 1.9) * w, isle2Hash(i * 2.9) * h, 1, 1); }
   });
-  var ciCurtainTex = paintTexture(64, 64, function (g, w, h) {        // pale blue curtain cloth with tiny white dots
-    g.fillStyle = '#a9cbe0'; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(255,255,255,0.7)';
-    for (var y = 4; y < h; y += 16) for (var x = 4 + (y % 32 ? 8 : 0); x < w; x += 16) { g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill(); }
-  });
-  ciCurtainTex.wrapS = ciCurtainTex.wrapT = THREE.RepeatWrapping; ciCurtainTex.repeat.set(3, 12);
   var ciScreenTex = paintTexture(160, 100, function (g, w, h) {       // the reception computer: the day's appointments
     g.fillStyle = '#eef6f4'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, 14);
@@ -10549,11 +10543,72 @@ function startGame(THREE) {
     g.fillStyle = '#5a5a5a'; g.font = '10px sans-serif';
     ['Eat your greens', 'Take a walk each day', 'Sleep well'].forEach(function (t, k) { g.fillText('♥ ' + t, w / 2, 178 + k * 14); });
   });
-  var ciWashTex = paintTexture(128, 96, function (g, w, h) {          // a little sign over the sink
-    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#2f6f68'; g.lineWidth = 4; g.strokeRect(3, 3, w - 6, h - 6);
-    g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 15px sans-serif'; g.fillText('Please wash', w / 2, 30); g.fillText('your hands', w / 2, 50);
-    g.fillStyle = '#7ab8e0'; for (var b = 0; b < 5; b++) { g.beginPath(); g.arc(30 + b * 17, 72 + (b % 2) * 6, 5 + (b % 3), 0, Math.PI * 2); g.fill(); }
+  var ciWashTex = paintTexture(512, 384, function (g, w, h) {          // a poster over the sink: how to wash your hands, in four little pictures
+    g.fillStyle = '#fbf8f1'; g.fillRect(0, 0, w, h);
+    var head = g.createLinearGradient(0, 0, 0, 62); head.addColorStop(0, '#3a8a80'); head.addColorStop(1, '#2a6a62');
+    g.fillStyle = head; g.fillRect(0, 0, w, 62);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 34px Georgia, serif'; g.fillText('Wash Your Hands', w / 2, 30);
+    g.font = 'italic 13px Georgia, serif'; g.fillStyle = '#d8f2ea'; g.fillText('four easy steps to keep Everdawn healthy', w / 2, 52);
+    function hand(cx, cy, s, rot, flip) {                              // a cartoon hand: palm, four fingers and a thumb
+      g.save(); g.translate(cx, cy); g.rotate(rot); g.scale(flip ? -s : s, s);
+      g.fillStyle = '#f4caa4'; g.strokeStyle = '#c98e6a'; g.lineWidth = 1.6 / s;
+      for (var f = 0; f < 4; f++) { g.beginPath(); g.ellipse(-9 + f * 6, -20 + Math.abs(f - 1.5) * 2.5, 3.2, 9, (f - 1.5) * 0.08, 0, Math.PI * 2); g.fill(); g.stroke(); }
+      g.beginPath(); g.ellipse(13, -2, 3.4, 8, -0.9, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.ellipse(0, -2, 13, 12, 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.fillRect(-8, 6, 16, 12); g.beginPath(); g.moveTo(-8, 6); g.lineTo(-8, 18); g.moveTo(8, 6); g.lineTo(8, 18); g.stroke();
+      g.fillStyle = '#a8d8e8'; g.fillRect(-9, 16, 18, 8);              // a pale blue cuff
+      g.restore();
+    }
+    function bubbles(cx, cy, n, spread, seed) {
+      for (var b = 0; b < n; b++) {
+        var bx = cx + (isle2Hash(seed + b) - 0.5) * spread, by = cy + (isle2Hash(seed + b * 2.3) - 0.5) * spread * 0.7, br = 3 + isle2Hash(seed + b * 3.1) * 6;
+        g.fillStyle = 'rgba(255,255,255,0.85)'; g.strokeStyle = 'rgba(110,170,210,0.8)'; g.lineWidth = 1.4;
+        g.beginPath(); g.arc(bx, by, br, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = 'rgba(160,210,240,0.7)'; g.beginPath(); g.arc(bx - br * 0.35, by - br * 0.35, br * 0.25, 0, Math.PI * 2); g.fill();
+      }
+    }
+    var PW = 236, PH = 142;
+    [[14, 72], [262, 72], [14, 226], [262, 226]].forEach(function (pp, k) {
+      var x = pp[0], y = pp[1], cx = x + PW / 2, cy = y + PH / 2 + 8;
+      g.fillStyle = ['#e6f3f8', '#fbe8ee', '#eef6e6', '#fdf3df'][k]; g.fillRect(x, y, PW, PH);
+      g.strokeStyle = '#2f6f68'; g.lineWidth = 2; g.strokeRect(x + 1, y + 1, PW - 2, PH - 2);
+      g.fillStyle = '#2f6f68'; g.beginPath(); g.arc(x + 20, y + 20, 13, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff'; g.font = 'bold 16px sans-serif'; g.fillText(String(k + 1), x + 20, y + 21);
+      g.fillStyle = '#2f6f68'; g.font = 'bold 16px sans-serif'; g.textAlign = 'left';
+      g.fillText(['Wet your hands', 'Add some soap', 'Scrub for 20 seconds', 'Rinse and dry'][k], x + 40, y + 21);
+      g.textAlign = 'center';
+      if (k === 0) {                                                    // a tap with water running onto two hands
+        g.strokeStyle = '#9aa4ac'; g.lineWidth = 9; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(cx - 50, cy - 40); g.lineTo(cx - 50, cy - 52); g.quadraticCurveTo(cx - 50, cy - 66, cx - 32, cy - 64); g.lineTo(cx - 8, cy - 58); g.stroke();
+        g.strokeStyle = '#7ab8e0'; g.lineWidth = 3;
+        for (var s2 = 0; s2 < 4; s2++) { g.beginPath(); g.moveTo(cx - 10 + s2 * 3, cy - 52); g.quadraticCurveTo(cx - 8 + s2 * 4, cy - 30, cx - 6 + s2 * 5, cy - 14); g.stroke(); }
+        hand(cx - 20, cy + 14, 1.5, 0.5, false); hand(cx + 18, cy + 14, 1.5, -0.5, true);
+        g.fillStyle = '#7ab8e0'; [[-40, 4], [42, 10], [-8, 34], [24, 36]].forEach(function (d) { g.beginPath(); g.moveTo(cx + d[0], cy + d[1] - 6); g.quadraticCurveTo(cx + d[0] + 5, cy + d[1] + 3, cx + d[0], cy + d[1] + 4); g.quadraticCurveTo(cx + d[0] - 5, cy + d[1] + 3, cx + d[0], cy + d[1] - 6); g.fill(); });
+      } else if (k === 1) {                                             // a soap pump and a dollop of foam in a palm
+        g.fillStyle = '#f2a6bc'; g.fillRect(cx + 34, cy - 30, 34, 58); g.fillStyle = '#e0607a'; g.fillRect(cx + 34, cy - 10, 34, 22);
+        g.fillStyle = '#ffffff'; g.fillRect(cx + 44, cy - 44, 14, 14); g.fillRect(cx + 26, cy - 46, 32, 6);
+        hand(cx - 18, cy + 16, 1.7, 0.15, false);
+        bubbles(cx - 18, cy - 4, 9, 34, 40);
+      } else if (k === 2) {                                             // two hands rubbing together in a cloud of bubbles, and a 20-second clock
+        hand(cx - 26, cy + 10, 1.5, 0.9, false); hand(cx + 4, cy + 10, 1.5, -0.9, true);
+        bubbles(cx - 12, cy, 16, 90, 70);
+        var tx = cx + 70, ty = cy - 4;
+        g.fillStyle = '#ffffff'; g.strokeStyle = '#2f6f68'; g.lineWidth = 3; g.beginPath(); g.arc(tx, ty, 26, 0, Math.PI * 2); g.fill(); g.stroke();
+        g.fillStyle = 'rgba(224,96,122,0.35)'; g.beginPath(); g.moveTo(tx, ty); g.arc(tx, ty, 24, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 / 3); g.closePath(); g.fill();
+        g.fillStyle = '#2f6f68'; g.font = 'bold 18px sans-serif'; g.fillText('20', tx, ty + 1);
+        g.font = '10px sans-serif'; g.fillText('sec', tx, ty + 14);
+      } else {                                                          // a hand being dried on a striped towel
+        g.save(); g.translate(cx + 6, cy + 4); g.rotate(-0.15);
+        g.fillStyle = '#ffffff'; g.fillRect(-56, -34, 112, 72);
+        g.fillStyle = '#8fc7b0'; g.fillRect(-56, -26, 112, 8); g.fillRect(-56, 22, 112, 8);
+        g.strokeStyle = 'rgba(120,140,130,0.4)'; g.lineWidth = 1; for (var tl = -50; tl < 56; tl += 6) { g.beginPath(); g.moveTo(tl, -34); g.lineTo(tl, 38); g.stroke(); }
+        g.restore();
+        hand(cx - 4, cy - 4, 1.6, -0.3, false);
+        g.fillStyle = '#e0607a'; g.font = 'bold 22px sans-serif'; g.fillText('♥', cx + 74, cy - 34);
+      }
+    });
+    g.fillStyle = '#2f6f68'; g.font = 'italic 12px Georgia, serif'; g.fillText('♥  Thank you for keeping our patients safe  ♥', w / 2, h - 7);
   });
   var ciDiplomaTex = paintTexture(128, 96, function (g, w, h) {
     g.fillStyle = '#f6efdc'; g.fillRect(0, 0, w, h);
@@ -10843,24 +10898,95 @@ function startGame(THREE) {
   ciFramed('E', DD_Z + 0.25, 2.0, 0.42, 0.32, ciDiplomaTex, CI.darkWood);
   ciFramed('E', 2.85, 1.75, 0.42, 0.66, ciEyeTex, CI.teal);                                                             // the eye chart
 
-  // the exam table under the back window, with its paper roll, a pillow, a step and a rolling stool, behind a curtain
-  var EX_X = 2.65, EX_Z = CNW + 0.6, EX_L = 1.9;
-  ciPart(new THREE.BoxGeometry(EX_L - 0.1, 0.55, 0.62), CI.white, EX_X, 0.275, EX_Z);
-  [-0.55, 0, 0.55].forEach(function (dx) { ciPart(new THREE.BoxGeometry(0.5, 0.2, 0.02), CI.mint, EX_X + dx, 0.35, EX_Z + 0.315); ciPart(new THREE.BoxGeometry(0.14, 0.02, 0.03), CI.steel, EX_X + dx, 0.4, EX_Z + 0.33); });
-  ciPart(new THREE.BoxGeometry(EX_L - 0.45, 0.14, 0.7), CI.tealVinyl, EX_X + 0.2, 0.62, EX_Z);
-  ciPart(new THREE.BoxGeometry(0.6, 0.14, 0.7), CI.tealVinyl, EX_X - EX_L / 2 + 0.3, 0.72, EX_Z, 0, 0, -0.35);           // the raised back rest
-  ciPart(new THREE.BoxGeometry(EX_L - 0.5, 0.004, 0.5), CI.paper, EX_X + 0.15, 0.692, EX_Z);
-  ciPart(new THREE.BoxGeometry(0.55, 0.004, 0.5), CI.paper, EX_X - EX_L / 2 + 0.32, 0.795, EX_Z, 0, 0, -0.35);
-  ciPart(new THREE.CylinderGeometry(0.06, 0.06, 0.54, 16), CI.paper, EX_X + EX_L / 2 - 0.08, 0.64, EX_Z, Math.PI / 2, 0, 0);   // the paper roll
-  ciPart(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 6), CI.steel, EX_X + EX_L / 2 - 0.08, 0.64, EX_Z, Math.PI / 2, 0, 0);
-  ciPart(new THREE.SphereGeometry(0.2, 16, 10), CI.paper, EX_X - EX_L / 2 + 0.28, 0.88, EX_Z).scale.set(0.8, 0.35, 1.2);
-  ciPart(new THREE.BoxGeometry(0.5, 0.18, 0.3), CI.steel, EX_X + 0.2, 0.09, EX_Z + 0.55);                                // a step up
-  ciPart(new THREE.BoxGeometry(0.46, 0.02, 0.26), CI.black, EX_X + 0.2, 0.185, EX_Z + 0.55);
+  // the exam table under the back window: a white cabinet base with drawers, doors and a pull-out step, a padded teal
+  // seat and a raised back rest with stitched seams and piping, chrome grab handles, a roll of paper on a chrome holder
+  // pulled out along the top, and a pillow
+  var EX_X = 2.65, EX_Z = CNW + 0.6, EX_L = 1.9, EX_D = 0.62, EX_TOP = 0.66;
+  function ciRoundBox(w, h, d, r) {                                   // a box with softly rounded edges (w along x, h up, d along z)
+    var b = Math.min(r, w / 2 - 0.001, h / 2 - 0.001, d / 2 - 0.001), sw = w / 2 - b, sh = h / 2 - b, s = new THREE.Shape();
+    var c = Math.min(b, sw, sh) * 0.9;
+    s.moveTo(-sw + c, -sh); s.lineTo(sw - c, -sh); s.quadraticCurveTo(sw, -sh, sw, -sh + c); s.lineTo(sw, sh - c); s.quadraticCurveTo(sw, sh, sw - c, sh);
+    s.lineTo(-sw + c, sh); s.quadraticCurveTo(-sw, sh, -sw, sh - c); s.lineTo(-sw, -sh + c); s.quadraticCurveTo(-sw, -sh, -sw + c, -sh);
+    var g = new THREE.ExtrudeGeometry(s, { depth: d - b * 2, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 4, curveSegments: 6 });
+    g.center();
+    return g;
+  }
+  var CI_CHROME = new THREE.MeshStandardMaterial({ color: 0xe6eaee, roughness: 0.22, metalness: 0.45 });
+  var CI_SEAM = new THREE.MeshStandardMaterial({ color: 0x2c6a62, roughness: 0.5 });
+  var CI_KICK = new THREE.MeshStandardMaterial({ color: 0x5a6266, roughness: 0.8 });
+  ciPart(new THREE.BoxGeometry(EX_L - 0.2, 0.08, EX_D - 0.1), CI_KICK, EX_X, 0.04, EX_Z - 0.03);                       // the recessed toe kick
+  ciPart(ciRoundBox(EX_L - 0.1, EX_TOP - 0.08, EX_D, 0.03), CI.white, EX_X, 0.08 + (EX_TOP - 0.08) / 2, EX_Z);           // the cabinet
+  var EXF = EX_Z + EX_D / 2;                                           // its front
+  [[-0.66, 0.37, 0.4, 0.42, 'door'], [0.66, 0.37, 0.4, 0.42, 'door'], [0, 0.5, 0.82, 0.16, 'drawer'], [0, 0.31, 0.82, 0.16, 'drawer']].forEach(function (f) {
+    ciPart(ciRoundBox(f[2], f[3], 0.025, 0.008), CI.mint, EX_X + f[0], f[1], EXF + 0.012);
+    ciPart(new THREE.BoxGeometry(f[2] - 0.08, f[3] - 0.08, 0.006), new THREE.MeshStandardMaterial({ color: 0xa9d2bf, roughness: 0.5 }), EX_X + f[0], f[1], EXF + 0.026);   // a recessed panel
+    if (f[4] === 'drawer') {                                            // a long bar pull on stand-offs
+      ciPart(new THREE.CylinderGeometry(0.007, 0.007, 0.22, 8), CI_CHROME, EX_X + f[0], f[1] + 0.03, EXF + 0.05, 0, 0, Math.PI / 2);
+      [-0.1, 0.1].forEach(function (o) { ciPart(new THREE.CylinderGeometry(0.005, 0.005, 0.025, 6), CI_CHROME, EX_X + f[0] + o, f[1] + 0.03, EXF + 0.038, Math.PI / 2, 0, 0); });
+    } else {
+      ciPart(new THREE.CylinderGeometry(0.007, 0.007, 0.16, 8), CI_CHROME, EX_X + f[0] - (f[0] > 0 ? 1 : -1) * 0.14, f[1], EXF + 0.05);
+      [-0.07, 0.07].forEach(function (o) { ciPart(new THREE.CylinderGeometry(0.005, 0.005, 0.025, 6), CI_CHROME, EX_X + f[0] - (f[0] > 0 ? 1 : -1) * 0.14, f[1] + o, EXF + 0.038, Math.PI / 2, 0, 0); });
+    }
+  });
+  ciPart(ciRoundBox(0.62, 0.045, 0.3, 0.012), CI.white, EX_X, 0.19, EXF + 0.15);                                         // the pull-out step, with a ribbed grip tread
+  for (var gr = 0; gr < 6; gr++) ciPart(new THREE.BoxGeometry(0.54, 0.008, 0.022), CI_KICK, EX_X, 0.216, EXF + 0.04 + gr * 0.042);
+  ciPart(new THREE.BoxGeometry(0.5, 0.02, 0.012), CI_CHROME, EX_X, 0.175, EXF + 0.3);
+  ciPart(new THREE.BoxGeometry(EX_L - 0.04, 0.035, EX_D + 0.04), CI.white, EX_X, EX_TOP + 0.017, EX_Z);                 // the platform the cushions sit on
+  // the padded seat and the raised back rest, with stitched seams, piping and a chrome hinge
+  var SEAT_L = 1.12, SEAT_X = EX_X + EX_L / 2 - SEAT_L / 2 - 0.05, CUSH_Y = EX_TOP + 0.035 + 0.055;
+  ciPart(ciRoundBox(SEAT_L, 0.11, EX_D - 0.02, 0.04), CI.tealVinyl, SEAT_X, CUSH_Y, EX_Z);
+  [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(SEAT_L - 0.08, 0.006, 0.004), CI_SEAM, SEAT_X, CUSH_Y + 0.03, EX_Z + s * (EX_D / 2 - 0.012)); });
+  var BACK_L = 0.66, BACK_ANG = 0.5, hingeX = SEAT_X - SEAT_L / 2 - 0.01;
+  var back = new THREE.Group(); back.position.set(hingeX, CUSH_Y, EX_Z); back.rotation.z = -BACK_ANG; clinicRoom.add(back);
+  ciPart(ciRoundBox(BACK_L, 0.11, EX_D - 0.02, 0.04), CI.tealVinyl, -BACK_L / 2, 0, 0, 0, 0, 0, back);
+  [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(BACK_L - 0.08, 0.006, 0.004), CI_SEAM, -BACK_L / 2, 0.03, s * (EX_D / 2 - 0.012), 0, 0, 0, back); });
+  ciPart(new THREE.CylinderGeometry(0.018, 0.018, EX_D - 0.06, 12), CI_CHROME, 0, -0.05, 0, Math.PI / 2, 0, 0, back);   // the hinge
+  ciPart(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 8), CI_CHROME, hingeX - 0.2, EX_TOP + 0.16, EX_Z, 0, 0, 1.05);   // the strut holding it up
+  // the paper: pulled off the roll at the foot, along the seat, and up over the back rest
+  var paperMat = new THREE.MeshStandardMaterial({ color: 0xfbfbf8, roughness: 0.95, side: THREE.DoubleSide });
+  ciPart(new THREE.PlaneGeometry(SEAT_L + 0.02, 0.5), paperMat, SEAT_X, CUSH_Y + 0.057, EX_Z, -Math.PI / 2, 0, 0).castShadow = false;
+  ciPart(new THREE.PlaneGeometry(BACK_L - 0.04, 0.5), paperMat, -BACK_L / 2 + 0.02, 0.057, 0, -Math.PI / 2, 0, 0, back).castShadow = false;
+  var drape = new THREE.PlaneGeometry(0.16, 0.5, 8, 1), dp = drape.attributes.position;   // curling over the foot end, down to the roll
+  for (var dv = 0; dv < dp.count; dv++) { var dx2 = dp.getX(dv) + 0.08, da = dx2 / 0.16 * Math.PI / 2; dp.setX(dv, Math.sin(da) * 0.08); dp.setZ(dv, -(1 - Math.cos(da)) * 0.08); }
+  drape.computeVertexNormals();
+  ciPart(drape, paperMat, SEAT_X + SEAT_L / 2 + 0.005, CUSH_Y + 0.057, EX_Z, -Math.PI / 2, 0, 0).castShadow = false;
+  var ROLL_X = EX_X + EX_L / 2 + 0.02, ROLL_Y = EX_TOP - 0.02;
+  ciPart(new THREE.CylinderGeometry(0.06, 0.06, 0.52, 20), new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.9 }), ROLL_X, ROLL_Y, EX_Z, Math.PI / 2, 0, 0);
+  [-1, 1].forEach(function (s) {
+    ciPart(new THREE.CylinderGeometry(0.024, 0.024, 0.004, 14), new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 0.9 }), ROLL_X, ROLL_Y, EX_Z + s * 0.262, Math.PI / 2, 0, 0);   // the cardboard core
+    ciPart(new THREE.BoxGeometry(0.012, 0.11, 0.012), CI_CHROME, ROLL_X - 0.04, ROLL_Y + 0.03, EX_Z + s * 0.285, 0, 0, -0.6);   // the holder's arms
+    ciPart(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 10), CI_CHROME, ROLL_X, ROLL_Y, EX_Z + s * 0.285, Math.PI / 2, 0, 0);
+  });
+  [-1, 1].forEach(function (s) {                                       // chrome grab handles at the sides of the seat
+    ciPart(new THREE.TorusGeometry(0.06, 0.008, 6, 16, Math.PI), CI_CHROME, SEAT_X - 0.25, EX_TOP + 0.03, EX_Z + s * (EX_D / 2 + 0.01), Math.PI, 0, 0).scale.set(1.4, 1, 1);
+  });
+  var pillow = ciPart(ciRoundBox(0.34, 0.08, 0.46, 0.04), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), -BACK_L + 0.22, 0.1, 0, 0, 0, 0, back);   // a plump pillow in a white case
+  pillow.scale.set(1, 1, 1);
+  ciPart(new THREE.BoxGeometry(0.3, 0.004, 0.47), new THREE.MeshStandardMaterial({ color: 0xcfe3f0, roughness: 0.9 }), -BACK_L + 0.22, 0.142, 0, 0, 0, 0, back);   // its pale blue stripe
+  ciSolids.push([EX_X - 0.5, EX_Z, 0.45], [EX_X + 0.5, EX_Z, 0.45], [EX_X, EXF + 0.15, 0.25]);
+  // a gas-lift doctor's stool: five legs on casters, a chrome foot ring and a padded seat with piping
   var stool = new THREE.Group(); stool.position.set(1.65, 0, -1.75); clinicRoom.add(stool);
-  for (var sa = 0; sa < 5; sa++) { var san = sa / 5 * Math.PI * 2; ciPart(new THREE.BoxGeometry(0.03, 0.03, 0.22), CI.steel, Math.sin(san) * 0.1, 0.05, Math.cos(san) * 0.1, 0, san, 0, stool); }
-  ciPart(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 8), CI.steel, 0, 0.25, 0, 0, 0, 0, stool);
-  ciPart(new THREE.CylinderGeometry(0.19, 0.18, 0.07, 20), CI.tealVinyl, 0, 0.48, 0, 0, 0, 0, stool);
-  ciSolids.push([EX_X - 0.5, EX_Z, 0.45], [EX_X + 0.5, EX_Z, 0.45], [EX_X + 0.2, EX_Z + 0.55, 0.25], [1.65, -1.75, 0.22]);
+  for (var sa = 0; sa < 5; sa++) {
+    var san = sa / 5 * Math.PI * 2, lx2 = Math.sin(san), lz2 = Math.cos(san);
+    ciPart(new THREE.BoxGeometry(0.035, 0.03, 0.24), CI_KICK, lx2 * 0.12, 0.085, lz2 * 0.12, 0.12, san, 0, stool);
+    ciPart(new THREE.SphereGeometry(0.02, 8, 6), CI_CHROME, lx2 * 0.24, 0.07, lz2 * 0.24, 0, 0, 0, stool);
+    ciPart(new THREE.BoxGeometry(0.025, 0.035, 0.03), CI.black, lx2 * 0.245, 0.045, lz2 * 0.245, 0, san, 0, stool);   // the caster fork
+    ciPart(new THREE.CylinderGeometry(0.024, 0.024, 0.022, 12), CI.black, lx2 * 0.255, 0.024, lz2 * 0.255, 0, san, Math.PI / 2, stool);   // and its wheel
+  }
+  ciPart(new THREE.CylinderGeometry(0.045, 0.05, 0.06, 14), CI_KICK, 0, 0.1, 0, 0, 0, 0, stool);
+  ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 12), CI.black, 0, 0.22, 0, 0, 0, 0, stool);
+  ciPart(new THREE.CylinderGeometry(0.022, 0.022, 0.16, 12), CI_CHROME, 0, 0.38, 0, 0, 0, 0, stool);
+  ciPart(new THREE.TorusGeometry(0.17, 0.009, 8, 32), CI_CHROME, 0, 0.27, 0, Math.PI / 2, 0, 0, stool);                // the foot ring
+  for (var fs = 0; fs < 3; fs++) { var fsa = fs / 3 * Math.PI * 2 + 0.3; ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.15, 6), CI_CHROME, Math.sin(fsa) * 0.09, 0.27, Math.cos(fsa) * 0.09, Math.PI / 2, fsa, 0, stool); }
+  ciPart(new THREE.CylinderGeometry(0.13, 0.11, 0.03, 20), CI_KICK, 0, 0.47, 0, 0, 0, 0, stool);                        // the seat pan
+  ciPart(new THREE.BoxGeometry(0.02, 0.012, 0.14), CI.black, 0.1, 0.45, 0, 0, 0, 0.2, stool);                          // the height lever
+  var seatPts = [];
+  for (var sp2 = 0; sp2 <= 10; sp2++) { var sa2 = sp2 / 10 * Math.PI / 2; seatPts.push(new THREE.Vector2(0.15 + Math.sin(sa2) * 0.045, 0.045 - Math.cos(sa2) * 0.045)); }
+  for (var sp3 = 0; sp3 <= 10; sp3++) { var sa3 = sp3 / 10 * Math.PI / 2; seatPts.push(new THREE.Vector2(0.15 + Math.cos(sa3) * 0.045, 0.045 + Math.sin(sa3) * 0.045 * 0.9)); }
+  seatPts.push(new THREE.Vector2(0.0, 0.094));
+  ciPart(new THREE.LatheGeometry(seatPts, 28), CI.tealVinyl, 0, 0.485, 0, 0, 0, 0, stool);
+  ciPart(new THREE.TorusGeometry(0.193, 0.006, 6, 40), CI_SEAM, 0, 0.53, 0, Math.PI / 2, 0, 0, stool);                 // the piping round its edge
+  ciSolids.push([1.65, -1.75, 0.24]);
   // a blood pressure gauge and a box of gloves on the back wall beside the window
   ciWallPart('N', new THREE.BoxGeometry(0.3, 0.38, 0.05), CI.white, 4.3, 1.55, 0.025);
   ciWallPart('N', new THREE.CylinderGeometry(0.11, 0.11, 0.03, 24), CI.white, 4.3, 1.6, 0.06, Math.PI / 2, 0, 0);
@@ -10869,24 +10995,126 @@ function startGame(THREE) {
   ciWallPart('N', new THREE.TorusGeometry(0.1, 0.01, 6, 20, Math.PI * 1.4), CI.black, 4.3, 1.32, 0.07, 0, 0, Math.PI);
   ciWallPart('N', new THREE.BoxGeometry(0.26, 0.13, 0.12), CI.white, 4.3, 1.0 + 0.24, 0.07);
   ciWallPart('N', new THREE.BoxGeometry(0.22, 0.04, 0.005), new THREE.MeshStandardMaterial({ color: 0x9ab8ff }), 4.3, 1.27, 0.131);
-  // the sink: a white cabinet with a basin, a tall tap, soap, a mirror and a sign
-  var SK_X = CIN_W / 2 - 0.3, SK_Z = -2.25;
-  ciPart(new THREE.BoxGeometry(0.58, 0.86, 1.2), CI.white, SK_X, 0.43, SK_Z);
-  [-0.29, 0.29].forEach(function (dz) { ciPart(new THREE.BoxGeometry(0.02, 0.7, 0.56), CI.mint, SK_X - 0.3, 0.43, SK_Z + dz); ciPart(new THREE.BoxGeometry(0.03, 0.12, 0.02), CI.steel, SK_X - 0.32, 0.65, SK_Z + dz * 0.2); });
-  ciPart(new THREE.BoxGeometry(0.62, 0.04, 1.24), new THREE.MeshStandardMaterial({ color: 0xe8ece8, roughness: 0.3 }), SK_X, 0.88, SK_Z);
-  ciPart(new THREE.CylinderGeometry(0.2, 0.15, 0.08, 24, 1, true), CI.white, SK_X - 0.02, 0.87, SK_Z);
-  ciPart(new THREE.CircleGeometry(0.15, 20), CI.steel, SK_X - 0.02, 0.835, SK_Z, -Math.PI / 2, 0, 0);
-  ciPart(new THREE.CylinderGeometry(0.015, 0.015, 0.3, 8), CI.steel, SK_X + 0.2, 1.05, SK_Z);
-  ciPart(new THREE.TorusGeometry(0.1, 0.015, 8, 16, Math.PI), CI.steel, SK_X + 0.1, 1.2, SK_Z, 0, 0, 0);
-  ciPart(new THREE.BoxGeometry(0.1, 0.02, 0.02), CI.steel, SK_X + 0.2, 1.0, SK_Z + 0.05, 0, 0, 0.3);
-  ciPart(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0xf2b8c8, roughness: 0.2 }), SK_X + 0.12, 0.97, SK_Z + 0.42);
-  ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), CI.white, SK_X + 0.12, 1.06, SK_Z + 0.42);
-  ciWallPart('E', new THREE.BoxGeometry(0.66, 0.55, 0.03), CI.white, SK_Z, 1.65, 0.015);                                // the mirror (on the right wall)
-  ciWallPart('E', new THREE.PlaneGeometry(0.58, 0.47), new THREE.MeshStandardMaterial({ color: 0xcfe0ea, roughness: 0.02, metalness: 0.9 }), SK_Z, 1.65, 0.032);
-  ciFramed('E', SK_Z, 2.25, 0.36, 0.27, ciWashTex, CI.teal);
-  ciWallPart('E', new THREE.BoxGeometry(0.28, 0.32, 0.12), CI.white, SK_Z + 0.62, 1.55, 0.06);                         // a paper towel holder
-  ciWallPart('E', new THREE.BoxGeometry(0.2, 0.02, 0.06), CI.paper, SK_Z + 0.62, 1.38, 0.1);
-  ciSolids.push([SK_X, SK_Z - 0.35, 0.4], [SK_X, SK_Z + 0.35, 0.4]);
+  // the sink: a white cabinet with shaker doors, a speckled quartz top with an upstand, a deep oval basin, a gooseneck
+  // tap with wrist-blade levers, a soap pump, a paper towel dispenser, a sanitiser and a pedal bin. Above it, a wall-
+  // mounted patient monitor on a swing arm, and a framed poster about washing your hands
+  var SK_X = CIN_W / 2 - 0.3, SK_Z = -2.25, SK_FX = SK_X - 0.29;          // SK_FX: the cabinet's front (it faces into the room, along -x)
+  var ciQuartzTex = paintTexture(256, 256, function (g, w, h) {
+    g.fillStyle = '#eef0ee'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 2600; i++) { var q = isle2Hash(i * 1.9); g.fillStyle = q > 0.7 ? 'rgba(150,150,150,0.5)' : q > 0.4 ? 'rgba(200,205,200,0.6)' : 'rgba(255,255,255,0.7)'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.7) * h, 1 + q * 1.5, 1 + q * 1.5); }
+  });
+  ciQuartzTex.wrapS = ciQuartzTex.wrapT = THREE.RepeatWrapping;
+  var ciQuartz = new THREE.MeshStandardMaterial({ map: ciQuartzTex, roughness: 0.25, metalness: 0.02 });
+  var ciCeramic = new THREE.MeshStandardMaterial({ color: 0xfbfbfb, roughness: 0.18, side: THREE.DoubleSide });
+  ciPart(new THREE.BoxGeometry(0.5, 0.08, 1.16), CI_KICK, SK_X + 0.03, 0.04, SK_Z);
+  ciPart(ciRoundBox(0.56, 0.78, 1.2, 0.015), CI.white, SK_X, 0.08 + 0.39, SK_Z);
+  [-0.29, 0.29].forEach(function (dz, k) {                              // two shaker doors: a frame, a recessed panel and a long bar pull
+    var dzc = SK_Z + dz;
+    [[0.305, 0, 0.07, 0.56], [-0.305, 0, 0.07, 0.56], [0, 0.245, 0.68, 0.07], [0, -0.245, 0.68, 0.07]].forEach(function (f) {   // rails and stiles
+      ciPart(new THREE.BoxGeometry(0.025, f[2], f[3]), CI.mint, SK_FX - 0.012, 0.46 + f[0], dzc + f[1]);
+    });
+    ciPart(new THREE.BoxGeometry(0.012, 0.6, 0.44), new THREE.MeshStandardMaterial({ color: 0xa9d2bf, roughness: 0.5 }), SK_FX - 0.006, 0.46, dzc);
+    var px = SK_FX - 0.05, pz = dzc + (k ? -0.2 : 0.2);
+    ciPart(new THREE.CylinderGeometry(0.008, 0.008, 0.2, 8), CI_CHROME, px, 0.58, pz);
+    [-0.08, 0.08].forEach(function (o) { ciPart(new THREE.CylinderGeometry(0.005, 0.005, 0.04, 6), CI_CHROME, px + 0.02, 0.58 + o, pz, 0, 0, Math.PI / 2); });
+  });
+  var topShape = new THREE.Shape();                                    // the quartz top, with an oval hole for the basin and a rounded front edge
+  topShape.moveTo(-0.31, -0.62); topShape.lineTo(0.31, -0.62); topShape.lineTo(0.31, 0.62); topShape.lineTo(-0.31, 0.62); topShape.lineTo(-0.31, -0.62);
+  var topHole = new THREE.Path(); topHole.absellipse(-0.04, 0, 0.155, 0.235, 0, Math.PI * 2, true); topShape.holes.push(topHole);
+  ciPart(new THREE.ExtrudeGeometry(topShape, { depth: 0.035, bevelEnabled: false, curveSegments: 24 }), ciQuartz, SK_X - 0.01, 0.8675, SK_Z, -Math.PI / 2, 0, 0);
+  ciPart(new THREE.CylinderGeometry(0.0175, 0.0175, 1.24, 10), ciQuartz, SK_X - 0.32, 0.885, SK_Z, Math.PI / 2, 0, 0);
+  ciPart(new THREE.BoxGeometry(0.02, 0.12, 1.24), ciQuartz, CIN_W / 2 - 0.01, 0.96, SK_Z);                              // the upstand against the wall
+  var bowlPts = [];                                                    // a deep oval basin set into the top, with a rolled rim
+  for (var bp2 = 0; bp2 <= 12; bp2++) { var bt = bp2 / 12; bowlPts.push(new THREE.Vector2(0.015 + Math.sin(bt * Math.PI / 2) * 0.17, -0.13 + (1 - Math.cos(bt * Math.PI / 2)) * 0.13)); }
+  bowlPts.push(new THREE.Vector2(0.195, 0.004), new THREE.Vector2(0.2, 0.012));
+  ciPart(new THREE.LatheGeometry(bowlPts, 32), ciCeramic, SK_X - 0.05, 0.9, SK_Z).scale.set(0.82, 1, 1.25);
+  ciPart(new THREE.CylinderGeometry(0.025, 0.025, 0.004, 16), CI_CHROME, SK_X - 0.05, 0.773, SK_Z);                       // the drain
+  ciPart(new THREE.CylinderGeometry(0.016, 0.016, 0.005, 12), CI.black, SK_X - 0.05, 0.775, SK_Z);
+  var tapX = SK_X + 0.2;                                               // the gooseneck tap and its wrist-blade levers
+  ciPart(new THREE.CylinderGeometry(0.03, 0.035, 0.05, 16), CI_CHROME, tapX, 0.93, SK_Z);
+  var tapCurve = new THREE.CatmullRomCurve3([new THREE.Vector3(tapX, 0.95, SK_Z), new THREE.Vector3(tapX, 1.15, SK_Z), new THREE.Vector3(tapX - 0.06, 1.24, SK_Z), new THREE.Vector3(tapX - 0.16, 1.2, SK_Z), new THREE.Vector3(tapX - 0.2, 1.1, SK_Z)]);
+  ciPart(new THREE.TubeGeometry(tapCurve, 30, 0.014, 10), CI_CHROME, 0, 0, 0);
+  ciPart(new THREE.CylinderGeometry(0.017, 0.016, 0.03, 12), CI_CHROME, tapX - 0.2, 1.085, SK_Z);
+  [-1, 1].forEach(function (s) {
+    ciPart(new THREE.CylinderGeometry(0.022, 0.025, 0.05, 12), CI_CHROME, tapX, 0.93, SK_Z + s * 0.13);
+    ciPart(new THREE.BoxGeometry(0.018, 0.012, 0.14), CI_CHROME, tapX - 0.04, 0.965, SK_Z + s * 0.18, 0, s * 0.35, 0.15);
+  });
+  var soapX = SK_X + 0.15, soapZ = SK_Z + 0.46;                       // a pump bottle of pink hand soap
+  ciPart(new THREE.CylinderGeometry(0.038, 0.04, 0.13, 16), new THREE.MeshStandardMaterial({ color: 0xf2a6bc, roughness: 0.1, transparent: true, opacity: 0.85 }), soapX, 0.97, soapZ);
+  ciPart(new THREE.CylinderGeometry(0.03, 0.032, 0.11, 16), new THREE.MeshStandardMaterial({ color: 0xe0607a, roughness: 0.4 }), soapX, 0.965, soapZ);
+  ciPart(new THREE.CylinderGeometry(0.02, 0.025, 0.025, 12), CI.white, soapX, 1.045, soapZ);
+  ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.04, 6), CI.white, soapX, 1.075, soapZ);
+  ciPart(new THREE.BoxGeometry(0.06, 0.016, 0.022), CI.white, soapX - 0.02, 1.095, soapZ);
+  ciPart(new THREE.BoxGeometry(0.045, 0.03, 0.002), CI.white, soapX - 0.04, 0.97, soapZ, 0, Math.PI / 2, 0);
+  // a paper towel dispenser on the wall, with a towel hanging out, and a hand sanitiser beside it (along the right wall, x is the room's z)
+  ciWallPart('E', ciRoundBox(0.32, 0.36, 0.12, 0.03), CI.white, SK_Z + 0.68, 1.5, 0.06);
+  ciWallPart('E', new THREE.PlaneGeometry(0.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x8aa4b4, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.6 }), SK_Z + 0.68, 1.56, 0.121);
+  ciWallPart('E', new THREE.BoxGeometry(0.2, 0.004, 0.04), CI.black, SK_Z + 0.68, 1.33, 0.1);
+  var towel = new THREE.PlaneGeometry(0.18, 0.12, 1, 6), tp2 = towel.attributes.position;
+  for (var tv = 0; tv < tp2.count; tv++) tp2.setZ(tv, Math.pow((0.06 - tp2.getY(tv)) / 0.12, 2) * 0.03);
+  towel.computeVertexNormals();
+  ciWallPart('E', towel, new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 1, side: THREE.DoubleSide }), SK_Z + 0.68, 1.27, 0.105);
+  ciWallPart('E', ciRoundBox(0.11, 0.2, 0.08, 0.02), CI.white, SK_Z - 0.75, 1.35, 0.04);
+  ciWallPart('E', new THREE.BoxGeometry(0.07, 0.07, 0.01), new THREE.MeshStandardMaterial({ color: 0x7ab8e0, roughness: 0.3 }), SK_Z - 0.75, 1.38, 0.082);
+  ciWallPart('E', new THREE.BoxGeometry(0.05, 0.04, 0.03), CI_KICK, SK_Z - 0.75, 1.24, 0.07);
+  // a pedal bin beside the sink
+  var BIN2_X = CIN_W / 2 - 0.25, BIN2_Z = SK_Z + 0.85;
+  ciPart(new THREE.CylinderGeometry(0.13, 0.12, 0.4, 24), CI_CHROME, BIN2_X, 0.2, BIN2_Z);
+  ciPart(new THREE.CylinderGeometry(0.135, 0.135, 0.03, 24), CI_CHROME, BIN2_X, 0.415, BIN2_Z);
+  ciPart(new THREE.SphereGeometry(0.135, 24, 6, 0, Math.PI * 2, 0, 0.5), CI_CHROME, BIN2_X, 0.37, BIN2_Z);
+  ciPart(new THREE.CylinderGeometry(0.125, 0.125, 0.02, 24), CI_KICK, BIN2_X, 0.01, BIN2_Z);
+  ciPart(new THREE.BoxGeometry(0.1, 0.015, 0.06), CI.black, BIN2_X - 0.15, 0.03, BIN2_Z, 0, 0, 0.15);
+  ciSolids.push([SK_X, SK_Z - 0.35, 0.4], [SK_X, SK_Z + 0.35, 0.4], [BIN2_X, BIN2_Z, 0.18]);
+
+  // the patient monitor on its swing arm: a vital signs screen with heart trace, oxygen and breathing waves, blood
+  // pressure and temperature, in a white case with a handle, buttons, a dial and a glowing status light
+  var ciVitalsTex = paintTexture(512, 360, function (g, w, h) {
+    g.fillStyle = '#071514'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(80,140,130,0.18)'; g.lineWidth = 1;
+    for (var gx = 0; gx < 340; gx += 17) { g.beginPath(); g.moveTo(gx, 34); g.lineTo(gx, h - 8); g.stroke(); }
+    for (var gy = 34; gy < h; gy += 17) { g.beginPath(); g.moveTo(0, gy); g.lineTo(340, gy); g.stroke(); }
+    g.fillStyle = '#123a36'; g.fillRect(0, 0, w, 28);
+    g.fillStyle = '#bff5e8'; g.font = 'bold 15px sans-serif'; g.fillText('EVERDAWN CLINIC   ♥  Bed 1', 10, 19);
+    g.fillStyle = '#ffd27a'; g.fillText('11:00', w - 58, 19);
+    function trace(y0, col, fn, label) {                               // a waveform across the screen, with its label
+      g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath();
+      for (var x = 4; x < 336; x++) { var y = y0 + fn(x); if (x === 4) g.moveTo(x, y); else g.lineTo(x, y); }
+      g.stroke();
+      g.fillStyle = col; g.font = 'bold 13px sans-serif'; g.fillText(label, 8, y0 - 34);
+    }
+    trace(110, '#6dffb0', function (x) { var p = (x % 80) / 80; return p > 0.4 && p < 0.44 ? -60 * Math.sin((p - 0.4) / 0.04 * Math.PI) : p > 0.44 && p < 0.48 ? 18 * Math.sin((p - 0.44) / 0.04 * Math.PI) : p > 0.6 && p < 0.75 ? -10 * Math.sin((p - 0.6) / 0.15 * Math.PI) : p > 0.25 && p < 0.33 ? -6 * Math.sin((p - 0.25) / 0.08 * Math.PI) : 0; }, 'II   ECG');
+    trace(200, '#5fd8ff', function (x) { var p = (x % 80) / 80; return -28 * Math.pow(Math.sin(p * Math.PI), 3) + (p > 0.55 ? -6 * Math.sin((p - 0.55) / 0.45 * Math.PI * 2) : 0); }, 'SpO₂   PLETH');
+    trace(290, '#ffe27a', function (x) { return -18 * Math.sin(x / 336 * Math.PI * 4.2); }, 'RESP');
+    g.strokeStyle = 'rgba(160,220,210,0.4)'; g.beginPath(); g.moveTo(345, 32); g.lineTo(345, h - 6); g.stroke();
+    function vital(y, col, name, val, unit, big) {                     // the big numbers down the right
+      g.fillStyle = col; g.font = 'bold 13px sans-serif'; g.fillText(name, 354, y);
+      g.font = 'bold ' + (big || 46) + 'px sans-serif'; g.fillText(val, 360, y + (big ? big - 4 : 44));
+      g.font = '12px sans-serif'; g.fillText(unit, w - 44, y);
+    }
+    vital(52, '#6dffb0', 'HR', '72', 'bpm');
+    vital(130, '#5fd8ff', 'SpO₂', '98', '%');
+    vital(208, '#ff9ab8', 'NIBP', '118/76', 'mmHg', 32);
+    vital(270, '#ffe27a', 'RR', '16', '/min', 30);
+    g.fillStyle = '#c8b4ff'; g.font = 'bold 13px sans-serif'; g.fillText('TEMP  36.8°C', 354, h - 16);
+  });
+  var MON_Z = SK_Z - 0.05, MON_Y = 1.66;                              // along the right wall (x on the wall is the room's z)
+  ciWallPart('E', ciRoundBox(0.14, 0.2, 0.03, 0.01), CI.white, MON_Z, MON_Y, 0.015);                                    // the wall plate
+  ciWallPart('E', new THREE.CylinderGeometry(0.022, 0.022, 0.16, 10), CI_CHROME, MON_Z, MON_Y, 0.1, Math.PI / 2, 0, 0); // the swing arm
+  ciWallPart('E', new THREE.CylinderGeometry(0.03, 0.03, 0.06, 12), CI.white, MON_Z, MON_Y, 0.19);
+  var mon = new THREE.Group(); mon.position.set(MON_Z, MON_Y, 0.24); mon.rotation.y = -0.18; mon.rotation.x = -0.08; ciWalls.E.g.add(mon);
+  ciPart(ciRoundBox(0.56, 0.42, 0.07, 0.03), CI.white, 0, 0, 0, 0, 0, 0, mon);                                         // the case
+  ciPart(ciRoundBox(0.46, 0.33, 0.01, 0.01), new THREE.MeshStandardMaterial({ color: 0x1a1f22, roughness: 0.3 }), -0.035, 0.01, 0.033, 0, 0, 0, mon);   // the bezel
+  ciPart(new THREE.PlaneGeometry(0.44, 0.31), new THREE.MeshStandardMaterial({ map: ciVitalsTex, emissive: 0xffffff, emissiveMap: ciVitalsTex, emissiveIntensity: 0.95, roughness: 0.15 }), -0.035, 0.01, 0.039, 0, 0, 0, mon).castShadow = false;
+  ciPart(new THREE.PlaneGeometry(0.44, 0.31), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.35, roughness: 0.05, depthWrite: false }), -0.035, 0.01, 0.041, 0, 0, 0, mon).castShadow = false;   // a sheen on the screen
+  for (var mb = 0; mb < 4; mb++) ciPart(new THREE.BoxGeometry(0.035, 0.02, 0.012), mb === 0 ? new THREE.MeshStandardMaterial({ color: 0xe0607a, roughness: 0.4 }) : new THREE.MeshStandardMaterial({ color: 0xcfd6d8, roughness: 0.4 }), 0.235, 0.11 - mb * 0.045, 0.037, 0, 0, 0, mon);
+  ciPart(new THREE.CylinderGeometry(0.026, 0.026, 0.02, 18), CI_KICK, 0.235, -0.13, 0.04, Math.PI / 2, 0, 0, mon);      // the dial
+  ciPart(new THREE.BoxGeometry(0.004, 0.02, 0.004), CI.white, 0.235, -0.12, 0.051, 0, 0, 0, mon);
+  var ciMonLed = ciPart(new THREE.SphereGeometry(0.008, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6dffb0, emissive: 0x6dffb0, emissiveIntensity: 1 }), 0.235, 0.17, 0.037, 0, 0, 0, mon);
+  ciPart(new THREE.TorusGeometry(0.1, 0.012, 8, 20, Math.PI), CI.white, 0, 0.21, -0.005, 0, 0, 0, mon).scale.set(1.4, 0.5, 1);   // a carry handle on top
+  var cable = new THREE.CatmullRomCurve3([new THREE.Vector3(-0.2, -0.2, -0.02), new THREE.Vector3(-0.22, -0.4, 0.0), new THREE.Vector3(-0.12, -0.55, 0.02), new THREE.Vector3(-0.3, -0.62, 0.0)]);
+  ciPart(new THREE.TubeGeometry(cable, 16, 0.006, 6), CI.black, 0, 0, 0, 0, 0, 0, mon);                                // its lead, looped below
+  // the poster over the monitor: how to wash your hands, in four little pictures
+  ciFramed('E', SK_Z - 0.05, 2.38, 0.56, 0.42, ciWashTex, CI.teal);
   // a cabinet of tonics between the back windows: a cupboard below and a glass-fronted cabinet of glowing bottles above
   var MC_Z = CNW;
   ciPart(new THREE.BoxGeometry(1.3, 0.88, 0.5), CI.white, 0, 0.44, MC_Z + 0.25);
@@ -10925,21 +11153,67 @@ function startGame(THREE) {
   ciPart(new THREE.BoxGeometry(0.22, 0.015, 0.06), CI.steel, SC_X + 0.04, 2.0, SC_Z - 0.2);
   ciSolids.push([SC_X, SC_Z, 0.3]);
 
-  // a ceiling track with pale blue curtains, pulled back on either side of the exam corner
-  var CT_X = 0.9, CT_Z = -0.9, CT_Y = CIN_H - 0.08;
-  ciPart(new THREE.BoxGeometry(0.04, 0.03, -CNW + CT_Z), CI.steel, CT_X, CT_Y, (CNW + CT_Z) / 2);
-  ciPart(new THREE.BoxGeometry(CIN_W / 2 - CT_X, 0.03, 0.04), CI.steel, (CT_X + CIN_W / 2) / 2, CT_Y, CT_Z);
-  var ciCurtainMat = new THREE.MeshStandardMaterial({ map: ciCurtainTex, roughness: 0.95, side: THREE.DoubleSide });
-  function ciCurtain(x, z, ry, w) {                                     // a gathered curtain hanging from the track
-    var geo = new THREE.PlaneGeometry(w, CT_Y - 0.32, 24, 10), p = geo.attributes.position;
-    for (var v = 0; v < p.count; v++) p.setZ(v, Math.sin(p.getX(v) / w * Math.PI * 7) * 0.06);
+  // a ceiling track with privacy curtains round the exam corner: a rounded aluminium rail on little hangers, with
+  // curtains pulled back to either end. Each curtain has a white mesh band at the top (so the light gets through), soft
+  // pale blue folds with a little leaf print, a hem, and runners clipped onto the rail, and they sway very gently
+  var CT_X = 0.9, CT_Z = -0.9, CT_Y = CIN_H - 0.09, CT_R = 0.3;
+  var ciRail = new THREE.MeshStandardMaterial({ color: 0xdfe3e6, roughness: 0.35, metalness: 0.35 });
+  var railPts = [];
+  for (var rz = CNW + 0.02; rz < CT_Z - CT_R; rz += 0.25) railPts.push(new THREE.Vector3(CT_X, CT_Y, rz));
+  for (var ra = 0; ra <= 8; ra++) { var rang = Math.PI - ra / 8 * Math.PI / 2; railPts.push(new THREE.Vector3(CT_X + CT_R + Math.cos(rang) * CT_R, CT_Y, CT_Z - CT_R + Math.sin(rang) * CT_R)); }
+  for (var rx = CT_X + CT_R + 0.25; rx <= CIN_W / 2 - 0.02; rx += 0.25) railPts.push(new THREE.Vector3(rx, CT_Y, CT_Z));
+  railPts.push(new THREE.Vector3(CIN_W / 2 - 0.02, CT_Y, CT_Z));
+  ciPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(railPts, false, 'catmullrom', 0.1), 120, 0.016, 8), ciRail, 0, 0, 0);
+  ciPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(railPts, false, 'catmullrom', 0.1), 120, 0.006, 6), CI_KICK, 0, -0.016, 0);   // the slot the runners ride in
+  [[CT_X, CNW + 0.8], [CT_X, CT_Z - 0.9], [CT_X + 1.4, CT_Z], [CT_X + 2.7, CT_Z]].forEach(function (hg) {   // hangers down from the ceiling
+    ciPart(new THREE.CylinderGeometry(0.008, 0.008, CIN_H - CT_Y, 6), ciRail, hg[0], (CIN_H + CT_Y) / 2, hg[1]);
+    ciPart(new THREE.CylinderGeometry(0.035, 0.035, 0.012, 14), ciRail, hg[0], CIN_H - 0.006, hg[1]);
+  });
+  [[CT_X, CNW + 0.02, 0], [CIN_W / 2 - 0.02, CT_Z, Math.PI / 2]].forEach(function (ec) {   // end stops where the rail meets the walls
+    ciPart(new THREE.BoxGeometry(0.06, 0.05, 0.03), ciRail, ec[0], CT_Y, ec[1], 0, ec[2], 0);
+  });
+  var ciCurtTex = paintTexture(128, 512, function (g, w, h) {         // one curtain, top to bottom: mesh band, header tape, printed fabric, hem
+    var MESH = h * 0.17;
+    g.clearRect(0, 0, w, h);
+    g.strokeStyle = '#ffffff'; g.lineWidth = 2.6;
+    for (var x = -MESH; x < w + MESH; x += 9) { g.beginPath(); g.moveTo(x, 10); g.lineTo(x + MESH, MESH + 10); g.moveTo(x + MESH, 10); g.lineTo(x, MESH + 10); g.stroke(); }
+    g.fillStyle = '#f7f7f4'; g.fillRect(0, 0, w, 12); g.fillRect(0, MESH + 8, w, 10);             // the header tape and the seam under the mesh
+    for (var e = 4; e < w; e += 16) { g.fillStyle = '#c0c6ca'; g.beginPath(); g.arc(e + 4, 6, 2.5, 0, Math.PI * 2); g.fill(); }   // eyelets
+    var body = g.createLinearGradient(0, MESH + 18, 0, h); body.addColorStop(0, '#b4d2e4'); body.addColorStop(1, '#9cc0d6');
+    g.fillStyle = body; g.fillRect(0, MESH + 18, w, h - MESH - 18);
+    for (var y = MESH + 30; y < h - 24; y += 26) for (var lx = (y % 52 ? 6 : 19); lx < w; lx += 26) {   // a little leaf print
+      g.save(); g.translate(lx, y); g.rotate(((lx + y) % 3 - 1) * 0.6);
+      g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.ellipse(0, 0, 5, 2.4, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-6, 0); g.lineTo(5, 0); g.stroke();
+      g.restore();
+    }
+    for (var t = 0; t < 900; t++) { g.fillStyle = 'rgba(40,70,90,' + isle2Hash(t) * 0.08 + ')'; g.fillRect(isle2Hash(t * 2.1) * w, MESH + 18 + isle2Hash(t * 3.3) * (h - MESH - 18), 2, 1); }   // the weave
+    g.fillStyle = '#8fb4ca'; g.fillRect(0, h - 22, w, 22); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, h - 22, w, 2);   // the hem
+  });
+  ciCurtTex.wrapS = THREE.RepeatWrapping; ciCurtTex.repeat.set(3, 1);
+  var ciCurtMat = new THREE.MeshStandardMaterial({ map: ciCurtTex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.95 });
+  var ciCurtains = [];
+  function ciCurtain(x, z, ry, w, folds) {                              // a gathered curtain hanging from its runners, its folds flaring a little toward the hem
+    var H = CT_Y - 0.06 - 0.06, geo = new THREE.PlaneGeometry(w, H, folds * 6, 16), p = geo.attributes.position;
+    for (var v = 0; v < p.count; v++) {
+      var fx = p.getX(v) / w + 0.5, fy = (H / 2 - p.getY(v)) / H;
+      p.setZ(v, Math.sin(fx * Math.PI * folds) * (0.05 + fy * 0.03) * (0.8 + 0.2 * Math.sin(fx * 13.7)) + Math.sin(fx * Math.PI * 1.6 + 1) * 0.03 * fy);   // soft, uneven folds
+      p.setX(v, p.getX(v) * (1 + fy * 0.06));
+    }
+    geo.translate(0, -H / 2, 0);                                        // hang it from its top edge, so it sways from the rail
     geo.computeVertexNormals();
-    ciPart(geo, ciCurtainMat, x, 0.32 + (CT_Y - 0.32) / 2, z, 0, ry, 0);
-    for (var r = 0; r < 7; r++) ciPart(new THREE.TorusGeometry(0.02, 0.004, 4, 10), CI.steel, x + Math.cos(ry) * (r / 6 - 0.5) * w, CT_Y - 0.03, z - Math.sin(ry) * (r / 6 - 0.5) * w, 0, ry + Math.PI / 2, 0);
+    var g = new THREE.Group(); g.position.set(x, CT_Y - 0.06, z); g.rotation.y = ry; clinicRoom.add(g);
+    ciPart(geo, ciCurtMat, 0, 0, 0, 0, 0, 0, g).castShadow = false;
+    for (var r = 0; r <= folds; r++) {                                  // a runner and a hook at the top of every fold
+      var rx2 = (r / folds - 0.5) * w;
+      ciPart(new THREE.CylinderGeometry(0.012, 0.012, 0.025, 8), CI.white, rx2, 0.045, 0, Math.PI / 2, 0, 0, g);
+      ciPart(new THREE.TorusGeometry(0.012, 0.003, 4, 10), ciRail, rx2, 0.02, 0, 0, Math.PI / 2, 0, g);
+    }
+    ciCurtains.push(g);
   }
-  ciCurtain(CT_X, CNW + 0.45, Math.PI / 2, 0.7);
-  ciCurtain(CIN_W / 2 - 0.45, CT_Z, 0, 0.7);
-  ciSolids.push([CT_X, CNW + 0.45, 0.2], [CIN_W / 2 - 0.45, CT_Z, 0.25]);
+  ciCurtain(CT_X, CNW + 0.5, Math.PI / 2, 0.8, 7);
+  ciCurtain(CIN_W / 2 - 0.5, CT_Z, 0, 0.8, 7);
+  ciSolids.push([CT_X, CNW + 0.5, 0.22], [CIN_W / 2 - 0.5, CT_Z, 0.25]);
 
   for (var ciWn in ciWalls) ciWalls[ciWn].g.traverse(function (o) { o.castShadow = false; });   // the walls and what's on them don't block the daylight
   var ciLook = new THREE.Vector3();
@@ -10954,6 +11228,8 @@ function startGame(THREE) {
     ciSun.intensity = 0.5 * (1 - nt);                                   // daylight only comes in through the windows by day
     for (var i = 0; i < ciTonics.length; i++) ciTonics[i].emissiveIntensity = 0.45 + Math.sin(t * 1.8 + i) * 0.15;
     mcGlow.material.opacity = 0.3 + Math.sin(t * 1.3) * 0.06;
+    for (var cc = 0; cc < ciCurtains.length; cc++) ciCurtains[cc].rotation.x = Math.sin(t * 0.7 + cc * 2) * 0.012;   // the curtains sway very gently
+    ciMonLed.material.emissiveIntensity = (t % 0.83) < 0.12 ? 1.6 : 0.4;   // the monitor's light blinks with each heartbeat
     var mins = state.minutes % 720;                                     // the clock on the wall keeps the island's time
     ciHourHand.rotation.z = -mins / 720 * Math.PI * 2;
     ciMinHand.rotation.z = -(state.minutes % 60) / 60 * Math.PI * 2;
