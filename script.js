@@ -1880,8 +1880,8 @@ function startGame(THREE) {
 
   // ---------- The second island: a grassy island out to sea, past the front of yours ----------
   // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
-  var ISLE2_X = 0, ISLE2_Z = 100, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
-  var SHOP_X = ISLE2_X - 8, SHOP_Z = ISLE2_Z + 4, SHOP_TURN = Math.PI + 0.45, SHOP_HW = 4.6, SHOP_HD = 3.2; // the seed shop, off to one side, its door turned toward the bridge
+  var ISLE2_X = 0, ISLE2_Z = 121, ISLE2 = 42, ISLE2_SQ = 6;          // its middle, half its width, and how square it is (its near edge still meets the bridge)
+  var SHOP_X = ISLE2_X - 8, SHOP_Z = 104, SHOP_TURN = Math.PI + 0.45, SHOP_HW = 4.6, SHOP_HD = 3.2; // the seed shop, off to one side, its door turned toward the bridge
   // the stone path from the end of the bridge to Whimsy & Bloom's front steps: a gentle curve through these points
   var SP_PTS = [[0, 80.6], [-0.2, 84.5], [-1.6, 89], [-4.4, 93.4], [-7.6, 96.9], [SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + 0.62), SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + 0.62)]];
   var SP_W = 0.95;                                                     // half the width of the path
@@ -1916,9 +1916,9 @@ function startGame(THREE) {
     return g;
   }
   scene.add(new THREE.Mesh(isle2Band(1.03, 0.92, 0, -2.4), sideMat));
-  scene.add(new THREE.Mesh(isle2Band(0.92, 0.3, -2.4, -8.4), cliffMat));
+  scene.add(new THREE.Mesh(isle2Band(0.92, 0.3, -2.4, -12), cliffMat));
   var isle2Top = (function () {                                       // the grassy top, coloured like your island's grass
-    var RINGS = 40, SEG = 160, pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
+    var RINGS = 70, SEG = 200, pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
     var grassA = new THREE.Color(0x8fcb68), grassB = new THREE.Color(0x5a9643), lush = new THREE.Color(0x4a8a3a), sunny = new THREE.Color(0xb8cf72);
     for (var r = 0; r <= RINGS; r++) {
       for (var sg = 0; sg <= SEG; sg++) {
@@ -1955,7 +1955,7 @@ function startGame(THREE) {
     var dx = x - ISLE2_X, dz = z - ISLE2_Z;
     return Math.pow(Math.pow(Math.abs(dx), ISLE2_SQ) + Math.pow(Math.abs(dz), ISLE2_SQ), 1 / ISLE2_SQ) < ISLE2 - margin;
   }
-  var ISLE2_BLADES = 9000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
+  var ISLE2_BLADES = 26000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
   for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
     if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9 || stonePathDist(ix, iz) < SP_W + 0.15) continue; // (none growing through the shop floor)
@@ -1977,7 +1977,7 @@ function startGame(THREE) {
   isle2Grass.frustumCulled = false;
   isle2Grass.receiveShadow = true;
   scene.add(isle2Grass);
-  var ISLE2_FLOWERS = 520, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
+  var ISLE2_FLOWERS = 1500, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
     if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || stonePathDist(fx, fz) < SP_W + 0.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
@@ -9944,7 +9944,7 @@ function startGame(THREE) {
   // Press "Next ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
   // the Dawn Tree, the lake and dock, your crops, the shipping bin, the bridge, Whimsy & Bloom, every standing tree,
   // bush and rock, and you, as a little witch's hat, which moves along with you while the map is open
-  var MAP_X0 = -42, MAP_X1 = 42, MAP_Z0 = -42, MAP_Z1 = 127, MAP_S = 6;   // the area it covers, and how many pixels per step
+  var MAP_X0 = -47, MAP_X1 = 47, MAP_Z0 = -42, MAP_Z1 = 168, MAP_S = 6;   // the area it covers, and how many pixels per step
   var MAP_W = Math.round((MAP_X1 - MAP_X0) * MAP_S), MAP_H = Math.round((MAP_Z1 - MAP_Z0) * MAP_S);
   var mapPage = false, mapBase = null, mapTimer = null, mapFollow = true;
   var mapHead = bagUi.box ? bagUi.box.querySelector('.inv-head b') : null;
@@ -10116,7 +10116,7 @@ function startGame(THREE) {
     g.beginPath(); g.arc(0, 0, 6, 0, Math.PI * 2); g.fillStyle = '#c89aff'; g.fill();                       // the crystal spire
     g.restore();
     label('Whimsy & Bloom', SHOP_X, SHOP_Z, SHOP_HD * K + 30);              // below the shop, clear of its teleport pin
-    label('New Island', ISLE2_X + 6, ISLE2_Z + 14, 0);
+    label('Town Square', ISLE2_X + 10, ISLE2_Z + 10, 0, 26);
     // teleport pins: a glowing purple marker on each place you can teleport to
     var pinPulse = 1 + Math.sin(Date.now() / 300) * 0.08;
     TELEPORTS.forEach(function (d) {
