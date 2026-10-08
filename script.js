@@ -9345,9 +9345,9 @@ function startGame(THREE) {
   var stWalnut = new THREE.MeshStandardMaterial({ map: stWalnutTex, color: 0x8a5a3c, roughness: 0.38 });
   var stWalnutPlain = new THREE.MeshStandardMaterial({ color: 0x5e3a24, roughness: 0.45 });
   var stBrass = new THREE.MeshStandardMaterial({ color: 0xd8b062, metalness: 0.85, roughness: 0.25 });
-  var stTopShape = new THREE.Shape(), TW = 0.4, TD = 0.27, TR = 0.06;
-  stTopShape.moveTo(-TW + TR, -TD); stTopShape.lineTo(TW - TR, -TD); stTopShape.quadraticCurveTo(TW, -TD, TW, -TD + TR); stTopShape.lineTo(TW, TD - TR); stTopShape.quadraticCurveTo(TW, TD, TW - TR, TD);
-  stTopShape.lineTo(-TW + TR, TD); stTopShape.quadraticCurveTo(-TW, TD, -TW, TD - TR); stTopShape.lineTo(-TW, -TD + TR); stTopShape.quadraticCurveTo(-TW, -TD, -TW + TR, -TD);
+  var stTopShape = new THREE.Shape(), stTW = 0.4, stTD = 0.27, stTR = 0.06;
+  stTopShape.moveTo(-stTW + stTR, -stTD); stTopShape.lineTo(stTW - stTR, -stTD); stTopShape.quadraticCurveTo(stTW, -stTD, stTW, -stTD + stTR); stTopShape.lineTo(stTW, stTD - stTR); stTopShape.quadraticCurveTo(stTW, stTD, stTW - stTR, stTD);
+  stTopShape.lineTo(-stTW + stTR, stTD); stTopShape.quadraticCurveTo(-stTW, stTD, -stTW, stTD - stTR); stTopShape.lineTo(-stTW, -stTD + stTR); stTopShape.quadraticCurveTo(-stTW, -stTD, -stTW + stTR, -stTD);
   var stTopGeo = new THREE.ExtrudeGeometry(stTopShape, { depth: 0.025, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 8 });
   stTopGeo.rotateX(-Math.PI / 2);
   (function () { var uv = stTopGeo.attributes.uv; for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.2, uv.getY(i) * 1.2); })();
@@ -9788,7 +9788,218 @@ function startGame(THREE) {
     if (!bagUi.box) return;
     bagUi.box.hidden = open === undefined ? !bagUi.box.hidden : !open;
     if (!bagUi.box.hidden) renderBag();
+    if (!bagUi.box.hidden && mapPage) showMapPage(true);              // the map shows where you are now
   }
+  // ---------- World map: a second page in the bag ----------
+  // Press "Next ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
+  // the Dawn Tree, the lake and dock, your crops, the shipping bin, the bridge, Whimsy & Bloom, every standing tree,
+  // bush and rock, and you, as a little witch's hat, which moves along with you while the map is open
+  var MAP_X0 = -42, MAP_X1 = 42, MAP_Z0 = -42, MAP_Z1 = 127, MAP_S = 6;   // the area it covers, and how many pixels per step
+  var MAP_W = Math.round((MAP_X1 - MAP_X0) * MAP_S), MAP_H = Math.round((MAP_Z1 - MAP_Z0) * MAP_S);
+  var mapPage = false, mapBase = null, mapTimer = null, mapFollow = true;
+  var mapHead = bagUi.box ? bagUi.box.querySelector('.inv-head b') : null;
+  var mapBtn = document.createElement('button');
+  mapBtn.type = 'button'; mapBtn.className = 'inv-close map-btn'; mapBtn.textContent = 'Next ›';
+  mapBtn.style.cssText = 'margin-left:auto;margin-right:8px;';
+  if (bagUi.close) bagUi.close.parentNode.insertBefore(mapBtn, bagUi.close);
+  var mapBox = document.createElement('div');
+  mapBox.style.cssText = 'height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:#cfe8ff;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;cursor:grab;position:relative;';
+  var mapCanvas = document.createElement('canvas');
+  mapCanvas.width = MAP_W * 2; mapCanvas.height = MAP_H * 2;           // drawn at double size so it stays sharp
+  mapCanvas.style.cssText = 'display:block;width:' + MAP_W + 'px;height:' + MAP_H + 'px;max-width:none;';
+  mapBox.appendChild(mapCanvas);
+  var mapFind = document.createElement('button');                      // jump back to where you are
+  mapFind.type = 'button'; mapFind.className = 'inv-close'; mapFind.textContent = '📍 Find me';
+  mapFind.style.cssText = 'font-size:.8rem;padding:3px 10px;';
+  var mapKey = document.createElement('div');
+  mapKey.className = 'inv-info';
+  mapKey.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:.78rem;';
+  mapKey.innerHTML = '<span><b style="color:#7b4fd6">🧙</b> You</span><span><span style="color:#8a5a3c">■</span> Farm soil</span><span><span style="color:#e98ab6">●</span> Ready to pick</span><span><span style="color:#3f8a3a">●</span> Trees</span><span><span style="color:#8c8c96">●</span> Rocks</span>';
+  mapKey.insertBefore(mapFind, mapKey.firstChild);
+  mapBox.style.display = mapKey.style.display = 'none';
+  if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(mapBox, bagUi.grid.nextSibling); bagUi.grid.parentNode.insertBefore(mapKey, mapBox.nextSibling); }
+  (function () {                                                       // drag the map with the mouse (fingers already scroll it)
+    var dragAt = null;
+    mapBox.addEventListener('mousedown', function (e) { dragAt = { x: e.clientX, y: e.clientY, l: mapBox.scrollLeft, t: mapBox.scrollTop }; mapBox.style.cursor = 'grabbing'; e.preventDefault(); });
+    window.addEventListener('mousemove', function (e) { if (!dragAt) return; mapBox.scrollLeft = dragAt.l - (e.clientX - dragAt.x); mapBox.scrollTop = dragAt.t - (e.clientY - dragAt.y); mapFollow = false; });
+    window.addEventListener('mouseup', function () { if (dragAt) { dragAt = null; mapBox.style.cursor = 'grab'; } });
+    mapBox.addEventListener('touchstart', function () { mapFollow = false; }, { passive: true });
+    mapBox.addEventListener('wheel', function () { mapFollow = false; }, { passive: true });
+  })();
+  function mapXY(x, z) { return [(x - MAP_X0) * MAP_S * 2, (z - MAP_Z0) * MAP_S * 2]; }
+  function drawMapBase() {                                            // the land, water, cliffs, paths and bridge, worked out pixel by pixel once
+    var BS = 3, bw = Math.round((MAP_X1 - MAP_X0) * BS), bh = Math.round((MAP_Z1 - MAP_Z0) * BS);
+    var cv = document.createElement('canvas'); cv.width = bw; cv.height = bh;
+    var g = cv.getContext('2d'), img = g.createImageData(bw, bh), d = img.data;
+    function land(x, z) { return islandR(x, z) < ISLAND || onIsle2(x, z, 0); }
+    for (var py = 0; py < bh; py++) for (var px = 0; px < bw; px++) {
+      var x = MAP_X0 + (px + 0.5) / BS, z = MAP_Z0 + (py + 0.5) / BS, c, i = (py * bw + px) * 4;
+      var main = islandR(x, z) < ISLAND, isle = onIsle2(x, z, 0), br = Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + 0.3 && z > BRIDGE_Z0 - 1.5 && z < BRIDGE_Z1 + 1.5;
+      var n = (isle2Hash(px * 7.1 + py * 3.3) - 0.5) * 10, n2 = Math.sin(x * 0.9 + Math.sin(z * 0.7) * 2) * 6 + Math.sin(z * 1.3 + x * 0.4) * 5;   // speckle and soft patches of lighter and darker grass
+      if (main && inLake(x, z)) {
+        if (onDock(x, z)) c = [170, 122, 80];
+        else { var depth = Math.min(1, (WATER_Y - groundHeight(x, z)) / 0.9); c = [150 - depth * 70, 210 - depth * 50, 240 - depth * 10]; n = n * 0.3; n2 = Math.sin(x * 3 + z * 2) * 4; }
+      } else if (main || isle) {
+        var edge = main ? ISLAND - islandR(x, z) : 4;
+        if (main && pathDist(x, z) < PATH_W + 0.25) c = pathDist(x, z) < PATH_W - 0.1 ? [222, 192, 140] : [190, 160, 112];   // the path, with darker worn edges
+        else if (main && nearLake(x, z)) c = [196, 206, 150];                                  // a sandy shore round the lake
+        else c = isle ? [128, 194, 108] : [122, 188, 100];
+        if (edge < 1.4) c = [c[0] - 30, c[1] - 30, c[2] - 26];                                  // the grassy rim at the edge
+        if (isle && !onIsle2(x, z, 1.2)) c = [96, 156, 82];
+      } else if (br) {
+        c = Math.abs(x - BRIDGE_X) > BRIDGE_W / 2 - 0.15 ? [170, 160, 150] : [210, 200, 186];  // railings and paving
+        if (Math.abs(x - BRIDGE_X) <= BRIDGE_W / 2 - 0.15 && (Math.floor(z * 1.5) % 2 === 0)) c = [200, 190, 176];
+        n = n * 0.4; n2 = 0;
+      } else {
+        var shadow = land(x - 1.2, z - 1.6) ? 22 : 0;                                          // the islands cast a soft shadow on the clouds below
+        var sky = 1 - py / bh * 0.2; c = [Math.round(186 * sky + 40) - shadow, Math.round(222 * sky + 22) - shadow, 255 - shadow * 0.5];
+        n2 = Math.sin(x * 0.25 + z * 0.15) * 6;
+      }
+      d[i] = Math.max(0, Math.min(255, c[0] + n + n2)); d[i + 1] = Math.max(0, Math.min(255, c[1] + n + n2)); d[i + 2] = Math.max(0, Math.min(255, c[2] + n * 0.6 + n2 * 0.5)); d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    var out = document.createElement('canvas'); out.width = MAP_W * 2; out.height = MAP_H * 2;
+    var o = out.getContext('2d');
+    o.imageSmoothingEnabled = true;
+    o.drawImage(cv, 0, 0, out.width, out.height);
+    // soft clouds drifting below the islands
+    for (var cl = 0; cl < 26; cl++) {
+      var cx = isle2Hash(cl * 3.1) * out.width, cy = isle2Hash(cl * 5.3) * out.height, cr = 30 + isle2Hash(cl) * 60;
+      var p1 = mapXY(MAP_X0 + cx / (MAP_S * 2), MAP_Z0 + cy / (MAP_S * 2));
+      if (land(MAP_X0 + cx / (MAP_S * 2), MAP_Z0 + cy / (MAP_S * 2))) continue;
+      for (var pf = 0; pf < 5; pf++) { o.beginPath(); o.arc(p1[0] + (pf - 2) * cr * 0.5, p1[1] + Math.sin(pf * 2) * cr * 0.2, cr * (0.5 + 0.2 * Math.sin(pf + cl)), 0, Math.PI * 2); o.fillStyle = 'rgba(255,255,255,0.35)'; o.fill(); }
+    }
+    // a compass in the corner
+    var cp = mapXY(MAP_X1 - 5, MAP_Z0 + 5);
+    o.save(); o.translate(cp[0], cp[1]);
+    o.beginPath(); o.arc(0, 0, 34, 0, Math.PI * 2); o.fillStyle = 'rgba(255,255,255,0.85)'; o.fill(); o.strokeStyle = '#b89a5a'; o.lineWidth = 3; o.stroke();
+    [0, 1, 2, 3].forEach(function (k) { o.save(); o.rotate(k * Math.PI / 2); o.beginPath(); o.moveTo(0, -28); o.lineTo(7, 0); o.lineTo(-7, 0); o.closePath(); o.fillStyle = k ? '#8a7aa8' : '#7b4fd6'; o.fill(); o.restore(); });
+    o.font = 'bold 16px Fredoka, sans-serif'; o.textAlign = 'center'; o.fillStyle = '#4a2f7a'; o.fillText('N', 0, -38);
+    o.restore();
+    return out;
+  }
+  function drawMap() {
+    if (!mapBase) mapBase = drawMapBase();
+    var g = mapCanvas.getContext('2d'), K = MAP_S * 2;
+    g.drawImage(mapBase, 0, 0);
+    function dot(x, z, r, col, ring) { var p = mapXY(x, z); g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); g.fillStyle = col; g.fill(); if (ring) { g.strokeStyle = ring; g.lineWidth = 1.5; g.stroke(); } }
+    function label(text, x, z, dy, size) {
+      var p = mapXY(x, z);
+      g.font = 'bold ' + (size || 20) + 'px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 6; g.strokeStyle = 'rgba(255,255,255,0.92)'; g.lineJoin = 'round'; g.strokeText(text, p[0], p[1] + (dy || 0));
+      g.fillStyle = '#4a2f7a'; g.fillText(text, p[0], p[1] + (dy || 0));
+    }
+    // your farm soil and crops
+    tiles.forEach(function (t) {
+      if (!t.soil) return;
+      var p = mapXY(t.x, t.z), sz = TILE * K * 0.92;
+      g.fillStyle = t.wet ? '#5a3a24' : '#8a5a3c'; g.fillRect(p[0] - sz / 2, p[1] - sz / 2, sz, sz);
+      g.strokeStyle = 'rgba(60,35,20,0.5)'; g.lineWidth = 1; for (var f = -1; f <= 1; f++) { g.beginPath(); g.moveTo(p[0] - sz / 2 + 2, p[1] + f * sz / 4); g.lineTo(p[0] + sz / 2 - 2, p[1] + f * sz / 4); g.stroke(); }
+      if (t.crop) {
+        if (t.stage === 3) { for (var pt = 0; pt < 5; pt++) dot(t.x + Math.cos(pt * 1.26) * 0.18, t.z + Math.sin(pt * 1.26) * 0.18, 3.5, '#f2a6c8'); dot(t.x, t.z, 2.5, '#ffe08a'); }
+        else dot(t.x, t.z, 2.5 + t.stage * 1.2, '#6cc062', 'rgba(30,70,30,0.6)');
+      }
+    });
+    // rocks, bushes and trees that are standing right now, with soft shadows
+    mineable.forEach(function (r) { if (r.gone || r.state !== 'whole') return; var rr = 2.5 + r.size * 2.2; dot(r.x + 0.15, r.z + 0.2, rr, 'rgba(0,0,0,0.18)'); dot(r.x, r.z, rr, '#9a9aa4', 'rgba(60,60,70,0.6)'); dot(r.x - 0.1, r.z - 0.12, rr * 0.4, 'rgba(255,255,255,0.45)'); });
+    trimmable.forEach(function (b) { var u = b.userData; if (u.gone || u.state !== 'standing') return; dot(u.base.x + 0.2, u.base.z + 0.25, 5, 'rgba(0,0,0,0.15)'); dot(u.base.x, u.base.z, 5, '#6fb85e'); dot(u.base.x - 0.12, u.base.z - 0.12, 2.5, '#9ad884'); });
+    choppable.forEach(function (t) {
+      var u = t.userData; if (u.gone || u.state !== 'standing') return;
+      var p = mapXY(u.base.x, u.base.z), sz = (u.size || 1);
+      g.beginPath(); g.ellipse(p[0] + 6 * sz, p[1] + 8 * sz, 11 * sz, 8 * sz, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.18)'; g.fill();
+      if (u.leafy) {                                                    // a round leafy crown made of a few blobs, lit from the top left
+        [[0, 0, 9], [-5, -3, 6], [5, -2, 6], [0, 5, 6]].forEach(function (bb) { g.beginPath(); g.arc(p[0] + bb[0] * sz, p[1] + bb[1] * sz, bb[2] * sz, 0, Math.PI * 2); g.fillStyle = '#3f8a3a'; g.fill(); });
+        g.beginPath(); g.arc(p[0] - 3 * sz, p[1] - 3 * sz, 4 * sz, 0, Math.PI * 2); g.fillStyle = '#6ab45a'; g.fill();
+      } else {                                                          // a pine, seen from above: a dark star of needles
+        g.beginPath(); for (var k = 0; k < 16; k++) { var a = k / 16 * Math.PI * 2, rr2 = (k % 2 ? 5 : 10) * sz; g.lineTo(p[0] + Math.cos(a) * rr2, p[1] + Math.sin(a) * rr2); } g.closePath();
+        g.fillStyle = '#285a2c'; g.fill(); g.beginPath(); g.arc(p[0] - 1.5, p[1] - 1.5, 3 * sz, 0, Math.PI * 2); g.fillStyle = '#3f7a3a'; g.fill();
+      }
+    });
+    // the house's yard fence, the house, its tower and the cauldron
+    g.fillStyle = '#7a5a40';
+    fencePosts.forEach(function (fp) { var w = houseToWorld(fp[0], fp[1]), p = mapXY(w.x, w.z); g.fillRect(p[0] - 2.5, p[1] - 2.5, 5, 5); });
+    var hp = mapXY(HOUSE_X, HOUSE_Z), hw2 = HW / 2 * K, hd2 = HD / 2 * K;
+    g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(hp[0] - hw2 + 8, hp[1] - hd2 + 10, hw2 * 2, hd2 * 2);
+    g.fillStyle = '#6a4aa8'; g.fillRect(hp[0] - hw2 - 4, hp[1] - hd2 - 4, hw2 * 2 + 8, hd2 * 2 + 8);      // the purple roof
+    g.fillStyle = '#7d5cc0'; g.fillRect(hp[0] - hw2 - 4, hp[1] - hd2 - 4, hw2 * 2 + 8, hd2 + 4);
+    g.strokeStyle = 'rgba(40,20,70,0.35)'; g.lineWidth = 1; for (var rl = 0; rl < 10; rl++) { var ry2 = hp[1] - hd2 - 4 + rl * (hd2 * 2 + 8) / 10; g.beginPath(); g.moveTo(hp[0] - hw2 - 4, ry2); g.lineTo(hp[0] + hw2 + 4, ry2); g.stroke(); }
+    g.strokeStyle = '#4a2f7a'; g.lineWidth = 3; g.beginPath(); g.moveTo(hp[0] - hw2 - 4, hp[1]); g.lineTo(hp[0] + hw2 + 4, hp[1]); g.stroke();   // the ridge
+    var tw = houseToWorld(TX, TZ), tp = mapXY(tw.x, tw.z);                                              // the round tower
+    g.beginPath(); g.arc(tp[0], tp[1], TR * K + 4, 0, Math.PI * 2); g.fillStyle = '#5a3a98'; g.fill(); g.strokeStyle = '#e8b84a'; g.lineWidth = 3; g.stroke();
+    g.beginPath(); g.arc(tp[0], tp[1], 4, 0, Math.PI * 2); g.fillStyle = '#e8b84a'; g.fill();
+    var cw2 = houseToWorld(CX, CZ); dot(cw2.x, cw2.z, 7, '#1e1e24'); dot(cw2.x, cw2.z, 4.5, '#4ae07e');  // the cauldron
+    label('Your House', HOUSE_X, HOUSE_Z, -hd2 - 22);
+    // the Dawn Tree, glowing pink
+    var dp = mapXY(TREE_X, TREE_Z), dg = g.createRadialGradient(dp[0], dp[1], 4, dp[0], dp[1], TREE_ZONE * K + 10);
+    dg.addColorStop(0, 'rgba(255,170,230,0.9)'); dg.addColorStop(1, 'rgba(255,170,230,0)');
+    g.fillStyle = dg; g.beginPath(); g.arc(dp[0], dp[1], TREE_ZONE * K + 10, 0, Math.PI * 2); g.fill();
+    [[0, 0, 16], [-10, -6, 11], [10, -5, 11], [0, 10, 11], [-9, 7, 9], [9, 7, 9]].forEach(function (bb) { g.beginPath(); g.arc(dp[0] + bb[0], dp[1] + bb[1], bb[2], 0, Math.PI * 2); g.fillStyle = '#ff9be0'; g.fill(); });
+    g.beginPath(); g.arc(dp[0] - 5, dp[1] - 5, 7, 0, Math.PI * 2); g.fillStyle = '#ffd6f2'; g.fill();
+    label('Dawn Tree', TREE_X, TREE_Z, 36);
+    label('Lake', LAKE_X, LAKE_Z, 0);
+    var bp = mapXY(binWorld.x, binWorld.z); g.fillStyle = '#1e1e22'; g.fillRect(bp[0] - 8, bp[1] - 6, 16, 12); g.fillStyle = '#555'; g.fillRect(bp[0] - 8, bp[1] - 6, 16, 3);
+    label('Shipping Bin', binWorld.x, binWorld.z, 20, 15);
+    // the bridge's gateways and its floating lanterns
+    [BRIDGE_Z0, BRIDGE_Z1].forEach(function (gz) { var a2 = mapXY(BRIDGE_X - BRIDGE_W / 2 - 0.3, gz), b2 = mapXY(BRIDGE_X + BRIDGE_W / 2 + 0.3, gz); g.fillStyle = '#d8ccbc'; g.fillRect(a2[0] - 6, a2[1] - 6, 12, 12); g.fillRect(b2[0] - 6, b2[1] - 6, 12, 12); });
+    for (var bl = BRIDGE_Z0 + 6; bl < BRIDGE_Z1 - 3; bl += 9) { [-1, 1].forEach(function (sd) { var lp = mapXY(BRIDGE_X + sd * (BRIDGE_W / 2 + 0.9), bl); var lg = g.createRadialGradient(lp[0], lp[1], 1, lp[0], lp[1], 12); lg.addColorStop(0, 'rgba(200,150,255,0.95)'); lg.addColorStop(1, 'rgba(200,150,255,0)'); g.fillStyle = lg; g.fillRect(lp[0] - 12, lp[1] - 12, 24, 24); }); }
+    label('Bridge', BRIDGE_X + 7, (BRIDGE_Z0 + BRIDGE_Z1) / 2, 0);
+    // Whimsy & Bloom: its slate roof, turned the way it faces, with the front steps
+    var sp = mapXY(SHOP_X, SHOP_Z);
+    g.save(); g.translate(sp[0], sp[1]); g.rotate(-SHOP_TURN);
+    g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-SHOP_HW * K + 8, -SHOP_HD * K + 10, SHOP_HW * K * 2, SHOP_HD * K * 2);
+    g.fillStyle = '#4a4e5a'; g.fillRect(-SHOP_HW * K - 3, -SHOP_HD * K - 3, SHOP_HW * K * 2 + 6, SHOP_HD * K * 2 + 6);
+    g.fillStyle = '#5c6070'; g.fillRect(-SHOP_HW * K * 0.8, -SHOP_HD * K * 0.8, SHOP_HW * K * 1.6, SHOP_HD * K * 1.6);
+    g.strokeStyle = '#e8b84a'; g.lineWidth = 2; g.strokeRect(-SHOP_HW * K * 0.8, -SHOP_HD * K * 0.8, SHOP_HW * K * 1.6, SHOP_HD * K * 1.6);
+    g.fillStyle = '#d6cfc4'; g.fillRect(-1 * K, SHOP_HD * K + 3, 2 * K, 0.6 * K);                         // the steps
+    g.fillStyle = '#b79ce6'; g.fillRect(-4 * K, SHOP_HD * K - 2, 3 * K, 6); g.fillRect(1 * K, SHOP_HD * K - 2, 3 * K, 6);   // the awnings
+    g.beginPath(); g.arc(0, 0, 6, 0, Math.PI * 2); g.fillStyle = '#c89aff'; g.fill();                       // the crystal spire
+    g.restore();
+    label('Whimsy & Bloom', SHOP_X, SHOP_Z, -SHOP_HD * K - 26);
+    label('New Island', ISLE2_X + 6, ISLE2_Z + 14, 0);
+    // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
+    var you = { x: player.position.x, z: player.position.z };
+    if (indoors) you = inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
+    g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
+    g.beginPath(); g.moveTo(0, -30); g.lineTo(8, -18); g.lineTo(-8, -18); g.closePath(); g.fillStyle = '#7b4fd6'; g.fill();   // which way you're facing
+    g.restore();
+    g.beginPath(); g.ellipse(yp[0], yp[1] + 6, 16, 6, 0, 0, Math.PI * 2); g.fillStyle = '#5b3fb0'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke();   // the hat's brim
+    g.beginPath(); g.moveTo(yp[0] - 9, yp[1] + 5); g.quadraticCurveTo(yp[0] - 2, yp[1] - 6, yp[0] + 4, yp[1] - 20); g.lineTo(yp[0] + 9, yp[1] + 5); g.closePath(); g.fillStyle = '#7b4fd6'; g.fill(); g.stroke();
+    g.beginPath(); g.arc(yp[0] + 4, yp[1] - 20, 3, 0, Math.PI * 2); g.fillStyle = '#ffe08a'; g.fill();
+    label('You', you.x, you.z, 24, 16);
+    return yp;
+  }
+  var mapAutoScroll = false;
+  function centreMapOnYou(yp) {
+    var l = Math.max(0, Math.round(yp[0] / 2 - mapBox.clientWidth / 2)), t = Math.max(0, Math.round(yp[1] / 2 - mapBox.clientHeight / 2));
+    if (Math.abs(mapBox.scrollLeft - l) < 1 && Math.abs(mapBox.scrollTop - t) < 1) return;
+    mapAutoScroll = true; mapBox.scrollLeft = l; mapBox.scrollTop = t;
+    setTimeout(function () { mapAutoScroll = false; }, 50);
+  }
+  mapBox.addEventListener('scroll', function () { if (!mapAutoScroll) mapFollow = false; });   // you scrolled to look around: stop following you
+  function showMapPage(on) {
+    mapPage = on;
+    if (bagUi.grid) bagUi.grid.style.display = on ? 'none' : '';
+    if (bagUi.info) bagUi.info.style.display = on ? 'none' : '';
+    var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
+    for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
+    mapBox.style.display = on ? 'block' : 'none'; mapKey.style.display = on ? 'flex' : 'none';
+    mapBtn.textContent = on ? '‹ Bag' : 'Next ›';
+    if (mapHead) mapHead.textContent = on ? '🗺️ World Map' : '🎒 Bag';
+    if (mapTimer) { clearInterval(mapTimer); mapTimer = null; }
+    if (on) {
+      mapFollow = true;
+      centreMapOnYou(drawMap());
+      mapTimer = setInterval(function () {                              // keep you moving on the map while it's open
+        if (!mapPage || !bagUi.box || bagUi.box.hidden) { clearInterval(mapTimer); mapTimer = null; return; }
+        var yp = drawMap(); if (mapFollow) centreMapOnYou(yp);
+      }, 300);
+    }
+  }
+  mapBtn.addEventListener('click', function () { showMapPage(!mapPage); });
+  mapFind.addEventListener('click', function () { mapFollow = true; centreMapOnYou(drawMap()); });
   if (bagUi.open) bagUi.open.addEventListener('click', function () { toggleBag(); });
   if (bagUi.close) bagUi.close.addEventListener('click', function () { toggleBag(false); focusGame(); });
   renderBag();
