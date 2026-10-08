@@ -3731,7 +3731,7 @@ function startGame(THREE) {
   var SHOP_WIN_B = SHOP_PLINTH + 0.6, SHOP_WIN_H = 1.85, SHOP_WIN_W = 2.95, BOX_Z = SHOP_FZ - SHOP_RECESS / 2;
   [-1, 1].forEach(function (s) {
     var bx = s * 2.425;
-    sp(new THREE.BoxGeometry(SHOP_WIN_W, SHOP_WIN_H, SHOP_RECESS), shopBoxMat, bx, SHOP_WIN_B + SHOP_WIN_H / 2, BOX_Z).castShadow = false;
+    sp(new THREE.BoxGeometry(SHOP_WIN_W - 0.03, SHOP_WIN_H - 0.03, SHOP_RECESS - 0.04), shopBoxMat, bx, SHOP_WIN_B + SHOP_WIN_H / 2, BOX_Z + 0.02).castShadow = false;   // a hair smaller than the opening, so it never fights with the stone wall behind it
     [SHOP_WIN_B + 0.62, SHOP_WIN_B + 1.22].forEach(function (shy, k) {          // two shelves on little brackets
       sp(new THREE.BoxGeometry(SHOP_WIN_W - 0.1, 0.035, 0.24), shopShelfMat, bx, shy, SHOP_FZ - SHOP_RECESS + 0.14);
       for (var j = 0; j < 9; j++) {
