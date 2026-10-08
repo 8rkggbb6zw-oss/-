@@ -3350,16 +3350,8 @@ function startGame(THREE) {
     houseLive.add(bub);
     bubbles.push({ m: bub, t: bb / 7, x: (Math.random() - 0.5) * 0.5, z: (Math.random() - 0.5) * 0.5 });
   }
-  // wisps of green steam curling up out of the pot
-  var brewSteam = [];
-  for (var bs = 0; bs < 6; bs++) {
-    var wisp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xb8ffd0, transparent: true, opacity: 0, depthWrite: false }));
-    houseLive.add(wisp);
-    brewSteam.push({ s: wisp, t: bs / 6, a: bs * 1.1 });
-  }
-
-  // lavender smoke curling out of the chimney
-  var smokeTex = paintTexture(128, 128, function (g, w, h) {          // a soft, billowy puff: lots of overlapping smooth blobs, no specks
+  // soft billowy puffs for steam and smoke: lots of overlapping smooth blobs, no specks
+  var smokeTex = paintTexture(128, 128, function (g, w, h) {
     for (var b = 0; b < 16; b++) {
       var a = isle2Hash(b * 2.3) * Math.PI * 2, d = isle2Hash(b * 4.1) * 26, bx = w / 2 + Math.cos(a) * d, by = h / 2 + Math.sin(a) * d * 0.8, br = 22 + isle2Hash(b * 6.7) * 18;
       var bg = g.createRadialGradient(bx, by, 0, bx, by, br);
@@ -3372,6 +3364,15 @@ function startGame(THREE) {
     g.fillStyle = edge; g.fillRect(0, 0, w, h);
     g.globalCompositeOperation = 'source-over';
   });
+  // wisps of pale green steam curling up out of the pot
+  var brewSteam = [];
+  for (var bs = 0; bs < 9; bs++) {
+    var wisp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xd8f5e0, transparent: true, opacity: 0, depthWrite: false }));
+    houseLive.add(wisp);
+    brewSteam.push({ s: wisp, t: bs / 9, a: bs * 1.1, spin: (bs % 2 ? 1 : -1) * 0.5 });
+  }
+
+  // lavender smoke curling out of the chimney
   var smoke = [];
   for (var sm = 0; sm < 12; sm++) {
     var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xdcd6e8, transparent: true, opacity: 0, depthWrite: false }));
@@ -4120,7 +4121,7 @@ function startGame(THREE) {
       L.bulb.material.emissiveIntensity = (0.4 + night * 1.1) * tw;
       L.halo.material.opacity = (0.12 + night * 0.5) * tw;
     });
-    brewGlow.material.opacity = 0.12 + night * 0.4 + Math.sin(t * 3) * 0.05;          // a soft glow by day, brighter at night
+    brewGlow.material.opacity = 0.06 + night * 0.28 + Math.sin(t * 3) * 0.03;         // a faint glow by day, brighter at night
     brewMat.emissiveIntensity = 0.3 + night * 0.5;
     brew.rotation.z = -t * 0.25;                                                       // the potion slowly swirls
     fireGlow.material.opacity = 0.45 + Math.sin(t * 13) * 0.1 + Math.sin(t * 7.3) * 0.08;
@@ -4137,12 +4138,13 @@ function startGame(THREE) {
       b.m.visible = b.t < 0.92;
     });
     brewSteam.forEach(function (w) {                                                   // steam drifts up, grows and fades
-      w.t += dt * 0.28;
+      w.t += dt * 0.22;
       if (w.t > 1) w.t -= 1;
       var k = w.t;
-      w.s.position.set(CX + Math.sin(k * 4 + w.a) * 0.18, 0.95 + k * 1.3, CZ + Math.cos(k * 3 + w.a) * 0.18);
-      w.s.scale.setScalar(0.25 + k * 0.6);
-      w.s.material.opacity = Math.sin(k * Math.PI) * 0.32;
+      w.s.position.set(CX + Math.sin(k * 4 + w.a) * 0.14, 0.95 + k * 1.2, CZ + Math.cos(k * 3 + w.a) * 0.14);
+      w.s.scale.setScalar(0.3 + k * 0.75);
+      w.s.material.rotation = w.a + k * w.spin;                       // each wisp slowly turns as it rises
+      w.s.material.opacity = Math.min(1, k * 6) * Math.pow(1 - k, 1.4) * 0.6;
     });
     smoke.forEach(function (p) {                                                       // puffs drift up, grow and fade
       p.t += dt * 0.12;
