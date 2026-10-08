@@ -9306,7 +9306,7 @@ function startGame(THREE) {
     siWallPart('S', new THREE.BoxGeometry(3.1, 0.035, 0.54), SI.wood, wx, 0.615, 0.25);              // a wooden top on the window seat
   });
   siWallPart('S', new THREE.BoxGeometry(1.3, 2.2, 0.06), siPlum, 0, 1.1, 0.03);
-  siWindow('S', 0, 1.5, 0.8, 1.05, SI.doorView, { cols: [0.5], rows: [0.5], barMat: houseMats.gold, sashMat: houseMats.gold, barW: 0.03, noCasing: true, z: 0.055 });
+  siWindow('S', 0, 1.5, 0.8, 1.05, siWindowMask, { cols: [0.5], rows: [0.5], barMat: houseMats.gold, sashMat: houseMats.gold, barW: 0.03, noCasing: true, z: 0.055 });
   siWallPart('S', new THREE.BoxGeometry(0.86, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0x55405f, roughness: 0.5 }), 0, 0.55, 0.07);   // a raised panel under the door glass
   siWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), SI.brass, -0.45, 1.05, 0.1);
   siPart(new THREE.BoxGeometry(1.0, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x5a5a58, roughness: 1 }), 0, 0.01, SIN_D / 2 - 0.45);
