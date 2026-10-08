@@ -3359,11 +3359,24 @@ function startGame(THREE) {
   }
 
   // lavender smoke curling out of the chimney
+  var smokeTex = paintTexture(128, 128, function (g, w, h) {          // a soft, billowy puff: lots of overlapping smooth blobs, no specks
+    for (var b = 0; b < 16; b++) {
+      var a = isle2Hash(b * 2.3) * Math.PI * 2, d = isle2Hash(b * 4.1) * 26, bx = w / 2 + Math.cos(a) * d, by = h / 2 + Math.sin(a) * d * 0.8, br = 22 + isle2Hash(b * 6.7) * 18;
+      var bg = g.createRadialGradient(bx, by, 0, bx, by, br);
+      bg.addColorStop(0, 'rgba(255,255,255,0.32)'); bg.addColorStop(0.6, 'rgba(255,255,255,0.14)'); bg.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    }
+    g.globalCompositeOperation = 'destination-in';                    // fade softly to nothing at the edges
+    var edge = g.createRadialGradient(w / 2, h / 2, w * 0.2, w / 2, h / 2, w / 2);
+    edge.addColorStop(0, 'rgba(0,0,0,1)'); edge.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = edge; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'source-over';
+  });
   var smoke = [];
-  for (var sm = 0; sm < 7; sm++) {
-    var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xbfa8f0, transparent: true, opacity: 0, depthWrite: false }));
+  for (var sm = 0; sm < 12; sm++) {
+    var puff = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xdcd6e8, transparent: true, opacity: 0, depthWrite: false }));
     houseLive.add(puff);
-    smoke.push({ s: puff, t: sm / 7 });
+    smoke.push({ s: puff, t: sm / 12, rot: sm * 1.9, spin: (sm % 2 ? 1 : -1) * (0.3 + (sm % 3) * 0.15) });
   }
 
   // a few little mushrooms round the house
@@ -4132,12 +4145,13 @@ function startGame(THREE) {
       w.s.material.opacity = Math.sin(k * Math.PI) * 0.32;
     });
     smoke.forEach(function (p) {                                                       // puffs drift up, grow and fade
-      p.t += dt * 0.16;
+      p.t += dt * 0.12;
       if (p.t > 1) p.t -= 1;
       var k = p.t;
-      p.s.position.set(CHIM_TOP.x + Math.sin(k * 5 + p.t) * 0.25 + k * 0.6, CHIM_TOP.y + k * 2.6, CHIM_TOP.z + Math.cos(k * 4) * 0.15);
-      p.s.scale.setScalar(0.4 + k * 1.3);
-      p.s.material.opacity = Math.min(1, k * 6) * (1 - k) * 0.8;
+      p.s.position.set(CHIM_TOP.x + Math.sin(k * 4 + p.rot) * 0.18 + k * k * 1.1, CHIM_TOP.y + 0.1 + k * 2.4, CHIM_TOP.z + Math.cos(k * 3 + p.rot) * 0.12);   // rises, then drifts off on the breeze
+      p.s.scale.setScalar(0.35 + k * 1.1);
+      p.s.material.rotation = p.rot + k * p.spin;                     // each puff slowly turns as it rises
+      p.s.material.opacity = Math.min(1, k * 8) * Math.pow(1 - k, 1.5) * 0.85;
     });
   }
 
