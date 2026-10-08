@@ -9264,21 +9264,44 @@ function startGame(THREE) {
   siPart(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 16), SI.wood, CNT_X + 0.88, CT + 0.053, CNT_Z + 0.24);
   for (var siC = CNT_X - 1.0; siC <= CNT_X + 1.01; siC += 0.67) shopInSolids.push([siC, CNT_Z, 0.45]);
 
-  // a little white side table with amber bottles and a box, and a pink wire stool
-  var STX = 4.4, STZ = 0.5;
-  siPart(new THREE.BoxGeometry(0.8, 0.05, 0.55), SI.white, STX, 0.85, STZ);
-  siPart(new THREE.BoxGeometry(0.82, 0.03, 0.57), SI.black, STX, 0.885, STZ);
-  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { siPart(new THREE.BoxGeometry(0.05, 0.84, 0.05), SI.white, STX + c[0] * 0.35, 0.42, STZ + c[1] * 0.23); });
-  siPart(new THREE.BoxGeometry(0.42, 0.3, 0.3), SI.card, STX + 0.1, 1.05, STZ - 0.05, 0, 0.15, 0);
-  for (var siSb = 0; siSb < 3; siSb++) siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.13, 10), SI.amber, STX - 0.3 + siSb * 0.09, 0.965, STZ + 0.12);
-  var stool = new THREE.Group(); stool.position.set(STX - 0.8, 0, STZ + 0.35); shopRoom.add(stool);
-  siPart(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 16), SI.pinkWire, 0, 0.62, 0, 0, 0, 0, stool);
-  for (var siSl = 0; siSl < 4; siSl++) {
-    var sla = siSl / 4 * Math.PI * 2 + 0.4;
-    siPart(new THREE.CylinderGeometry(0.01, 0.01, 0.64, 5), SI.pinkWire, Math.cos(sla) * 0.13, 0.31, Math.sin(sla) * 0.13, Math.sin(sla) * 0.12, 0, -Math.cos(sla) * 0.12, stool);
-    siPart(new THREE.TorusGeometry(0.05, 0.007, 5, 12, Math.PI * 1.5), SI.pinkWire, Math.cos(sla) * 0.15, 0.2, Math.sin(sla) * 0.15, 0, -sla, 0, stool);
+  // a walnut side table with a soft-cornered top, tapered legs on brass feet and a slatted shelf, and an upholstered stool
+  var STX = 4.4, STZ = 0.5, ST_H = 0.86;
+  var stWalnutTex = ctGrainTex.clone(); stWalnutTex.needsUpdate = true; stWalnutTex.wrapS = stWalnutTex.wrapT = THREE.RepeatWrapping; stWalnutTex.repeat.set(1.2, 6);
+  var stWalnut = new THREE.MeshStandardMaterial({ map: stWalnutTex, color: 0x8a5a3c, roughness: 0.38 });
+  var stWalnutPlain = new THREE.MeshStandardMaterial({ color: 0x5e3a24, roughness: 0.45 });
+  var stBrass = new THREE.MeshStandardMaterial({ color: 0xd8b062, metalness: 0.85, roughness: 0.25 });
+  var stTopShape = new THREE.Shape(), TW = 0.4, TD = 0.27, TR = 0.06;
+  stTopShape.moveTo(-TW + TR, -TD); stTopShape.lineTo(TW - TR, -TD); stTopShape.quadraticCurveTo(TW, -TD, TW, -TD + TR); stTopShape.lineTo(TW, TD - TR); stTopShape.quadraticCurveTo(TW, TD, TW - TR, TD);
+  stTopShape.lineTo(-TW + TR, TD); stTopShape.quadraticCurveTo(-TW, TD, -TW, TD - TR); stTopShape.lineTo(-TW, -TD + TR); stTopShape.quadraticCurveTo(-TW, -TD, -TW + TR, -TD);
+  var stTopGeo = new THREE.ExtrudeGeometry(stTopShape, { depth: 0.025, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 8 });
+  stTopGeo.rotateX(-Math.PI / 2);
+  (function () { var uv = stTopGeo.attributes.uv; for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 1.2, uv.getY(i) * 1.2); })();
+  siPart(stTopGeo, stWalnut, STX, ST_H - 0.025, STZ);
+  [[0, -0.22, 0.66, 0.012], [0, 0.22, 0.66, 0.012]].forEach(function (r) { siPart(new THREE.BoxGeometry(r[2], 0.07, 0.022), stWalnutPlain, STX + r[0], ST_H - 0.07, STZ + r[1]); });   // the aprons under the top
+  [-1, 1].forEach(function (sd) { siPart(new THREE.BoxGeometry(0.022, 0.07, 0.4), stWalnutPlain, STX + sd * 0.33, ST_H - 0.07, STZ); });
+  siPart(new THREE.BoxGeometry(0.008, 0.02, 0.005), stBrass, STX, ST_H - 0.07, STZ + 0.233);       // a little brass drawer pull
+  siPart(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 12), stBrass, STX, ST_H - 0.07, STZ + 0.237, Math.PI / 2, 0, 0);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) {          // tapered legs, slightly splayed, on brass feet
+    var lx = STX + c[0] * 0.33, lz = STZ + c[1] * 0.2;
+    siPart(new THREE.CylinderGeometry(0.022, 0.013, ST_H - 0.1, 10), stWalnutPlain, lx + c[0] * 0.01, (ST_H - 0.1) / 2 + 0.03, lz + c[1] * 0.01, c[1] * 0.025, 0, -c[0] * 0.025);
+    siPart(new THREE.CylinderGeometry(0.015, 0.014, 0.035, 10), stBrass, lx + c[0] * 0.02, 0.018, lz + c[1] * 0.02);
+  });
+  for (var stSl = 0; stSl < 6; stSl++) siPart(new THREE.BoxGeometry(0.62, 0.012, 0.05), stWalnut, STX, 0.26, STZ - 0.16 + stSl * 0.064);   // a slatted lower shelf
+  [-1, 1].forEach(function (sd) { siPart(new THREE.BoxGeometry(0.02, 0.025, 0.4), stWalnutPlain, STX + sd * 0.32, 0.25, STZ); });
+  var stool = new THREE.Group(); stool.position.set(STX - 0.8, 0, STZ + 0.35); stool.rotation.y = 0.3; shopRoom.add(stool);
+  var stVelvet = new THREE.MeshStandardMaterial({ color: 0xc98a9c, roughness: 0.95 });
+  var stCushion = new THREE.LatheGeometry([[0, 0], [0.17, 0], [0.182, 0.01], [0.188, 0.035], [0.18, 0.06], [0.15, 0.075], [0.08, 0.082], [0, 0.083]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 36);
+  siPart(stCushion, stVelvet, 0, 0.6, 0, 0, 0, 0, stool);                                          // a plump velvet cushion
+  siPart(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshStandardMaterial({ color: 0xa86478, roughness: 0.9 }), 0, 0.682, 0, 0, 0, 0, stool).scale.set(1, 0.4, 1);   // a covered button in the middle
+  for (var stP = 0; stP < 36; stP++) { var pa2 = stP / 36 * Math.PI * 2; siPart(new THREE.SphereGeometry(0.006, 6, 4), stBrass, Math.cos(pa2) * 0.183, 0.612, Math.sin(pa2) * 0.183, 0, 0, 0, stool); }   // brass nailheads round the edge
+  siPart(new THREE.CylinderGeometry(0.17, 0.16, 0.035, 32), stWalnut, 0, 0.583, 0, 0, 0, 0, stool);                                // the walnut seat frame
+  for (var stL = 0; stL < 4; stL++) {                                  // four splayed tapered legs with brass feet
+    var la2 = stL / 4 * Math.PI * 2 + Math.PI / 4, fx = Math.cos(la2), fz = Math.sin(la2);
+    var leg = siPart(new THREE.CylinderGeometry(0.016, 0.01, 0.6, 10), stWalnutPlain, fx * 0.15, 0.29, fz * 0.15, 0, 0, 0, stool);
+    leg.rotation.set(fz * 0.12, 0, -fx * 0.12);
+    siPart(new THREE.CylinderGeometry(0.011, 0.011, 0.02, 8), stBrass, fx * 0.185, 0.01, fz * 0.185, 0, 0, 0, stool);
   }
-  siPart(new THREE.TorusGeometry(0.14, 0.008, 5, 20), SI.pinkWire, 0, 0.3, 0, Math.PI / 2, 0, 0, stool);
+  siPart(new THREE.TorusGeometry(0.165, 0.009, 8, 40), stBrass, 0, 0.2, 0, Math.PI / 2, 0, 0, stool);   // a brass foot ring
   shopInSolids.push([STX, STZ, 0.5], [STX - 0.8, STZ + 0.35, 0.25]);
 
   // a tall leafy plant in the front corner, and a framed print by the counter
