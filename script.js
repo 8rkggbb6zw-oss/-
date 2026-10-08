@@ -3519,60 +3519,6 @@ function startGame(THREE) {
       g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(cx - 12, y0 + 14, 10, 3);
     }
   });
-  var shopDisplayTex = paintTexture(512, 320, function (g, w, h) {    // a cosy lit shop window full of seeds
-    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#e9d6bc'); bg.addColorStop(1, '#cfa77a');
-    g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    var warm = g.createRadialGradient(w / 2, h * 0.55, 10, w / 2, h * 0.55, w * 0.6);
-    warm.addColorStop(0, 'rgba(255,240,200,0.8)'); warm.addColorStop(1, 'rgba(255,240,200,0)');
-    g.fillStyle = warm; g.fillRect(0, 0, w, h);
-    g.strokeStyle = 'rgba(120,80,40,0.5)'; g.lineWidth = 1.5;               // a string of fairy lights
-    g.beginPath(); g.moveTo(20, 84); g.quadraticCurveTo(w / 2, 120, w - 20, 84); g.stroke();
-    for (var f = 1; f < 14; f++) {
-      var ft = f / 14, fx = 20 + ft * (w - 40), fy = 84 + 4 * ft * (1 - ft) * 36 * 0.95 + 4;
-      var fl = g.createRadialGradient(fx, fy, 0, fx, fy, 9); fl.addColorStop(0, 'rgba(255,236,170,1)'); fl.addColorStop(1, 'rgba(255,236,170,0)');
-      g.fillStyle = fl; g.fillRect(fx - 9, fy - 9, 18, 18);
-    }
-    var shelves = [180, 262];
-    shelves.forEach(function (sy, si2) {
-      for (var j = 0; j < 9; j++) {                                      // jars, seed packets and little pots along each shelf
-        var jx = 44 + j * 52 + (si2 ? 22 : 0), kind = Math.floor(isle2Hash(j * 5 + si2 * 31 + 3) * 3);
-        if (jx > w - 40) continue;
-        if (kind === 0) {
-          g.fillStyle = 'rgba(235,245,255,0.55)'; g.fillRect(jx - 15, sy - 46, 30, 46);
-          var sg = g.createRadialGradient(jx, sy - 16, 2, jx, sy - 16, 18); sg.addColorStop(0, '#f3e2ff'); sg.addColorStop(1, '#9a5ce8');
-          g.fillStyle = sg; g.fillRect(jx - 13, sy - 28, 26, 27);
-          g.fillStyle = '#e8b84a'; g.fillRect(jx - 17, sy - 52, 34, 7);
-        } else if (kind === 1) {
-          var pc = ['#f7b8d8', '#c9b3ef', '#bfe6c8', '#ffe3a3'][j % 4];
-          g.fillStyle = pc; g.fillRect(jx - 14, sy - 40, 28, 40);
-          g.fillStyle = '#ffffff'; g.beginPath(); g.arc(jx, sy - 24, 7, 0, Math.PI * 2); g.fill();
-          g.fillStyle = '#e8a6d0'; g.beginPath(); g.arc(jx, sy - 24, 3.5, 0, Math.PI * 2); g.fill();
-          g.fillStyle = 'rgba(80,50,110,0.6)'; g.fillRect(jx - 10, sy - 10, 20, 3);
-        } else {
-          g.fillStyle = '#c47b52'; g.beginPath(); g.moveTo(jx - 13, sy - 24); g.lineTo(jx + 13, sy - 24); g.lineTo(jx + 10, sy); g.lineTo(jx - 10, sy); g.closePath(); g.fill();
-          g.fillStyle = '#5fae5a'; g.beginPath(); g.arc(jx, sy - 34, 13, 0, Math.PI * 2); g.fill();
-          g.fillStyle = ['#ffb3dc', '#d9c4ff', '#fff1b8'][j % 3];
-          for (var b = 0; b < 4; b++) { g.beginPath(); g.arc(jx + Math.cos(b * 1.7) * 8, sy - 36 + Math.sin(b * 1.7) * 7, 3.5, 0, Math.PI * 2); g.fill(); }
-        }
-      }
-      g.fillStyle = '#7a4e34'; g.fillRect(16, sy, w - 32, 9);                  // the shelf, and its shadow
-      g.fillStyle = 'rgba(90,50,30,0.25)'; g.fillRect(16, sy + 9, w - 32, 10);
-    });
-    g.fillStyle = '#d9a63c'; g.font = 'italic bold 30px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('Moonbloom Seeds', w / 2, h - 26);
-    var sheen = g.createLinearGradient(0, 0, w, h);                     // a soft reflection across the glass
-    sheen.addColorStop(0.3, 'rgba(255,255,255,0)'); sheen.addColorStop(0.42, 'rgba(255,255,255,0.22)'); sheen.addColorStop(0.5, 'rgba(255,255,255,0)');
-    g.fillStyle = sheen; g.fillRect(0, 0, w, h);
-    var depth = g.createLinearGradient(0, 0, 0, h);                     // shade the top and bottom so the window looks deep
-    depth.addColorStop(0, 'rgba(60,35,20,0.45)'); depth.addColorStop(0.3, 'rgba(60,35,20,0)'); depth.addColorStop(0.85, 'rgba(60,35,20,0)'); depth.addColorStop(1, 'rgba(60,35,20,0.3)');
-    g.fillStyle = depth; g.fillRect(0, 0, w, h);
-    [0, w].forEach(function (ex) { var side = g.createLinearGradient(ex, 0, w / 2, 0); side.addColorStop(0, 'rgba(60,35,20,0.35)'); side.addColorStop(0.35, 'rgba(60,35,20,0)'); g.fillStyle = side; g.fillRect(0, 0, w, h); });
-    g.strokeStyle = '#3b2a4a'; g.lineWidth = 6;
-    g.beginPath(); g.moveTo(0, 64); g.lineTo(w, 64); g.stroke();
-    for (var m = 1; m < 6; m++) { g.lineWidth = 4; g.beginPath(); g.moveTo(m * w / 6, 0); g.lineTo(m * w / 6, 64); g.stroke(); }
-    g.lineWidth = 7; [w / 3, w * 2 / 3].forEach(function (mx) { g.beginPath(); g.moveTo(mx, 64); g.lineTo(mx, h); g.stroke(); });
-    g.lineWidth = 14; g.strokeRect(0, 0, w, h);
-  });
   var shopArchTex = paintTexture(128, 282, function (g, w, h) {        // an arched window with lilac curtains, lit from inside
     var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#fff0d4'); bg.addColorStop(1, '#efc994');
     g.fillStyle = bg; g.fillRect(0, 0, w, h);
@@ -3635,6 +3581,54 @@ function startGame(THREE) {
   var shopPaint = new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.42, metalness: 0.05 });
   var shopPaintLight = new THREE.MeshStandardMaterial({ color: 0x55405f, roughness: 0.42 });
   var shopSlate = new THREE.MeshStandardMaterial({ map: shopTiled(shopSlateTex, 14, 3), roughness: 0.7, metalness: 0.1 });
+  var shopNightGlass = [], shopDisplayLit = [];
+  function shopPanePaint(kind) {                                      // kind: 'arch', 'round', 'door', 'transom' (bars), and day or night
+    return function (g, w, h, night) {
+      if (night) {
+        var warm = g.createRadialGradient(w / 2, h * 0.6, 4, w / 2, h * 0.6, Math.max(w, h) * 0.75);
+        warm.addColorStop(0, '#ffe7b4'); warm.addColorStop(0.6, '#f0b870'); warm.addColorStop(1, '#a8683a');
+        g.fillStyle = warm; g.fillRect(0, 0, w, h);
+        if (kind === 'arch') {                                          // sheer curtains drawn back to each side
+          [[0, 1], [w, -1]].forEach(function (c) {
+            var cg = g.createLinearGradient(c[0], 0, c[0] + c[1] * w * 0.32, 0);
+            cg.addColorStop(0, 'rgba(120,80,110,0.75)'); cg.addColorStop(1, 'rgba(120,80,110,0)');
+            g.fillStyle = cg; g.fillRect(0, 0, w, h);
+          });
+        }
+        if (kind === 'door') {                                          // soft shapes of shelves deep inside
+          g.fillStyle = 'rgba(110,70,40,0.35)';
+          for (var sh = 0; sh < 3; sh++) g.fillRect(4, h * (0.3 + sh * 0.22), w - 8, 4);
+        }
+      } else {
+        var sky = g.createLinearGradient(0, 0, 0, h);                  // the sky reflected at the top, darker glass below
+        sky.addColorStop(0, '#b9cddb'); sky.addColorStop(0.45, '#5f707c'); sky.addColorStop(1, '#2c3034');
+        g.fillStyle = sky; g.fillRect(0, 0, w, h);
+        var streak = g.createLinearGradient(0, 0, w, h);
+        streak.addColorStop(0.25, 'rgba(255,255,255,0)'); streak.addColorStop(0.36, 'rgba(255,255,255,0.28)'); streak.addColorStop(0.42, 'rgba(255,255,255,0.05)'); streak.addColorStop(0.5, 'rgba(255,255,255,0.18)'); streak.addColorStop(0.58, 'rgba(255,255,255,0)');
+        g.fillStyle = streak; g.fillRect(0, 0, w, h);
+      }
+      g.strokeStyle = night ? '#3b2f2a' : '#f2ede4'; g.lineWidth = Math.max(4, w / 28);
+      g.beginPath();
+      if (kind === 'arch') {
+        g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.moveTo(0, h * 0.42); g.lineTo(w, h * 0.42); g.moveTo(0, h * 0.71); g.lineTo(w, h * 0.71); g.moveTo(0, 58); g.lineTo(w, 58);
+        for (var a = 1; a < 4; a++) { var an = Math.PI + a / 4 * Math.PI; g.moveTo(w / 2, 58); g.lineTo(w / 2 + Math.cos(an) * 64, 58 + Math.sin(an) * 64); }
+      } else if (kind === 'round') {
+        g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.moveTo(w / 2, 0); g.lineTo(w / 2, h);
+        g.moveTo(w / 2 + w * 0.22, h / 2); g.arc(w / 2, h / 2, w * 0.22, 0, Math.PI * 2);
+      } else if (kind === 'transom') {
+        for (var t = 1; t < 4; t++) { g.moveTo(t * w / 4, 0); g.lineTo(t * w / 4, h); }
+      }
+      g.stroke();
+    };
+  }
+  function shopRealGlass(kind, cw, ch, rx, ry, ox, oy) {             // glass that shows the sky by day and a warm lit room at night
+    var day = paintTexture(cw, ch, function (g, w, h) { shopPanePaint(kind)(g, w, h, false); });
+    var nite = paintTexture(cw, ch, function (g, w, h) { shopPanePaint(kind)(g, w, h, true); });
+    [day, nite].forEach(function (t) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.offset.set(ox || 0, oy || 0); });
+    var m = new THREE.MeshStandardMaterial({ map: day, emissive: 0xffffff, emissiveMap: nite, emissiveIntensity: 0.03, roughness: 0.06, metalness: 0.35 });
+    shopNightGlass.push(m);
+    return m;
+  }
   function shopGlow(tex, emissive) {                                  // lit glass, brighter at night
     var m = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.3, roughness: 0.15, metalness: 0.1 });
     if (emissive !== false) shopGlowList.push(m);
@@ -3643,7 +3637,12 @@ function startGame(THREE) {
 
   // the stone plinth, the cream stone walls and the corner quoins
   sp(new THREE.BoxGeometry(SW * 2 + 0.3, SHOP_PLINTH, SD * 2 + 0.3), houseMats.stone, 0, SHOP_PLINTH / 2, 0);
-  sp(new THREE.BoxGeometry(SW * 2, SHOP_WALL_H, SD * 2), shopAshlar, 0, SHOP_PLINTH + SHOP_WALL_H / 2, 0);
+  var SHOP_RECESS = 0.6;                                               // how deep the display windows are
+  sp(new THREE.BoxGeometry(SW * 2, SHOP_WALL_H, SD * 2 - SHOP_RECESS), shopAshlar, 0, SHOP_PLINTH + SHOP_WALL_H / 2, -SHOP_RECESS / 2);
+  [[-4.25, 0.7, SHOP_PLINTH, SHOP_WALL_H], [4.25, 0.7, SHOP_PLINTH, SHOP_WALL_H], [0, 1.9, SHOP_PLINTH, SHOP_WALL_H],      // the front wall round the two window openings
+   [-2.425, 2.95, SHOP_PLINTH, 0.6], [2.425, 2.95, SHOP_PLINTH, 0.6], [-2.425, 2.95, SHOP_PLINTH + 2.45, SHOP_WALL_H - 2.45], [2.425, 2.95, SHOP_PLINTH + 2.45, SHOP_WALL_H - 2.45]].forEach(function (f) {
+    sp(new THREE.BoxGeometry(f[1], f[3], SHOP_RECESS), shopAshlar, f[0], f[2] + f[3] / 2, SD - SHOP_RECESS / 2);
+  });
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
     for (var q = 0; q < 7; q++) {
       var longX = q % 2 === 0;
@@ -3663,8 +3662,7 @@ function startGame(THREE) {
     var win = new THREE.Group(), r = w / 2;
     win.position.set(x, y, z); win.rotation.y = ry;
     (parent || shopGroup).add(win);
-    var tex = shopTiled(shopArchTex, 1 / w, 1 / (hRect + r), 0.5, 0);
-    sp(new THREE.ShapeGeometry(shopArchPath(new THREE.Shape(), r, hRect, 0), 20), shopGlow(tex), 0, 0, 0.01, 0, 0, 0, win);
+    sp(new THREE.ShapeGeometry(shopArchPath(new THREE.Shape(), r, hRect, 0), 20), shopRealGlass('arch', 128, 282, 1 / w, 1 / (hRect + r), 0.5, 0), 0, 0, 0.01, 0, 0, 0, win);
     var frame = shopArchPath(new THREE.Shape(), r + 0.12, hRect, -0.12);
     frame.holes.push(shopArchPath(new THREE.Path(), r, hRect, 0));
     sp(new THREE.ExtrudeGeometry(frame, { depth: 0.1, bevelEnabled: false, curveSegments: 20 }), frameMat || shopTrim, 0, 0, 0, 0, 0, 0, win);
@@ -3685,25 +3683,103 @@ function startGame(THREE) {
     sp(new THREE.BoxGeometry(0.38, 0.1, 0.24), houseMats.gold, px, SHOP_PLINTH + 2.62, SHOP_FZ + 0.1);
     sp(new THREE.BoxGeometry(0.14, 1.6, 0.04), shopPaintLight, px, SHOP_PLINTH + 1.3, SHOP_FZ + 0.19);
   });
-  var shopDisplayMat = shopGlow(shopDisplayTex);
+  var shopBoxTex = paintTexture(256, 160, function (g, w, h) {       // soft cream walls inside the window box
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#efe2cc'); bg.addColorStop(1, '#d9c3a2');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(190,160,130,0.25)'; for (var i = 0; i < 16; i++) g.fillRect(i * 16 + 7, 0, 3, h);
+  });
+  var shopBoxMat = new THREE.MeshStandardMaterial({ map: shopBoxTex, emissive: 0xffd9a0, emissiveIntensity: 0.12, roughness: 0.9, side: THREE.BackSide });
+  var shopShelfMat = new THREE.MeshStandardMaterial({ color: 0x7a5236, emissive: 0x3a2010, emissiveIntensity: 0.15, roughness: 0.7 });
+  var shopJarMat = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.35, depthWrite: false });
+  var shopSeedMat = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x8a4ad8, emissiveIntensity: 0.6 });
+  var shopPotMat = new THREE.MeshStandardMaterial({ color: 0xb8673f, emissive: 0x3a1a0a, emissiveIntensity: 0.15, roughness: 0.85 });
+  var shopPlantMat = new THREE.MeshStandardMaterial({ color: 0x3f7a3a, emissive: 0x10240e, emissiveIntensity: 0.15, roughness: 0.6 });
+  shopDisplayLit.push(shopBoxMat, shopShelfMat, shopPotMat, shopPlantMat);
+  var shopPacketMats = [0xf4c2cc, 0xf7f3ec, 0xd9c8ec, 0xd8e8d4].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.1, roughness: 0.7 }); });
+  shopPacketMats.forEach(function (m) { shopDisplayLit.push(m); });
+  var shopBulbMat = new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffc860, emissiveIntensity: 1 });
+  var shopPaneTex = paintTexture(256, 160, function (g, w, h) {      // reflections across the big panes
+    g.fillStyle = 'rgba(200,220,235,0.06)'; g.fillRect(0, 0, w, h);
+    var top = g.createLinearGradient(0, 0, 0, h * 0.5); top.addColorStop(0, 'rgba(40,40,50,0.45)'); top.addColorStop(1, 'rgba(40,40,50,0)');
+    g.fillStyle = top; g.fillRect(0, 0, w, h);                         // the awning's shade on the glass
+    var st = g.createLinearGradient(0, 0, w, h);
+    st.addColorStop(0.2, 'rgba(255,255,255,0)'); st.addColorStop(0.3, 'rgba(255,255,255,0.3)'); st.addColorStop(0.36, 'rgba(255,255,255,0.04)'); st.addColorStop(0.44, 'rgba(255,255,255,0.2)'); st.addColorStop(0.52, 'rgba(255,255,255,0)');
+    g.fillStyle = st; g.fillRect(0, 0, w, h);
+  });
+  var shopPaneMat = new THREE.MeshStandardMaterial({ map: shopPaneTex, transparent: true, roughness: 0.05, metalness: 0.4, depthWrite: false });
+  var shopLetterTex = paintTexture(512, 64, function (g, w, h) {     // gilded lettering on the glass
+    g.fillStyle = '#e2b54c'; g.strokeStyle = 'rgba(80,50,10,0.6)'; g.lineWidth = 2;
+    g.font = 'italic bold 40px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.strokeText('Moonbloom Seeds', w / 2, h / 2); g.fillText('Moonbloom Seeds', w / 2, h / 2);
+  });
+  var shopLetterMat = new THREE.MeshStandardMaterial({ map: shopLetterTex, transparent: true, metalness: 0.6, roughness: 0.3, emissive: 0x6a4a10, emissiveIntensity: 0.3, depthWrite: false });
+  var SHOP_WIN_B = SHOP_PLINTH + 0.6, SHOP_WIN_H = 1.85, SHOP_WIN_W = 2.95, BOX_Z = SHOP_FZ - SHOP_RECESS / 2;
+  [-1, 1].forEach(function (s) {
+    var bx = s * 2.425;
+    sp(new THREE.BoxGeometry(SHOP_WIN_W, SHOP_WIN_H, SHOP_RECESS), shopBoxMat, bx, SHOP_WIN_B + SHOP_WIN_H / 2, BOX_Z).castShadow = false;
+    [SHOP_WIN_B + 0.62, SHOP_WIN_B + 1.22].forEach(function (shy, k) {          // two shelves on little brackets
+      sp(new THREE.BoxGeometry(SHOP_WIN_W - 0.1, 0.035, 0.24), shopShelfMat, bx, shy, SHOP_FZ - SHOP_RECESS + 0.14);
+      for (var j = 0; j < 9; j++) {
+        var jx = bx - 1.25 + j * 0.31 + (k ? 0.12 : 0), hv = isle2Hash(j * 3 + k * 17 + s * 41);
+        if ((j + k) % 3 === 0) {                                       // a jar of glowing seeds
+          sp(new THREE.CylinderGeometry(0.055, 0.055, 0.1, 10), shopSeedMat, jx, shy + 0.06, SHOP_FZ - SHOP_RECESS + 0.14);
+          sp(new THREE.CylinderGeometry(0.065, 0.065, 0.17, 12), shopJarMat, jx, shy + 0.1, SHOP_FZ - SHOP_RECESS + 0.14).castShadow = false;
+          sp(new THREE.CylinderGeometry(0.07, 0.07, 0.025, 12), houseMats.gold, jx, shy + 0.2, SHOP_FZ - SHOP_RECESS + 0.14);
+        } else if ((j + k) % 3 === 1) {                                // seed packets
+          sp(new THREE.BoxGeometry(0.13, 0.18, 0.02), shopPacketMats[Math.floor(hv * 4)], jx, shy + 0.1, SHOP_FZ - SHOP_RECESS + 0.16, -0.15, 0, 0);
+          sp(new THREE.BoxGeometry(0.13, 0.17, 0.02), shopPacketMats[(Math.floor(hv * 4) + 1) % 4], jx + 0.07, shy + 0.095, SHOP_FZ - SHOP_RECESS + 0.1, -0.1, 0, 0);
+        } else {                                                       // a little potted seedling
+          sp(new THREE.CylinderGeometry(0.06, 0.045, 0.1, 10), shopPotMat, jx, shy + 0.05, SHOP_FZ - SHOP_RECESS + 0.14);
+          sp(new THREE.IcosahedronGeometry(0.07, 0), shopPlantMat, jx, shy + 0.15, SHOP_FZ - SHOP_RECESS + 0.14, hv * 6, hv * 3, 0);
+        }
+      }
+    });
+    [-1.2, 1.2].forEach(function (ex) {                               // on the window floor: a big potted moonbloom at each end
+      var px = bx + ex;
+      sp(new THREE.CylinderGeometry(0.13, 0.1, 0.22, 14), shopPotMat, px, SHOP_WIN_B + 0.11, BOX_Z + 0.05);
+      for (var lf = 0; lf < 6; lf++) sp(new THREE.SphereGeometry(0.07, 8, 6), shopPlantMat, px + Math.cos(lf) * 0.07, SHOP_WIN_B + 0.3 + (lf % 2) * 0.06, BOX_Z + 0.05 + Math.sin(lf) * 0.07, 0, lf, 0.4).scale.set(1, 0.35, 1.6);
+      for (var bl = 0; bl < 3; bl++) sp(new THREE.SphereGeometry(0.045, 8, 6), shopSeedMat, px + Math.cos(bl * 2.1) * 0.06, SHOP_WIN_B + 0.42 + bl * 0.03, BOX_Z + 0.05 + Math.sin(bl * 2.1) * 0.06);
+    });
+    sp(new THREE.BoxGeometry(0.42, 0.14, 0.26), new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 0.95 }), bx - 0.45, SHOP_WIN_B + 0.07, BOX_Z);   // a crate of packets
+    for (var cp = 0; cp < 4; cp++) sp(new THREE.BoxGeometry(0.11, 0.16, 0.02), shopPacketMats[cp], bx - 0.6 + cp * 0.1, SHOP_WIN_B + 0.2, BOX_Z - 0.02 + (cp % 2) * 0.06, -0.2, 0, 0);
+    var easel = sp(new THREE.BoxGeometry(0.34, 0.42, 0.02), houseMats.door, bx + 0.4, SHOP_WIN_B + 0.21, BOX_Z + 0.08, -0.15, 0, 0);   // a little sign on an easel
+    sp(new THREE.PlaneGeometry(0.28, 0.34), new THREE.MeshStandardMaterial({ map: shopChalkTex2(), roughness: 0.9 }), 0, 0, 0.012, 0, 0, 0, easel);
+    for (var lb = 0; lb < 9; lb++) {                                   // a string of warm bulbs across the top
+      var lt = lb / 8;
+      sp(new THREE.SphereGeometry(0.025, 8, 6), shopBulbMat, bx - 1.35 + lt * 2.7, SHOP_WIN_B + SHOP_WIN_H - 0.1 - Math.sin(lt * Math.PI) * 0.12, SHOP_FZ - 0.12);
+    }
+    sp(new THREE.PlaneGeometry(SHOP_WIN_W, SHOP_WIN_H), shopPaneMat, bx, SHOP_WIN_B + SHOP_WIN_H / 2, SHOP_FZ + 0.01).castShadow = false;
+    sp(new THREE.PlaneGeometry(1.6, 0.2), shopLetterMat, bx, SHOP_WIN_B + 0.42, SHOP_FZ + 0.015).castShadow = false;
+    [[0, SHOP_WIN_H - 0.42, SHOP_WIN_W, 0.05], [-SHOP_WIN_W / 6, (SHOP_WIN_H - 0.42) / 2, 0.05, SHOP_WIN_H - 0.42], [SHOP_WIN_W / 6, (SHOP_WIN_H - 0.42) / 2, 0.05, SHOP_WIN_H - 0.42],   // slim glazing bars
+     [0, 0.02, SHOP_WIN_W, 0.05], [0, SHOP_WIN_H - 0.02, SHOP_WIN_W, 0.05], [-SHOP_WIN_W / 2 + 0.02, SHOP_WIN_H / 2, 0.05, SHOP_WIN_H], [SHOP_WIN_W / 2 - 0.02, SHOP_WIN_H / 2, 0.05, SHOP_WIN_H]].forEach(function (b) {
+      sp(new THREE.BoxGeometry(b[2], b[3], 0.05), shopPaint, bx + b[0], SHOP_WIN_B + b[1], SHOP_FZ + 0.02);
+    });
+    for (var tb = 1; tb < 6; tb++) sp(new THREE.BoxGeometry(0.035, 0.4, 0.04), shopPaint, bx - SHOP_WIN_W / 2 + tb * SHOP_WIN_W / 6, SHOP_WIN_B + SHOP_WIN_H - 0.21, SHOP_FZ + 0.02);
+  });
+  function shopChalkTex2() {
+    return paintTexture(112, 136, function (g, w, h) {
+      g.fillStyle = '#2f3833'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#f4efe6'; g.textAlign = 'center'; g.font = 'bold 17px Georgia, serif';
+      g.fillText('Fresh', w / 2, 34); g.fillText('Seeds', w / 2, 56);
+      g.fillStyle = '#f7d36a'; g.font = 'bold 24px Georgia, serif'; g.fillText('10 ✦', w / 2, 96);
+    });
+  }
   [-1, 1].forEach(function (s) {
     var cx = s * 2.425;
     sp(new THREE.BoxGeometry(2.95, 0.6, 0.12), shopPaint, cx, SHOP_PLINTH + 0.3, SHOP_FZ + 0.06);              // stall riser
     sp(new THREE.BoxGeometry(2.5, 0.34, 0.04), shopPaintLight, cx, SHOP_PLINTH + 0.3, SHOP_FZ + 0.13);
     sp(new THREE.BoxGeometry(2.56, 0.04, 0.05), houseMats.gold, cx, SHOP_PLINTH + 0.49, SHOP_FZ + 0.14);
     sp(new THREE.BoxGeometry(2.56, 0.04, 0.05), houseMats.gold, cx, SHOP_PLINTH + 0.11, SHOP_FZ + 0.14);
-    sp(new THREE.PlaneGeometry(2.95, 1.85), shopDisplayMat, cx, SHOP_PLINTH + 0.6 + 0.925, SHOP_FZ + 0.03);
     sp(new THREE.BoxGeometry(3.05, 0.07, 0.26), shopPaint, cx, SHOP_PLINTH + 0.62, SHOP_FZ + 0.13);           // window sill
   });
-  var shopDoorGlass = new THREE.MeshStandardMaterial({ color: 0xfff0d6, emissive: 0xffd9a0, emissiveIntensity: 0.4, roughness: 0.1 });
-  shopGlowList.push(shopDoorGlass);
+  var shopDoorGlass = shopRealGlass('door', 128, 168), shopTransomGlass = shopRealGlass('transom', 256, 60);
   sp(new THREE.BoxGeometry(1.3, 2.2, 0.08), houseMats.door, 0, SHOP_PLINTH + 1.1, SHOP_FZ + 0.02);
   sp(new THREE.PlaneGeometry(0.8, 1.05), shopDoorGlass, 0, SHOP_PLINTH + 1.5, SHOP_FZ + 0.065);
   [[0, 0.98, 0.86, 0.05], [0, 2.03, 0.86, 0.05], [-0.41, 1.5, 0.05, 1.1], [0.41, 1.5, 0.05, 1.1], [0, 1.5, 0.03, 1.05], [0, 0.18, 1.1, 0.16]].forEach(function (b) {
     sp(new THREE.BoxGeometry(b[2], b[3], 0.04), houseMats.gold, b[0], SHOP_PLINTH + b[1], SHOP_FZ + 0.075);
   });
   sp(new THREE.SphereGeometry(0.055, 10, 8), houseMats.gold, 0.45, SHOP_PLINTH + 1.05, SHOP_FZ + 0.11);
-  sp(new THREE.PlaneGeometry(1.3, 0.3), shopDoorGlass, 0, SHOP_PLINTH + 2.4, SHOP_FZ + 0.02);                  // transom light over the door
+  sp(new THREE.PlaneGeometry(1.3, 0.3), shopTransomGlass, 0, SHOP_PLINTH + 2.4, SHOP_FZ + 0.02);                  // transom light over the door
   sp(new THREE.BoxGeometry(1.3, 0.05, 0.06), houseMats.gold, 0, SHOP_PLINTH + 2.24, SHOP_FZ + 0.06);
   // the fascia sign and its cornice
   var shopSignTex = paintTexture(1040, 100, function (g, w, h) {
@@ -3771,7 +3847,7 @@ function startGame(THREE) {
     ar.scale.set(1, 0.75, 1);
     sp(new THREE.ConeGeometry(0.05, 0.3, 6), houseMats.gold, 0, bh + rr * 0.75 + 0.15, 0.02, 0, 0, 0, d);
     if (big) {
-      var rose = sp(new THREE.CircleGeometry(0.6, 32), shopGlow(shopRoseTex), 0, bh / 2 + 0.05, 0.06, 0, 0, 0, d);
+      var rose = sp(new THREE.CircleGeometry(0.6, 32), shopRealGlass('round', 256, 256), 0, bh / 2 + 0.05, 0.06, 0, 0, 0, d);
       sp(new THREE.TorusGeometry(0.63, 0.05, 8, 40), houseMats.gold, 0, bh / 2 + 0.05, 0.08, 0, 0, 0, d);
       sp(new THREE.TorusGeometry(0.74, 0.08, 8, 40), shopTrim, 0, bh / 2 + 0.05, 0.06, 0, 0, 0, d);
       sp(new THREE.BoxGeometry(0.18, 0.24, 0.12), shopTrim, 0, bh / 2 + 0.83, 0.08, 0, 0, 0, d);
@@ -3923,6 +3999,8 @@ function startGame(THREE) {
     crystalGlow.material.opacity = 0.45 + glow * 0.3 + Math.sin(t * 2.4) * 0.1;
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
     for (var g = 0; g < shopGlowList.length; g++) shopGlowList[g].emissiveIntensity = 0.3 + glow * 0.65;
+    for (var ng = 0; ng < shopNightGlass.length; ng++) shopNightGlass[ng].emissiveIntensity = 0.03 + glow * 0.9;
+    for (var dl = 0; dl < shopDisplayLit.length; dl++) shopDisplayLit[dl].emissiveIntensity = 0.12 + glow * 0.45;
     for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the spire
       var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = 2.2 * (1 - k * 0.7);
       shopSparkPos[i * 3] = Math.cos(a2) * r; shopSparkPos[i * 3 + 1] = BREAK_Y - 0.2 + k * 3.5; shopSparkPos[i * 3 + 2] = Math.sin(a2) * r;
@@ -3932,7 +4010,9 @@ function startGame(THREE) {
   (function () {                                                       // you bump into the building, the topiaries and the chalkboard
     var c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
     function solidAt(lx, lz, r) { solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: r }); }
-    for (var x = -SW; x <= SW + 0.01; x += 1.2) for (var z = -SD; z <= SD + 0.01; z += 1.2) solidAt(x, z, 0.95);
+    for (var x = -SW; x <= SW + 0.01; x += 1.2) for (var z = -SD; z <= SD - 0.9; z += 1.2) solidAt(x, z, 0.95);
+    for (var fx = -SW; fx <= SW + 0.01; fx += 0.5) if (Math.abs(fx) > 0.7) solidAt(fx, SD - 0.25, 0.4);   // the shopfront, with a gap for the door
+    solidAt(0, SD - 0.6, 0.35);                                        // the door itself: walk up to it and in you go
     topiaryXs.forEach(function (tx) { solidAt(tx, TOPIARY_Z, 0.32); });
     solidAt(CHALK_X, CHALK_Z, 0.4);
   })();
@@ -4572,7 +4652,7 @@ function startGame(THREE) {
     var d = indoors ? (inShop ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
     if (!doorArmed) { if (Math.min(d, dShop) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
     if (d < 0.5) useDoor(!indoors);
-    else if (dShop < 0.5) useDoor(!indoors, true);
+    else if (dShop < (indoors ? 0.5 : 0.22)) useDoor(!indoors, true);   // outside, you have to climb right up to the shop door
   }
   // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
   var sleepBtn = document.createElement('button');
@@ -8820,7 +8900,13 @@ function startGame(THREE) {
   // ---------- The seed shop: step up to the counter inside to buy seeds with Star Coins ----------
   var SEED_COST = 10;
   function shopFront(d) { return { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + d), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + d) }; }
-  var shopDoor = shopFront(1.05);                                     // step up to the front door to go in
+  var shopDoor = shopFront(0.12);                                     // walk up the steps to the front door to go in
+  function shopStepHeight(x, z) {                                     // how high the shop's front steps lift you
+    var dx = x - SHOP_X, dz = z - SHOP_Z, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
+    var lx = dx * c - dz * si, lz = dx * si + dz * c;                  // into the shop's own directions
+    if (Math.abs(lx) > 1.0 || lz < SHOP_HD - 0.6 || lz > SHOP_HD + 0.58) return 0;
+    return lz < SHOP_HD + 0.3 ? 0.3 : 0.15;
+  }
   var shopOpen = false;
   function nearShop(margin) { return atShopCounter(margin); }
   var shopBtn = document.createElement('button');
@@ -9186,7 +9272,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z); // up the porch steps and over the bridge
+    player.position.y = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z); // up the porch and shop steps, and over the bridge
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
