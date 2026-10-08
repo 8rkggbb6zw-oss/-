@@ -8356,9 +8356,11 @@ function startGame(THREE) {
     binLid.rotation.x += (lidTarget - binLid.rotation.x) * Math.min(1, dt * 8);
   }
   // ---------- Inside Whimsy & Bloom ----------
-  // Its own room, drawn instead of the island while you're inside, just like the farmhouse: a parquet floor, cream
-  // wallpaper over plum panelling, tall shelves of seed jars and packets behind a marble-topped counter (stand at the
-  // counter to buy seeds), display tables, arched windows, brass wall lamps and big potted plants. Walk back to the door to leave
+  // Its own room, drawn instead of the island while you're inside, just like the farmhouse: a bright white boutique with a
+  // dark wood plank floor and white marble hexagon tiles spilling round the counter, black metal shelves of glass lanterns,
+  // seed jars, bottles and packets, a white marble counter with a black top under brass dome lamps (stand at the counter
+  // to buy seeds), a black steel-grid window over a green back cabinet, white ceiling rails with trailing vines, a big
+  // window with a glass table of orchids, and spinner racks of seed packets. Walk back to the door to leave
   var shopScene = new THREE.Scene();
   shopScene.background = new THREE.Color(0x1c1228);
   var SIN_X = 200, SIN_Z = 1000, SIN_W = 11, SIN_D = 8, SIN_H = 3.8;   // where the room is built, far from everything, and its size
@@ -8366,12 +8368,12 @@ function startGame(THREE) {
   var shopRoom = new THREE.Group();
   shopRoom.position.set(SIN_X, 0, SIN_Z);
   shopScene.add(shopRoom);
-  shopScene.add(new THREE.HemisphereLight(0xfff0dc, 0x5a4060, 0.8));
-  var shopInLamp = new THREE.PointLight(0xffe2b8, 0.8, 14);
-  shopInLamp.position.set(SIN_X, 3.4, SIN_Z - 1.2);
+  shopScene.add(new THREE.HemisphereLight(0xffffff, 0xb8ad9e, 1.0));
+  var shopInLamp = new THREE.PointLight(0xffe2b8, 0.7, 10);           // warm light under the brass lamps
+  shopInLamp.position.set(SIN_X + 2.4, 2.3, SIN_Z - 1.4);
   shopScene.add(shopInLamp);
-  var shopInLamp2 = new THREE.PointLight(0xffd9a8, 0.45, 12);
-  shopInLamp2.position.set(SIN_X, 3.2, SIN_Z + 2.2);
+  var shopInLamp2 = new THREE.PointLight(0xfff4e6, 0.5, 14);          // soft daylight across the room
+  shopInLamp2.position.set(SIN_X - 2.5, 3.4, SIN_Z + 0.5);
   shopScene.add(shopInLamp2);
   function siPart(geo, mat, x, y, z, rx, ry, rz, parent) {            // one piece of the shop room (x, z from the middle of the floor)
     var m = new THREE.Mesh(geo, mat);
@@ -8381,77 +8383,84 @@ function startGame(THREE) {
     return m;
   }
   var shopInSolids = [];                                              // things you bump into (room positions: x, z, radius)
+  var CNT_X = 2.4, CNT_Z = -1.6, CNT_W = 3.0;                         // the counter: middle, and length
 
-  // painted textures: oak parquet, sprigged wallpaper, white marble, a rug, and the garden seen through the windows
-  var siParquetTex = paintTexture(256, 256, function (g, w, h) {
-    for (var bxi = 0; bxi < 4; bxi++) for (var byi = 0; byi < 4; byi++) {
-      for (var p = 0; p < 4; p++) {
-        var l = 46 + isle2Hash(bxi * 13 + byi * 7 + p * 3) * 12, along = (bxi + byi) % 2 === 0;
-        g.fillStyle = 'hsl(30,42%,' + l + '%)';
-        var x = bxi * 64, y = byi * 64;
-        if (along) g.fillRect(x + 1, y + p * 16 + 1, 62, 14); else g.fillRect(x + p * 16 + 1, y + 1, 14, 62);
-        g.strokeStyle = 'rgba(90,55,30,0.22)'; g.lineWidth = 1;
-        for (var k = 0; k < 3; k++) {
-          g.beginPath();
-          if (along) { var gy = y + p * 16 + 4 + k * 4; g.moveTo(x + 2, gy); g.lineTo(x + 62, gy + (isle2Hash(k + p) - 0.5) * 3); }
-          else { var gx = x + p * 16 + 4 + k * 4; g.moveTo(gx, y + 2); g.lineTo(gx + (isle2Hash(k + p) - 0.5) * 3, y + 62); }
-          g.stroke();
+  // the floor: dark oak planks, with white marble hexagon tiles spilling out round the counter
+  var SI_PPM = 186;                                                   // canvas pixels per metre of floor
+  var siFloorTex = paintTexture(2048, 1490, function (g, w, h) {
+    var PW = 0.2 * SI_PPM;
+    for (var r = 0; r * PW < h; r++) {                                 // long planks with grain and staggered joints
+      var x = -isle2Hash(r * 3.7) * 300;
+      while (x < w) {
+        var len = (1.2 + isle2Hash(r * 11 + x) * 1.0) * SI_PPM, l = 27 + isle2Hash(r * 5 + x * 0.3) * 10;
+        g.fillStyle = 'hsl(' + (24 + isle2Hash(x + r) * 6) + ',38%,' + l + '%)';
+        g.fillRect(x + 1, r * PW + 1, len - 2, PW - 2);
+        g.strokeStyle = 'rgba(40,22,12,0.25)'; g.lineWidth = 1;
+        for (var k = 0; k < 5; k++) {
+          var gy = r * PW + 4 + k * (PW - 8) / 4;
+          g.beginPath(); g.moveTo(x + 2, gy); g.bezierCurveTo(x + len * 0.3, gy + 2, x + len * 0.6, gy - 2, x + len - 2, gy + (isle2Hash(k + r) - 0.5) * 3); g.stroke();
         }
+        g.fillStyle = 'rgba(255,240,220,0.05)'; g.fillRect(x + 1, r * PW + 2, len - 2, 3);
+        x += len;
       }
     }
-  });
-  siParquetTex.wrapS = siParquetTex.wrapT = THREE.RepeatWrapping; siParquetTex.repeat.set(5.5, 4);
-  var siPaperTex = paintTexture(256, 256, function (g, w, h) {
-    g.fillStyle = '#efe6d6'; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(200,180,150,0.25)';
-    for (var s = 0; s < 4; s++) g.fillRect(s * 64 + 28, 0, 8, h);
-    for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) {          // little sprigs of leaves and a flower
-      var cx = i * 64 + ((j % 2) ? 0 : 32), cy = j * 64 + 32;
-      g.strokeStyle = '#8fa58a'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy + 10); g.quadraticCurveTo(cx - 3, cy, cx, cy - 10); g.stroke();
-      g.fillStyle = '#9db597';
-      g.beginPath(); g.ellipse(cx - 6, cy + 2, 6, 2.5, -0.6, 0, Math.PI * 2); g.fill();
-      g.beginPath(); g.ellipse(cx + 6, cy - 3, 6, 2.5, 0.6, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#c9a8c8'; g.beginPath(); g.arc(cx, cy - 12, 3, 0, Math.PI * 2); g.fill();
+    var R = 0.17, HW = Math.sqrt(3) * R;                               // hexagon tiles (metres)
+    function tiled(fx, fz, n) {                                        // the ragged patch round the counter and out toward the door
+      var a = Math.pow((fx - 2.6) / 3.1, 2) + Math.pow((fz + 1.2) / 2.3, 2);
+      var b = Math.pow((fx - 1.2) / 1.5, 2) + Math.pow((fz - 1.0) / 1.2, 2);
+      var c = Math.pow((fx - 3.6) / 1.6, 2) + Math.pow((fz - 1.4) / 1.1, 2);
+      return Math.min(a, b, c) < 1 + (isle2Hash(n) - 0.5) * 0.7;
+    }
+    var n = 0;
+    for (var row = 0; row * 1.5 * R < 8.4; row++) for (var col = 0; col * HW < 11.4; col++) {
+      n++;
+      var hx = col * HW + (row % 2 ? HW / 2 : 0) - 5.5, hz = row * 1.5 * R - 4;
+      if (!tiled(hx, hz, n * 1.31)) continue;
+      var px = (hx + 5.5) * SI_PPM, py = (hz + 4) * SI_PPM, pr = R * SI_PPM;
+      g.save(); g.beginPath();
+      for (var v = 0; v < 6; v++) { var va = Math.PI / 6 + v * Math.PI / 3; g.lineTo(px + Math.cos(va) * pr, py + Math.sin(va) * pr); }
+      g.closePath();
+      var mg = g.createLinearGradient(px - pr, py - pr, px + pr, py + pr); mg.addColorStop(0, '#f7f7f5'); mg.addColorStop(1, '#e6e6e3');
+      g.fillStyle = mg; g.fill();
+      g.clip();
+      g.strokeStyle = 'rgba(120,120,128,0.28)'; g.lineWidth = 1.2;
+      for (var vn = 0; vn < 2; vn++) {
+        var sx = px - pr + isle2Hash(n * 7 + vn) * pr * 2, sy = py - pr;
+        g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + (isle2Hash(n + vn * 3) - 0.5) * pr * 2, py - pr * 0.3, sx + (isle2Hash(n * 2 + vn) - 0.5) * pr * 2, py + pr * 0.3, sx + (isle2Hash(n * 5) - 0.5) * pr, py + pr); g.stroke();
+      }
+      g.restore();
+      g.strokeStyle = '#c7c6c2'; g.lineWidth = 3;
+      g.beginPath();
+      for (var v2 = 0; v2 <= 6; v2++) { var va2 = Math.PI / 6 + v2 * Math.PI / 3; g.lineTo(px + Math.cos(va2) * pr, py + Math.sin(va2) * pr); }
+      g.stroke();
     }
   });
-  siPaperTex.wrapS = siPaperTex.wrapT = THREE.RepeatWrapping;
-  var siMarbleTex = paintTexture(256, 64, function (g, w, h) {
-    g.fillStyle = '#f2eee8'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = 'rgba(150,140,150,0.35)'; g.lineWidth = 1.2;
-    for (var v = 0; v < 7; v++) {
+  siFloorTex.anisotropy = 4;
+  var siMarbleTex = paintTexture(256, 128, function (g, w, h) {       // white marble with soft grey veins
+    g.fillStyle = '#f3f2ef'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(140,140,148,0.3)'; g.lineWidth = 1.2;
+    for (var v = 0; v < 9; v++) {
       g.beginPath(); var x = isle2Hash(v * 3) * w; g.moveTo(x, 0);
       for (var y = 0; y <= h; y += 8) { x += (isle2Hash(v * 11 + y) - 0.45) * 14; g.lineTo(x, y); }
       g.stroke();
     }
-  });
-  var siRugTex = paintTexture(128, 320, function (g, w, h) {
-    g.fillStyle = '#5a3a6a'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#d9b25a'; g.lineWidth = 4; g.strokeRect(8, 8, w - 16, h - 16);
-    g.strokeStyle = '#c99ac0'; g.lineWidth = 2; g.strokeRect(16, 16, w - 32, h - 32);
-    for (var d = 0; d < 5; d++) {                                      // a row of diamonds down the middle
-      var cy = 40 + d * 60;
-      g.fillStyle = d % 2 ? '#c99ac0' : '#d9b25a';
-      g.beginPath(); g.moveTo(w / 2, cy - 22); g.lineTo(w / 2 + 22, cy); g.lineTo(w / 2, cy + 22); g.lineTo(w / 2 - 22, cy); g.closePath(); g.fill();
-    }
-    for (var i = 0; i < 1500; i++) { g.fillStyle = 'rgba(0,0,0,' + isle2Hash(i) * 0.08 + ')'; g.fillRect(isle2Hash(i * 2.1) * w, isle2Hash(i * 3.7) * h, 1, 1); }
+    g.strokeStyle = 'rgba(200,200,205,0.6)'; g.lineWidth = 2;          // tiles laid in a herringbone
+    for (var hx = -h; hx < w + h; hx += 32) { g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx + h / 2, h / 2); g.lineTo(hx, h); g.stroke(); }
   });
   function siViewPaint(g, w, h) {                                     // a sunny garden, seen through glass
-    var sky = g.createLinearGradient(0, 0, 0, h * 0.62); sky.addColorStop(0, '#8ec9f0'); sky.addColorStop(1, '#e4f3fc');
+    var sky = g.createLinearGradient(0, 0, 0, h * 0.62); sky.addColorStop(0, '#9fd2f2'); sky.addColorStop(1, '#eef8fd');
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#a9cf95'; g.beginPath(); g.moveTo(0, h * 0.6); g.quadraticCurveTo(w * 0.3, h * 0.5, w * 0.6, h * 0.58); g.quadraticCurveTo(w * 0.85, h * 0.62, w, h * 0.55); g.lineTo(w, h); g.lineTo(0, h); g.fill();
+    for (var t = 0; t < 5; t++) { g.fillStyle = 'rgba(80,130,70,0.8)'; g.beginPath(); g.arc(isle2Hash(t * 4.1) * w, h * 0.55, w * 0.06 + isle2Hash(t) * w * 0.05, 0, Math.PI * 2); g.fill(); }
     g.fillStyle = '#7fb36a'; g.fillRect(0, h * 0.72, w, h);
     for (var i = 0; i < 40; i++) { g.fillStyle = ['#f7b8d8', '#fff1b8', '#c9b3ef'][i % 3]; g.beginPath(); g.arc(isle2Hash(i * 1.3) * w, h * 0.76 + isle2Hash(i * 2.9) * h * 0.22, 2 + isle2Hash(i) * 2, 0, Math.PI * 2); g.fill(); }
     var sheen = g.createLinearGradient(0, 0, w, h); sheen.addColorStop(0.35, 'rgba(255,255,255,0)'); sheen.addColorStop(0.45, 'rgba(255,255,255,0.25)'); sheen.addColorStop(0.55, 'rgba(255,255,255,0)');
     g.fillStyle = sheen; g.fillRect(0, 0, w, h);
   }
-  var siArchViewTex = paintTexture(128, 282, function (g, w, h) {
-    siViewPaint(g, w, h);
-    g.strokeStyle = '#f5efe3'; g.lineWidth = 5;
-    g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h); g.moveTo(0, h * 0.42); g.lineTo(w, h * 0.42); g.moveTo(0, h * 0.71); g.lineTo(w, h * 0.71); g.moveTo(0, 58); g.lineTo(w, 58); g.stroke();
-  });
+  var siViewTex = paintTexture(512, 360, function (g, w, h) { siViewPaint(g, w, h); });
   var siFrontViewTex = paintTexture(512, 320, function (g, w, h) {
     siViewPaint(g, w, h);
-    g.strokeStyle = '#3b2a4a'; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 64); g.lineTo(w, 64); g.stroke();
+    g.strokeStyle = '#2a2a2c'; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 64); g.lineTo(w, 64); g.stroke();
     g.lineWidth = 4; for (var m = 1; m < 6; m++) { g.beginPath(); g.moveTo(m * w / 6, 0); g.lineTo(m * w / 6, 64); g.stroke(); }
     g.lineWidth = 7; [w / 3, w * 2 / 3].forEach(function (mx) { g.beginPath(); g.moveTo(mx, 64); g.lineTo(mx, h); g.stroke(); });
     g.lineWidth = 14; g.strokeRect(0, 0, w, h);
@@ -8459,45 +8468,38 @@ function startGame(THREE) {
 
   // materials
   var SI = {
-    floor: new THREE.MeshStandardMaterial({ map: siParquetTex, roughness: 0.45, metalness: 0.05 }),
-    paint: new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.45 }),
-    paintLight: new THREE.MeshStandardMaterial({ color: 0x55405f, roughness: 0.45 }),
-    wood: new THREE.MeshStandardMaterial({ color: 0x6e4a30, roughness: 0.7 }),
-    darkWood: new THREE.MeshStandardMaterial({ color: 0x3e2a20, roughness: 0.75 }),
-    marble: new THREE.MeshStandardMaterial({ map: siMarbleTex, roughness: 0.2, metalness: 0.05 }),
-    brass: new THREE.MeshStandardMaterial({ color: 0xd9a84e, emissive: 0x6a4a10, emissiveIntensity: 0.25, metalness: 0.75, roughness: 0.3 }),
-    cream: new THREE.MeshStandardMaterial({ color: 0xf5efe3, roughness: 0.8 }),
+    floor: new THREE.MeshStandardMaterial({ map: siFloorTex, roughness: 0.55, metalness: 0.02 }),
+    wall: new THREE.MeshStandardMaterial({ color: 0xf6f4f0, roughness: 0.95 }),
+    white: new THREE.MeshStandardMaterial({ color: 0xf8f7f4, roughness: 0.6 }),
+    black: new THREE.MeshStandardMaterial({ color: 0x1f1f22, roughness: 0.45, metalness: 0.55 }),
+    green: new THREE.MeshStandardMaterial({ color: 0x24392f, roughness: 0.5 }),
+    wood: new THREE.MeshStandardMaterial({ color: 0x8a6440, roughness: 0.7 }),
+    marble: new THREE.MeshStandardMaterial({ map: siMarbleTex, roughness: 0.25, metalness: 0.03 }),
+    brass: new THREE.MeshStandardMaterial({ color: 0xd4a84e, emissive: 0x5a3e0c, emissiveIntensity: 0.2, metalness: 0.8, roughness: 0.28 }),
     clay: new THREE.MeshStandardMaterial({ color: 0xb8673f, roughness: 0.85 }),
     leaf: new THREE.MeshStandardMaterial({ color: 0x3f6e3a, roughness: 0.8, flatShading: true }),
-    glass: new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32, depthWrite: false }),
-    seeds: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x5a2c99, emissiveIntensity: 0.45, roughness: 0.6 }),
-    glowSeed: new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 1.0 }),
-    rug: new THREE.MeshStandardMaterial({ map: siRugTex, roughness: 1 }),
-    view: new THREE.MeshStandardMaterial({ map: siFrontViewTex, emissive: 0xffffff, emissiveMap: siFrontViewTex, emissiveIntensity: 0.55, roughness: 0.2 })
+    glass: new THREE.MeshStandardMaterial({ color: 0xeef7ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.3, depthWrite: false }),
+    amber: new THREE.MeshStandardMaterial({ color: 0x8a4a1c, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85 }),
+    seeds: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x4a2a80, emissiveIntensity: 0.35, roughness: 0.6 }),
+    glowSeed: new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 0.9 }),
+    card: new THREE.MeshStandardMaterial({ color: 0xc9a27a, roughness: 0.9 }),
+    view: new THREE.MeshStandardMaterial({ map: siFrontViewTex, emissive: 0xffffff, emissiveMap: siFrontViewTex, emissiveIntensity: 0.6, roughness: 0.2 }),
+    bigView: new THREE.MeshStandardMaterial({ map: siViewTex, emissive: 0xffffff, emissiveMap: siViewTex, emissiveIntensity: 0.65, roughness: 0.2 }),
+    orchid: new THREE.MeshStandardMaterial({ color: 0xd63fae, roughness: 0.6 }),
+    blue: new THREE.MeshStandardMaterial({ color: 0x3a5ca8, roughness: 0.4 }),
+    pinkWire: new THREE.MeshStandardMaterial({ color: 0xe8b4bc, roughness: 0.5, metalness: 0.4 })
   };
-
-  // the floor and the rug running from the door to the counter
   siPart(new THREE.PlaneGeometry(SIN_W, SIN_D), SI.floor, 0, 0, 0, -Math.PI / 2);
-  siPart(new THREE.PlaneGeometry(1.5, 4.6), SI.rug, 0, 0.005, 1.4, -Math.PI / 2);
 
-  // the walls: wallpaper over plum panelling with a gold dado rail. Each wall is its own group (its local +z points into the room)
+  // the walls: plain bright white, with a white skirting board. Each wall is its own group (its local +z points into the room)
   var shopInWalls = {};
   function siWall(name, x, z, ry, len) {
     var wgp = new THREE.Group();
     wgp.position.set(x, 0, z); wgp.rotation.y = ry;
     shopRoom.add(wgp);
     shopInWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
-    var paper = new THREE.MeshStandardMaterial({ map: siPaperTex.clone(), roughness: 0.95 });
-    paper.map.needsUpdate = true; paper.map.repeat.set(len / 1.6, (SIN_H - 1.1) / 1.6);
-    siPart(new THREE.PlaneGeometry(len, SIN_H - 1.1), paper, 0, 1.1 + (SIN_H - 1.1) / 2, 0, 0, 0, 0, wgp);
-    siPart(new THREE.BoxGeometry(len, 1.1, 0.04), SI.paint, 0, 0.55, 0.02, 0, 0, 0, wgp);
-    for (var p = 0; p < Math.floor(len / 1.1); p++) {                  // raised panels
-      var px = -len / 2 + 0.55 + p * (len / Math.floor(len / 1.1));
-      siPart(new THREE.BoxGeometry(len / Math.floor(len / 1.1) - 0.2, 0.6, 0.02), SI.paintLight, px + (len / Math.floor(len / 1.1) - 1.1) / 2, 0.55, 0.05, 0, 0, 0, wgp);
-    }
-    siPart(new THREE.BoxGeometry(len, 0.06, 0.07), SI.brass, 0, 1.12, 0.04, 0, 0, 0, wgp);
-    siPart(new THREE.BoxGeometry(len, 0.12, 0.06), SI.darkWood, 0, 0.06, 0.05, 0, 0, 0, wgp);
-    siPart(new THREE.BoxGeometry(len, 0.14, 0.12), SI.cream, 0, SIN_H - 0.07, 0.06, 0, 0, 0, wgp);
+    siPart(new THREE.PlaneGeometry(len, SIN_H), SI.wall, 0, SIN_H / 2, 0, 0, 0, 0, wgp);
+    siPart(new THREE.BoxGeometry(len, 0.12, 0.03), SI.white, 0, 0.06, 0.015, 0, 0, 0, wgp);
     return wgp;
   }
   var SNW = -SIN_D / 2;
@@ -8507,69 +8509,71 @@ function startGame(THREE) {
   siWall('E', SIN_W / 2, 0, -Math.PI / 2, SIN_D);
   function siWallPart(name, geo, mat, x, y, z, rx, ry, rz) { return siPart(geo, mat, x, y, z, rx, ry, rz, shopInWalls[name].g); }
 
-  // arched windows on the side walls, looking out on the garden
-  [['W', 1], ['E', -1]].forEach(function (wn) {
-    [-1.0, 1.8].forEach(function (wz) {
-      var lx = wn[1] > 0 ? -wz : wz, wgrp = new THREE.Group();          // position along the wall, as seen from inside
-      wgrp.position.set(lx, 1.15, 0.01);
-      shopInWalls[wn[0]].g.add(wgrp);
-      var tex = siArchViewTex.clone(); tex.needsUpdate = true; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(1 / 1.1, 1 / (1.6 + 0.55)); tex.offset.set(0.5, 0);
-      siPart(new THREE.ShapeGeometry(shopArchPath(new THREE.Shape(), 0.55, 1.6, 0), 20), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.55 }), 0, 0, 0.01, 0, 0, 0, wgrp);
-      var frame = shopArchPath(new THREE.Shape(), 0.67, 1.6, -0.12);
-      frame.holes.push(shopArchPath(new THREE.Path(), 0.55, 1.6, 0));
-      siPart(new THREE.ExtrudeGeometry(frame, { depth: 0.08, bevelEnabled: false, curveSegments: 20 }), SI.cream, 0, 0, 0, 0, 0, 0, wgrp);
-      siPart(new THREE.BoxGeometry(1.4, 0.06, 0.2), SI.cream, 0, -0.14, 0.08, 0, 0, 0, wgrp);
-      [-1, 1].forEach(function (s) {                                   // lilac curtains, tied back
-        var cur = siPart(new THREE.CylinderGeometry(0.1, 0.2, 2.4, 10, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0xa48ccc, roughness: 0.9, side: THREE.DoubleSide }), s * 0.78, 1.0, 0.12, 0, s > 0 ? Math.PI : 0, 0, wgrp);
-        cur.scale.set(1, 1, 0.5);
-        siPart(new THREE.TorusGeometry(0.13, 0.015, 6, 14), SI.brass, s * 0.78, 0.7, 0.14, Math.PI / 2, 0, 0, wgrp);
-      });
-      siPart(new THREE.CylinderGeometry(0.02, 0.02, 1.9, 8), SI.brass, 0, 2.3, 0.15, 0, 0, Math.PI / 2, wgrp);
-    });
+  // a big picture window on the left wall, with a glass-topped iron table of orchids under it
+  siWallPart('W', new THREE.PlaneGeometry(3.4, 2.3), SI.bigView, -0.3, 1.95, 0.01);
+  [[-0.3, 3.1, 3.6, 0.1], [-0.3, 0.8, 3.6, 0.1], [-2.05, 1.95, 0.1, 2.4], [1.45, 1.95, 0.1, 2.4], [-0.3, 1.95, 0.05, 2.3]].forEach(function (b) {
+    siWallPart('W', new THREE.BoxGeometry(b[2], b[3], 0.08), SI.white, b[0], b[1], 0.04);
   });
-  // the shop front from inside: the two big display windows and the door you came in by
-  [-2.425, 2.425].forEach(function (wx) {
-    siWallPart('S', new THREE.PlaneGeometry(2.95, 1.85), SI.view, wx, 0.6 + 0.925, 0.02);
-    siWallPart('S', new THREE.BoxGeometry(3.05, 0.6, 0.6), SI.paint, wx, 0.3, 0.3);                    // a low display platform under each window
-    siWallPart('S', new THREE.BoxGeometry(3.1, 0.04, 0.64), SI.wood, wx, 0.62, 0.3);
+  siWallPart('W', new THREE.BoxGeometry(3.7, 0.05, 0.22), SI.white, -0.3, 0.76, 0.1);
+  var TBL_X = -SIN_W / 2 + 0.55;
+  siPart(new THREE.BoxGeometry(0.75, 0.03, 2.2), SI.glass, TBL_X, 0.82, 0.3);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) {           // curly iron legs
+    var lx = TBL_X + c[0] * 0.32, lz = 0.3 + c[1] * 1.0;
+    siPart(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 6), SI.black, lx, 0.4, lz);
+    siPart(new THREE.TorusGeometry(0.08, 0.012, 6, 14, Math.PI * 1.5), SI.black, lx, 0.62, lz - c[1] * 0.08, 0, Math.PI / 2, 0);
   });
-  var siDoorMat = new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.5 });
-  siWallPart('S', new THREE.BoxGeometry(1.3, 2.2, 0.06), siDoorMat, 0, 1.1, 0.03);
-  siWallPart('S', new THREE.PlaneGeometry(0.8, 1.05), SI.view, 0, 1.5, 0.065);
-  siWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), SI.brass, -0.45, 1.05, 0.1);
-  [[0, 2.24, 1.5, 0.1], [-0.69, 1.1, 0.1, 2.3], [0.69, 1.1, 0.1, 2.3]].forEach(function (b) { siWallPart('S', new THREE.BoxGeometry(b[2], b[3], 0.1), SI.cream, b[0], b[1], 0.05); });
-  siWallPart('S', new THREE.SphereGeometry(0.08, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), SI.brass, 0, 2.45, 0.12, Math.PI, 0, 0);     // the shop bell over the door
-  siPart(new THREE.BoxGeometry(1.0, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x6b5340, roughness: 1 }), 0, 0.01, SIN_D / 2 - 0.45);
-  var SIN_EXIT_Z = SIN_D / 2 - 0.6;
-
-  // the tall shelves along the back wall, crowded with seed jars, packets and seedlings
-  var SHELF_Z = SNW + 0.25, SHELF_YS = [0.5, 1.05, 1.6, 2.15, 2.7];
-  siPart(new THREE.PlaneGeometry(9.1, 3.0), SI.darkWood, 0, 1.5, SNW + 0.02);
-  for (var siSpk = 0; siSpk <= 6; siSpk++) siPart(new THREE.BoxGeometry(0.08, 3.0, 0.48), SI.paint, -4.5 + siSpk * 1.5, 1.5, SHELF_Z);
-  SHELF_YS.forEach(function (y) { siPart(new THREE.BoxGeometry(9.1, 0.04, 0.48), SI.wood, 0, y - 0.02, SHELF_Z); });
-  siPart(new THREE.BoxGeometry(9.1, 0.14, 0.48), SI.paint, 0, 0.07, SHELF_Z);
-  siPart(new THREE.BoxGeometry(9.5, 0.2, 0.6), SI.paint, 0, 3.08, SHELF_Z + 0.03);
-  siPart(new THREE.BoxGeometry(9.5, 0.04, 0.62), SI.brass, 0, 2.97, SHELF_Z + 0.03);
-  siPart(new THREE.PlaneGeometry(4.2, 0.4), shopSignMat, 0, 3.08, SHELF_Z + 0.335);
-  var siJars = [], siLids = [], siFills = [], siPackets = [], siPots = [], siSprouts = [];
-  SHELF_YS.forEach(function (y, si3) {
-    for (var x = -4.42; x <= 4.42; x += 0.21) {
-      var post = Math.abs(((x + 4.5) % 1.5 + 1.5) % 1.5);
-      if (post < 0.1 || post > 1.4) continue;                          // leave room for the uprights
-      var group = Math.floor((x + 4.5) / 0.84), kind = Math.floor(isle2Hash(si3 * 17 + group * 5) * 3), hv = isle2Hash(x * 7 + si3);
-      if (kind === 0) {
-        var jh = 0.18 + (si3 % 2) * 0.05;
-        siJars.push([x, y + jh / 2, SHELF_Z + 0.02, 1, jh / 0.2, 1, 0, 0, 0]);
-        siFills.push([x, y + jh * 0.32, SHELF_Z + 0.02, 1, jh * 0.6 / 0.12, 1, hv, 0, 0]);
-        siLids.push([x, y + jh + 0.015, SHELF_Z + 0.02, 1, 1, 1, 0, 0, 0]);
-      } else if (kind === 1) {
-        siPackets.push([x, y + 0.1, SHELF_Z + 0.06 + hv * 0.04, 1, 1, 1, hv, -0.18, 0]);
-      } else {
-        siPots.push([x, y + 0.06, SHELF_Z + 0.02, 1, 1, 1, 0, 0, 0]);
-        siSprouts.push([x, y + 0.16, SHELF_Z + 0.02, 1, 1, 1, hv, 0, hv * 6]);
+  siPart(new THREE.BoxGeometry(0.66, 0.015, 2.0), SI.black, TBL_X, 0.25, 0.3);
+  function siOrchid(x, z, y, s) {                                     // a white-and-blue pot of magenta orchids
+    siPart(new THREE.CylinderGeometry(0.11 * s, 0.09 * s, 0.18 * s, 14), SI.white, x, y + 0.09 * s, z);
+    siPart(new THREE.TorusGeometry(0.105 * s, 0.012 * s, 6, 16), SI.blue, x, y + 0.12 * s, z, Math.PI / 2, 0, 0);
+    for (var lf = 0; lf < 4; lf++) siPart(new THREE.IcosahedronGeometry(0.07 * s, 0), SI.leaf, x + Math.cos(lf * 1.6) * 0.08 * s, y + 0.2 * s, z + Math.sin(lf * 1.6) * 0.08 * s, lf, lf, 0).scale.set(1.6, 0.3, 0.7);
+    for (var st = 0; st < 2; st++) {
+      var sa = st * 2.4 + x, sh = (0.45 + st * 0.12) * s;
+      siPart(new THREE.CylinderGeometry(0.006, 0.006, sh, 4), SI.leaf, x + Math.cos(sa) * 0.03, y + 0.18 * s + sh / 2, z + Math.sin(sa) * 0.03);
+      for (var fl = 0; fl < 5; fl++) {
+        var fy = y + 0.18 * s + sh - fl * 0.06 * s, fo = 0.04 + fl * 0.025;
+        siPart(new THREE.SphereGeometry(0.035 * s, 8, 6), SI.orchid, x + Math.cos(sa) * (0.03 + fo * s), fy, z + Math.sin(sa) * (0.03 + fo * s)).scale.set(1.3, 1, 0.5);
       }
     }
+  }
+  siOrchid(TBL_X, -0.5, 0.835, 1.3); siOrchid(TBL_X, 0.25, 0.835, 1.1); siOrchid(TBL_X - 0.1, 1.0, 0.835, 1.2);
+  siPart(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 12), SI.glass, TBL_X + 0.18, 0.935, 1.15);
+  for (var siTz = -0.6; siTz <= 1.2; siTz += 0.9) shopInSolids.push([TBL_X, siTz, 0.5]);
+
+  // two tall black metal shelving units on the back wall
+  var SHELF_Z = SNW + 0.26, SHELF_YS = [0.35, 0.95, 1.55, 2.15, 2.75];
+  var siJars = [], siFills = [], siLids = [], siBottles = [], siNecks = [], siPackets = [], siBaskets = [];
+  [-4.6, -2.95].forEach(function (x0, u) {
+    var UW = 1.6;
+    [0, UW].forEach(function (dx) { [-0.21, 0.21].forEach(function (dz) { siPart(new THREE.BoxGeometry(0.04, 2.95, 0.04), SI.black, x0 + dx, 1.475, SHELF_Z + dz); }); });
+    SHELF_YS.forEach(function (y, k) {
+      siPart(new THREE.BoxGeometry(UW, 0.035, 0.44), SI.black, x0 + UW / 2, y - 0.018, SHELF_Z);
+      for (var i = 0; i < 7; i++) {
+        var x = x0 + 0.13 + i * 0.225, hv = isle2Hash(u * 50 + k * 9 + i);
+        if (k === 4) {
+          if (i % 2) continue;                                         // glass lanterns with brass tops along the top shelf
+          siPart(new THREE.BoxGeometry(0.17, 0.26, 0.17), SI.glass, x + 0.1, y + 0.13, SHELF_Z);
+          siPart(new THREE.ConeGeometry(0.13, 0.1, 4), SI.brass, x + 0.1, y + 0.31, SHELF_Z, 0, Math.PI / 4, 0);
+          siPart(new THREE.TorusGeometry(0.035, 0.008, 6, 12), SI.brass, x + 0.1, y + 0.39, SHELF_Z);
+          siPart(new THREE.BoxGeometry(0.18, 0.02, 0.18), SI.brass, x + 0.1, y + 0.01, SHELF_Z);
+          siPart(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8), SI.white, x + 0.1, y + 0.06, SHELF_Z);
+        } else if (k === 3) {
+          var jh = 0.16 + hv * 0.1;                                    // glass jars of seeds
+          siJars.push([x, y + jh / 2, SHELF_Z, 1, jh / 0.2, 1, 0, 0, 0]);
+          siFills.push([x, y + jh * 0.3, SHELF_Z, 1, jh * 0.55 / 0.12, 1, hv, 0, 0]);
+          siLids.push([x, y + jh + 0.01, SHELF_Z, 1, 1, 1, 0, 0, 0]);
+        } else if (k === 2) {
+          siBottles.push([x, y + 0.11, SHELF_Z, 1, 1, 1, hv, 0, 0]);   // little bottles of plant food
+          siNecks.push([x, y + 0.26, SHELF_Z, 1, 1, 1, 0, 0, 0]);
+        } else if (k === 1) {
+          siPackets.push([x, y + 0.11, SHELF_Z + 0.05, 1, 1, 1, hv, -0.15, 0]);
+          siPackets.push([x + 0.08, y + 0.1, SHELF_Z - 0.02, 1, 0.9, 1, isle2Hash(hv * 9), -0.1, 0]);
+        } else if (i % 3 === 0) {
+          siBaskets.push([x + 0.2, y + 0.08, SHELF_Z, 1, 1, 1, hv, 0, 0]);
+        }
+      }
+    });
+    shopInSolids.push([x0 + 0.4, SHELF_Z, 0.45], [x0 + 1.2, SHELF_Z, 0.45]);
   });
   var siDummy = new THREE.Object3D(), siCol = new THREE.Color();
   function siInstances(geo, mat, list, colorOf) {
@@ -8587,136 +8591,150 @@ function startGame(THREE) {
   }
   siInstances(new THREE.CylinderGeometry(0.075, 0.075, 0.2, 12), SI.glass, siJars);
   siInstances(new THREE.CylinderGeometry(0.065, 0.065, 0.12, 10), SI.seeds, siFills, function (q, c) { return c.set([0xd9b8ff, 0xffc2dc, 0xffe6a8, 0xc9f0d0][Math.floor(q[6] * 4)]); });
-  siInstances(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 12), SI.brass, siLids);
-  siInstances(new THREE.BoxGeometry(0.15, 0.2, 0.025), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }), siPackets, function (q, c) { return c.set([0xf7b8d8, 0xc9b3ef, 0xbfe6c8, 0xffe3a3, 0xf5efe3][Math.floor(q[6] * 5)]); });
-  siInstances(new THREE.CylinderGeometry(0.075, 0.055, 0.12, 10), SI.clay, siPots);
-  siInstances(new THREE.IcosahedronGeometry(0.085, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), siSprouts, function (q, c) { return c.setHSL(0.27 + q[6] * 0.06, 0.4, 0.28 + q[6] * 0.1); });
-  for (var siSpl = -4.2; siSpl <= 4.2; siSpl += 1.5) shopInSolids.push([siSpl, SHELF_Z, 0.45]);
-  // a rolling library ladder leaning on the shelves
-  var siLadder = new THREE.Group();
-  siLadder.position.set(3.0, 0, SHELF_Z + 0.75); siLadder.rotation.x = -0.24;
-  shopRoom.add(siLadder);
-  [-0.22, 0.22].forEach(function (lx) { siPart(new THREE.BoxGeometry(0.05, 3.1, 0.06), SI.wood, lx, 1.55, 0, 0, 0, 0, siLadder); });
-  for (var siRung = 0; siRung < 9; siRung++) siPart(new THREE.CylinderGeometry(0.018, 0.018, 0.44, 6), SI.brass, 0, 0.3 + siRung * 0.32, 0, 0, 0, Math.PI / 2, siLadder);
-  shopInSolids.push([3.0, SHELF_Z + 0.6, 0.35]);
-  // fairy lights along the top of the shelves, and ivy trailing down from them
-  var siBulbs = [];
-  for (var siFb = 0; siFb < 22; siFb++) {
-    var siFx = -4.4 + siFb * 0.42, siFy = 2.88 - Math.sin((siFb % 4) / 4 * Math.PI) * 0.1;
-    siPart(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0xfff0c0, emissive: 0xffc860, emissiveIntensity: 1 }), siFx, siFy, SHELF_Z + 0.3);
-    var siFg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd080, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-    siFg.position.set(siFx, siFy, SHELF_Z + 0.3); siFg.scale.set(0.3, 0.3, 1); shopRoom.add(siFg);
-    siBulbs.push({ s: siFg, p: siFb * 1.7 });
-  }
-  var siIvy = [];
-  [-3.8, -2.1, -0.6, 1.4, 3.6].forEach(function (vx, k) {
-    var len = 0.7 + isle2Hash(k * 3) * 0.7;
-    for (var v = 0; v < len / 0.07; v++) { var iv = isle2Hash(k * 10 + v); siIvy.push([vx + Math.sin(v * 0.9) * 0.04, 3.0 - v * 0.07, SHELF_Z + 0.32, 1, 1, 1, iv, 0, iv * 6]); }
-  });
-  siInstances(new THREE.IcosahedronGeometry(0.045, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), siIvy, function (q, c) { return c.setHSL(0.28 + q[6] * 0.05, 0.42, 0.26 + q[6] * 0.1); });
+  siInstances(new THREE.CylinderGeometry(0.08, 0.08, 0.025, 12), SI.brass, siLids);
+  siInstances(new THREE.CylinderGeometry(0.055, 0.055, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 }), siBottles, function (q, c) { return c.set([0x2a2a2e, 0x5a2e1a, 0x2e3a2c, 0x3a2a40][Math.floor(q[6] * 4)]); });
+  siInstances(new THREE.CylinderGeometry(0.018, 0.025, 0.08, 8), SI.black, siNecks);
+  siInstances(new THREE.BoxGeometry(0.15, 0.2, 0.025), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }), siPackets, function (q, c) { return c.set([0xf4c2cc, 0xf7f3ec, 0xe8d3ea, 0xd8e8d4, 0xf3dcc6][Math.floor(q[6] * 5)]); });
+  siInstances(new THREE.BoxGeometry(0.4, 0.15, 0.32), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), siBaskets, function (q, c) { return c.set(q[6] > 0.5 ? 0xb89a72 : 0xd8d2c8); });
 
-  // the counter: plum panels with gold trim, a white marble top, a brass till, a bell, a ledger and a jar of glowing seeds
-  var CNT_Z = -2.0, CNT_W = 4.0;
-  siPart(new THREE.BoxGeometry(CNT_W, 0.9, 0.65), SI.paint, 0, 0.5, CNT_Z);
-  siPart(new THREE.BoxGeometry(CNT_W - 0.1, 0.1, 0.6), SI.darkWood, 0, 0.05, CNT_Z);
-  for (var siCp = 0; siCp < 4; siCp++) {
-    var siCpx = -CNT_W / 2 + 0.5 + siCp * 1.0;
-    siPart(new THREE.BoxGeometry(0.8, 0.55, 0.03), SI.paintLight, siCpx, 0.52, CNT_Z + 0.335);
-    siPart(new THREE.BoxGeometry(0.82, 0.02, 0.035), SI.brass, siCpx, 0.8, CNT_Z + 0.34);
-    siPart(new THREE.BoxGeometry(0.82, 0.02, 0.035), SI.brass, siCpx, 0.24, CNT_Z + 0.34);
-  }
-  siPart(new THREE.BoxGeometry(CNT_W + 0.2, 0.07, 0.82), SI.marble, 0, 0.985, CNT_Z + 0.03);
-  var till = new THREE.Group(); till.position.set(-1.25, 1.02, CNT_Z); till.rotation.y = 0.15; shopRoom.add(till);
-  siPart(new THREE.BoxGeometry(0.5, 0.14, 0.42), SI.brass, 0, 0.07, 0, 0, 0, 0, till);                              // the drawer
-  siPart(new THREE.BoxGeometry(0.46, 0.22, 0.24), SI.brass, 0, 0.25, -0.06, 0, 0, 0, till);
-  siPart(new THREE.BoxGeometry(0.46, 0.04, 0.22), SI.darkWood, 0, 0.2, 0.12, 0.5, 0, 0, till);                       // the keys
-  for (var siTk = 0; siTk < 12; siTk++) siPart(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 8), SI.cream, -0.17 + (siTk % 4) * 0.11, 0.23 + Math.floor(siTk / 4) * 0.025, 0.08 + Math.floor(siTk / 4) * 0.045, 0.5, 0, 0, till);
-  siPart(new THREE.BoxGeometry(0.3, 0.12, 0.03), SI.cream, 0, 0.42, -0.08, 0, 0, 0, till);
-  siPart(new THREE.CylinderGeometry(0.05, 0.06, 0.02, 14), SI.brass, 0.55, 1.03, CNT_Z + 0.15);                          // the bell
-  siPart(new THREE.SphereGeometry(0.055, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), SI.brass, 0.55, 1.04, CNT_Z + 0.15);
-  siPart(new THREE.BoxGeometry(0.34, 0.05, 0.25), new THREE.MeshStandardMaterial({ color: 0x6a2f36, roughness: 0.7 }), 1.05, 1.045, CNT_Z + 0.05, 0, -0.3, 0);   // the ledger
-  siPart(new THREE.BoxGeometry(0.32, 0.01, 0.23), SI.cream, 1.05, 1.075, CNT_Z + 0.05, 0, -0.3, 0);
-  siPart(new THREE.CylinderGeometry(0.11, 0.11, 0.28, 16), SI.glass, 1.55, 1.16, CNT_Z + 0.1);
-  var siBigJar = siPart(new THREE.CylinderGeometry(0.1, 0.1, 0.18, 14), SI.glowSeed, 1.55, 1.11, CNT_Z + 0.1);
-  siPart(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), SI.brass, 1.55, 1.315, CNT_Z + 0.1);
-  for (var siC = -1.5; siC <= 1.5; siC += 1.0) shopInSolids.push([siC, CNT_Z, 0.5]);
+  // spinner racks of seed packets, and a little black table with an orchid, between the shelves and the counter
+  var siRacks = [];
+  [[-0.95, -3.35], [-0.2, -3.25]].forEach(function (rp, n) {
+    var rack = new THREE.Group(); rack.position.set(rp[0], 0, rp[1]); shopRoom.add(rack); siRacks.push(rack);
+    siPart(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 18), SI.black, 0, 0.015, 0, 0, 0, 0, rack);
+    siPart(new THREE.CylinderGeometry(0.015, 0.015, 1.9, 6), SI.black, 0, 0.95, 0, 0, 0, 0, rack);
+    siPart(new THREE.SphereGeometry(0.03, 8, 6), SI.black, 0, 1.92, 0, 0, 0, 0, rack);
+    for (var t = 0; t < 6; t++) for (var f = 0; f < 4; f++) {
+      var fa = f / 4 * Math.PI * 2, py = 0.65 + t * 0.2;
+      var pocket = siPart(new THREE.BoxGeometry(0.15, 0.17, 0.015), new THREE.MeshStandardMaterial({ color: [0xf4c2cc, 0xf7f3ec, 0xe8b8d0, 0xd9c8ec][(t + f + n) % 4], roughness: 0.7 }), Math.sin(fa) * 0.1, py, Math.cos(fa) * 0.1, -0.12, fa, 0, rack);
+      pocket.rotation.order = 'YXZ'; pocket.rotation.set(-0.12, fa, 0);
+      siPart(new THREE.BoxGeometry(0.17, 0.012, 0.03), SI.black, Math.sin(fa) * 0.12, py - 0.08, Math.cos(fa) * 0.12, 0, fa, 0, rack);
+    }
+    shopInSolids.push([rp[0], rp[1], 0.3]);
+  });
+  siPart(new THREE.BoxGeometry(0.45, 0.03, 0.45), SI.black, 0.6, 0.7, -3.4);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { siPart(new THREE.BoxGeometry(0.03, 0.7, 0.03), SI.black, 0.6 + c[0] * 0.2, 0.35, -3.4 + c[1] * 0.2); });
+  siOrchid(0.6, -3.4, 0.715, 1.2);
+  shopInSolids.push([0.6, -3.4, 0.35]);
 
-  // display tables either side of the rug: tiered seed jars on one, potted moonblooms on the other
-  function siRoundTable(x, z) {
-    siPart(new THREE.CylinderGeometry(0.75, 0.75, 0.05, 28), SI.wood, x, 0.78, z);
-    siPart(new THREE.CylinderGeometry(0.06, 0.08, 0.76, 10), SI.darkWood, x, 0.39, z);
-    siPart(new THREE.CylinderGeometry(0.35, 0.4, 0.05, 16), SI.darkWood, x, 0.025, z);
-    shopInSolids.push([x, z, 0.8]);
+  // behind the counter: a dark green cabinet with pastel boxes on top, under a black steel-grid glass screen
+  var BC_X0 = 1.2, BC_X1 = SIN_W / 2 - 0.05, BC_W = BC_X1 - BC_X0, BC_MID = (BC_X0 + BC_X1) / 2, BC_Z = SNW + 0.3;
+  siPart(new THREE.BoxGeometry(BC_W, 1.0, 0.56), SI.green, BC_MID, 0.5, BC_Z);
+  siPart(new THREE.BoxGeometry(BC_W + 0.04, 0.04, 0.6), SI.marble, BC_MID, 1.02, BC_Z);
+  for (var siBd = 0; siBd < 3; siBd++) {                               // cabinet doors with slim brass pulls
+    var dxm = BC_X0 + (siBd + 0.5) * BC_W / 3;
+    siPart(new THREE.BoxGeometry(BC_W / 3 - 0.08, 0.82, 0.02), new THREE.MeshStandardMaterial({ color: 0x2c4538, roughness: 0.5 }), dxm, 0.5, BC_Z + 0.285);
+    siPart(new THREE.BoxGeometry(0.2, 0.02, 0.03), SI.brass, dxm, 0.82, BC_Z + 0.3);
   }
-  siRoundTable(-2.5, 1.0);
-  [[0.55, 0.81], [0.38, 1.05], [0.22, 1.29]].forEach(function (tier, k) {
-    siPart(new THREE.CylinderGeometry(tier[0], tier[0], 0.04, 24), SI.cream, -2.5, tier[1], 1.0);
-    if (k < 2) siPart(new THREE.CylinderGeometry(0.03, 0.03, 0.24, 8), SI.brass, -2.5, tier[1] + 0.12, 1.0);
-    var n = [9, 6, 1][k];
-    for (var j = 0; j < n; j++) {
-      var a = j / n * Math.PI * 2, r = n > 1 ? tier[0] - 0.1 : 0, jx = -2.5 + Math.cos(a) * r, jz = 1.0 + Math.sin(a) * r;
-      siPart(new THREE.CylinderGeometry(0.065, 0.065, 0.17, 12), SI.glass, jx, tier[1] + 0.105, jz);
-      siPart(new THREE.CylinderGeometry(0.055, 0.055, 0.1, 10), j % 2 ? SI.glowSeed : SI.seeds, jx, tier[1] + 0.07, jz);
-      siPart(new THREE.CylinderGeometry(0.07, 0.07, 0.025, 12), SI.brass, jx, tier[1] + 0.2, jz);
-    }
+  [0xc8d6b0, 0xf1e6d0, 0xf0c7a8].forEach(function (c, k) {              // sage, cream and peach storage boxes
+    siPart(new THREE.BoxGeometry(BC_W / 3 - 0.06, 0.32, 0.4), new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 }), BC_X0 + (k + 0.5) * BC_W / 3, 1.2, BC_Z - 0.04);
   });
-  siRoundTable(2.5, 1.0);
-  var siBloomMats = [0xf2a6c8, 0xc8b4ec, 0xfaf2dc].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }); });
-  [[0, 0, 0.16], [0.35, 0.2, 0.11], [-0.32, 0.22, 0.11], [0.05, -0.38, 0.11], [-0.35, -0.2, 0.1]].forEach(function (pt, k) {
-    var px = 2.5 + pt[0], pz = 1.0 + pt[1], ps = pt[2];
-    siPart(new THREE.CylinderGeometry(ps, ps * 0.75, ps * 1.3, 12), SI.clay, px, 0.8 + ps * 0.65, pz);
-    siPart(new THREE.CylinderGeometry(ps * 1.05, ps * 1.05, ps * 0.15, 12), SI.clay, px, 0.8 + ps * 1.3, pz);
-    var top = 0.8 + ps * 1.3;
-    for (var b = 0; b < 5; b++) {
-      var ba = b * 1.3 + k, bx = px + Math.cos(ba) * ps * 0.5, bz = pz + Math.sin(ba) * ps * 0.5, bh = ps * (1.6 + isle2Hash(b + k * 5) * 1.2);
-      siPart(new THREE.CylinderGeometry(0.008, 0.01, bh, 5), SI.leaf, bx, top + bh / 2, bz);
-      siPart(new THREE.IcosahedronGeometry(ps * 0.35, 0), SI.leaf, bx + 0.03, top + bh * 0.4, bz, ba, ba, 0).scale.set(1, 0.4, 1.6);
-      var fl = siPart(new THREE.SphereGeometry(ps * 0.28, 10, 8), siBloomMats[(b + k) % 3], bx, top + bh, bz);
-      fl.scale.set(1, 0.6, 1);
-      siPart(new THREE.SphereGeometry(ps * 0.1, 8, 6), SI.glowSeed, bx, top + bh + ps * 0.12, bz);
-    }
+  var GRID_Y0 = 1.4, GRID_Y1 = 3.4, gridMid = (GRID_Y0 + GRID_Y1) / 2;
+  siPart(new THREE.PlaneGeometry(BC_W, GRID_Y1 - GRID_Y0), new THREE.MeshStandardMaterial({ color: 0xdfe8ea, roughness: 0.08, metalness: 0.4, transparent: true, opacity: 0.55 }), BC_MID, gridMid, SNW + 0.14);
+  for (var gx = 0; gx <= 6; gx++) siPart(new THREE.BoxGeometry(0.05, GRID_Y1 - GRID_Y0, 0.05), SI.black, BC_X0 + gx * BC_W / 6, gridMid, SNW + 0.16);
+  for (var gy = 0; gy <= 4; gy++) siPart(new THREE.BoxGeometry(BC_W, 0.05, 0.05), SI.black, BC_MID, GRID_Y0 + gy * (GRID_Y1 - GRID_Y0) / 4, SNW + 0.16);
+  for (var siBs = 0; siBs < 5; siBs++) shopInSolids.push([BC_X0 + 0.4 + siBs * (BC_W - 0.8) / 4, BC_Z, 0.4]);
+
+  // the counter: white marble tiles on the front and sides, a black top, a till, a white flower, amber bottles and a bowl
+  siPart(new THREE.BoxGeometry(CNT_W, 0.95, 0.62), SI.marble, CNT_X, 0.475, CNT_Z);
+  siPart(new THREE.BoxGeometry(CNT_W + 0.08, 0.06, 0.72), SI.black, CNT_X, 0.98, CNT_Z + 0.02);
+  siPart(new THREE.BoxGeometry(CNT_W - 0.04, 0.06, 0.58), SI.black, CNT_X, 0.03, CNT_Z);
+  var till = new THREE.Group(); till.position.set(CNT_X + 0.6, 1.01, CNT_Z - 0.1); till.rotation.y = -0.3; shopRoom.add(till);
+  siPart(new THREE.BoxGeometry(0.4, 0.28, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.3, 0, -0.15, 0, 0, till);
+  siPart(new THREE.PlaneGeometry(0.36, 0.24), new THREE.MeshStandardMaterial({ color: 0x9fc4e8, emissive: 0x6a9ccf, emissiveIntensity: 0.5 }), 0, 0.3, 0.012, -0.15, 0, 0, till);
+  siPart(new THREE.BoxGeometry(0.04, 0.18, 0.04), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.09, -0.03, 0, 0, 0, till);
+  siPart(new THREE.BoxGeometry(0.18, 0.015, 0.14), new THREE.MeshStandardMaterial({ color: 0xc8cace, metalness: 0.7, roughness: 0.3 }), 0, 0.008, -0.03, 0, 0, 0, till);
+  siPart(new THREE.BoxGeometry(0.09, 0.03, 0.15), SI.black, -0.3, 0.02, 0.1, 0.3, 0.2, 0, till);                      // the card reader
+  siPart(new THREE.CylinderGeometry(0.13, 0.08, 0.08, 18), SI.wood, CNT_X - 0.1, 1.05, CNT_Z + 0.05);                 // a wooden bowl of seed pods
+  for (var siPod = 0; siPod < 6; siPod++) siPart(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6a4030, roughness: 0.8 }), CNT_X - 0.1 + Math.cos(siPod) * 0.06, 1.1, CNT_Z + 0.05 + Math.sin(siPod) * 0.06);
+  var lilyX = CNT_X - 1.05, lilyZ = CNT_Z - 0.05;                     // a white peace lily in a pot
+  siPart(new THREE.CylinderGeometry(0.12, 0.1, 0.2, 14), SI.white, lilyX, 1.11, lilyZ);
+  for (var siLf = 0; siLf < 9; siLf++) {
+    var la = siLf * 0.7, ll = 0.25 + isle2Hash(siLf) * 0.15;
+    siPart(new THREE.CylinderGeometry(0.006, 0.006, ll, 4), SI.leaf, lilyX + Math.cos(la) * 0.05, 1.21 + ll / 2, lilyZ + Math.sin(la) * 0.05, Math.sin(la) * 0.4, 0, Math.cos(la) * 0.4);
+    siPart(new THREE.SphereGeometry(0.09, 10, 6), SI.leaf, lilyX + Math.cos(la) * 0.16, 1.21 + ll, lilyZ + Math.sin(la) * 0.16, 0.3, -la, 0.5).scale.set(0.5, 0.15, 1.3);
+    if (siLf % 3 === 0) siPart(new THREE.SphereGeometry(0.06, 10, 6), SI.white, lilyX + Math.cos(la + 0.4) * 0.1, 1.27 + ll, lilyZ + Math.sin(la + 0.4) * 0.1, 0.4, la, 0).scale.set(0.6, 1.4, 0.3);
+  }
+  for (var siAb = 0; siAb < 3; siAb++) {                               // little amber bottles
+    var abx = CNT_X + 1.2 - siAb * 0.11;
+    siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 10), SI.amber, abx, 1.07, CNT_Z + 0.15);
+    siPart(new THREE.CylinderGeometry(0.015, 0.015, 0.04, 8), SI.black, abx, 1.15, CNT_Z + 0.15);
+  }
+  var siBigJar = siPart(new THREE.CylinderGeometry(0.1, 0.1, 0.16, 14), SI.glowSeed, CNT_X + 0.15, 1.09, CNT_Z + 0.12);
+  siPart(new THREE.CylinderGeometry(0.11, 0.11, 0.26, 16), SI.glass, CNT_X + 0.15, 1.14, CNT_Z + 0.12);
+  siPart(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), SI.brass, CNT_X + 0.15, 1.28, CNT_Z + 0.12);
+  for (var siC = CNT_X - 1.0; siC <= CNT_X + 1.01; siC += 0.67) shopInSolids.push([siC, CNT_Z, 0.45]);
+
+  // a little white side table with amber bottles and a box, and a pink wire stool
+  var STX = 4.4, STZ = 0.5;
+  siPart(new THREE.BoxGeometry(0.8, 0.05, 0.55), SI.white, STX, 0.85, STZ);
+  siPart(new THREE.BoxGeometry(0.82, 0.03, 0.57), SI.black, STX, 0.885, STZ);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { siPart(new THREE.BoxGeometry(0.05, 0.84, 0.05), SI.white, STX + c[0] * 0.35, 0.42, STZ + c[1] * 0.23); });
+  siPart(new THREE.BoxGeometry(0.42, 0.3, 0.3), SI.card, STX + 0.1, 1.05, STZ - 0.05, 0, 0.15, 0);
+  for (var siSb = 0; siSb < 3; siSb++) siPart(new THREE.CylinderGeometry(0.035, 0.035, 0.13, 10), SI.amber, STX - 0.3 + siSb * 0.09, 0.965, STZ + 0.12);
+  var stool = new THREE.Group(); stool.position.set(STX - 0.8, 0, STZ + 0.35); shopRoom.add(stool);
+  siPart(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 16), SI.pinkWire, 0, 0.62, 0, 0, 0, 0, stool);
+  for (var siSl = 0; siSl < 4; siSl++) {
+    var sla = siSl / 4 * Math.PI * 2 + 0.4;
+    siPart(new THREE.CylinderGeometry(0.01, 0.01, 0.64, 5), SI.pinkWire, Math.cos(sla) * 0.13, 0.31, Math.sin(sla) * 0.13, Math.sin(sla) * 0.12, 0, -Math.cos(sla) * 0.12, stool);
+    siPart(new THREE.TorusGeometry(0.05, 0.007, 5, 12, Math.PI * 1.5), SI.pinkWire, Math.cos(sla) * 0.15, 0.2, Math.sin(sla) * 0.15, 0, -sla, 0, stool);
+  }
+  siPart(new THREE.TorusGeometry(0.14, 0.008, 5, 20), SI.pinkWire, 0, 0.3, 0, Math.PI / 2, 0, 0, stool);
+  shopInSolids.push([STX, STZ, 0.5], [STX - 0.8, STZ + 0.35, 0.25]);
+
+  // a tall leafy plant in the front corner, and a framed print by the counter
+  var siCornerX = SIN_W / 2 - 0.55, siCornerZ = SIN_D / 2 - 0.6;
+  siPart(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 16), SI.white, siCornerX, 0.25, siCornerZ);
+  siPart(new THREE.CylinderGeometry(0.03, 0.04, 1.3, 6), SI.wood, siCornerX, 1.1, siCornerZ);
+  for (var siPl = 0; siPl < 16; siPl++) {
+    var pla = siPl * 2.4, plh = 0.9 + (siPl / 16) * 1.0, plr = 0.18 + (1 - siPl / 16) * 0.12;
+    siPart(new THREE.IcosahedronGeometry(0.16, 0), SI.leaf, siCornerX + Math.cos(pla) * plr, plh, siCornerZ + Math.sin(pla) * plr, 0.4, -pla, 0.3).scale.set(0.9, 0.25, 1.4);
+  }
+  shopInSolids.push([siCornerX, siCornerZ, 0.4]);
+  siWallPart('E', new THREE.BoxGeometry(0.5, 0.62, 0.03), SI.black, -1.2, 1.75, 0.015);
+  siWallPart('E', new THREE.PlaneGeometry(0.4, 0.52), new THREE.MeshStandardMaterial({ map: shopBladeTex, roughness: 0.7 }), -1.2, 1.75, 0.035);
+
+  // the shop front from inside: the two big display windows and the door you came in by
+  [-2.425, 2.425].forEach(function (wx) {
+    siWallPart('S', new THREE.PlaneGeometry(2.95, 1.85), SI.view, wx, 0.6 + 0.925, 0.02);
+    siWallPart('S', new THREE.BoxGeometry(3.05, 0.6, 0.5), SI.white, wx, 0.3, 0.25);
   });
-  // long tables under the side windows, with baskets of seed packets and seedlings
-  [-1, 1].forEach(function (s) {
-    var tx = s * (SIN_W / 2 - 0.45);
-    siPart(new THREE.BoxGeometry(0.7, 0.05, 4.2), SI.wood, tx, 0.8, 0.4);
-    [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { siPart(new THREE.BoxGeometry(0.06, 0.78, 0.06), SI.darkWood, tx + c[0] * 0.3, 0.39, 0.4 + c[1] * 2.0); });
-    siPart(new THREE.BoxGeometry(0.62, 0.03, 4.0), SI.darkWood, tx, 0.18, 0.4);
-    for (var bk = 0; bk < 4; bk++) {
-      var bz = -1.2 + bk * 1.07;
-      if (bk % 2 === 0) {                                              // a wicker basket of packets
-        siPart(new THREE.CylinderGeometry(0.24, 0.2, 0.16, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 0.95, side: THREE.DoubleSide }), tx, 0.9, bz);
-        siPart(new THREE.CylinderGeometry(0.2, 0.2, 0.01, 14), new THREE.MeshStandardMaterial({ color: 0x8a6a42 }), tx, 0.83, bz);
-        for (var pk = 0; pk < 6; pk++) siPart(new THREE.BoxGeometry(0.12, 0.17, 0.02), new THREE.MeshStandardMaterial({ color: [0xf7b8d8, 0xc9b3ef, 0xbfe6c8, 0xffe3a3][pk % 4], roughness: 0.7 }), tx - 0.12 + (pk % 3) * 0.12, 0.96, bz - 0.06 + Math.floor(pk / 3) * 0.1, -0.25 + (pk % 2) * 0.3, 0, (pk % 3 - 1) * 0.15);
-      } else {                                                         // a tray of seedlings
-        siPart(new THREE.BoxGeometry(0.5, 0.06, 0.7), SI.clay, tx, 0.86, bz);
-        for (var sd = 0; sd < 8; sd++) siPart(new THREE.IcosahedronGeometry(0.06, 0), SI.leaf, tx - 0.12 + (sd % 2) * 0.24, 0.93, bz - 0.27 + Math.floor(sd / 2) * 0.18, sd, sd, 0);
+  siWallPart('S', new THREE.BoxGeometry(1.3, 2.2, 0.06), new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.5 }), 0, 1.1, 0.03);
+  siWallPart('S', new THREE.PlaneGeometry(0.8, 1.05), SI.view, 0, 1.5, 0.065);
+  siWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), SI.brass, -0.45, 1.05, 0.1);
+  siPart(new THREE.BoxGeometry(1.0, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x5a5a58, roughness: 1 }), 0, 0.01, SIN_D / 2 - 0.45);
+  var SIN_EXIT_Z = SIN_D / 2 - 0.6;
+
+  // white ceiling rails with spotlights, two brass dome lamps over the counter, and vines trailing down
+  var RAIL_Y = SIN_H - 0.08;
+  [[0, CNT_Z, SIN_W, 0.1], [-3.4, 0, 0.1, SIN_D]].forEach(function (r) {
+    siPart(new THREE.BoxGeometry(r[2], 0.1, r[3]), SI.white, r[0], RAIL_Y, r[1]);
+  });
+  [[-3.4, 2.2, 0.5], [-3.4, -2.6, 0.5], [-3.4, -0.6, -0.4], [-0.3, CNT_Z, 0.4], [-2.0, CNT_Z, -0.4], [4.4, CNT_Z, 0.4]].forEach(function (t) {
+    siPart(new THREE.CylinderGeometry(0.05, 0.065, 0.18, 12), SI.white, t[0], RAIL_Y - 0.14, t[1], t[2], 0, 0);
+  });
+  var siPendGlows = [];
+  [CNT_X - 0.6, CNT_X + 0.6].forEach(function (px, k) {
+    var py = 2.35 + k * 0.15;
+    siPart(new THREE.CylinderGeometry(0.006, 0.006, RAIL_Y - py, 4), SI.black, px, (RAIL_Y + py) / 2, CNT_Z);
+    siPart(new THREE.SphereGeometry(0.3, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), SI.brass, px, py - 0.22, CNT_Z).scale.set(1, 0.85, 1);
+    siPart(new THREE.SphereGeometry(0.29, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0d0, emissiveIntensity: 0.9, side: THREE.BackSide }), px, py - 0.22, CNT_Z).scale.set(1, 0.85, 1);
+    siPart(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 8), SI.brass, px, py + 0.04, CNT_Z);
+    var pg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe2b0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    pg.position.set(px, py - 0.28, CNT_Z); pg.scale.set(0.9, 0.9, 1); shopRoom.add(pg);
+    siPendGlows.push(pg);
+  });
+  var siVines = [];
+  [[-3.4, 0.6, 1.2], [-3.4, 1.6, 0.8], [-2.4, CNT_Z, 1.2], [3.6, CNT_Z, 0.8], [4.6, CNT_Z, 1.3], [-0.9, CNT_Z, 0.9], [-3.4, -3.2, 1.1], [-3.4, 2.8, 1.0], [1.0, CNT_Z, 0.7]].forEach(function (vn, k) {
+    for (var s = 0; s < 3; s++) {                                       // a few strands per vine, each with little leaves
+      var len = vn[2] * (0.6 + isle2Hash(k * 7 + s) * 0.5), ox = (s - 1) * 0.12;
+      for (var v = 0; v < len / 0.06; v++) {
+        var iv = isle2Hash(k * 31 + s * 7 + v);
+        siVines.push([vn[0] + ox + Math.sin(v * 0.7 + s) * 0.05, RAIL_Y - 0.05 - v * 0.06, vn[1] + Math.cos(v * 0.9 + s) * 0.05, 1, 1, 1, iv, iv * 3, iv * 6]);
       }
     }
-    for (var tzs = -1.5; tzs <= 2.5; tzs += 1.0) shopInSolids.push([tx, tzs, 0.45]);
   });
-  // tall potted plants in the front corners
-  [-1, 1].forEach(function (s) {
-    var px = s * (SIN_W / 2 - 0.55), pz = SIN_D / 2 - 0.55;
-    siPart(new THREE.CylinderGeometry(0.3, 0.24, 0.55, 16), SI.cream, px, 0.275, pz);
-    siPart(new THREE.TorusGeometry(0.3, 0.025, 6, 20), SI.brass, px, 0.52, pz, Math.PI / 2, 0, 0);
-    siPart(new THREE.CylinderGeometry(0.03, 0.04, 1.3, 6), SI.darkWood, px, 1.15, pz);
-    for (var lf = 0; lf < 16; lf++) {
-      var la = lf * 2.4, lh = 0.9 + (lf / 16) * 1.0, lr = 0.18 + (1 - lf / 16) * 0.12;
-      siPart(new THREE.IcosahedronGeometry(0.16, 0), SI.leaf, px + Math.cos(la) * lr, lh, pz + Math.sin(la) * lr, 0.4, -la, 0.3).scale.set(0.9, 0.25, 1.4);
-    }
-    shopInSolids.push([px, pz, 0.4]);
-  });
-  // brass wall lamps with frosted glass shades
-  var siSconces = [];
-  [['W', -0.4], ['E', 0.4], ['N', -4.8], ['N', 4.8]].forEach(function (sc) {
-    siWallPart(sc[0], new THREE.CylinderGeometry(0.08, 0.08, 0.02, 14), SI.brass, sc[1], 2.4, 0.02, Math.PI / 2, 0, 0);
-    siWallPart(sc[0], new THREE.CylinderGeometry(0.015, 0.015, 0.22, 6), SI.brass, sc[1], 2.45, 0.12, Math.PI / 2 - 0.4, 0, 0);
-    siWallPart(sc[0], new THREE.SphereGeometry(0.1, 14, 10), new THREE.MeshStandardMaterial({ color: 0xfff6e6, emissive: 0xffd9a0, emissiveIntensity: 0.9, roughness: 0.4 }), sc[1], 2.55, 0.22);
-    var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd9a0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
-    gl.position.set(sc[1], 2.55, 0.22); gl.scale.set(1.0, 1.0, 1); shopInWalls[sc[0]].g.add(gl);
-    siSconces.push(gl);
-  });
+  siInstances(new THREE.IcosahedronGeometry(0.045, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }), siVines, function (q, c) { return c.setHSL(0.27 + q[6] * 0.06, 0.4, 0.27 + q[6] * 0.12); }).scale.set(1, 1, 1);
 
   var siLook = new THREE.Vector3();
   function updateShopInterior(t) {
@@ -8726,14 +8744,16 @@ function startGame(THREE) {
       siLook.set(camera.position.x - SIN_X - W.c.x, 0, camera.position.z - SIN_Z - W.c.z);
       W.g.visible = siLook.dot(W.n) > 0;
     }
-    siBulbs.forEach(function (L) { L.s.material.opacity = 0.35 + 0.18 * Math.sin(t * 2 + L.p); });
-    SI.glowSeed.emissiveIntensity = 0.85 + Math.sin(t * 2.2) * 0.25;
+    SI.glowSeed.emissiveIntensity = 0.8 + Math.sin(t * 2.2) * 0.2;
     siBigJar.rotation.y = t * 0.3;
+    siRacks[0].rotation.y = Math.sin(t * 0.3) * 0.3;                    // the spinner racks turn a little, as if someone just browsed
+    siRacks[1].rotation.y = Math.sin(t * 0.25 + 2) * 0.3;
+    siPendGlows.forEach(function (g, k) { g.material.opacity = 0.45 + Math.sin(t * 1.3 + k) * 0.04; });
   }
   function inShopRoom(x, z) { return Math.abs(x - SIN_X) < SIN_W / 2 - 0.35 && Math.abs(z - SIN_Z) < SIN_D / 2 - 0.35; }
   function atShopCounter(margin) {                                    // standing in front of the counter (margin: how far past it still counts)
     if (!inShop) return false;
-    var lx = player.position.x - SIN_X, lz = player.position.z - SIN_Z, m = margin || 0;
+    var lx = player.position.x - SIN_X - CNT_X, lz = player.position.z - SIN_Z, m = margin || 0;
     return Math.abs(lx) < CNT_W / 2 + 0.4 + m && lz > CNT_Z + 0.3 && lz < CNT_Z + 1.9 + m;
   }
 
