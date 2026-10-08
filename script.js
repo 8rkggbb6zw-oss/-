@@ -68,7 +68,7 @@ function startGame(THREE) {
   var GROW_DAYS = 4;               // watered days for a moonbloom to grow from seed to flower
   var STAGE_ON_DAY = [0, 1, 1, 2, 3]; // which growth stage it shows after each watered day: sprout, young, young, bud, bloom
   var SPEED = 4.4;
-  var GAME_MINUTES_PER_SECOND = 8; // one in-game day = 3 real minutes
+  var GAME_MINUTES_PER_SECOND = 10 / 11; // every 10 in-game minutes take 11 real seconds (one in-game day = 26.4 real minutes)
 
   var state = { mana: MAX_MANA, harvest: 0, coins: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
 
