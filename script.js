@@ -1550,7 +1550,7 @@ function startGame(THREE) {
     };
   }
 
-  // Sparkles that drift up from the fish (one shared pool, drawn in a single go)
+  // Water spray when a fish leaps (one shared pool, drawn in a single go)
   var SPARKS = 120;
   var sparkPos = new Float32Array(SPARKS * 3), sparkCol = new Float32Array(SPARKS * 3);
   var sparkInfo = [];
@@ -1645,7 +1645,7 @@ function startGame(THREE) {
       if (f.jump < 0 && f.jumpIn <= 0) {
         f.jump = 0;
         ripple(p.x, p.z, 0xffffff, 0.9, 1.0);
-        for (var b = 0; b < 18; b++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.3, 0.9);
+        for (var b = 0; b < 18; b++) sparkle(p.x, WATER_Y + 0.05, p.z, 0xe8f6ff, 1.3, 0.9);   // a splash of water spray
       }
       if (f.jump >= 0) {
         f.jump += dt / 1.1;
@@ -1655,7 +1655,7 @@ function startGame(THREE) {
           f.jump = -1;
           f.jumpIn = 6 + Math.random() * 8;
           ripple(p.x, p.z, 0xffffff, 1.1, 1.2);
-          for (var b2 = 0; b2 < 24; b2++) sparkle(p.x, WATER_Y + 0.05, p.z, f.kind.glow, 1.5, 1.1);
+          for (var b2 = 0; b2 < 24; b2++) sparkle(p.x, WATER_Y + 0.05, p.z, 0xe8f6ff, 1.5, 1.1);
         }
       }
       g.position.y = y;
@@ -1671,13 +1671,6 @@ function startGame(THREE) {
       f.halo.position.set(p.x, WATER_Y + 0.01, p.z);
       f.halo.material.opacity = (0.35 + pulse * 0.1 + night * 0.5) * (f.jump >= 0 ? 0.4 : 1);
 
-      // An occasional sparkle drifting up from the tail
-      f.sparkIn -= dt;
-      if (f.sparkIn <= 0) {
-        f.sparkIn = 0.15 + Math.random() * 0.2;
-        var back = -FISH_LEN * 0.6;
-        sparkle(p.x + Math.cos(g.rotation.y) * back, y + 0.05, p.z - Math.sin(g.rotation.y) * back, f.kind.glow, 0.12, 0.3);
-      }
     });
 
     // Move and fade the sparkles
