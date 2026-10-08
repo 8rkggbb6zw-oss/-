@@ -8857,9 +8857,71 @@ function startGame(THREE) {
   siPart(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 12), SI.glass, TBL_X + 0.18, 0.935, 1.15);
   for (var siTz = -0.6; siTz <= 1.2; siTz += 0.9) shopInSolids.push([TBL_X, siTz, 0.5]);
 
+  // painted labels and packets for everything on the shelves and stands
+  var SI_PACKETS = [                                                   // name, background, flower, accent
+    ['Moonbloom', '#f6d9e2', '#e98ab6', '#7a3f6e'], ['Starbell', '#ece4f6', '#a98ad8', '#4f3a7a'],
+    ['Dawn Poppy', '#f8ead6', '#f0965a', '#7a4320'], ['Glowcress', '#e2efdc', '#8cc76a', '#2f5a2a'], ['Mistlily', '#f4f2ec', '#c9c3e6', '#5a5470']
+  ];
+  var siPacketMats = SI_PACKETS.map(function (pk, n) {
+    var tex = paintTexture(128, 176, function (g, w, h) {
+      g.fillStyle = pk[1]; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(120,90,60,' + isle2Hash(i * 3 + n) * 0.06 + ')'; g.fillRect(isle2Hash(i + n * 7) * w, isle2Hash(i * 2.3 + n) * h, 1, 1); }   // paper fibres
+      g.fillStyle = pk[3]; g.fillRect(0, 0, w, 14);                     // the crimped top
+      g.fillStyle = 'rgba(255,255,255,0.35)'; for (var c = 0; c < w; c += 4) g.fillRect(c, 2, 2, 10);
+      g.strokeStyle = pk[3]; g.lineWidth = 1.5; g.strokeRect(8, 22, w - 16, 104);   // the picture frame
+      var sky = g.createLinearGradient(0, 22, 0, 126); sky.addColorStop(0, '#ffffff'); sky.addColorStop(1, pk[1]);
+      g.fillStyle = sky; g.fillRect(9, 23, w - 18, 102);
+      g.strokeStyle = '#5a8a48'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, 124); g.quadraticCurveTo(w / 2 - 6, 90, w / 2, 66); g.stroke();
+      g.fillStyle = '#6aa055';
+      [[-1, 104], [1, 92]].forEach(function (lf) { g.beginPath(); g.ellipse(w / 2 + lf[0] * 13, lf[1], 13, 5, lf[0] * -0.5, 0, Math.PI * 2); g.fill(); });
+      for (var pt = 0; pt < 7; pt++) {                                   // the flower, in soft watercolour
+        var a = pt / 7 * Math.PI * 2, px = w / 2 + Math.cos(a) * 15, py = 58 + Math.sin(a) * 15;
+        var pg = g.createRadialGradient(px, py, 1, px, py, 14); pg.addColorStop(0, pk[2]); pg.addColorStop(1, 'rgba(255,255,255,0.2)');
+        g.fillStyle = pg; g.beginPath(); g.ellipse(px, py, 14, 9, a, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(w / 2, 58, 6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = pk[3]; g.textAlign = 'center';
+      g.font = 'bold 17px Georgia, serif'; g.fillText(pk[0], w / 2, 146);
+      g.font = 'italic 10px Georgia, serif'; g.fillText('Whimsy & Bloom', w / 2, 160);
+      g.fillStyle = pk[3]; g.fillRect(14, 166, w - 28, 2);
+    });
+    return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+  });
+  var siJarLabelTex = paintTexture(256, 48, function (g, w, h) {       // a kraft paper label wrapped round each jar
+    g.fillStyle = '#d2b48a'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 400; i++) { g.fillStyle = 'rgba(90,60,30,' + isle2Hash(i) * 0.12 + ')'; g.fillRect(isle2Hash(i * 1.7) * w, isle2Hash(i * 2.9) * h, 1.5, 1); }
+    g.fillStyle = '#3a2a1e'; g.textAlign = 'center'; g.font = 'italic bold 20px Georgia, serif';
+    g.fillText('Moon Seeds', w * 0.25, 30); g.fillText('Moon Seeds', w * 0.75, 30);
+    g.fillRect(0, 4, w, 1.5); g.fillRect(0, h - 6, w, 1.5);
+  });
+  var siSeedTex = paintTexture(128, 128, function (g, w, h) {          // seeds piled up inside the jars
+    g.fillStyle = '#f2ece4'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 700; i++) {
+      var sx = isle2Hash(i * 1.3) * w, sy = isle2Hash(i * 2.1) * h, sr = 1.5 + isle2Hash(i) * 2;
+      g.fillStyle = isle2Hash(i * 5.5) > 0.6 ? 'rgba(70,50,40,0.55)' : 'rgba(255,255,255,0.7)';
+      g.beginPath(); g.ellipse(sx, sy, sr, sr * 0.6, isle2Hash(i * 3) * 3, 0, Math.PI * 2); g.fill();
+    }
+  });
+  siSeedTex.wrapS = siSeedTex.wrapT = THREE.RepeatWrapping;
+  var siTonicTex = paintTexture(256, 64, function (g, w, h) {          // the label on the tonic bottles
+    g.fillStyle = '#f5f0e6'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#7a5a3a'; g.lineWidth = 1.5; g.strokeRect(6, 6, w / 2 - 12, h - 12); g.strokeRect(w / 2 + 6, 6, w / 2 - 12, h - 12);
+    g.fillStyle = '#3a2a1e'; g.textAlign = 'center';
+    g.font = 'bold 15px Georgia, serif'; g.fillText('BLOOM', w / 4, 28); g.fillText('BLOOM', w * 0.75, 28);
+    g.font = 'italic 12px Georgia, serif'; g.fillText('tonic', w / 4, 46); g.fillText('tonic', w * 0.75, 46);
+  });
+  var siWickerTex = paintTexture(128, 64, function (g, w, h) {          // a woven basket
+    g.fillStyle = '#9a7448'; g.fillRect(0, 0, w, h);
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 16; c++) {
+      var odd = (r + c) % 2, x = c * 8, y = r * 8;
+      var wg = g.createLinearGradient(x, y, odd ? x + 8 : x, odd ? y : y + 8); wg.addColorStop(0, '#7a5530'); wg.addColorStop(0.5, '#d2a870'); wg.addColorStop(1, '#7a5530');
+      g.fillStyle = wg; g.fillRect(x + 0.5, y + 0.5, 7, 7);
+    }
+  });
+  siWickerTex.wrapS = siWickerTex.wrapT = THREE.RepeatWrapping;
   // two tall black metal shelving units on the back wall
   var SHELF_Z = SNW + 0.26, SHELF_YS = [0.35, 0.95, 1.55, 2.15, 2.75];
-  var siJars = [], siFills = [], siLids = [], siBottles = [], siNecks = [], siPackets = [], siBaskets = [];
+  var siJars = [], siFills = [], siLids = [], siJarLabels = [], siBottles = [], siNecks = [], siBulbs2 = [], siTonicLabels = [], siPacketSets = SI_PACKETS.map(function () { return []; }), siBaskets = [], siLanternLights = [];
   [-4.6, -2.95].forEach(function (x0, u) {
     var UW = 1.6;
     [0, UW].forEach(function (dx) { [-0.21, 0.21].forEach(function (dz) { siPart(new THREE.BoxGeometry(0.04, 2.95, 0.04), SI.black, x0 + dx, 1.475, SHELF_Z + dz); }); });
@@ -8868,25 +8930,39 @@ function startGame(THREE) {
       for (var i = 0; i < 7; i++) {
         var x = x0 + 0.13 + i * 0.225, hv = isle2Hash(u * 50 + k * 9 + i);
         if (k === 4) {
-          if (i % 2) continue;                                         // glass lanterns with brass tops along the top shelf
-          siPart(new THREE.BoxGeometry(0.17, 0.26, 0.17), SI.glass, x + 0.1, y + 0.13, SHELF_Z);
-          siPart(new THREE.ConeGeometry(0.13, 0.1, 4), SI.brass, x + 0.1, y + 0.31, SHELF_Z, 0, Math.PI / 4, 0);
-          siPart(new THREE.TorusGeometry(0.035, 0.008, 6, 12), SI.brass, x + 0.1, y + 0.39, SHELF_Z);
-          siPart(new THREE.BoxGeometry(0.18, 0.02, 0.18), SI.brass, x + 0.1, y + 0.01, SHELF_Z);
-          siPart(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8), SI.white, x + 0.1, y + 0.06, SHELF_Z);
+          if (i % 2) continue;                                         // glass lanterns with brass frames and lit candles along the top shelf
+          var lx = x + 0.1;
+          siPart(new THREE.BoxGeometry(0.16, 0.25, 0.16), SI.glass, lx, y + 0.145, SHELF_Z);
+          [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { siPart(new THREE.BoxGeometry(0.012, 0.26, 0.012), SI.brass, lx + c[0] * 0.08, y + 0.145, SHELF_Z + c[1] * 0.08); });
+          siPart(new THREE.BoxGeometry(0.18, 0.025, 0.18), SI.brass, lx, y + 0.013, SHELF_Z);
+          siPart(new THREE.BoxGeometry(0.18, 0.015, 0.18), SI.brass, lx, y + 0.275, SHELF_Z);
+          siPart(new THREE.ConeGeometry(0.125, 0.09, 4), SI.brass, lx, y + 0.33, SHELF_Z, 0, Math.PI / 4, 0);
+          siPart(new THREE.SphereGeometry(0.014, 8, 6), SI.brass, lx, y + 0.38, SHELF_Z);
+          siPart(new THREE.TorusGeometry(0.03, 0.007, 6, 14), SI.brass, lx, y + 0.415, SHELF_Z);
+          siPart(new THREE.CylinderGeometry(0.028, 0.03, 0.09, 12), new THREE.MeshStandardMaterial({ color: 0xf6f0e2, roughness: 0.6 }), lx, y + 0.07, SHELF_Z);   // the candle
+          siPart(new THREE.CylinderGeometry(0.002, 0.002, 0.015, 4), SI.black, lx, y + 0.122, SHELF_Z);
+          var flame = siPart(new THREE.SphereGeometry(0.011, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a }), lx, y + 0.14, SHELF_Z);
+          flame.scale.set(1, 1.9, 1);
+          var fg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb860, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+          fg.position.set(lx, y + 0.14, SHELF_Z); fg.scale.set(0.2, 0.24, 1); shopRoom.add(fg);
+          siLanternLights.push({ f: flame, g: fg, p: hv * 6 });
         } else if (k === 3) {
           var jh = 0.16 + hv * 0.1;                                    // glass jars of seeds
           siJars.push([x, y + jh / 2, SHELF_Z, 1, jh / 0.2, 1, 0, 0, 0]);
-          siFills.push([x, y + jh * 0.3, SHELF_Z, 1, jh * 0.55 / 0.12, 1, hv, 0, 0]);
+          siFills.push([x, y + jh * 0.3, SHELF_Z, 1, jh * 0.55 / 0.12, 1, hv, 0, hv * 6]);
           siLids.push([x, y + jh + 0.01, SHELF_Z, 1, 1, 1, 0, 0, 0]);
+          siJarLabels.push([x, y + jh * 0.5, SHELF_Z, 1, 1, 1, hv, 0, -0.3 + hv * 0.6]);
         } else if (k === 2) {
-          siBottles.push([x, y + 0.11, SHELF_Z, 1, 1, 1, hv, 0, 0]);   // little bottles of plant food
-          siNecks.push([x, y + 0.26, SHELF_Z, 1, 1, 1, 0, 0, 0]);
+          siBottles.push([x, y, SHELF_Z, 1, 1, 1, hv, 0, 0]);         // little dropper bottles of plant tonic
+          siNecks.push([x, y + 0.245, SHELF_Z, 1, 1, 1, 0, 0, 0]);
+          siBulbs2.push([x, y + 0.29, SHELF_Z, 1, 1.5, 1, 0, 0, 0]);
+          siTonicLabels.push([x, y + 0.095, SHELF_Z, 1, 1, 1, 0, 0, -0.3 + hv * 0.6]);
         } else if (k === 1) {
-          siPackets.push([x, y + 0.11, SHELF_Z + 0.05, 1, 1, 1, hv, -0.15, 0]);
-          siPackets.push([x + 0.08, y + 0.1, SHELF_Z - 0.02, 1, 0.9, 1, isle2Hash(hv * 9), -0.1, 0]);
+          siPacketSets[Math.floor(hv * SI_PACKETS.length)].push([x, y + 0.11, SHELF_Z + 0.06, 1, 1, 1, hv, -0.15, 0]);   // seed packets, leaning back in rows
+          siPacketSets[Math.floor(isle2Hash(hv * 9) * SI_PACKETS.length)].push([x + 0.04, y + 0.105, SHELF_Z - 0.02, 1, 0.95, 1, 0, -0.12, 0]);
+          siPacketSets[Math.floor(isle2Hash(hv * 13) * SI_PACKETS.length)].push([x + 0.08, y + 0.1, SHELF_Z - 0.1, 1, 0.9, 1, 0, -0.1, 0]);
         } else if (i % 3 === 0) {
-          siBaskets.push([x + 0.2, y + 0.08, SHELF_Z, 1, 1, 1, hv, 0, 0]);
+          siBaskets.push([x + 0.2, y, SHELF_Z, hv, u * 3 + i]);
         }
       }
     });
@@ -8908,26 +8984,64 @@ function startGame(THREE) {
     return im;
   }
   siInstances(new THREE.CylinderGeometry(0.075, 0.075, 0.2, 12), SI.glass, siJars);
-  siInstances(new THREE.CylinderGeometry(0.065, 0.065, 0.12, 10), SI.seeds, siFills, function (q, c) { return c.set([0xd9b8ff, 0xffc2dc, 0xffe6a8, 0xc9f0d0][Math.floor(q[6] * 4)]); });
-  siInstances(new THREE.CylinderGeometry(0.08, 0.08, 0.025, 12), SI.brass, siLids);
-  siInstances(new THREE.CylinderGeometry(0.055, 0.055, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.1 }), siBottles, function (q, c) { return c.set([0x2a2a2e, 0x5a2e1a, 0x2e3a2c, 0x3a2a40][Math.floor(q[6] * 4)]); });
-  siInstances(new THREE.CylinderGeometry(0.018, 0.025, 0.08, 8), SI.black, siNecks);
-  siInstances(new THREE.BoxGeometry(0.15, 0.2, 0.025), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 }), siPackets, function (q, c) { return c.set([0xf4c2cc, 0xf7f3ec, 0xe8d3ea, 0xd8e8d4, 0xf3dcc6][Math.floor(q[6] * 5)]); });
-  siInstances(new THREE.BoxGeometry(0.4, 0.15, 0.32), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), siBaskets, function (q, c) { return c.set(q[6] > 0.5 ? 0xb89a72 : 0xd8d2c8); });
+  siInstances(new THREE.CylinderGeometry(0.065, 0.065, 0.12, 14), new THREE.MeshStandardMaterial({ map: siSeedTex, emissive: 0x4a2a80, emissiveIntensity: 0.25, roughness: 0.8 }), siFills, function (q, c) { return c.set([0xd9b8ff, 0xffc2dc, 0xffe6a8, 0xc9f0d0][Math.floor(q[6] * 4)]); });
+  siInstances(new THREE.CylinderGeometry(0.08, 0.08, 0.025, 16), SI.brass, siLids);
+  siInstances(new THREE.CylinderGeometry(0.077, 0.077, 0.06, 18, 1, true), new THREE.MeshStandardMaterial({ map: siJarLabelTex, roughness: 0.9 }), siJarLabels);
+  var siBottleGeo = new THREE.LatheGeometry([[0, 0], [0.045, 0], [0.05, 0.01], [0.05, 0.15], [0.046, 0.175], [0.03, 0.2], [0.018, 0.215], [0.018, 0.24], [0, 0.24]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 16);
+  siInstances(siBottleGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.12, metalness: 0.25 }), siBottles, function (q, c) { return c.set([0x6a3416, 0x2e4a2e, 0x2e3a5a, 0x4a2a50][Math.floor(q[6] * 4)]); });
+  siInstances(new THREE.CylinderGeometry(0.0515, 0.0515, 0.075, 18, 1, true), new THREE.MeshStandardMaterial({ map: siTonicTex, roughness: 0.85 }), siTonicLabels);
+  siInstances(new THREE.CylinderGeometry(0.022, 0.022, 0.03, 12), SI.black, siNecks);
+  siInstances(new THREE.SphereGeometry(0.018, 10, 8), new THREE.MeshStandardMaterial({ color: 0x1e1e20, roughness: 0.45 }), siBulbs2);
+  siPacketSets.forEach(function (list, n) { siInstances(new THREE.BoxGeometry(0.15, 0.2, 0.012), siPacketMats[n], list); });
+  var siWicker = new THREE.MeshStandardMaterial({ map: siWickerTex, roughness: 0.95, side: THREE.DoubleSide });
+  var siLinen = new THREE.MeshStandardMaterial({ color: 0xe9e2d4, roughness: 0.95 });
+  siBaskets.forEach(function (b) {                                     // woven baskets of seed packets, and linen boxes with brass label holders
+    var bx = b[0], by = b[1], bz = b[2];
+    if (b[4] % 2 === 0) {
+      var bt = siWickerTex.clone(); bt.needsUpdate = true; bt.repeat.set(4, 1);
+      var bm = new THREE.MeshStandardMaterial({ map: bt, roughness: 0.95, side: THREE.DoubleSide });
+      siPart(new THREE.CylinderGeometry(0.17, 0.14, 0.15, 16, 1, true), bm, bx, by + 0.075, bz);
+      siPart(new THREE.CircleGeometry(0.14, 16), bm, bx, by + 0.004, bz, -Math.PI / 2);
+      siPart(new THREE.TorusGeometry(0.17, 0.012, 6, 24), new THREE.MeshStandardMaterial({ color: 0x8a6438, roughness: 0.9 }), bx, by + 0.15, bz, Math.PI / 2, 0, 0);
+      for (var bk = 0; bk < 7; bk++) siPart(new THREE.BoxGeometry(0.1, 0.13, 0.01), siPacketMats[(bk + b[4]) % SI_PACKETS.length], bx + (bk % 4 - 1.5) * 0.06, by + 0.14, bz + (bk < 4 ? 0.03 : -0.04), (bk % 2 ? 0.2 : -0.15), (bk - 3) * 0.12, 0);
+      [-1, 1].forEach(function (sd) { siPart(new THREE.TorusGeometry(0.035, 0.008, 5, 12, Math.PI), new THREE.MeshStandardMaterial({ color: 0x8a6438, roughness: 0.9 }), bx + sd * 0.17, by + 0.13, bz, 0, Math.PI / 2, 0); });
+    } else {
+      siPart(new THREE.BoxGeometry(0.36, 0.17, 0.3), siLinen, bx, by + 0.085, bz);
+      siPart(new THREE.BoxGeometry(0.37, 0.03, 0.31), new THREE.MeshStandardMaterial({ color: 0xded5c3, roughness: 0.95 }), bx, by + 0.17, bz);
+      siPart(new THREE.BoxGeometry(0.1, 0.05, 0.006), SI.brass, bx, by + 0.1, bz + 0.153);
+      siPart(new THREE.PlaneGeometry(0.08, 0.035), new THREE.MeshStandardMaterial({ map: siJarLabelTex, roughness: 0.9 }), bx, by + 0.1, bz + 0.157);
+    }
+  });
 
   // spinner racks of seed packets, and a little black table with an orchid, between the shelves and the counter
   var siRacks = [];
   [[-0.95, -3.35], [-0.2, -3.25]].forEach(function (rp, n) {
     var rack = new THREE.Group(); rack.position.set(rp[0], 0, rp[1]); shopRoom.add(rack); siRacks.push(rack);
     siPart(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 18), SI.black, 0, 0.015, 0, 0, 0, 0, rack);
-    siPart(new THREE.CylinderGeometry(0.015, 0.015, 1.9, 6), SI.black, 0, 0.95, 0, 0, 0, 0, rack);
-    siPart(new THREE.SphereGeometry(0.03, 8, 6), SI.black, 0, 1.92, 0, 0, 0, 0, rack);
-    for (var t = 0; t < 6; t++) for (var f = 0; f < 4; f++) {
-      var fa = f / 4 * Math.PI * 2, py = 0.65 + t * 0.2;
-      var pocket = siPart(new THREE.BoxGeometry(0.15, 0.17, 0.015), new THREE.MeshStandardMaterial({ color: [0xf4c2cc, 0xf7f3ec, 0xe8b8d0, 0xd9c8ec][(t + f + n) % 4], roughness: 0.7 }), Math.sin(fa) * 0.1, py, Math.cos(fa) * 0.1, -0.12, fa, 0, rack);
-      pocket.rotation.order = 'YXZ'; pocket.rotation.set(-0.12, fa, 0);
-      siPart(new THREE.BoxGeometry(0.17, 0.012, 0.03), SI.black, Math.sin(fa) * 0.12, py - 0.08, Math.cos(fa) * 0.12, 0, fa, 0, rack);
+    siPart(new THREE.CylinderGeometry(0.015, 0.015, 1.83, 8), SI.black, 0, 0.915, 0, 0, 0, 0, rack);
+    siPart(new THREE.SphereGeometry(0.03, 8, 6), SI.brass, 0, 1.99, 0, 0, 0, 0, rack);
+    for (var t = 0; t < 6; t++) for (var f = 0; f < 4; f++) {           // wire pockets, each holding a couple of seed packets
+      var fa = f / 4 * Math.PI * 2, py = 0.65 + t * 0.2, pmat = siPacketMats[(t * 2 + f + n * 3) % SI_PACKETS.length];
+      [0, 1].forEach(function (pp) {
+        var pocket = siPart(new THREE.BoxGeometry(0.14, 0.18, 0.008), pmat, Math.sin(fa) * (0.1 - pp * 0.015), py + pp * 0.008, Math.cos(fa) * (0.1 - pp * 0.015), 0, 0, 0, rack);
+        pocket.rotation.order = 'YXZ'; pocket.rotation.set(-0.14, fa, 0);
+      });
+      siPart(new THREE.BoxGeometry(0.16, 0.008, 0.035), SI.black, Math.sin(fa) * 0.12, py - 0.085, Math.cos(fa) * 0.12, 0, fa, 0, rack);
+      [-1, 1].forEach(function (sd) {                                   // the wire sides of the pocket
+        var ox = Math.cos(fa) * sd * 0.075, oz = -Math.sin(fa) * sd * 0.075;
+        siPart(new THREE.BoxGeometry(0.004, 0.09, 0.004), SI.black, Math.sin(fa) * 0.13 + ox, py - 0.045, Math.cos(fa) * 0.13 + oz, 0, fa, 0, rack);
+      });
+      siPart(new THREE.BoxGeometry(0.16, 0.004, 0.004), SI.black, Math.sin(fa) * 0.135, py - 0.01, Math.cos(fa) * 0.135, 0, fa, 0, rack);
     }
+    var signTex = paintTexture(128, 64, function (g, w, h) {          // a little sign on top of the rack
+      g.fillStyle = '#2f2a33'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#d9a84e'; g.lineWidth = 3; g.strokeRect(4, 4, w - 8, h - 8);
+      g.fillStyle = '#f2e6c8'; g.textAlign = 'center'; g.font = 'italic bold 22px Georgia, serif'; g.fillText(n ? 'Flowers' : 'Seeds', w / 2, 40);
+    });
+    var signMat = new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.6, side: THREE.DoubleSide });
+    siPart(new THREE.PlaneGeometry(0.26, 0.13), signMat, 0, 1.9, 0, 0, 0, 0, rack);
+    siPart(new THREE.PlaneGeometry(0.26, 0.13), signMat, 0, 1.9, 0, 0, Math.PI / 2, 0, rack);
+    siPart(new THREE.CylinderGeometry(0.012, 0.012, 0.04, 6), SI.brass, 0, 1.83, 0, 0, 0, 0, rack);
     shopInSolids.push([rp[0], rp[1], 0.3]);
   });
   siPart(new THREE.BoxGeometry(0.45, 0.03, 0.45), SI.black, 0.6, 0.7, -3.4);
@@ -9191,6 +9305,7 @@ function startGame(THREE) {
     }
     SI.glowSeed.emissiveIntensity = 0.8 + Math.sin(t * 2.2) * 0.2;
     siBigJar.rotation.y = t * 0.3;
+    siLanternLights.forEach(function (L) { var fl = 1 + Math.sin(t * 13 + L.p) * 0.12 + Math.sin(t * 7.1 + L.p * 2) * 0.08; L.f.scale.set(1, 1.9 * fl, 1); L.g.material.opacity = 0.45 * fl; });
     siRacks[0].rotation.y = Math.sin(t * 0.3) * 0.3;                    // the spinner racks turn a little, as if someone just browsed
     siRacks[1].rotation.y = Math.sin(t * 0.25 + 2) * 0.3;
     siPendGlows.forEach(function (g, k) { g.material.opacity = 0.45 + Math.sin(t * 1.3 + k) * 0.04; });
