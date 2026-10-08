@@ -3979,22 +3979,52 @@ function startGame(THREE) {
   var shopLeafMat = new THREE.MeshStandardMaterial({ color: 0x3f6e3a, roughness: 0.8, flatShading: true });
   var bloomMatsS = [0xf2a6c8, 0xc8b4ec, 0xfaf2dc].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }); });
   var shopDummy = new THREE.Object3D(), shopLeafSpots = [], shopBloomSpots = [[], [], []];
-  function shopPlanter(x, y, z, lx, lz, seedN) {
+  // the plants in the flower boxes: small flat leaves, five-petalled flowers with golden centres, lavender spikes and trailing ivy
+  var pbLeaves = [], pbPetals = [], pbCentres = [], pbLavStems = [], pbLavBuds = [];
+  var PB_COLOURS = [0xf2a6c8, 0xd9608c, 0xc8b4ec, 0xf6c4a0, 0xf7f3ec, 0xe88ab4];
+  function shopPlanter(x, y, z, lx, lz, seedN, ox, oz) {               // (ox, oz): which way the box faces out
     sp(new THREE.BoxGeometry(lx, 0.3, lz), shopPaint, x, y + 0.15, z);
-    sp(new THREE.BoxGeometry(lx + 0.06, 0.04, lz + 0.06), houseMats.gold, x, y + 0.31, z);
-    var len = Math.max(lx, lz), n = Math.floor(len / 0.14);
-    for (var i = 0; i < n; i++) {
-      var f = (i + 0.5) / n - 0.5, px = lx > lz ? x + f * lx : x, pz = lx > lz ? z : z + f * lz, r = isle2Hash(seedN + i * 3.1);
-      shopLeafSpots.push([px, y + 0.38, pz, 0.11 + r * 0.05]);
-      for (var b = 0; b < 2; b++) {
-        var rb = isle2Hash(seedN + i * 7.7 + b);
-        shopBloomSpots[Math.floor(rb * 3)].push([px + (rb - 0.5) * 0.16, y + 0.45 + isle2Hash(rb * 91) * 0.08, pz + (isle2Hash(rb * 37) - 0.5) * 0.14]);
+    [[0, lz / 2, lx + 0.06, 0.035], [0, -lz / 2, lx + 0.06, 0.035], [lx / 2, 0, 0.035, lz + 0.06], [-lx / 2, 0, 0.035, lz + 0.06]].forEach(function (r) {   // a thin gold rim
+      sp(new THREE.BoxGeometry(r[2], 0.04, r[3]), houseMats.gold, x + r[0], y + 0.31, z + r[1]);
+    });
+    sp(new THREE.BoxGeometry(lx - 0.02, 0.02, lz - 0.02), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 1 }), x, y + 0.305, z);   // the soil
+    var along = lx > lz, len = along ? lx : lz, depth = along ? lz : lx, top = y + 0.31;
+    function at(f, d) { return along ? [x + f * len, z + d * depth] : [x + d * depth, z + f * len]; }
+    for (var i = 0; i < Math.floor(len / 0.008); i++) {                 // a dense bed of small leaves
+      var h = isle2Hash(seedN + i * 1.37), q = at(isle2Hash(seedN + i * 2.11) - 0.5, (h - 0.5) * 0.85);
+      pbLeaves.push([q[0], top + 0.015 + isle2Hash(seedN + i * 5.3) * 0.1, q[1], 0.035 + h * 0.025, isle2Hash(seedN + i * 7.9) * 6.28, 0.15 + h * 0.6, h]);
+    }
+    for (var fl = 0; fl < Math.floor(len / 0.06); fl++) {               // flowers peeking up out of the leaves
+      var fh = isle2Hash(seedN + fl * 3.73), fq = at((fl + 0.5) / Math.floor(len / 0.06) - 0.5 + (fh - 0.5) * 0.04, (isle2Hash(seedN + fl * 4.1) - 0.5) * 0.7);
+      var fy = top + 0.09 + isle2Hash(seedN + fl * 6.6) * 0.07, pr = 0.016 + fh * 0.01, col = PB_COLOURS[Math.floor(isle2Hash(seedN + fl * 8.2) * PB_COLOURS.length)], ph = fh * 6.28;
+      for (var pt = 0; pt < 5; pt++) {
+        var pa = ph + pt / 5 * Math.PI * 2;
+        pbPetals.push([fq[0] + Math.cos(pa) * pr, fy, fq[1] + Math.sin(pa) * pr, pr, pa, col]);
+      }
+      pbCentres.push([fq[0], fy + 0.004, fq[1], pr * 0.45]);
+    }
+    for (var lv = 0; lv < Math.floor(len / 0.32); lv++) {               // lavender spikes standing up at the back
+      var lq = at((lv + 0.5) / Math.floor(len / 0.32) - 0.5, -0.3), lean = (isle2Hash(seedN + lv * 9.1) - 0.5) * 0.3, lh = 0.16 + isle2Hash(seedN + lv * 2.2) * 0.06;
+      for (var st = 0; st < 3; st++) {
+        var sa = st * 2.1 + lv;
+        pbLavStems.push([lq[0] + Math.cos(sa) * 0.02, top + lh / 2, lq[1] + Math.sin(sa) * 0.02, lh, lean * Math.cos(sa), lean * Math.sin(sa)]);
+        for (var bd = 0; bd < 6; bd++) {
+          var bt = 0.55 + bd * 0.08;
+          pbLavBuds.push([lq[0] + Math.cos(sa) * 0.02 + lean * Math.cos(sa) * lh * bt, top + lh * bt, lq[1] + Math.sin(sa) * 0.02 - lean * Math.sin(sa) * lh * bt, 0.011 - bd * 0.0008]);
+        }
+      }
+    }
+    for (var iv = 0; iv < Math.floor(len / 0.22); iv++) {               // ivy trailing over the front edge
+      var iq = at((iv + 0.5) / Math.floor(len / 0.22) - 0.5 + (isle2Hash(seedN + iv) - 0.5) * 0.05, 0), ilen = 4 + Math.floor(isle2Hash(seedN + iv * 3.3) * 4);
+      for (var il = 0; il < ilen; il++) {
+        var ih = isle2Hash(seedN + iv * 11 + il);
+        pbLeaves.push([iq[0] + ox * (depth / 2 + 0.03) + (ih - 0.5) * 0.03, top + 0.01 - il * 0.045, iq[1] + oz * (depth / 2 + 0.03) + (ih - 0.5) * 0.03, 0.026 + ih * 0.01, ih * 6.28, 1.2 + ih * 0.3, ih]);
       }
     }
   }
   [-1, 1].forEach(function (s) {
-    shopPlanter(s * 2.425, 0, SHOP_FZ + 0.32, 2.9, 0.3, 300 + s * 50);
-    [-1.4, 1.4].forEach(function (wz, k) { shopPlanter(s * (SW + 0.17), 0.55, wz, 0.24, 1.2, 500 + s * 50 + k * 20); });
+    shopPlanter(s * 2.425, 0, SHOP_FZ + 0.32, 2.9, 0.3, 300 + s * 50, 0, 1);
+    [-1.4, 1.4].forEach(function (wz, k) { shopPlanter(s * (SW + 0.17), 0.55, wz, 0.24, 1.2, 500 + s * 50 + k * 20, s, 0); });
     for (var v = 0; v < 70; v++) {                                     // climbing roses up the front corners
       var rv = isle2Hash(v * 4.1 + s * 9), vy = 0.4 + v / 70 * 3.2;
       var vx = s * (SW + 0.06 + rv * 0.1), vz = SHOP_FZ - 0.35 + isle2Hash(v * 2.7) * 0.5;
@@ -4023,8 +4053,34 @@ function startGame(THREE) {
     list.forEach(function (q, i) { shopDummy.position.set(q[0], q[1], q[2]); shopDummy.scale.set(1, 1, 1); shopDummy.updateMatrix(); im.setMatrixAt(i, shopDummy.matrix); });
     shopGroup.add(im);
   });
+  function pbInstances(geo, mat, list, place) {                       // one batch for each kind of flower-box piece
+    var im = new THREE.InstancedMesh(geo, mat, list.length), pc = new THREE.Color();
+    list.forEach(function (q, i) { var col = place(q); shopDummy.updateMatrix(); im.setMatrixAt(i, shopDummy.matrix); if (col !== undefined) im.setColorAt(i, pc.set(col)); });
+    im.castShadow = true; im.receiveShadow = true;
+    shopGroup.add(im);
+    shopDummy.rotation.order = 'XYZ'; shopDummy.rotation.set(0, 0, 0); shopDummy.scale.set(1, 1, 1);
+    return im;
+  }
+  var pbLeafCol = new THREE.Color();
+  pbInstances(new THREE.SphereGeometry(1, 8, 5), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 }), pbLeaves, function (q) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.rotation.order = 'YZX'; shopDummy.rotation.set(0, q[4], q[5]); shopDummy.scale.set(q[3], q[3] * 0.18, q[3] * 0.6);
+    return pbLeafCol.setHSL(0.26 + q[6] * 0.07, 0.42, 0.24 + q[6] * 0.14).getHex();
+  });
+  pbInstances(new THREE.SphereGeometry(1, 8, 5), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, side: THREE.DoubleSide }), pbPetals, function (q) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.rotation.order = 'YZX'; shopDummy.rotation.set(0, -q[4], 0.35); shopDummy.scale.set(q[3] * 1.2, q[3] * 0.22, q[3] * 0.8);
+    return q[5];
+  });
+  pbInstances(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xe8c040, roughness: 0.7 }), pbCentres, function (q) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.scale.set(q[3], q[3] * 0.6, q[3]);
+  });
+  pbInstances(new THREE.CylinderGeometry(0.003, 0.004, 1, 4), new THREE.MeshStandardMaterial({ color: 0x5a7a48, roughness: 0.8 }), pbLavStems, function (q) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.rotation.set(q[5], 0, -q[4]); shopDummy.scale.set(1, q[3], 1);
+  });
+  pbInstances(new THREE.SphereGeometry(1, 6, 5), new THREE.MeshStandardMaterial({ color: 0x8a6ad0, roughness: 0.7 }), pbLavBuds, function (q) {
+    shopDummy.position.set(q[0], q[1], q[2]); shopDummy.scale.set(q[3], q[3] * 1.5, q[3]);
+  });
 
-  // potted topiaries by the door, and a chalkboard out front
+  // potted topiaries by the door
   var topiaryXs = [-1.3, 1.3], TOPIARY_Z = SHOP_FZ + 0.5;
   topiaryXs.forEach(function (tx, k) {
     sp(new THREE.CylinderGeometry(0.26, 0.2, 0.46, 14), shopTrim, tx, 0.23, TOPIARY_Z);
@@ -4034,23 +4090,6 @@ function startGame(THREE) {
       var ba = b * 2.4 + k, bh = (isle2Hash(b * 3 + k * 17) - 0.5) * 0.5, br = Math.sqrt(1 - bh * bh * 3.2) * 0.27;
       sp(new THREE.IcosahedronGeometry(0.1 + isle2Hash(b + k * 9) * 0.04, 0), shopLeafMat, tx + Math.cos(ba) * br, 0.86 + bh * 0.6, TOPIARY_Z + Math.sin(ba) * br, ba, ba * 0.7, 0);
     }
-  });
-  var shopChalkTex = paintTexture(160, 220, function (g, w, h) {
-    g.fillStyle = '#2f3833'; g.fillRect(0, 0, w, h);
-    g.fillStyle = 'rgba(255,255,255,0.06)'; for (var i = 0; i < 40; i++) g.fillRect(isle2Hash(i) * w, isle2Hash(i * 3) * h, 20, 2);
-    g.fillStyle = '#f4efe6'; g.textAlign = 'center'; g.font = 'bold 22px Georgia, serif';
-    g.fillText('Moonbloom', w / 2, 46); g.fillText('Seeds', w / 2, 72);
-    g.fillStyle = '#f7d36a'; g.font = 'bold 30px Georgia, serif'; g.fillText('10 ✦', w / 2, 118);
-    g.fillStyle = '#f4efe6'; g.font = '16px Georgia, serif'; g.fillText('each', w / 2, 140);
-    g.fillStyle = '#f7b8d8'; g.beginPath(); g.arc(w / 2, 180, 10, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#a8e0a0'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, 190); g.lineTo(w / 2, 210); g.stroke();
-  });
-  var shopChalk = new THREE.MeshStandardMaterial({ map: shopChalkTex, roughness: 0.9 });
-  var CHALK_X = 2.3, CHALK_Z = SHOP_FZ + 1.9;
-  [-1, 1].forEach(function (s) {
-    var tilt = -s * 0.2, bz = CHALK_Z + s * 0.14;
-    sp(new THREE.BoxGeometry(0.62, 0.9, 0.04), houseMats.door, CHALK_X, 0.45, bz, tilt, 0, 0);
-    sp(new THREE.PlaneGeometry(0.5, 0.7), shopChalk, CHALK_X, 0.47, bz + s * 0.025, tilt, s > 0 ? 0 : Math.PI, 0);
   });
   // floating crystal lanterns above the topiaries (shopGroup is turned, so work out where they land in the world)
   topiaryXs.forEach(function (tx, k) {
@@ -4081,14 +4120,13 @@ function startGame(THREE) {
     }
     shopSparkGeo.attributes.position.needsUpdate = true;
   }
-  (function () {                                                       // you bump into the building, the topiaries and the chalkboard
+  (function () {                                                       // you bump into the building and the topiaries
     var c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
     function solidAt(lx, lz, r) { solids.push({ x: SHOP_X + lx * c + lz * si, z: SHOP_Z - lx * si + lz * c, r: r }); }
     for (var x = -SW; x <= SW + 0.01; x += 1.2) for (var z = -SD; z <= SD - 0.9; z += 1.2) solidAt(x, z, 0.95);
     for (var fx = -SW; fx <= SW + 0.01; fx += 0.5) if (Math.abs(fx) > 0.7) solidAt(fx, SD - 0.25, 0.4);   // the shopfront, with a gap for the door
     solidAt(0, SD - 0.6, 0.35);                                        // the door itself: walk up to it and in you go
     topiaryXs.forEach(function (tx) { solidAt(tx, TOPIARY_Z, 0.32); });
-    solidAt(CHALK_X, CHALK_Z, 0.4);
   })();
 
   // You bump into the house, the tower and the cauldron
