@@ -8622,24 +8622,82 @@ function startGame(THREE) {
     g.strokeStyle = 'rgba(200,200,205,0.6)'; g.lineWidth = 2;          // tiles laid in a herringbone
     for (var hx = -h; hx < w + h; hx += 32) { g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx + h / 2, h / 2); g.lineTo(hx, h); g.stroke(); }
   });
-  function siViewPaint(g, w, h) {                                     // a sunny garden, seen through glass
-    var sky = g.createLinearGradient(0, 0, 0, h * 0.62); sky.addColorStop(0, '#9fd2f2'); sky.addColorStop(1, '#eef8fd');
+  function siViewPaint(g, w, h, seedN) {                              // a sunny garden seen through the glass: sky, clouds, hills, trees, a fence and flower beds
+    var k = seedN || 0, H = function (n) { return isle2Hash(n + k * 17.3); };
+    var sky = g.createLinearGradient(0, 0, 0, h * 0.6); sky.addColorStop(0, '#7fbfea'); sky.addColorStop(0.7, '#cfe9f8'); sky.addColorStop(1, '#eef7fb');
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#a9cf95'; g.beginPath(); g.moveTo(0, h * 0.6); g.quadraticCurveTo(w * 0.3, h * 0.5, w * 0.6, h * 0.58); g.quadraticCurveTo(w * 0.85, h * 0.62, w, h * 0.55); g.lineTo(w, h); g.lineTo(0, h); g.fill();
-    for (var t = 0; t < 5; t++) { g.fillStyle = 'rgba(80,130,70,0.8)'; g.beginPath(); g.arc(isle2Hash(t * 4.1) * w, h * 0.55, w * 0.06 + isle2Hash(t) * w * 0.05, 0, Math.PI * 2); g.fill(); }
-    g.fillStyle = '#7fb36a'; g.fillRect(0, h * 0.72, w, h);
-    for (var i = 0; i < 40; i++) { g.fillStyle = ['#f7b8d8', '#fff1b8', '#c9b3ef'][i % 3]; g.beginPath(); g.arc(isle2Hash(i * 1.3) * w, h * 0.76 + isle2Hash(i * 2.9) * h * 0.22, 2 + isle2Hash(i) * 2, 0, Math.PI * 2); g.fill(); }
-    var sheen = g.createLinearGradient(0, 0, w, h); sheen.addColorStop(0.35, 'rgba(255,255,255,0)'); sheen.addColorStop(0.45, 'rgba(255,255,255,0.25)'); sheen.addColorStop(0.55, 'rgba(255,255,255,0)');
-    g.fillStyle = sheen; g.fillRect(0, 0, w, h);
+    for (var c = 0; c < 4; c++) {                                      // soft clouds
+      var cx = H(c * 3.1) * w, cy = h * (0.08 + H(c * 5.7) * 0.2), cw = w * (0.12 + H(c * 2.3) * 0.1);
+      for (var p = 0; p < 7; p++) {
+        var px = cx + (H(c * 11 + p) - 0.5) * cw, py = cy + (H(c * 13 + p) - 0.5) * cw * 0.25, pr = cw * (0.18 + H(c * 7 + p) * 0.16);
+        var cg = g.createRadialGradient(px, py, 0, px, py, pr); cg.addColorStop(0, 'rgba(255,255,255,0.9)'); cg.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = cg; g.fillRect(px - pr, py - pr, pr * 2, pr * 2);
+      }
+    }
+    [['#b9d6c2', 0.5, 0.06], ['#9cc59a', 0.56, 0.05], ['#86b876', 0.62, 0.04]].forEach(function (hl, n) {   // hills, paler in the distance
+      g.fillStyle = hl[0]; g.beginPath(); g.moveTo(0, h);
+      for (var x = 0; x <= w; x += w / 40) g.lineTo(x, h * hl[1] - Math.sin(x / w * 5 + n * 2 + k) * h * hl[2] - Math.sin(x / w * 13 + n) * h * 0.012);
+      g.lineTo(w, h); g.closePath(); g.fill();
+    });
+    function tree(x, base, size) {                                     // a round tree: trunk, then lots of leafy blobs, lit from the top left
+      g.fillStyle = '#6a4a32'; g.fillRect(x - size * 0.07, base - size * 0.9, size * 0.14, size * 0.9);
+      g.fillStyle = 'rgba(40,60,30,0.35)'; g.beginPath(); g.ellipse(x, base, size * 0.55, size * 0.08, 0, 0, Math.PI * 2); g.fill();
+      for (var b = 0; b < 26; b++) {
+        var a2 = H(x + b * 1.7) * Math.PI * 2, d = Math.sqrt(H(x + b * 2.9)) * size * 0.55, bx = x + Math.cos(a2) * d, by = base - size * 1.25 + Math.sin(a2) * d * 0.85, br = size * (0.16 + H(x + b) * 0.12);
+        var lit = (bx < x ? 0.12 : 0) + (by < base - size * 1.25 ? 0.1 : 0);
+        g.fillStyle = 'hsl(' + (100 + H(b + x) * 20) + ',38%,' + (30 + lit * 100 + H(x * 3 + b) * 8) + '%)';
+        g.beginPath(); g.arc(bx, by, br, 0, Math.PI * 2); g.fill();
+      }
+    }
+    for (var t = 0; t < 4; t++) tree(w * (0.08 + t * 0.28 + (H(t * 9.1) - 0.5) * 0.1), h * (0.62 + H(t * 4.3) * 0.04), h * (0.16 + H(t * 6.1) * 0.08));
+    var lawn = g.createLinearGradient(0, h * 0.64, 0, h); lawn.addColorStop(0, '#8cc070'); lawn.addColorStop(1, '#5f9a4a');
+    g.fillStyle = lawn; g.fillRect(0, h * 0.68, w, h);
+    g.strokeStyle = 'rgba(40,80,30,0.35)'; g.lineWidth = 1;
+    for (var gr = 0; gr < 300; gr++) { var gx = H(gr * 1.9) * w, gy = h * 0.7 + H(gr * 2.7) * h * 0.3; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx + (H(gr) - 0.5) * 3, gy - 3 - H(gr * 5) * 4); g.stroke(); }
+    var fy = h * 0.73;                                                  // a white picket fence
+    g.fillStyle = '#f4f1ea'; g.fillRect(0, fy - h * 0.05, w, h * 0.012); g.fillRect(0, fy - h * 0.02, w, h * 0.012);
+    for (var f = 0; f < w; f += w / 28) {
+      g.fillStyle = '#f7f4ee'; g.beginPath(); g.moveTo(f, fy); g.lineTo(f, fy - h * 0.07); g.lineTo(f + w / 70, fy - h * 0.085); g.lineTo(f + w / 35, fy - h * 0.07); g.lineTo(f + w / 35, fy); g.fill();
+      g.fillStyle = 'rgba(120,120,110,0.3)'; g.fillRect(f + w / 45, fy - h * 0.07, w / 120, h * 0.07);
+    }
+    for (var i = 0; i < 160; i++) {                                     // flower beds in front of the fence
+      var fx = H(i * 1.3) * w, fy2 = fy + 2 + H(i * 2.9) * h * 0.2, fr = 1.5 + H(i) * 2.5 * (fy2 / h);
+      g.fillStyle = 'rgba(50,90,40,0.8)'; g.beginPath(); g.arc(fx, fy2 + fr, fr * 1.4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = ['#f7b8d8', '#fff1b8', '#c9b3ef', '#ffffff', '#f49ab8'][i % 5]; g.beginPath(); g.arc(fx, fy2, fr, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,220,100,0.9)'; g.beginPath(); g.arc(fx, fy2, fr * 0.35, 0, Math.PI * 2); g.fill();
+    }
   }
-  var siViewTex = paintTexture(512, 360, function (g, w, h) { siViewPaint(g, w, h); });
-  var siFrontViewTex = paintTexture(512, 320, function (g, w, h) {
-    siViewPaint(g, w, h);
-    g.strokeStyle = '#2a2a2c'; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 64); g.lineTo(w, 64); g.stroke();
-    g.lineWidth = 4; for (var m = 1; m < 6; m++) { g.beginPath(); g.moveTo(m * w / 6, 0); g.lineTo(m * w / 6, 64); g.stroke(); }
-    g.lineWidth = 7; [w / 3, w * 2 / 3].forEach(function (mx) { g.beginPath(); g.moveTo(mx, 64); g.lineTo(mx, h); g.stroke(); });
-    g.lineWidth = 14; g.strokeRect(0, 0, w, h);
+  var siViewTex = paintTexture(1024, 700, function (g, w, h) { siViewPaint(g, w, h, 1); });
+  var siFrontViewTex = paintTexture(640, 400, function (g, w, h) { siViewPaint(g, w, h, 2); });
+  var siDoorViewTex = paintTexture(256, 336, function (g, w, h) { siViewPaint(g, w, h, 3); });
+  var siGlassTex = paintTexture(256, 256, function (g, w, h) {         // reflections on the glass, see-through everywhere else
+    var st = g.createLinearGradient(0, 0, w, h);
+    st.addColorStop(0.15, 'rgba(255,255,255,0)'); st.addColorStop(0.26, 'rgba(255,255,255,0.22)'); st.addColorStop(0.31, 'rgba(255,255,255,0.04)'); st.addColorStop(0.38, 'rgba(255,255,255,0.14)'); st.addColorStop(0.46, 'rgba(255,255,255,0)');
+    st.addColorStop(0.7, 'rgba(255,255,255,0)'); st.addColorStop(0.76, 'rgba(255,255,255,0.1)'); st.addColorStop(0.82, 'rgba(255,255,255,0)');
+    g.fillStyle = st; g.fillRect(0, 0, w, h);
   });
+  var siPaneMat = new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, roughness: 0.05, metalness: 0.3, depthWrite: false });
+  var siCasing = new THREE.MeshStandardMaterial({ color: 0xf6f4ef, roughness: 0.55 });
+  var siPlum = new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.5 });
+  function siWindow(wall, cx, cy, ww, wh, viewMat, opts) {            // a framed window: the view, the glass, glazing bars, a deep casing and a sill
+    var o = opts || {}, bar = o.barMat || siCasing, z = o.z || 0, bw = o.barW || 0.035, colH = o.colH || wh;
+    siWallPart(wall, new THREE.PlaneGeometry(ww, wh), viewMat, cx, cy, z + 0.01);
+    siWallPart(wall, new THREE.PlaneGeometry(ww, wh), siPaneMat, cx, cy, z + 0.06).renderOrder = 2;
+    (o.cols || []).forEach(function (fx) { siWallPart(wall, new THREE.BoxGeometry(bw, colH, 0.04), bar, cx - ww / 2 + fx * ww, cy - wh / 2 + colH / 2, z + 0.03); });
+    (o.rows || []).forEach(function (fy) { siWallPart(wall, new THREE.BoxGeometry(ww, bw, 0.04), bar, cx, cy - wh / 2 + fy * wh, z + 0.03); });
+    (o.topCols || []).forEach(function (fx) { var th = wh - colH; siWallPart(wall, new THREE.BoxGeometry(bw * 0.8, th, 0.035), bar, cx - ww / 2 + fx * ww, cy + wh / 2 - th / 2, z + 0.03); });
+    var sash = o.sashMat || bar, sw = 0.06;                             // the sash frame round the glass
+    [[0, wh / 2 - sw / 2, ww, sw], [0, -wh / 2 + sw / 2, ww, sw], [-ww / 2 + sw / 2, 0, sw, wh], [ww / 2 - sw / 2, 0, sw, wh]].forEach(function (f) { siWallPart(wall, new THREE.BoxGeometry(f[2], f[3], 0.05), sash, cx + f[0], cy + f[1], z + 0.035); });
+    if (o.noCasing) return;
+    var cw = 0.12, d = 0.14;                                            // the casing: a deep frame with a raised moulding round its outer edge
+    [[0, wh / 2 + cw / 2, ww + cw * 2, cw, 0, 1], [-ww / 2 - cw / 2, 0, cw, wh, -1, 0], [ww / 2 + cw / 2, 0, cw, wh, 1, 0]].forEach(function (f) {
+      siWallPart(wall, new THREE.BoxGeometry(f[2], f[3], d), siCasing, cx + f[0], cy + f[1], d / 2);
+      siWallPart(wall, new THREE.BoxGeometry(f[5] ? f[2] + 0.02 : 0.03, f[5] ? 0.03 : f[3], 0.03), siCasing, cx + f[0] + f[4] * cw / 2, cy + f[1] + f[5] * cw / 2, d + 0.01);
+    });
+    siWallPart(wall, new THREE.BoxGeometry(ww + cw * 2 + 0.12, 0.05, 0.26), siCasing, cx, cy - wh / 2 - 0.025, 0.13);   // the sill
+    siWallPart(wall, new THREE.BoxGeometry(ww + cw * 2, 0.1, 0.03), siCasing, cx, cy - wh / 2 - 0.1, 0.015);             // the apron under it
+    if (o.keystone) siWallPart(wall, new THREE.BoxGeometry(0.16, 0.2, d + 0.03), siCasing, cx, cy + wh / 2 + cw / 2, d / 2 + 0.015);
+  }
 
   // materials
   var SI = {
@@ -8659,6 +8717,7 @@ function startGame(THREE) {
     glowSeed: new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0xa45cff, emissiveIntensity: 0.9 }),
     card: new THREE.MeshStandardMaterial({ color: 0xc9a27a, roughness: 0.9 }),
     view: new THREE.MeshStandardMaterial({ map: siFrontViewTex, emissive: 0xffffff, emissiveMap: siFrontViewTex, emissiveIntensity: 0.6, roughness: 0.2 }),
+    doorView: new THREE.MeshStandardMaterial({ map: siDoorViewTex, emissive: 0xffffff, emissiveMap: siDoorViewTex, emissiveIntensity: 0.6, roughness: 0.2 }),
     bigView: new THREE.MeshStandardMaterial({ map: siViewTex, emissive: 0xffffff, emissiveMap: siViewTex, emissiveIntensity: 0.65, roughness: 0.2 }),
     orchid: new THREE.MeshStandardMaterial({ color: 0xd63fae, roughness: 0.6 }),
     blue: new THREE.MeshStandardMaterial({ color: 0x3a5ca8, roughness: 0.4 }),
@@ -8745,11 +8804,21 @@ function startGame(THREE) {
   function siWallPart(name, geo, mat, x, y, z, rx, ry, rz) { return siPart(geo, mat, x, y, z, rx, ry, rz, shopInWalls[name].g); }
 
   // a big picture window on the left wall, with a glass-topped iron table of orchids under it
-  siWallPart('W', new THREE.PlaneGeometry(3.4, 2.3), SI.bigView, -0.3, 1.95, 0.01);
-  [[-0.3, 3.1, 3.6, 0.1], [-0.3, 0.8, 3.6, 0.1], [-2.05, 1.95, 0.1, 2.4], [1.45, 1.95, 0.1, 2.4], [-0.3, 1.95, 0.05, 2.3]].forEach(function (b) {
-    siWallPart('W', new THREE.BoxGeometry(b[2], b[3], 0.08), SI.white, b[0], b[1], 0.04);
+  siWindow('W', -0.3, 1.95, 3.4, 2.3, SI.bigView, { cols: [1 / 3, 2 / 3], rows: [0.78], topCols: [1 / 6, 0.5, 5 / 6], colH: 2.3 * 0.78, barW: 0.05, keystone: true });
+  // linen curtains on a brass rod, tied back either side of the window
+  siWallPart('W', new THREE.CylinderGeometry(0.018, 0.018, 4.4, 10), SI.brass, -0.3, 3.4, 0.24, 0, 0, Math.PI / 2);
+  [-1, 1].forEach(function (s2) {
+    siWallPart('W', new THREE.SphereGeometry(0.04, 12, 8), SI.brass, -0.3 + s2 * 2.22, 3.4, 0.24);
+    siWallPart('W', new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), SI.brass, -0.3 + s2 * 2.05, 3.4, 0.12, Math.PI / 2, 0, 0);
+    var cur = new THREE.PlaneGeometry(0.55, 2.75, 14, 20), cpos = cur.attributes.position;
+    for (var cv = 0; cv < cpos.count; cv++) {                           // soft pleats, gathered in toward the tie-back
+      var cxv = cpos.getX(cv), cyv = cpos.getY(cv), pinch = 1 - 0.55 * Math.exp(-Math.pow((cyv + 0.25) / 0.35, 2));
+      cpos.setX(cv, cxv * pinch + s2 * 0.12 * (1 - pinch)); cpos.setZ(cv, Math.sin(cxv * 34) * 0.035 * pinch);
+    }
+    cur.computeVertexNormals();
+    siWallPart('W', cur, new THREE.MeshStandardMaterial({ color: 0xf1ebe0, roughness: 0.95, side: THREE.DoubleSide }), -0.3 + s2 * 1.95, 2.0, 0.22);
+    siWallPart('W', new THREE.TorusGeometry(0.1, 0.012, 6, 16), SI.brass, -0.3 + s2 * 1.95, 1.75, 0.26);
   });
-  siWallPart('W', new THREE.BoxGeometry(3.7, 0.05, 0.22), SI.white, -0.3, 0.76, 0.1);
   var TBL_X = -SIN_W / 2 + 0.55;
   siPart(new THREE.BoxGeometry(0.75, 0.03, 2.2), SI.glass, TBL_X, 0.82, 0.3);
   [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) {           // curly iron legs
@@ -9068,11 +9137,13 @@ function startGame(THREE) {
 
   // the shop front from inside: the two big display windows and the door you came in by
   [-2.425, 2.425].forEach(function (wx) {
-    siWallPart('S', new THREE.PlaneGeometry(2.95, 1.85), SI.view, wx, 0.6 + 0.925, 0.02);
+    siWindow('S', wx, 0.6 + 0.925, 2.95, 1.85, SI.view, { cols: [1 / 3, 2 / 3], colH: 1.85 - 0.42, rows: [(1.85 - 0.42) / 1.85], topCols: [1 / 6, 0.5, 5 / 6], barMat: siPlum, barW: 0.045 });
     siWallPart('S', new THREE.BoxGeometry(3.05, 0.6, 0.5), SI.white, wx, 0.3, 0.25);
+    siWallPart('S', new THREE.BoxGeometry(3.1, 0.035, 0.54), SI.wood, wx, 0.615, 0.25);              // a wooden top on the window seat
   });
-  siWallPart('S', new THREE.BoxGeometry(1.3, 2.2, 0.06), new THREE.MeshStandardMaterial({ color: 0x43304f, roughness: 0.5 }), 0, 1.1, 0.03);
-  siWallPart('S', new THREE.PlaneGeometry(0.8, 1.05), SI.view, 0, 1.5, 0.065);
+  siWallPart('S', new THREE.BoxGeometry(1.3, 2.2, 0.06), siPlum, 0, 1.1, 0.03);
+  siWindow('S', 0, 1.5, 0.8, 1.05, SI.doorView, { cols: [0.5], rows: [0.5], barMat: houseMats.gold, sashMat: houseMats.gold, barW: 0.03, noCasing: true, z: 0.055 });
+  siWallPart('S', new THREE.BoxGeometry(0.86, 0.6, 0.02), new THREE.MeshStandardMaterial({ color: 0x55405f, roughness: 0.5 }), 0, 0.55, 0.07);   // a raised panel under the door glass
   siWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), SI.brass, -0.45, 1.05, 0.1);
   siPart(new THREE.BoxGeometry(1.0, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x5a5a58, roughness: 1 }), 0, 0.01, SIN_D / 2 - 0.45);
   var SIN_EXIT_Z = SIN_D / 2 - 0.6;
