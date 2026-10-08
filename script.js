@@ -1882,6 +1882,24 @@ function startGame(THREE) {
   // Not joined to your island yet; one day it'll be the town square. For now it's open grass and wildflowers
   var ISLE2_X = 0, ISLE2_Z = 100, ISLE2 = 21, ISLE2_SQ = 6;          // its middle, half its width, and how square it is
   var SHOP_X = ISLE2_X - 8, SHOP_Z = ISLE2_Z + 4, SHOP_TURN = Math.PI + 0.45, SHOP_HW = 4.6, SHOP_HD = 3.2; // the seed shop, off to one side, its door turned toward the bridge
+  // the stone path from the end of the bridge to Whimsy & Bloom's front steps: a gentle curve through these points
+  var SP_PTS = [[0, 80.6], [-0.2, 84.5], [-1.6, 89], [-4.4, 93.4], [-7.6, 96.9], [SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + 0.62), SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + 0.62)]];
+  var SP_W = 0.95;                                                     // half the width of the path
+  var spLine = (function () {                                          // the curve, cut into many short steps
+    var c = new THREE.CatmullRomCurve3(SP_PTS.map(function (q) { return new THREE.Vector3(q[0], 0, q[1]); }));
+    return c.getSpacedPoints(160).map(function (v) { return [v.x, v.z]; });
+  })();
+  function stonePathDist(x, z) {
+    if (x > 3 || x < -13 || z < 78 || z > 103) return 99;               // nowhere near it: skip the sums
+    var best = 1e9;
+    for (var i = 0; i < spLine.length - 1; i++) {
+      var ax = spLine[i][0], az = spLine[i][1], dx = spLine[i + 1][0] - ax, dz = spLine[i + 1][1] - az;
+      var t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz)));
+      var ex = x - ax - dx * t, ez = z - az - dz * t, dd = ex * ex + ez * ez;
+      if (dd < best) best = dd;
+    }
+    return Math.sqrt(best);
+  }
   function isle2Edge(a) { return ISLE2 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE2_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE2_SQ), 1 / ISLE2_SQ); }
   function isle2Hash(n) { var v = Math.sin(n * 12.9898 + 4.1) * 43758.5453; return v - Math.floor(v); } // its own random numbers, so nothing on your island moves
   function isle2Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs, like your island's
@@ -1940,7 +1958,7 @@ function startGame(THREE) {
   var ISLE2_BLADES = 9000, isle2Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE2_BLADES), i2n = 0;
   for (var ib = 0; ib < ISLE2_BLADES * 2 && i2n < ISLE2_BLADES; ib++) {   // thick grass all over: short, medium and tall clumps
     var ix = ISLE2_X + (isle2Hash(ib * 3.1) * 2 - 1) * ISLE2, iz = ISLE2_Z + (isle2Hash(ib * 7.7) * 2 - 1) * ISLE2;
-    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9) continue; // (none growing through the shop floor)
+    if (!onIsle2(ix, iz, 0.5) || dist(ix, iz, SHOP_X, SHOP_Z) < 5.9 || stonePathDist(ix, iz) < SP_W + 0.15) continue; // (none growing through the shop floor)
     var meadow = noise(ix * 0.35 + 11, iz * 0.35 - 4);                 // some patches grow longer and lusher than others
     gEuler.set((isle2Hash(ib * 1.3) - 0.5) * 0.6, isle2Hash(ib * 2.9) * Math.PI, (isle2Hash(ib * 5.3) - 0.5) * 0.6);
     gQuat.setFromEuler(gEuler);
@@ -1962,7 +1980,7 @@ function startGame(THREE) {
   var ISLE2_FLOWERS = 520, isle2Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE2_FLOWERS), isle2Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE2_FLOWERS), i2f = 0;
   for (var iw = 0; iw < ISLE2_FLOWERS * 4 && i2f < ISLE2_FLOWERS; iw++) {   // wildflowers in little drifts
     var fx = ISLE2_X + (isle2Hash(iw * 13.7) * 2 - 1) * ISLE2, fz = ISLE2_Z + (isle2Hash(iw * 17.3) * 2 - 1) * ISLE2, fh = isle2Hash(iw * 3.3);
-    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
+    if (!onIsle2(fx, fz, 1) || dist(fx, fz, SHOP_X, SHOP_Z) < 6.2 || stonePathDist(fx, fz) < SP_W + 0.6 || noise(fx * 0.6 + 3, fz * 0.6 - 1) < 0.05 + fh * 0.2) continue;
     wfE.set((fh - 0.5) * 0.3, isle2Hash(iw * 5.5) * 6.28, 0);
     wfQ.setFromEuler(wfE);
     wfS.setScalar(0.8 + fh * 0.6);
@@ -4146,6 +4164,106 @@ function startGame(THREE) {
     for (var fx = -SW; fx <= SW + 0.01; fx += 0.5) if (Math.abs(fx) > 0.7) solidAt(fx, SD - 0.25, 0.4);   // the shopfront, with a gap for the door
     solidAt(0, SD - 0.6, 0.35);                                        // the door itself: walk up to it and in you go
     topiaryXs.forEach(function (tx) { solidAt(tx, TOPIARY_Z, 0.32); });
+  })();
+
+  // ---------- The stone path to Whimsy & Bloom ----------
+  // Irregular pale flagstones laid in mossy soil, edged with little rounded cobbles, with lavender, daisies and
+  // pink blooms growing along both sides, and a few tiny glowing mushrooms tucked in the borders
+  (function () {
+    var dummy = new THREE.Object3D(), col = new THREE.Color(), n = 0;
+    function H(k) { return isle2Hash(k * 1.37 + 812); }
+    // the mossy soil bed the stones sit in
+    var bedPos = [], bedCol = [], bedIdx = [], soil = new THREE.Color(0x6a5a3e), moss = new THREE.Color(0x5e7e3e);
+    for (var i = 0; i < spLine.length; i++) {
+      var a = spLine[Math.max(0, i - 1)], b = spLine[Math.min(spLine.length - 1, i + 1)];
+      var tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
+      for (var sd = -1; sd <= 1; sd += 2) {
+        var w = SP_W + 0.12 + Math.sin(i * 0.9 + sd) * 0.06;
+        bedPos.push(spLine[i][0] + nx * w * sd, 0.012, spLine[i][1] + nz * w * sd);
+        col.copy(soil).lerp(moss, 0.4 + H(i * 2 + sd) * 0.4); bedCol.push(col.r, col.g, col.b);
+      }
+      if (i) { var k = i * 2; bedIdx.push(k - 2, k, k - 1, k - 1, k, k + 1); }
+    }
+    var bedGeo = new THREE.BufferGeometry();
+    bedGeo.setAttribute('position', new THREE.Float32BufferAttribute(bedPos, 3));
+    bedGeo.setAttribute('color', new THREE.Float32BufferAttribute(bedCol, 3));
+    bedGeo.setIndex(bedIdx); bedGeo.computeVertexNormals();
+    var bed = new THREE.Mesh(bedGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide }));
+    bed.receiveShadow = true; scene.add(bed);
+    // flagstones: rounded, irregular slabs with bevelled edges, a few across the path at each step, staggered like real paving
+    var slabGeo = new THREE.CylinderGeometry(1, 1.04, 1, 9, 1);
+    (function () { var p = slabGeo.attributes.position; for (var v = 0; v < p.count; v++) { var x = p.getX(v), z = p.getZ(v), a2 = Math.atan2(z, x), r = 0.82 + 0.18 * Math.sin(a2 * 3 + 1.3) * Math.cos(a2 * 2); if (Math.abs(x) + Math.abs(z) > 0.01) { p.setX(v, x * r); p.setZ(v, z * r); } } slabGeo.computeVertexNormals(); })();
+    var slabs = [], cobbles = [], blooms = [], lav = [], leaves = [], shrooms = [];
+    var along = 0, row = 0;
+    for (var j = 1; j < spLine.length; j++) {
+      var p0 = spLine[j - 1], p1 = spLine[j], sx = p1[0] - p0[0], sz = p1[1] - p0[1], sl = Math.sqrt(sx * sx + sz * sz);
+      along += sl;
+      var ux = sx / sl, uz = sz / sl, nx2 = -uz, nz2 = ux, turn = Math.atan2(ux, uz);
+      if (along < 0.62) continue;
+      along = 0; row++;
+      var cnt = row % 2 ? 3 : 2, off = row % 2 ? 0 : 0.32;
+      for (var c2 = 0; c2 < cnt; c2++) {
+        var acr = (cnt === 3 ? (c2 - 1) * 0.6 : (c2 - 0.5) * 0.66) + (H(row * 7 + c2) - 0.5) * 0.1;
+        if (Math.abs(acr) > SP_W - 0.18) continue;
+        var size = 0.27 + H(row * 3 + c2 * 5) * 0.06;
+        slabs.push([p1[0] + nx2 * acr + ux * (H(row + c2 * 9) - 0.5) * 0.08, p1[1] + nz2 * acr + uz * (H(row + c2 * 9) - 0.5) * 0.08, size * (1.05 + H(row * 11 + c2) * 0.25), size, turn + H(row * 13 + c2) * 6.28, H(row * 17 + c2)]);
+      }
+      for (var e = -1; e <= 1; e += 2) {                                 // edging cobbles, and plants growing along the edge
+        var ex = p1[0] + nx2 * e * (SP_W + 0.08), ez = p1[1] + nz2 * e * (SP_W + 0.08);
+        cobbles.push([ex, ez, 0.09 + H(row * 5 + e) * 0.04, H(row * 19 + e)]);
+        cobbles.push([ex + ux * 0.31, ez + uz * 0.31, 0.08 + H(row * 6 + e) * 0.04, H(row * 23 + e)]);
+        if (dist(p1[0], p1[1], SP_PTS[SP_PTS.length - 1][0], SP_PTS[SP_PTS.length - 1][1]) < 1.2 || p1[1] < 82.5) continue;   // keep the ends clear for the steps and the bridge
+        var gx = p1[0] + nx2 * e * (SP_W + 0.45), gz = p1[1] + nz2 * e * (SP_W + 0.45), kind = H(row * 29 + e);
+        for (var lf = 0; lf < 5; lf++) leaves.push([gx + (H(row * 31 + lf + e) - 0.5) * 0.45, gz + (H(row * 37 + lf - e) - 0.5) * 0.45, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
+        if (kind < 0.4) for (var lv = 0; lv < 5; lv++) lav.push([gx + (H(row * 43 + lv + e) - 0.5) * 0.3, gz + (H(row * 47 + lv - e) - 0.5) * 0.3, 0.32 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
+        else for (var bl = 0; bl < 4; bl++) blooms.push([gx + (H(row * 61 + bl + e) - 0.5) * 0.4, gz + (H(row * 67 + bl - e) - 0.5) * 0.4, 0.13 + H(row * 71 + bl) * 0.08, kind < 0.7 ? 0 : (bl % 2 ? 1 : 2)]);
+        if (H(row * 73 + e) > 0.86) shrooms.push([gx + nx2 * e * 0.25, gz + nz2 * e * 0.25]);
+      }
+    }
+    function batch(geo, mat, list, put) {
+      var im = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach(function (q, i) { var cc = put(q); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); if (cc !== undefined) im.setColorAt(i, col.set(cc)); });
+      dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
+      return im;
+    }
+    var stoneTex = paintTexture(128, 128, function (g, w, h) {         // weathered stone: soft mottling and a few dark flecks
+      g.fillStyle = '#d8d2c6'; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 900; i++) { var v = isle2Hash(i * 3.7); g.fillStyle = v > 0.6 ? 'rgba(255,255,255,0.18)' : v > 0.25 ? 'rgba(120,110,100,0.12)' : 'rgba(70,64,60,0.22)'; g.fillRect(isle2Hash(i * 1.3) * w, isle2Hash(i * 2.1) * h, 1 + v * 3, 1 + v * 2); }
+    });
+    batch(slabGeo, new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.85 }), slabs, function (q) {
+      dummy.position.set(q[0], 0.035, q[1]); dummy.rotation.set(0, q[4], 0); dummy.scale.set(q[2], 0.05, q[3]);
+      return new THREE.Color().setHSL(0.09 + q[5] * 0.05, 0.08 + q[5] * 0.08, 0.72 + q[5] * 0.14).getHex();
+    });
+    batch(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), cobbles, function (q) {
+      dummy.position.set(q[0], 0.03, q[1]); dummy.rotation.set(0, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.55, q[2] * 0.85);
+      return new THREE.Color().setHSL(0.08, 0.06, 0.55 + q[3] * 0.2).getHex();
+    });
+    batch(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: true }), leaves, function (q) {
+      dummy.position.set(q[0], q[2] * 0.6, q[1]); dummy.rotation.set(q[3] * 3, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.7, q[2]);
+      return new THREE.Color().setHSL(0.26 + q[3] * 0.06, 0.45, 0.28 + q[3] * 0.12).getHex();
+    });
+    batch(new THREE.CylinderGeometry(0.006, 0.008, 1, 4), new THREE.MeshStandardMaterial({ color: 0x5a7a48 }), lav, function (q) {
+      dummy.position.set(q[0], q[2] / 2, q[1]); dummy.rotation.set(q[3], 0, -q[3] * 0.7); dummy.scale.set(1, q[2], 1);
+    });
+    batch(new THREE.CylinderGeometry(0.018, 0.012, 0.13, 6), new THREE.MeshStandardMaterial({ color: 0x9a78dc, roughness: 0.7 }), lav, function (q) {
+      dummy.position.set(q[0] + Math.sin(-q[3] * 0.7) * -q[2] * 0.4, q[2] - 0.04, q[1] + Math.sin(q[3]) * q[2] * 0.4); dummy.rotation.set(q[3], 0, -q[3] * 0.7);
+    });
+    var petalCols = [0xf6a6c8, 0xfaf6ee, 0xffe08a];
+    var flowerGeo = new THREE.CylinderGeometry(0.055, 0.03, 0.02, 7);
+    batch(flowerGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), blooms, function (q) {
+      dummy.position.set(q[0], q[2], q[1]); dummy.rotation.set((q[2] - 0.17) * 3, q[0] * 5, 0); return petalCols[q[3]];
+    });
+    batch(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshStandardMaterial({ color: 0xe8b84a }), blooms, function (q) { dummy.position.set(q[0], q[2] + 0.012, q[1]); });
+    batch(new THREE.CylinderGeometry(0.005, 0.006, 1, 4), new THREE.MeshStandardMaterial({ color: 0x4f7a3e }), blooms, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.scale.set(1, q[2], 1); });
+    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 });
+    shrooms.forEach(function (m) {
+      for (var t = 0; t < 3; t++) {
+        var mx = m[0] + Math.cos(t * 2.1) * 0.08, mz = m[1] + Math.sin(t * 2.1) * 0.08, mh = 0.07 + t * 0.025;
+        var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, mh, 6), new THREE.MeshStandardMaterial({ color: 0xf2ece0 })); stem.position.set(mx, mh / 2, mz); scene.add(stem);
+        var cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), shroomCap); cap.position.set(mx, mh, mz); cap.scale.y = 0.7; scene.add(cap);
+      }
+    });
   })();
 
   // You bump into the house, the tower and the cauldron
@@ -9846,6 +9964,7 @@ function startGame(THREE) {
         else c = isle ? [128, 194, 108] : [122, 188, 100];
         if (edge < 1.4) c = [c[0] - 30, c[1] - 30, c[2] - 26];                                  // the grassy rim at the edge
         if (isle && !onIsle2(x, z, 1.2)) c = [96, 156, 82];
+        if (isle && stonePathDist(x, z) < SP_W) c = (Math.floor(x * 1.6) + Math.floor(z * 1.6)) % 2 ? [222, 214, 198] : [206, 198, 184];   // the stone path to the shop
       } else if (br) {
         c = Math.abs(x - BRIDGE_X) > BRIDGE_W / 2 - 0.15 ? [170, 160, 150] : [210, 200, 186];  // railings and paving
         if (Math.abs(x - BRIDGE_X) <= BRIDGE_W / 2 - 0.15 && (Math.floor(z * 1.5) % 2 === 0)) c = [200, 190, 176];
