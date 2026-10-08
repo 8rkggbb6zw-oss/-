@@ -3782,17 +3782,81 @@ function startGame(THREE) {
   sp(new THREE.PlaneGeometry(1.3, 0.3), shopTransomGlass, 0, SHOP_PLINTH + 2.4, SHOP_FZ + 0.02);                  // transom light over the door
   sp(new THREE.BoxGeometry(1.3, 0.05, 0.06), houseMats.gold, 0, SHOP_PLINTH + 2.24, SHOP_FZ + 0.06);
   // the fascia sign and its cornice
-  var shopSignTex = paintTexture(1040, 100, function (g, w, h) {
-    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#5a3d8a'); bg.addColorStop(1, '#3a2560');
-    g.fillStyle = bg; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#f2c14e'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12);
-    g.fillStyle = '#f7d36a'; g.font = 'italic bold 66px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillText('Whimsy & Bloom', w / 2, h / 2 + 4);
-    g.font = '34px Georgia, serif'; g.fillText('✦  SEEDS  ✦', 150, h / 2 + 2); g.fillText('✦  BLOOMS  ✦', w - 150, h / 2 + 2);
-  });
-  var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, emissive: 0xffffff, emissiveMap: shopSignTex, emissiveIntensity: 0.3, roughness: 0.45 });
+  function shopSignPaint(g, w, h, metalOnly) {                      // a hand-painted wooden sign with raised, gilded letters
+    if (metalOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+    else {
+      g.fillStyle = '#382645'; g.fillRect(0, 0, w, h);                 // deep plum paint over wood
+      for (var i = 0; i < 260; i++) {                                  // the grain showing through
+        var gy = isle2Hash(i * 1.7) * h, lite = isle2Hash(i * 3.1) > 0.5;
+        g.strokeStyle = lite ? 'rgba(120,90,140,' + (0.05 + isle2Hash(i) * 0.08) + ')' : 'rgba(10,5,15,' + (0.08 + isle2Hash(i) * 0.1) + ')';
+        g.lineWidth = 0.6 + isle2Hash(i * 5) * 1.4;
+        g.beginPath(); var x0 = isle2Hash(i * 2.3) * w * 0.7; g.moveTo(x0, gy);
+        g.bezierCurveTo(x0 + 200, gy + (isle2Hash(i * 7) - 0.5) * 6, x0 + 420, gy - (isle2Hash(i * 9) - 0.5) * 6, x0 + 300 + isle2Hash(i * 11) * 500, gy + (isle2Hash(i * 13) - 0.5) * 4);
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, h / 2 - 1, w, 2);   // the joint between the two boards
+      var vig = g.createLinearGradient(0, 0, 0, h); vig.addColorStop(0, 'rgba(0,0,0,0.3)'); vig.addColorStop(0.2, 'rgba(0,0,0,0)'); vig.addColorStop(0.8, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.35)');
+      g.fillStyle = vig; g.fillRect(0, 0, w, h);
+      for (var sc = 0; sc < 40; sc++) { g.strokeStyle = 'rgba(200,180,210,0.07)'; g.lineWidth = 1; var sx = isle2Hash(sc * 17) * w, sy = isle2Hash(sc * 19) * h; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 8 + isle2Hash(sc) * 20, sy + (isle2Hash(sc * 3) - 0.5) * 4); g.stroke(); }
+    }
+    function gold(y0, y1) {
+      if (metalOnly) return '#fff';
+      var gg = g.createLinearGradient(0, y0, 0, y1);
+      gg.addColorStop(0, '#fff3c0'); gg.addColorStop(0.32, '#e9bb4e'); gg.addColorStop(0.55, '#a87824'); gg.addColorStop(0.78, '#f0cd68'); gg.addColorStop(1, '#7e5814');
+      return gg;
+    }
+    function gild(text, x, y, size, italic, spacing) {                 // letters with a shadow, a dark bevel edge and a gold face
+      g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; g.textBaseline = 'middle';
+      var chars = text.split(''), widths = chars.map(function (c) { return g.measureText(c).width + (spacing || 0); });
+      var total = widths.reduce(function (a2, b2) { return a2 + b2; }, 0) - (spacing || 0), cx = x - total / 2;
+      chars.forEach(function (c, k) {
+        if (!metalOnly) {
+          g.save(); g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowOffsetX = size * 0.04; g.shadowOffsetY = size * 0.06; g.shadowBlur = size * 0.07;
+          g.fillStyle = '#4a3008'; g.fillText(c, cx + 1, y + 1.5); g.restore();
+        }
+        g.fillStyle = gold(y - size * 0.5, y + size * 0.5); g.fillText(c, cx, y);
+        if (!metalOnly) { g.strokeStyle = 'rgba(255,248,215,0.45)'; g.lineWidth = 0.8; g.strokeText(c, cx - 0.5, y - 0.8); }
+        cx += widths[k];
+      });
+    }
+    g.strokeStyle = metalOnly ? '#fff' : gold(0, h); g.lineWidth = 3.5;   // a gold pinstripe border
+    function rrect(m, r) { g.beginPath(); g.moveTo(m + r, m); g.lineTo(w - m - r, m); g.quadraticCurveTo(w - m, m, w - m, m + r); g.lineTo(w - m, h - m - r); g.quadraticCurveTo(w - m, h - m, w - m - r, h - m); g.lineTo(m + r, h - m); g.quadraticCurveTo(m, h - m, m, h - m - r); g.lineTo(m, m + r); g.quadraticCurveTo(m, m, m + r, m); g.stroke(); }
+    rrect(12, 14); g.lineWidth = 1.2; rrect(20, 10);
+    gild('Whimsy & Bloom', w / 2, h / 2 + 2, 92, true, 1);
+    [[250, 'SEEDS'], [w - 250, 'BLOOMS']].forEach(function (sw) {
+      gild(sw[1], sw[0], h / 2 + 2, 32, false, 7);
+      g.strokeStyle = metalOnly ? '#fff' : '#c99a3a'; g.lineWidth = 2;
+      [-1, 1].forEach(function (d) {                                   // little rules and diamonds either side
+        var ex = sw[0] + d * 105;
+        g.beginPath(); g.moveTo(ex, h / 2 + 2); g.lineTo(ex + d * 40, h / 2 + 2); g.stroke();
+        g.fillStyle = metalOnly ? '#fff' : '#e3b54c'; g.beginPath(); g.moveTo(ex + d * 48, h / 2 - 4); g.lineTo(ex + d * 54, h / 2 + 2); g.lineTo(ex + d * 48, h / 2 + 8); g.lineTo(ex + d * 42, h / 2 + 2); g.closePath(); g.fill();
+      });
+    });
+  }
+  var shopSignTex = paintTexture(2048, 130, function (g, w, h) { shopSignPaint(g, w, h, false); });
+  var shopSignMetal = paintTexture(2048, 130, function (g, w, h) { shopSignPaint(g, w, h, true); });
+  shopSignTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var shopSignMat = new THREE.MeshStandardMaterial({ map: shopSignTex, metalnessMap: shopSignMetal, metalness: 0.3, roughness: 0.42, emissive: 0xe8b54a, emissiveMap: shopSignMetal, emissiveIntensity: 0.3 });   // the gilding catches the light
   sp(new THREE.BoxGeometry(8.6, 0.62, 0.16), shopPaint, 0, SHOP_PLINTH + 2.98, SHOP_FZ + 0.1);
   sp(new THREE.PlaneGeometry(8.2, 0.52), shopSignMat, 0, SHOP_PLINTH + 2.98, SHOP_FZ + 0.185);
+  [[0, 0.29, 8.4, 0.06], [0, -0.29, 8.4, 0.06], [-4.17, 0, 0.06, 0.64], [4.17, 0, 0.06, 0.64]].forEach(function (f) {     // a raised moulded frame with a gold bead
+    sp(new THREE.BoxGeometry(f[2], f[3], 0.06), shopPaint, f[0], SHOP_PLINTH + 2.98 + f[1], SHOP_FZ + 0.2);
+    sp(new THREE.BoxGeometry(f[2] > 1 ? 8.26 : 0.018, f[3] > 0.1 ? 0.54 : 0.018, 0.02), houseMats.gold, f[0] * 0.985, SHOP_PLINTH + 2.98 + f[1] * 0.9, SHOP_FZ + 0.215);
+  });
+  var shopLampGlows = [], shopLampInner = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.2, side: THREE.BackSide });
+  [-2.7, 0, 2.7].forEach(function (lx) {                              // brass gooseneck lamps lighting the sign
+    var y0 = SHOP_PLINTH + 3.41, z0 = SHOP_FZ + 0.2;
+    sp(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 12), houseMats.gold, lx, y0 + 0.01, z0);
+    var neck = new THREE.CatmullRomCurve3([new THREE.Vector3(lx, y0, z0), new THREE.Vector3(lx, y0 + 0.22, z0 + 0.05), new THREE.Vector3(lx, y0 + 0.3, z0 + 0.28), new THREE.Vector3(lx, y0 + 0.22, z0 + 0.48)]);
+    sp(new THREE.TubeGeometry(neck, 16, 0.014, 6), houseMats.gold, 0, 0, 0);
+    var shade = sp(new THREE.SphereGeometry(0.1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), houseMats.gold, lx, y0 + 0.2, z0 + 0.5, 0.75, 0, 0);
+    shade.scale.set(1.3, 0.8, 1);
+    var inner = sp(new THREE.SphereGeometry(0.095, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), shopLampInner, lx, y0 + 0.2, z0 + 0.5, 0.75, 0, 0);
+    inner.scale.set(1.3, 0.8, 1); inner.castShadow = false;
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd9a0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(lx, y0 + 0.12, z0 + 0.46); lg.scale.set(0.7, 0.7, 1); shopGroup.add(lg);
+    shopLampGlows.push(lg);
+  });
   sp(new THREE.BoxGeometry(8.9, 0.12, 0.34), shopPaint, 0, SHOP_PLINTH + 3.35, SHOP_FZ + 0.12);
   sp(new THREE.BoxGeometry(8.8, 0.04, 0.3), houseMats.gold, 0, SHOP_PLINTH + 3.27, SHOP_FZ + 0.13);
   // striped awnings with scalloped fronts over the display windows
@@ -4000,6 +4064,9 @@ function startGame(THREE) {
     seedGlow.emissiveIntensity = 0.9 + Math.sin(t * 2.4) * 0.3;
     for (var g = 0; g < shopGlowList.length; g++) shopGlowList[g].emissiveIntensity = 0.3 + glow * 0.65;
     for (var ng = 0; ng < shopNightGlass.length; ng++) shopNightGlass[ng].emissiveIntensity = 0.03 + glow * 0.9;
+    shopSignMat.emissiveIntensity = 0.3 + glow * 0.4;                   // the lamps make the gold letters shine at night
+    shopLampInner.emissiveIntensity = 0.2 + glow * 1.2;
+    for (var lgi = 0; lgi < shopLampGlows.length; lgi++) shopLampGlows[lgi].material.opacity = glow * 0.75;
     for (var dl = 0; dl < shopDisplayLit.length; dl++) shopDisplayLit[dl].emissiveIntensity = 0.12 + glow * 0.45;
     for (var i = 0; i < SHOP_SPARKS; i++) {                            // sparkles spiralling slowly up round the spire
       var k = (i / SHOP_SPARKS + t * 0.04) % 1, a2 = i * 2.4 + t * 0.3, r = 2.2 * (1 - k * 0.7);
