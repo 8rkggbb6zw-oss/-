@@ -70,7 +70,18 @@ function startGame(THREE) {
   var SPEED = 4.4;
   var GAME_MINUTES_PER_SECOND = 10 / 11; // every 10 in-game minutes take 11 real seconds (one in-game day = 26.4 real minutes)
 
-  var state = { mana: MAX_MANA, harvest: 0, coins: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
+  var MAX_STAMINA = 450;                                              // how much stamina you wake up with each morning (and the most you can have)
+  var STAMINA_COST = { axe: 2, pickaxe: 2, trimmers: 1, hoe: 3, water: 2 };   // what each swing or job costs
+  var state = { mana: MAX_MANA, stamina: MAX_STAMINA, harvest: 0, coins: 0, time: 0, minutes: 6 * 60, day: 1, inTreeZone: false };
+  // the stamina bar, next to the mana bar in the top bar
+  (function () {
+    var manaWrap = document.querySelector('.mana-wrap');
+    if (!manaWrap) return;
+    var wrap = document.createElement('div'); wrap.className = 'mana-wrap stamina-wrap';
+    wrap.innerHTML = '<div class="mana" title="Stamina"><div class="mana-fill" id="stamina" style="background:linear-gradient(90deg,#7fd38a,#c6e26a 60%,#ffd36e)"></div><span>Stamina</span></div><div class="mana-num" id="staminaNum" style="color:#4f9a52">450 / 450</div>';
+    manaWrap.parentNode.insertBefore(wrap, manaWrap.nextSibling);
+    ui.stamina = wrap.querySelector('#stamina'); ui.staminaNum = wrap.querySelector('#staminaNum');
+  })();
 
   // Same "random" island every time
   var seed = 12345;
@@ -4797,16 +4808,74 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     showToast('Zzz…', 1600);
     setTimeout(function () {
-      if (state.minutes >= 6 * 60) state.day += 1;                    // wake at 6 am the next morning
-      state.minutes = 6 * 60;                                          // (fall asleep after midnight and it's 6 am that same morning)
-      state.mana = MAX_MANA;                                           // well rested: full mana
-      updateClock(0);
+      wakeNextMorning();                                               // well rested: full mana and stamina, at 6 am
       setTimeout(function () {
         fadeBox.style.opacity = 0;
         showToast('Good morning! ☀ Day ' + state.day, 2600);
         setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = false; }, 900);
       }, 1200);
     }, 1000);
+  }
+  // ---------- Stamina ----------
+  // Swinging tools and watering use stamina. Run out and you collapse, waking up at home the next morning.
+  // Sleeping fills it back up, and eating a moonbloom gives you some back (never more than MAX_STAMINA)
+  var passingOut = false, tiredWarned = false;
+  function useStamina(n) {
+    state.stamina = Math.max(0, state.stamina - n);
+    if (state.stamina <= 60 && !tiredWarned) { tiredWarned = true; showToast('You\'re getting tired… eat a moonbloom or head to bed 🌙', 2600); }
+  }
+  function eatBloom() {
+    if (state.stamina >= MAX_STAMINA) { showToast('You\'re full of energy already!', 1600); return; }
+    if (!takeItem('bloom', 1)) return;
+    var gain = 25 + Math.floor(Math.random() * 51);                     // a random 25 to 75
+    var before = state.stamina;
+    state.stamina = Math.min(MAX_STAMINA, state.stamina + gain);
+    if (state.stamina > 60) tiredWarned = false;
+    burst(player.position.x, 1.4, player.position.z, 0xffb3e6, 14, 1.5, 1.5, -3);
+    popSound();
+    showToast('Yum! +' + Math.round(state.stamina - before) + ' stamina 🌸', 1800);
+  }
+  function wakeNextMorning() {                                        // shared by sleeping and collapsing
+    if (state.minutes >= 6 * 60) state.day += 1;                      // wake at 6 am the next morning
+    state.minutes = 6 * 60;                                            // (after midnight, it's 6 am that same morning)
+    state.mana = MAX_MANA;
+    state.stamina = MAX_STAMINA;
+    tiredWarned = false;
+    updateClock(0);
+  }
+  function passOut() {                                                // out of stamina: everything goes dark and you wake up at home
+    if (passingOut || sleeping) return;
+    passingOut = sleeping = true;
+    walkTarget = null; keys = {};
+    if (binOpen) closeBin();
+    if (shopOpen) closeShop();
+    toggleBag(false);
+    sleepSound();
+    showToast('You\'re exhausted… 💫', 1800);
+    fadeBox.style.transition = 'opacity 1.2s';
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+      indoors = true; inShop = false;                                   // carried home, next to your bed
+      interiorScene.add(player);
+      player.position.set(IN_X + BX - BED_W / 2 - 0.55, 0, IN_Z + MZ);
+      facing = -Math.PI / 2;
+      cam.dist = 7.5; cam.pitch = 0.85; cam.yaw = 0;
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      doorArmed = false;
+      wakeNextMorning();
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('You collapsed and woke up at home. ☀ Day ' + state.day, 3000);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = passingOut = false; }, 1300);
+      }, 1500);
+    }, 1400);
+  }
+  function updateStamina() {
+    if (ui.stamina) ui.stamina.style.width = (state.stamina / MAX_STAMINA * 100).toFixed(1) + '%';
+    var stText = Math.ceil(state.stamina - 0.001) + ' / ' + MAX_STAMINA;
+    if (ui.staminaNum && ui.staminaNum.textContent !== stText) ui.staminaNum.textContent = stText;
+    if (state.stamina <= 0 && !passingOut && !sleeping) passOut();
   }
   sleepBtn.addEventListener('click', function () { goToSleep(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyZ') goToSleep(); });
@@ -4996,6 +5065,7 @@ function startGame(THREE) {
   function tillTile(tile) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
+    useStamina(STAMINA_COST.hoe);
     swingTile = tile;
     facing = Math.atan2(tile.x - player.position.x, tile.z - player.position.z);
   }
@@ -5051,6 +5121,7 @@ function startGame(THREE) {
   function trimBush(b) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
+    useStamina(STAMINA_COST.trimmers);
     swingBush = b;
     facing = Math.atan2(b.userData.base.x - player.position.x, b.userData.base.z - player.position.z);
   }
@@ -5084,6 +5155,7 @@ function startGame(THREE) {
   function chopTree(t) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
+    useStamina(STAMINA_COST.axe);
     swingTree = t;
     var u = t.userData;
     facing = Math.atan2(u.base.x - player.position.x, u.base.z - player.position.z); // turn to face the tree
@@ -6017,6 +6089,7 @@ function startGame(THREE) {
   function mineRock(r) {
     if (swingT < SWING_TIME) return; // still mid-swing
     swingT = 0;
+    useStamina(STAMINA_COST.pickaxe);
     swingRock = r;
     facing = Math.atan2(r.x - player.position.x, r.z - player.position.z); // turn to face the rock
   }
@@ -7141,6 +7214,7 @@ function startGame(THREE) {
     var nearBush = heldItem() === 'trimmers' ? bushInReach() : null;
     if (nearBush) { trimBush(nearBush); return; }
     var tile = targetTile();
+    if (heldItem() === 'bloom' && !(tile && tile.crop && tile.stage === 3)) { eatBloom(); return; }   // holding a moonbloom: eat it (unless there's one to pick)
     if (!tile) {
       if (nearTree) return;
       if (state.inTreeZone && state.petalDay !== state.day) {
@@ -7178,6 +7252,7 @@ function startGame(THREE) {
       setWet(tile, true);
       burst(tile.x, 1.2, tile.z, 0x7cc7ff, 14, 1, 0.5, -6);
       waterSound();
+      useStamina(STAMINA_COST.water);
     }
   }
 
@@ -7200,7 +7275,7 @@ function startGame(THREE) {
   // ---------- Bag (inventory) ----------
   var ITEMS = {
     seed: { name: 'Moonbloom Seed', price: 5, icon: '🌱', img: iconSeed(), info: 'Plant one in tilled garden soil and water it every day. After 4 watered days it blooms. Buy more at Whimsy & Bloom, the seed shop on the new island.' },
-    bloom: { name: 'Moonbloom', price: 60, icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden.' },
+    bloom: { name: 'Moonbloom', price: 60, icon: '🌸', img: iconBloom(), info: 'A glowing flower grown in your garden. Select it and press Interact to eat it for stamina.' },
     petal: { name: 'Dawn Petal', price: 40, icon: '🌺', img: iconPetal(), fill: 92, info: 'A shimmering petal from the Dawn Tree. It gives you one each day.' },
     axe: { name: 'Axe', icon: '🪓', img: iconAxe(), fill: 94, info: 'Select it in your hotbar, then press Interact next to a tree. Ten chops fell a tree.' },
     wood: { name: 'Wood', price: 2, icon: '🪵', info: 'Chopped from trees. Every tree drops logs worth 15 wood; walk into them to pick them up.' },
@@ -10063,7 +10138,7 @@ function startGame(THREE) {
     if (inShop) { var so = shopFront(2.0); px = so.x; pz = so.z; }    // saved inside the shop? you'll load in outside its door
     var data = {
       v: 1,
-      state: { mana: state.mana, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
+      state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
       shipBin: shipBin,
@@ -10127,6 +10202,7 @@ function startGame(THREE) {
     if (!data || data.v !== 1) { showToast('No saved game yet', 2200); return; }
     // the clock, mana and harvests
     state.mana = data.state.mana; state.harvest = data.state.harvest;
+    state.stamina = data.state.stamina === undefined ? MAX_STAMINA : Math.min(MAX_STAMINA, data.state.stamina);
     state.minutes = data.state.minutes; state.day = data.state.day; state.petalDay = data.state.petalDay;
     state.coins = data.state.coins || 0; showCoins(false);
     shipBin = data.shipBin || []; lastFarmDay = farmDay(); closeBin();
@@ -10211,6 +10287,7 @@ function startGame(THREE) {
     updatePlayer(dt);
     updateDoors();
     updateSleepButton();
+    updateStamina();
     updateShipping(dt);
     updateShop(dt);
     updateBridge(state.time, night);
