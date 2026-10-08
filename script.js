@@ -10523,13 +10523,6 @@ function startGame(THREE) {
     g.stroke();
     g.fillStyle = '#6dffcf'; g.font = 'bold 12px sans-serif'; g.fillText('72 ♥', 92, 20);
   });
-  var ciEyeTex = paintTexture(128, 192, function (g, w, h) {          // an eye chart: rows of letters, getting smaller
-    g.fillStyle = '#fbfaf6'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#1e1e22'; g.textAlign = 'center';
-    var rows = ['E', 'F P', 'T O Z', 'L P E D', 'P E C F D', 'E D F C Z P', 'F E L O P Z D'], sz = [44, 26, 20, 15, 12, 10, 8], y = 8;
-    rows.forEach(function (t, k) { y += sz[k] + 6; g.font = 'bold ' + sz[k] + 'px sans-serif'; g.fillText(t, w / 2, y); });
-    g.fillStyle = '#e0607a'; g.fillRect(12, h - 14, w - 24, 2);
-  });
   var ciHeartTex = paintTexture(160, 220, function (g, w, h) {        // a friendly poster of the heart
     g.fillStyle = '#fdf6ec'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 15px Georgia, serif'; g.fillText('Your Heart', w / 2, 22);
@@ -10610,13 +10603,104 @@ function startGame(THREE) {
     });
     g.fillStyle = '#2f6f68'; g.font = 'italic 12px Georgia, serif'; g.fillText('♥  Thank you for keeping our patients safe  ♥', w / 2, h - 7);
   });
-  var ciDiplomaTex = paintTexture(128, 96, function (g, w, h) {
-    g.fillStyle = '#f6efdc'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.strokeRect(6, 6, w - 12, h - 12);
-    g.fillStyle = '#3a2a1e'; g.textAlign = 'center'; g.font = 'italic bold 13px Georgia, serif'; g.fillText('Doctor of', w / 2, 32); g.fillText('Medicine', w / 2, 48);
-    g.fillStyle = '#c9445e'; g.beginPath(); g.arc(w / 2, 70, 9, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#7a6a5a'; g.fillRect(20, 84, 30, 1); g.fillRect(w - 50, 84, 30, 1);
+  // the diplomas: aged parchment with a filigree border, a crest, a name in a flowing hand, signatures and a gold seal
+  // with ribbons. One from the academy, one a licence to practise
+  function ciDiplomaPaint(g, w, h, kind) {
+    var bg = g.createRadialGradient(w / 2, h / 2, 40, w / 2, h / 2, w * 0.7);
+    bg.addColorStop(0, '#fbf3dc'); bg.addColorStop(0.7, '#f1e2bb'); bg.addColorStop(1, '#d9c08a');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 1800; i++) { g.fillStyle = 'rgba(140,100,40,' + isle2Hash(i * 1.7 + kind) * 0.07 + ')'; g.fillRect(isle2Hash(i * 2.3 + kind) * w, isle2Hash(i * 3.1 + kind) * h, 2, 2); }   // the paper's fibres
+    var gold = g.createLinearGradient(0, 0, w, h); gold.addColorStop(0, '#d8b04a'); gold.addColorStop(0.5, '#f4dc8a'); gold.addColorStop(1, '#a8802c');
+    g.strokeStyle = gold; g.lineWidth = 6; g.strokeRect(14, 14, w - 28, h - 28);
+    g.strokeStyle = kind ? '#2f6f68' : '#7a2a3a'; g.lineWidth = 2; g.strokeRect(24, 24, w - 48, h - 48);
+    g.strokeStyle = gold; g.lineWidth = 1.2;
+    for (var x = 30; x < w - 30; x += 12) { g.beginPath(); g.arc(x + 6, 19, 4, Math.PI, 0); g.stroke(); g.beginPath(); g.arc(x + 6, h - 19, 4, 0, Math.PI); g.stroke(); }   // a scalloped border
+    [[30, 30, 1, 1], [w - 30, 30, -1, 1], [30, h - 30, 1, -1], [w - 30, h - 30, -1, -1]].forEach(function (c) {   // filigree in each corner
+      g.strokeStyle = gold; g.lineWidth = 2;
+      for (var k = 0; k < 3; k++) { g.beginPath(); g.arc(c[0] + c[2] * (10 + k * 9), c[1] + c[3] * (10 + k * 9), 8 - k * 2, 0, Math.PI * 2); g.stroke(); }
+      g.beginPath(); g.moveTo(c[0], c[1] + c[3] * 40); g.quadraticCurveTo(c[0], c[1], c[0] + c[2] * 40, c[1]); g.stroke();
+    });
+    var cx = w / 2;
+    // the crest: a heart on a shield with a leafy staff and a crescent moon
+    g.fillStyle = kind ? '#2f6f68' : '#7a2a3a';
+    g.beginPath(); g.moveTo(cx - 22, 38); g.lineTo(cx + 22, 38); g.lineTo(cx + 22, 62); g.quadraticCurveTo(cx + 20, 78, cx, 86); g.quadraticCurveTo(cx - 20, 78, cx - 22, 62); g.closePath(); g.fill();
+    g.strokeStyle = gold; g.lineWidth = 2.5; g.stroke();
+    g.fillStyle = '#f4dc8a'; g.beginPath(); g.moveTo(cx, 72); g.bezierCurveTo(cx - 14, 62, cx - 9, 50, cx, 56); g.bezierCurveTo(cx + 9, 50, cx + 14, 62, cx, 72); g.fill();
+    g.strokeStyle = '#5a8a48'; g.lineWidth = 2; [-1, 1].forEach(function (s) { for (var lf = 0; lf < 4; lf++) { g.beginPath(); g.ellipse(cx + s * (30 + lf * 7), 70 - lf * 8, 6, 2.5, s * 0.8, 0, Math.PI * 2); g.stroke(); } });
+    g.fillStyle = '#3a2a1e'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    if (kind === 0) {
+      g.font = 'bold 22px Georgia, serif'; g.fillText('MOONVALE ACADEMY OF HEALING', cx, 116);
+      g.font = 'italic 15px Georgia, serif'; g.fillText('upon the recommendation of the faculty, hereby confers upon', cx, 144);
+      g.font = 'italic bold 38px Georgia, serif'; g.fillStyle = '#2a1e14'; g.fillText('Hazel Bramble', cx, 190);
+      g.fillStyle = '#3a2a1e'; g.font = 'italic 15px Georgia, serif'; g.fillText('the degree of', cx, 216);
+      g.font = 'bold 30px Georgia, serif'; g.fillStyle = kind ? '#2f6f68' : '#7a2a3a'; g.fillText('Doctor of Medicine', cx, 252);
+      g.fillStyle = '#3a2a1e'; g.font = 'italic 13px Georgia, serif'; g.fillText('with all the rights, honours and privileges thereto, this first day of Spring', cx, 278);
+    } else {
+      g.font = 'bold 21px Georgia, serif'; g.fillText('EVERDAWN BOARD OF HEALERS', cx, 116);
+      g.font = 'bold 30px Georgia, serif'; g.fillStyle = '#2f6f68'; g.fillText('Licence to Practise', cx, 154);
+      g.fillStyle = '#3a2a1e'; g.font = 'italic 15px Georgia, serif'; g.fillText('Medicine, Herbalism & Gentle Magics, is granted to', cx, 182);
+      g.font = 'italic bold 36px Georgia, serif'; g.fillStyle = '#2a1e14'; g.fillText('Dr. Hazel Bramble', cx, 226);
+      g.fillStyle = '#3a2a1e'; g.font = '13px Georgia, serif'; g.fillText('Licence No. 0471  ·  Valid in all the floating isles', cx, 256);
+      g.font = 'italic 13px Georgia, serif'; g.fillText('In good standing, renewed each Harvest Moon', cx, 278);
+    }
+    [[cx - 150, 'Dean of Healing'], [cx + 150, kind ? 'Board Registrar' : 'High Herbalist']].forEach(function (sg, k) {   // signatures
+      g.strokeStyle = '#1f2a5a'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(sg[0] - 60, 322);
+      for (var t = 0; t < 120; t += 3) g.lineTo(sg[0] - 60 + t, 322 + Math.sin(t * 0.35 + k * 2) * (5 + isle2Hash(t + k * 9) * 5) - (t > 90 ? (t - 90) * 0.3 : 0));
+      g.stroke();
+      g.strokeStyle = '#6a5a4a'; g.lineWidth = 1; g.beginPath(); g.moveTo(sg[0] - 70, 332); g.lineTo(sg[0] + 70, 332); g.stroke();
+      g.fillStyle = '#4a3a2a'; g.font = 'italic 11px Georgia, serif'; g.fillText(sg[1], sg[0], 346);
+    });
+    var sx = cx, sy = 330;                                              // the embossed gold seal, with two ribbons
+    g.fillStyle = kind ? '#2f6f68' : '#b03040';
+    [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(sx + s * 6, sy + 10); g.lineTo(sx + s * 20, sy + 44); g.lineTo(sx + s * 12, sy + 38); g.lineTo(sx + s * 6, sy + 48); g.lineTo(sx, sy + 14); g.closePath(); g.fill(); });
+    g.beginPath();
+    for (var p = 0; p <= 32; p++) { var pa = p / 32 * Math.PI * 2, pr = p % 2 ? 26 : 30; g.lineTo(sx + Math.cos(pa) * pr, sy + Math.sin(pa) * pr); }
+    var sealG = g.createRadialGradient(sx - 8, sy - 8, 2, sx, sy, 30); sealG.addColorStop(0, '#fff0b0'); sealG.addColorStop(0.5, '#e0b448'); sealG.addColorStop(1, '#9a7020');
+    g.fillStyle = sealG; g.fill();
+    g.strokeStyle = 'rgba(120,80,20,0.7)'; g.lineWidth = 1.2; g.beginPath(); g.arc(sx, sy, 19, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(120,80,20,0.8)'; g.beginPath(); g.moveTo(sx, sy + 8); g.bezierCurveTo(sx - 12, sy, sx - 8, sy - 10, sx, sy - 4); g.bezierCurveTo(sx + 8, sy - 10, sx + 12, sy, sx, sy + 8); g.fill();
+  }
+  var ciDiplomaTexA = paintTexture(512, 384, function (g, w, h) { ciDiplomaPaint(g, w, h, 0); });
+  var ciDiplomaTexB = paintTexture(512, 384, function (g, w, h) { ciDiplomaPaint(g, w, h, 1); });
+  [ciDiplomaTexA, ciDiplomaTexB].forEach(function (t) { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
+  // a framed certificate: a moulded wooden frame with a gilt inner lip, a cream mat with a bevelled window, and glass
+  function ciFancyFrame(name, x, y, w, h, tex, frameMat) {
+    var F = 0.045, M = 0.04;                                            // frame width, mat width
+    var ow = w + M * 2 + F * 2, oh = h + M * 2 + F * 2;
+    [[0, (oh - F) / 2, ow, F], [0, -(oh - F) / 2, ow, F], [-(ow - F) / 2, 0, F, oh], [(ow - F) / 2, 0, F, oh]].forEach(function (b) {
+      ciWallPart(name, ciRoundBox(b[2], b[3], 0.04, 0.012), frameMat, x + b[0], y + b[1], 0.02);
+    });
+    [[0, (h + M * 2) / 2 + 0.004, w + M * 2 + 0.016, 0.008], [0, -(h + M * 2) / 2 - 0.004, w + M * 2 + 0.016, 0.008], [-(w + M * 2) / 2 - 0.004, 0, 0.008, h + M * 2], [(w + M * 2) / 2 + 0.004, 0, 0.008, h + M * 2]].forEach(function (b) {
+      ciWallPart(name, new THREE.BoxGeometry(b[2], b[3], 0.012), CI.brass, x + b[0], y + b[1], 0.03);   // the gilt lip
+    });
+    ciWallPart(name, new THREE.PlaneGeometry(w + M * 2, h + M * 2), new THREE.MeshStandardMaterial({ color: 0xf4efe2, roughness: 0.95 }), x, y, 0.012);   // the mat
+    [[0, h / 2 + 0.003, w + 0.012, 0.006], [0, -h / 2 - 0.003, w + 0.012, 0.006], [-w / 2 - 0.003, 0, 0.006, h], [w / 2 + 0.003, 0, 0.006, h]].forEach(function (b) {
+      ciWallPart(name, new THREE.BoxGeometry(b[2], b[3], 0.004), new THREE.MeshStandardMaterial({ color: 0xfffdf6, roughness: 0.9 }), x + b[0], y + b[1], 0.014);   // its bevel
+    });
+    ciWallPart(name, new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }), x, y, 0.0125);
+    ciWallPart(name, new THREE.PlaneGeometry(w + M * 2, h + M * 2), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.3, depthWrite: false }), x, y, 0.038).renderOrder = 2;   // the glass
+  }
+
+  // the eye chart: a backlit light box with a full chart, the line sizes down the sides and a red and green bar at the foot
+  var ciEyeTex = paintTexture(512, 896, function (g, w, h) {
+    g.scale(2, 2); w = 256; h = 448;                                    // painted at double size, so the small rows stay sharp
+    g.fillStyle = '#fdfcf8'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, 30);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 14px sans-serif'; g.fillText('EVERDAWN EYE CHART', w / 2, 16);
+    var rows = ['E', 'F P', 'T O Z', 'L P E D', 'P E C F D', 'E D F C Z P', 'F E L O P Z D', 'D E F P O T E C', 'L E F O D P C T'], sz = [72, 46, 34, 27, 22, 17, 14, 11, 9], y = 40;
+    var acu = ['200', '100', '70', '50', '40', '30', '25', '20', '15'];
+    rows.forEach(function (t, k) {
+      y += sz[k] + 8;
+      g.fillStyle = '#16161a'; g.font = 'bold ' + sz[k] + 'px Arial, sans-serif'; g.fillText(t, w / 2, y - sz[k] / 2);
+      g.fillStyle = '#8a8a90'; g.font = '9px sans-serif'; g.fillText(String(k + 1), 14, y - sz[k] / 2); g.fillText('20/' + acu[k], w - 22, y - sz[k] / 2);
+      if (k === 7) { g.fillStyle = '#e0607a'; g.fillRect(28, y + 2, w - 56, 2); }   // the "perfect sight" line
+    });
+    g.fillStyle = '#d83a3a'; g.fillRect(24, h - 52, (w - 48) / 2, 34);
+    g.fillStyle = '#2f9a4a'; g.fillRect(w / 2, h - 52, (w - 48) / 2, 34);
+    g.fillStyle = '#16161a'; g.font = 'bold 12px "Courier New", monospace'; g.fillText('O  Z  E', w / 4 + 12, h - 35); g.fillText('F  P  C', w * 0.75 - 12, h - 35);
+    g.fillStyle = '#8a8a90'; g.font = '8px sans-serif'; g.fillText('Read the lowest line you can', w / 2, h - 8);
   });
+  ciEyeTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   var ciMagTex = paintTexture(128, 128, function (g, w, h) {          // magazine covers, four to a texture
     [['#e0889a', 'Bloom'], ['#7ab8e0', 'Tides'], ['#8fc7b0', 'Herbs'], ['#f2c14e', 'Stars']].forEach(function (m, k) {
       var x = (k % 2) * 64, y = Math.floor(k / 2) * 64;
@@ -11098,9 +11182,16 @@ function startGame(THREE) {
   ciOfficeChair(DD_X - 0.1, DD_Z - 0.75, 0.15);
   ciArmchair(DD_X - 0.3, DD_Z + 1.05, Math.PI - 0.15, CI.tealVinyl);                                                    // a chair for you, across the desk
   ciSolids.push([DD_X - 0.45, DD_Z, 0.5], [DD_X + 0.4, DD_Z, 0.5], [DD_X - 0.1, DD_Z - 0.75, 0.32], [DD_X - 0.3, DD_Z + 1.05, 0.36]);
-  ciFramed('E', DD_Z - 0.35, 2.0, 0.42, 0.32, ciDiplomaTex, CI.darkWood);                                                // diplomas over the desk (along the right wall, x on the wall is the room's z)
-  ciFramed('E', DD_Z + 0.25, 2.0, 0.42, 0.32, ciDiplomaTex, CI.darkWood);
-  ciFramed('E', 2.85, 1.75, 0.42, 0.66, ciEyeTex, CI.teal);                                                             // the eye chart
+  ciFancyFrame('E', DD_Z - 0.35, 2.05, 0.36, 0.27, ciDiplomaTexA, CI.darkWood);                                         // diplomas over the desk (along the right wall, x on the wall is the room's z)
+  ciFancyFrame('E', DD_Z + 0.3, 2.05, 0.36, 0.27, ciDiplomaTexB, CI.darkWood);
+  // the eye chart in its light box: a teal case with a softly glowing face, a little switch and its cord
+  ciWallPart('E', ciRoundBox(0.52, 0.9, 0.07, 0.02), CI.teal, 2.85, 1.72, 0.035);
+  ciWallPart('E', new THREE.PlaneGeometry(0.44, 0.77), new THREE.MeshStandardMaterial({ map: ciEyeTex, emissive: 0xffffff, emissiveMap: ciEyeTex, emissiveIntensity: 0.14, roughness: 0.4 }), 2.85, 1.72, 0.0705).castShadow = false;
+  ciWallPart('E', new THREE.PlaneGeometry(0.46, 0.79), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.2, roughness: 0.05, metalness: 0.2, depthWrite: false }), 2.85, 1.72, 0.073).renderOrder = 2;
+  ciWallPart('E', new THREE.BoxGeometry(0.03, 0.05, 0.02), CI.white, 2.85 + 0.2, 1.72 - 0.47, 0.06);
+  ciWallPart('E', new THREE.BoxGeometry(0.008, 0.6, 0.008), CI.white, 2.85 + 0.2, 1.72 - 0.47 - 0.3, 0.012);
+  var ciEyeGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xf6fff8, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
+  ciEyeGlow.position.set(CIN_W / 2 - 0.12, 1.72, 2.85); ciEyeGlow.scale.set(1.1, 1.4, 1); clinicRoom.add(ciEyeGlow);
 
   // the exam table under the back window: a white cabinet base with drawers, doors and a pull-out step, a padded teal
   // seat and a raised back rest with stitched seams and piping, chrome grab handles, a roll of paper on a chrome holder
@@ -11342,16 +11433,63 @@ function startGame(THREE) {
   var mcGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xc8a0ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
   mcGlow.position.set(0, 1.9, MC_Z + 0.3); mcGlow.scale.set(1.6, 1.6, 1); clinicRoom.add(mcGlow);
   ciSolids.push([-0.35, MC_Z + 0.3, 0.4], [0.35, MC_Z + 0.3, 0.4]);
-  // a doctor's balance scale in the front corner
-  var SC_X = CIN_W / 2 - 0.45, SC_Z = CIN_D / 2 - 0.5;
-  ciPart(new THREE.BoxGeometry(0.42, 0.08, 0.5), CI.white, SC_X, 0.04, SC_Z);
-  ciPart(new THREE.BoxGeometry(0.36, 0.01, 0.42), CI.black, SC_X, 0.085, SC_Z);
-  ciPart(new THREE.BoxGeometry(0.06, 1.35, 0.06), CI.white, SC_X + 0.12, 0.72, SC_Z - 0.2);
-  ciPart(new THREE.BoxGeometry(0.14, 0.2, 0.08), CI.white, SC_X + 0.12, 1.38, SC_Z - 0.2);
-  ciPart(new THREE.BoxGeometry(0.5, 0.03, 0.03), CI.steel, SC_X - 0.05, 1.3, SC_Z - 0.2);
-  ciPart(new THREE.BoxGeometry(0.03, 0.05, 0.05), CI.black, SC_X - 0.1, 1.3, SC_Z - 0.2);
-  ciPart(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), CI.steel, SC_X + 0.12, 1.75, SC_Z - 0.2);
-  ciPart(new THREE.BoxGeometry(0.22, 0.015, 0.06), CI.steel, SC_X + 0.04, 2.0, SC_Z - 0.2);
+  // a doctor's beam scale with a height rod: a platform with a ribbed rubber mat on levelling feet, a white enamel
+  // column, a twin beam with engraved marks and sliding weights, a balance pointer, and a chrome measuring rod with
+  // a flip-out head piece. You'd stand on it facing into the room
+  var SC_X = CIN_W / 2 - 0.45, SC_Z = CIN_D / 2 - 0.5, COL_X = SC_X + 0.2;
+  var ciBeamTex = paintTexture(512, 64, function (g, w, h) {            // the engraved beam: marks every step, numbers every ten
+    g.fillStyle = '#e8ecee'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2a2a30'; g.textAlign = 'center'; g.font = 'bold 13px sans-serif';
+    for (var t = 0; t <= 100; t++) {
+      var x = 12 + t * 4.88, tall = t % 10 === 0 ? 26 : t % 5 === 0 ? 18 : 11;
+      g.fillRect(x - 0.8, h - tall - 4, 1.6, tall);
+      if (t % 10 === 0) g.fillText(String(t), x, 18);
+    }
+  });
+  var ciRodTex = paintTexture(64, 512, function (g, w, h) {             // the height rod's scale, in centimetres
+    g.fillStyle = '#e4e8ea'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2a2a30'; g.font = 'bold 12px sans-serif'; g.textAlign = 'left';
+    for (var c = 0; c <= 100; c++) {
+      var y = h - 6 - c * 5, l = c % 10 === 0 ? 30 : c % 5 === 0 ? 20 : 12;
+      g.fillRect(0, y - 0.7, l, 1.4);
+      if (c % 10 === 0) g.fillText(String(100 + c), 33, y + 4);
+    }
+  });
+  var CI_ENAMEL = new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.25 });
+  var CI_RUBBER = new THREE.MeshStandardMaterial({ color: 0x2c2f33, roughness: 0.95 });
+  // the platform
+  ciPart(ciRoundBox(0.46, 0.08, 0.52, 0.02), CI_ENAMEL, SC_X, 0.06, SC_Z);
+  ciPart(ciRoundBox(0.4, 0.012, 0.44, 0.006), CI_RUBBER, SC_X - 0.01, 0.105, SC_Z);
+  for (var rb = 0; rb < 9; rb++) ciPart(new THREE.BoxGeometry(0.36, 0.006, 0.012), new THREE.MeshStandardMaterial({ color: 0x3c4046, roughness: 0.9 }), SC_X - 0.01, 0.113, SC_Z - 0.18 + rb * 0.045);   // the ribs
+  ciPart(new THREE.BoxGeometry(0.48, 0.012, 0.54), CI_CHROME, SC_X, 0.025, SC_Z);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { ciPart(new THREE.CylinderGeometry(0.018, 0.022, 0.02, 12), CI_RUBBER, SC_X + c[0] * 0.2, 0.01, SC_Z + c[1] * 0.23); });   // levelling feet
+  // the column, with a little brass maker's plate
+  ciPart(ciRoundBox(0.07, 1.22, 0.07, 0.012), CI_ENAMEL, COL_X, 0.1 + 0.61, SC_Z);
+  ciPart(ciRoundBox(0.12, 0.08, 0.12, 0.02), CI_ENAMEL, COL_X, 0.12, SC_Z);
+  ciPart(new THREE.BoxGeometry(0.004, 0.08, 0.045), CI.brass, COL_X - 0.037, 0.55, SC_Z);
+  // the beam head: a housing with two engraved beams and their sliding weights, ending in a pointer loop
+  var BH_Y = 1.3, BZ0 = SC_Z + 0.06;                                   // (the beams reach toward the front wall, clear of the eye chart)
+  ciPart(ciRoundBox(0.1, 0.16, 0.12, 0.02), CI_ENAMEL, COL_X, BH_Y, SC_Z);
+  var beamMat = new THREE.MeshStandardMaterial({ map: ciBeamTex, roughness: 0.3, metalness: 0.3 });
+  [[BH_Y + 0.035, 0.18], [BH_Y - 0.03, 0.62]].forEach(function (bm, k) {
+    var by = bm[0], len = 0.38;
+    ciPart(new THREE.BoxGeometry(0.012, 0.035, len), CI_CHROME, COL_X - 0.06, by, BZ0 + len / 2 - 0.06);
+    ciPart(new THREE.PlaneGeometry(len - 0.02, 0.03), beamMat, COL_X - 0.0665, by, BZ0 + len / 2 - 0.06, 0, -Math.PI / 2, 0);
+    var pz = BZ0 - 0.06 + len * bm[1];                                // the sliding weight sitting on its notch
+    ciPart(ciRoundBox(0.03, 0.05, 0.03, 0.006), k ? CI.black : CI_CHROME, COL_X - 0.06, by + 0.008, pz);
+    ciPart(new THREE.BoxGeometry(0.003, 0.012, 0.002), new THREE.MeshStandardMaterial({ color: 0xe0607a }), COL_X - 0.0765, by + 0.008, pz);
+  });
+  ciPart(new THREE.TorusGeometry(0.035, 0.006, 6, 18), CI_CHROME, COL_X - 0.06, BH_Y, BZ0 + 0.35, 0, Math.PI / 2, 0);   // the trig loop the beam settles in
+  ciPart(new THREE.BoxGeometry(0.006, 0.05, 0.006), new THREE.MeshStandardMaterial({ color: 0xe0607a }), COL_X - 0.06, BH_Y, BZ0 + 0.35);     // and its pointer, balanced
+  // the height rod rising out of the column, marked in centimetres, with a hinged head piece folded out over the platform
+  var ROD_TOP = 2.02;
+  ciPart(new THREE.BoxGeometry(0.03, ROD_TOP - BH_Y, 0.022), CI_CHROME, COL_X, (ROD_TOP + BH_Y) / 2 + 0.04, SC_Z);
+  ciPart(new THREE.PlaneGeometry(0.02, ROD_TOP - BH_Y - 0.1), new THREE.MeshStandardMaterial({ map: ciRodTex, roughness: 0.35 }), COL_X - 0.0155, (ROD_TOP + BH_Y) / 2 + 0.04, SC_Z, 0, -Math.PI / 2, 0);
+  ciPart(new THREE.CylinderGeometry(0.014, 0.014, 0.04, 10), CI_KICK, COL_X - 0.03, BH_Y + 0.14, SC_Z, 0, 0, Math.PI / 2);   // the rod's lock knob
+  ciPart(ciRoundBox(0.05, 0.06, 0.04, 0.01), CI_CHROME, COL_X, ROD_TOP + 0.03, SC_Z);                                  // the hinge block
+  ciPart(new THREE.SphereGeometry(0.012, 10, 8), CI_KICK, COL_X - 0.03, ROD_TOP + 0.04, SC_Z + 0.025);
+  ciPart(ciRoundBox(0.3, 0.012, 0.03, 0.005), CI_CHROME, COL_X - 0.17, ROD_TOP + 0.04, SC_Z);                           // the head piece
+  ciPart(ciRoundBox(0.05, 0.02, 0.05, 0.008), CI_RUBBER, COL_X - 0.3, ROD_TOP + 0.03, SC_Z);
   ciSolids.push([SC_X, SC_Z, 0.3]);
 
   // a ceiling track with privacy curtains round the exam corner: a rounded aluminium rail on little hangers, with
