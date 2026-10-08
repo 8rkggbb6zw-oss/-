@@ -2549,11 +2549,11 @@ function startGame(THREE) {
     batch.count = 0;
     return batch;
   }
-  var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 28000);
+  var leafBatch = foliageBatch(new THREE.PlaneGeometry(1, 1), leafTex, 32000);
   var sprayGeo = new THREE.PlaneGeometry(1, 1);
   sprayGeo.rotateX(-Math.PI / 2);
   sprayGeo.translate(0.5, 0, 0); // the spray starts at the trunk and reaches outward
-  var needleBatch = foliageBatch(sprayGeo, needleTex, 18000);
+  var needleBatch = foliageBatch(sprayGeo, needleTex, 26000);  // room for every pine's branches (the island needs about 22,000)
   var pineCoreMat = new THREE.MeshStandardMaterial({ color: 0x1d3a22, roughness: 1 });
   var fMat = new THREE.Matrix4(), fWorld = new THREE.Matrix4(), fQuat = new THREE.Quaternion(), fEuler = new THREE.Euler();
   var fPos = new THREE.Vector3(), fScale = new THREE.Vector3(), fColor = new THREE.Color();
