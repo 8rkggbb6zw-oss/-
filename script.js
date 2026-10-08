@@ -8886,15 +8886,64 @@ function startGame(THREE) {
 
   // a tall leafy plant in the front corner, and a framed print by the counter
   var siCornerX = SIN_W / 2 - 0.55, siCornerZ = SIN_D / 2 - 0.6;
-  siPart(new THREE.CylinderGeometry(0.28, 0.22, 0.5, 16), SI.white, siCornerX, 0.25, siCornerZ);
-  siPart(new THREE.CylinderGeometry(0.25, 0.25, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 1 }), siCornerX, 0.49, siCornerZ);
-  siPart(new THREE.CylinderGeometry(0.022, 0.035, 1.5, 7), new THREE.MeshStandardMaterial({ color: 0x7a6250, roughness: 0.9 }), siCornerX, 1.2, siCornerZ);
-  var siFigLeaf = new THREE.MeshStandardMaterial({ color: 0x2e5a26, roughness: 0.4, metalness: 0.05 });
-  for (var siPl = 0; siPl < 22; siPl++) {                              // big violin-shaped leaves spiralling up the trunk
-    var pla = siPl * 2.4, plh = 0.95 + (siPl / 22) * 1.15, plr = 0.13 + (1 - siPl / 22) * 0.06;
-    var fig = siPart(new THREE.SphereGeometry(0.15, 12, 8), siFigLeaf, siCornerX + Math.cos(pla) * plr, plh, siCornerZ + Math.sin(pla) * plr, 0, -pla, 0.45 - (siPl % 3) * 0.2);
-    fig.scale.set(1.25, 0.1, 0.85 + isle2Hash(siPl) * 0.25);
+  // an open white ceramic pot with a rim, and soil sitting down inside it
+  var siPotMat = new THREE.MeshStandardMaterial({ color: 0xf3f1ec, roughness: 0.35, side: THREE.DoubleSide });
+  var siPotPts = [[0, 0.0], [0.2, 0.0], [0.215, 0.02], [0.27, 0.47], [0.285, 0.5], [0.285, 0.53], [0.265, 0.53], [0.252, 0.5], [0.205, 0.06], [0, 0.06]];
+  siPart(new THREE.LatheGeometry(siPotPts.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 32), siPotMat, siCornerX, 0, siCornerZ);
+  var siSoilTex = paintTexture(128, 128, function (g, w, h) {
+    g.fillStyle = '#3e2c1e'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 900; i++) { var l = isle2Hash(i * 1.9); g.fillStyle = l > 0.5 ? 'rgba(110,80,55,0.5)' : 'rgba(20,12,8,0.5)'; g.fillRect(isle2Hash(i) * w, isle2Hash(i * 2.7) * h, 1 + l * 2, 1 + l * 2); }
+  });
+  siPart(new THREE.CircleGeometry(0.25, 24), new THREE.MeshStandardMaterial({ map: siSoilTex, roughness: 1 }), siCornerX, 0.45, siCornerZ, -Math.PI / 2).castShadow = false;
+  for (var siPb = 0; siPb < 7; siPb++) siPart(new THREE.SphereGeometry(0.018 + isle2Hash(siPb) * 0.012, 7, 5), new THREE.MeshStandardMaterial({ color: 0x8a8278, roughness: 0.9 }), siCornerX + Math.cos(siPb * 2.3) * (0.08 + isle2Hash(siPb * 3) * 0.12), 0.455, siCornerZ + Math.sin(siPb * 2.3) * (0.08 + isle2Hash(siPb * 3) * 0.12)).scale.set(1, 0.6, 1);
+  // a fiddle-leaf fig: a slim, slightly crooked trunk with two branches, and big glossy violin-shaped leaves
+  var siBarkMat = new THREE.MeshStandardMaterial({ color: 0x6e5a48, roughness: 0.9 });
+  function siCurve(pts) { return new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(siCornerX + q[0], q[1], siCornerZ + q[2]); })); }
+  var siTrunk = siCurve([[0, 0.44, 0], [0.025, 0.85, 0.01], [-0.01, 1.35, 0.03], [0.02, 1.95, 0.0]]);
+  var siBranches = [siCurve([[0.0, 1.25, 0.03], [0.12, 1.45, 0.06], [0.24, 1.72, 0.1]]), siCurve([[0.02, 1.0, 0.02], [-0.1, 1.2, -0.05], [-0.2, 1.5, -0.12]])];
+  siPart(new THREE.TubeGeometry(siTrunk, 24, 0.02, 7), siBarkMat, 0, 0, 0);
+  siBranches.forEach(function (c) { siPart(new THREE.TubeGeometry(c, 12, 0.012, 6), siBarkMat, 0, 0, 0); });
+  var siLeafTex = paintTexture(128, 192, function (g, w, h) {
+    g.beginPath(); g.moveTo(64, 190);                                 // narrow at the stalk, broad and wavy near the tip
+    g.bezierCurveTo(34, 172, 14, 124, 12, 84); g.bezierCurveTo(10, 34, 40, 8, 60, 12); g.quadraticCurveTo(64, 16, 68, 12);
+    g.bezierCurveTo(88, 8, 118, 34, 116, 84); g.bezierCurveTo(114, 124, 94, 172, 64, 190); g.closePath();
+    var lg2 = g.createRadialGradient(64, 90, 6, 64, 100, 80); lg2.addColorStop(0, '#47803a'); lg2.addColorStop(1, '#22451c');
+    g.fillStyle = lg2; g.fill();
+    g.save(); g.clip();
+    g.strokeStyle = 'rgba(190,220,150,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(64, 190); g.quadraticCurveTo(62, 100, 64, 18); g.stroke();   // the pale midrib
+    g.strokeStyle = 'rgba(170,205,135,0.35)'; g.lineWidth = 1.5;
+    for (var v = 0; v < 7; v++) {                                      // veins curving out and up
+      var vy = 170 - v * 22;
+      [-1, 1].forEach(function (d) { g.beginPath(); g.moveTo(63, vy); g.quadraticCurveTo(64 + d * 26, vy - 10, 64 + d * 50, vy - 30); g.stroke(); });
+    }
+    var gloss = g.createLinearGradient(0, 0, w, h); gloss.addColorStop(0.2, 'rgba(255,255,255,0)'); gloss.addColorStop(0.4, 'rgba(255,255,255,0.12)'); gloss.addColorStop(0.6, 'rgba(255,255,255,0)');
+    g.fillStyle = gloss; g.fillRect(0, 0, w, h);
+    g.restore();
+    g.strokeStyle = '#1a3414'; g.lineWidth = 2; g.stroke();
+  });
+  var siLeafMat = new THREE.MeshStandardMaterial({ map: siLeafTex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.32, metalness: 0.02 });
+  var siLeafDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: siLeafTex, alphaTest: 0.5 });   // so the shadows are leaf-shaped
+  var siLeafGeo = new THREE.PlaneGeometry(1, 1, 4, 6);
+  siLeafGeo.translate(0, 0.5, 0);
+  var siLp = siLeafGeo.attributes.position;
+  for (var siLv = 0; siLv < siLp.count; siLv++) {                      // cup the leaf and let its tip droop a little
+    var lvx = siLp.getX(siLv), lvy = siLp.getY(siLv);
+    siLp.setZ(siLv, -lvx * lvx * 0.35 + lvy * lvy * 0.18);
   }
+  siLeafGeo.computeVertexNormals();
+  function siFigLeaf(curve, t, n) {
+    var at = curve.getPoint(t), lw = 0.2 + isle2Hash(n) * 0.08, ll = 0.28 + isle2Hash(n * 1.7) * 0.1;
+    var leaf = new THREE.Group();
+    leaf.position.copy(at); leaf.rotation.order = 'YXZ';
+    leaf.rotation.set(0.5 + (1 - t) * 0.5 + isle2Hash(n * 3) * 0.2, n * 2.4, (isle2Hash(n * 5) - 0.5) * 0.4);
+    shopRoom.add(leaf);
+    siPart(new THREE.CylinderGeometry(0.005, 0.006, 0.05, 4), siBarkMat, 0, 0.02, 0, 0, 0, 0, leaf);   // the little leaf stalk
+    var m = siPart(siLeafGeo, siLeafMat, 0, 0.04, 0, 0, 0, 0, leaf);
+    m.scale.set(lw, ll, lw);
+    m.receiveShadow = false; m.customDepthMaterial = siLeafDepth;
+  }
+  for (var siPl = 0; siPl < 15; siPl++) siFigLeaf(siTrunk, 0.32 + siPl / 14 * 0.68, siPl);
+  siBranches.forEach(function (c, k) { for (var j = 0; j < 6; j++) siFigLeaf(c, 0.25 + j / 5 * 0.75, 40 + k * 10 + j); });
   shopInSolids.push([siCornerX, siCornerZ, 0.4]);
   siWallPart('E', new THREE.BoxGeometry(0.5, 0.62, 0.03), SI.black, -1.2, 1.75, 0.015);
   siWallPart('E', new THREE.PlaneGeometry(0.4, 0.52), new THREE.MeshStandardMaterial({ map: shopBladeTex, roughness: 0.7 }), -1.2, 1.75, 0.035);
