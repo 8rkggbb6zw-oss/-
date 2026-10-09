@@ -1844,23 +1844,24 @@ EVERDAWN_PARTS.push(function (THREE) {
   // gold to a white-hot ember glowing at its heart. (Drawn tip at the top. The glow map is the same feather, shining
   // only where it's hottest)
   function emberFeatherCanvas(pal, glowOnly) {
-    var ramp = emberRamp([[0, pal.base], [0.3, pal.vane], [0.62, pal.ring], [0.85, pal.tip], [1, '#ffffff']]);
-    var wisp = emberRamp([[0, pal.back], [0.6, pal.base], [1, pal.vane]]);
-    return glimCanvas(256, 1024, function (g, w, h) {
+    var deep = '#' + new THREE.Color(pal.base).multiplyScalar(0.7).getHexString();
+    var ramp = emberRamp([[0, pal.base], [0.16, pal.vane], [0.27, pal.ring], [0.33, deep], [0.39, pal.base], [0.47, pal.vane], [0.6, pal.ring], [0.66, deep], [0.71, pal.vane], [0.8, pal.ring], [0.9, pal.tip], [1, '#ffffff']]);   // (rings of colour round the ember, like the eye of a flame)
+    var wisp = emberRamp([[0, pal.back], [0.45, pal.base], [0.8, pal.vane], [1, pal.ring]]);
+    return glimCanvas(320, 1280, function (g, w, h) {
       if (glowOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
       g.translate(0, h); g.scale(1, -1);                              // (the painter draws base at the top)
       function heat(t, k) { var u = (t - 0.6) / 0.4, d = Math.sqrt(Math.pow((u - 0.4) / 0.62, 2) + Math.pow(k * 0.95, 2)); return Math.max(0, 1 - d); }
-      emberPaintFeather(g, w, h, { from: 0.6, seed: 17, sweep: 0.7, step: 0.6, lw: 1.5, split: 0.008,
-        fluff: function (t) { return 22 + t * 90; },
+      emberPaintFeather(g, w, h, { from: 0.6, seed: 17, sweep: 0.7, step: 0.5, lw: 1.6, split: 0.01, fluffA: 0.85, fluffW: 1.1,
+        fluff: function (t) { return 30 + t * 120; },                // (loose, separate filaments low down, tipped with gold)
         edge: function (t) {                                         // (wavering like a flame)
           var u = (t - 0.6) / 0.4; if (u <= 0) return w * 0.05;
           return w * 0.47 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, u))), 0.65) * (1 - u * 0.3) * (1 + Math.sin(u * 17) * 0.07);
         },
         col: function (t, k, j) {
           j = j || 0;
-          if (t < 0.6) { var c = wisp(t / 0.6 * (0.6 + k * 0.4)); return glowOnly ? '#0c0400' : c; }
+          if (t < 0.6) { var c = wisp(Math.min(1, t / 0.6 * 0.7 + k * 0.35 + j * 0.06)); return glowOnly ? '#0c0400' : c; }
           var hv = heat(t, k);
-          if (!glowOnly) return ramp(hv + j * 0.05);
+          if (!glowOnly) return ramp(hv + j * 0.025);
           var b = Math.pow(hv, 1.6); return 'rgb(' + Math.round(255 * Math.min(1, b * 1.4)) + ',' + Math.round(200 * b) + ',' + Math.round(140 * b * b) + ')';
         },
         shaft: glowOnly ? '#3a2010' : '#ffe2b0', shaftW: 3.2 });
@@ -1925,7 +1926,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var r = glimR(y * 13.7 + si * 71 + sd), r2 = glimR(y * 7.3 + si * 11 + sd);
         if (t < o.from) {                                              // fluffy down near the base
           var fl = o.fluff(t) * (0.6 + r2 * 0.6), fa = 0.9 + r * 0.5;
-          g.globalAlpha = 0.45; g.strokeStyle = o.col(t, 0.4); g.lineWidth = 0.7;
+          g.globalAlpha = o.fluffA || 0.45; g.strokeStyle = o.col(t, 0.4, (r - 0.5) * 2); g.lineWidth = o.fluffW || 0.7;
           g.beginPath(); g.moveTo(cx, y); g.bezierCurveTo(cx + s * fl * 0.4, y + fl * 0.1, cx + s * fl * 0.8, y + fl * (0.3 + r * 0.5), cx + s * fl * Math.cos(fa) * 1.1, y + fl * Math.sin(fa)); g.stroke();
           return;
         }
@@ -1953,15 +1954,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.putImageData(img, 0, 0);
   }
   function grey(v) { v = Math.max(0, Math.min(255, Math.round(v))); return 'rgb(' + v + ',' + v + ',' + v + ')'; }
-  // a small rounded body feather, in greys so each one can be tinted its own colour: dark at the root, paling to its
-  // rounded tip, fluffy at the base
-  var emberContourTex = new THREE.CanvasTexture(glimCanvas(128, 192, function (g, w, h) {
-    emberPaintFeather(g, w, h, { from: 0.16, fluff: function () { return 26; }, seed: 3, sweep: 0.62, step: 0.55, lw: 1.2, split: 0.015,
-      edge: function (u) { return w * 0.4 * Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.52) / 0.47, 2))); },
-      col: function (t, k, j) { return grey(130 + t * 105 + k * 22 + (j || 0) * 28); }, shaft: 'rgb(175,175,175)', shaftW: 1.4 });
-    emberBleed(g, w, h, [215, 215, 215]);
-  }));
-  emberContourTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  // small rounded body feathers, in greys so each one can be tinted its own colour: dark at the root, paling to the
+  // rounded tip, fluffy at the base. Three patterns, mixed together over its body as on a real bird: plain; with a
+  // darker streak down the shaft; and with a dark band near the tip and a pale, glossy fringe
+  var emberContourTexes = [0, 1, 2].map(function (pat) {
+    var tex = new THREE.CanvasTexture(glimCanvas(128, 192, function (g, w, h) {
+      emberPaintFeather(g, w, h, { from: 0.16, fluff: function () { return 26; }, seed: 3 + pat * 40, sweep: 0.62, step: 0.5, lw: 1.2, split: 0.015,
+        edge: function (u) { return w * (0.4 - pat * 0.015) * Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.52) / 0.47, 2))); },
+        col: function (t, k, j) {
+          var v = 130 + t * 105 + k * 22 + (j || 0) * 26;
+          if (pat === 1 && k < 0.5 && t > 0.25) v -= 50 * Math.min(1, (t - 0.25) * 4);   // the shaft streak
+          if (pat === 2) { if (t > 0.6 && t < 0.8) v -= 42 * Math.sin((t - 0.6) / 0.2 * Math.PI); if (t > 0.84) v += 22; }   // the band and the fringe
+          return grey(v);
+        }, shaft: pat === 1 ? 'rgb(120,120,120)' : 'rgb(175,175,175)', shaftW: 1.4 });
+      emberBleed(g, w, h, [215, 215, 215]);
+    }));
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return tex;
+  });
   // a long, narrow, pointed hackle feather for its neck, glossy and paling to the tip
   var emberHackleTex = new THREE.CanvasTexture(glimCanvas(64, 256, function (g, w, h) {
     emberPaintFeather(g, w, h, { from: 0.1, fluff: function () { return 14; }, seed: 9, sweep: 0.85, step: 0.6, lw: 1, split: 0.012,
@@ -2021,22 +2031,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     // layered contour feathers: hundreds of small rounded feathers, each one tinted, laid over its body like shingles
     // so every feather can be seen; all of one group are drawn in a single batch
-    var contourMat = new THREE.MeshStandardMaterial({ map: emberContourTex, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.15, emissive: pal.glow, emissiveIntensity: 0.05 });
-    var hackleMat = new THREE.MeshStandardMaterial({ map: emberHackleTex, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.35, metalness: 0.25, emissive: pal.glow, emissiveIntensity: 0.06 });
+    var sheenCol = new THREE.Color(pal.ring).multiplyScalar(0.45);    // (a soft, warm sheen and a little gloss, like real feathers catching the light)
+    var contourMats = emberContourTexes.map(function (tex) { return new THREE.MeshPhysicalMaterial({ map: tex, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.45, sheen: sheenCol, emissive: pal.glow, emissiveIntensity: 0.04 }); });
+    var hackleMat = new THREE.MeshPhysicalMaterial({ map: emberHackleTex, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.35, metalness: 0.1, clearcoat: 0.5, clearcoatRoughness: 0.3, sheen: sheenCol, emissive: pal.glow, emissiveIntensity: 0.05 });
     var cPlane = emberCurvedPlane(0.3, 0.15), hPlane = emberCurvedPlane(0.3, 0.05);   // (base at the top, hanging down to the tip)
     var cDown = V3(0, -1, 0), cM = new THREE.Matrix4(), cN = new THREE.Vector3(), cT = new THREE.Vector3(), cX = new THREE.Vector3(), cY = new THREE.Vector3(), cZ = new THREE.Vector3();
     var colMid = new THREE.Color(pal.mid), colBreast = new THREE.Color(pal.breast), colBack = new THREE.Color(pal.back), colVane = new THREE.Color(pal.vane), colTip = new THREE.Color(pal.tip);
-    function shingles(parent, list, hackles) {                       // (hackles lie flatter)                       // list: [x, y, z, normal, flow, width, length, colour]
-      var im = new THREE.InstancedMesh(hackles ? hPlane : cPlane, hackles ? hackleMat : contourMat, list.length); im.castShadow = true;
-      list.forEach(function (f, i) {
-        cN.copy(f[3]).normalize();
-        cT.copy(f[4]).addScaledVector(cN, -f[4].dot(cN)).normalize().addScaledVector(cN, hackles ? 0.04 : 0.12).normalize();
-        cT.applyAxisAngle(cN, (glimR(i * 3.7 + list.length) - 0.5) * 0.25);   // (each a little askew, as real feathers lie)   // flowing along the surface, its tip lifting a little
-        cY.copy(cT).negate(); cZ.copy(cN).addScaledVector(cT, -cN.dot(cT)).normalize(); cX.crossVectors(cY, cZ);
-        cM.makeBasis(cX, cY, cZ).scale(V3(f[5], f[6], f[5])).setPosition(f[0], f[1], f[2]);
-        im.setMatrixAt(i, cM); im.setColorAt(i, f[7]);
+    function shingles(parent, list, hackles) {                       // list: [x, y, z, normal, flow, width, length, colour]; hackles lie flatter
+      var groups = hackles ? [list] : [[], [], []];
+      if (!hackles) list.forEach(function (f, i) { groups[Math.floor(glimR(i * 5.3 + list.length * 0.7) * 2.999)].push(f); });   // (a mix of the three patterns)
+      groups.forEach(function (grp, gi) {
+        if (!grp.length) return;
+        var im = new THREE.InstancedMesh(hackles ? hPlane : cPlane, hackles ? hackleMat : contourMats[gi], grp.length); im.castShadow = true;
+        grp.forEach(function (f, i) {
+          var r1 = glimR(i * 3.7 + gi * 91 + grp.length), r2 = glimR(i * 6.1 + gi * 37 + grp.length);
+          cN.copy(f[3]).normalize();
+          cT.copy(f[4]).addScaledVector(cN, -f[4].dot(cN)).normalize().addScaledVector(cN, (hackles ? 0.04 : 0.08) + r2 * 0.08).normalize();   // flowing along the surface, its tip lifting a little
+          cT.applyAxisAngle(cN, (r1 - 0.5) * 0.3);                    // (each a little askew, as real feathers lie)
+          cY.copy(cT).negate(); cZ.copy(cN).addScaledVector(cT, -cN.dot(cT)).normalize(); cX.crossVectors(cY, cZ);
+          var sw = f[5] * (0.86 + r1 * 0.28), sl = f[6] * (0.88 + r2 * 0.26);   // (and no two quite the same size)
+          cM.makeBasis(cX, cY, cZ).scale(V3(sw, sl, sw)).setPosition(f[0], f[1], f[2]);
+          im.setMatrixAt(i, cM); im.setColorAt(i, f[7]);
+        });
+        parent.add(im);
       });
-      parent.add(im); return im;
     }
     function onEgg(c, r, u, v, out) {                                 // a point on an egg shape, and which way is out from it there
       var d = V3(Math.sin(u) * Math.cos(v), Math.sin(v), Math.cos(u) * Math.cos(v));
@@ -2052,7 +2070,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var bv = 1.0 - br * 0.145, bn = 12 + (br > 1 && br < 10 ? 3 : 0);
       for (var bc = 0; bc < bn; bc++) {
         var bu = -1.4 + (bc + (br % 2) * 0.5) * 2.8 / bn, pt = onEgg([0, 0.38, 0.08], [0.09, 0.11, 0.095], bu, bv, 0.003 + (13 - br) * 0.0004);
-        bodyF.push([pt[0], pt[1], pt[2], pt[3], cDown, 0.022 + glimR(br * 5 + bc) * 0.004, 0.03, tint(colMid, colBreast, br / 10 + (glimR(br * 9 + bc) - 0.5) * 0.25, br * 31 + bc)]);
+        bodyF.push([pt[0], pt[1], pt[2], pt[3], cDown, 0.023 + glimR(br * 5 + bc) * 0.004, 0.035, tint(colMid, colBreast, br / 10 + (glimR(br * 9 + bc) - 0.5) * 0.25, br * 31 + bc)]);
       }
     }
     for (var bk = 0; bk < 11; bk++) {                                 // the back and flanks: longer feathers flowing back toward its tail
@@ -2060,7 +2078,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var kc = 0; kc < kn; kc++) {
         var ku = Math.PI + (-0.5 + (kc + (bk % 2) * 0.5) / kn) * Math.PI * 1.55, kp = onEgg([0, 0.32, -0.03], [0.1, 0.11, 0.185], ku, kv, 0.003 + (11 - bk) * 0.0004);
         if (Math.pow(kp[0] / 0.09, 2) + Math.pow((kp[1] - 0.38) / 0.11, 2) + Math.pow((kp[2] - 0.08) / 0.095, 2) < 1) continue;   // (the breast covers this)
-        bodyF.push([kp[0], kp[1], kp[2], kp[3], V3(0, -0.45, -1), 0.026 + glimR(bk * 3 + kc) * 0.005, 0.04, tint(colBack, colMid, 0.25 + bk * 0.08 + (glimR(bk * 7 + kc) - 0.5) * 0.3, 900 + bk * 31 + kc)]);
+        bodyF.push([kp[0], kp[1], kp[2], kp[3], V3(0, -0.45, -1), 0.027 + glimR(bk * 3 + kc) * 0.005, 0.047, tint(colBack, colMid, 0.25 + bk * 0.08 + (glimR(bk * 7 + kc) - 0.5) * 0.3, 900 + bk * 31 + kc)]);
       }
     }
     // a long, graceful neck, smooth and covered in a cape of fine, pointed hackle feathers
@@ -2204,27 +2222,52 @@ EVERDAWN_PARTS.push(function (THREE) {
       legs.push({ g: lg, ph: k * Math.PI });
     });
     // the train: four tiers of long flame feathers from the base of its tail, the shortest on top covering the base of
-    // the rest. Each feather has a resting pose, trailing behind along the floor, and a display pose, raised in a
-    // great upright fan; animating blends between the two
+    // the rest. Each feather is gently curved (cupped across, arching back along its length) and no two are quite the
+    // same, and each has a resting pose, trailing behind along the floor, and a display pose, raised in a great upright
+    // fan; animating blends between the two. Behind the fan, a row of stiff tail feathers props it up, and a puff of
+    // pale, fluffy down sits at its base
     var featherMat = emberFeatherMat(pal), up = V3(0, 1, 0), train = [];
     var tailBase = new THREE.Group(); tailBase.position.set(0, 0.34, -0.16); body.add(tailBase);
+    function trainGeo(wd, L) {
+      var geo = new THREE.PlaneGeometry(wd, L, 6, 20).translate(0, L / 2, 0), p = geo.attributes.position;
+      for (var i = 0; i < p.count; i++) { var x = p.getX(i) / wd * 2, y = p.getY(i) / L; p.setZ(i, -x * x * wd * 0.09 - y * y * L * 0.1); }
+      geo.computeVertexNormals(); return geo;
+    }
     [[21, 0.76, 1.45], [17, 0.64, 1.32], [13, 0.5, 1.12], [9, 0.32, 0.85]].forEach(function (tier, ti) {
-      var n = tier[0], L = tier[1], spread = tier[2], geo = new THREE.PlaneGeometry(0.13 * L / 0.74 + 0.03, L).translate(0, L / 2, 0);
+      var n = tier[0], L = tier[1], spread = tier[2], geo = trainGeo(0.13 * L / 0.74 + 0.03, L);
       for (var k = 0; k < n; k++) {
-        var a = -spread + k * spread * 2 / (n - 1), alt = k % 2 ? 0.004 : 0;
+        var jr = glimR(ti * 57 + k * 3.3), a = -spread + k * spread * 2 / (n - 1) + (jr - 0.5) * 0.04, alt = k % 2 ? 0.004 : 0;
         var pv = new THREE.Group(); pv.position.set(0, ti * 0.012 + alt, -(3 - ti) * 0.012 - alt); tailBase.add(pv);
         var rest = new THREE.Quaternion().setFromUnitVectors(up, V3(Math.sin(a) * 0.2, -0.42 + ti * 0.06, -1).normalize());
         var show = new THREE.Quaternion().setFromUnitVectors(up, V3(Math.sin(a), Math.cos(a), -0.3 + ti * 0.04).normalize());
-        var fm = new THREE.Mesh(geo, featherMat); fm.castShadow = true; pv.add(fm);
-        var ember = null;
+        var fm = new THREE.Mesh(geo, featherMat); fm.castShadow = true; fm.scale.setScalar(0.93 + jr * 0.14); fm.rotation.y = (glimR(k * 7.7 + ti) - 0.5) * 0.25; pv.add(fm);
+        var ember = null, glint = null;
         if (ti < 2 && (ti === 0 || k % 2 === 0)) {                     // the embers at their hearts glow out when the fan is raised
           ember = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-          ember.scale.set(0.12, 0.12, 1); ember.position.set(0, L * 0.71, 0.01); pv.add(ember);
+          ember.scale.set(0.1, 0.1, 1); ember.position.set(0, L * 0.74, 0.01); fm.add(ember);
+        }
+        if (ti === 0) {                                                // and now and then a glint of light runs off a feather's tip
+          glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color(pal.tip), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+          glint.scale.set(0.05, 0.05, 1); glint.position.set(0, L * 0.97, 0.01); fm.add(glint);
         }
         pv.quaternion.copy(rest);
-        train.push({ pv: pv, rest: rest, show: show, ember: ember, ph: glimR(ti * 31 + k) * 6 });
+        train.push({ pv: pv, rest: rest, show: show, ember: ember, glint: glint, ph: glimR(ti * 31 + k) * 6 });
       }
     });
+    var propGeo = new THREE.PlaneGeometry(1, 1).translate(0, -0.5, 0).rotateZ(Math.PI);   // (a flight feather, turned so its tip points up)
+    for (var pr = 0; pr < 13; pr++) {                                 // the stiff tail feathers behind, tucked under the train at rest
+      var pa = (pr - 6) * 0.2, ppv = new THREE.Group(); ppv.position.set(0, -0.004, -0.05); tailBase.add(ppv);
+      var pm = new THREE.Mesh(propGeo, flightMat); pm.scale.set(0.045, 0.34 - Math.abs(pr - 6) * 0.012, 1); pm.castShadow = true; ppv.add(pm);
+      var prest = new THREE.Quaternion().setFromUnitVectors(up, V3(Math.sin(pa) * 0.15, -0.5, -1).normalize());
+      var pshow = new THREE.Quaternion().setFromUnitVectors(up, V3(Math.sin(pa) * 0.8, Math.cos(pa), -0.7).normalize());
+      ppv.quaternion.copy(prest); train.push({ pv: ppv, rest: prest, show: pshow, ember: null, glint: null, ph: glimR(pr * 13) * 6 });
+    }
+    var puff = [];                                                     // the puff of pale down at the base of its tail
+    for (var pu = 0; pu < 5; pu++) for (var pc = 0; pc < 12; pc++) {
+      var pp = onEgg([0, -0.01, -0.02], [0.055, 0.045, 0.06], Math.PI + (pc - 5.5) * 0.28, 0.6 - pu * 0.32, 0.002);
+      puff.push([pp[0], pp[1], pp[2], pp[3], V3(0, -0.6, -1), 0.024, 0.034, tint(colBreast, colTip, 0.3 + pu * 0.12, 6000 + pu * 13 + pc)]);
+    }
+    shingles(tailBase, puff);
     var sparks = [];                                                  // embers drifting up, and a warm glow round it
     for (var sp = 0; sp < 14; sp++) { var sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color(sp % 3 ? pal.ring : pal.tip), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); sk.scale.set(0.035, 0.035, 1); root.add(sk); sparks.push({ s: sk, t: glimR(sp + 50) * 2, x: 0, y: 0, z: 0, dx: 0 }); }
     var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -2283,6 +2326,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (f < 0.05) tr.pv.rotateZ(Math.sin(t * 0.9 + tr.ph) * 0.015 + (moving ? Math.sin(g.hop + tr.ph) * 0.03 : 0));   // trailing feathers sway as it walks
       else tr.pv.rotateX(Math.sin(t * 28 + tr.ph) * 0.03 * rattle * f + Math.sin(t * 1.1 + tr.ph) * 0.02 * f);
       if (tr.ember) tr.ember.material.opacity = f * (0.45 + Math.sin(t * 9 + tr.ph) * 0.12 + Math.sin(t * 15 + tr.ph * 2) * 0.08);   // (flickering, like coals)
+      if (tr.glint) tr.glint.material.opacity = f * Math.pow(Math.max(0, Math.sin(t * 1.7 + tr.ph * 7)), 12);
     });
     var flick = 0.5 + Math.sin(t * 7 + g.stall) * 0.25 + Math.sin(t * 12.7 + g.stall) * 0.25;
     m.featherMat.emissiveIntensity = 0.55 + f * 0.4 + flick * 0.15;
