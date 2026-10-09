@@ -1904,7 +1904,7 @@ function startGame(THREE) {
   function animalFront(d) { return { x: ANIMAL_X + Math.sin(ANIMAL_TURN) * (ANIMAL_HD + d), z: ANIMAL_Z + Math.cos(ANIMAL_TURN) * (ANIMAL_HD + d) }; }
   function onAnimalLot(x, z, m) {                                      // the barn, its pen and the clutter out front
     var dx = x - ANIMAL_X, dz = z - ANIMAL_Z, c = Math.cos(ANIMAL_TURN), si = Math.sin(ANIMAL_TURN), lx = dx * c - dz * si, lz = dx * si + dz * c;
-    return lx > -ANIMAL_HW - 4.6 - m && lx < ANIMAL_HW + 1.7 + m && lz > -ANIMAL_HD - 0.6 - m && lz < ANIMAL_HD + 1.4 + m;
+    return lx > -ANIMAL_HW - 0.6 - m && lx < ANIMAL_HW + 1.7 + m && lz > -ANIMAL_HD - 0.6 - m && lz < ANIMAL_HD + 1.4 + m;
   }
   var AP_PTS = [[-81.2, 6], [-85, 5.7], [-89.5, 4.6], [-94, 3.0], [-98.5, 1.0], [animalFront(1.6).x, animalFront(1.6).z]];
   var spLine = stoneCurve(SP_PTS, 160), cpLine = stoneCurve(CP_PTS, 170), apLine = stoneCurve(AP_PTS, 160);
@@ -5023,7 +5023,7 @@ function startGame(THREE) {
   // A big red barn of a shop: board-and-batten siding with white trim, a grey shingled gambrel roof with a cupola and a
   // rooster weathervane, a fieldstone foundation, big white-braced sliding doors (half open, warm light inside), a
   // hayloft door with a pulley and hay spilling out, a painted sign with paw prints, windows with flower boxes,
-  // lanterns, hay bales, feed sacks, a water trough, a milk churn, and a little fenced pen with sheep and hens
+  // lanterns, hay bales, feed sacks, a water trough, a milk churn, and a few farmyard bits and pieces
   var barnGroup = new THREE.Group();
   barnGroup.position.set(ANIMAL_X, 0, ANIMAL_Z); barnGroup.rotation.y = ANIMAL_TURN;
   scene.add(barnGroup);
@@ -5276,43 +5276,6 @@ function startGame(THREE) {
   [-0.55, 0.55].forEach(function (lx) { apPart(new THREE.BoxGeometry(0.08, 0.1, 0.55), AM.iron, lx, 0.05, 0, 0, 0, 0, trough); });
   var churnPts = [[0.001, 0], [0.16, 0], [0.17, 0.05], [0.17, 0.4], [0.1, 0.5], [0.07, 0.55], [0.08, 0.6], [0.001, 0.62]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
   apPart(new THREE.LatheGeometry(churnPts, 20), new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.35, metalness: 0.7 }), 2.0, 0, B_FZ + 0.6);
-  // a little fenced pen beside the barn, with sheep and hens
-  var BPEN_X = -BW - 2.6, BPEN_Z = 0.5, BPEN_W = 3.6, BPEN_D = 5;
-  var penPosts = [];
-  for (var px = -BPEN_W / 2; px <= BPEN_W / 2 + 0.01; px += BPEN_W / 3) { penPosts.push([BPEN_X + px, BPEN_Z - BPEN_D / 2]); penPosts.push([BPEN_X + px, BPEN_Z + BPEN_D / 2]); }
-  for (var pz = -BPEN_D / 2 + BPEN_D / 4; pz < BPEN_D / 2 - 0.01; pz += BPEN_D / 4) { penPosts.push([BPEN_X - BPEN_W / 2, BPEN_Z + pz]); }
-  penPosts.forEach(function (pp) { apPart(new THREE.BoxGeometry(0.1, 0.9, 0.1), AM.wood, pp[0], 0.45, pp[1]); });
-  [0.35, 0.7].forEach(function (ry) {
-    apPart(new THREE.BoxGeometry(BPEN_W, 0.08, 0.04), AM.wood, BPEN_X, ry, BPEN_Z - BPEN_D / 2);
-    apPart(new THREE.BoxGeometry(BPEN_W, 0.08, 0.04), AM.wood, BPEN_X, ry, BPEN_Z + BPEN_D / 2);
-    apPart(new THREE.BoxGeometry(0.04, 0.08, BPEN_D), AM.wood, BPEN_X - BPEN_W / 2, ry, BPEN_Z);
-  });
-  apPart(new THREE.BoxGeometry(BPEN_W - 0.2, 0.02, BPEN_D - 0.2), new THREE.MeshStandardMaterial({ color: 0xb89a5a, roughness: 1 }), BPEN_X, 0.01, BPEN_Z).castShadow = false;   // straw on the ground
-  var barnAnimals = [];
-  function sheep(x, z, ry, k) {
-    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; barnGroup.add(g);
-    for (var w = 0; w < 9; w++) apPart(new THREE.IcosahedronGeometry(0.16 + isle2Hash(w + k * 9) * 0.05, 1), AM.wool, (isle2Hash(w * 2 + k) - 0.5) * 0.4, 0.5 + (isle2Hash(w * 3 + k) - 0.5) * 0.14, (isle2Hash(w * 5 + k) - 0.5) * 0.25, 0, 0, 0, g);
-    [[-0.15, -0.08], [-0.15, 0.08], [0.15, -0.08], [0.15, 0.08]].forEach(function (l) { apPart(new THREE.CylinderGeometry(0.025, 0.022, 0.36, 6), AM.black, l[0], 0.18, l[1], 0, 0, 0, g); });
-    var head = new THREE.Group(); head.position.set(0.3, 0.58, 0); g.add(head);
-    apPart(new THREE.SphereGeometry(0.1, 12, 10), AM.black, 0.04, 0, 0, 0, 0, 0, head).scale.set(1.3, 1, 0.9);
-    [-1, 1].forEach(function (s) { apPart(new THREE.SphereGeometry(0.04, 8, 6), AM.black, -0.02, 0.04, s * 0.1, 0, 0, 0, head).scale.set(0.6, 0.4, 1.4); apPart(new THREE.SphereGeometry(0.012, 6, 4), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0.1, 0.03, s * 0.05, 0, 0, 0, head); });
-    apPart(new THREE.IcosahedronGeometry(0.08, 1), AM.wool, -0.04, 0.08, 0, 0, 0, 0, head);
-    barnAnimals.push({ head: head, p: k * 1.7, kind: 'sheep' });
-  }
-  function hen(x, z, ry, k, col) {
-    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; barnGroup.add(g);
-    var m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 });
-    apPart(new THREE.SphereGeometry(0.11, 12, 10), m, 0, 0.18, 0, 0, 0, 0, g).scale.set(1.3, 1, 0.9);
-    apPart(new THREE.ConeGeometry(0.06, 0.14, 8), m, -0.13, 0.25, 0, 0, 0, 0.9, g);
-    var head = new THREE.Group(); head.position.set(0.12, 0.29, 0); g.add(head);
-    apPart(new THREE.SphereGeometry(0.06, 10, 8), m, 0, 0, 0, 0, 0, 0, head);
-    apPart(new THREE.ConeGeometry(0.018, 0.05, 6), new THREE.MeshStandardMaterial({ color: 0xf2b63a }), 0.065, -0.005, 0, 0, 0, -Math.PI / 2, head);
-    apPart(new THREE.BoxGeometry(0.06, 0.04, 0.012), new THREE.MeshStandardMaterial({ color: 0xd8344a }), 0, 0.06, 0, 0, 0, 0, head);
-    [-0.03, 0.03].forEach(function (lz) { apPart(new THREE.CylinderGeometry(0.008, 0.008, 0.1, 4), new THREE.MeshStandardMaterial({ color: 0xf2b63a }), 0, 0.06, lz, 0, 0, 0, g); });
-    barnAnimals.push({ head: head, p: k * 2.3, kind: 'hen' });
-  }
-  sheep(BPEN_X + 0.4, BPEN_Z - 1.2, 0.6, 1); sheep(BPEN_X - 0.6, BPEN_Z + 0.8, -2.4, 2);
-  hen(BPEN_X + 0.9, BPEN_Z + 1.4, 1.2, 3, 0xf6f2ea); hen(BPEN_X - 0.2, BPEN_Z - 0.2, 2.6, 4, 0xa8643a); hen(BPEN_X + 0.5, BPEN_Z + 0.4, -0.4, 5, 0xf6f2ea);
   // ----- more of the farmyard -----
   // lightning rods along the ridge, each with a blue glass ball, joined by a twisted cable
   [-3.2, 0, 3.2].forEach(function (rz, k) {
@@ -5381,17 +5344,6 @@ function startGame(THREE) {
   [-1, 1].forEach(function (s) { apPart(new THREE.ConeGeometry(0.03, 0.06, 4), catFur, 0.15, 0.18, 0.06 + s * 0.045, 0, 0, 0, cat); });
   apPart(new THREE.TorusGeometry(0.13, 0.022, 6, 16, Math.PI * 1.2), catFur, -0.02, 0.05, 0, Math.PI / 2, 0, 0.6, cat);
   var catBreath = cat.children[0];
-  // a little chicken coop by the pen: red, on legs, with a ramp, a nesting box and a heart cut in its door
-  var coop = new THREE.Group(); coop.position.set(BPEN_X - 0.2, 0, BPEN_Z + 3.5); coop.rotation.y = Math.PI; barnGroup.add(coop);
-  [[-0.4, -0.3], [0.4, -0.3], [-0.4, 0.3], [0.4, 0.3]].forEach(function (l) { apPart(new THREE.BoxGeometry(0.06, 0.45, 0.06), AM.wood, l[0], 0.225, l[1], 0, 0, 0, coop); });
-  apPart(new THREE.BoxGeometry(1.0, 0.6, 0.75), AM.siding, 0, 0.75, 0, 0, 0, 0, coop);
-  [-1, 1].forEach(function (s) { apPart(new THREE.BoxGeometry(1.15, 0.05, 0.5), awnShingle, 0, 1.15, s * 0.2, s * 0.6, 0, 0, coop); });
-  apPart(new THREE.BoxGeometry(0.3, 0.32, 0.02), AM.black, 0.15, 0.68, 0.385, 0, 0, 0, coop);
-  apPart(new THREE.BoxGeometry(0.4, 0.06, 0.02), AM.trim, 0.15, 0.86, 0.39, 0, 0, 0, coop);
-  var ramp = apPart(new THREE.BoxGeometry(0.28, 0.03, 0.75), AM.wood, 0.15, 0.27, 0.68, -0.72, 0, 0, coop);
-  for (var rampR = 0; rampR < 5; rampR++) apPart(new THREE.BoxGeometry(0.26, 0.02, 0.02), AM.darkWood, 0, 0.02, -0.3 + rampR * 0.15, 0, 0, 0, ramp);
-  apPart(new THREE.BoxGeometry(0.45, 0.3, 0.3), AM.siding, -0.72, 0.7, 0, 0, 0, 0, coop);                                // the nesting box
-  apPart(new THREE.BoxGeometry(0.5, 0.04, 0.36), awnShingle, -0.72, 0.88, 0, 0, 0, 0.3, coop);
   // a bird house on a post by the path
   var bh = new THREE.Group(); bh.position.set(ANIMAL_HW + 1.6, 0, B_FZ + 2.2); barnGroup.add(bh);
   apPart(new THREE.BoxGeometry(0.07, 1.6, 0.07), AM.wood, 0, 0.8, 0, 0, 0, 0, bh);
@@ -5409,21 +5361,14 @@ function startGame(THREE) {
     dogTail.rotation.y = 0.6 + Math.sin(t * 1.3) * 0.25;               // the dog's tail thumps now and then in its sleep
     catBreath.scale.y = 0.6 + Math.sin(t * 1.8) * 0.03;                 // and the cat breathes slowly
     rooster.rotation.y = Math.sin(t * 0.17) * 1.2 + Math.sin(t * 0.43) * 0.3;
-    for (var a = 0; a < barnAnimals.length; a++) {
-      var an = barnAnimals[a], ph = (t * (an.kind === 'hen' ? 0.9 : 0.35) + an.p) % 3;
-      an.head.rotation.z = an.kind === 'hen' ? (ph < 0.3 ? -0.9 * Math.sin(ph / 0.3 * Math.PI) : 0) : -0.6 * Math.max(0, Math.sin(ph * 1.2));   // pecking, or grazing
-    }
   }
-  (function () {                                                       // you bump into the barn, the pen, the bales and the trough
+  (function () {                                                       // you bump into the barn, the bales and the trough
     var c = Math.cos(ANIMAL_TURN), si = Math.sin(ANIMAL_TURN);
     function solidAt(lx, lz, r) { solids.push({ x: ANIMAL_X + lx * c + lz * si, z: ANIMAL_Z - lx * si + lz * c, r: r }); }
     for (var x = -BW + 0.6; x <= BW - 0.59; x += 1.2) for (var z = -BD + 0.6; z <= BD - 0.59; z += 1.2) solidAt(x, z, 0.9);
     for (var x2 = -BW; x2 <= BW + 0.01; x2 += 0.5) solidAt(x2, BD - 0.2, 0.4);
-    penPosts.forEach(function (pp) { solidAt(pp[0], pp[1], 0.3); });
-    for (var pz2 = -BPEN_D / 2; pz2 <= BPEN_D / 2; pz2 += 0.5) solidAt(BPEN_X - BPEN_W / 2, BPEN_Z + pz2, 0.25);
-    for (var px2 = -BPEN_W / 2; px2 <= BPEN_W / 2; px2 += 0.5) { solidAt(BPEN_X + px2, BPEN_Z - BPEN_D / 2, 0.25); solidAt(BPEN_X + px2, BPEN_Z + BPEN_D / 2, 0.25); }
     solidAt(-3.0, B_FZ + 0.8, 0.7); solidAt(2.7, B_FZ + 0.9, 0.5); solidAt(2.0, B_FZ + 0.6, 0.25); solidAt(BW + 1.0, 1.0, 0.75);
-    solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(1.45, B_FZ + 0.85, 0.35); solidAt(BPEN_X - 0.2, BPEN_Z + 3.5, 0.6); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the dog, the coop, the bird house, the wheel
+    solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(1.45, B_FZ + 0.85, 0.35); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the dog, the bird house, the wheel
   })();
 
   // ---------- The stone path to Whimsy & Bloom ----------
@@ -13212,7 +13157,7 @@ function startGame(THREE) {
     label('Bridge', BRIDGE_X + 7, (BRIDGE_Z0 + BRIDGE_Z1) / 2, 0);
     label('West Bridge', -(BRIDGE_Z0 + BRIDGE_Z1) / 2, BRIDGE2_Z - 6, 0);
     label('Western Isle', ISLE3_X + 6, ISLE3_Z + 16, 0, 26);
-    // Fluff & Feather: its grey gambrel roof with the ridge along it, the cupola, and the pen beside it
+    // Fluff & Feather: its grey gambrel roof with the ridge along it, and the cupola
     var apm = mapXY(ANIMAL_X, ANIMAL_Z);
     g.save(); g.translate(apm[0], apm[1]); g.rotate(-ANIMAL_TURN);
     g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-ANIMAL_HW * K + 8, -ANIMAL_HD * K + 10, ANIMAL_HW * K * 2, ANIMAL_HD * K * 2);
@@ -13221,7 +13166,6 @@ function startGame(THREE) {
     g.fillStyle = '#f4f0e6'; g.fillRect(-2, -ANIMAL_HD * K - 4, 4, ANIMAL_HD * K * 2 + 8);
     g.fillStyle = '#5fa890'; g.fillRect(-7, -7, 14, 14);
     g.fillStyle = '#b8343a'; g.fillRect(-1.4 * K, ANIMAL_HD * K, 2.8 * K, 5);                 // the red barn doors
-    g.strokeStyle = '#8a6440'; g.lineWidth = 3; g.strokeRect((-ANIMAL_HW - 4.4) * K, -2.0 * K, 3.6 * K, 5 * K);   // the pen
     g.restore();
     label('Fluff & Feather', ANIMAL_X, ANIMAL_Z, ANIMAL_HD * K + 34);
     // Whimsy & Bloom: its slate roof, turned the way it faces, with the front steps
