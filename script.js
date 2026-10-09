@@ -10545,17 +10545,6 @@ function startGame(THREE) {
     for (var i = 0; i < 1200; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,140,130') + ',' + (isle2Hash(i * 1.7) * 0.06) + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
   });
   ciPlasterTex.wrapS = ciPlasterTex.wrapT = THREE.RepeatWrapping;
-  var ciRugTex = paintTexture(256, 192, function (g, w, h) {          // a soft wool rug with a border and little hearts
-    g.fillStyle = '#e9d9c4'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#2f6f68'; g.lineWidth = 10; g.strokeRect(10, 10, w - 20, h - 20);
-    g.strokeStyle = '#e0889a'; g.lineWidth = 3; g.strokeRect(24, 24, w - 48, h - 48);
-    for (var r = 0; r < 4; r++) for (var c = 0; c < 6; c++) {
-      var hx = 50 + c * 32, hy = 52 + r * 30;
-      g.fillStyle = (r + c) % 2 ? 'rgba(224,136,154,0.7)' : 'rgba(47,111,104,0.5)';
-      g.beginPath(); g.moveTo(hx, hy + 6); g.bezierCurveTo(hx - 9, hy, hx - 6, hy - 7, hx, hy - 2); g.bezierCurveTo(hx + 6, hy - 7, hx + 9, hy, hx, hy + 6); g.fill();
-    }
-    for (var i = 0; i < 2500; i++) { g.fillStyle = 'rgba(80,60,40,' + isle2Hash(i) * 0.08 + ')'; g.fillRect(isle2Hash(i * 1.9) * w, isle2Hash(i * 2.9) * h, 1, 1); }
-  });
   var ciScreenTex = paintTexture(160, 100, function (g, w, h) {       // the reception computer: the day's appointments
     g.fillStyle = '#eef6f4'; g.fillRect(0, 0, w, h);
     g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, 14);
@@ -10575,18 +10564,46 @@ function startGame(THREE) {
     g.stroke();
     g.fillStyle = '#6dffcf'; g.font = 'bold 12px sans-serif'; g.fillText('72 ♥', 92, 20);
   });
-  var ciHeartTex = paintTexture(160, 220, function (g, w, h) {        // a friendly poster of the heart
-    g.fillStyle = '#fdf6ec'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#2f6f68'; g.textAlign = 'center'; g.font = 'bold 15px Georgia, serif'; g.fillText('Your Heart', w / 2, 22);
-    var cx = w / 2, cy = 110, s = 50;
-    var hg = g.createRadialGradient(cx - 10, cy - 20, 5, cx, cy, s * 1.4); hg.addColorStop(0, '#f27a8e'); hg.addColorStop(1, '#a8243e');
+  var ciHeartTex = paintTexture(512, 700, function (g, w, h) {        // a friendly poster all about the heart: a drawing with labels, facts and tips
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#fdf7ee'); bg.addColorStop(1, '#f6ecdc');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, 84);
+    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = 'bold 40px Georgia, serif'; g.fillText('Your Amazing Heart', w / 2, 50);
+    g.fillStyle = '#cfe9e2'; g.font = 'italic 16px Georgia, serif'; g.fillText('a hard-working friend, about the size of your fist', w / 2, 74);
+    var cx = 240, cy = 300;
+    function tube(pts, col, wid) { g.strokeStyle = col; g.lineWidth = wid; g.lineCap = 'round'; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i += 2) g.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); g.stroke(); }
+    tube([[cx - 70, 120], [cx - 72, 170], [cx - 60, 220]], '#4a6ad0', 30);                                   // the vena cava, bringing blood home
+    tube([[cx + 10, 230], [cx - 10, 130], [cx + 60, 140], [cx + 120, 150], [cx + 110, 230]], '#c8344a', 34); // the aorta's arch
+    tube([[cx + 40, 150], [cx + 30, 110], [cx + 20, 100]], '#c8344a', 14); tube([[cx + 70, 145], [cx + 70, 105], [cx + 72, 92]], '#c8344a', 14);   // its branches
+    tube([[cx - 20, 250], [cx - 40, 180], [cx - 110, 175]], '#5a7ae0', 26);                                 // the pulmonary artery, off to the lungs
+    var hg = g.createRadialGradient(cx - 30, cy - 40, 20, cx, cy, 170); hg.addColorStop(0, '#f48a9a'); hg.addColorStop(0.6, '#d8485e'); hg.addColorStop(1, '#8a1e34');
     g.fillStyle = hg;
-    g.beginPath(); g.moveTo(cx, cy + s * 0.95); g.bezierCurveTo(cx - s * 1.4, cy, cx - s * 0.85, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.85, cy - s, cx + s * 1.4, cy, cx, cy + s * 0.95); g.fill();
-    g.strokeStyle = '#4a7ad0'; g.lineWidth = 6; g.beginPath(); g.moveTo(cx - 12, cy - 30); g.quadraticCurveTo(cx - 14, cy - 64, cx - 34, cy - 70); g.stroke();
-    g.strokeStyle = '#d04a5a'; g.beginPath(); g.moveTo(cx + 6, cy - 32); g.quadraticCurveTo(cx + 4, cy - 70, cx + 30, cy - 66); g.stroke();
-    g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 5, cy - 18); g.quadraticCurveTo(cx + 8, cy + 10, cx - 4, cy + 34); g.stroke();
-    g.fillStyle = '#5a5a5a'; g.font = '10px sans-serif';
-    ['Eat your greens', 'Take a walk each day', 'Sleep well'].forEach(function (t, k) { g.fillText('♥ ' + t, w / 2, 178 + k * 14); });
+    g.beginPath(); g.moveTo(cx - 20, cy - 80); g.bezierCurveTo(cx - 140, cy - 90, cx - 150, cy + 40, cx - 60, cy + 110); g.quadraticCurveTo(cx + 10, cy + 170, cx + 40, cy + 190); g.bezierCurveTo(cx + 90, cy + 120, cx + 160, cy + 40, cx + 120, cy - 50); g.bezierCurveTo(cx + 90, cy - 100, cx + 20, cy - 90, cx - 20, cy - 80); g.fill();
+    g.fillStyle = 'rgba(90,110,220,0.28)'; g.beginPath(); g.moveTo(cx - 20, cy - 80); g.bezierCurveTo(cx - 140, cy - 90, cx - 150, cy + 40, cx - 60, cy + 110); g.quadraticCurveTo(cx - 10, cy + 40, cx + 10, cy - 70); g.fill();   // the right side, carrying tired blue blood
+    g.strokeStyle = '#7a2a1e'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + 10, cy - 70); g.bezierCurveTo(cx - 10, cy + 20, cx + 20, cy + 100, cx + 40, cy + 185); g.stroke();   // the groove between the halves
+    g.strokeStyle = 'rgba(255,220,120,0.7)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(cx + 30, cy - 60); g.bezierCurveTo(cx + 60, cy, cx + 50, cy + 60, cx + 80, cy + 110); g.moveTo(cx - 40, cy - 50); g.bezierCurveTo(cx - 90, cy, cx - 70, cy + 60, cx - 50, cy + 90); g.stroke();   // the coronary vessels
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.ellipse(cx - 60, cy - 30, 24, 40, 0.5, 0, Math.PI * 2); g.fill();
+    function label(text, lx, ly, tx, ty, align) {                      // a label with a leader line
+      g.strokeStyle = '#5a5a5a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(lx, ly); g.lineTo(tx, ty); g.stroke();
+      g.fillStyle = '#5a5a5a'; g.beginPath(); g.arc(tx, ty, 3, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2a2a30'; g.font = 'bold 15px sans-serif'; g.textAlign = align; g.fillText(text, lx + (align === 'left' ? 4 : -4), ly + 5);
+    }
+    label('Aorta', 420, 128, cx + 110, 150, 'left'); label('Vena cava', 60, 120, cx - 75, 140, 'right');
+    label('To the lungs', 66, 200, cx - 105, 178, 'right'); label('Right side', 50, 330, cx - 90, cy, 'right');
+    label('Left side', 420, 330, cx + 110, cy + 10, 'left'); label('Ventricles', 420, 430, cx + 50, cy + 120, 'left');
+    [[cx + 140, 260, '#c8344a'], [cx - 135, 260, '#4a6ad0']].forEach(function (ar) {   // arrows showing which way the blood flows
+      g.fillStyle = ar[2]; g.beginPath(); g.moveTo(ar[0], ar[1] - 14); g.lineTo(ar[0] + 10, ar[1] + 4); g.lineTo(ar[0] - 10, ar[1] + 4); g.fill();
+    });
+    g.fillStyle = '#ffffff'; g.strokeStyle = '#e0889a'; g.lineWidth = 2;   // a fact box
+    g.fillRect(36, 512, w - 72, 56); g.strokeRect(36, 512, w - 72, 56);
+    g.fillStyle = '#c8344a'; g.font = 'bold 17px sans-serif'; g.textAlign = 'center'; g.fillText('♥ It beats about 100,000 times a day!', w / 2, 546);
+    [['🍎', 'Eat your greens'], ['👟', 'Walk each day'], ['🌙', 'Sleep well']].forEach(function (t, k) {   // three tips, each with a little picture
+      var tx = 90 + k * 166, ty = 610;
+      g.fillStyle = ['#e6f3e0', '#e6f2fb', '#efe8fb'][k]; g.beginPath(); g.arc(tx, ty, 26, 0, Math.PI * 2); g.fill();
+      g.font = '28px sans-serif'; g.fillText(t[0], tx, ty + 10);
+      g.fillStyle = '#2f6f68'; g.font = 'bold 14px sans-serif'; g.fillText(t[1], tx, ty + 50);
+    });
+    g.fillStyle = '#8a7a6a'; g.font = 'italic 12px Georgia, serif'; g.fillText('Everdawn Clinic · Dr. Hazel Bramble', w / 2, h - 12);
   });
   var ciWashTex = paintTexture(512, 384, function (g, w, h) {          // a poster over the sink: how to wash your hands, in four little pictures
     g.fillStyle = '#fbf8f1'; g.fillRect(0, 0, w, h);
@@ -10753,14 +10770,6 @@ function startGame(THREE) {
     g.fillStyle = '#8a8a90'; g.font = '8px sans-serif'; g.fillText('Read the lowest line you can', w / 2, h - 8);
   });
   ciEyeTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  var ciMagTex = paintTexture(128, 128, function (g, w, h) {          // magazine covers, four to a texture
-    [['#e0889a', 'Bloom'], ['#7ab8e0', 'Tides'], ['#8fc7b0', 'Herbs'], ['#f2c14e', 'Stars']].forEach(function (m, k) {
-      var x = (k % 2) * 64, y = Math.floor(k / 2) * 64;
-      g.fillStyle = m[0]; g.fillRect(x, y, 64, 64);
-      g.fillStyle = 'rgba(255,255,255,0.85)'; g.font = 'bold 14px Georgia, serif'; g.textAlign = 'center'; g.fillText(m[1], x + 32, y + 18);
-      g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(x + 32, y + 42, 14, 0, Math.PI * 2); g.fill();
-    });
-  });
 
   // materials
   var CI = {
@@ -10995,41 +11004,132 @@ function startGame(THREE) {
       ciPart(new THREE.CylinderGeometry(0.0145, 0.013, 0.035, 10), CI.brass, lx + c[0] * 0.026, 0.017, lz + c[1] * 0.026, 0, 0, 0, g);
     });
     ciPart(ciRoundBox(0.6, 0.055, 0.56, 0.015), oak, 0, 0.32, 0, 0, 0, 0, g);                                          // the seat frame
-    ciPart(ciRoundBox(0.52, 0.12, 0.5, 0.05), mat, 0, 0.405, 0.02, 0, 0, 0, g);                                         // the seat cushion
-    ciPart(new THREE.BoxGeometry(0.44, 0.008, 0.008), pipe, 0, 0.455, 0.27, 0, 0, 0, g);
+    var seatGeo = ciRoundBox(0.52, 0.12, 0.5, 0.05), sgp = seatGeo.attributes.position;   // the seat cushion, softly domed in the middle
+    for (var sv = 0; sv < sgp.count; sv++) if (sgp.getY(sv) > 0.03) sgp.setY(sv, sgp.getY(sv) + 0.018 * Math.max(0, 1 - Math.pow(sgp.getX(sv) / 0.26, 2)) * Math.max(0, 1 - Math.pow(sgp.getZ(sv) / 0.25, 2)));
+    seatGeo.computeVertexNormals();
+    ciPart(seatGeo, mat, 0, 0.405, 0.02, 0, 0, 0, g);
+    [[0, 0.27, 0.46, 0.009], [0, -0.23, 0.46, 0.009], [-0.26, 0.02, 0.009, 0.46], [0.26, 0.02, 0.009, 0.46]].forEach(function (pp) {   // piping all the way round its top edge
+      ciPart(ciRoundBox(pp[2], 0.009, pp[3], 0.004), pipe, pp[0], 0.452, pp[1], 0, 0, 0, g);
+    });
+    [[-0.1, 0.12], [0.1, 0.12], [0, 0.0], [-0.1, -0.12], [0.1, -0.12]].forEach(function (b) {   // buttons on the seat too
+      ciPart(new THREE.SphereGeometry(0.009, 8, 6), pipe, b[0], 0.468, b[1] + 0.02, 0, 0, 0, g).scale.set(1, 0.6, 1);
+    });
+    // stretchers between the legs, and spindles under the arms
+    ciRod(new THREE.Vector3(-0.255, 0.1, 0.235), new THREE.Vector3(-0.255, 0.1, -0.235), 0.009, oak, g);
+    ciRod(new THREE.Vector3(0.255, 0.1, 0.235), new THREE.Vector3(0.255, 0.1, -0.235), 0.009, oak, g);
+    ciRod(new THREE.Vector3(-0.255, 0.1, 0), new THREE.Vector3(0.255, 0.1, 0), 0.009, oak, g);
     [-1, 1].forEach(function (s) {
       ciPart(ciRoundBox(0.04, 0.6, 0.045, 0.012), oak, s * 0.27, 0.62, -0.27, -0.14, 0, 0, g);                         // the back posts
       ciPart(ciRoundBox(0.035, 0.28, 0.035, 0.01), oak, s * 0.29, 0.48, 0.2, 0, 0, s * 0.05, g);                       // the arm supports
       ciPart(ciRoundBox(0.07, 0.035, 0.58, 0.016), oak, s * 0.3, 0.625, -0.01, 0, 0, 0, g);                            // the arms
+      ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.07, 14), oak, s * 0.3, 0.625, 0.275, 0, 0, Math.PI / 2, g);        // their rounded ends
+      [-0.16, -0.04, 0.08].forEach(function (sz) { ciPart(new THREE.CylinderGeometry(0.008, 0.011, 0.26, 8), oak, s * 0.29, 0.48, sz, 0, 0, 0, g); });   // turned spindles
     });
     ciPart(ciRoundBox(0.5, 0.04, 0.03, 0.01), oak, 0, 0.88, -0.32, -0.14, 0, 0, g);                                    // a curved top rail
     var bc = ciPart(ciRoundBox(0.48, 0.4, 0.11, 0.05), mat, 0, 0.66, -0.24, -0.14, 0, 0, g);                            // the back cushion, buttoned
     [[-0.12, 0.08], [0.12, 0.08], [0, -0.02], [-0.12, -0.1], [0.12, -0.1]].forEach(function (b) {
       ciPart(new THREE.SphereGeometry(0.011, 8, 6), pipe, b[0], b[1], 0.055, 0, 0, 0, bc);
     });
-    ciPart(new THREE.BoxGeometry(0.42, 0.008, 0.008), pipe, 0, 0.2, 0.05, 0, 0, 0, bc);
+    [[0, 0.198, 0.42, 0.009], [0, -0.198, 0.42, 0.009], [-0.238, 0, 0.009, 0.36], [0.238, 0, 0.009, 0.36]].forEach(function (pp) {   // piping round the back cushion
+      ciPart(ciRoundBox(pp[2], pp[3], 0.009, 0.004), pipe, pp[0], pp[1], 0.05, 0, 0, 0, bc);
+    });
+    [-0.17, -0.06, 0.06, 0.17].forEach(function (bx) { ciPart(new THREE.CylinderGeometry(0.007, 0.009, 0.34, 8), oak, bx, 0.62, -0.31, -0.14, 0, 0, g); });   // spindles in the back, behind the cushion
   }
   [[0.95, CI.coral], [1.75, CI.tealVinyl], [2.55, CI.coral]].forEach(function (c) { ciArmchair(-CIN_W / 2 + 0.42, c[0], Math.PI / 2, c[1]); ciSolids.push([-CIN_W / 2 + 0.42, c[0], 0.36]); });
-  ciPart(new THREE.PlaneGeometry(2.0, 1.5), new THREE.MeshStandardMaterial({ map: ciRugTex, roughness: 1 }), -3.0, 0.006, 1.75, -Math.PI / 2).castShadow = false;
-  var MAG_X = -3.15, MAG_Z = 1.75;
-  ciPart(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 28), CI.wood, MAG_X, 0.42, MAG_Z);
-  ciPart(new THREE.CylinderGeometry(0.05, 0.08, 0.4, 10), CI.darkWood, MAG_X, 0.2, MAG_Z);
-  ciPart(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 20), CI.darkWood, MAG_X, 0.015, MAG_Z);
-  [0, 1, 2].forEach(function (k) {                                     // a fan of magazines
-    var mg = new THREE.BoxGeometry(0.2, 0.008, 0.27), uvA = mg.attributes.uv;
-    for (var v = 0; v < uvA.count; v++) uvA.setXY(v, (k % 2) * 0.5 + uvA.getX(v) * 0.5, (k < 2 ? 0.5 : 0) + uvA.getY(v) * 0.5);
-    ciPart(mg, new THREE.MeshStandardMaterial({ map: ciMagTex, roughness: 0.6 }), MAG_X - 0.08 + k * 0.07, 0.445 + k * 0.009, MAG_Z + (k - 1) * 0.04, 0, -0.4 + k * 0.35, 0);
-  });
-  ciPart(new THREE.CylinderGeometry(0.04, 0.05, 0.14, 12), CI.glass, MAG_X + 0.15, 0.51, MAG_Z - 0.12);                  // a little vase of daisies
-  for (var dz = 0; dz < 5; dz++) {
-    var da = dz * 1.3;
-    ciPart(new THREE.CylinderGeometry(0.003, 0.003, 0.2, 4), CI.leaf, MAG_X + 0.15 + Math.cos(da) * 0.02, 0.56, MAG_Z - 0.12 + Math.sin(da) * 0.02, Math.sin(da) * 0.25, 0, Math.cos(da) * 0.25);
-    ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 10), CI.paper, MAG_X + 0.15 + Math.cos(da) * 0.06, 0.66 + (dz % 2) * 0.02, MAG_Z - 0.12 + Math.sin(da) * 0.06, 0.4, 0, 0);
-    ciPart(new THREE.SphereGeometry(0.012, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf2c14e }), MAG_X + 0.15 + Math.cos(da) * 0.06, 0.665 + (dz % 2) * 0.02, MAG_Z - 0.12 + Math.sin(da) * 0.06);
+  // the coffee table: a round oak top with a moulded edge, a turned pedestal on three splayed feet with brass caps, and a
+  // lower shelf with a couple of books. On top: a fan of magazines, a glass bud vase of daisies and lavender, a box of
+  // tissues and a bowl of wrapped sweets
+  var MAG_X = -3.15, MAG_Z = 1.75, MT_Y = 0.44;
+  var ciOakDark = new THREE.MeshStandardMaterial({ map: ciOakTex, color: 0xb88a68, roughness: 0.45 });
+  ciPart(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 40), CI_OAK, MAG_X, MT_Y - 0.015, MAG_Z);
+  ciPart(new THREE.TorusGeometry(0.34, 0.016, 10, 48), CI_OAK, MAG_X, MT_Y - 0.016, MAG_Z, Math.PI / 2, 0, 0);          // the rounded edge
+  ciPart(new THREE.CylinderGeometry(0.29, 0.29, 0.05, 32, 1, true), ciOakDark, MAG_X, MT_Y - 0.055, MAG_Z);            // the apron
+  var pedPts = [];                                                     // the turned pedestal: rings, a bulb and a slim neck
+  [[0.07, 0.0], [0.075, 0.02], [0.05, 0.035], [0.045, 0.07], [0.065, 0.11], [0.07, 0.14], [0.05, 0.17], [0.035, 0.22], [0.032, 0.28], [0.045, 0.31], [0.05, 0.33], [0.04, 0.35], [0.06, 0.37], [0.06, 0.38]].forEach(function (q) { pedPts.push(new THREE.Vector2(q[0], q[1])); });
+  ciPart(new THREE.LatheGeometry(pedPts, 24), ciOakDark, MAG_X, 0.02, MAG_Z);
+  for (var tf = 0; tf < 3; tf++) {                                     // three gently curved, splayed feet
+    var tfa = tf / 3 * Math.PI * 2 + 0.5, fx = Math.cos(tfa), fz = Math.sin(tfa);
+    var foot = new THREE.CatmullRomCurve3([new THREE.Vector3(MAG_X + fx * 0.04, 0.09, MAG_Z + fz * 0.04), new THREE.Vector3(MAG_X + fx * 0.14, 0.06, MAG_Z + fz * 0.14), new THREE.Vector3(MAG_X + fx * 0.25, 0.025, MAG_Z + fz * 0.25)]);
+    ciPart(new THREE.TubeGeometry(foot, 12, 0.022, 8), ciOakDark, 0, 0, 0);
+    ciPart(new THREE.CylinderGeometry(0.02, 0.018, 0.03, 10), CI.brass, MAG_X + fx * 0.255, 0.015, MAG_Z + fz * 0.255);
   }
-  ciSolids.push([MAG_X, MAG_Z, 0.36]);
-  // a heart poster over the chairs, on the left wall (along the left wall, x on the wall is minus the room's z)
-  ciFramed('W', -2.0, 2.05, 0.55, 0.75, ciHeartTex, CI.white);
+  ciPart(new THREE.CylinderGeometry(0.22, 0.22, 0.018, 32), CI_OAK, MAG_X, 0.16, MAG_Z);                                // the lower shelf
+  ciPart(new THREE.TorusGeometry(0.22, 0.008, 6, 36), CI.brass, MAG_X, 0.16, MAG_Z, Math.PI / 2, 0, 0);
+  [[0.035, CI.teal, 0.1], [0.03, CI.coral, -0.2]].forEach(function (bk, k) {   // books on the shelf
+    ciPart(ciRoundBox(0.2, bk[0], 0.15, 0.004), bk[1], MAG_X + 0.08, 0.17 + k * 0.035 + bk[0] / 2, MAG_Z - 0.05, 0, bk[2], 0);
+    ciPart(new THREE.BoxGeometry(0.19, bk[0] * 0.8, 0.002), CI.paper, MAG_X + 0.08 + Math.sin(bk[2]) * 0.076, 0.17 + k * 0.035 + bk[0] / 2, MAG_Z - 0.05 + Math.cos(bk[2]) * 0.076, 0, bk[2], 0);
+  });
+  ciSolids.push([MAG_X, MAG_Z, 0.38]);
+  // magazines: proper covers, with white page edges
+  var ciMagCovers = [['BLOOM', '#e98ab6', '#fde8f0', 'Spring’s prettiest\nwindow boxes', 0], ['Tides & Tonics', '#4a8ad0', '#e6f2fb', 'Sea air for\nhealthy lungs', 1], ['Herbal Home', '#5a9a5a', '#eef6e6', '20 teas to\ncalm a cold', 2]].map(function (m) {
+    return paintTexture(256, 340, function (g, w, h) {
+      g.fillStyle = m[2]; g.fillRect(0, 0, w, h);
+      if (m[4] === 0) { for (var p = 0; p < 7; p++) { var a = p / 7 * Math.PI * 2; g.fillStyle = 'rgba(233,138,182,0.8)'; g.beginPath(); g.ellipse(w / 2 + Math.cos(a) * 40, 200 + Math.sin(a) * 40, 34, 20, a, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#f2c14e'; g.beginPath(); g.arc(w / 2, 200, 20, 0, Math.PI * 2); g.fill(); }
+      else if (m[4] === 1) { var sky = g.createLinearGradient(0, 90, 0, 300); sky.addColorStop(0, '#bfe2f8'); sky.addColorStop(1, '#4a8ad0'); g.fillStyle = sky; g.fillRect(20, 90, w - 40, 210); g.fillStyle = '#ffffff'; for (var wv = 0; wv < 4; wv++) { g.beginPath(); for (var x = 20; x <= w - 20; x += 8) g.lineTo(x, 220 + wv * 22 + Math.sin(x * 0.08 + wv) * 6); g.lineTo(w - 20, 300); g.lineTo(20, 300); g.fill(); g.fillStyle = 'rgba(255,255,255,' + (0.5 - wv * 0.1) + ')'; } g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(190, 140, 24, 0, Math.PI * 2); g.fill(); }
+      else { g.fillStyle = '#f6efe2'; g.beginPath(); g.ellipse(w / 2, 240, 70, 40, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#c87a3a'; g.beginPath(); g.ellipse(w / 2, 232, 56, 22, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#f6efe2'; g.lineWidth = 8; g.beginPath(); g.arc(w / 2 + 74, 236, 18, -1.2, 1.2); g.stroke(); for (var lf = 0; lf < 6; lf++) { g.fillStyle = '#6aa055'; g.beginPath(); g.ellipse(60 + lf * 28, 150 + (lf % 2) * 18, 14, 6, lf, 0, Math.PI * 2); g.fill(); } }
+      g.fillStyle = m[1]; g.textAlign = 'center'; g.font = 'bold ' + (m[0].length > 8 ? 34 : 54) + 'px Georgia, serif'; g.fillText(m[0], w / 2, 62);
+      g.fillStyle = '#2a2a30'; g.font = 'bold 15px sans-serif'; g.textAlign = 'left';
+      m[3].split('\n').forEach(function (ln, k) { g.fillText(ln, 16, 100 + k * 18); });
+      g.fillStyle = m[1]; g.fillRect(16, h - 40, 60, 4);
+      g.fillStyle = '#ffffff'; g.fillRect(w - 64, h - 44, 48, 30); g.fillStyle = '#16161a'; for (var b = 0; b < 20; b++) if (isle2Hash(b + m[4] * 9) > 0.4) g.fillRect(w - 60 + b * 2, h - 40, 1.4, 20);   // a barcode
+      g.fillStyle = '#5a5a60'; g.font = '10px sans-serif'; g.fillText('ISSUE ' + (12 + m[4] * 7) + '  ·  2 coins', 16, h - 16);
+    });
+  });
+  var ciPageEdge = new THREE.MeshStandardMaterial({ color: 0xf6f4ee, roughness: 0.9 });
+  ciMagCovers.forEach(function (tex, k) {
+    var mats = [ciPageEdge, ciPageEdge, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 }), ciPageEdge, ciPageEdge, ciPageEdge];
+    ciPart(new THREE.BoxGeometry(0.17, 0.007, 0.225), mats, MAG_X - 0.1 + k * 0.06, MT_Y + 0.004 + k * 0.0075, MAG_Z + 0.05 + (k - 1) * 0.03, 0, -0.5 + k * 0.38, 0).castShadow = true;
+  });
+  // a glass bud vase with a little water, five daisies with their own petals, and two sprigs of lavender
+  var VZ_X = MAG_X + 0.15, VZ_Z = MAG_Z - 0.14;
+  var vasePts = []; [[0.001, 0], [0.04, 0], [0.05, 0.03], [0.045, 0.08], [0.022, 0.13], [0.018, 0.16], [0.024, 0.175], [0.02, 0.178]].forEach(function (q) { vasePts.push(new THREE.Vector2(q[0], q[1])); });
+  var waterPts = []; [[0.001, 0.004], [0.038, 0.004], [0.046, 0.03], [0.041, 0.075], [0.001, 0.075]].forEach(function (q) { waterPts.push(new THREE.Vector2(q[0], q[1])); });
+  ciPart(new THREE.LatheGeometry(waterPts, 20), new THREE.MeshStandardMaterial({ color: 0xbfe0f0, roughness: 0.05, transparent: true, opacity: 0.45, depthWrite: false }), VZ_X, MT_Y, VZ_Z).renderOrder = 2;
+  ciPart(new THREE.LatheGeometry(vasePts, 24), new THREE.MeshStandardMaterial({ color: 0xe8f6ff, roughness: 0.02, metalness: 0.1, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }), VZ_X, MT_Y, VZ_Z).renderOrder = 3;
+  var petals = [], petalGeo = new THREE.SphereGeometry(1, 8, 4);
+  for (var dz = 0; dz < 5; dz++) {
+    var da = dz * 1.26, lean = 0.22 + (dz % 2) * 0.1, sl = 0.24 + isle2Hash(dz * 3) * 0.06;
+    var head = new THREE.Vector3(VZ_X + Math.cos(da) * Math.sin(lean) * sl, MT_Y + 0.05 + Math.cos(lean) * sl, VZ_Z + Math.sin(da) * Math.sin(lean) * sl);
+    ciRod(new THREE.Vector3(VZ_X, MT_Y + 0.05, VZ_Z), head, 0.0022, CI.leaf);
+    var leafD = ciPart(new THREE.SphereGeometry(1, 8, 4), CI.leaf, VZ_X + Math.cos(da) * 0.03, MT_Y + 0.2, VZ_Z + Math.sin(da) * 0.03); leafD.scale.set(0.006, 0.03, 0.012); leafD.rotation.set(0, -da, 0.5);
+    var fg = new THREE.Group(); fg.position.copy(head); fg.lookAt(head.x + Math.cos(da) * 0.6, head.y + 1, head.z + Math.sin(da) * 0.6); clinicRoom.add(fg);
+    for (var pt = 0; pt < 13; pt++) {                                  // the white petals, each its own little oval
+      var pa = pt / 13 * Math.PI * 2;
+      var pm = ciPart(petalGeo, CI.paper, Math.cos(pa) * 0.018, Math.sin(pa) * 0.018, 0.002, 0, 0, pa, fg);
+      pm.scale.set(0.015, 0.0045, 0.0015); pm.castShadow = false;
+    }
+    ciPart(new THREE.SphereGeometry(0.009, 10, 6), new THREE.MeshStandardMaterial({ color: 0xf2b63a, roughness: 0.8 }), 0, 0, 0.004, 0, 0, 0, fg).scale.set(1, 1, 0.55);
+  }
+  [[0.7, 0.3], [3.6, 0.25]].forEach(function (lv) {                   // lavender sprigs
+    var tip = new THREE.Vector3(VZ_X + Math.cos(lv[0]) * Math.sin(lv[1]) * 0.3, MT_Y + 0.05 + Math.cos(lv[1]) * 0.3, VZ_Z + Math.sin(lv[0]) * Math.sin(lv[1]) * 0.3);
+    ciRod(new THREE.Vector3(VZ_X, MT_Y + 0.05, VZ_Z), tip, 0.0018, CI.leaf);
+    for (var bd = 0; bd < 9; bd++) { var f = 0.72 + bd * 0.035; ciPart(new THREE.SphereGeometry(0.006, 6, 4), new THREE.MeshStandardMaterial({ color: 0x8a6ad0, roughness: 0.8 }), VZ_X + (tip.x - VZ_X) * f + (bd % 2 ? 0.004 : -0.004), MT_Y + 0.05 + (tip.y - MT_Y - 0.05) * f, VZ_Z + (tip.z - VZ_Z) * f).castShadow = false; }
+  });
+  // a box of tissues with one pulled up, in a teal leaf-print box
+  var ciTissueTex = paintTexture(128, 64, function (g, w, h) {
+    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,0.5)'; for (var i = 0; i < 18; i++) { g.beginPath(); g.ellipse(isle2Hash(i * 3.1) * w, isle2Hash(i * 4.7) * h, 5, 2.2, isle2Hash(i) * 3, 0, Math.PI * 2); g.fill(); }
+  });
+  var TB_X = MAG_X - 0.12, TB_Z = MAG_Z - 0.17;
+  ciPart(ciRoundBox(0.13, 0.07, 0.13, 0.008), new THREE.MeshStandardMaterial({ map: ciTissueTex, roughness: 0.7 }), TB_X, MT_Y + 0.035, TB_Z, 0, 0.3, 0);
+  ciPart(new THREE.BoxGeometry(0.06, 0.002, 0.02), CI.white, TB_X, MT_Y + 0.071, TB_Z, 0, 0.3, 0);
+  var tissue = new THREE.PlaneGeometry(0.07, 0.07, 6, 6), tsp = tissue.attributes.position;
+  for (var tv = 0; tv < tsp.count; tv++) { var ttx = tsp.getX(tv), tty = tsp.getY(tv) + 0.035; tsp.setZ(tv, Math.sin(ttx * 60) * 0.006 + tty * tty * 2); tsp.setX(tv, ttx * (1 - tty * 4)); }
+  tissue.computeVertexNormals();
+  ciPart(tissue, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, side: THREE.DoubleSide }), TB_X, MT_Y + 0.105, TB_Z, 0, 0.3, 0).castShadow = false;
+  // a little glass bowl of sweets in twisted wrappers
+  var BW_X = MAG_X + 0.17, BW_Z = MAG_Z + 0.13;
+  var bowlPts2 = []; [[0.001, 0], [0.04, 0], [0.065, 0.02], [0.08, 0.045], [0.083, 0.05]].forEach(function (q) { bowlPts2.push(new THREE.Vector2(q[0], q[1])); });
+  ciPart(new THREE.LatheGeometry(bowlPts2, 24), new THREE.MeshStandardMaterial({ color: 0xf2e8ff, roughness: 0.03, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false }), BW_X, MT_Y, BW_Z).renderOrder = 3;
+  for (var sw = 0; sw < 9; sw++) {
+    var swa = sw * 2.4, swr = (sw % 3) * 0.022, sweet = new THREE.Group();
+    sweet.position.set(BW_X + Math.cos(swa) * swr, MT_Y + 0.02 + (sw > 5 ? 0.018 : 0), BW_Z + Math.sin(swa) * swr); sweet.rotation.set(0, swa * 1.7, 0.2); clinicRoom.add(sweet);
+    var sm = new THREE.MeshStandardMaterial({ color: [0xff6a8a, 0xffd04a, 0x7ad0a0, 0x9a8aff, 0xffffff][sw % 5], roughness: 0.15, metalness: 0.2 });
+    ciPart(new THREE.SphereGeometry(0.014, 10, 8), sm, 0, 0, 0, 0, 0, 0, sweet).scale.set(1.3, 1, 1);
+    [-1, 1].forEach(function (s) { ciPart(new THREE.ConeGeometry(0.009, 0.016, 6), sm, s * 0.024, 0, 0, 0, 0, s * Math.PI / 2, sweet); });
+  }
+  // a heart poster over the chairs, in an oak frame with a mat (along the left wall, x on the wall is minus the room's z)
+  ciFancyFrame('W', -2.0, 2.05, 0.5, 0.68, ciHeartTex, CI_OAK);
   // a water cooler by the door: a white cabinet with a recessed dispensing alcove, hot and cold taps, indicator lights,
   // a slotted drip tray, side vents, a label, a cup dispenser on its side, and a big ribbed jug of spring water on top
   // with bubbles rising through it now and then
@@ -11150,11 +11250,11 @@ function startGame(THREE) {
     // the moss pole, and an aerial root or two
     ciPart(new THREE.CylinderGeometry(0.03 * s, 0.035 * s, 0.6 * s, 10), new THREE.MeshStandardMaterial({ color: 0x6a7a3a, roughness: 1 }), x - 0.03 * s, soilY + 0.3 * s, z - 0.02 * s);
     for (var rt = 0; rt < 2; rt++) {
-      var ra = rt * 2.7 + x, root = new THREE.CatmullRomCurve3([new THREE.Vector3(x + Math.cos(ra) * 0.05 * s, soilY + 0.3 * s, z + Math.sin(ra) * 0.05 * s), new THREE.Vector3(x + Math.cos(ra) * 0.16 * s, soilY + 0.15 * s, z + Math.sin(ra) * 0.16 * s), new THREE.Vector3(x + Math.cos(ra) * 0.2 * s, soilY, z + Math.sin(ra) * 0.2 * s)]);
+      var ra = rt * 2.7 + x, root = new THREE.CatmullRomCurve3([new THREE.Vector3(x + Math.cos(ra) * 0.05 * s, soilY + 0.3 * s, z + Math.sin(ra) * 0.05 * s), new THREE.Vector3(x + Math.cos(ra) * 0.08 * s, soilY + 0.15 * s, z + Math.sin(ra) * 0.08 * s), new THREE.Vector3(x + Math.cos(ra) * 0.1 * s, soilY, z + Math.sin(ra) * 0.1 * s)]);
       ciPart(new THREE.TubeGeometry(root, 12, 0.005 * s, 5), ciRootMat, 0, 0, 0);
     }
     // the leaves, each on its own curving stem
-    for (var l = 0; l < 9; l++) {
+    for (var l = 0; l < 12; l++) {
       var a = l * 2.4 + x * 1.3, h = (0.45 + isle2Hash(l + x * 3) * 0.55) * s, out = (0.14 + isle2Hash(l * 2 + z) * 0.2) * s, pitch = -(0.25 + isle2Hash(l * 5 + x) * 0.55);   // tipped outward, so you see their faces
       var start = new THREE.Vector3(x + Math.cos(a) * 0.03 * s, soilY, z + Math.sin(a) * 0.03 * s);
       var end = new THREE.Vector3(x + Math.cos(a) * out, soilY + h, z + Math.sin(a) * out);
@@ -11164,7 +11264,11 @@ function startGame(THREE) {
       var leaf = ciPart(ciMonsteraLeaf(L, l * 11 + Math.round(x * 7)), ciMonsteraMat, end.x, end.y, end.z);
       var F = new THREE.Vector3(Math.cos(a) * Math.cos(pitch), Math.sin(pitch), Math.sin(a) * Math.cos(pitch)), R = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)), Nn = new THREE.Vector3().crossVectors(R, F);
       leaf.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(R, F, Nn));
+      ciPart(new THREE.CylinderGeometry(0.012 * s, 0.006 * s, 0.08 * s, 6), new THREE.MeshStandardMaterial({ color: 0x8a9a5a, roughness: 0.7 }), start.x, soilY + 0.04 * s, start.z, 0, 0, 0);   // a papery sheath where the stem leaves the soil
     }
+    var newLeaf = new THREE.CatmullRomCurve3([new THREE.Vector3(x, soilY, z), new THREE.Vector3(x + 0.02 * s, soilY + 0.5 * s, z + 0.01 * s), new THREE.Vector3(x + 0.05 * s, soilY + 0.95 * s, z + 0.03 * s)]);   // a brand-new leaf, still rolled up
+    ciPart(new THREE.TubeGeometry(newLeaf, 12, 0.006 * s, 6), ciStemMat, 0, 0, 0);
+    ciPart(new THREE.ConeGeometry(0.018 * s, 0.16 * s, 10), new THREE.MeshStandardMaterial({ color: 0x8ac860, roughness: 0.4 }), x + 0.055 * s, soilY + 1.02 * s, z + 0.035 * s, 0.1, 0, -0.08);
   }
   ciPlant(-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 1.25); ciSolids.push([-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 0.35]);
   ciPlant(1.45, CIN_D / 2 - 0.4, 1.1); ciSolids.push([1.45, CIN_D / 2 - 0.4, 0.32]);
