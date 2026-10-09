@@ -1153,17 +1153,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     return m;
   }
   var moonSegLo = new THREE.SphereGeometry(1, 24, 16);                 // (the fur shells don't need as many faces)
-  var moonHairAlpha = null;
-  function moonFurAlpha() {                                          // a hair in every pixel, its brightness how long it is (made once, shared)
-    if (moonHairAlpha) return moonHairAlpha;
-    var cv = glimCanvas(1536, 768, function (g, w, h) {
-      var img = g.createImageData(w, h), d = img.data;
-      for (var i = 0; i < w * h; i++) { var v = Math.round(Math.pow(glimR(i * 0.731) * glimR(i * 1.913 + 3), 0.55) * 255); d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
-      g.putImageData(img, 0, 0);
-    });
-    moonHairAlpha = new THREE.CanvasTexture(cv); moonHairAlpha.minFilter = THREE.LinearFilter; moonHairAlpha.generateMipmaps = false;
-    return moonHairAlpha;
-  }
   function moonBuild(pal) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
     var coatCol = new THREE.Color(pal.coat), bellyCol = new THREE.Color(pal.belly), muzzleCol = new THREE.Color(pal.belly).lerp(new THREE.Color(pal.nose), 0.5);
