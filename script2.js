@@ -260,23 +260,93 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   // down the right: feed sacks, a feed bin, a Dutch door, tack on a peg, buckets, nesting boxes and hay bales
   var AEX = AB_W / 2;
-  [[AEX - 0.42, -3.35, 1.5, 0], [AEX - 0.42, -2.85, 1.7, 1], [AEX - 0.45, -3.1, 1.6, 2]].forEach(function (sk, k) {   // sacks, the top one flopped over
-    var sg = barnSackProtos[sk[3]].clone();
-    sg.position.set(sk[0], k === 2 ? 0.38 : 0, sk[1]); sg.rotation.set(0, sk[2], k === 2 ? 1.2 : 0);
+  // feed sacks stacked on a pallet, labels out, the top one flopped over; and an open sack of grain beside them,
+  // its top rolled down, a scoop stuck in it and a little grain spilled on the floor
+  var abSackMat = new THREE.MeshStandardMaterial({ map: burlapTex, bumpMap: burlapTex, bumpScale: 0.025, color: 0xcbb48a, roughness: 1 });
+  var PAL_X = AEX - 0.45, PAL_Z = -3.12;
+  [-0.38, 0, 0.38].forEach(function (pz) { abPart(new THREE.BoxGeometry(0.72, 0.09, 0.08), AB.beam, PAL_X, 0.045, PAL_Z + pz); });   // the pallet: stringers,
+  for (var palB = 0; palB < 6; palB++) abPart(new THREE.BoxGeometry(0.11, 0.025, 0.9), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.08, 0.3, 0.34 + isle2Hash(palB * 3.7) * 0.1), roughness: 0.9 }), PAL_X - 0.3 + palB * 0.12, 0.103, PAL_Z);   // and deck boards
+  [[AEX - 0.45, 0.115, -3.38, -1.45, 0, 0], [AEX - 0.45, 0.115, -2.86, -1.7, 1, 0], [AEX - 0.5, 0.48, -3.12, -1.55, 2, 1.2]].forEach(function (sk) {
+    var sg = barnSackProtos[sk[4]].clone();
+    sg.position.set(sk[0], sk[1], sk[2]); sg.rotation.set(0, sk[3], sk[5]);
+    sg.traverse(function (o) {
+      if (o.material === sackMat) o.material = abSackMat;               // (a touch darker than outside, so they don't glare in the lamplight)
+      if (o.material && o.material.map && sackLabels.indexOf(o.material.map) >= 0) { o.position.z += 0.03; o.scale.set(1.15, 1.15, 1); }   // and the labels stand clear of the cloth
+    });
     abRoom.add(sg);
   });
-  abSolids.push([AEX - 0.42, -3.1, 0.45]);
-  // the feed bin: a wooden chest with its lid propped open, grain inside and a scoop
-  var FB_Z = -1.95, FB_X = AEX - 0.4;
-  abPart(new THREE.BoxGeometry(0.55, 0.62, 0.9), AB.wood, FB_X, 0.31, FB_Z);
-  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { abPart(new THREE.BoxGeometry(0.07, 0.66, 0.07), AB.beam, FB_X + c[0] * 0.26, 0.33, FB_Z + c[1] * 0.43); });
-  [0.15, 0.5].forEach(function (by) { abPart(new THREE.BoxGeometry(0.03, 0.06, 0.92), AB.iron, FB_X - 0.28, by, FB_Z); });
-  abPart(new THREE.BoxGeometry(0.5, 0.02, 0.85), new THREE.MeshStandardMaterial({ color: 0xd8b060, roughness: 1 }), FB_X, 0.58, FB_Z);   // the grain
-  var fbLid = new THREE.Group(); fbLid.position.set(FB_X + 0.28, 0.66, FB_Z); fbLid.rotation.z = 1.2; abRoom.add(fbLid);
-  abPart(new THREE.BoxGeometry(0.58, 0.04, 0.94), AB.wood, -0.29, 0.02, 0, 0, 0, 0, fbLid);
-  [-0.3, 0.3].forEach(function (lz2) { abPart(new THREE.BoxGeometry(0.58, 0.05, 0.06), AB.beam, -0.29, 0.05, lz2, 0, 0, 0, fbLid); });
-  abPart(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), FB_X - 0.05, 0.63, FB_Z + 0.15, 1.2, 0, 0.3);   // the scoop
-  abPart(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 6), AB.wood, FB_X - 0.06, 0.66, FB_Z + 0.25, 1.2, 0, 0.3);
+  abSolids.push([PAL_X, PAL_Z, 0.5]);
+  var OS_X = AEX - 1.08, OS_Z = -3.5;                                  // the open sack
+  var osPts = []; [[0.13, 0], [0.19, 0.03], [0.21, 0.15], [0.205, 0.3], [0.19, 0.4], [0.2, 0.43]].forEach(function (p) { osPts.push(new THREE.Vector2(p[0], p[1])); });
+  var osGeo = new THREE.LatheGeometry(osPts, 20), osp = osGeo.attributes.position;
+  for (var ov = 0; ov < osp.count; ov++) { var ox = osp.getX(ov), oz = osp.getZ(ov), oy = osp.getY(ov), ow = 1 + (isle2Hash(Math.round(ox * 50) * 3 + Math.round(oz * 50) * 7 + Math.round(oy * 50)) - 0.5) * 0.08; osp.setXYZ(ov, ox * ow, oy, oz * ow); }
+  osGeo.computeVertexNormals();
+  abPart(osGeo, new THREE.MeshStandardMaterial({ map: burlapTex, color: 0xcbb48a, roughness: 1, side: THREE.DoubleSide }), OS_X, 0, OS_Z);
+  abPart(new THREE.TorusGeometry(0.205, 0.035, 8, 22), abSackMat, OS_X, 0.43, OS_Z, Math.PI / 2, 0, 0);   // the rolled-down top
+  var osGrain = abPart(wbLumpGeo(77, 0.12), new THREE.MeshStandardMaterial({ color: 0xd8b468, roughness: 1 }), OS_X, 0.39, OS_Z); osGrain.scale.set(0.19, 0.06, 0.19);
+  for (var gk = 0; gk < 40; gk++) {                                    // grains on top, and spilled on the floor
+    var spill = gk >= 22, ga2 = isle2Hash(gk * 2.3 + 40) * Math.PI * 2, gr = spill ? 0.24 + isle2Hash(gk * 3.1) * 0.25 : isle2Hash(gk * 3.1) * 0.17;
+    abPart(new THREE.SphereGeometry(0.007, 5, 4), new THREE.MeshStandardMaterial({ color: isle2Hash(gk) > 0.5 ? 0xe0c070 : 0xc89a50, roughness: 1 }), OS_X + Math.cos(ga2) * gr, spill ? 0.005 : 0.44, OS_Z + Math.sin(ga2) * gr).scale.set(1.6, 0.8, 1);
+  }
+  var abScoopMat = new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.4, side: THREE.DoubleSide });
+  function abScoop(x, y, z, rx, ry) {                                  // a tin feed scoop: a cut-away cup with a back and a wooden handle
+    var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.set(rx, ry, 0, 'YXZ'); abRoom.add(g);
+    abPart(new THREE.CylinderGeometry(0.055, 0.055, 0.16, 16, 1, true, 0, Math.PI * 1.3), abScoopMat, 0, 0, 0, Math.PI / 2, 0, 0, g);
+    abPart(new THREE.CircleGeometry(0.055, 16), abScoopMat, 0, 0, -0.08, 0, 0, 0, g);
+    abPart(new THREE.TorusGeometry(0.055, 0.003, 4, 16, Math.PI * 1.3), abScoopMat, 0, 0, 0.08, 0, 0, 0, g);
+    abPart(new THREE.CylinderGeometry(0.014, 0.012, 0.12, 8), AB.wood, 0, 0, -0.15, Math.PI / 2, 0, 0, g);
+    abPart(new THREE.CylinderGeometry(0.006, 0.006, 0.03, 6), abScoopMat, 0, 0, -0.095, Math.PI / 2, 0, 0, g);
+    return g;
+  }
+  abScoop(OS_X + 0.04, 0.44, OS_Z + 0.02, -0.7, 0.8);
+  abSolids.push([OS_X, OS_Z, 0.25]);
+  // the feed bin: an ironbound chest of planks on runners, with rope handles and "FEED" stencilled on the front. Its lid
+  // stands open on strap hinges, propped with a stick; inside, grain heaped up with a scoop in it
+  var FB_Z = -1.95, FB_X = AEX - 0.4, FBW = 0.55, FBL = 0.9, FBH = 0.62;
+  var fbBoard = new THREE.MeshStandardMaterial({ map: abPlankTex.clone(), color: 0xd8b890, roughness: 0.8 }); fbBoard.map.needsUpdate = true; fbBoard.map.repeat.set(0.45, 0.3); fbBoard.map.rotation = Math.PI / 2;
+  [-1, 1].forEach(function (s) { abPart(new THREE.BoxGeometry(FBW + 0.04, 0.06, 0.07), AB.beam, FB_X, 0.03, FB_Z + s * 0.36); });   // runners
+  for (var fbb = 0; fbb < 4; fbb++) {                                  // planked front, back and ends
+    var fy = 0.1 + fbb * 0.135 + 0.065;
+    [-1, 1].forEach(function (s) {
+      abPart(new THREE.BoxGeometry(0.03, 0.128, FBL), fbBoard, FB_X + s * (FBW / 2 - 0.015), fy, FB_Z);
+      abPart(new THREE.BoxGeometry(FBW - 0.06, 0.128, 0.03), fbBoard, FB_X, fy, FB_Z + s * (FBL / 2 - 0.015));
+    });
+  }
+  abPart(new THREE.BoxGeometry(FBW - 0.06, 0.02, FBL - 0.06), AB.beam, FB_X, 0.11, FB_Z);            // the floor of it
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) {
+    abPart(new THREE.BoxGeometry(0.06, FBH + 0.02, 0.06), AB.beam, FB_X + c[0] * (FBW / 2 - 0.03), 0.06 + FBH / 2, FB_Z + c[1] * (FBL / 2 - 0.03));
+    [0.14, FBH - 0.02].forEach(function (cy) {                         // iron corner brackets, with rivets
+      abPart(new THREE.BoxGeometry(0.008, 0.07, 0.14), AB.iron, FB_X + c[0] * (FBW / 2 + 0.002), cy, FB_Z + c[1] * (FBL / 2 - 0.07));
+      abPart(new THREE.BoxGeometry(0.14, 0.07, 0.008), AB.iron, FB_X + c[0] * (FBW / 2 - 0.07), cy, FB_Z + c[1] * (FBL / 2 + 0.002));
+      abPart(new THREE.SphereGeometry(0.007, 6, 4), AB.iron, FB_X + c[0] * (FBW / 2 + 0.007), cy, FB_Z + c[1] * (FBL / 2 - 0.1));
+    });
+  });
+  [0.24, 0.5].forEach(function (by) { abPart(new THREE.BoxGeometry(0.006, 0.04, FBL + 0.01), AB.iron, FB_X - FBW / 2 - 0.004, by, FB_Z); });   // iron bands round the front
+  [-1, 1].forEach(function (s) {                                       // rope handles at the ends
+    abPart(new THREE.TorusGeometry(0.06, 0.012, 6, 14, Math.PI), AB.rope, FB_X, 0.5, FB_Z + s * (FBL / 2 + 0.01), 0, 0, Math.PI);
+    [-1, 1].forEach(function (k) { abPart(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 8), AB.rope, FB_X + k * 0.06, 0.5, FB_Z + s * (FBL / 2 + 0.01), Math.PI / 2, 0, 0); });
+  });
+  var fbStencil = paintTexture(256, 96, function (g, w, h) {
+    g.clearRect(0, 0, w, h);
+    g.fillStyle = 'rgba(150,40,30,0.85)'; g.font = 'bold 52px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('FEED', w / 2, 40);
+    g.font = 'bold 16px Georgia, serif'; g.fillText('OATS · BARLEY · CORN', w / 2, 80);
+    g.globalCompositeOperation = 'destination-out';                    // worn, the way stencilled paint goes
+    for (var i = 0; i < 160; i++) { g.fillStyle = 'rgba(0,0,0,' + isle2Hash(i * 1.9) * 0.6 + ')'; g.fillRect(isle2Hash(i * 2.7) * w, isle2Hash(i * 3.3) * h, 2 + isle2Hash(i) * 5, 2); }
+  });
+  abPart(new THREE.PlaneGeometry(0.62, 0.23), new THREE.MeshStandardMaterial({ map: fbStencil, transparent: true, roughness: 0.9, depthWrite: false }), FB_X - FBW / 2 - 0.007, 0.38, FB_Z, 0, -Math.PI / 2, 0).castShadow = false;
+  var fbGrain = abPart(wbLumpGeo(91, 0.1), new THREE.MeshStandardMaterial({ color: 0xd8b468, roughness: 1 }), FB_X, FBH - 0.02, FB_Z); fbGrain.scale.set(FBW / 2 - 0.04, 0.07, FBL / 2 - 0.04);
+  for (var fg = 0; fg < 26; fg++) abPart(new THREE.SphereGeometry(0.007, 5, 4), new THREE.MeshStandardMaterial({ color: isle2Hash(fg * 5) > 0.5 ? 0xe0c070 : 0xb88a48, roughness: 1 }), FB_X + (isle2Hash(fg * 1.3 + 5) - 0.5) * 0.4, FBH + 0.03 + isle2Hash(fg * 2.9) * 0.02, FB_Z + (isle2Hash(fg * 3.7 + 5) - 0.5) * 0.7).scale.set(1.6, 0.8, 1);
+  abScoop(FB_X - 0.05, FBH + 0.06, FB_Z + 0.12, -0.5, -0.9);
+  var fbLid = new THREE.Group(); fbLid.position.set(FB_X + FBW / 2, FBH + 0.08, FB_Z); fbLid.rotation.z = 1.25; abRoom.add(fbLid);   // the lid, standing open
+  for (var fbLp = 0; fbLp < 4; fbLp++) abPart(new THREE.BoxGeometry(FBW + 0.04, 0.035, (FBL + 0.04) / 4 - 0.006), fbBoard, -(FBW + 0.04) / 2, 0.02, -FBL / 2 - 0.02 + (fbLp + 0.5) * (FBL + 0.04) / 4, 0, 0, 0, fbLid);
+  [-1, 1].forEach(function (s) { abPart(new THREE.BoxGeometry(FBW + 0.04, 0.045, 0.06), AB.beam, -(FBW + 0.04) / 2, 0.025, s * (FBL / 2 - 0.01), 0, 0, 0, fbLid); });   // breadboard ends
+  [-0.28, 0.28].forEach(function (hz) {                                // strap hinges, and the hasp
+    abPart(new THREE.BoxGeometry(0.34, 0.006, 0.04), AB.iron, -0.17, 0.045, hz, 0, 0, 0, fbLid);
+    abPart(new THREE.CylinderGeometry(0.012, 0.012, 0.06, 8), AB.iron, 0, 0.0, hz, Math.PI / 2, 0, 0, fbLid);
+  });
+  abPart(new THREE.BoxGeometry(0.1, 0.006, 0.04), AB.iron, -FBW + 0.02, 0.045, 0, 0, 0, 0, fbLid);
+  abPart(new THREE.TorusGeometry(0.018, 0.004, 5, 10), AB.iron, -FBW - 0.03, 0.045, 0, Math.PI / 2, 0, 0, fbLid);
+  abRod(V3(FB_X + FBW / 2 - 0.04, FBH + 0.06, FB_Z + FBL / 2 - 0.08), V3(FB_X + FBW / 2 - 0.02, FBH + 0.5, FB_Z + FBL / 2 - 0.1), 0.012, AB.wood);   // the prop stick
   abSolids.push([FB_X, FB_Z - 0.25, 0.35], [FB_X, FB_Z + 0.25, 0.35]);
   // the Dutch door in the side wall, shut, its top and bottom halves each with a Z brace
   [[0.52, 1.0], [1.52, 1.0]].forEach(function (hf) {
@@ -390,14 +460,54 @@ EVERDAWN_PARTS.push(function (THREE) {
   for (var cl = 0; cl < 6; cl++) abPart(new THREE.BoxGeometry(0.02, 0.018, 0.16), nbTrim, 0.06 + cl * 0.12, 0.036, 0, 0, 0, 0, RAMP);
   abSolids.push([NB_X, NB_Z - 0.3, 0.35], [NB_X, NB_Z + 0.3, 0.35], [NB_X - NBW / 2 - 0.35, NB_Z - 0.2, 0.15]);
 
-  // hay bales stacked in the back corner, and a ladder up to the loft
-  [[AEX - 0.66, 0, -4.6, 0.03], [AEX - 0.66, 0, -4.1, -0.05], [AEX - 0.68, HB_H, -4.35, 0.08]].forEach(function (bb) {
+  // hay bales stacked in the back corner, with straws sticking out all over, a loose flake leaning against them, a
+  // scatter of hay at their feet and a cut length of baling twine; and a sturdy ladder up to the loft, its rungs set
+  // through the rails and pegged, with iron hooks over the top plate and a coil of rope hung on it
+  var abBales = [[AEX - 0.66, 0, -4.6, 0.03], [AEX - 0.66, 0, -4.1, -0.05], [AEX - 0.68, HB_H, -4.35, 0.08]];
+  abBales.forEach(function (bb) {
     var bale = barnBaleProto.clone(); bale.position.set(bb[0], bb[1] + HB_H / 2, bb[2]); bale.rotation.set(0, bb[3], 0); abRoom.add(bale);
   });
-  abSolids.push([AEX - 0.66, -4.35, 0.55]);
-  var LAD_X = 2.35;
-  [-0.2, 0.2].forEach(function (lx) { abPart(new THREE.BoxGeometry(0.06, 3.1, 0.05), AB.wood, LAD_X + lx, 1.5, ANW + 0.42, -0.13, 0, 0); });
-  for (var abLr = 0.3; abLr < 2.9; abLr += 0.32) abPart(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 8), AB.pale, LAD_X, abLr, ANW + 0.615 - abLr * 0.13, 0, 0, Math.PI / 2);
+  (function () {                                                       // straws poking out of every face
+    var n = 420, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0028, 0.0018, 1, 3), hayWispMat, n), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
+    for (var i = 0; i < n; i++) {
+      var bb = abBales[i % 3], face = Math.floor(isle2Hash(i * 1.7 + 300) * 5), u = isle2Hash(i * 2.9 + 300) - 0.5, w = isle2Hash(i * 4.1 + 300) - 0.5;
+      var lx = face === 0 ? -HB_L / 2 : face === 1 ? HB_L / 2 : u * HB_L * 0.95, ly = face === 2 ? HB_H / 2 : (face < 2 ? u : w) * HB_H * 0.9, lz = face === 3 ? -HB_W / 2 : face === 4 ? HB_W / 2 : (face === 2 ? w : u) * HB_W * 0.95;
+      if (face === 2 && bb[1] === 0 && Math.abs(bb[2] + 4.35) < 0.3) continue;
+      pos.set(bb[0] + lx * Math.cos(bb[3]) + lz * Math.sin(bb[3]), bb[1] + HB_H / 2 + ly, bb[2] - lx * Math.sin(bb[3]) + lz * Math.cos(bb[3]));
+      e.set((isle2Hash(i * 5.3) - 0.5) * 2.6, isle2Hash(i * 6.1) * 6.3, (isle2Hash(i * 7.9) - 0.5) * 2.6); q.setFromEuler(e);
+      sc.set(1, 0.05 + isle2Hash(i * 8.3) * 0.1, 1);
+      m.compose(pos, q, sc); im.setMatrixAt(i, m);
+      im.setColorAt(i, col.setHSL(0.11 + isle2Hash(i * 11) * 0.03, 0.55, 0.42 + isle2Hash(i * 13) * 0.25));
+    }
+    im.castShadow = true; abRoom.add(im);
+  })();
+  var flakeGeo = new THREE.BoxGeometry(0.09, 0.4, 0.44, 2, 6, 6), fkp = flakeGeo.attributes.position;   // a flake pulled off a bale, leaning on the stack
+  for (var fk = 0; fk < fkp.count; fk++) fkp.setX(fk, fkp.getX(fk) + (isle2Hash(Math.round(fkp.getY(fk) * 60) * 3 + Math.round(fkp.getZ(fk) * 60) * 7) - 0.5) * 0.03);
+  flakeGeo.computeVertexNormals();
+  abPart(flakeGeo, [hayEnd, hayEnd, haySide, haySide, haySide, haySide], AEX - 1.2, 0.19, -4.25, 0, 0.15, 0.3);
+  var litter = abPart(wbLumpGeo(56, 0.3), AB.straw, AEX - 1.15, 0.02, -4.2, 0, 0.6, 0); litter.scale.set(0.35, 0.03, 0.45); litter.castShadow = false;   // loose hay at their feet
+  var twine = new THREE.CatmullRomCurve3([V3(AEX - 1.5, 0.008, -3.9), V3(AEX - 1.4, 0.008, -3.75), V3(AEX - 1.55, 0.008, -3.6), V3(AEX - 1.35, 0.008, -3.5), V3(AEX - 1.25, 0.008, -3.62)]);
+  abPart(new THREE.TubeGeometry(twine, 24, 0.004, 5), hayTwineMat, 0, 0, 0).castShadow = false;
+  abSolids.push([AEX - 0.66, -4.35, 0.55], [AEX - 1.2, -4.25, 0.15]);
+  var LAD_X = 2.35, LAD_T = -0.13;                                     // the ladder leans back against the wall
+  function ladPt(h, side) { return V3(LAD_X + side * 0.2, h, ANW + 0.62 - h * 0.13); }
+  [-1, 1].forEach(function (s) {
+    var rail = abPart(new THREE.BoxGeometry(0.07, 3.1, 0.045), new THREE.MeshStandardMaterial({ color: 0x9a7048, roughness: 0.75 }), LAD_X + s * 0.2, 1.5, ANW + 0.42, LAD_T, 0, 0);
+    rail.scale.set(1, 1, 1);
+    abPart(new THREE.BoxGeometry(0.075, 0.08, 0.05), AB.iron, LAD_X + s * 0.2, 0.04, ANW + 0.62, LAD_T, 0, 0);   // iron shoes
+    var hk = new THREE.CatmullRomCurve3([ladPt(3.0, s), V3(LAD_X + s * 0.2, 3.07, ANW + 0.2), V3(LAD_X + s * 0.2, 3.02, ANW + 0.14)]);   // hooks over the plate
+    abPart(new THREE.TubeGeometry(hk, 8, 0.01, 5), AB.iron, 0, 0, 0);
+  });
+  for (var lr = 0.3; lr < 2.9; lr += 0.3) {                            // the rungs, worn pale on top, pegged at each end
+    var rp = ladPt(lr, 0);
+    abPart(new THREE.CylinderGeometry(0.019, 0.019, 0.47, 10), AB.pale, rp.x, rp.y, rp.z, 0, 0, Math.PI / 2);
+    abPart(new THREE.BoxGeometry(0.3, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0xe0c8a0, roughness: 0.6 }), rp.x, rp.y + 0.017, rp.z);
+    [-1, 1].forEach(function (s) { abPart(new THREE.CylinderGeometry(0.008, 0.008, 0.02, 6), AB.beam, rp.x + s * 0.24, rp.y, rp.z, 0, 0, Math.PI / 2); });
+  }
+  var ropeAt = ladPt(1.65, 1);                                             // a coil of rope hung over a rung
+  abPart(new THREE.TorusGeometry(0.13, 0.016, 6, 22), AB.rope, ropeAt.x + 0.02, ropeAt.y - 0.12, ropeAt.z + 0.05, 0.1, Math.PI / 2, 0);
+  abPart(new THREE.TorusGeometry(0.12, 0.016, 6, 22), AB.rope, ropeAt.x + 0.04, ropeAt.y - 0.14, ropeAt.z + 0.05, 0.25, Math.PI / 2, 0.1);
+  abPart(new THREE.CylinderGeometry(0.02, 0.025, 0.06, 8), AB.rope, ropeAt.x + 0.03, ropeAt.y - 0.24, ropeAt.z + 0.05);
   abSolids.push([LAD_X, ANW + 0.4, 0.3]);
   // a wheelbarrow heaped with hay: a pressed steel tray in chipped green paint with a rolled rim, on two ash handles
   // with worn rubber grips, braced to a pair of legs with feet; a spoked wheel with a treaded tyre on an axle between
