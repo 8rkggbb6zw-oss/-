@@ -10568,19 +10568,14 @@ function startGame(THREE) {
     for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i) * 0.06 + ')'; g.fillRect(isle2Hash(i * 2.2) * w, isle2Hash(i * 3.4) * h, 1, 4 + isle2Hash(i * 5) * 10); }
   });
   ciBeadTex.wrapS = THREE.RepeatWrapping;
-  var ciPaperTex = paintTexture(256, 256, function (g, w, h) {        // the wallpaper above: cream with soft sage stripes and little sprigs of leaves and hearts
-    g.fillStyle = '#f3ebdc'; g.fillRect(0, 0, w, h);
-    for (var sx = 0; sx < w; sx += 64) { g.fillStyle = 'rgba(150,185,160,0.22)'; g.fillRect(sx + 26, 0, 12, h); g.fillStyle = 'rgba(150,185,160,0.35)'; g.fillRect(sx + 24, 0, 1.5, h); g.fillRect(sx + 38.5, 0, 1.5, h); }
-    for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {         // a sprig between the stripes, offset column by column
-      var cy = r * 64 + (c % 2 ? 32 : 0) + 16;
-      g.save(); g.translate(c * 64 + 2, cy); g.rotate((r + c) % 2 ? 0.3 : -0.3);
-      g.strokeStyle = 'rgba(90,130,100,0.6)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(0, 10); g.quadraticCurveTo(2, 0, 0, -10); g.stroke();
-      g.fillStyle = 'rgba(110,150,115,0.6)';
-      [[-1, 4], [1, -1], [-1, -6]].forEach(function (lf) { g.beginPath(); g.ellipse(lf[0] * 4, lf[1], 4, 1.8, lf[0] * 0.6, 0, Math.PI * 2); g.fill(); });
-      g.fillStyle = 'rgba(224,136,154,0.7)'; g.beginPath(); g.moveTo(0, -10); g.bezierCurveTo(-4, -14, -2, -17, 0, -15); g.bezierCurveTo(2, -17, 4, -14, 0, -10); g.fill();
-      g.restore();
+  var ciPaperTex = paintTexture(256, 256, function (g, w, h) {        // the upper walls: plain warm cream plaster, with just a faint, soft texture
+    g.fillStyle = '#f4eee2'; g.fillRect(0, 0, w, h);
+    for (var c = 0; c < 14; c++) {                                     // gentle cloudy variation, as in hand-trowelled plaster
+      var cx = isle2Hash(c * 3.7) * w, cy = isle2Hash(c * 5.1) * h, cg = g.createRadialGradient(cx, cy, 4, cx, cy, 40 + isle2Hash(c) * 50);
+      cg.addColorStop(0, isle2Hash(c * 2.2) > 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(200,185,160,0.08)'); cg.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = cg; g.fillRect(0, 0, w, h);
     }
-    for (var i = 0; i < 1500; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,130,110') + ',' + isle2Hash(i * 1.7) * 0.05 + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
+    for (var i = 0; i < 1500; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,130,110') + ',' + isle2Hash(i * 1.7) * 0.04 + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
   });
   ciPaperTex.wrapS = ciPaperTex.wrapT = THREE.RepeatWrapping;
   var ciPlasterTex = paintTexture(128, 128, function (g, w, h) {
@@ -10870,7 +10865,7 @@ function startGame(THREE) {
     ciWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
     var wallTex = ciPlasterTex.clone(); wallTex.needsUpdate = true; wallTex.repeat.set(len / 1.5, CIN_H / 1.5);
     var plasterMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 });   // plain plaster, for the window reveals
-    var paperTex = ciPaperTex.clone(); paperTex.needsUpdate = true; paperTex.repeat.set(len / 0.6, CIN_H / 0.6);
+    var paperTex = ciPaperTex.clone(); paperTex.needsUpdate = true; paperTex.repeat.set(len / 1.5, CIN_H / 1.5);
     var paperMat = new THREE.MeshStandardMaterial({ map: paperTex, roughness: 0.9 });
     var shape = new THREE.Shape(); shape.moveTo(-len / 2, 0); shape.lineTo(len / 2, 0); shape.lineTo(len / 2, CIN_H); shape.lineTo(-len / 2, CIN_H); shape.lineTo(-len / 2, 0);
     CI_HOLES[name].forEach(function (hx) {
