@@ -5406,7 +5406,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var i = 0; i < 400; i++) { g.fillStyle = 'rgba(80,55,25,' + isle2Hash(i * 3) * 0.2 + ')'; g.fillRect(isle2Hash(i) * w, isle2Hash(i * 2) * h, 1 + isle2Hash(i * 5) * 3, 1); }   // slubs
   });
   burlapTex.wrapS = burlapTex.wrapT = THREE.RepeatWrapping; burlapTex.repeat.set(3, 3);
-  var sackLabels = ['HEN FEED', 'SHEEP MIX', 'OATS'].map(function (t, k) {
+  var sackLabels = ['GRAIN MIX', 'BARLEY', 'OATS'].map(function (t, k) {
     return paintTexture(128, 96, function (g, w, h) {
       g.fillStyle = '#c8b088'; g.fillRect(0, 0, w, h);
       for (var y = 0; y < h; y += 3) { g.fillStyle = 'rgba(90,65,35,0.2)'; g.fillRect(0, y, w, 1); }
