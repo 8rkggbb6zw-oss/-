@@ -5712,7 +5712,8 @@ function startGame(THREE) {
   // Sleeping fills it back up, and eating a moonbloom gives you some back (never more than MAX_STAMINA)
   var passingOut = false, tiredWarned = false;
   function useStamina(n) {
-    state.stamina = Math.max(0, state.stamina - n);
+    state.stamina -= n;
+    if (state.stamina <= 0) state.stamina = -(2 + Math.floor(Math.random() * 4));   // run out and you overdo it, a couple of points into the negatives (-2 to -5)
     if (state.stamina <= 60 && !tiredWarned) { tiredWarned = true; showToast('You\'re getting tired… eat a moonbloom or head to bed 🌙', 2600); }
   }
   function eatBloom() {
@@ -5754,10 +5755,12 @@ function startGame(THREE) {
       cam.dist = 7.5; cam.pitch = 0.85; cam.yaw = 0;
       cam.target.set(player.position.x, 0.8, player.position.z);
       doorArmed = false;
+      var overdid = Math.max(0, Math.round(-state.stamina));             // how far into the negatives you went
       wakeNextMorning();
+      state.stamina = MAX_STAMINA - overdid;                            // and that much is missing from tomorrow's stamina
       setTimeout(function () {
         fadeBox.style.opacity = 0;
-        showToast('You collapsed and woke up at home. ☀ Day ' + state.day, 3000);
+        showToast('You collapsed and woke up at home. You overdid it, so you start the day ' + overdid + ' stamina short. ☀ Day ' + state.day, 3600);
         setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = passingOut = false; }, 1300);
       }, 1500);
     }, 1400);
@@ -5810,8 +5813,9 @@ function startGame(THREE) {
     }, 1400);
   }
   function updateStamina() {
-    if (ui.stamina) ui.stamina.style.width = (state.stamina / MAX_STAMINA * 100).toFixed(1) + '%';
+    if (ui.stamina) ui.stamina.style.width = (Math.max(0, state.stamina) / MAX_STAMINA * 100).toFixed(1) + '%';
     var stText = Math.ceil(state.stamina - 0.001) + ' / ' + MAX_STAMINA;
+    if (ui.staminaNum) ui.staminaNum.style.color = state.stamina < 0 ? '#e0304a' : '';   // shown in red while you're in the negatives
     if (ui.staminaNum && ui.staminaNum.textContent !== stText) ui.staminaNum.textContent = stText;
     if (state.stamina <= 0 && !passingOut && !sleeping) passOut();
     updateBedtime();
