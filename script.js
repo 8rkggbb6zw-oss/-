@@ -11,13 +11,13 @@ function showToast(message, ms) {
   toastTimer = setTimeout(function () { box.classList.remove('show'); }, ms || 1800);
 }
 
-// Everdawn is split over three files (script.js, script2.js and script3.js), loaded in that order by index.html,
-// because CodePen won't save a file bigger than 1 MB. Each file adds its share of the game to EVERDAWN_PARTS, and
-// script3.js joins them back together into one game and starts it.
+// Everdawn is split over two files (script.js, then script2.js), loaded in that order by index.html, because
+// CodePen won't save a file bigger than 1 MB. Each file adds its half of the game to EVERDAWN_PARTS, and script2.js
+// joins them back together into one game and starts it.
 
 var EVERDAWN_PARTS = [];
 
-// ---------- Part 1 of 3 ----------
+// ---------- Part 1 of 2 ----------
 EVERDAWN_PARTS.push(function (THREE) {
   var canvas = document.getElementById('game');
   var ui = {
@@ -5220,4 +5220,2563 @@ EVERDAWN_PARTS.push(function (THREE) {
   apPart(new THREE.TorusGeometry(RW_R * 0.42, 0.014, 6, 28), AM.trim, 0, RW_Y, B_FZ + 0.04);                  // glazing: an inner ring and four spokes
   [0, 1, 2, 3].forEach(function (k) { apPart(new THREE.BoxGeometry(0.025, RW_R * 0.58, 0.025), AM.trim, Math.sin(k * Math.PI / 2) * RW_R * 0.71, RW_Y + Math.cos(k * Math.PI / 2) * RW_R * 0.71, B_FZ + 0.04, 0, 0, -k * Math.PI / 2); });
   apPart(new THREE.BoxGeometry(0.5, 0.04, 0.12), AM.trim, 0, RW_Y - RW_R - 0.14, B_FZ + 0.06);              // a little sill
+  // the sign over the doors, in the same style as Whimsy & Bloom's and the clinic's: a hand-painted board (a deep
+  // forest green here) with raised gilded letters that catch the light, a gold pinstripe border, little gold feather
+  // ornaments, in a moulded frame with a gold bead, lit by two brass gooseneck lamps
+  function barnSignPaint(g, w, h, metalOnly) {
+    if (metalOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+    else {
+      var base = g.createLinearGradient(0, 0, 0, h); base.addColorStop(0, '#2c4a36'); base.addColorStop(0.5, '#23402e'); base.addColorStop(1, '#1a3324');
+      g.fillStyle = base; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 300; i++) {                                  // the wood grain showing through the paint
+        var gy = isle2Hash(i * 1.7 + 70) * h, lite = isle2Hash(i * 3.1 + 70) > 0.5;
+        g.strokeStyle = lite ? 'rgba(140,190,150,' + (0.04 + isle2Hash(i) * 0.06) + ')' : 'rgba(5,20,10,' + (0.08 + isle2Hash(i) * 0.1) + ')';
+        g.lineWidth = 0.6 + isle2Hash(i * 5) * 1.6;
+        g.beginPath(); var x0 = isle2Hash(i * 2.3 + 70) * w * 0.7; g.moveTo(x0, gy);
+        g.bezierCurveTo(x0 + 200, gy + (isle2Hash(i * 7) - 0.5) * 8, x0 + 420, gy - (isle2Hash(i * 9) - 0.5) * 8, x0 + 300 + isle2Hash(i * 11) * 600, gy + (isle2Hash(i * 13) - 0.5) * 5);
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, h * 0.5 - 1, w, 2);   // the joint between the two boards
+      var vig = g.createLinearGradient(0, 0, 0, h); vig.addColorStop(0, 'rgba(0,0,0,0.3)'); vig.addColorStop(0.18, 'rgba(0,0,0,0)'); vig.addColorStop(0.82, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.38)');
+      g.fillStyle = vig; g.fillRect(0, 0, w, h);
+    }
+    function gold(y0, y1) {
+      if (metalOnly) return '#fff';
+      var gg = g.createLinearGradient(0, y0, 0, y1);
+      gg.addColorStop(0, '#fff5c8'); gg.addColorStop(0.3, '#ecc054'); gg.addColorStop(0.55, '#a87824'); gg.addColorStop(0.78, '#f2d06c'); gg.addColorStop(1, '#7e5814');
+      return gg;
+    }
+    function gild(text, x, y, size, italic, spacing) {                 // letters with a shadow, a dark bevel edge and a gold face
+      g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; g.textBaseline = 'middle';
+      var chars = text.split(''), widths = chars.map(function (c) { return g.measureText(c).width + (spacing || 0); });
+      var total = widths.reduce(function (a2, b2) { return a2 + b2; }, 0) - (spacing || 0), cx = x - total / 2;
+      chars.forEach(function (c, k) {
+        if (!metalOnly) { g.save(); g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowOffsetX = size * 0.04; g.shadowOffsetY = size * 0.06; g.shadowBlur = size * 0.08; g.fillStyle = '#4a3008'; g.fillText(c, cx + 1.5, y + 2); g.restore(); }
+        g.fillStyle = gold(y - size * 0.5, y + size * 0.5); g.fillText(c, cx, y);
+        if (!metalOnly) { g.strokeStyle = 'rgba(255,248,215,0.5)'; g.lineWidth = 1; g.strokeText(c, cx - 0.6, y - 1); }
+        cx += widths[k];
+      });
+    }
+    function rrect(m, r) { g.beginPath(); g.moveTo(m + r, m); g.lineTo(w - m - r, m); g.quadraticCurveTo(w - m, m, w - m, m + r); g.lineTo(w - m, h - m - r); g.quadraticCurveTo(w - m, h - m, w - m - r, h - m); g.lineTo(m + r, h - m); g.quadraticCurveTo(m, h - m, m, h - m - r); g.lineTo(m, m + r); g.quadraticCurveTo(m, m, m + r, m); g.stroke(); }
+    g.strokeStyle = metalOnly ? '#fff' : gold(0, h); g.lineWidth = 6; rrect(18, 26);
+    g.lineWidth = 2; rrect(32, 18);
+    function feather(cx, cy, s, rot) {                                 // a gilded feather
+      g.save(); g.translate(cx, cy); g.rotate(rot);
+      g.fillStyle = metalOnly ? '#fff' : gold(-s, s);
+      g.beginPath(); g.moveTo(0, -s); g.bezierCurveTo(s * 0.45, -s * 0.5, s * 0.4, s * 0.4, 0, s * 0.7); g.bezierCurveTo(-s * 0.4, s * 0.4, -s * 0.45, -s * 0.5, 0, -s); g.fill();
+      if (!metalOnly) {
+        g.strokeStyle = '#6a4a10'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -s * 0.9); g.lineTo(0, s * 1.1); g.stroke();
+        g.lineWidth = 1.5; for (var b = -0.6; b < 0.6; b += 0.16) { g.beginPath(); g.moveTo(0, b * s); g.lineTo(s * 0.3, b * s - s * 0.18); g.moveTo(0, b * s); g.lineTo(-s * 0.3, b * s - s * 0.18); g.stroke(); }
+      }
+      g.restore();
+    }
+    feather(150, h / 2 + 4, 80, -0.5); feather(w - 150, h / 2 + 4, 80, 0.5);
+    gild('Fluff & Feather', w / 2, h / 2 - 34, 168, true, 2);
+    gild('ANIMALS · FEED · SUPPLIES', w / 2, h / 2 + 108, 42, false, 10);
+    g.strokeStyle = metalOnly ? '#fff' : '#c99a3a'; g.lineWidth = 3;
+    [-1, 1].forEach(function (d) {
+      var ex = w / 2 + d * 420;
+      g.beginPath(); g.moveTo(ex, h / 2 + 108); g.lineTo(ex + d * 90, h / 2 + 108); g.stroke();
+      g.fillStyle = metalOnly ? '#fff' : '#e3b54c'; g.beginPath(); g.moveTo(ex + d * 106, h / 2 + 98); g.lineTo(ex + d * 116, h / 2 + 108); g.lineTo(ex + d * 106, h / 2 + 118); g.lineTo(ex + d * 96, h / 2 + 108); g.closePath(); g.fill();
+    });
+  }
+  var barnSignTex = paintTexture(2048, 360, function (g, w, h) { barnSignPaint(g, w, h, false); });
+  var barnSignMetal = paintTexture(2048, 360, function (g, w, h) { barnSignPaint(g, w, h, true); });
+  barnSignTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var barnSignMat = new THREE.MeshStandardMaterial({ map: barnSignTex, metalnessMap: barnSignMetal, metalness: 0.35, roughness: 0.4, emissive: 0xe8b54a, emissiveMap: barnSignMetal, emissiveIntensity: 0.25 });   // the gilding catches the light
+  var BS_Y = B_FOUND + 2.78, BS_Z = B_FZ + 0.05;
+  apPart(new THREE.BoxGeometry(3.35, 0.56, 0.05), new THREE.MeshStandardMaterial({ color: 0x23402e, roughness: 0.5 }), 0, BS_Y, BS_Z + 0.025);
+  apPart(new THREE.PlaneGeometry(3.24, 0.5), barnSignMat, 0, BS_Y, BS_Z + 0.052);
+  [[0, 0.28, 3.46, 0.06], [0, -0.28, 3.46, 0.06], [-1.7, 0, 0.06, 0.62], [1.7, 0, 0.06, 0.62]].forEach(function (f) {   // the moulded frame with a gold bead
+    apPart(new THREE.BoxGeometry(f[2], f[3], 0.07), AM.trim, f[0], BS_Y + f[1], BS_Z + 0.06);
+    apPart(new THREE.BoxGeometry(f[2] > 1 ? 3.34 : 0.018, f[3] > 0.1 ? 0.5 : 0.018, 0.02), houseMats.gold, f[0] * 0.985, BS_Y + f[1] * 0.9, BS_Z + 0.09);
+  });
+  var barnSignLampInner = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.2, side: THREE.BackSide });
+  var barnSignGlows = [];
+  [-1.15, 1.15].forEach(function (lx) {                                // brass gooseneck lamps lighting the sign
+    var y0 = BS_Y + 0.31, z0 = BS_Z + 0.08;
+    apPart(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 12), houseMats.gold, lx, y0 + 0.01, z0);
+    var neck = new THREE.CatmullRomCurve3([new THREE.Vector3(lx, y0, z0), new THREE.Vector3(lx, y0 + 0.16, z0 + 0.04), new THREE.Vector3(lx, y0 + 0.22, z0 + 0.2), new THREE.Vector3(lx, y0 + 0.15, z0 + 0.36)]);
+    apPart(new THREE.TubeGeometry(neck, 14, 0.012, 6), houseMats.gold, 0, 0, 0);
+    apPart(new THREE.SphereGeometry(0.08, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), houseMats.gold, lx, y0 + 0.13, z0 + 0.38, 0.75, 0, 0).scale.set(1.3, 0.8, 1);
+    var inner = apPart(new THREE.SphereGeometry(0.076, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), barnSignLampInner, lx, y0 + 0.13, z0 + 0.38, 0.75, 0, 0);
+    inner.scale.set(1.3, 0.8, 1); inner.castShadow = false;
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd9a0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(lx, y0 + 0.06, z0 + 0.34); lg.scale.set(0.6, 0.6, 1); barnGroup.add(lg); barnSignGlows.push(lg);
+  });
+  // gooseneck lanterns either side of the doors
+  var barnLampGlows = [];
+  [-1, 1].forEach(function (s) {
+    var lx = s * 2.1, ly = B_FOUND + 2.0;
+    apPart(new THREE.BoxGeometry(0.1, 0.2, 0.04), AM.iron, lx, ly, B_FZ + 0.03);
+    apPart(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), AM.iron, lx, ly + 0.05, B_FZ + 0.18, Math.PI / 2, 0, 0);
+    apPart(new THREE.ConeGeometry(0.16, 0.12, 16, 1, true), AM.iron, lx, ly + 0.03, B_FZ + 0.34);
+    apPart(new THREE.SphereGeometry(0.05, 10, 8), AM.lamp, lx, ly - 0.02, B_FZ + 0.34);
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(lx, ly - 0.05, B_FZ + 0.36); lg.scale.set(1.2, 1.2, 1); barnGroup.add(lg); barnLampGlows.push(lg);
+  });
+  // windows down each side, with white trim, cross bars, glowing panes and flower boxes
+  [-1, 1].forEach(function (s) {
+    [-2.6, 0, 2.6].forEach(function (wz) {
+      if (s === 1 && wz === 0) return;                                   // (a Dutch door goes here instead)
+      var wg = new THREE.Group(); wg.position.set(s * (BW + 0.01), B_FOUND + 1.8, wz); wg.rotation.y = s * Math.PI / 2; barnGroup.add(wg);
+      apPart(new THREE.PlaneGeometry(0.9, 0.9), AM.warm, 0, 0, 0.02, 0, 0, 0, wg);
+      [[0, 0.5, 1.1, 0.12], [0, -0.5, 1.1, 0.12], [-0.5, 0, 0.12, 0.9], [0.5, 0, 0.12, 0.9], [0, 0, 0.04, 0.9], [0, 0, 0.9, 0.04]].forEach(function (f) { apPart(new THREE.BoxGeometry(f[2], f[3], 0.06), AM.trim, f[0], f[1], 0.04, 0, 0, 0, wg); });
+      apPart(new THREE.BoxGeometry(1.0, 0.2, 0.2), AM.darkWood, 0, -0.65, 0.12, 0, 0, 0, wg);
+      for (var fl = 0; fl < 8; fl++) apPart(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshStandardMaterial({ color: [0xf2c14e, 0xff8a6a, 0xf7f3ec][fl % 3], roughness: 0.6 }), -0.4 + fl * 0.115, -0.52 + isle2Hash(fl + wz) * 0.05, 0.14 + isle2Hash(fl * 3) * 0.06, 0, 0, 0, wg);
+      for (var lf = 0; lf < 10; lf++) apPart(new THREE.IcosahedronGeometry(0.05, 0), new THREE.MeshStandardMaterial({ color: 0x4a8a3a, roughness: 0.8, flatShading: true }), -0.42 + lf * 0.093, -0.56, 0.16 + isle2Hash(lf + wz * 2) * 0.05, 0, 0, 0, wg);
+    });
+  });
+  // props out front: hay bales, feed sacks, a water trough, a milk churn and a wheelbarrow of pumpkins
+  // hay bales: straw pressed into a slightly lumpy block, long golden strands along the sides, chopped flakes on the
+  // cut ends, two tight loops of baling twine sinking into the straw, and loose wisps sticking out everywhere
+  var hayRnd = function (n) { return isle2Hash(n * 1.37 + 4400); };
+  var haySideTex = paintTexture(256, 128, function (g, w, h) {         // the long sides: strands of straw lying lengthwise
+    g.fillStyle = '#b8903e'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 2600; i++) {
+      var x = hayRnd(i) * w, y = hayRnd(i + 0.5) * h, len = 12 + hayRnd(i + 0.25) * 40, a = (hayRnd(i + 0.75) - 0.5) * 0.25, l = 45 + hayRnd(i * 3) * 30;
+      g.strokeStyle = 'hsl(' + (40 + hayRnd(i * 5) * 10) + ',' + (45 + hayRnd(i * 7) * 25) + '%,' + l + '%)'; g.lineWidth = 0.8 + hayRnd(i * 9) * 1.4;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); g.stroke();
+    }
+    for (var d = 0; d < 300; d++) { g.fillStyle = 'rgba(70,45,15,' + hayRnd(d * 11) * 0.35 + ')'; g.fillRect(hayRnd(d * 13) * w, hayRnd(d * 17) * h, 3 + hayRnd(d) * 8, 1); }   // shadowy gaps between strands
+  });
+  var hayEndTex = paintTexture(128, 128, function (g, w, h) {          // the cut ends: packed flakes of chopped stalks
+    g.fillStyle = '#a07a32'; g.fillRect(0, 0, w, h);
+    for (var f = 0; f < 6; f++) { g.fillStyle = 'rgba(60,35,10,0.35)'; g.fillRect(f * w / 6 + hayRnd(f) * 4, 0, 1.5, h); }   // the flakes the baler packed in
+    for (var i = 0; i < 1400; i++) {
+      var x = hayRnd(i * 2) * w, y = hayRnd(i * 3) * h, r = 0.8 + hayRnd(i * 4) * 2.2, l = 40 + hayRnd(i * 5) * 35;
+      g.fillStyle = 'hsl(' + (38 + hayRnd(i * 6) * 12) + ',55%,' + l + '%)'; g.beginPath(); g.ellipse(x, y, r * 1.6, r, hayRnd(i * 7) * 3, 0, Math.PI * 2); g.fill();
+      if (hayRnd(i * 8) > 0.7) { g.fillStyle = 'rgba(50,30,8,0.5)'; g.beginPath(); g.arc(x, y, r * 0.4, 0, Math.PI * 2); g.fill(); }   // hollow stalk ends
+    }
+  });
+  haySideTex.wrapS = haySideTex.wrapT = hayEndTex.wrapS = hayEndTex.wrapT = THREE.RepeatWrapping;
+  var haySide = new THREE.MeshStandardMaterial({ map: haySideTex, bumpMap: haySideTex, bumpScale: 0.025, roughness: 1 });
+  var hayEnd = new THREE.MeshStandardMaterial({ map: hayEndTex, bumpMap: hayEndTex, bumpScale: 0.03, roughness: 1 });
+  var hayTwineMat = new THREE.MeshStandardMaterial({ color: 0xc89a5a, roughness: 0.9 });
+  var hayWisps = [], hayWispMat = new THREE.MeshStandardMaterial({ color: 0xd8b060, roughness: 0.9 });
+  var HB_L = 0.9, HB_H = 0.42, HB_W = 0.48;
+  function haybale(x, y, z, ry) {
+    var n = hayBaleCount++;
+    var geo = new THREE.BoxGeometry(HB_L, HB_H, HB_W, 14, 6, 8), p = geo.attributes.position;
+    for (var v = 0; v < p.count; v++) {                                // round the edges and make it a little lumpy and bulging
+      var vx = p.getX(v), vy = p.getY(v), vz = p.getZ(v), ex = Math.abs(vx) / (HB_L / 2), ey = Math.abs(vy) / (HB_H / 2), ez = Math.abs(vz) / (HB_W / 2);
+      var edge = Math.max(0, ey + ez - 1.55) + Math.max(0, ex + ey - 1.7) + Math.max(0, ex + ez - 1.7);
+      var k = 1 - edge * 0.12, bulge = 1 + (1 - ex * ex) * 0.035;
+      var jit = (isle2Hash(vx * 37.1 + vy * 91.7 + vz * 53.3 + n * 7) - 0.5) * 0.018;
+      p.setXYZ(v, vx * k + jit, vy * k * bulge + jit * 0.6, vz * k * bulge + jit);
+    }
+    geo.computeVertexNormals();
+    var b = apPart(geo, [hayEnd, hayEnd, haySide, haySide, haySide, haySide], x, y + HB_H / 2, z, 0, ry, 0);
+    [-0.22, 0.22].forEach(function (tx) {                               // a loop of twine round it, pressed into the straw
+      var loop = [], hy = HB_H / 2 + 0.002, hz = HB_W / 2 + 0.002, r = 0.03;
+      for (var a = 0; a <= 32; a++) {
+        var t = a / 32 * Math.PI * 2, cx = Math.cos(t), cy = Math.sin(t);
+        loop.push(new THREE.Vector3(tx + (isle2Hash(a + n) - 0.5) * 0.006, Math.sign(cy) * Math.min(hy, Math.abs(cy) * (hy + 0.2)) - Math.sign(cy) * (Math.abs(cy) > 0.7 ? 0.004 : 0), Math.sign(cx) * Math.min(hz, Math.abs(cx) * (hz + 0.2))));
+      }
+      apPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true), 64, 0.0055, 5, true), hayTwineMat, 0, 0, 0, 0, 0, 0, b);
+    });
+    for (var w = 0; w < 70; w++) {                                     // loose wisps poking out of every face
+      var face = Math.floor(hayRnd(n * 100 + w) * 6), u = hayRnd(n * 100 + w + 0.3) - 0.5, q = hayRnd(n * 100 + w + 0.6) - 0.5;
+      var px = face < 2 ? (face ? -1 : 1) * HB_L / 2 : u * HB_L * 0.95, py = face === 2 ? HB_H / 2 : face === 3 ? -HB_H / 2 + 0.03 : (face < 2 ? u : q) * HB_H * 0.9, pz = face > 3 ? (face === 4 ? 1 : -1) * HB_W / 2 : q * HB_W * 0.9;
+      if (face === 3) continue;                                         // (none underneath)
+      hayWisps.push({ b: b, p: new THREE.Vector3(px, py, pz), ax: (hayRnd(w * 7 + n) - 0.5) * 2.4, az: (hayRnd(w * 11 + n) - 0.5) * 2.4, ay: hayRnd(w * 13 + n) * 6, len: 0.06 + hayRnd(w * 17 + n) * 0.12 });
+    }
+    return b;
+  }
+  var hayBaleCount = 0;
+  var barnBaleProto = haybale(-2.6, 0, B_FZ + 0.9, 0.1); haybale(-3.5, 0, B_FZ + 0.7, -0.2); haybale(-3.05, HB_H, B_FZ + 0.8, 0.3);
+  (function () {                                                       // all the loose wisps of straw, in one batch
+    var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0025, 0.0015, 1, 3), hayWispMat, hayWisps.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
+    hayWisps.forEach(function (w, i) {
+      w.b.updateMatrix(); barnGroup.updateMatrix();
+      e.set(w.ax, w.ay, w.az); q.setFromEuler(e); sc.set(1, w.len, 1);
+      pos.copy(w.p).applyMatrix4(w.b.matrix);
+      q.premultiply(new THREE.Quaternion().setFromRotationMatrix(w.b.matrix));
+      m.compose(pos, q, sc); im.setMatrixAt(i, m);
+      im.setColorAt(i, col.setHSL(0.11 + hayRnd(i * 3) * 0.03, 0.55, 0.45 + hayRnd(i * 5) * 0.25));
+    });
+    im.castShadow = true; barnGroup.add(im);
+  })();
+  // burlap feed sacks: a coarse woven cloth with a printed label, plump and slumped, their necks gathered and tied
+  // with twine, the top one flopped over the others
+  var burlapTex = paintTexture(128, 128, function (g, w, h) {
+    g.fillStyle = '#c8b088'; g.fillRect(0, 0, w, h);
+    for (var y = 0; y < h; y += 3) { g.fillStyle = 'rgba(90,65,35,' + (0.18 + isle2Hash(y) * 0.12) + ')'; g.fillRect(0, y, w, 1); }     // the weave: weft
+    for (var x = 0; x < w; x += 3) { g.fillStyle = 'rgba(255,240,210,' + (0.1 + isle2Hash(x + 50) * 0.1) + ')'; g.fillRect(x, 0, 1, h); }   // and warp
+    for (var i = 0; i < 400; i++) { g.fillStyle = 'rgba(80,55,25,' + isle2Hash(i * 3) * 0.2 + ')'; g.fillRect(isle2Hash(i) * w, isle2Hash(i * 2) * h, 1 + isle2Hash(i * 5) * 3, 1); }   // slubs
+  });
+  burlapTex.wrapS = burlapTex.wrapT = THREE.RepeatWrapping; burlapTex.repeat.set(3, 3);
+  var sackLabels = ['HEN FEED', 'SHEEP MIX', 'OATS'].map(function (t, k) {
+    return paintTexture(128, 96, function (g, w, h) {
+      g.fillStyle = '#c8b088'; g.fillRect(0, 0, w, h);
+      for (var y = 0; y < h; y += 3) { g.fillStyle = 'rgba(90,65,35,0.2)'; g.fillRect(0, y, w, 1); }
+      g.strokeStyle = ['#8a2a20', '#2f5a3a', '#2f4a6a'][k]; g.lineWidth = 4; g.strokeRect(10, 10, w - 20, h - 20);
+      g.fillStyle = g.strokeStyle; g.textAlign = 'center'; g.font = 'bold 19px Georgia, serif'; g.fillText(t, w / 2, 46);
+      g.font = 'italic 11px Georgia, serif'; g.fillText('Fluff & Feather', w / 2, 66);
+      g.beginPath(); g.moveTo(w / 2, 82); g.bezierCurveTo(w / 2 - 8, 74, w / 2 - 5, 70, w / 2, 74); g.bezierCurveTo(w / 2 + 5, 70, w / 2 + 8, 74, w / 2, 82); g.fill();
+    });
+  });
+  var sackMat = new THREE.MeshStandardMaterial({ map: burlapTex, bumpMap: burlapTex, bumpScale: 0.02, roughness: 1 });
+  var sackTwine = new THREE.MeshStandardMaterial({ color: 0x9a7448, roughness: 0.9 });
+  var barnSackProtos = [];                                             // (kept so the barn's inside can have the same sacks)
+  [[2.5, 0.85, 0.2, 0.24, 0], [2.98, 0.95, -0.3, 0.24, 1], [2.74, 0.82, 0.9, 0.62, 2]].forEach(function (sk) {
+    var sg = new THREE.Group(); sg.position.set(sk[0], sk[3] - 0.24, B_FZ + sk[1]); sg.rotation.y = sk[2]; barnGroup.add(sg); barnSackProtos.push(sg);
+    if (sk[4] === 2) sg.rotation.z = 1.2;                             // the top sack lies flopped across the others
+    var geo = new THREE.SphereGeometry(0.28, 20, 16), gp = geo.attributes.position;
+    for (var v = 0; v < gp.count; v++) {                              // a slumped sack: flat bottom, squared shoulders, lumpy sides
+      var x = gp.getX(v), y = gp.getY(v), z = gp.getZ(v);
+      if (y < -0.2) y = -0.2 - (y + 0.2) * 0.15;
+      var sq = 1 + 0.18 * (1 - Math.abs(y) / 0.28);
+      x *= sq * 0.85; z *= sq * 0.6;
+      var lump = (isle2Hash(x * 41 + y * 73 + z * 29 + sk[4]) - 0.5) * 0.02;
+      gp.setXYZ(v, x + lump, y * 1.05 + 0.2, z + lump);
+    }
+    geo.computeVertexNormals();
+    apPart(geo, sackMat, 0, 0, 0, 0, 0, 0, sg);
+    apPart(new THREE.PlaneGeometry(0.26, 0.2), new THREE.MeshStandardMaterial({ map: sackLabels[sk[4]], roughness: 1, transparent: true, opacity: 0.95 }), 0, 0.2, 0.172, -0.08, 0, 0, sg);   // the printed label
+    apPart(new THREE.CylinderGeometry(0.05, 0.11, 0.1, 12), sackMat, 0, 0.52, 0, 0, 0, 0, sg);       // the gathered neck
+    apPart(new THREE.TorusGeometry(0.052, 0.008, 6, 14), sackTwine, 0, 0.55, 0, Math.PI / 2, 0, 0, sg);
+    for (var f = 0; f < 6; f++) { var fa = f / 6 * Math.PI * 2; apPart(new THREE.ConeGeometry(0.03, 0.09, 4), sackMat, Math.cos(fa) * 0.04, 0.62, Math.sin(fa) * 0.04, Math.cos(fa) * 0.5, 0, -Math.sin(fa) * 0.5, sg); }   // the frilled top
+    apPart(new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), sackTwine, 0.05, 0.51, 0.03, 0.3, 0, 0.6, sg);   // a twine tail
+  });
+  var trough = new THREE.Group(); trough.position.set(BW + 1.0, 0, 1.0); trough.rotation.y = Math.PI / 2; barnGroup.add(trough);
+  apPart(new THREE.BoxGeometry(1.4, 0.4, 0.5), AM.darkWood, 0, 0.25, 0, 0, 0, 0, trough);
+  apPart(new THREE.BoxGeometry(1.3, 0.02, 0.4), new THREE.MeshStandardMaterial({ color: 0x6ab0d8, roughness: 0.05, metalness: 0.2 }), 0, 0.4, 0, 0, 0, 0, trough);
+  [-0.55, 0.55].forEach(function (lx) { apPart(new THREE.BoxGeometry(0.08, 0.1, 0.55), AM.iron, lx, 0.05, 0, 0, 0, 0, trough); });
+  var churnPts = [[0.001, 0], [0.16, 0], [0.17, 0.05], [0.17, 0.4], [0.1, 0.5], [0.07, 0.55], [0.08, 0.6], [0.001, 0.62]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+  var churnMat = new THREE.MeshStandardMaterial({ color: 0xd8dde2, roughness: 0.38, metalness: 0.35 });   // an old steel milk churn: bands, side handles, a lid and a few dull patches
+  apPart(new THREE.LatheGeometry(churnPts, 28), churnMat, 2.0, 0, B_FZ + 0.6);
+  [0.04, 0.2, 0.38].forEach(function (by) { apPart(new THREE.TorusGeometry(0.172, 0.01, 6, 28), churnMat, 2.0, by, B_FZ + 0.6, Math.PI / 2, 0, 0); });
+  [-1, 1].forEach(function (s) { apPart(new THREE.TorusGeometry(0.05, 0.01, 6, 14, Math.PI), churnMat, 2.0 + s * 0.17, 0.42, B_FZ + 0.6, 0, s * Math.PI / 2, -Math.PI / 2 * s).rotation.set(0, Math.PI / 2, s > 0 ? -Math.PI / 2 : Math.PI / 2); });
+  apPart(new THREE.CylinderGeometry(0.09, 0.09, 0.04, 20), churnMat, 2.0, 0.62, B_FZ + 0.6);
+  apPart(new THREE.TorusGeometry(0.035, 0.01, 6, 14, Math.PI), churnMat, 2.0, 0.64, B_FZ + 0.6);
+  [[0.11, 0.25, 0.5], [-0.08, 0.12, 2.2]].forEach(function (pt) { apPart(new THREE.CircleGeometry(0.035, 10), new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.9, transparent: true, opacity: 0.6 }), 2.0 + Math.sin(pt[2]) * 0.172, pt[1], B_FZ + 0.6 + Math.cos(pt[2]) * 0.172, 0, pt[2], 0); });   // dull, worn patches
+  // ----- more of the farmyard -----
+  // lightning rods along the ridge, each with a blue glass ball, joined by a twisted cable
+  [-3.2, 0, 3.2].forEach(function (rz, k) {
+    if (k === 1) return;                                               // (the cupola's in the middle)
+    apPart(new THREE.CylinderGeometry(0.012, 0.016, 0.9, 6), AM.iron, 0, B_TOP + 3.1, rz);
+    apPart(new THREE.SphereGeometry(0.07, 14, 10), new THREE.MeshStandardMaterial({ color: 0x5aa0e8, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.8 }), 0, B_TOP + 3.05, rz);
+    apPart(new THREE.ConeGeometry(0.03, 0.12, 6), AM.iron, 0, B_TOP + 3.6, rz);
+    [0.12, -0.12].forEach(function (sz) { apPart(new THREE.BoxGeometry(0.02, 0.2, 0.02), AM.iron, 0, B_TOP + 2.75, rz + sz, sz > 0 ? 0.6 : -0.6, 0, 0); });
+  });
+  apPart(new THREE.CylinderGeometry(0.008, 0.008, BD * 2, 5), AM.iron, 0.05, B_TOP + 2.76, 0, Math.PI / 2, 0, 0);
+  // a Dutch door on the right side (top half open, a geranium on its shelf) under a little shingled awning
+  var DD = new THREE.Group(); DD.position.set(BW + 0.01, B_FOUND, 0); DD.rotation.y = Math.PI / 2; barnGroup.add(DD);
+  apPart(new THREE.BoxGeometry(1.0, 2.0, 0.02), AM.warm, 0, 1.0, 0.0, 0, 0, 0, DD);
+  apPart(new THREE.BoxGeometry(1.0, 0.98, 0.06), AM.siding, 0, 0.49, 0.03, 0, 0, 0, DD);                                // the bottom half, shut
+  [[0, 0.47, 1.0, 0.1], [0, -0.47, 1.0, 0.1], [-0.45, 0, 0.1, 0.98], [0.45, 0, 0.1, 0.98]].forEach(function (f) { apPart(new THREE.BoxGeometry(f[2], f[3], 0.03), AM.trim, f[0], 0.49 + f[1], 0.07, 0, 0, 0, DD); });
+  apPart(new THREE.BoxGeometry(1.15, 0.1, 0.06), AM.trim, 0, 0.49, 0.07, 0, 0, -Math.atan2(0.88, 0.9), DD);
+  apPart(new THREE.BoxGeometry(1.1, 0.05, 0.2), AM.wood, 0, 1.0, 0.1, 0, 0, 0, DD);                                  // the shelf on top of it
+  apPart(new THREE.CylinderGeometry(0.07, 0.055, 0.12, 12), new THREE.MeshStandardMaterial({ color: 0xc0704a, roughness: 0.85 }), 0.25, 1.085, 0.1, 0, 0, 0, DD);
+  for (var gf = 0; gf < 7; gf++) apPart(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: gf % 2 ? 0xe0304a : 0x3f7a3a, roughness: 0.6 }), 0.25 + (isle2Hash(gf) - 0.5) * 0.12, 1.17 + isle2Hash(gf * 3) * 0.06, 0.1 + (isle2Hash(gf * 5) - 0.5) * 0.12, 0, 0, 0, DD);
+  var dutchTop = new THREE.Group(); dutchTop.position.set(-0.5, 1.5, 0.05); dutchTop.rotation.y = -1.9; DD.add(dutchTop);   // the top half, swung open against the wall
+  apPart(new THREE.BoxGeometry(1.0, 0.98, 0.05), AM.siding, 0.5, 0, 0, 0, 0, 0, dutchTop);
+  apPart(new THREE.BoxGeometry(0.5, 0.4, 0.02), AM.warm, 0.5, 0.15, 0.03, 0, 0, 0, dutchTop);
+  [[-0.5, 0], [0.5, 0]].forEach(function (f) { apPart(new THREE.BoxGeometry(0.2, 0.04, 0.02), AM.iron, 0.12, 0.3 * (f[0] > 0 ? 1 : -1), 0.03, 0, 0, 0, dutchTop); });
+  [[-0.6, 1.0, 0.12, 2.1], [0.6, 1.0, 0.12, 2.1], [0, 2.07, 1.32, 0.14]].forEach(function (f) { apPart(new THREE.BoxGeometry(f[2], f[3], 0.08), AM.trim, f[0], f[1], 0.04, 0, 0, 0, DD); });
+  var awnShingle = AM.shingle.clone(); awnShingle.map = barnShingleTex.clone(); awnShingle.map.needsUpdate = true; awnShingle.map.repeat.set(1, 0.6); awnShingle.bumpMap = awnShingle.map;
+  apPart(new THREE.BoxGeometry(1.6, 0.06, 0.8), awnShingle, 0, 2.35, 0.36, 0.35, 0, 0, DD);
+  [-0.7, 0.7].forEach(function (bx) { apPart(new THREE.BoxGeometry(0.06, 0.06, 0.62), AM.darkWood, bx, 2.15, 0.3, -0.62, 0, 0, DD); });
+  apPart(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 10), AM.iron, -0.35, 0.75, 0.1, Math.PI / 2, 0, 0, DD);       // the latch knob
+  // half-barrel planters of flowers either side of the doors, and a wagon wheel leaning on the wall
+  var staveTex = paintTexture(256, 64, function (g, w, h) {           // weathered oak staves, each a slightly different shade
+    for (var x = 0; x < w; x += 16) {
+      var l = 36 + isle2Hash(x * 0.7 + 3) * 10;
+      g.fillStyle = 'hsl(28,40%,' + l + '%)'; g.fillRect(x, 0, 16, h);
+      for (var gr = 0; gr < 5; gr++) { g.strokeStyle = 'rgba(40,20,8,0.25)'; g.lineWidth = 1; var gx = x + 2 + isle2Hash(x + gr) * 12; g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + (isle2Hash(gr + x * 2) - 0.5) * 3, h); g.stroke(); }
+      g.fillStyle = 'rgba(20,10,4,0.55)'; g.fillRect(x, 0, 1.5, h);
+    }
+  });
+  staveTex.wrapS = THREE.RepeatWrapping; staveTex.repeat.set(3, 1);
+  var staveMat = new THREE.MeshStandardMaterial({ map: staveTex, bumpMap: staveTex, bumpScale: 0.01, roughness: 0.85, side: THREE.DoubleSide });
+  var barrelPetal = [0xf6a6c8, 0xffd04a, 0xf7f3ec, 0xc8b4ec].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, side: THREE.DoubleSide }); });
+  var barrelLeaf = new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.6, side: THREE.DoubleSide });
+  [-1, 1].forEach(function (s) {
+    var bx = s * 2.55, bz = B_FZ + 0.45;
+    var barrelPts = [[0.26, 0], [0.29, 0.1], [0.3, 0.22], [0.29, 0.34], [0.285, 0.36]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+    apPart(new THREE.LatheGeometry(barrelPts, 32), staveMat, bx, 0, bz);
+    apPart(new THREE.TorusGeometry(0.285, 0.014, 6, 28), AM.darkWood, bx, 0.36, bz, Math.PI / 2, 0, 0);   // the rim of the staves
+    [0.07, 0.29].forEach(function (hy) {                                // iron hoops, with rivets
+      apPart(new THREE.CylinderGeometry(0.296, 0.296, 0.035, 32, 1, true), AM.iron, bx, hy, bz);
+      for (var r = 0; r < 8; r++) { var ra = r / 8 * Math.PI * 2; apPart(new THREE.SphereGeometry(0.008, 6, 4), AM.iron, bx + Math.cos(ra) * 0.3, hy, bz + Math.sin(ra) * 0.3); }
+    });
+    apPart(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 24), new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }), bx, 0.33, bz);
+    for (var fbl = 0; fbl < 18; fbl++) {                               // a mound of leaves, and pansies and daisies with real petals
+      var fa = fbl * 2.4, fr = 0.04 + (fbl % 4) * 0.055;
+      var lf = apPart(new THREE.SphereGeometry(1, 8, 5), barrelLeaf, bx + Math.cos(fa) * fr, 0.38 + isle2Hash(fbl + s) * 0.08, bz + Math.sin(fa) * fr);
+      lf.scale.set(0.07, 0.012, 0.035); lf.rotation.set(isle2Hash(fbl * 3) - 0.5, -fa, 0.3);
+    }
+    for (var fl = 0; fl < 9; fl++) {
+      var fla = fl * 2.4 + s, flr = (fl % 3) * 0.08, fx = bx + Math.cos(fla) * flr, fz = bz + Math.sin(fla) * flr, fy = 0.46 + isle2Hash(fl * 5 + s) * 0.08;
+      var fg = new THREE.Group(); fg.position.set(fx, fy, fz); fg.rotation.set(-Math.PI / 2 + (isle2Hash(fl) - 0.5) * 0.6, 0, fla); barnGroup.add(fg);
+      var pm = barrelPetal[(fl + (s > 0 ? 1 : 0)) % 4], np = pm === barrelPetal[2] ? 10 : 5;
+      for (var pt = 0; pt < np; pt++) { var pa = pt / np * Math.PI * 2; var pe = apPart(new THREE.CircleGeometry(np === 10 ? 0.012 : 0.022, 8), pm, Math.cos(pa) * (np === 10 ? 0.018 : 0.02), Math.sin(pa) * (np === 10 ? 0.018 : 0.02), 0, 0, 0, pa, fg); pe.scale.set(np === 10 ? 1.8 : 1.1, 0.8, 1); pe.castShadow = false; }
+      apPart(new THREE.SphereGeometry(0.011, 8, 6), new THREE.MeshStandardMaterial({ color: np === 10 ? 0xf2b63a : 0x4a2a5a }), 0, 0, 0.004, 0, 0, 0, fg);
+    }
+  });
+  var wheel = new THREE.Group(); wheel.position.set(BW + 0.12, 0.62, -3.9); wheel.rotation.set(0, Math.PI / 2, 0.12); barnGroup.add(wheel);
+  apPart(new THREE.TorusGeometry(0.6, 0.04, 8, 32), AM.wood, 0, 0, 0, 0, 0, 0, wheel);
+  apPart(new THREE.TorusGeometry(0.6, 0.015, 6, 32), AM.iron, 0, 0, 0.02, 0, 0, 0, wheel);
+  apPart(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 12), AM.darkWood, 0, 0, 0, Math.PI / 2, 0, 0, wheel);
+  for (var sp = 0; sp < 10; sp++) apPart(new THREE.CylinderGeometry(0.015, 0.02, 0.55, 6), AM.wood, Math.cos(sp / 10 * Math.PI * 2) * 0.32, Math.sin(sp / 10 * Math.PI * 2) * 0.32, 0, 0, 0, sp / 10 * Math.PI * 2 - Math.PI / 2, wheel);
+  // a pitchfork leaning on the bales
+  var fork = new THREE.Group(); fork.position.set(-2.2, 0, B_FZ + 1.25); fork.rotation.set(0.3, 0.4, 0.15); barnGroup.add(fork);
+  apPart(new THREE.CylinderGeometry(0.018, 0.018, 1.4, 6), AM.wood, 0, 0.7, 0, 0, 0, 0, fork);
+  apPart(new THREE.BoxGeometry(0.22, 0.03, 0.03), AM.iron, 0, 1.42, 0, 0, 0, 0, fork);
+  [-0.09, -0.03, 0.03, 0.09].forEach(function (tx) { apPart(new THREE.CylinderGeometry(0.008, 0.004, 0.28, 5), AM.iron, tx, 1.56, 0, 0, 0, 0, fork); });
+  // a bird house on a post by the path
+  var bh = new THREE.Group(); bh.position.set(ANIMAL_HW + 1.6, 0, B_FZ + 2.2); barnGroup.add(bh);
+  apPart(new THREE.BoxGeometry(0.07, 1.6, 0.07), AM.wood, 0, 0.8, 0, 0, 0, 0, bh);
+  apPart(new THREE.BoxGeometry(0.26, 0.24, 0.24), AM.siding, 0, 1.72, 0, 0, 0, 0, bh);
+  [-1, 1].forEach(function (s) { apPart(new THREE.BoxGeometry(0.2, 0.02, 0.32), AM.trim, s * 0.08, 1.88, 0, 0, 0, -s * 0.7, bh); });
+  apPart(new THREE.CircleGeometry(0.035, 12), AM.black, 0, 1.74, 0.121, 0, 0, 0, bh);
+  apPart(new THREE.CylinderGeometry(0.006, 0.006, 0.06, 5), AM.wood, 0, 1.68, 0.14, Math.PI / 2, 0, 0, bh);
+  function updateAnimalShop(t, glow) {                                 // lanterns at night, the weathervane in the breeze, and the animals nibbling and pecking
+    AM.lamp.emissiveIntensity = 0.3 + glow * 1.5;
+    AM.warm.emissiveIntensity = 0.5 + glow * 0.8;
+    for (var i = 0; i < barnLampGlows.length; i++) barnLampGlows[i].material.opacity = glow * 0.8;
+    barnSignMat.emissiveIntensity = 0.25 + glow * 0.45;                 // the little lamps make the gold letters shine at night
+    barnSignLampInner.emissiveIntensity = 0.2 + glow * 1.2;
+    for (var sgl = 0; sgl < barnSignGlows.length; sgl++) barnSignGlows[sgl].material.opacity = glow * 0.75;
+    rooster.rotation.y = Math.sin(t * 0.17) * 1.2 + Math.sin(t * 0.43) * 0.3;
+  }
+  (function () {                                                       // you bump into the barn, the bales and the trough
+    var c = Math.cos(ANIMAL_TURN), si = Math.sin(ANIMAL_TURN);
+    function solidAt(lx, lz, r) { solids.push({ x: ANIMAL_X + lx * c + lz * si, z: ANIMAL_Z - lx * si + lz * c, r: r }); }
+    for (var x = -BW + 0.6; x <= BW - 0.59; x += 1.2) for (var z = -BD + 0.6; z <= BD - 1.1; z += 1.2) solidAt(x, z, 0.9);
+    for (var x2 = -BW; x2 <= BW + 0.01; x2 += 0.5) if (Math.abs(x2) > 1.3) solidAt(x2, BD - 0.2, 0.4);   // the front wall, with a gap for the doorway
+    solidAt(0, BD - 0.6, 0.35); solidAt(-0.9, BD - 0.45, 0.35); solidAt(0.9, BD - 0.45, 0.35);   // the doorway itself: walk up into it and in you go
+    solidAt(-3.0, B_FZ + 0.8, 0.7); solidAt(2.7, B_FZ + 0.9, 0.5); solidAt(2.0, B_FZ + 0.6, 0.25); solidAt(BW + 1.0, 1.0, 0.75);
+    solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the bird house, the wheel
+  })();
+
+  // ---------- The stone path to Whimsy & Bloom ----------
+  // A paved garden walk: weathered flagstones fitted together with moss growing in the joints, laid between kerbs of
+  // dressed stone, with lavender, flowers and little glowing mushrooms along both sides, and iron lanterns that light
+  // the way at night
+  var pathLanternGlows = [];
+  var pathLampMat = new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0xffc870, emissiveIntensity: 0.3, roughness: 0.3 });
+  (function () {
+    var dummy = new THREE.Object3D(), col = new THREE.Color();
+    function H(k) { return isle2Hash(k * 1.37 + 812); }
+    // the paving: crazy-paved flagstones worked out pixel by pixel, so the joints stay crisp; it tiles along the path
+    var PW = 256, PH = 512, cells = [];
+    for (var gy = 0; gy < 8; gy++) for (var gx = 0; gx < 4; gx++) cells.push([(gx + 0.15 + H(gx * 7 + gy * 13) * 0.7) * 64, (gy + 0.15 + H(gx * 11 + gy * 5 + 3) * 0.7) * 64, H(gx * 3 + gy * 17 + 9)]);
+    var pave = new Uint8Array(PW * PH * 4), bump = new Uint8Array(PW * PH * 4);
+    for (var py = 0; py < PH; py++) for (var px = 0; px < PW; px++) {
+      var d1 = 1e9, d2 = 1e9, best = null;
+      for (var c = 0; c < cells.length; c++) for (var wy = -1; wy <= 1; wy++) {   // wrap top to bottom so it tiles along the path
+        var cx = cells[c][0], cy = cells[c][1] + wy * PH, dx = px - cx, dy = py - cy, dd = dx * dx + dy * dy;
+        if (dd < d1) { d2 = d1; d1 = dd; best = cells[c]; } else if (dd < d2) d2 = dd;
+      }
+      var edge = Math.sqrt(d2) - Math.sqrt(d1), i = (py * PW + px) * 4;
+      var grain = isle2Hash(px * 3.1 + py * 7.7) * 14 + Math.sin(px * 0.21 + best[2] * 9) * Math.cos(py * 0.17) * 6;
+      var r, g, bl, h;
+      if (edge < 3.2) {                                                // the joints: dark soil with moss growing in them
+        var mossy = isle2Hash(Math.floor(px / 6) * 5.3 + Math.floor(py / 6) * 2.9) > 0.35;
+        r = mossy ? 86 : 74; g = mossy ? 112 : 64; bl = mossy ? 58 : 50; h = 40;
+        r += grain * 0.6; g += grain * 0.6; bl += grain * 0.3;
+      } else {                                                         // a flagstone: warm grey-cream, each one a slightly different shade
+        var shade = 168 + best[2] * 46, bevel = Math.min(1, (edge - 3.2) / 6);
+        r = shade + 8 + grain; g = shade + grain; bl = shade - 14 + grain * 0.8;
+        r *= 0.82 + bevel * 0.18; g *= 0.82 + bevel * 0.18; bl *= 0.82 + bevel * 0.18;   // edges worn down and a touch darker
+        if (isle2Hash(px * 1.7 + py * 2.3) > 0.985) { r -= 40; g -= 36; bl -= 30; }       // little pits and flecks
+        h = 150 + bevel * 100;
+      }
+      pave[i] = Math.max(0, Math.min(255, r)); pave[i + 1] = Math.max(0, Math.min(255, g)); pave[i + 2] = Math.max(0, Math.min(255, bl)); pave[i + 3] = 255;
+      bump[i] = bump[i + 1] = bump[i + 2] = Math.max(0, Math.min(255, h + grain)); bump[i + 3] = 255;
+    }
+    function dataTex(arr) { var t = new THREE.DataTexture(arr, PW, PH, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true; return t; }
+    var paveTex = dataTex(pave), paveBump = dataTex(bump);
+    var iron = new THREE.MeshStandardMaterial({ color: 0x24222a, roughness: 0.45, metalness: 0.6 });
+    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 }), shroomStem = new THREE.MeshStandardMaterial({ color: 0xf2ece0 });
+    var paveMat = new THREE.MeshStandardMaterial({ map: paveTex, bumpMap: paveBump, bumpScale: 0.03, roughness: 0.88, side: THREE.DoubleSide });
+    var paveMat2 = paveMat.clone(); paveMat2.polygonOffset = true; paveMat2.polygonOffsetFactor = -2; paveMat2.polygonOffsetUnits = -2;   // where the two paths meet, the branch lies neatly on top
+    function layPath(spLine, other, otherBox, branch) {                 // spLine: this path; other: the path it mustn't plant flowers on
+    var pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
+    for (var k = 0; k < spLine.length; k++) {
+      var a = spLine[Math.max(0, k - 1)], b = spLine[Math.min(spLine.length - 1, k + 1)];
+      var tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
+      if (k) run += Math.sqrt(Math.pow(spLine[k][0] - spLine[k - 1][0], 2) + Math.pow(spLine[k][1] - spLine[k - 1][1], 2));
+      pos.push(spLine[k][0] - nx * SP_W, 0.02, spLine[k][1] - nz * SP_W, spLine[k][0] + nx * SP_W, 0.02, spLine[k][1] + nz * SP_W);
+      uv.push(0, run / (W * 2), 1, run / (W * 2));
+      if (k) { var q = k * 2; idx.push(q - 2, q, q - 1, q - 1, q, q + 1); }
+    }
+    var paveGeo = new THREE.BufferGeometry();
+    paveGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    paveGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    paveGeo.setIndex(idx); paveGeo.computeVertexNormals();
+    var paveMesh = new THREE.Mesh(paveGeo, branch ? paveMat2 : paveMat);
+    paveMesh.receiveShadow = true; scene.add(paveMesh);
+    // kerbs of dressed stone along both sides, and the plants, mushrooms and lanterns beyond them
+    var kerbs = [], blooms = [], lav = [], leaves = [], shrooms = [], lamps = [];
+    var gap = 0, row = 0, lampRun = 0, lampSide = 1, walked = 0, end = spLine[spLine.length - 1];
+    for (var j = 1; j < spLine.length; j++) {
+      var p0 = spLine[j - 1], p1 = spLine[j], sx = p1[0] - p0[0], sz = p1[1] - p0[1], sl = Math.sqrt(sx * sx + sz * sz);
+      gap += sl; lampRun += sl; walked += sl;
+      var ux = sx / sl, uz = sz / sl, nx2 = -uz, nz2 = ux, turn = Math.atan2(ux, uz);
+      var nearShop = dist(p1[0], p1[1], end[0], end[1]) < 1.1, onOther = function (ex2) { return lineDist(other, otherBox, p1[0] + nx2 * ex2, p1[1] + nz2 * ex2) < SP_W + 0.35; };
+      if (lampRun > 4.6 && walked > 2.4 && !nearShop && !onOther(lampSide * (SP_W + 0.55))) { lampRun = 0; lamps.push([p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55)]); lampSide = -lampSide; }
+      if (gap < 0.46) continue;
+      gap = 0; row++;
+      for (var e = -1; e <= 1; e += 2) {
+        if (!nearShop && !onOther(e * (SP_W + 0.07))) kerbs.push([p1[0] + nx2 * e * (SP_W + 0.07), p1[1] + nz2 * e * (SP_W + 0.07), turn, H(row * 19 + e)]);
+        if (nearShop || walked < 1.9 || onOther(e * (SP_W + 0.42))) continue;   // keep the ends clear for the steps and the bridge, and the other path clear
+        var gx2 = p1[0] + nx2 * e * (SP_W + 0.42), gz2 = p1[1] + nz2 * e * (SP_W + 0.42), kind = H(row * 29 + e);
+        for (var lf = 0; lf < 6; lf++) leaves.push([gx2 + (H(row * 31 + lf + e) - 0.5) * 0.42, gz2 + (H(row * 37 + lf - e) - 0.5) * 0.42, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
+        if (kind < 0.45) for (var lv = 0; lv < 6; lv++) lav.push([gx2 + (H(row * 43 + lv + e) - 0.5) * 0.32, gz2 + (H(row * 47 + lv - e) - 0.5) * 0.32, 0.34 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
+        else for (var bl2 = 0; bl2 < 5; bl2++) blooms.push([gx2 + (H(row * 61 + bl2 + e) - 0.5) * 0.42, gz2 + (H(row * 67 + bl2 - e) - 0.5) * 0.42, 0.13 + H(row * 71 + bl2) * 0.09, kind < 0.72 ? 0 : (bl2 % 2 ? 1 : 2)]);
+        if (H(row * 73 + e) > 0.88) shrooms.push([gx2 + nx2 * e * 0.22, gz2 + nz2 * e * 0.22]);
+      }
+    }
+    function batch(geo, mat, list, put) {
+      var im = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach(function (q, i) { var cc = put(q); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); if (cc !== undefined) im.setColorAt(i, col.set(cc)); });
+      dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
+      im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im);
+      return im;
+    }
+    var kerbGeo = new THREE.BoxGeometry(0.12, 0.1, 0.42, 1, 1, 1);
+    (function () { var kp = kerbGeo.attributes.position; for (var v = 0; v < kp.count; v++) if (kp.getY(v) > 0) { kp.setX(v, kp.getX(v) * 0.82); kp.setZ(v, kp.getZ(v) * 0.94); } kerbGeo.computeVertexNormals(); })();   // softly bevelled tops
+    batch(kerbGeo, new THREE.MeshStandardMaterial({ map: paveTex, roughness: 0.85, color: 0xe8e2d8 }), kerbs, function (q) {
+      dummy.position.set(q[0], 0.045, q[1]); dummy.rotation.set(0, q[2] + (q[3] - 0.5) * 0.06, (q[3] - 0.5) * 0.04);
+      return new THREE.Color().setHSL(0.09, 0.08, 0.7 + q[3] * 0.14).getHex();
+    });
+    batch(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: true }), leaves, function (q) {
+      dummy.position.set(q[0], q[2] * 0.6, q[1]); dummy.rotation.set(q[3] * 3, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.7, q[2]);
+      return new THREE.Color().setHSL(0.26 + q[3] * 0.06, 0.45, 0.28 + q[3] * 0.12).getHex();
+    });
+    batch(new THREE.CylinderGeometry(0.006, 0.008, 1, 4), new THREE.MeshStandardMaterial({ color: 0x5a7a48 }), lav, function (q) {
+      dummy.position.set(q[0], q[2] / 2, q[1]); dummy.rotation.set(q[3], 0, -q[3] * 0.7); dummy.scale.set(1, q[2], 1);
+    });
+    batch(new THREE.CylinderGeometry(0.018, 0.012, 0.14, 6), new THREE.MeshStandardMaterial({ color: 0x9a78dc, roughness: 0.7 }), lav, function (q) {
+      dummy.position.set(q[0] + Math.sin(-q[3] * 0.7) * -q[2] * 0.4, q[2] - 0.04, q[1] + Math.sin(q[3]) * q[2] * 0.4); dummy.rotation.set(q[3], 0, -q[3] * 0.7);
+    });
+    var petalCols = [0xf6a6c8, 0xfaf6ee, 0xffe08a];
+    batch(new THREE.CylinderGeometry(0.055, 0.03, 0.02, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), blooms, function (q) {
+      dummy.position.set(q[0], q[2], q[1]); dummy.rotation.set((q[2] - 0.17) * 3, q[0] * 5, 0); return petalCols[q[3]];
+    });
+    batch(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshStandardMaterial({ color: 0xe8b84a }), blooms, function (q) { dummy.position.set(q[0], q[2] + 0.012, q[1]); });
+    batch(new THREE.CylinderGeometry(0.005, 0.006, 1, 4), new THREE.MeshStandardMaterial({ color: 0x4f7a3e }), blooms, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.scale.set(1, q[2], 1); });
+    shrooms.forEach(function (m) {
+      for (var t = 0; t < 3; t++) {
+        var mx = m[0] + Math.cos(t * 2.1) * 0.08, mz = m[1] + Math.sin(t * 2.1) * 0.08, mh = 0.07 + t * 0.025;
+        var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, mh, 6), shroomStem); stem.position.set(mx, mh / 2, mz); scene.add(stem);
+        var cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), shroomCap); cap.position.set(mx, mh, mz); cap.scale.y = 0.7; scene.add(cap);
+      }
+    });
+    // wrought-iron lantern posts that glow warm at night
+    lamps.forEach(function (lp) {
+      var g = new THREE.Group(); g.position.set(lp[0], 0, lp[1]); scene.add(g);
+      function part(geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; }
+      part(new THREE.CylinderGeometry(0.11, 0.14, 0.12, 8), iron, 0, 0.06, 0);
+      part(new THREE.CylinderGeometry(0.025, 0.035, 1.5, 8), iron, 0, 0.84, 0);
+      part(new THREE.TorusGeometry(0.04, 0.008, 6, 12), iron, 0, 0.5, 0).rotation.x = Math.PI / 2;
+      part(new THREE.CylinderGeometry(0.1, 0.08, 0.03, 8), iron, 0, 1.6, 0);
+      part(new THREE.CylinderGeometry(0.075, 0.06, 0.2, 6), pathLampMat, 0, 1.72, 0);
+      [0, 1, 2, 3, 4, 5].forEach(function (s2) { var ba = s2 / 6 * Math.PI * 2; part(new THREE.BoxGeometry(0.008, 0.2, 0.008), iron, Math.cos(ba) * 0.075, 1.72, Math.sin(ba) * 0.075); });
+      part(new THREE.ConeGeometry(0.12, 0.12, 6), iron, 0, 1.88, 0);
+      part(new THREE.SphereGeometry(0.02, 8, 6), iron, 0, 1.96, 0);
+      var glowS = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glowS.position.set(0, 1.72, 0); glowS.scale.set(1.4, 1.4, 1); g.add(glowS); pathLanternGlows.push(glowS);
+      solids.push({ x: lp[0], z: lp[1], r: 0.18 });
+    });
+    }
+    layPath(spLine, cpLine, cpBox, false);                              // to Whimsy & Bloom
+    layPath(cpLine, spLine, spBox, true);                               // and to the clinic
+    layPath(apLine, spLine, spBox, false);                              // and on the Western Isle, to the animal shop
+  })();
+
+  // You bump into the house, the tower and the cauldron
+  function houseToWorld(lx, lz) {
+    var c = Math.cos(HOUSE_TURN), s = Math.sin(HOUSE_TURN);
+    return { x: HOUSE_X + lx * c + lz * s, z: HOUSE_Z - lx * s + lz * c };
+  }
+  var houseBumps = [[TX, TZ, TR + 0.2], [CX, CZ, 0.55], [BIN_X - 0.3, BIN_Z, 0.5], [BIN_X + 0.3, BIN_Z, 0.5], [-0.95, FRONT + 1.1, 0.12], [0.95, FRONT + 1.1, 0.12]];
+  for (var hbx = -2.9; hbx <= 2.95; hbx += 1.45) { houseBumps.push([hbx, -0.85, 1.15], [hbx, 0.85, 1.15]); } // two rows of bumpers fill the house's footprint
+  fencePosts.forEach(function (fp) { houseBumps.push([fp[0], fp[1], 0.24]); }); // and you can't walk through the fence
+  houseBumps.forEach(function (c) {
+    var w = houseToWorld(c[0], c[1]);
+    solids.push({ x: w.x, z: w.z, r: c[2] });
+  });
+
+  function updateHouse(dt, t, night) {
+    var glow = 0.35 + night * 0.9;
+    houseMats.glass.emissiveIntensity = glow + Math.sin(t * 7) * 0.03 * night;       // the windows glow warmer at night, with a little flicker
+    lanternMat.emissiveIntensity = 0.6 + night * 1.2 + Math.sin(t * 9) * 0.08;
+    lanterns.forEach(function (lh, n) { lh.material.opacity = 0.2 + night * 0.55 + Math.sin(t * 9 + n) * 0.04; });
+    houseLights.forEach(function (L) {                                                 // the string lights twinkle gently
+      var tw = 0.75 + 0.25 * Math.sin(t * 2.2 + L.p);
+      L.bulb.material.emissiveIntensity = (0.4 + night * 1.1) * tw;
+      L.halo.material.opacity = (0.12 + night * 0.5) * tw;
+    });
+    brewGlow.material.opacity = 0.06 + night * 0.28 + Math.sin(t * 3) * 0.03;         // a faint glow by day, brighter at night
+    brewMat.emissiveIntensity = 0.3 + night * 0.5;
+    brew.rotation.z = -t * 0.25;                                                       // the potion slowly swirls
+    fireGlow.material.opacity = 0.45 + Math.sin(t * 13) * 0.1 + Math.sin(t * 7.3) * 0.08;
+    cauldronFlames.forEach(function (f) {                                              // the flames flicker and dance
+      var k = 0.8 + Math.sin(t * 11 + f.p) * 0.18 + Math.sin(t * 17.3 + f.p * 2) * 0.1;
+      f.g.scale.set(1, k, 1);
+      f.g.rotation.z = Math.sin(t * 6 + f.p) * 0.12;
+    });
+    bubbles.forEach(function (b) {                                                     // bubbles rise, swell and pop
+      b.t += dt * 0.7;
+      if (b.t > 1) { b.t -= 1; b.x = (Math.random() - 0.5) * 0.5; b.z = (Math.random() - 0.5) * 0.5; }
+      b.m.position.set(CX + b.x, 0.8 + b.t * 0.08, CZ + b.z);
+      b.m.scale.setScalar(0.3 + b.t * 0.9);
+      b.m.visible = b.t < 0.92;
+    });
+    brewSteam.forEach(function (w) {                                                   // steam drifts up, grows and fades
+      w.t += dt * 0.22;
+      if (w.t > 1) w.t -= 1;
+      var k = w.t;
+      w.s.position.set(CX + Math.sin(k * 4 + w.a) * 0.14, 0.95 + k * 1.2, CZ + Math.cos(k * 3 + w.a) * 0.14);
+      w.s.scale.setScalar(0.3 + k * 0.75);
+      w.s.material.rotation = w.a + k * w.spin;                       // each wisp slowly turns as it rises
+      w.s.material.opacity = Math.min(1, k * 6) * Math.pow(1 - k, 1.4) * 0.6;
+    });
+    smoke.forEach(function (p) {                                                       // puffs drift up, grow and fade
+      p.t += dt * 0.12;
+      if (p.t > 1) p.t -= 1;
+      var k = p.t;
+      p.s.position.set(CHIM_TOP.x + Math.sin(k * 4 + p.rot) * 0.18 + k * k * 1.1, CHIM_TOP.y + 0.1 + k * 2.4, CHIM_TOP.z + Math.cos(k * 3 + p.rot) * 0.12);   // rises, then drifts off on the breeze
+      p.s.scale.setScalar(0.35 + k * 1.1);
+      p.s.material.rotation = p.rot + k * p.spin;                     // each puff slowly turns as it rises
+      p.s.material.opacity = Math.min(1, k * 8) * Math.pow(1 - k, 1.5) * 0.85;
+    });
+  }
+
+  // ---------- Inside the farmhouse ----------
+  // A cosy room of its own, drawn instead of the island while you're inside, so you can't see out.
+  // It sits far away from the island (at IN_X, IN_Z) so nothing outside can be reached from in here.
+  var interiorScene = new THREE.Scene();
+  interiorScene.background = new THREE.Color(0x1c1228);
+  var ROOM_W = 9, ROOM_D = 7, ROOM_H = 3.4;
+  var indoors = false;
+  var room = new THREE.Group();
+  room.position.set(IN_X, 0, IN_Z);
+  interiorScene.add(room);
+  interiorScene.add(new THREE.HemisphereLight(0xffe6cc, 0x4a3050, 0.75));
+  var roomLamp = new THREE.PointLight(0xffd6f0, 0.55, 16);           // a soft glow over the whole room
+  roomLamp.position.set(IN_X + 0.5, 3.2, IN_Z + 0.5);
+  interiorScene.add(roomLamp);
+  var fireLight = new THREE.PointLight(0xff9a4a, 1.6, 9, 1.6);       // the fireplace, flickering warm light across the room
+  interiorScene.add(fireLight);
+
+  var floorTex = paintTexture(512, 512, function (g, w, h) {          // grey hardwood: long planks in soft driftwood greys, with grain, knots and staggered joints
+    var ROWS = 8, rowH = h / ROWS;
+    var greys = [[156, 152, 150], [138, 135, 136], [170, 166, 162], [124, 122, 126], [148, 146, 150], [162, 157, 152], [132, 129, 128], [144, 141, 144]];
+    for (var r = 0; r < ROWS; r++) {
+      var y0 = r * rowH, x = -((r * 173) % 256);                      // each row's joints fall in a different place
+      while (x < w) {
+        var len = 180 + ((r * 7 + Math.floor(x)) % 5) * 40, c = greys[(r * 3 + Math.floor((x + 512) / 97)) % greys.length];
+        var tint = (Math.random() - 0.5) * 14;
+        var grd = g.createLinearGradient(x, y0, x + len, y0);          // each plank a touch lighter at one end
+        grd.addColorStop(0, 'rgb(' + Math.round(c[0] + tint) + ',' + Math.round(c[1] + tint) + ',' + Math.round(c[2] + tint) + ')');
+        grd.addColorStop(1, 'rgb(' + Math.round(c[0] + tint - 10) + ',' + Math.round(c[1] + tint - 10) + ',' + Math.round(c[2] + tint - 8) + ')');
+        g.fillStyle = grd; g.fillRect(x, y0, len, rowH);
+        for (var gl = 0; gl < 9; gl++) {                               // the wood grain: long wavy lines
+          var gy = y0 + 4 + Math.random() * (rowH - 8), amp = 1 + Math.random() * 2.5, ph = Math.random() * 6;
+          g.strokeStyle = Math.random() < 0.6 ? 'rgba(70,66,72,0.22)' : 'rgba(235,232,228,0.18)';
+          g.lineWidth = 0.6 + Math.random() * 0.9;
+          g.beginPath();
+          for (var gx = 0; gx <= len; gx += 8) g.lineTo(x + gx, gy + Math.sin(gx / 40 + ph) * amp);
+          g.stroke();
+        }
+        if (Math.random() < 0.35) {                                    // now and then a little knot
+          var kx = x + 30 + Math.random() * (len - 60), ky = y0 + rowH * (0.3 + Math.random() * 0.4);
+          g.fillStyle = 'rgba(80,74,78,0.45)'; g.beginPath(); g.ellipse(kx, ky, 7, 3.5, 0, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = 'rgba(80,74,78,0.3)'; g.lineWidth = 1; g.beginPath(); g.ellipse(kx, ky, 12, 6, 0, 0, Math.PI * 2); g.stroke();
+        }
+        g.fillStyle = 'rgba(45,42,48,0.65)'; g.fillRect(x, y0, 2, rowH); // the joint at the end of the plank
+        x += len;
+      }
+      g.fillStyle = 'rgba(40,38,44,0.7)'; g.fillRect(0, y0, w, 2);      // the gap between rows
+      g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(0, y0 + 2, w, 1); // and a soft bevel highlight
+    }
+  });
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+  floorTex.repeat.set(2, 2);
+  var quiltTex = paintTexture(64, 64, function (g, w, h) {            // a patchwork quilt
+    var cols = ['#7a58b0', '#b07ad0', '#5b3f8c', '#e49ccf'];
+    for (var x = 0; x < 4; x++) for (var y = 0; y < 4; y++) { g.fillStyle = cols[(x + y * 3) % 4]; g.fillRect(x * 16, y * 16, 16, 16); }
+    g.strokeStyle = 'rgba(255,240,200,0.6)'; g.setLineDash([2, 2]);
+    for (var i = 1; i < 4; i++) { g.beginPath(); g.moveTo(i * 16, 0); g.lineTo(i * 16, h); g.moveTo(0, i * 16); g.lineTo(w, i * 16); g.stroke(); }
+  });
+  var rugTex = paintTexture(1024, 704, function (g, w, h) {           // a celestial rug, edge to edge: deep indigo starry sky, a big crescent moon ringed by the moon's phases
+    var GOLD = '#e3b553', CREAM = '#f6ecd8', ROSE = '#d996b4', INK = '#221a3e', SHADE = '#2f2552';
+    var cx = w / 2, cy = h / 2;
+    var field = g.createRadialGradient(cx, cy, 30, cx, cy, w * 0.62);    // midnight indigo, a little lighter in the middle
+    field.addColorStop(0, '#3d3170'); field.addColorStop(1, '#251d47');
+    g.fillStyle = field; g.fillRect(0, 0, w, h);
+    for (var wy = 0; wy < h; wy += 3) { g.fillStyle = wy % 6 ? 'rgba(230,220,255,0.03)' : 'rgba(0,0,20,0.06)'; g.fillRect(0, wy, w, 1); } // woven rows
+    for (var n = 0; n < 4000; n++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(230,220,255,0.05)' : 'rgba(0,0,15,0.07)'; g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 1); }
+    function star(x, y, r, col, pts) { g.fillStyle = col; g.beginPath(); for (var p = 0; p < pts * 2; p++) { var rr = p % 2 ? r * 0.4 : r, aa = p / (pts * 2) * Math.PI * 2 - Math.PI / 2; g.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr); } g.closePath(); g.fill(); }
+    // little constellations in the four corners: gold stars joined by fine lines
+    [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (c) {
+      var bx = cx - c[0] * (cx - 95), by = cy - c[1] * (cy - 95);
+      var pts = [[0, 0], [38, 18], [70, 6], [58, -34], [96, -48]].map(function (q) { return [bx + q[0] * c[0], by + q[1] * c[1]]; });
+      g.strokeStyle = 'rgba(246,236,216,0.45)'; g.lineWidth = 1.5;
+      g.beginPath(); pts.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.stroke();
+      pts.forEach(function (q, i) { star(q[0], q[1], i === 2 ? 9 : 6, i % 2 ? CREAM : GOLD, 4); });
+    });
+    for (var s2 = 0; s2 < 90; s2++) {                                   // a scatter of tiny stars, kept clear of the middle
+      var sx = 25 + Math.random() * (w - 50), sy = 25 + Math.random() * (h - 50);
+      if (Math.hypot((sx - cx) / 1.55, sy - cy) < 215) continue;
+      star(sx, sy, 2 + Math.random() * 3, Math.random() < 0.5 ? 'rgba(246,236,216,0.8)' : GOLD, 4);
+    }
+    // the middle: a ring of the moon's phases going round, with a big golden crescent cradling a star inside
+    g.strokeStyle = 'rgba(227,181,83,0.6)'; g.lineWidth = 2; g.setLineDash([2, 8]);
+    g.beginPath(); g.ellipse(cx, cy, 300, 196, 0, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([]);
+    g.strokeStyle = GOLD; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(cx, cy, 150, 150 * 0.98, 0, 0, Math.PI * 2); g.stroke();
+    var PH = 8;
+    for (var k = 0; k < PH; k++) {                                     // eight phases round the ring: new, crescent, half, gibbous, full and back
+      var a = k / PH * Math.PI * 2 - Math.PI / 2, mx = cx + Math.cos(a) * 240, my = cy + Math.sin(a) * 160, mr = 28;
+      g.fillStyle = 'rgba(246,236,216,0.12)'; g.beginPath(); g.arc(mx, my, mr * 1.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = SHADE; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
+      var lit = k / PH, wax = lit <= 0.5, f = Math.cos(lit * Math.PI * 2);    // how much of the face is lit, and from which side
+      g.save(); g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.clip();
+      g.fillStyle = CREAM;
+      g.beginPath();
+      g.arc(mx, my, mr, -Math.PI / 2, Math.PI / 2, !wax);             // the lit half
+      g.ellipse(mx, my, Math.abs(f) * mr, mr, 0, Math.PI / 2, -Math.PI / 2, (f > 0) === wax);
+      g.fill();
+      g.restore();
+      g.strokeStyle = GOLD; g.lineWidth = 2.5; g.beginPath(); g.arc(mx, my, mr + 2, 0, Math.PI * 2); g.stroke();
+    }
+    var halo = g.createRadialGradient(cx, cy, 20, cx, cy, 140);
+    halo.addColorStop(0, 'rgba(255,230,170,0.35)'); halo.addColorStop(1, 'rgba(255,230,170,0)');
+    g.fillStyle = halo; g.beginPath(); g.arc(cx, cy, 140, 0, Math.PI * 2); g.fill();
+    var moonG = g.createLinearGradient(cx - 100, cy - 100, cx + 60, cy + 100);
+    moonG.addColorStop(0, '#f7d98a'); moonG.addColorStop(1, '#d49a34');
+    g.fillStyle = moonG; g.beginPath(); g.arc(cx - 10, cy, 100, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#342a62'; g.beginPath(); g.arc(cx + 34, cy - 22, 88, 0, Math.PI * 2); g.fill(); // cut the crescent out
+    star(cx + 28, cy - 10, 30, CREAM, 5); star(cx + 28, cy - 10, 12, GOLD, 5);
+    star(cx + 78, cy + 52, 10, GOLD, 4); star(cx + 60, cy - 78, 7, CREAM, 4);
+  });
+  function rMat(color, extra) {
+    var o = { color: color, roughness: 0.8 };
+    for (var k in extra) o[k] = extra[k];
+    return new THREE.MeshStandardMaterial(o);
+  }
+  var R = {
+    floor: rMat(0xffffff, { map: floorTex, roughness: 0.5, metalness: 0.05 }), wall: rMat(0xf2e6d8, { roughness: 0.95 }),
+    wood: rMat(0x7a4e32), darkWood: rMat(0x4a3226), stone: rMat(0xffffff, { map: stoneWallTex, roughness: 0.95 }), soot: rMat(0x1a1214),
+    cream: rMat(0xf3e6d0), quilt: rMat(0xffffff, { map: quiltTex }), pillow: rMat(0xfff4fa), rug: rMat(0xffffff, { map: rugTex, roughness: 1 }),
+    gold: rMat(0xffd36e, { emissive: 0xb07a10, emissiveIntensity: 0.3, metalness: 0.6, roughness: 0.35 }), clay: rMat(0xc8714a),
+    leaf: rMat(0x5aa84a),
+    curtain: rMat(0xd96aa8), pane: rMat(0x9fb4ff, { emissive: 0x6a7ad8, emissiveIntensity: 0.6 }), door: rMat(0xffffff, { map: plankTex, roughness: 0.7 }),
+    candle: rMat(0xfff0d8), iron: rMat(0x24222c, { metalness: 0.5, roughness: 0.45 })
+  };
+  function iPart(geo, mat, x, y, z, rx, ry, rz, parent) { // one piece of the room (x, z from the middle of the floor)
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    (parent || room).add(m);
+    return m;
+  }
+  var inSolids = [];                                                  // furniture you bump into (room positions)
+  var NW = -ROOM_D / 2;                                               // the back (north) wall
+
+  // the floor
+  iPart(new THREE.PlaneGeometry(ROOM_W, ROOM_D), R.floor, 0, 0, 0, -Math.PI / 2);
+
+  // the walls: plain and soft cream. Each wall is its own group (its local +z points into the room);
+  // a wall the camera is behind hides completely, windows and all, so it never blocks the view
+  var inWalls = {};
+  function makeWall(name, x, z, ry, len) {
+    var wgp = new THREE.Group();
+    wgp.position.set(x, 0, z); wgp.rotation.y = ry;
+    room.add(wgp);
+    inWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
+    iPart(new THREE.PlaneGeometry(len, ROOM_H), R.wall, 0, ROOM_H / 2, 0, 0, 0, 0, wgp);
+    return wgp;
+  }
+  makeWall('N', 0, NW, 0, ROOM_W);
+  makeWall('S', 0, -NW, Math.PI, ROOM_W);
+  makeWall('W', -ROOM_W / 2, 0, Math.PI / 2, ROOM_D);
+  makeWall('E', ROOM_W / 2, 0, -Math.PI / 2, ROOM_D);
+  function wallPart(name, geo, mat, x, y, z, rx, ry, rz) { return iPart(geo, mat, x, y, z, rx, ry, rz, inWalls[name].g); }
+
+  // the fireplace on the back wall: a fieldstone surround with an arched opening, a glowing brick firebox,
+  // a crackling log fire on iron fire-dogs, a thick wooden mantel on carved brackets, and a chimney breast up to the ceiling
+  var FPX = -1.6, FP_D = 0.75, OPEN_W = 1.4, OPEN_H = 0.9;           // its middle, how far it sticks out, and the size of the opening
+  var FZ0 = NW, FZF = NW + FP_D;                                      // the back wall and the front face
+  [-1, 1].forEach(function (sd) {                                      // the stone piers either side of the opening
+    iPart(new THREE.BoxGeometry(0.6, 1.6, FP_D), R.stone, FPX + sd * (OPEN_W / 2 + 0.3), 0.8, FZ0 + FP_D / 2);
+  });
+  var archShape = new THREE.Shape();                                   // the stonework over the opening, with an arched underside
+  archShape.moveTo(-OPEN_W / 2, OPEN_H); archShape.lineTo(-OPEN_W / 2, 1.6); archShape.lineTo(OPEN_W / 2, 1.6); archShape.lineTo(OPEN_W / 2, OPEN_H);
+  archShape.bezierCurveTo(OPEN_W / 2, OPEN_H + 0.3, OPEN_W / 4, OPEN_H + 0.38, 0, OPEN_H + 0.38);
+  archShape.bezierCurveTo(-OPEN_W / 4, OPEN_H + 0.38, -OPEN_W / 2, OPEN_H + 0.3, -OPEN_W / 2, OPEN_H);
+  var archGeo = new THREE.ExtrudeGeometry(archShape, { depth: FP_D, bevelEnabled: false, curveSegments: 12 });
+  var auv = archGeo.attributes.uv;
+  for (var au = 0; au < auv.count; au++) auv.setXY(au, auv.getX(au) * 0.6, auv.getY(au) * 0.6);
+  iPart(archGeo, R.stone, FPX, 0, FZ0);
+  // a carved keystone over the arch: a wedge of pale stone
+  var key = new THREE.Shape();
+  key.moveTo(-0.13, 0); key.lineTo(0.13, 0); key.lineTo(0.18, 0.36); key.lineTo(-0.18, 0.36); key.lineTo(-0.13, 0);
+  iPart(new THREE.ExtrudeGeometry(key, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 }), rMat(0xd8d0de, { roughness: 0.85 }), FPX, OPEN_H + 0.22, FZF);
+  var brickTex = paintTexture(128, 128, function (g, w, h) {           // sooty bricks inside, glowing hot near the bottom
+    g.fillStyle = '#1c0f0c'; g.fillRect(0, 0, w, h);
+    for (var r = 0; r < 8; r++) for (var c = -1; c < 5; c++) {
+      var bx = c * 32 + (r % 2) * 16, by = r * 16, heat = Math.max(0, (r - 3) / 4);
+      g.fillStyle = 'rgb(' + Math.round(60 + heat * 150) + ',' + Math.round(26 + heat * 60) + ',' + Math.round(20 + heat * 10) + ')';
+      g.fillRect(bx + 1.5, by + 1.5, 29, 13);
+    }
+  });
+  var brickMat = rMat(0xffffff, { map: brickTex, emissive: 0xff5a1a, emissiveMap: brickTex, emissiveIntensity: 0.6, roughness: 1 });
+  iPart(new THREE.PlaneGeometry(OPEN_W, OPEN_H + 0.38), brickMat, FPX, (OPEN_H + 0.38) / 2, FZ0 + 0.06);                 // the back of the firebox
+  [-1, 1].forEach(function (sd) { iPart(new THREE.PlaneGeometry(FP_D - 0.06, OPEN_H + 0.38), brickMat, FPX + sd * (OPEN_W / 2 - 0.015), (OPEN_H + 0.38) / 2, FZ0 + 0.06 + (FP_D - 0.06) / 2, 0, -sd * Math.PI / 2, 0); }); // the side walls, just inside the stone so they don't flicker
+  iPart(new THREE.PlaneGeometry(OPEN_W, FP_D), R.soot, FPX, 0.13, FZ0 + FP_D / 2, -Math.PI / 2);                         // the sooty floor of the firebox
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.6, 0.13, 0.75), R.stone, FPX, 0.065, FZF + 0.3);                               // the raised stone hearth
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.66, 0.04, 0.8), rMat(0x8c8494, { roughness: 0.7 }), FPX, 0.135, FZF + 0.3);    // with a smooth slab on top
+  // the mantel: a thick dark beam on two carved brackets
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.7, 0.18, 0.5), R.darkWood, FPX, 1.7, FZ0 + 0.55);
+  iPart(new THREE.BoxGeometry(OPEN_W + 1.6, 0.05, 0.08), R.wood, FPX, 1.6, FZ0 + 0.79);
+  var corbel = new THREE.Shape();
+  corbel.moveTo(0, 0); corbel.lineTo(0.22, 0); corbel.quadraticCurveTo(0.22, -0.12, 0.1, -0.16); corbel.quadraticCurveTo(0.02, -0.22, 0, -0.32); corbel.lineTo(0, 0);
+  [-1, 1].forEach(function (sd) {
+    var cb = iPart(new THREE.ExtrudeGeometry(corbel, { depth: 0.12, bevelEnabled: false }), R.darkWood, FPX + sd * (OPEN_W / 2 + 0.55) - 0.06, 1.61, FZF, 0, -Math.PI / 2, 0);
+  });
+  // the chimney breast, stone all the way up
+  iPart(new THREE.BoxGeometry(OPEN_W + 0.9, ROOM_H - 1.79, 0.55), R.stone, FPX, (ROOM_H + 1.79) / 2, FZ0 + 0.275);
+  // the fire: iron fire-dogs, three logs, glowing embers, dancing flames and rising sparks
+  var FIRE_Z = FZ0 + 0.38;
+  [-1, 1].forEach(function (sd) {
+    iPart(new THREE.BoxGeometry(0.05, 0.05, 0.5), R.iron, FPX + sd * 0.38, 0.2, FIRE_Z);
+    iPart(new THREE.BoxGeometry(0.05, 0.3, 0.05), R.iron, FPX + sd * 0.38, 0.3, FIRE_Z + 0.25);
+    iPart(new THREE.SphereGeometry(0.045, 10, 8), R.gold, FPX + sd * 0.38, 0.47, FIRE_Z + 0.25);
+  });
+  var logBark = rMat(0xffffff, { map: barkTex, roughness: 0.95 }), logEnd = rMat(0xc9a27a, { roughness: 0.9 });
+  [[0, 0.27, -0.06, 0.15, 0.09], [-0.05, 0.4, 0.06, -0.3, 0.075], [0.08, 0.37, 0.02, 0.45, 0.07]].forEach(function (lg) {
+    var lgm = iPart(new THREE.CylinderGeometry(lg[4], lg[4], 0.95, 10), [logBark, logEnd, logEnd], FPX + lg[0], lg[1], FIRE_Z + lg[2], 0, lg[3], Math.PI / 2);
+  });
+  var emberMat = rMat(0xff6a20, { emissive: 0xff5010, emissiveIntensity: 1.4 });
+  for (var em = 0; em < 14; em++) iPart(new THREE.SphereGeometry(0.03 + Math.random() * 0.025, 6, 5), emberMat, FPX + (Math.random() - 0.5) * 0.8, 0.16, FIRE_Z + (Math.random() - 0.5) * 0.35);
+  var emberGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff6a20, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+  emberGlow.position.set(FPX, 0.25, FIRE_Z + 0.1); emberGlow.scale.set(1.3, 0.5, 1); room.add(emberGlow);
+  var hearthGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff9a4a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  hearthGlow.position.set(FPX, 0.6, FZF + 0.5); hearthGlow.scale.set(2.6, 1.4, 1); room.add(hearthGlow);
+  fireLight.position.set(IN_X + FPX, 0.7, IN_Z + FZF + 0.4);
+  var flameGeo = new THREE.LatheGeometry([[0, 0], [0.09, 0.06], [0.11, 0.16], [0.08, 0.3], [0.04, 0.42], [0, 0.5]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 10);
+  var flameMats = [0xff5a10, 0xff8a20, 0xffc040, 0xfff0a0].map(function (c) { return new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }); });
+  var flames = [];
+  [[0, 1.2, 0], [-0.22, 0.95, 0], [0.22, 1.0, 1], [-0.1, 0.8, 2], [0.12, 0.75, 2], [0, 0.55, 3], [-0.3, 0.6, 1], [0.32, 0.55, 1]].forEach(function (f, n) {
+    var fm = iPart(flameGeo, flameMats[f[2]], FPX + f[0], 0.3, FIRE_Z + (n % 3 - 1) * 0.06);
+    flames.push({ m: fm, base: f[1], p: n * 1.7, x: f[0] });
+  });
+  [[0, 0.65, 0.9, 0xffb040], [0, 0.5, 0.5, 0xfff0a0]].forEach(function (gl) {                     // soft glows round the flames
+    var gs = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: gl[3], transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    gs.position.set(FPX + gl[0], gl[1], FIRE_Z + 0.15); gs.scale.set(gl[2], gl[2] * 1.3, 1); room.add(gs);
+  });
+  var fireSparks = [];
+  for (var sk = 0; sk < 14; sk++) {
+    var spk = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc060, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    spk.scale.set(0.05, 0.05, 1); room.add(spk);
+    fireSparks.push({ s: spk, t: Math.random(), x: (Math.random() - 0.5) * 0.6, sp: 0.5 + Math.random() * 0.6 });
+  }
+  // a set of fire tools on the right and a basket of logs on the left
+  var TLX = FPX + OPEN_W / 2 + 0.95, TLZ = FZF + 0.25;
+  iPart(new THREE.CylinderGeometry(0.13, 0.15, 0.04, 12), R.iron, TLX, 0.02, TLZ);
+  iPart(new THREE.CylinderGeometry(0.018, 0.018, 0.85, 6), R.iron, TLX, 0.45, TLZ);
+  iPart(new THREE.SphereGeometry(0.04, 8, 6), R.gold, TLX, 0.9, TLZ);
+  iPart(new THREE.BoxGeometry(0.22, 0.02, 0.02), R.iron, TLX, 0.8, TLZ);
+  [[-0.1, 'poker'], [0.1, 'shovel']].forEach(function (tl) {
+    iPart(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 5), R.iron, TLX + tl[0], 0.43, TLZ + 0.02);
+    if (tl[1] === 'shovel') iPart(new THREE.BoxGeometry(0.1, 0.12, 0.015), R.iron, TLX + tl[0], 0.08, TLZ + 0.02);
+    else iPart(new THREE.ConeGeometry(0.02, 0.1, 5), R.iron, TLX + tl[0], 0.06, TLZ + 0.02, Math.PI, 0, 0);
+  });
+  var BKX = FPX - OPEN_W / 2 - 1.0, BKZ = FZF + 0.15;
+  iPart(new THREE.CylinderGeometry(0.32, 0.27, 0.36, 16, 1, true), rMat(0xb08a52, { roughness: 1, side: THREE.DoubleSide }), BKX, 0.18, BKZ);
+  iPart(new THREE.TorusGeometry(0.32, 0.025, 6, 20), rMat(0x8a6a3a), BKX, 0.36, BKZ, Math.PI / 2, 0, 0);
+  [[-0.12, 0.38, 0.2], [0.1, 0.4, -0.3], [0, 0.48, 0.6], [0.05, 0.33, 1.2]].forEach(function (bl) {
+    iPart(new THREE.CylinderGeometry(0.06, 0.06, 0.62, 8), [logBark, logEnd, logEnd], BKX + bl[0], bl[1], BKZ, 0, bl[2], Math.PI / 2 - 0.25);
+  });
+  // candles, potions and a glowing crystal ball along the mantel
+  var candleGlows = [];
+  function candle(x, y, z, hgt) {
+    iPart(new THREE.CylinderGeometry(0.05, 0.05, hgt, 8), R.candle, x, y + hgt / 2, z);
+    var cg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc060, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    cg.position.set(x, y + hgt + 0.06, z);
+    cg.scale.set(0.22, 0.3, 1);
+    room.add(cg);
+    candleGlows.push(cg);
+  }
+  function potion(x, y, z, color, size) { // a round glowing bottle with a cork
+    var pm = rMat(color, { emissive: color, emissiveIntensity: 0.55, roughness: 0.15, transparent: true, opacity: 0.85 });
+    iPart(new THREE.SphereGeometry(0.11 * size, 12, 10), pm, x, y + 0.11 * size, z);
+    iPart(new THREE.CylinderGeometry(0.035 * size, 0.04 * size, 0.1 * size, 8), pm, x, y + 0.25 * size, z);
+    iPart(new THREE.CylinderGeometry(0.04 * size, 0.035 * size, 0.05 * size, 8), R.wood, x, y + 0.32 * size, z);
+  }
+  var MT = 1.79;                                                      // the top of the mantel
+  candle(FPX - 1.3, MT, FZ0 + 0.55, 0.32); candle(FPX - 1.12, MT, FZ0 + 0.6, 0.2); candle(FPX + 1.3, MT, FZ0 + 0.55, 0.26);
+  potion(FPX - 0.65, MT, FZ0 + 0.55, 0x7dff9a, 1); potion(FPX + 0.75, MT, FZ0 + 0.55, 0xff8fd0, 1.15);
+  iPart(new THREE.CylinderGeometry(0.06, 0.09, 0.08, 10), R.gold, FPX + 0.35, MT + 0.04, FZ0 + 0.55);
+  var crystal = iPart(new THREE.SphereGeometry(0.11, 16, 12), rMat(0xd8c4ff, { emissive: 0x9a6aff, emissiveIntensity: 0.7, roughness: 0.05, transparent: true, opacity: 0.85 }), FPX + 0.35, MT + 0.19, FZ0 + 0.55);
+  inSolids.push([FPX, FZ0 + 0.55, 1.3], [FPX - 1.1, FZF + 0.3, 0.45], [FPX + 1.1, FZF + 0.3, 0.45], [BKX, BKZ, 0.35], [TLX, TLZ, 0.18]);
+
+  // a black four-poster bed in the corner: turned posts with gold finials, a tufted plum velvet headboard
+  // with a gold moon, a starry quilted duvet draped over the sides, plump pillows, a throw and sheer drapes
+  var BED_W = 1.9, BED_L = 2.5, BX = ROOM_W / 2 - 1.15, HZ = NW + 0.16, FZ = HZ + BED_L + 0.16, MZ = HZ + 0.08 + BED_L / 2;
+  var bedWood = rMat(0x15121a, { roughness: 0.4, metalness: 0.15 }), velvet = rMat(0x5a3a78, { roughness: 0.95 });
+  var duvetTex = paintTexture(256, 256, function (g, w, h) {        // a midnight quilt stitched in diamonds, a gold star in each
+    g.fillStyle = '#2f2758'; g.fillRect(0, 0, w, h);
+    var shade = g.createLinearGradient(0, 0, w, h); shade.addColorStop(0, 'rgba(255,255,255,0.05)'); shade.addColorStop(1, 'rgba(0,0,0,0.08)');
+    g.fillStyle = shade; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(227,181,83,0.55)'; g.lineWidth = 2; g.setLineDash([5, 4]);
+    for (var d = -w; d < w * 2; d += 64) {                            // the diamond stitching
+      g.beginPath(); g.moveTo(d, 0); g.lineTo(d + h, h); g.stroke();
+      g.beginPath(); g.moveTo(d, h); g.lineTo(d + h, 0); g.stroke();
+    }
+    g.setLineDash([]);
+    for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) {         // a star or a little moon in the middle of each diamond
+      var sx = x * 64 + 32, sy = y * 64, alt = (x + y) % 2;
+      g.fillStyle = alt ? '#e3b553' : '#f6ecd8';
+      if (alt) { g.beginPath(); for (var p = 0; p < 10; p++) { var r = p % 2 ? 3.5 : 9, a = p / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r); } g.fill(); }
+      else { g.beginPath(); g.arc(sx, sy, 7, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2f2758'; g.beginPath(); g.arc(sx + 3, sy - 2, 6, 0, Math.PI * 2); g.fill(); }
+    }
+  });
+  duvetTex.wrapS = duvetTex.wrapT = THREE.RepeatWrapping;
+  var duvetMat = rMat(0xffffff, { map: duvetTex, roughness: 0.9, side: THREE.DoubleSide });
+  function softSlab(w, d, h, r, mat, x, y, z) {                        // a box with soft rounded edges (cushions, mattress, pillows)
+    var sh = new THREE.Shape(), hw = w / 2 - r, hd = d / 2 - r;
+    sh.moveTo(-hw, -d / 2); sh.lineTo(hw, -d / 2); sh.quadraticCurveTo(w / 2, -d / 2, w / 2, -hd);
+    sh.lineTo(w / 2, hd); sh.quadraticCurveTo(w / 2, d / 2, hw, d / 2); sh.lineTo(-hw, d / 2);
+    sh.quadraticCurveTo(-w / 2, d / 2, -w / 2, hd); sh.lineTo(-w / 2, -hd); sh.quadraticCurveTo(-w / 2, -d / 2, -hw, -d / 2);
+    var geo = new THREE.ExtrudeGeometry(sh, { depth: Math.max(0.001, h - r * 2), bevelEnabled: true, bevelThickness: r, bevelSize: r * 0.6, bevelSegments: 3, curveSegments: 6 });
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, r, 0);
+    return iPart(geo, mat, x, y, z);
+  }
+  // the frame: side rails, a footboard and four turned posts
+  [-1, 1].forEach(function (sd) { iPart(new THREE.BoxGeometry(0.09, 0.22, BED_L + 0.1), bedWood, BX + sd * (BED_W / 2 + 0.02), 0.36, MZ); });
+  var postPts = [[0.075, 0], [0.075, 0.12], [0.095, 0.16], [0.06, 0.22], [0.05, 0.5], [0.075, 0.56], [0.05, 0.62], [0.042, 1.3], [0.065, 1.36], [0.042, 1.42], [0.04, 2.3], [0.06, 2.36], [0.045, 2.42], [0.001, 2.42]];
+  var postGeo = new THREE.LatheGeometry(postPts.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 12);
+  [[-1, HZ], [1, HZ], [-1, FZ], [1, FZ]].forEach(function (pc) {
+    iPart(postGeo, bedWood, BX + pc[0] * (BED_W / 2 + 0.04), 0, pc[1]);
+    iPart(new THREE.SphereGeometry(0.07, 12, 10), R.gold, BX + pc[0] * (BED_W / 2 + 0.04), 2.48, pc[1]);   // gold finials
+  });
+  [HZ, FZ].forEach(function (z) { iPart(new THREE.BoxGeometry(BED_W + 0.1, 0.06, 0.06), bedWood, BX, 2.36, z); });   // the canopy frame
+  [-1, 1].forEach(function (sd) { iPart(new THREE.BoxGeometry(0.06, 0.06, FZ - HZ), bedWood, BX + sd * (BED_W / 2 + 0.04), 2.36, (HZ + FZ) / 2); });
+  var foot = new THREE.Shape();                                        // a footboard with a gently curved top
+  foot.moveTo(-BED_W / 2, 0); foot.lineTo(BED_W / 2, 0); foot.lineTo(BED_W / 2, 0.5); foot.quadraticCurveTo(0, 0.68, -BED_W / 2, 0.5); foot.lineTo(-BED_W / 2, 0);
+  iPart(new THREE.ExtrudeGeometry(foot, { depth: 0.06, bevelEnabled: false }), bedWood, BX, 0.28, FZ - 0.03);
+  // the headboard: a black arched frame with a tufted plum velvet panel and gold buttons
+  function arch(w, hgt, top) { var s = new THREE.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, hgt); s.bezierCurveTo(w / 2, hgt + top * 0.8, w * 0.2, hgt + top, 0, hgt + top); s.bezierCurveTo(-w * 0.2, hgt + top, -w / 2, hgt + top * 0.8, -w / 2, hgt); s.lineTo(-w / 2, 0); return s; }
+  iPart(new THREE.ExtrudeGeometry(arch(BED_W, 0.9, 0.45), { depth: 0.08, bevelEnabled: false }), bedWood, BX, 0.4, HZ - 0.06);
+  iPart(new THREE.ExtrudeGeometry(arch(BED_W - 0.24, 0.8, 0.36), { depth: 0.06, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 3 }), velvet, BX, 0.5, HZ + 0.02);
+  for (var tr = 0; tr < 3; tr++) for (var tc = 0; tc < 5 - (tr === 2 ? 2 : 0); tc++) {     // tufting buttons
+    var tx = (tc - (tr === 2 ? 1 : 2)) * 0.32, ty = 0.75 + tr * 0.3;
+    iPart(new THREE.SphereGeometry(0.025, 8, 6), R.gold, BX + tx, ty, HZ + 0.13);
+  }
+  // mattress, sheet and the draped duvet
+  softSlab(BED_W - 0.04, BED_L, 0.3, 0.06, R.cream, BX, 0.45, MZ);
+  var DUV_L = BED_L * 0.72, DROP = 0.3, DUV_Z0 = MZ + BED_L / 2 - DUV_L;  // the duvet covers the bottom of the bed and hangs over the sides and foot
+  var dg = new THREE.PlaneGeometry(BED_W + DROP * 2, DUV_L + DROP, 32, 26), dp = dg.attributes.position, half = (BED_W - 0.04) / 2, rr = 0.07;
+  function fold(e) { // how a length of cloth past an edge wraps over and hangs: returns [outward, drop]
+    if (e <= 0) return [e, 0];
+    if (e < rr * Math.PI / 2) { var an = e / rr; return [rr * Math.sin(an), -rr * (1 - Math.cos(an))]; }
+    return [rr, -rr - (e - rr * Math.PI / 2)];
+  }
+  for (var dv = 0; dv < dp.count; dv++) {
+    var px = dp.getX(dv), pz = -dp.getY(dv) + (DUV_L + DROP) / 2;     // pz: 0 at the top edge of the duvet, growing toward the foot
+    var py = 0, nx = px, nz = pz;
+    var es = Math.abs(px) - half, fs = fold(es);
+    if (es > 0) { nx = (px > 0 ? 1 : -1) * (half + fs[0]); py += fs[1]; nz += Math.sin(pz * 7 + px) * 0.025 * Math.min(1, es / DROP); }
+    var ef = pz - DUV_L, ff = fold(ef);
+    if (ef > 0) { nz = DUV_L + ff[0]; py += ff[1]; nx += Math.sin(px * 7) * 0.025 * Math.min(1, ef / DROP); }
+    py += 0.035 * Math.sin(Math.min(1, Math.max(0, pz / 0.25)) * Math.PI / 2) * (es < 0 && ef < 0 ? 1 : 0.3); // a soft puffy top
+    dp.setXYZ(dv, nx, py, nz);
+  }
+  dg.computeVertexNormals();
+  var duv = dg.attributes.uv;
+  for (var du = 0; du < duv.count; du++) duv.setXY(du, duv.getX(du) * 2.6, duv.getY(du) * 3);
+  iPart(dg, duvetMat, BX, 0.79, DUV_Z0);
+  softSlab(BED_W - 0.02, 0.22, 0.05, 0.02, R.cream, BX, 0.79, DUV_Z0 + 0.06);           // the sheet folded back over the top of the duvet
+  // pillows, a little round cushion, and a rose throw across the foot
+  [-0.43, 0.43].forEach(function (px) { softSlab(0.78, 0.46, 0.2, 0.09, R.pillow, BX + px, 0.73, HZ + 0.38).rotation.x = -0.25; });
+  softSlab(0.6, 0.36, 0.16, 0.07, rMat(0xd9c8f0), BX - 0.15, 0.8, HZ + 0.66).rotation.set(-0.35, 0.12, 0);
+  var cushion = iPart(new THREE.SphereGeometry(0.17, 16, 12), rMat(0xd98fb0), BX + 0.32, 0.95, HZ + 0.7);
+  cushion.scale.set(1, 1, 0.42); cushion.rotation.x = -0.3;
+  softSlab(BED_W + 0.08, 0.5, 0.07, 0.03, rMat(0xd98fb0, { roughness: 1 }), BX, 0.82, FZ - 0.5);
+  // sheer lavender drapes gathered at each post
+  var sheer = rMat(0xd8c4f0, { transparent: true, opacity: 0.62, side: THREE.DoubleSide, depthWrite: false });
+  [[-1, HZ], [1, HZ], [-1, FZ], [1, FZ]].forEach(function (pc, n) {
+    var cg = new THREE.PlaneGeometry(0.5, 2.3, 6, 16), cp = cg.attributes.position;
+    for (var ci = 0; ci < cp.count; ci++) {
+      var cy = cp.getY(ci) + 1.15, pinch = cy < 1.2 ? 0.35 + 0.65 * Math.abs(cy - 1.2) / 1.2 : 0.35 + 0.65 * (cy - 1.2) / 1.1; // gathered with a tie at the middle
+      cp.setXYZ(ci, cp.getX(ci) * pinch, cy, Math.sin(cp.getX(ci) * 18) * 0.03 * pinch);
+    }
+    cg.computeVertexNormals();
+    var drape = iPart(cg, sheer, BX + pc[0] * (BED_W / 2 + 0.04), 0.06, pc[1] + (n < 2 ? 0.12 : -0.12), 0, pc[0] > 0 ? -Math.PI / 2 : Math.PI / 2, 0);
+    iPart(new THREE.TorusGeometry(0.07, 0.015, 6, 12), R.gold, BX + pc[0] * (BED_W / 2 + 0.04), 1.26, pc[1] + (n < 2 ? 0.12 : -0.12), Math.PI / 2, 0, 0); // a gold tie-back
+  });
+  inSolids.push([BX, MZ - 0.7, 1.05], [BX, MZ + 0.5, 1.05]);
+  // a little black nightstand beside the bed, with a candle and a potion
+  var NSX = BX - BED_W / 2 - 0.5, NSZ = HZ + 0.3;
+  iPart(new THREE.BoxGeometry(0.55, 0.55, 0.5), bedWood, NSX, 0.3, NSZ);
+  iPart(new THREE.BoxGeometry(0.62, 0.05, 0.56), bedWood, NSX, 0.6, NSZ);
+  iPart(new THREE.BoxGeometry(0.42, 0.18, 0.02), rMat(0x26222e, { roughness: 0.6 }), NSX, 0.38, NSZ + 0.26);  // a drawer
+  iPart(new THREE.SphereGeometry(0.025, 8, 6), R.gold, NSX, 0.38, NSZ + 0.28);
+  candle(NSX - 0.12, 0.625, NSZ, 0.2);
+  potion(NSX + 0.13, 0.625, NSZ + 0.02, 0xb98cff, 0.9);
+  inSolids.push([NSX, NSZ, 0.38]);
+
+  // a tall black bookshelf on the left wall, open-fronted and empty, with a crown on top and a plinth below
+  var SX = -ROOM_W / 2 + 0.28, SZ = -0.5;                             // its middle; it faces into the room (+x)
+  var shelfBlack = rMat(0x111014, { roughness: 0.4, metalness: 0.15 }), shelfInside = rMat(0x1e1b24, { roughness: 0.6 });
+  iPart(new THREE.BoxGeometry(0.03, 2.36, 1.8), shelfInside, SX - 0.2, 1.3, SZ);                  // the back panel, a shade lighter
+  [-1, 1].forEach(function (sd) {
+    iPart(new THREE.BoxGeometry(0.46, 2.5, 0.07), shelfBlack, SX, 1.25, SZ + sd * 0.935);         // the two sides
+    iPart(new THREE.BoxGeometry(0.03, 2.3, 0.03), shelfInside, SX + 0.235, 1.3, SZ + sd * 0.905); // a fine bead down each front edge
+  });
+  iPart(new THREE.BoxGeometry(0.5, 0.07, 2.0), shelfBlack, SX, 2.47, SZ);                          // the top
+  iPart(new THREE.BoxGeometry(0.56, 0.06, 2.08), shelfBlack, SX + 0.02, 2.54, SZ);                 // a stepped crown
+  iPart(new THREE.BoxGeometry(0.6, 0.05, 2.14), shelfBlack, SX + 0.03, 2.6, SZ);
+  iPart(new THREE.BoxGeometry(0.52, 0.16, 2.0), shelfBlack, SX + 0.01, 0.08, SZ);                  // the plinth at the bottom
+  for (var shelf = 0; shelf < 4; shelf++) {                                                        // four empty shelves, each with a little lip
+    var sy = 0.2 + shelf * 0.58;
+    iPart(new THREE.BoxGeometry(0.42, 0.04, 1.8), shelfBlack, SX, sy, SZ);
+    iPart(new THREE.BoxGeometry(0.03, 0.07, 1.8), shelfBlack, SX + 0.215, sy + 0.01, SZ);
+  }
+  inSolids.push([SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]);
+
+  // the rug in the middle of the room
+  var rugSide = rMat(0x2a2050, { roughness: 1 }), RUG_X = 0.1, RUG_Z = 0.6, RUG_W = 3.9, RUG_D = 2.7; // a rectangular woven rug
+  iPart(new THREE.BoxGeometry(RUG_W, 0.03, RUG_D), [rugSide, rugSide, R.rug, rugSide, rugSide, rugSide], RUG_X, 0.015, RUG_Z);
+  var fringeMat = rMat(0xf5e9d3, { roughness: 1 }), knotMat = rMat(0xe3b553, { roughness: 0.8 });
+  [-1, 1].forEach(function (sd) {                                      // soft cream tassels along both short ends, each tied with a little gold knot
+    for (var fr = 0; fr < 14; fr++) {
+      var fz = RUG_Z - RUG_D / 2 + 0.12 + fr * (RUG_D - 0.24) / 13, fx = RUG_X + sd * (RUG_W / 2 + 0.03);
+      iPart(new THREE.SphereGeometry(0.03, 8, 6), knotMat, fx, 0.02, fz).scale.set(1, 0.6, 1);
+      for (var st = -1; st <= 1; st++) {
+        iPart(new THREE.BoxGeometry(0.17, 0.01, 0.014), fringeMat, fx + sd * 0.1, 0.008, fz + st * 0.018, 0, st * 0.18 * sd, 0);
+      }
+    }
+  });
+
+
+
+
+  // windows: arched wooden frames with little panes, a deep sill, a twilight sky outside, and pleated pink curtains
+  // gathered back with gold tie-backs, hung from a gold rod with ball finials under a ruffled valance
+  var skyTex = paintTexture(128, 160, function (g, w, h) {            // the view: a soft dusky sky with a few stars and distant hills
+    var sky = g.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#3c3a7a'); sky.addColorStop(0.55, '#8e7ac0'); sky.addColorStop(0.85, '#e8b4c8'); sky.addColorStop(1, '#f6d2b8');
+    g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,248,230,0.9)';
+    [[18, 14], [52, 30], [96, 18], [76, 52], [30, 60], [110, 70], [64, 10]].forEach(function (st) { g.beginPath(); g.arc(st[0], st[1], 1.3, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = '#5a5a8a';
+    g.beginPath(); g.moveTo(0, h); g.lineTo(0, h - 22); g.quadraticCurveTo(40, h - 40, 80, h - 26); g.quadraticCurveTo(110, h - 18, w, h - 30); g.lineTo(w, h); g.fill();
+  });
+  var paneMat = rMat(0xffffff, { map: skyTex, emissive: 0xffffff, emissiveMap: skyTex, emissiveIntensity: 0.55, roughness: 0.2 });
+  var winFrame = rMat(0xf1e6da, { roughness: 0.6 });                  // creamy painted wood
+  var curtainMat = rMat(0xe07aae, { roughness: 0.9, side: THREE.DoubleSide });
+  var curtainLining = rMat(0xf5c4dc, { roughness: 0.9 });
+  var WIN_W = 0.9, WIN_H = 1.05, ARCH = 0.3;
+  function winArch(w, h, a) { var s = new THREE.Shape(); s.moveTo(-w / 2, -h / 2); s.lineTo(w / 2, -h / 2); s.lineTo(w / 2, h / 2 - a); s.quadraticCurveTo(w / 2, h / 2 + a * 0.35, 0, h / 2 + a * 0.35); s.quadraticCurveTo(-w / 2, h / 2 + a * 0.35, -w / 2, h / 2 - a); s.lineTo(-w / 2, -h / 2); return s; }
+  [['N', 1.05], ['E', 0.2]].forEach(function (wd) {
+    var wg = new THREE.Group(); wg.position.set(wd[1], 1.85, 0.02); inWalls[wd[0]].g.add(wg);
+    var outer = winArch(WIN_W + 0.16, WIN_H + 0.16, ARCH + 0.06);
+    outer.holes.push(winArch(WIN_W, WIN_H, ARCH));
+    iPart(new THREE.ExtrudeGeometry(outer, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 }), winFrame, 0, 0, 0, 0, 0, 0, wg);
+    var paneGeo = new THREE.ShapeGeometry(winArch(WIN_W, WIN_H, ARCH)), puv = paneGeo.attributes.uv, pp = paneGeo.attributes.position;
+    for (var pv = 0; pv < puv.count; pv++) puv.setXY(pv, pp.getX(pv) / WIN_W + 0.5, (pp.getY(pv) + WIN_H / 2) / (WIN_H + ARCH * 0.35));
+    iPart(paneGeo, paneMat, 0, 0, 0.005, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.035, WIN_H + ARCH * 0.3, 0.04), winFrame, 0, 0.04, 0.04, 0, 0, 0, wg);                    // the glazing bars
+    [-0.18, 0.18].forEach(function (by) { iPart(new THREE.BoxGeometry(WIN_W, 0.035, 0.04), winFrame, 0, by, 0.04, 0, 0, 0, wg); });
+    iPart(new THREE.BoxGeometry(WIN_W + 0.36, 0.06, 0.2), winFrame, 0, -WIN_H / 2 - 0.1, 0.1, 0, 0, 0, wg);                  // a deep sill
+    iPart(new THREE.BoxGeometry(WIN_W + 0.2, 0.08, 0.05), winFrame, 0, -WIN_H / 2 - 0.16, 0.04, 0, 0, 0, wg);
+    var ROD_Y = WIN_H / 2 + ARCH * 0.35 + 0.18, ROD_W = WIN_W + 0.8;
+    iPart(new THREE.CylinderGeometry(0.018, 0.018, ROD_W, 8), R.gold, 0, ROD_Y, 0.16, 0, 0, Math.PI / 2, wg);           // the curtain rod
+    [-1, 1].forEach(function (sd) {
+      iPart(new THREE.SphereGeometry(0.04, 10, 8), R.gold, sd * ROD_W / 2, ROD_Y, 0.16, 0, 0, 0, wg);                    // ball finials
+      iPart(new THREE.BoxGeometry(0.03, 0.03, 0.14), R.gold, sd * (ROD_W / 2 - 0.1), ROD_Y, 0.09, 0, 0, 0, wg);           // brackets
+      // a pleated curtain: hangs in soft folds from the rod, gathered in at a tie-back, then flares out below
+      var CW = 0.42, CH = ROD_Y + WIN_H / 2 + 0.3, cg = new THREE.PlaneGeometry(CW, CH, 16, 24), cp = cg.attributes.position;
+      for (var ci = 0; ci < cp.count; ci++) {
+        var u = cp.getX(ci) / CW + 0.5, v = 1 - (cp.getY(ci) / CH + 0.5);    // u across, v from the rod (0) down to the hem (1)
+        var tie = 0.62, gather = v < tie ? 1 - 0.55 * Math.pow(v / tie, 1.6) : 0.45 + 0.4 * Math.pow((v - tie) / (1 - tie), 0.8);
+        var x = (u - 0.5) * CW * gather - sd * (1 - gather) * 0.12;         // pulled toward the outside edge at the tie-back
+        var z = Math.sin(u * Math.PI * 6) * 0.025 * (0.6 + gather * 0.5); // the pleats
+        cp.setXYZ(ci, x, cp.getY(ci), z);
+      }
+      cg.computeVertexNormals();
+      var cx = sd * (WIN_W / 2 + 0.18);
+      iPart(cg, curtainMat, cx, ROD_Y - CH / 2, 0.13, 0, 0, 0, wg);
+      iPart(new THREE.TorusGeometry(0.06, 0.016, 6, 14), R.gold, cx - sd * 0.1, ROD_Y - CH * 0.62, 0.16, 0, Math.PI / 2, 0, wg); // gold tie-back
+      for (var rr = 0; rr < 4; rr++) iPart(new THREE.TorusGeometry(0.026, 0.006, 5, 10), R.gold, cx + (rr - 1.5) * 0.1, ROD_Y, 0.16, 0, Math.PI / 2, 0, wg); // curtain rings
+    });
+    var vg = new THREE.PlaneGeometry(ROD_W - 0.1, 0.2, 30, 3), vp = vg.attributes.position;   // a ruffled valance across the top
+    for (var vi = 0; vi < vp.count; vi++) {
+      var vx = vp.getX(vi), vy = vp.getY(vi), scallop = vy < -0.05 ? -0.04 * Math.abs(Math.sin(vx * Math.PI / 0.27)) : 0;
+      vp.setXYZ(vi, vx, vy + scallop, Math.sin(vx * 40) * 0.015);
+    }
+    vg.computeVertexNormals();
+    iPart(vg, curtainMat, 0, ROD_Y - 0.06, 0.18, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(ROD_W - 0.1, 0.025, 0.02), curtainLining, 0, ROD_Y + 0.04, 0.18, 0, 0, 0, wg);
+  });
+
+  // twinkly string lights along the top of the walls
+  var inLights = [];
+  function lightRun(name, len, n) { // a sagging string of lights along the top of one wall
+    for (var i = 0; i <= n; i++) {
+      var lx = -len / 2 + 0.2 + (len - 0.4) * i / n, ly = ROOM_H - 0.32 - Math.sin((i % 4) / 4 * Math.PI) * 0.12;
+      var lm = rMat(i % 2 ? 0xffd27a : 0xff9be0, { emissive: i % 2 ? 0xffb040 : 0xff6fcf, emissiveIntensity: 1 });
+      wallPart(name, new THREE.SphereGeometry(0.05, 8, 6), lm, lx, ly, 0.2);
+      var lh = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: i % 2 ? 0xffc060 : 0xff8fe0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      lh.position.set(lx, ly, 0.2); lh.scale.set(0.3, 0.3, 1); inWalls[name].g.add(lh);
+      inLights.push({ s: lh, p: i * 1.3 + len });
+    }
+  }
+  lightRun('N', ROOM_W, 18);
+  lightRun('W', ROOM_D, 13);
+  lightRun('E', ROOM_D, 13);
+
+  // the front door (seen from inside): walk up to it to go back out
+  wallPart('S', new THREE.PlaneGeometry(1.1, 1.5), R.door, 0, 0.75, 0.03);
+  wallPart('S', new THREE.CircleGeometry(0.55, 18, 0, Math.PI), R.door, 0, 1.5, 0.03);
+  wallPart('S', new THREE.TorusGeometry(0.6, 0.07, 6, 18, Math.PI), R.darkWood, 0, 1.5, 0.06);        // a wooden frame round the door
+  [-1, 1].forEach(function (sd) { wallPart('S', new THREE.BoxGeometry(0.14, 1.5, 0.1), R.darkWood, sd * 0.62, 0.75, 0.06); });
+  wallPart('S', new THREE.SphereGeometry(0.06, 10, 8), R.gold, 0.35, 0.8, 0.08);
+  var EXIT_Z = -NW - 0.6;
+
+  var wallLook = new THREE.Vector3();
+  function updateInterior(dt, t) {
+    if (!indoors || inShop || inClinic || inBarn) return;
+    for (var wn in inWalls) { // hide any wall the camera is behind, windows and all, so it never blocks the view
+      var W = inWalls[wn];
+      wallLook.set(camera.position.x - IN_X - W.c.x, 0, camera.position.z - IN_Z - W.c.z);
+      W.g.visible = wallLook.dot(W.n) > 0;
+    }
+    fireLight.intensity = 1.5 + Math.sin(t * 11) * 0.15 + Math.sin(t * 17.3) * 0.12;
+    flames.forEach(function (f) {                                       // flames lick upward and sway
+      var k = 1 + Math.sin(t * 9 + f.p) * 0.18 + Math.sin(t * 15.7 + f.p * 2) * 0.1;
+      f.m.scale.set(0.9 + Math.sin(t * 6 + f.p) * 0.1, f.base * k, 0.9);
+      f.m.rotation.z = Math.sin(t * 5 + f.p) * 0.12;
+      f.m.position.x = FPX + f.x + Math.sin(t * 4 + f.p) * 0.02;
+    });
+    fireSparks.forEach(function (sp) {                                  // sparks drift up the chimney and wink out
+      sp.t += dt * sp.sp;
+      if (sp.t > 1) { sp.t -= 1; sp.x = (Math.random() - 0.5) * 0.6; }
+      sp.s.position.set(FPX + sp.x + Math.sin(sp.t * 9 + sp.sp * 5) * 0.06, 0.45 + sp.t * 0.85, FIRE_Z + 0.1);
+      sp.s.material.opacity = (1 - sp.t) * 0.9;
+    });
+    emberGlow.material.opacity = 0.65 + Math.sin(t * 3.1) * 0.1 + Math.sin(t * 7.7) * 0.06;
+    hearthGlow.material.opacity = 0.28 + Math.sin(t * 11) * 0.04;
+    crystal.material.emissiveIntensity = 0.6 + Math.sin(t * 1.6) * 0.25;
+    candleGlows.forEach(function (c, n) { c.material.opacity = 0.75 + Math.sin(t * 12 + n * 2) * 0.12; });
+    inLights.forEach(function (L) { L.s.material.opacity = 0.32 + 0.18 * Math.sin(t * 2 + L.p); });
+  }
+
+  // Going in and out: walk up to the front door to go in, and up to it again from inside to come back out
+  var fadeBox = document.createElement('div');
+  fadeBox.style.cssText = 'position:absolute;left:0;top:0;right:0;bottom:0;background:#120a1c;opacity:0;pointer-events:none;transition:opacity 0.35s;border-radius:inherit;z-index:5;';
+  canvas.parentNode.appendChild(fadeBox);
+  var doorBusy = false, doorArmed = true, outsideCam = null;
+  var OUT_DOOR_X = HOUSE_X, OUT_DOOR_Z = HOUSE_Z + HD / 2 + 0.55;      // standing right in front of the door
+  function inRoom(x, z) { return inBarn ? inBarnRoom(x, z) : inClinic ? inClinicRoom(x, z) : inShop ? inShopRoom(x, z) : Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
+  function useDoor(goIn, toShop) {                                   // toShop: true for the seed shop's door, 'clinic' for the clinic's, 'barn' for Fluff & Feather's, or nothing for the farmhouse's
+    if (doorBusy) return;
+    doorBusy = true;
+    doorArmed = false;
+    walkTarget = null;
+    doorSound();
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      var leftShop = inShop, leftClinic = inClinic, leftBarn = inBarn;
+      indoors = goIn;
+      inShop = goIn && toShop === true;
+      inClinic = goIn && toShop === 'clinic';
+      inBarn = goIn && toShop === 'barn';
+      if (goIn) {
+        if (inBarn) {
+          abScene.add(player);
+          player.position.set(AB_X, 0, AB_Z + AB_EXIT_Z - 1.0);
+        } else if (inClinic) {
+          clinicScene.add(player);
+          player.position.set(CIN_X, 0, CIN_Z + CIN_EXIT_Z - 1.0);
+        } else if (inShop) {
+          shopScene.add(player);
+          player.position.set(SIN_X, 0, SIN_Z + SIN_EXIT_Z - 1.0);
+        } else {
+          interiorScene.add(player);
+          player.position.set(IN_X, 0, IN_Z + EXIT_Z - 1.0);
+        }
+        facing = Math.PI;                                           // facing into the room
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+        cam.dist = inBarn ? 9 : inShop || inClinic ? 8.5 : 7.5; cam.pitch = 0.85; cam.yaw = 0;
+      } else {
+        scene.add(player);
+        if (leftBarn) {
+          var bOut = animalFront(1.6);
+          player.position.set(bOut.x, 0, bOut.z);
+          facing = ANIMAL_TURN;                                     // facing out, down the ramp
+        } else if (leftClinic) {
+          var cOut = clinicFront(2.3);
+          player.position.set(cOut.x, 0, cOut.z);
+          facing = CLINIC_TURN;                                     // facing out, away from the clinic
+        } else if (leftShop) {
+          var out = shopFront(2.0);
+          player.position.set(out.x, 0, out.z);
+          facing = SHOP_TURN;                                       // facing out, away from the shop
+        } else {
+          player.position.set(OUT_DOOR_X, 0, OUT_DOOR_Z + 1.0);
+          facing = 0;                                               // facing out, away from the door
+        }
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+      }
+      cam.target.set(player.position.x, 0.8, player.position.z);   // jump the camera straight there
+      fadeBox.style.opacity = 0;
+      setTimeout(function () { doorBusy = false; }, 380);
+    }, 380);
+  }
+  function updateDoors() {
+    var px = player.position.x, pz = player.position.z;
+    var dShop = indoors ? (inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99) : dist(px, pz, shopDoor.x, shopDoor.z);
+    var dClinic = indoors ? (inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99) : dist(px, pz, clinicDoor.x, clinicDoor.z);
+    var dBarn = indoors ? (inBarn ? dist(px, pz, AB_X, AB_Z + AB_EXIT_Z) : 99) : dist(px, pz, barnDoor.x, barnDoor.z);
+    var d = indoors ? (inShop || inClinic || inBarn ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
+    if (!doorArmed) { if (Math.min(d, dShop, dClinic, dBarn) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
+    if (d < 0.5) useDoor(!indoors);
+    else if (dShop < (indoors ? 0.5 : 0.22)) useDoor(!indoors, true);   // outside, you have to climb right up to the shop door
+    else if (dClinic < (indoors ? 0.5 : 0.22)) useDoor(!indoors, 'clinic');
+    else if (dBarn < (indoors ? 0.5 : 0.25)) useDoor(!indoors, 'barn');
+  }
+  // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
+  var sleepBtn = document.createElement('button');
+  sleepBtn.type = 'button';
+  sleepBtn.className = 'sleep-btn';
+  sleepBtn.innerHTML = '🌙 Sleep <kbd>Z</kbd>';
+  canvas.parentNode.appendChild(sleepBtn);
+  var sleeping = false;
+  function nearBed() {
+    if (!indoors) return false;
+    var lx = player.position.x - IN_X - BX, lz = player.position.z - IN_Z - MZ;  // from the middle of the bed
+    return Math.abs(lx) < BED_W / 2 + 0.9 && Math.abs(lz) < BED_L / 2 + 0.6;
+  }
+  function goToSleep() {
+    if (sleeping || doorBusy || !nearBed()) return;
+    sleeping = true;
+    walkTarget = null;
+    sleepSound();
+    fadeBox.style.transition = 'opacity 0.9s';
+    fadeBox.style.opacity = 1;
+    showToast('Zzz…', 1600);
+    var stayedUpLate = state.minutes < 2 * 60;                         // got to bed between midnight and 2 am?
+    setTimeout(function () {
+      wakeNextMorning(stayedUpLate);                                   // well rested: full mana and stamina at 6 am (only half if you stayed up late)
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast(stayedUpLate ? 'Good morning… you stayed up late, so you only have half your stamina 🥱 ☀ Day ' + state.day : 'Good morning! ☀ Day ' + state.day, stayedUpLate ? 3400 : 2600);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = false; }, 900);
+      }, 1200);
+    }, 1000);
+  }
+  // ---------- Stamina ----------
+  // Swinging tools and watering use stamina. Run out and you collapse, waking up at home the next morning.
+  // Sleeping fills it back up, and eating a moonbloom gives you some back (never more than MAX_STAMINA)
+  var passingOut = false, tiredWarned = false;
+  function useStamina(n) {
+    state.stamina -= n;
+    if (state.stamina <= 0) state.stamina = -(2 + Math.floor(Math.random() * 4));   // run out and you overdo it, a couple of points into the negatives (-2 to -5)
+    if (state.stamina <= 60 && !tiredWarned) { tiredWarned = true; showToast('You\'re getting tired… eat a moonbloom or head to bed 🌙', 2600); }
+  }
+  function eatBloom() {
+    if (state.stamina >= MAX_STAMINA) { showToast('You\'re full of energy already!', 1600); return; }
+    if (!takeItem('bloom', 1)) return;
+    var gain = 25 + Math.floor(Math.random() * 51);                     // a random 25 to 75
+    var before = state.stamina;
+    state.stamina = Math.min(MAX_STAMINA, state.stamina + gain);
+    if (state.stamina > 60) tiredWarned = false;
+    burst(player.position.x, 1.4, player.position.z, 0xffb3e6, 14, 1.5, 1.5, -3);
+    popSound();
+    showToast('Yum! +' + Math.round(state.stamina - before) + ' stamina 🌸', 1800);
+  }
+  function wakeNextMorning(halfStamina) {                             // shared by sleeping and collapsing (halfStamina: you stayed up past midnight)
+    if (state.minutes >= 6 * 60) state.day += 1;                      // wake at 6 am the next morning
+    state.minutes = 6 * 60;                                            // (after midnight, it's 6 am that same morning)
+    state.mana = MAX_MANA;
+    state.stamina = halfStamina ? MAX_STAMINA / 2 : MAX_STAMINA;
+    tiredWarned = false;
+    updateClock(0);
+  }
+  function passOut() {                                                // out of stamina: everything goes dark and you wake up at home
+    if (passingOut || sleeping) return;
+    passingOut = sleeping = true;
+    walkTarget = null; keys = {};
+    if (binOpen) closeBin();
+    if (shopOpen) closeShop();
+    if (barnShopOpen) closeBarnShop();
+    toggleBag(false);
+    sleepSound();
+    showToast('You\'re exhausted… 💫', 1800);
+    fadeBox.style.transition = 'opacity 1.2s';
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+      indoors = true; inShop = false; inClinic = false; inBarn = false;  // carried home, next to your bed
+      interiorScene.add(player);
+      player.position.set(IN_X + BX - BED_W / 2 - 0.55, 0, IN_Z + MZ);
+      facing = -Math.PI / 2;
+      cam.dist = 7.5; cam.pitch = 0.85; cam.yaw = 0;
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      doorArmed = false;
+      var overdid = Math.max(0, Math.round(-state.stamina));             // how far into the negatives you went
+      wakeNextMorning();
+      state.stamina = MAX_STAMINA - overdid;                            // and that much is missing from tomorrow's stamina
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('You collapsed and woke up at home. You overdid it, so you start the day ' + overdid + ' stamina short. ☀ Day ' + state.day, 3600);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = passingOut = false; }, 1300);
+      }, 1500);
+    }, 1400);
+  }
+  // Bedtime: at midnight the clock turns red and chimes. Get to bed by 2 am (you'll wake with half stamina). Still up at
+  // 2 am? You pass out, wake up at the clinic at 6 am with half stamina, and the visit costs 500 Star Coins
+  var CLINIC_FEE = 500, wasLate = null;
+  function lateAlarm() {                                               // a little two-tone alarm: ding-dong, ding-dong
+    if (!audioCtx) return;
+    [988, 740, 988, 740].forEach(function (fr, i) { bellTone(fr, 0.07, 0.6, i * 0.28); bellTone(fr * 2, 0.02, 0.4, i * 0.28 + 0.01); });
+  }
+  function updateBedtime() {
+    var late = state.minutes < 6 * 60;                                 // from midnight until morning
+    if (wasLate !== late) {
+      ui.clock.style.color = late ? '#e0304a' : '';
+      ui.clock.style.fontWeight = late ? '700' : '';
+      if (late && wasLate === false && !sleeping) { lateAlarm(); showToast('It\'s midnight! 🌙 Get to bed by 2 am…', 3000); }
+      wasLate = late;
+    }
+    if (state.minutes >= 2 * 60 && state.minutes < 6 * 60 && !sleeping && !passingOut) collapseToClinic();
+  }
+  function collapseToClinic() {                                        // up too late: you pass out and wake up at the clinic
+    passingOut = sleeping = true;
+    walkTarget = null; keys = {};
+    if (binOpen) closeBin();
+    if (shopOpen) closeShop();
+    if (barnShopOpen) closeBarnShop();
+    toggleBag(false);
+    sleepSound();
+    showToast('It\'s 2 am… you can\'t keep your eyes open 💫', 1800);
+    fadeBox.style.transition = 'opacity 1.2s';
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+      indoors = true; inShop = false; inClinic = true; inBarn = false;   // carried to the clinic, beside the exam table
+      clinicScene.add(player);
+      player.position.set(CIN_X + 2.0, 0, CIN_Z - 1.1);
+      facing = Math.PI;
+      cam.dist = 8.5; cam.pitch = 0.85; cam.yaw = 0;
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      doorArmed = false;
+      var paid = Math.min(CLINIC_FEE, state.coins);                    // the visit costs 500 Star Coins (or all you have, if you have less)
+      state.coins -= paid;
+      showCoins(true);
+      wakeNextMorning(true);
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('You passed out and woke up at Everdawn Clinic. The visit cost ' + paid + ' Star Coins, and you only have half your stamina. ☀ Day ' + state.day, 4200);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = passingOut = false; }, 1300);
+      }, 1500);
+    }, 1400);
+  }
+  function updateStamina() {
+    if (ui.stamina) ui.stamina.style.width = (Math.max(0, state.stamina) / MAX_STAMINA * 100).toFixed(1) + '%';
+    var stText = Math.ceil(state.stamina - 0.001) + ' / ' + MAX_STAMINA;
+    if (ui.staminaNum) ui.staminaNum.style.color = state.stamina < 0 ? '#e0304a' : '';   // shown in red while you're in the negatives
+    if (ui.staminaNum && ui.staminaNum.textContent !== stText) ui.staminaNum.textContent = stText;
+    if (state.stamina <= 0 && !passingOut && !sleeping) passOut();
+    updateBedtime();
+  }
+  sleepBtn.addEventListener('click', function () { goToSleep(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyZ') goToSleep(); });
+  function updateSleepButton() {
+    var show = nearBed() && !sleeping;
+    if (sleepBtn.classList.contains('show') !== show) sleepBtn.classList.toggle('show', show);
+  }
+
+
+  // ---------- Chopping trees ----------
+  var CHOPS_TO_FELL = 10, WOOD_PER_TREE = 15;
+  var REGROW_DAYS = 75;   // in-game days for a felled tree to grow all the way back
+  var SPROUT_DAYS = 1;    // the spot stays empty this long before a little sapling sprouts
+  function gameMinutes() { return (state.day - 1) * 24 * 60 + state.minutes; } // in-game minutes since Day 1 began
+  var FALL_MATS = [barkMat, pineBarkMat, pineCoreMat]; // trunks and branches fall; roots and soil stay
+  // Ranges of the big shared buffers that changed this frame, sent to the graphics card in one go
+  var dirtyRanges = [];
+  function markDirty(attr, start, count) {
+    for (var i = 0; i < dirtyRanges.length; i++) {
+      var d = dirtyRanges[i];
+      if (d.attr === attr) { d.lo = Math.min(d.lo, start); d.hi = Math.max(d.hi, start + count); return; }
+    }
+    dirtyRanges.push({ attr: attr, lo: start, hi: start + count });
+  }
+  function flushDirty() {
+    dirtyRanges.forEach(function (d) {
+      d.attr.updateRange.offset = d.lo;
+      d.attr.updateRange.count = d.hi - d.lo;
+      d.attr.needsUpdate = true;
+    });
+    dirtyRanges = [];
+  }
+  // Remember every tree's (and bush's) own trunk, branches and leaves inside the shared batches
+  choppable.concat(trimmable).forEach(function (t) {
+    var u = t.userData;
+    u.base = t.position.clone();
+    u.hits = 0;
+    u.state = 'standing';
+    u.solidR = u.solid.r;
+    u.parts = [];
+    (u.pieces || []).forEach(function (pc) {
+      var falls = FALL_MATS.indexOf(pc.entry.mat) >= 0; // trunk and branches fall; roots and soil vanish with the tree
+      var pos = pc.entry.mesh.geometry.attributes.position, vs = pc.geo.userData.vStart, vc = pc.geo.attributes.position.count;
+      u.parts.push({
+        falls: falls, flat: pc.entry.mat === litterMat, mesh: pc.entry.mesh, vStart: vs, vCount: vc, // flat: the leaf pile on the ground
+        iStart: pc.geo.userData.iStart, iCount: pc.geo.index ? pc.geo.index.count : vc,
+        orig: pos.array.slice(vs * 3, (vs + vc) * 3)
+      });
+    });
+    u.pieces = null;
+    u.leafOrig = u.leaves.map(function (L) { return L.batch.instanceMatrix.array.slice(L.start * 16, (L.start + L.count) * 16); });
+  });
+
+  // Moves a whole tree by matrix M (worked out around its base): used to grow, shrink and shudder it
+  var growM = new THREE.Matrix4(), chopM = new THREE.Matrix4(), chopM2 = new THREE.Matrix4();
+  // which: 'fall' moves only the trunk, branches and leaves; 'ground' only the roots and soil patch; nothing = all
+  function setTreeTransform(t, M, which) {
+    var u = t.userData, e = M.elements;
+    u.parts.forEach(function (pt) {
+      if (which === 'fall' && !pt.falls) return;
+      if (which === 'ground' && pt.falls) return;
+      if (which === 'tilt' && pt.flat) return; // the leaf pile stays flat on the ground while the tree shudders
+      var attr = pt.mesh.geometry.attributes.position, arr = attr.array, o = pt.orig, s0 = pt.vStart * 3;
+      for (var i = 0; i < o.length; i += 3) {
+        var x = o[i], y = o[i + 1], z = o[i + 2];
+        arr[s0 + i] = e[0] * x + e[4] * y + e[8] * z + e[12];
+        arr[s0 + i + 1] = e[1] * x + e[5] * y + e[9] * z + e[13];
+        arr[s0 + i + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
+      }
+      markDirty(attr, s0, o.length);
+    });
+    if (which === 'ground') return;
+    growM.copy(M);
+    u.leaves.forEach(function (L, n) {
+      if (!L.count) return;
+      var o = u.leafOrig[n], arr = L.batch.instanceMatrix.array;
+      for (var i = 0; i < L.count; i++) {
+        chopM.fromArray(o, i * 16).premultiply(growM);
+        chopM.toArray(arr, (L.start + i) * 16);
+      }
+      markDirty(L.batch.instanceMatrix, L.start * 16, L.count * 16);
+    });
+  }
+  // Shrinks a tree toward its base (k = 0 hides it, k = 1 is full size): used when it's felled and as it regrows
+  var treeM = new THREE.Matrix4(), treeM2 = new THREE.Matrix4();
+  function setTreeGrowth(t, k, which) {
+    var b = t.userData.base;
+    treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeScale(k, k, k)).multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
+    setTreeTransform(t, treeM, which);
+  }
+  // Tilts a tree a little around its base, toward direction (dx, dz): used to make it shudder when hit
+  var tiltQ = new THREE.Quaternion(), tiltAxis = new THREE.Vector3();
+  function setTreeTilt(t, angle, dx, dz) {
+    var b = t.userData.base;
+    tiltAxis.set(dz, 0, -dx).normalize();
+    treeM.makeTranslation(b.x, b.y, b.z).multiply(treeM2.makeRotationFromQuaternion(tiltQ.setFromAxisAngle(tiltAxis, angle)))
+      .multiply(new THREE.Matrix4().makeTranslation(-b.x, -b.y, -b.z));
+    setTreeTransform(t, treeM, 'tilt');
+  }
+
+  // A copy of the tree that can tip over on its own, pivoting just above the stump
+  function makeFallingTree(t) {
+    var u = t.userData, b = u.base, grp = new THREE.Group();
+    grp.position.set(b.x, b.y + u.stumpH, b.z);
+    u.parts.forEach(function (pt) {
+      if (!pt.falls) return;
+      var src = pt.mesh.geometry, g = new THREE.BufferGeometry(), vs = pt.vStart, vc = pt.vCount, i;
+      var pos = new Float32Array(vc * 3);
+      for (i = 0; i < vc; i++) {
+        pos[i * 3] = pt.orig[i * 3] - b.x;
+        pos[i * 3 + 1] = pt.orig[i * 3 + 1] - b.y - u.stumpH;
+        pos[i * 3 + 2] = pt.orig[i * 3 + 2] - b.z;
+      }
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(src.attributes.normal.array.slice(vs * 3, (vs + vc) * 3), 3));
+      g.setAttribute('uv', new THREE.BufferAttribute(src.attributes.uv.array.slice(vs * 2, (vs + vc) * 2), 2));
+      if (src.attributes.color) g.setAttribute('color', new THREE.BufferAttribute(src.attributes.color.array.slice(vs * 3, (vs + vc) * 3), 3));
+      var idx = new Uint32Array(pt.iCount);
+      for (i = 0; i < pt.iCount; i++) idx[i] = src.index.array[pt.iStart + i] - vs;
+      g.setIndex(new THREE.BufferAttribute(idx, 1));
+      var m = new THREE.Mesh(g, pt.mesh.material);
+      m.castShadow = true;
+      grp.add(m);
+    });
+    chopM2.makeTranslation(-b.x, -b.y - u.stumpH, -b.z);
+    u.leaves.forEach(function (L, n) {
+      if (!L.count) return;
+      var im = new THREE.InstancedMesh(L.batch.geometry, L.batch.material, L.count), c = new THREE.Color();
+      im.customDepthMaterial = L.batch.customDepthMaterial;
+      im.castShadow = true;
+      im.frustumCulled = false;
+      for (var i = 0; i < L.count; i++) {
+        chopM.fromArray(u.leafOrig[n], i * 16).premultiply(chopM2);
+        im.setMatrixAt(i, chopM);
+        c.fromArray(L.batch.instanceColor.array, (L.start + i) * 3);
+        im.setColorAt(i, c);
+      }
+      grp.add(im);
+    });
+    scene.add(grp);
+    return grp;
+  }
+
+  // Tree stumps: bark round the side, rings on top
+  var ringCanvas = document.createElement('canvas');
+  ringCanvas.width = ringCanvas.height = 128;
+  (function (g) {
+    g.fillStyle = '#d8b98a';
+    g.fillRect(0, 0, 128, 128);
+    for (var r = 6; r < 64; r += 4 + Math.random() * 3) {
+      g.strokeStyle = 'rgba(140,96,58,' + (0.3 + Math.random() * 0.3) + ')';
+      g.lineWidth = 1 + Math.random();
+      g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.stroke();
+    }
+    g.fillStyle = '#a77a4c';
+    g.beginPath(); g.arc(64, 64, 4, 0, Math.PI * 2); g.fill();
+  })(ringCanvas.getContext('2d'));
+  var stumpTopMat = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(ringCanvas), roughness: 0.9 });
+  function makeStump(t) {
+    var u = t.userData, s = u.size;
+    var geo = u.leafy ? new THREE.CylinderGeometry(0.3 * s, 0.42 * s, u.stumpH, 14) : new THREE.CylinderGeometry(0.22 * s, 0.26 * s, u.stumpH, 12);
+    var m = new THREE.Mesh(geo, [u.leafy ? barkMat : pineBarkMat, stumpTopMat, barkMat]);
+    m.position.set(u.base.x, u.base.y + u.stumpH / 2, u.base.z);
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+    return m;
+  }
+
+  // The nearest standing tree you're close enough to chop
+  function treeInReach() {
+    var best = null, bestD = 99;
+    choppable.forEach(function (t) {
+      var u = t.userData;
+      if (u.state !== 'standing') return;
+      var d = dist(player.position.x, player.position.z, u.base.x, u.base.z);
+      if (d < u.solid.r + 1.1 && d < bestD) { best = t; bestD = d; }
+    });
+    return best;
+  }
+
+  var SWING_TIME = 0.6, IMPACT = 0.27; // seconds: a whole swing, and when the axe bites into the trunk
+  var swingT = 9, swingTree = null, swingRock = null; // time since the last swing started, and what it's aimed at
+  // ---------- Tilling soil with the hoe ----------
+  var TILL_FIND_CHANCE = 0.15; // each time you till, a 15% chance of digging something up
+  var TILL_FINDS = ['stone', 'fiber', 'sap', 'acorn', 'pinecone', 'coal', 'hay', 'wood'];
+  var swingTile = null, tilling = [];
+  function tillTile(tile) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    useStamina(STAMINA_COST.hoe);
+    swingTile = tile;
+    facing = Math.atan2(tile.x - player.position.x, tile.z - player.position.z);
+  }
+  // The hoe bites into the ground: the turf flips over into a mound of soil with furrows
+  function hoeHits(tile) {
+    if (tile.soil) return;
+    tile = keepTile(tile);
+    coverGrass(tile);
+    buildSoil(tile, true);                    // three furrows, raised one after another
+    tile.soil.scale.set(0.6, 0.05, 0.6);
+    tile.tillT = 0;
+    tilling.push(tile);
+    tillSound();
+    burst(tile.x, 0.2, tile.z, 0x8a5a36, 16, 2.6, 2.2, -8); // clods of earth
+    burst(tile.x, 0.2, tile.z, 0x6aa84f, 8, 2, 1.8, -7);    // bits of turf
+    if (Math.random() < TILL_FIND_CHANCE) { // dug something up!
+      var find = TILL_FINDS[Math.floor(Math.random() * TILL_FINDS.length)];
+      dropPickup(find, 1, tile.x + (Math.random() - 0.5) * 0.4, tile.z + (Math.random() - 0.5) * 0.4, 0.12, 0.35);
+      findSound();
+      burst(tile.x, 0.4, tile.z, 0xfff1a8, 10, 2, 2, -3);
+    }
+  }
+  function updateTilling(dt) {
+    for (var i = tilling.length - 1; i >= 0; i--) {
+      var tile = tilling[i];
+      tile.tillT += dt;
+      var t = tile.tillT;
+      // the soil heaves up with a little bounce, then settles
+      var k = Math.min(1, t / 0.3);
+      var bounce = k < 1 ? 1 - Math.pow(1 - k, 3) : 1 + Math.sin(Math.min(1, (t - 0.3) / 0.3) * Math.PI) * 0.12 * Math.max(0, 1 - (t - 0.3) / 0.3);
+      tile.soil.scale.set(0.6 + 0.4 * Math.min(1, k * 1.4), Math.max(0.05, bounce), 0.6 + 0.4 * Math.min(1, k * 1.4));
+      tile.ridges.forEach(function (ridge, n) { // furrows rise one by one
+        var rk = Math.max(0, Math.min(1, (t - 0.15 - n * 0.1) / 0.2));
+        ridge.scale.y = Math.max(0.001, rk * (rk < 1 ? 1.2 : 1));
+      });
+      if (t > 0.7) { tile.soil.scale.set(1, 1, 1); tilling.splice(i, 1); }
+    }
+  }
+
+  // ---------- Trimming bushes ----------
+  var SNIPS_TO_TRIM = 10, HAY_CHANCE = 0.5, swingBush = null;
+  var allScenery = null; // every tree and bush, filled in once everything is set up
+  function bushInReach() {
+    var best = null, bestD = 99;
+    trimmable.forEach(function (b) {
+      var u = b.userData;
+      if (u.state !== 'standing') return;
+      var d = dist(player.position.x, player.position.z, u.base.x, u.base.z);
+      if (d < u.solidR + 1.0 && d < bestD) { best = b; bestD = d; }
+    });
+    return best;
+  }
+  function trimBush(b) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    useStamina(STAMINA_COST.trimmers);
+    swingBush = b;
+    facing = Math.atan2(b.userData.base.x - player.position.x, b.userData.base.z - player.position.z);
+  }
+  // The trimmers snip: leaves fly, the bush shudders, and on the tenth snip it's trimmed away
+  function snipHits(b) {
+    var u = b.userData;
+    if (u.state !== 'standing') return;
+    u.hits++;
+    snipSound();
+    burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x6aa84f, 12, 2.4, 1.6, -5); // snipped leaves
+    burst(u.base.x, u.base.y + 0.5 * u.size, u.base.z, 0x9bd06a, 5, 1.8, 1.2, -3);
+    if (u.hits < SNIPS_TO_TRIM) { u.shudderT = 0; return; }
+    rustleSound();
+    u.state = 'shrinking';
+    u.shrinkT = 0;
+    u.shudderT = undefined;
+    burst(u.base.x, u.base.y + 0.4 * u.size, u.base.z, 0x6aa84f, 30, 3.5, 2, -4);
+    var span = 0.8 * u.size;
+    sparklePoof(new THREE.Vector3(u.base.x - span, u.base.y, u.base.z), new THREE.Vector3(u.base.x + span, u.base.y, u.base.z), 150);
+    var fibers = Math.max(2, Math.min(5, Math.round(1 + u.size * 2.5)));
+    for (var i = 0; i < fibers; i++) {
+      var a = Math.random() * Math.PI * 2, d = 0.4 + Math.random() * 0.8;
+      dropPickup('fiber', 1, u.base.x + Math.cos(a) * d, u.base.z + Math.sin(a) * d, u.base.y, 0.2 + i * 0.06);
+    }
+    if (Math.random() < HAY_CHANCE) {
+      var ha = Math.random() * Math.PI * 2;
+      dropPickup('hay', 1, u.base.x + Math.cos(ha) * 0.8, u.base.z + Math.sin(ha) * 0.8, u.base.y, 0.55);
+    }
+  }
+
+  function chopTree(t) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    useStamina(STAMINA_COST.axe);
+    swingTree = t;
+    var u = t.userData;
+    facing = Math.atan2(u.base.x - player.position.x, u.base.z - player.position.z); // turn to face the tree
+  }
+  // The axe lands: chips fly, the tree shudders, and on the tenth hit it falls
+  function axeHits(t) {
+    var u = t.userData;
+    if (u.state !== 'standing') return;
+    u.hits++;
+    chopSound();
+    var hx = u.base.x - Math.sin(facing) * 0.3, hz = u.base.z - Math.cos(facing) * 0.3;
+    burst(hx, 0.7, hz, 0xd2a86e, 12, 2.6, 1.8, -7);                // wood chips
+    burst(u.base.x, 2.6 * u.size, u.base.z, 0x6aa84f, 6, 1.6, 0.2, -1.2); // a few leaves shaken loose
+    if (u.hits < CHOPS_TO_FELL) {
+      u.shudderT = 0;
+      return;
+    }
+    // Timber! Swap the standing tree for a copy that tips over, away from you
+    creakSound();
+    u.state = 'falling';
+    u.fallT = 0;
+    u.landed = false;
+    u.poofed = false;
+    u.stumpH = (u.leafy ? 0.38 : 0.32) * u.size;
+    var away = new THREE.Vector3(u.base.x - player.position.x, 0, u.base.z - player.position.z);
+    if (away.lengthSq() < 0.0001) away.set(1, 0, 0);
+    away.normalize();
+    u.fallDir = away;
+    u.fallAxis = new THREE.Vector3(0, 1, 0).cross(away).normalize();
+    u.proxy = makeFallingTree(t);
+    setTreeGrowth(t, 0, 'fall'); // the standing trunk and leaves are swapped for the falling copy; roots stay for now
+    u.stump = makeStump(t);
+    u.solid.r = 0.35 * u.size; // only the stump is in the way now
+  }
+
+  // ---------- Wooden logs you walk into to collect ----------
+  // A felled tree leaves logs floating where it fell, glowing softly like pickups
+  var LOGS_PER_TREE = 7; // the tree's 15 wood is split between them
+  var logBarkTex = barkTex.clone();
+  logBarkTex.needsUpdate = true;
+  logBarkTex.repeat.set(2, 1);
+  var logGeo = new THREE.CylinderGeometry(0.13, 0.14, 1.15, 14);
+  logGeo.rotateZ(Math.PI / 2); // lying on its side
+  var logMats = [new THREE.MeshStandardMaterial({ map: logBarkTex, color: 0x9a6a48, roughness: 0.9 }), stumpTopMat, stumpTopMat];
+  var logs = [];
+  function dropLogs(u, len) {
+    var midX = u.base.x + u.fallDir.x * len * 0.45, midZ = u.base.z + u.fallDir.z * len * 0.45;
+    var sideX = -u.fallDir.z, sideZ = u.fallDir.x;
+    for (var i = 0; i < LOGS_PER_TREE; i++) {
+      var a = (Math.random() - 0.5) * 2.8, c = (i % 4 - 1.5) * 0.55 + (Math.random() - 0.5) * 0.25; // spread out loosely
+      var x = midX + u.fallDir.x * a + sideX * c, z = midZ + u.fallDir.z * a + sideZ * c;
+      var share = Math.floor(WOOD_PER_TREE / LOGS_PER_TREE) + (i < WOOD_PER_TREE % LOGS_PER_TREE ? 1 : 0);
+      dropPickup('wood', share, x, z, u.base.y, i * 0.06);
+    }
+    // and the extras: 3 drops of sap, plus an acorn (leafy trees) or a pinecone (pines)
+    var extras = ['sap', 'sap', 'sap', u.leafy ? 'acorn' : 'pinecone'];
+    extras.forEach(function (item, n) {
+      var ang = Math.random() * Math.PI * 2, r = 0.5 + Math.random() * 1.1;
+      dropPickup(item, 1, midX + Math.cos(ang) * r, midZ + Math.sin(ang) * r, u.base.y, 0.45 + n * 0.08);
+    });
+  }
+
+  // 3D models for things you can pick up
+  var sapMat = new THREE.MeshStandardMaterial({ color: 0xf0a030, emissive: 0xd07a10, emissiveIntensity: 0.35, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.72 });
+  var sapCoreMat = new THREE.MeshStandardMaterial({ color: 0xffc04a, emissive: 0xffa020, emissiveIntensity: 0.9, roughness: 0.3 }); // glowing honey centre
+  var sapDripGeo = new THREE.SphereGeometry(0.028, 12, 8);
+  sapDripGeo.scale(1, 1.4, 1);
+  var sapShineGeo = new THREE.SphereGeometry(0.018, 10, 8);
+  sapShineGeo.scale(0.7, 1.4, 0.4);
+  var sapShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+  var sapGeo = new THREE.SphereGeometry(0.11, 16, 12);
+  (function () { // pull the top of the ball up into a droplet point
+    var pp = sapGeo.attributes.position;
+    for (var i = 0; i < pp.count; i++) {
+      var y = pp.getY(i);
+      if (y > 0) { var k = y / 0.11; pp.setXYZ(i, pp.getX(i) * (1 - k * 0.75), y + k * k * 0.12, pp.getZ(i) * (1 - k * 0.75)); }
+    }
+    sapGeo.computeVertexNormals();
+  })();
+  var nutMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.3, metalness: 0.05 }); // glossy, coloured by height
+  var capMat = new THREE.MeshStandardMaterial({ color: 0x5e4026, roughness: 0.95 });
+  var capScaleMat = new THREE.MeshStandardMaterial({ color: 0x8e6a42, roughness: 0.9 });
+  var capScaleTipMat = new THREE.MeshStandardMaterial({ color: 0x9e7a4e, roughness: 0.85 }); // sun-bleached scale tips
+  var coneMat = new THREE.MeshStandardMaterial({ color: 0x3a1e0c, roughness: 0.95 });                      // the dark core between the scales
+  var coneScaleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.75 }); // scales: dark at the base, pale at the tip
+  function pickupModel(item) {
+    var g = new THREE.Group(), m;
+    if (item === 'wood') {
+      m = new THREE.Mesh(logGeo, logMats);
+      m.rotation.order = 'YXZ';
+      m.rotation.x = Math.random() * Math.PI;  // roll, so the bark looks different on each
+      m.rotation.z = 0.12;                      // a slight tilt, like a floating pickup
+      g.add(m);
+    } else if (item === 'sap') { // a glossy drop of amber: see-through shell, glowing honey centre, a little drip
+      g.add(new THREE.Mesh(sapGeo, sapMat));
+      var core = new THREE.Mesh(sapGeo, sapCoreMat);
+      core.scale.setScalar(0.62);
+      core.position.y = -0.012;
+      g.add(core);
+      var drip = new THREE.Mesh(sapDripGeo, sapMat);    // a small drip hanging off the bottom
+      drip.position.set(0.03, -0.115, 0.01);
+      g.add(drip);
+      var shine1 = new THREE.Mesh(sapShineGeo, sapShineMat);
+      shine1.position.set(-0.04, 0.03, 0.075);
+      g.add(shine1);
+      var shine2 = new THREE.Mesh(sapShineGeo, sapShineMat);
+      shine2.scale.setScalar(0.45);
+      shine2.position.set(0.035, -0.04, 0.085);
+      g.add(shine2);
+      var sapGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb040, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sapGlow.scale.set(0.42, 0.42, 1);
+      g.add(sapGlow);
+    } else if (item === 'acorn') { // a plump glossy acorn with a scaly cap and a little curved stem
+      var nutPts = [];
+      for (var ai = 0; ai <= 24; ai++) {
+        var at = ai / 24;                       // 0 = the pointed tip, 1 = up under the cap
+        var ar = at < 0.75 ? 0.1 * Math.pow(Math.sin((at / 0.75) * Math.PI / 2), 0.8) : 0.1 * Math.cos(((at - 0.75) / 0.25) * 0.8);
+        nutPts.push(new THREE.Vector2(Math.max(0.0005, ar), -0.17 + at * 0.24));
+      }
+      var nutGeo = new THREE.LatheGeometry(nutPts, 24);
+      nutGeo.computeVertexNormals();
+      var nutCols = [], nutPos = nutGeo.attributes.position, nutC = new THREE.Color();
+      var nutLow = new THREE.Color(0x7a3c1a), nutMid = new THREE.Color(0xc27a36), nutTop = new THREE.Color(0xe8be7a), nutBand = new THREE.Color(0xf3dfae);
+      for (var ni = 0; ni < nutPos.count; ni++) {
+        var nh = (nutPos.getY(ni) + 0.17) / 0.24; // deep red-brown at the tip, warm in the middle, pale gold by the cap
+        if (nh < 0.55) nutC.copy(nutLow).lerp(nutMid, Math.pow(nh / 0.55, 0.6));
+        else nutC.copy(nutMid).lerp(nutTop, (nh - 0.55) / 0.45);
+        if (nh > 0.82) nutC.lerp(nutBand, (nh - 0.82) / 0.18);   // a creamy band just under the cap
+        var nAng = Math.atan2(nutPos.getZ(ni), nutPos.getX(ni));
+        var streak = 1 - 0.12 * Math.pow(Math.sin(nAng * 7 + nh * 1.5), 2) * Math.sin(nh * Math.PI); // faint darker grain lines down the sides
+        nutCols.push(nutC.r * streak, nutC.g * streak, nutC.b * streak);
+      }
+      nutGeo.setAttribute('color', new THREE.Float32BufferAttribute(nutCols, 3));
+      g.add(new THREE.Mesh(nutGeo, nutMat));
+      var tip = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.03, 8), capMat); // the little dark point
+      tip.rotation.x = Math.PI;
+      tip.position.y = -0.175;
+      g.add(tip);
+      var nutShine = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), seedShineMat);
+      nutShine.scale.set(0.7, 1.8, 0.4);
+      nutShine.position.set(-0.045, -0.04, 0.083);
+      nutShine.rotation.z = -0.25;
+      g.add(nutShine);
+      var nutShine2 = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), seedShineMat); // a second, smaller glint
+      nutShine2.position.set(-0.028, -0.105, 0.064);
+      g.add(nutShine2);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+      cap.scale.set(0.108, 0.06, 0.108);        // a low dome that sits over the top of the nut
+      cap.position.y = 0.035;
+      g.add(cap);
+      var lip = new THREE.Mesh(new THREE.TorusGeometry(0.104, 0.013, 8, 28), capMat); // the thick overhanging rim
+      lip.rotation.x = Math.PI / 2;
+      lip.position.y = 0.036;
+      g.add(lip);
+      var scaleGeo = new THREE.SphereGeometry(0.022, 7, 5);
+      for (var sr = 0; sr < 5; sr++) {          // rings of overlapping woody scales, smaller toward the top
+        var phi = 1.48 - sr * 0.28, ring = 18 - sr * 3;
+        for (var sk = 0; sk < ring; sk++) {
+          var sa = (sk / ring) * Math.PI * 2 + sr * 0.4;
+          var nx = Math.sin(phi) * Math.cos(sa), ny = Math.cos(phi), nz = Math.sin(phi) * Math.sin(sa);
+          var bump = new THREE.Mesh(scaleGeo, (sk + sr) % 3 === 0 ? capScaleTipMat : (sk % 2 ? capScaleMat : capMat));
+          bump.position.set(nx * 0.112, 0.035 + ny * 0.064, nz * 0.112);
+          bump.lookAt(bump.position.x + nx, bump.position.y + ny + 0.4, bump.position.z + nz);
+          var jit = 0.9 + ((sk * 7 + sr * 3) % 5) * 0.05; // slightly uneven, like real scales
+          bump.scale.set((1 - sr * 0.13) * jit * 0.85, (1.15 - sr * 0.13) * jit * 0.85, 0.4);
+          g.add(bump);
+        }
+      }
+      var stemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.1, 0), new THREE.Vector3(0, 0.15, 0), new THREE.Vector3(0.035, 0.17, 0));
+      var stem = new THREE.Mesh(new THREE.TubeGeometry(stemCurve, 8, 0.011, 6), capMat); // a short stem with a gentle bend
+      g.add(stem);
+      var stemEnd = new THREE.Mesh(new THREE.SphereGeometry(0.011, 6, 5), capScaleMat);
+      stemEnd.position.set(0.035, 0.17, 0);
+      stemEnd.scale.set(0.6, 1, 1);             // the snapped-off end shows the paler wood inside
+      g.add(stemEnd);
+      for (var si = 0; si < 2; si++) {          // little growth rings on the stem
+        var knot = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.003, 5, 10), capScaleMat);
+        var sp = stemCurve.getPoint(0.35 + si * 0.35), sd = stemCurve.getTangent(0.35 + si * 0.35);
+        knot.position.copy(sp);
+        knot.lookAt(sp.x + sd.x, sp.y + sd.y, sp.z + sd.z);
+        g.add(knot);
+      }
+    } else if (item === 'fiber') { // a tied bundle of long grassy strands, flared at both ends, with twine round the middle
+      var FIB_COLS = [0x2f7a2c, 0x3f8f36, 0x56a845, 0x6dbd52, 0x86cf62, 0x4a9a3c, 0xa2d872, 0x5fb04a];
+      var fibC = new THREE.Color();
+      for (var fi = 0; fi < 26; fi++) {
+        var fa = fi * 2.39996, fdx = Math.cos(fa), fdz = Math.sin(fa);   // which way round the bundle this strand sits
+        var rw = 0.002 + (fi % 4) * 0.004, rt = 0.035 + (fi % 5) * 0.009, rb = 0.028 + (fi % 3) * 0.008;
+        var yt = 0.17 + (fi % 4) * 0.012, yb = -0.16 - (fi % 2) * 0.01;
+        var fGeo = new THREE.PlaneGeometry(1, 1, 1, 14);
+        var fp = fGeo.attributes.position, fCols = [];
+        fibC.setHex(FIB_COLS[(fi * 3) % FIB_COLS.length]);
+        for (var fv = 0; fv < fp.count; fv++) {
+          var t = fp.getY(fv) + 0.5, u = 1 - t;   // 0 = the cut bottom, 1 = the pointed top
+          var cr = u * u * rb + 2 * u * t * rw + t * t * rt;      // out from the middle: flared ends, pinched waist
+          var cyy = u * u * yb + t * t * yt;
+          var fw = 0.008 * (0.6 + 0.4 * Math.sin(Math.PI * t)) * (t > 0.7 ? Math.pow((1 - t) / 0.3, 0.7) : 1);
+          var side = fp.getX(fv) * 2 * fw;
+          fp.setXYZ(fv, fdx * cr - fdz * side, cyy, fdz * cr + fdx * side);
+          var shade = 0.7 + 0.45 * t;             // darker low down, brighter toward the tips
+          fCols.push(fibC.r * shade, fibC.g * shade, fibC.b * shade);
+        }
+        fGeo.setAttribute('color', new THREE.Float32BufferAttribute(fCols, 3));
+        fGeo.computeVertexNormals();
+        g.add(new THREE.Mesh(fGeo, fiberMat));
+      }
+      for (var tw = 0; tw < 3; tw++) {            // three turns of twine round the waist
+        var turn = new THREE.Mesh(new THREE.TorusGeometry(0.031, 0.0085, 6, 18), twineMat);
+        turn.rotation.x = Math.PI / 2 + (tw - 1) * 0.12;
+        turn.position.y = (tw - 1) * 0.011;
+        g.add(turn);
+      }
+      var knot = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), twineMat);
+      knot.position.set(0.034, 0, 0.012);
+      g.add(knot);
+      [[0.05, -0.04, 0.02], [0.06, -0.01, -0.01]].forEach(function (end) { // the two loose ends of the twine
+        var endCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.036, 0, 0.012), new THREE.Vector3(0.05, 0, end[2] + 0.01), new THREE.Vector3(end[0], end[1], end[2]));
+        g.add(new THREE.Mesh(new THREE.TubeGeometry(endCurve, 6, 0.004, 5), twineMat));
+      });
+    } else if (item === 'hay') { // a little tied hay bale: straw on every side, two twine bands, fuzzy loose straws
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.17, 0.19), [hayEndMat, hayEndMat, hayMat, hayMat, hayMat, hayMat]));
+      [-0.075, 0.075].forEach(function (bx) {   // the twine bands, pulled tight round the bale
+        var hb = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.176, 0.196), bandMat);
+        hb.position.x = bx;
+        g.add(hb);
+      });
+      var strawGeo = new THREE.CylinderGeometry(0.0025, 0.0035, 1, 4);
+      for (var hs = 0; hs < 46; hs++) {         // loose straws sticking out of the surface all over
+        var hf = hs % 6, hu = Math.random() - 0.5, hv = Math.random() - 0.5, hp = new THREE.Vector3(), hn = new THREE.Vector3();
+        if (hf < 2) { hp.set(hf ? 0.15 : -0.15, hu * 0.17, hv * 0.19); hn.set(hf ? 1 : -1, 0, 0); }
+        else if (hf < 4) { hp.set(hu * 0.3, hf === 2 ? 0.085 : -0.085, hv * 0.19); hn.set(0, hf === 2 ? 1 : -1, 0); }
+        else { hp.set(hu * 0.3, hv * 0.17, hf === 4 ? 0.095 : -0.095); hn.set(0, 0, hf === 4 ? 1 : -1); }
+        var hlen = 0.025 + Math.random() * 0.05;
+        var straw = new THREE.Mesh(strawGeo, hs % 3 ? hayStrawMat : hayStrawPaleMat);
+        hn.x += (Math.random() - 0.5) * 1.2; hn.y += (Math.random() - 0.5) * 1.2; hn.z += (Math.random() - 0.5) * 1.2; hn.normalize();
+        straw.scale.set(1, hlen, 1);
+        straw.position.copy(hp).addScaledVector(hn, hlen * 0.35);
+        straw.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), hn);
+        g.add(straw);
+      }
+    } else if (item === 'seed') { // three plump pearly seeds, each with a glowing gold crescent moon
+      var SEEDS = [[0, 0.03, -0.01, 1, 0], [-0.06, -0.005, 0.015, 0.88, 0.45], [0.06, -0.005, 0.015, 0.88, -0.45]];
+      SEEDS.forEach(function (sd) {
+        var one = new THREE.Group();
+        one.position.set(sd[0], sd[1], sd[2]);
+        one.rotation.z = sd[4];                 // tilted outward, like a little bouquet
+        one.scale.setScalar(sd[3]);
+        one.add(new THREE.Mesh(seedGeo, seedMat));
+        var moon = new THREE.Mesh(seedMoonGeo, seedMoonMat);
+        moon.position.set(0, 0.0, 0.047);
+        moon.rotation.z = 0.7;                  // the crescent's horns point up and to the side
+        one.add(moon);
+        var shine = new THREE.Mesh(seedShineGeo, seedShineMat);
+        shine.position.set(-0.022, 0.03, 0.035);
+        one.add(shine);
+        g.add(one);
+      });
+      var seedGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xb98cff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+      seedGlow.scale.set(0.38, 0.38, 1);
+      g.add(seedGlow);
+      [[0.09, 0.09], [-0.1, 0.06], [0.03, 0.13]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.05, 0.05, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
+    } else if (item === 'bloom') { // a glowing moonbloom: two rings of cupped petals, a golden heart with a crescent moon, a leafy stem
+      var bloomPetal = function (len, wide, cup, inner, outer) { // one spoon-shaped petal pointing out along +x, fading to a pale tip
+        var pg = new THREE.PlaneGeometry(1, 1, 4, 10), pp = pg.attributes.position, pc = [], cIn = new THREE.Color(inner), cOut = new THREE.Color(outer), cc = new THREE.Color();
+        for (var v = 0; v < pp.count; v++) {
+          var t = pp.getY(v) + 0.5, across = pp.getX(v) * 2;  // t: 0 at the heart, 1 at the tip
+          var w = wide * Math.pow(Math.sin(Math.PI * Math.pow(t, 0.6)), 0.55);  // broad and rounded, with a soft point
+          var z = across * w;
+          pp.setXYZ(v, t * len, cup * t * t + z * z * 2.2, z); // curves up toward the tip, edges lift into a cup
+          cc.copy(cIn).lerp(cOut, Math.pow(t, 1.3));
+          cc.lerp(cOut, Math.abs(across) * 0.25 * t);         // paler edges
+          pc.push(cc.r, cc.g, cc.b);
+        }
+        pg.setAttribute('color', new THREE.Float32BufferAttribute(pc, 3));
+        pg.computeVertexNormals();
+        return pg;
+      };
+      var head = new THREE.Group();
+      head.rotation.x = 0.3;                    // the flower nods forward a little
+      var backPetal = bloomPetal(0.11, 0.048, 0.03, 0xb47cff, 0xf3e3ff), frontPetal = bloomPetal(0.095, 0.044, 0.04, 0xff6fcf, 0xffe6f6);
+      for (var pi = 0; pi < 12; pi++) {
+        var back = pi < 6, pet = new THREE.Mesh(back ? backPetal : frontPetal, bloomPetalMat);
+        pet.rotation.y = (pi % 6) / 6 * Math.PI * 2 + (back ? Math.PI / 6 : 0);
+        pet.rotation.z = back ? 0.12 : 0.34;    // back petals open wide, front ones stand up more
+        pet.position.y = back ? -0.004 : 0.004;
+        head.add(pet);
+      }
+      var heart = new THREE.Mesh(new THREE.SphereGeometry(0.026, 14, 10), M.center); // the glowing golden heart
+      heart.scale.set(1, 0.6, 1);
+      heart.position.y = 0.014;
+      head.add(heart);
+      for (var si = 0; si < 9; si++) {          // a ring of little golden stamens
+        var sa = si / 9 * Math.PI * 2;
+        var stamen = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 6, 4), bloomStamenMat);
+        stamen.position.set(Math.cos(sa) * 0.03, 0.026, Math.sin(sa) * 0.03);
+        head.add(stamen);
+      }
+      var bloomMoon = new THREE.Mesh(seedMoonGeo, seedMoonMat); // the crescent moon resting on the heart
+      bloomMoon.scale.setScalar(0.95);
+      bloomMoon.position.set(0, 0.034, 0.004);
+      bloomMoon.rotation.set(-1.0, 0, 0.7);
+      head.add(bloomMoon);
+      g.add(head);
+      var bloomStemCurve = new THREE.CubicBezierCurve3(new THREE.Vector3(0, -0.19, 0), new THREE.Vector3(0.02, -0.13, 0), new THREE.Vector3(-0.018, -0.06, 0), new THREE.Vector3(0, -0.005, 0));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(bloomStemCurve, 12, 0.009, 6), M.stem)); // a slender, gently curving stem
+      var sepals = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.leaf); // the little green cup under the flower
+      sepals.position.y = 0.006;
+      g.add(sepals);
+      var bloomLeaf = new THREE.Mesh(bloomPetal(0.07, 0.022, 0.025, 0x4f9a48, 0x8ad87a), bloomLeafMat); // one leaf off the stem
+      bloomLeaf.position.set(0.006, -0.1, 0);
+      bloomLeaf.rotation.set(0, -0.4, 0.5);
+      g.add(bloomLeaf);
+      var bloomGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff9be0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      bloomGlow.scale.set(0.38, 0.38, 1);
+      bloomGlow.position.y = 0.02;
+      g.add(bloomGlow);
+      [[0.13, 0.08], [-0.13, 0.03], [0.05, 0.15]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.035, 0.035, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
+    } else if (item === 'petal') { // a Dawn Petal: a cupped cherry-blossom petal with a notched tip, deep pink at the base fading to pearl, fine veins and a dewdrop
+      var PCOLS = 12, PROWS = 18, PLEN = 0.25, PWIDE = 0.075;
+      var petalSpot = function (u, v) {           // u: -1..1 across the petal, v: 0 at the base to 1 at the tip
+        var w = PWIDE * Math.pow(Math.sin(Math.PI / 2 * Math.min(1, (v + 0.04) / 0.78)), 0.8);
+        var len = PLEN - 0.045 * (1 - Math.sqrt(1 - u * u)) - 0.016 * Math.exp(-(u / 0.13) * (u / 0.13)); // rounded shoulders and a notch at the tip
+        var x = u * w, y = -PLEN / 2 + v * len;
+        var z = 5 * x * x - 1.4 * Math.pow(Math.max(0, y - 0.02), 2) + 0.4 * (y + PLEN / 2) * x; // cupped across, the tip curling back, a little twist
+        return [x, y, z];
+      };
+      var pPos = [], pCol = [], pIdx = [];
+      var pBase = new THREE.Color(0xff4fb4), pMid = new THREE.Color(0xff9ad8), pTip = new THREE.Color(0xfff0f8), pc = new THREE.Color();
+      for (var pr = 0; pr <= PROWS; pr++) {
+        for (var pq = 0; pq <= PCOLS; pq++) {
+          var pu = pq / PCOLS * 2 - 1, pv = pr / PROWS, spot = petalSpot(pu, pv);
+          pPos.push(spot[0], spot[1], spot[2]);
+          if (pv < 0.45) pc.copy(pBase).lerp(pMid, pv / 0.45); else pc.copy(pMid).lerp(pTip, (pv - 0.45) / 0.55);
+          pc.lerp(pTip, Math.abs(pu) * 0.25 * pv);              // the edges are a touch paler
+          pCol.push(pc.r, pc.g, pc.b);
+        }
+      }
+      for (pr = 0; pr < PROWS; pr++) {
+        for (pq = 0; pq < PCOLS; pq++) {
+          var pa = pr * (PCOLS + 1) + pq, pb = pa + PCOLS + 1;
+          pIdx.push(pa, pb, pa + 1, pa + 1, pb, pb + 1);
+        }
+      }
+      var petalGeo2 = new THREE.BufferGeometry();
+      petalGeo2.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+      petalGeo2.setAttribute('color', new THREE.Float32BufferAttribute(pCol, 3));
+      petalGeo2.setIndex(pIdx);
+      petalGeo2.computeVertexNormals();
+      var dawnPetal = new THREE.Mesh(petalGeo2, new THREE.MeshStandardMaterial({ vertexColors: true, emissive: 0xff5cc0, emissiveIntensity: 0.35, roughness: 0.35, side: THREE.DoubleSide }));
+      var petalBody = new THREE.Group();           // the petal, its veins and dewdrop, tilted together
+      petalBody.rotation.z = 0.12;
+      g.add(petalBody);
+      petalBody.add(dawnPetal);
+      var veinMat = new THREE.LineBasicMaterial({ color: 0xe0559f, transparent: true, opacity: 0.55 });
+      [-0.55, -0.28, 0, 0.28, 0.55].forEach(function (vu) {      // fine veins fanning out from the base, on both faces
+        [-0.0015, 0.0015].forEach(function (side) {
+          var vp = [];
+          for (var vs = 0; vs <= 10; vs++) {
+            var vv = vs / 10 * (vu === 0 ? 0.74 : 0.64), at = petalSpot(vu * Math.min(1, vv * 1.4), vv);
+            vp.push(new THREE.Vector3(at[0], at[1], at[2] + side));
+          }
+          petalBody.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(vp), veinMat));
+        });
+      });
+      var dewSpot = petalSpot(-0.3, 0.55);
+      var dew = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffd6f0, emissiveIntensity: 0.3, roughness: 0.05, transparent: true, opacity: 0.6 }));
+      dew.scale.set(1, 1, 0.6);
+      dew.position.set(dewSpot[0], dewSpot[1], dewSpot[2] + 0.007);
+      petalBody.add(dew);
+      var dewShine = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffffff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+      dewShine.scale.set(0.018, 0.018, 1);
+      dewShine.position.set(dewSpot[0] - 0.004, dewSpot[1] + 0.005, dewSpot[2] + 0.02);
+      petalBody.add(dewShine);
+      var petalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8fd8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      petalGlow.scale.set(0.36, 0.36, 1);
+      g.add(petalGlow);
+      [[0.1, 0.1], [-0.1, -0.04], [0.07, -0.11]].forEach(function (tw) { // tiny gold twinkles
+        var t = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe680, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+        t.scale.set(0.03, 0.03, 1);
+        t.position.set(tw[0], tw[1], 0.02);
+        g.add(t);
+      });
+    } else if (item === 'stone') {
+      m = new THREE.Mesh(boulderGeos[2], stoneMat);
+      m.scale.set(0.15, 0.12, 0.13);
+      g.add(m);
+    } else if (item === 'coal') { // a glossy faceted lump of coal with a couple of small chips and glints of shine
+      m = new THREE.Mesh(coalGeo, coalMat);
+      m.rotation.set(0.4, 0.3, 0.2);
+      g.add(m);
+      [[0.1, -0.06, 0.05, 0.32], [-0.09, -0.07, 0.06, 0.24]].forEach(function (ch) { // little chips broken off the lump
+        var chip = new THREE.Mesh(coalGeo, coalMat);
+        chip.position.set(ch[0], ch[1], ch[2]);
+        chip.scale.setScalar(ch[3]);
+        chip.rotation.set(ch[0] * 20, ch[1] * 30, ch[2] * 10);
+        g.add(chip);
+      });
+      [[-0.04, 0.07, 0.11, 0.07], [0.06, 0.02, 0.13, 0.05], [-0.08, -0.01, 0.11, 0.04], [0.03, 0.09, 0.06, 0.035]].forEach(function (gl) { // sparkly glints on the facets
+        var glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xdfe8ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+        glint.position.set(gl[0], gl[1], gl[2]);
+        glint.scale.set(gl[3], gl[3], 1);
+        g.add(glint);
+      });
+    } else if (item === 'pinecone') { // a woody cone: pointed scales spiralling round a dark core, pale worn tips, a little stem
+      var CONE_TOP = 0.14, CONE_BOT = -0.15;
+      var coneW = function (y) {                // an egg shape: rounded top, widest just above the middle, blunt point at the bottom
+        var t = Math.min(1, Math.max(0, (CONE_TOP - y) / (CONE_TOP - CONE_BOT)));
+        return 0.072 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(t, 0.8))), 0.65);
+      };
+      var corePts = [];
+      for (var ci = 0; ci <= 16; ci++) {
+        var cy = CONE_BOT + (ci / 16) * (CONE_TOP - CONE_BOT);
+        corePts.push(new THREE.Vector2(Math.max(0.002, coneW(cy) * 0.8), cy));
+      }
+      g.add(new THREE.Mesh(new THREE.LatheGeometry(corePts, 14), coneMat));
+      // one scale: a flat, pointed woody plate whose tip sticks out (+z), with a ridge down the middle
+      var scaleGeo = new THREE.SphereGeometry(1, 8, 6);
+      var sp = scaleGeo.attributes.position, scCols = [], scC = new THREE.Color();
+      var scBase = new THREE.Color(0x3e200c), scMid = new THREE.Color(0x7e4420), scTip = new THREE.Color(0xb47a46), scEdge = new THREE.Color(0xf0c890), scUmbo = new THREE.Color(0x3a1e0c);
+      for (var vi = 0; vi < sp.count; vi++) {
+        var vx = sp.getX(vi), vy = sp.getY(vi), vz = sp.getZ(vi);
+        var out = (vz + 1) / 2;                 // 0 = tucked into the core, 1 = the open tip
+        vx *= 1 - out * out * 0.7;              // narrows to a point at the tip
+        var top = vy > 0;
+        vy = vy * (top ? (1 - Math.abs(vx) * 0.6) * (1 + out * 0.9) : 0.6); // a raised ridge, and a chunky knob at the tip
+        vy += out * out * out * 0.9;            // the tip curls up a little
+        sp.setXYZ(vi, vx * 0.032, vy * 0.011, vz * 0.034);
+        if (out < 0.55) scC.copy(scBase).lerp(scMid, out / 0.55); else scC.copy(scMid).lerp(scTip, (out - 0.55) / 0.45);
+        if (top && out > 0.62 && out < 0.78) scC.lerp(scEdge, 0.55); // a pale worn band across the knob
+        if (top && out > 0.8 && Math.abs(vx) < 0.22) scC.copy(scUmbo); // the little dark point in the middle of the knob
+        if (!top) scC.multiplyScalar(0.55);     // darker underneath
+        scCols.push(scC.r, scC.g, scC.b);
+      }
+      scaleGeo.setAttribute('color', new THREE.Float32BufferAttribute(scCols, 3));
+      scaleGeo.computeVertexNormals();
+      var NSCALES = 96;
+      for (var r = 0; r < NSCALES; r++) {       // a golden-angle spiral, like a real pinecone
+        var f = r / (NSCALES - 1), y = CONE_BOT + 0.02 + f * (CONE_TOP - CONE_BOT - 0.05);
+        var rad = coneW(y) * 0.85, a = r * 2.39996;
+        var ox = Math.cos(a), oz = Math.sin(a);
+        var sc = new THREE.Mesh(scaleGeo, coneScaleMat);
+        sc.position.set(ox * rad, y, oz * rad);
+        var droop = 0.55 + (1 - f) * 0.35;      // scales point out and down, more open toward the bottom
+        sc.lookAt(sc.position.x + ox, y - droop, sc.position.z + oz);
+        var size = 0.45 + (coneW(y) / 0.072) * 0.5;
+        sc.scale.set(size, size, size * (0.9 + (r % 3) * 0.06)); // slightly uneven lengths
+        sc.position.x += ox * 0.012 * size; sc.position.z += oz * 0.012 * size;
+        g.add(sc);
+      }
+      var coneStemCurve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, CONE_TOP - 0.02, 0), new THREE.Vector3(0, CONE_TOP + 0.03, 0), new THREE.Vector3(0.025, CONE_TOP + 0.05, 0));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(coneStemCurve, 8, 0.012, 6), capMat)); // a short bent woody stem
+      var coneStemEnd = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 5), capScaleMat);
+      coneStemEnd.position.set(0.025, CONE_TOP + 0.05, 0);
+      coneStemEnd.scale.set(0.6, 1, 1);
+      g.add(coneStemEnd);
+      [[0.6, 0.05, 1.1], [2.4, -0.04, 0.8]].forEach(function (sd) { // a couple of tiny glossy drops of sap
+        var drop = new THREE.Mesh(sapGeo, sapMat);
+        var dr = coneW(sd[1]) + 0.022;
+        drop.position.set(Math.cos(sd[0]) * dr, sd[1], Math.sin(sd[0]) * dr);
+        drop.scale.setScalar(0.11 * sd[2]);
+        g.add(drop);
+      });
+    }
+    g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    return g;
+  }
+  var fiberMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.7, side: THREE.DoubleSide }); // grassy strands, coloured per strand
+  var seedMat = new THREE.MeshStandardMaterial({ color: 0xe2d2ff, emissive: 0x7a58d0, emissiveIntensity: 0.4, roughness: 0.15, metalness: 0.15 }); // glossy pearly lavender
+  // a plump teardrop: round at the bottom, softly pointed (not sharp) at the top
+  var seedGeo = (function () {
+    var pts = [];
+    for (var i = 0; i <= 16; i++) {
+      var t = i / 16, y = -0.05 + t * 0.13;
+      var r = t < 0.45 ? Math.sin((t / 0.45) * Math.PI / 2) * 0.05 : 0.05 * Math.pow(Math.cos(((t - 0.45) / 0.55) * Math.PI / 2), 0.9);
+      pts.push(new THREE.Vector2(Math.max(0.0005, r), y));
+    }
+    var g = new THREE.LatheGeometry(pts, 20);
+    g.computeVertexNormals();
+    return g;
+  })();
+  var seedMoonGeo = new THREE.TorusGeometry(0.02, 0.0065, 8, 18, Math.PI * 1.25); // an open ring = a crescent moon
+  var seedMoonMat = new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffc94d, emissiveIntensity: 0.7, roughness: 0.4 });
+  var seedShineGeo = new THREE.SphereGeometry(0.01, 8, 6);
+  seedShineGeo.scale(0.8, 1.6, 0.5);
+  var bloomPetalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, emissive: 0xff6fcf, emissiveIntensity: 0.2, roughness: 0.45, side: THREE.DoubleSide });
+  var bloomLeafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.6, side: THREE.DoubleSide });
+  var bloomStamenMat = new THREE.MeshStandardMaterial({ color: 0xffe9a8, emissive: 0xffc94d, emissiveIntensity: 0.8, roughness: 0.4 });
+  var seedShineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+  var petalMat = new THREE.MeshStandardMaterial({ color: 0xff9be0, emissive: 0xff6fcf, emissiveIntensity: 0.45, roughness: 0.4, side: THREE.DoubleSide });
+  var twineMat = new THREE.MeshStandardMaterial({ color: 0xc99a5a, roughness: 0.9 });
+  // straw textures for the hay bale: long golden strands on the sides, cut ends on the two ends
+  function hayCanvas(ends) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var x = c.getContext('2d');
+    x.fillStyle = ends ? '#d6a848' : '#efca5e';
+    x.fillRect(0, 0, 128, 128);
+    var cols = ends ? ['#7a5418', '#f2d68a', '#a87a28', '#e0b450'] : ['#fff0b0', '#c99a32', '#f2d070', '#a87824', '#e8c058'];
+    x.lineCap = 'round';
+    for (var i = 0; i < (ends ? 260 : 420); i++) {
+      var px = Math.random() * 128, py = Math.random() * 128;
+      x.strokeStyle = x.fillStyle = cols[i % cols.length];
+      if (ends) { x.beginPath(); x.arc(px, py, 1 + Math.random() * 1.6, 0, Math.PI * 2); x.fill(); }
+      else { var l = 10 + Math.random() * 28; x.lineWidth = 1 + Math.random() * 1.6; x.beginPath(); x.moveTo(px, py); x.lineTo(px + l, py + (Math.random() - 0.5) * 4); x.stroke(); }
+    }
+    var t = new THREE.CanvasTexture(c);
+    return t;
+  }
+  var hayMat = new THREE.MeshStandardMaterial({ map: hayCanvas(false), roughness: 0.95 });
+  var hayEndMat = new THREE.MeshStandardMaterial({ map: hayCanvas(true), roughness: 0.95 });
+  var hayStrawMat = new THREE.MeshStandardMaterial({ color: 0xe0b450, roughness: 0.9 });
+  var hayStrawPaleMat = new THREE.MeshStandardMaterial({ color: 0xf6dc8a, roughness: 0.9 });
+  var bandMat = new THREE.MeshStandardMaterial({ color: 0xb0402e, roughness: 0.8 });
+  // a chunk of coal broken off a seam: big flat cleaved faces with softly rounded edges, dark and glossy
+  var coalGeo = (function () {
+    var cg = new THREE.IcosahedronGeometry(0.13, 4), cp = cg.attributes.position, v = new THREE.Vector3(), cols = [], cc = new THREE.Color();
+    var CUTS = [[0.1, 1, 0.15, 0.62], [0.9, 0.3, 0.4, 0.66], [-0.8, 0.5, 0.3, 0.7], [0.2, -0.3, 1, 0.68], [-0.3, 0.2, -1, 0.7],
+                [0.6, -0.9, -0.3, 0.6], [-0.7, -0.6, 0.4, 0.66], [0.5, 0.6, -0.7, 0.68], [-0.4, 0.7, 0.7, 0.72], [0.7, -0.1, 0.8, 0.74]];
+    var planes = CUTS.map(function (c) { return { n: new THREE.Vector3(c[0], c[1], c[2]).normalize(), d: c[3] }; });
+    for (var i = 0; i < cp.count; i++) {
+      v.fromBufferAttribute(cp, i).normalize();
+      for (var pi = 0; pi < planes.length; pi++) { // slice the ball flat wherever it pokes past a cleave plane
+        var over = v.dot(planes[pi].n) - planes[pi].d;
+        if (over > 0) v.addScaledVector(planes[pi].n, -over);
+      }
+      v.multiplyScalar(0.13 / 0.72);
+      cp.setXYZ(i, v.x * 1.1, v.y * 0.85, v.z);
+      var tone = 0.32 + 0.03 * Math.sin(v.x * 40 + v.y * 25) + 0.02 * Math.sin(v.z * 55 - v.y * 30); // faint natural variation, no patches
+      cc.setRGB(tone, tone, tone * 1.15);
+      cols.push(cc.r, cc.g, cc.b);
+    }
+    // smooth the shading: every copy of the same corner shares one averaged normal, so no flat triangles show
+    cg.computeVertexNormals();
+    var nAcc = {}, nrm = cg.attributes.normal, key;
+    for (i = 0; i < cp.count; i++) {
+      key = Math.round(cp.getX(i) * 1e4) + ',' + Math.round(cp.getY(i) * 1e4) + ',' + Math.round(cp.getZ(i) * 1e4);
+      if (!nAcc[key]) nAcc[key] = new THREE.Vector3();
+      nAcc[key].x += nrm.getX(i); nAcc[key].y += nrm.getY(i); nAcc[key].z += nrm.getZ(i);
+    }
+    for (i = 0; i < cp.count; i++) {
+      key = Math.round(cp.getX(i) * 1e4) + ',' + Math.round(cp.getY(i) * 1e4) + ',' + Math.round(cp.getZ(i) * 1e4);
+      v.copy(nAcc[key]).normalize();
+      nrm.setXYZ(i, v.x, v.y, v.z);
+    }
+    cg.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    return cg;
+  })();
+  var coalMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.3, metalness: 0 }); // glossy, so each flat face catches the light differently
+  var PICKUP_GLOW = { fiber: 0xd8ffb0, hay: 0xffe6a0, wood: 0xffe6a8, sap: 0xffc060, acorn: 0xffe6a8, pinecone: 0xffe6a8, stone: 0xe6eeff, coal: 0xffb070 };
+  // Puts a floating, glowing pickup on the ground: walk into it to collect
+  function dropPickup(item, amount, x, z, groundY, delay) {
+    var holder = new THREE.Group(); // floats and spins
+    holder.position.set(x, groundY + 1.0 + Math.random() * 0.4, z);
+    holder.rotation.y = Math.random() * Math.PI * 2;
+    holder.add(pickupModel(item));
+    var big = item === 'wood';
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: PICKUP_GLOW[item], transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(big ? 1.5 : 0.8, big ? 1.5 : 0.8, 1);
+    holder.add(glow);
+    scene.add(holder);
+    var shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2;
+    if (big) shadow.scale.set(1.4, 0.6, 1); else shadow.scale.set(0.45, 0.45, 1);
+    shadow.position.set(x, groundY + 0.03, z);
+    scene.add(shadow);
+    logs.push({ mesh: holder, glow: glow, shadow: shadow, x: x, z: z, ground: groundY, t: -delay, p: Math.random() * 6.28,
+      item: item, amount: amount, hover: big ? FLOAT_H : FLOAT_H + 0.08 });
+  }
+  // Picking things up: the message keeps a running count while you're collecting (+3 Sap, not +1 Sap three times),
+  // listing each kind you've picked up; it starts fresh once you've stopped for a moment
+  var tally = [], tallyAt = 0;
+  function pickupTally(item, amount) {
+    var now = Date.now();
+    if (now - tallyAt > 2600) tally = [];
+    tallyAt = now;
+    var found = null;
+    tally.forEach(function (t) { if (t.item === item) found = t; });
+    if (found) found.n += amount; else tally.push({ item: item, n: amount });
+    showToast(tally.map(function (t) { return '+' + t.n + ' ' + ITEMS[t.item].name + ' ' + ITEMS[t.item].icon; }).join('  ·  '), 2600);
+  }
+  var FLOAT_H = 0.32;     // how high the logs hover
+  var PICKUP_RANGE = 1.4; // how close you need to be to pick things up
+  function updateLogs(dt) {
+    for (var i = logs.length - 1; i >= 0; i--) {
+      var L = logs[i];
+      L.t += dt;
+      var on = L.t >= 0;
+      L.mesh.visible = L.shadow.visible = on;
+      if (!on) continue;
+      // pops out of the sparkles, then settles into a gentle hover, bobbing and slowly turning
+      var hoverY = L.ground + L.hover + Math.sin(L.t * 2.4 + L.p) * 0.05;
+      var settle = Math.min(1, L.t / 0.6);
+      L.mesh.position.y += (hoverY - L.mesh.position.y) * Math.min(1, dt * (2 + settle * 6));
+      L.mesh.rotation.y += dt * 0.8;
+      L.glow.material.opacity = 0.3 + Math.sin(L.t * 3 + L.p) * 0.12;
+      var sh = 1 - (L.mesh.position.y - L.ground - L.hover) * 0.5; // the shadow grows as the log comes down
+      L.shadow.material.opacity = 0.2 * Math.max(0.2, Math.min(1, sh));
+      if (L.t > 0.5 && dist(player.position.x, player.position.z, L.x, L.z) < PICKUP_RANGE) { // walked into it: collect
+        if (!addItem(L.item, L.amount)) { bagFull(); continue; }  // no room: it stays where it is
+        popSound();
+        pickupTally(L.item, L.amount);
+        burst(L.x, L.mesh.position.y + 0.2, L.z, 0xfff1a8, 10, 2, 1.5, -2);
+        scene.remove(L.mesh);
+        L.mesh.traverse(function (o) { // free one-off shapes; shared ones stay
+          if (o.isMesh && o.geometry !== logGeo && o.geometry !== sapGeo && o.geometry !== coalGeo && o.geometry !== seedMoonGeo && o.geometry !== seedShineGeo && o.geometry !== seedGeo && o.geometry !== sapDripGeo && o.geometry !== sapShineGeo && boulderGeos.indexOf(o.geometry) < 0) o.geometry.dispose();
+        });
+        scene.remove(L.shadow);
+        L.glow.material.dispose();
+        L.shadow.geometry.dispose();
+        L.shadow.material.dispose();
+        logs.splice(i, 1);
+      }
+    }
+  }
+
+  // A little "pop" sound, made on the fly (no sound files needed)
+  var audioCtx = null;
+  function wakeAudio() { // phones only allow sound after you've touched the screen or pressed a key
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx && AC) audioCtx = new AC();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  window.addEventListener('pointerdown', wakeAudio);
+  window.addEventListener('keydown', wakeAudio);
+  window.addEventListener('touchstart', wakeAudio);
+  function popSound() {
+    if (!audioCtx) return;
+    var now = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620 + Math.random() * 120, now);         // a quick upward bloop
+    osc.frequency.exponentialRampToValueAtTime(1300, now + 0.07);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
+  // Tree-chopping sounds, also made on the fly
+  var noiseBuf = null;
+  function hissBurst(dur, filterType, freq, q, vol, attack, decay, when) { // a burst of filtered hiss: the basis of thocks, crashes and rustles
+    if (!noiseBuf) {
+      noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    var t0 = audioCtx.currentTime + (when || 0);
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    src.buffer = noiseBuf;
+    f.type = filterType; f.frequency.value = freq; f.Q.value = q;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + attack + decay);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.5);
+    src.stop(t0 + dur);
+  }
+  function slideTone(type, f0, f1, vol, dur, when) { // a pitch that slides from f0 to f1
+    var t0 = audioCtx.currentTime + (when || 0);
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function chopSound() { // a woody "thock" as the axe bites in
+    if (!audioCtx) return;
+    var p = 0.9 + Math.random() * 0.2;
+    slideTone('sine', 230 * p, 105 * p, 0.55, 0.11);            // the deep knock of the trunk
+    slideTone('triangle', 520 * p, 300 * p, 0.18, 0.05);        // the hollow ring of the wood
+    hissBurst(0.12, 'bandpass', 1500 * p, 1.4, 0.4, 0.002, 0.07); // the crack of the blade and chips flying
+  }
+  function creakSound() { // the trunk groans as the tree starts to tip
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), wob = audioCtx.createOscillator(), wobAmt = audioCtx.createGain();
+    var f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(95, t0);
+    osc.frequency.linearRampToValueAtTime(60, t0 + 1.3);
+    wob.frequency.value = 13; wobAmt.gain.value = 9;          // a ratchety wobble, like wood fibres giving way
+    wob.connect(wobAmt); wobAmt.connect(osc.frequency);
+    f.type = 'lowpass'; f.frequency.value = 700; f.Q.value = 4;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.25);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.4);
+    osc.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); wob.start(t0);
+    osc.stop(t0 + 1.45); wob.stop(t0 + 1.45);
+  }
+  function crashSound() { // the tree hits the ground: a heavy thud, a rumble and a rustle of leaves
+    if (!audioCtx) return;
+    slideTone('sine', 90, 38, 0.7, 0.45);
+    hissBurst(0.8, 'lowpass', 320, 0.7, 0.6, 0.01, 0.6);
+    hissBurst(0.7, 'highpass', 2600, 0.5, 0.18, 0.03, 0.5, 0.04);
+    slideTone('sine', 70, 40, 0.3, 0.25, 0.16);                // a smaller bounce
+  }
+  // Mining sounds: a bright metal-on-stone "tink" for each swing, a clattering rumble when the rock breaks
+  function bellTone(freq, vol, decay, when) { // one bell-like partial that rings and fades
+    var t0 = audioCtx.currentTime + (when || 0);
+    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + decay + 0.02);
+  }
+  function clinkSound() { // the pickaxe strikes stone
+    if (!audioCtx) return;
+    var p = 0.92 + Math.random() * 0.16;
+    bellTone(1870 * p, 0.16, 0.32);                                // the pick's metal ringing, with uneven overtones like real metal
+    bellTone(2790 * p, 0.09, 0.22);
+    bellTone(4310 * p, 0.05, 0.14);
+    hissBurst(0.06, 'bandpass', 3800 * p, 1.2, 0.35, 0.001, 0.03); // the sharp click of the strike
+    slideTone('sine', 170 * p, 95 * p, 0.32, 0.07);            // the dull knock of solid rock
+    hissBurst(0.16, 'highpass', 1800, 0.6, 0.12, 0.004, 0.11, 0.015); // grit and chips skittering away
+  }
+  function crumbleSound() { // the rock cracks apart and the rubble tumbles down
+    if (!audioCtx) return;
+    hissBurst(0.15, 'bandpass', 2400, 0.8, 0.5, 0.001, 0.08);    // the crack
+    slideTone('sine', 110, 45, 0.6, 0.4, 0.02);                  // a heavy thump
+    hissBurst(0.7, 'lowpass', 500, 0.7, 0.4, 0.02, 0.5, 0.03);   // the rumble
+    for (var i = 0; i < 9; i++) {                                // stones clattering, quieter as they settle
+      var when = 0.06 + i * 0.05 + Math.random() * 0.04;
+      hissBurst(0.08, 'bandpass', 700 + Math.random() * 1800, 2.5, 0.28 * (1 - i / 11), 0.002, 0.05, when);
+      slideTone('sine', 240 + Math.random() * 200, 140, 0.12 * (1 - i / 11), 0.05, when);
+    }
+  }
+  // Trimming sounds: a crisp "snip-snick" of the shears with a rustle of leaves, and a big leafy whoosh when the bush is cleared
+  function snipSound() {
+    if (!audioCtx) return;
+    var p = 0.92 + Math.random() * 0.16;
+    hissBurst(0.09, 'highpass', 5200 * p, 0.8, 0.22, 0.003, 0.05);      // the blades sliding past each other
+    bellTone(3300 * p, 0.07, 0.06, 0.04);                             // the little metal click as they close
+    bellTone(4700 * p, 0.04, 0.04, 0.045);
+    hissBurst(0.05, 'bandpass', 2600 * p, 3, 0.25, 0.001, 0.025, 0.045); // the snip itself
+    hissBurst(0.3, 'bandpass', 3200, 0.9, 0.16, 0.02, 0.2, 0.05);     // leaves rustling as they fall
+  }
+  function rustleSound() {
+    if (!audioCtx) return;
+    for (var i = 0; i < 7; i++) {                                     // waves of rustling leaves, fading away
+      hissBurst(0.25, 'bandpass', 2400 + Math.random() * 2000, 0.8, 0.22 * (1 - i / 9), 0.03, 0.17, i * 0.08 + Math.random() * 0.03);
+    }
+    hissBurst(0.6, 'lowpass', 900, 0.5, 0.18, 0.05, 0.45);            // the soft whoosh of the branches collapsing
+    slideTone('sine', 120, 70, 0.18, 0.25, 0.05);                     // a gentle bump as it settles
+  }
+  // Spell sounds: a sparkly magical shimmer when you cast, and a soft chime as the sparkles land on each crop
+  function spellSound() {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain(); // a whoosh that sweeps upward
+    if (!noiseBuf) hissBurst(0.01, 'lowpass', 100, 1, 0.0002, 0.001, 0.002);  // makes sure the hiss is ready
+    src.buffer = noiseBuf;
+    f.type = 'bandpass'; f.Q.value = 2.5;
+    f.frequency.setValueAtTime(500, t0);
+    f.frequency.exponentialRampToValueAtTime(3500, t0 + 0.6);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.16, t0 + 0.2);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + 0.8);
+    [523.25, 526.5].forEach(function (fr) {                       // a warm, slightly wavy glow underneath
+      var osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = fr;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.5);
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + 1.55);
+    });
+    [1046.5, 1318.5, 1568, 2093, 2637, 3136].forEach(function (fr, i) { // a rising, twinkly run of bell notes
+      bellTone(fr, 0.09, 0.7, 0.05 + i * 0.065);
+      bellTone(fr * 2.01, 0.025, 0.4, 0.05 + i * 0.065);          // a faint glassy overtone on each
+    });
+    for (var i = 0; i < 7; i++) {                                 // little random sparkles fizzing around you
+      bellTone(3200 + Math.random() * 3200, 0.03, 0.18, 0.35 + Math.random() * 0.9);
+    }
+  }
+  function landChime(when) { // sparkles settling onto a crop
+    if (!audioCtx) return;
+    var notes = [1568, 1760, 2093, 2349];
+    var fr = notes[Math.floor(Math.random() * notes.length)];
+    bellTone(fr, 0.05, 0.5, when);
+    bellTone(fr * 1.5, 0.025, 0.35, when + 0.03);
+  }
+  // Mana sounds: soft twinkles that climb higher as the Dawn Tree fills your mana, and a bright chord when it's full
+  var MANA_NOTES = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349.3, 2637, 3136, 3520]; // a happy five-note scale, two octaves
+  var manaChimeT = 0;
+  function manaFillSound(fullness, dt) {
+    if (!audioCtx) return;
+    manaChimeT -= dt;
+    if (manaChimeT > 0) return;
+    manaChimeT = 0.16;                                              // one twinkle every so often while it fills
+    var fr = MANA_NOTES[Math.min(MANA_NOTES.length - 1, Math.floor(fullness * MANA_NOTES.length))];
+    bellTone(fr, 0.04, 0.4);
+    bellTone(fr * 2.01, 0.012, 0.25, 0.01);                         // a glassy shimmer on top
+  }
+  function manaFullSound() {
+    if (!audioCtx) return;
+    [2093, 2637, 3136, 4186].forEach(function (fr, i) {             // a quick sparkling chord, rolled upward
+      bellTone(fr, 0.06, 0.9, i * 0.05);
+      bellTone(fr * 1.005, 0.03, 0.9, i * 0.05 + 0.01);             // slightly detuned twin, for a soft chorus shimmer
+    });
+    for (var i = 0; i < 5; i++) bellTone(4000 + Math.random() * 2500, 0.02, 0.2, 0.25 + Math.random() * 0.5); // a few glints
+  }
+  // Garden sounds: a crunchy dig for tilling, a soft pat and a cheerful bloop for planting, a splash and drips for watering
+  function tillSound() {
+    if (!audioCtx) return;
+    var p = 0.9 + Math.random() * 0.2;
+    slideTone('sine', 130 * p, 65 * p, 0.4, 0.12);                   // the hoe thunks into the ground
+    hissBurst(0.25, 'lowpass', 700 * p, 0.8, 0.45, 0.004, 0.16);      // a crunchy scoop of earth
+    hissBurst(0.15, 'bandpass', 1300 * p, 1.5, 0.18, 0.01, 0.09, 0.03); // the blade scraping through soil
+    for (var i = 0; i < 4; i++) {                                     // clods pattering back down
+      hissBurst(0.06, 'bandpass', 500 + Math.random() * 600, 2, 0.14, 0.002, 0.04, 0.16 + i * 0.06 + Math.random() * 0.03);
+    }
+  }
+  function findSound() { // you dug something up!
+    if (!audioCtx) return;
+    bellTone(1568, 0.07, 0.4, 0.3);
+    bellTone(2093, 0.07, 0.5, 0.38);
+    bellTone(3136, 0.03, 0.4, 0.38);
+  }
+  function plantSound() {
+    if (!audioCtx) return;
+    hissBurst(0.1, 'lowpass', 600, 0.7, 0.3, 0.003, 0.06);           // patting the soil down over the seed
+    hissBurst(0.1, 'lowpass', 500, 0.7, 0.22, 0.003, 0.06, 0.11);
+    slideTone('sine', 420, 760, 0.16, 0.12, 0.2);                     // a cheerful little bloop as it settles in
+    bellTone(1760, 0.035, 0.35, 0.3);                                 // and a tiny magic twinkle
+  }
+  function waterSound() {
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    if (!noiseBuf) hissBurst(0.01, 'lowpass', 100, 1, 0.0002, 0.001, 0.002);  // makes sure the hiss is ready
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain(); // a soft pouring splash
+    src.buffer = noiseBuf;
+    f.type = 'bandpass'; f.Q.value = 0.9;
+    f.frequency.setValueAtTime(1200, t0);
+    f.frequency.linearRampToValueAtTime(2200, t0 + 0.5);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.05);
+    gain.gain.setValueAtTime(0.2, t0 + 0.35);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(t0, Math.random() * 0.3);
+    src.stop(t0 + 0.75);
+    for (var i = 0; i < 6; i++) {                                     // droplets plinking into the soil
+      var when = 0.08 + i * 0.09 + Math.random() * 0.05, fr = 700 + Math.random() * 500;
+      slideTone('sine', fr, fr * 2.2, 0.08 * (1 - i / 8), 0.06, when);
+    }
+  }  function sleepSound() { // a soft, sleepy lullaby: three gentle falling notes
+    if (!audioCtx) return;
+    [784, 659.3, 523.3].forEach(function (fr, i) { bellTone(fr, 0.06, 1.1, i * 0.35); bellTone(fr * 2, 0.015, 0.7, i * 0.35 + 0.01); });
+  }
+  function doorSound() { // the front door creaks open and bumps shut
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator(), wob = audioCtx.createOscillator(), wobAmt = audioCtx.createGain();
+    var f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(260, t0);
+    osc.frequency.linearRampToValueAtTime(420, t0 + 0.35);         // a little rising creak
+    wob.frequency.value = 22; wobAmt.gain.value = 18;
+    wob.connect(wobAmt); wobAmt.connect(osc.frequency);
+    f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 3;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.08, t0 + 0.06);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+    osc.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); wob.start(t0);
+    osc.stop(t0 + 0.42); wob.stop(t0 + 0.42);
+    slideTone('sine', 140, 70, 0.35, 0.12, 0.42);                    // and a soft wooden bump as it closes
+    hissBurst(0.08, 'lowpass', 800, 0.7, 0.2, 0.003, 0.05, 0.42);
+    bellTone(2093, 0.025, 0.4, 0.46);                                // with a tiny magic chime
+  }
+
+
+
+
+
+
+  // ---------- Mining rocks ----------
+  var HITS_TO_BREAK = 10, COAL_CHANCE = 0.4;
+  var mineable = [], rockS = new THREE.Vector3(), rockP = new THREE.Vector3(), rockQ = new THREE.Quaternion();
+  rockBatches.forEach(function (rb) {
+    rb.list.forEach(function (m4, n) {
+      m4.decompose(rockP, rockQ, rockS);
+      if (rockP.y < WATER_Y - 0.05) return; // rocks on the lake bed stay put
+      var solid = null;
+      for (var i = 0; i < solids.length; i++) {
+        if (Math.abs(solids[i].x - rockP.x) < 0.001 && Math.abs(solids[i].z - rockP.z) < 0.001) { solid = solids[i]; break; }
+      }
+      mineable.push({
+        mesh: rb.mesh, index: n, orig: m4.clone(), x: rockP.x, z: rockP.z, y: rockP.y,
+        size: rockS.x, solid: solid || { x: rockP.x, z: rockP.z, r: 0 }, solidR: solid ? solid.r : 0,
+        hits: 0, state: 'whole'
+      });
+    });
+  });
+  allScenery = choppable.concat(trimmable);
+  function rockInReach() {
+    var best = null, bestD = 99;
+    mineable.forEach(function (r) {
+      if (r.state !== 'whole') return;
+      var d = dist(player.position.x, player.position.z, r.x, r.z);
+      if (d < r.size * 0.75 + 1.0 && d < bestD) { best = r; bestD = d; }
+    });
+    return best;
+  }
+  function mineRock(r) {
+    if (swingT < SWING_TIME) return; // still mid-swing
+    swingT = 0;
+    useStamina(STAMINA_COST.pickaxe);
+    swingRock = r;
+    facing = Math.atan2(r.x - player.position.x, r.z - player.position.z); // turn to face the rock
+  }
+  // Puts a rock's instance back with a size (k) and a little offset (for shaking)
+  var rockM = new THREE.Matrix4(), rockScaleM = new THREE.Matrix4();
+  function setRock(r, k, ox, oz) {
+    rockM.copy(r.orig).multiply(rockScaleM.makeScale(k, k, k));
+    rockM.elements[12] += ox || 0;
+    rockM.elements[14] += oz || 0;
+    r.mesh.setMatrixAt(r.index, rockM);
+    r.mesh.instanceMatrix.needsUpdate = true;
+  }
+  // The pickaxe lands: chips fly, the rock shakes, and on the tenth hit it crumbles
+  function pickHits(r) {
+    if (r.state !== 'whole') return;
+    r.hits++;
+    clinkSound();
+    var hx = r.x - Math.sin(facing) * r.size * 0.5, hz = r.z - Math.cos(facing) * r.size * 0.5;
+    burst(hx, r.y + r.size * 0.4, hz, 0xa9a49a, 12, 2.6, 2, -8);  // stone chips
+    burst(hx, r.y + r.size * 0.4, hz, 0xfff1c4, 4, 2, 1.5, -4);   // a few sparks
+    if (r.hits < HITS_TO_BREAK) { r.shakeT = 0; return; }
+    // Crumble! The rock bursts into rubble and sparkles, leaving stone (and maybe coal) behind
+    crumbleSound();
+    r.state = 'crumbling';
+    r.crumbleT = 0;
+    burst(r.x, r.y + r.size * 0.3, r.z, 0x8f8c86, 30, 4 * Math.max(0.6, r.size), 2.5, -9);
+    var span = 0.9 * Math.max(0.5, r.size);
+    sparklePoof(new THREE.Vector3(r.x - span, r.y, r.z), new THREE.Vector3(r.x + span, r.y, r.z), 160);
+    var stones = Math.max(2, Math.min(6, Math.round(r.size * 4)));
+    for (var i = 0; i < stones; i++) {
+      var a = Math.random() * Math.PI * 2, d = 0.3 + Math.random() * (0.6 + r.size * 0.5);
+      dropPickup('stone', 1, r.x + Math.cos(a) * d, r.z + Math.sin(a) * d, groundHeight(r.x, r.z), 0.2 + i * 0.06);
+    }
+    if (Math.random() < COAL_CHANCE) {
+      var ca = Math.random() * Math.PI * 2;
+      dropPickup('coal', 1, r.x + Math.cos(ca) * 0.7, r.z + Math.sin(ca) * 0.7, groundHeight(r.x, r.z), 0.6);
+    }
+  }
+  function updateRocks(dt) {
+    mineable.forEach(function (r) {
+      if (r.state === 'whole' && r.shakeT !== undefined) { // a quick shake after each hit
+        r.shakeT += dt;
+        var sh = r.shakeT < 0.3 ? Math.sin(r.shakeT * 60) * 0.035 * Math.exp(-r.shakeT * 9) : 0;
+        setRock(r, 1, sh * Math.cos(facing), -sh * Math.sin(facing));
+        if (r.shakeT >= 0.3) r.shakeT = undefined;
+      } else if (r.state === 'crumbling') { // shrinks away into the rubble
+        r.crumbleT += dt;
+        var k = Math.max(0, 1 - r.crumbleT / 0.35);
+        setRock(r, k, (Math.random() - 0.5) * 0.05 * k, (Math.random() - 0.5) * 0.05 * k);
+        if (k === 0) {
+          r.solid.r = 0;
+          showHiddenGrass(r.solid, true); // grass grows where the rock was
+          r.state = 'regrowing';
+          r.brokeAt = gameMinutes();
+          r.shownK = -1;
+          r.grassHidden = false;
+        }
+      } else if (r.state === 'regrowing') { // the rock slowly rises back out of the ground over many days
+        var days = (gameMinutes() - r.brokeAt) / (24 * 60);
+        if (days < SPROUT_DAYS) return;
+        if (r.shownK < 0 && soilNear(r.solid.x, r.solid.z, r.solidR)) { r.brokeAt = gameMinutes() - SPROUT_DAYS * 24 * 60; return; } // farmed over: it can't come back
+        var g = Math.min(1, (days - SPROUT_DAYS) / (REGROW_DAYS - SPROUT_DAYS));
+        var rk = 0.08 + 0.92 * g;
+        if (g >= 1 || rk - r.shownK > 0.004) {
+          setRock(r, rk);
+          r.shownK = rk;
+          r.solid.r = r.solidR * rk;
+        }
+        if (rk > 0.35 && !r.grassHidden) { showHiddenGrass(r.solid, false); r.grassHidden = true; }
+        if (g >= 1) { r.state = 'whole'; r.hits = 0; r.solid.r = r.solidR; }
+      }
+    });
+  }
+
 });
