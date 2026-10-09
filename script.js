@@ -10492,7 +10492,7 @@ function startGame(THREE) {
   var clinicRoom = new THREE.Group();
   clinicRoom.position.set(CIN_X, 0, CIN_Z);
   clinicScene.add(clinicRoom);
-  clinicScene.add(new THREE.HemisphereLight(0xfffaf2, 0x8c9488, 0.66));
+  clinicScene.add(new THREE.HemisphereLight(0xfff6ea, 0x7a8478, 0.5));   // (softer, so the colours don't wash out)
   var ciSun = new THREE.DirectionalLight(0xfff0dc, 0.5);               // daylight slanting in through the windows
   ciSun.position.set(CIN_X - 6, 8, CIN_Z + 5);
   ciSun.target.position.set(CIN_X + 1, 0, CIN_Z - 0.5);
@@ -10502,10 +10502,10 @@ function startGame(THREE) {
   ciSun.shadow.camera.near = 1; ciSun.shadow.camera.far = 25;
   ciSun.shadow.bias = -0.0006; ciSun.shadow.normalBias = 0.02;
   clinicScene.add(ciSun); clinicScene.add(ciSun.target);
-  var ciLamp = new THREE.PointLight(0xfff4e6, 0.5, 13);                // the ceiling lights
+  var ciLamp = new THREE.PointLight(0xfff0dc, 0.36, 13);                // the ceiling lights
   ciLamp.position.set(CIN_X - 2.4, 3.1, CIN_Z + 0.6);
   clinicScene.add(ciLamp);
-  var ciLamp2 = new THREE.PointLight(0xfff4e6, 0.5, 13);
+  var ciLamp2 = new THREE.PointLight(0xfff0dc, 0.36, 13);
   ciLamp2.position.set(CIN_X + 2.6, 3.1, CIN_Z - 0.4);
   clinicScene.add(ciLamp2);
   function ciPart(geo, mat, x, y, z, rx, ry, rz, parent) {            // one piece of the clinic room (x, z from the middle of the floor)
@@ -10520,26 +10520,69 @@ function startGame(THREE) {
   var ciSolids = [];                                                  // things you bump into (room positions: x, z, radius)
 
   // painted textures
-  var ciFloorTex = paintTexture(512, 512, function (g, w, h) {        // cream and pale mint vinyl tiles, with a soft speckle
-    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
-      g.fillStyle = (r + c) % 2 ? '#cfe2d6' : '#f1ece0'; g.fillRect(c * 64, r * 64, 64, 64);
-      var sh = g.createLinearGradient(c * 64, r * 64, c * 64 + 64, r * 64 + 64); sh.addColorStop(0, 'rgba(255,255,255,0.12)'); sh.addColorStop(1, 'rgba(0,0,0,0.04)');
-      g.fillStyle = sh; g.fillRect(c * 64, r * 64, 64, 64);
+  // the floor: polished marble-look tiles laid as a checkerboard of warm cream and sage, each tile its own shade with soft
+  // grey veining, in narrow grout lines, framed by a border of deep teal tiles and a thin cream inlay round the room
+  var CF_PPM = 160, CF_T = 0.4;                                        // canvas pixels per metre, and tile size
+  function ciFloorPaint(g, w, h, bumpOnly) {
+    var T = CF_T * CF_PPM, B = 0.32 * CF_PPM, GR = 3;                  // tile, border width and grout in pixels
+    g.fillStyle = bumpOnly ? '#303030' : '#8a8478'; g.fillRect(0, 0, w, h);   // the grout
+    function tile(x, y, tw, th, base, seed) {
+      if (bumpOnly) { g.fillStyle = '#f0f0f0'; g.fillRect(x + GR / 2, y + GR / 2, tw - GR, th - GR); g.fillStyle = '#c8c8c8'; g.fillRect(x + GR / 2, y + th - GR / 2 - 2, tw - GR, 2); g.fillRect(x + tw - GR / 2 - 2, y + GR / 2, 2, th - GR); return; }
+      var v = (isle2Hash(seed) - 0.5) * 10;
+      g.fillStyle = 'hsl(' + base[0] + ',' + base[1] + '%,' + (base[2] + v * 0.5) + '%)'; g.fillRect(x + GR / 2, y + GR / 2, tw - GR, th - GR);
+      for (var c = 0; c < 3; c++) {                                    // cloudy patches
+        var cx = x + isle2Hash(seed + c * 3.1) * tw, cy = y + isle2Hash(seed + c * 4.7) * th, cg = g.createRadialGradient(cx, cy, 2, cx, cy, tw * 0.5);
+        cg.addColorStop(0, 'rgba(255,255,255,0.18)'); cg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = cg; g.fillRect(x + GR / 2, y + GR / 2, tw - GR, th - GR);
+      }
+      g.save(); g.beginPath(); g.rect(x + GR / 2, y + GR / 2, tw - GR, th - GR); g.clip();
+      for (var vn = 0; vn < 2; vn++) {                                 // fine grey veins
+        g.strokeStyle = 'rgba(90,90,96,' + (0.05 + isle2Hash(seed + vn * 9) * 0.1) + ')'; g.lineWidth = 0.5 + isle2Hash(seed + vn) * 0.9;
+        var px = x + isle2Hash(seed * 1.3 + vn) * tw, py = y; g.beginPath(); g.moveTo(px, py);
+        while (py < y + th) { px += (isle2Hash(seed + py * 0.37 + vn) - 0.5) * 14; py += 6; g.lineTo(px, py); }
+        g.stroke();
+      }
+      var sh = g.createLinearGradient(x, y, x + tw, y + th); sh.addColorStop(0, 'rgba(255,255,255,0.14)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.08)');   // a bevelled, polished face
+      g.fillStyle = sh; g.fillRect(x, y, tw, th);
+      g.restore();
     }
-    for (var i = 0; i < 5000; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '90,100,90' : '255,255,255') + ',' + isle2Hash(i * 1.3) * 0.18 + ')'; g.fillRect(isle2Hash(i * 2.1) * w, isle2Hash(i * 3.7) * h, 1.5, 1.5); }
-    g.strokeStyle = 'rgba(120,130,120,0.35)'; g.lineWidth = 1.2;
-    for (var k = 0; k <= 8; k++) { g.beginPath(); g.moveTo(k * 64, 0); g.lineTo(k * 64, h); g.moveTo(0, k * 64); g.lineTo(w, k * 64); g.stroke(); }
-  });
-  ciFloorTex.wrapS = ciFloorTex.wrapT = THREE.RepeatWrapping; ciFloorTex.repeat.set(CIN_W / 3.2, CIN_D / 3.2);
+    var n = 0;
+    for (var y = B; y < h - B - 1; y += T) for (var x = B; x < w - B - 1; x += T) {   // the checkerboard
+      var ci = Math.round((x - B) / T), cj = Math.round((y - B) / T);
+      tile(x, y, Math.min(T, w - B - x), Math.min(T, h - B - y), (ci + cj) % 2 ? [140, 18, 70] : [38, 38, 84], ++n * 7.3);
+    }
+    for (var bx = 0; bx < w; bx += T) { tile(bx, 0, T, B, [172, 40, 28], ++n * 7.3); tile(bx, h - B, T, B, [172, 40, 28], ++n * 7.3); }   // the teal border
+    for (var by = B; by < h - B; by += T) { tile(0, by, B, Math.min(T, h - B - by), [172, 40, 28], ++n * 7.3); tile(w - B, by, B, Math.min(T, h - B - by), [172, 40, 28], ++n * 7.3); }
+    if (!bumpOnly) { g.strokeStyle = '#efe4cc'; g.lineWidth = 5; g.strokeRect(B - 1, B - 1, w - B * 2 + 2, h - B * 2 + 2); }   // the cream inlay
+  }
+  var ciFloorTex = paintTexture(Math.round(CIN_W * CF_PPM), Math.round(CIN_D * CF_PPM), function (g, w, h) { ciFloorPaint(g, w, h, false); });
+  var ciFloorBump = paintTexture(Math.round(CIN_W * CF_PPM / 2), Math.round(CIN_D * CF_PPM / 2), function (g, w, h) { g.scale(0.5, 0.5); ciFloorPaint(g, w * 2, h * 2, true); });
   ciFloorTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  var ciBeadTex = paintTexture(256, 64, function (g, w, h) {          // mint beadboard: narrow tongue-and-groove boards
+  var ciBeadTex = paintTexture(256, 128, function (g, w, h) {         // sage beadboard: narrow tongue-and-groove boards, each with a rounded bead and a little brushwork
     for (var x = 0; x < w; x += 16) {
-      var bg = g.createLinearGradient(x, 0, x + 16, 0); bg.addColorStop(0, '#9fc7b4'); bg.addColorStop(0.2, '#b9dccb'); bg.addColorStop(0.85, '#b2d6c4'); bg.addColorStop(1, '#8fb8a5');
+      var l = 70 + isle2Hash(x * 0.37) * 3;
+      var bg = g.createLinearGradient(x, 0, x + 16, 0); bg.addColorStop(0, 'hsl(150,20%,' + (l - 12) + '%)'); bg.addColorStop(0.18, 'hsl(150,22%,' + (l + 3) + '%)'); bg.addColorStop(0.3, 'hsl(150,20%,' + l + '%)'); bg.addColorStop(0.85, 'hsl(150,20%,' + (l - 2) + '%)'); bg.addColorStop(1, 'hsl(150,20%,' + (l - 9) + '%)');
       g.fillStyle = bg; g.fillRect(x, 0, 16, h);
-      g.fillStyle = 'rgba(40,70,60,0.35)'; g.fillRect(x, 0, 1.5, h);
+      g.fillStyle = 'rgba(30,60,50,0.55)'; g.fillRect(x, 0, 1.5, h);
+      g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(x + 2, 0, 1, h);
     }
+    for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i) * 0.06 + ')'; g.fillRect(isle2Hash(i * 2.2) * w, isle2Hash(i * 3.4) * h, 1, 4 + isle2Hash(i * 5) * 10); }
   });
   ciBeadTex.wrapS = THREE.RepeatWrapping;
+  var ciPaperTex = paintTexture(256, 256, function (g, w, h) {        // the wallpaper above: cream with soft sage stripes and little sprigs of leaves and hearts
+    g.fillStyle = '#f3ebdc'; g.fillRect(0, 0, w, h);
+    for (var sx = 0; sx < w; sx += 64) { g.fillStyle = 'rgba(150,185,160,0.22)'; g.fillRect(sx + 26, 0, 12, h); g.fillStyle = 'rgba(150,185,160,0.35)'; g.fillRect(sx + 24, 0, 1.5, h); g.fillRect(sx + 38.5, 0, 1.5, h); }
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {         // a sprig between the stripes, offset column by column
+      var cy = r * 64 + (c % 2 ? 32 : 0) + 16;
+      g.save(); g.translate(c * 64 + 2, cy); g.rotate((r + c) % 2 ? 0.3 : -0.3);
+      g.strokeStyle = 'rgba(90,130,100,0.6)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(0, 10); g.quadraticCurveTo(2, 0, 0, -10); g.stroke();
+      g.fillStyle = 'rgba(110,150,115,0.6)';
+      [[-1, 4], [1, -1], [-1, -6]].forEach(function (lf) { g.beginPath(); g.ellipse(lf[0] * 4, lf[1], 4, 1.8, lf[0] * 0.6, 0, Math.PI * 2); g.fill(); });
+      g.fillStyle = 'rgba(224,136,154,0.7)'; g.beginPath(); g.moveTo(0, -10); g.bezierCurveTo(-4, -14, -2, -17, 0, -15); g.bezierCurveTo(2, -17, 4, -14, 0, -10); g.fill();
+      g.restore();
+    }
+    for (var i = 0; i < 1500; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,130,110') + ',' + isle2Hash(i * 1.7) * 0.05 + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
+  });
+  ciPaperTex.wrapS = ciPaperTex.wrapT = THREE.RepeatWrapping;
   var ciPlasterTex = paintTexture(128, 128, function (g, w, h) {
     g.fillStyle = '#f7f4ee'; g.fillRect(0, 0, w, h);
     for (var i = 0; i < 1200; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,255,255' : '150,140,130') + ',' + (isle2Hash(i * 1.7) * 0.06) + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
@@ -10773,7 +10816,7 @@ function startGame(THREE) {
 
   // materials
   var CI = {
-    floor: new THREE.MeshStandardMaterial({ map: ciFloorTex, roughness: 0.4, metalness: 0.02 }),
+    floor: new THREE.MeshStandardMaterial({ map: ciFloorTex, bumpMap: ciFloorBump, bumpScale: 0.012, roughness: 0.28, metalness: 0.04 }),
     white: new THREE.MeshStandardMaterial({ color: 0xf8f7f3, roughness: 0.5 }),
     mint: new THREE.MeshStandardMaterial({ color: 0x9fcab6, roughness: 0.55 }),
     teal: new THREE.MeshStandardMaterial({ color: 0x2f6f68, roughness: 0.45 }),
@@ -10826,7 +10869,9 @@ function startGame(THREE) {
     clinicRoom.add(wgp);
     ciWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
     var wallTex = ciPlasterTex.clone(); wallTex.needsUpdate = true; wallTex.repeat.set(len / 1.5, CIN_H / 1.5);
-    var plasterMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 });
+    var plasterMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.95 });   // plain plaster, for the window reveals
+    var paperTex = ciPaperTex.clone(); paperTex.needsUpdate = true; paperTex.repeat.set(len / 0.6, CIN_H / 0.6);
+    var paperMat = new THREE.MeshStandardMaterial({ map: paperTex, roughness: 0.9 });
     var shape = new THREE.Shape(); shape.moveTo(-len / 2, 0); shape.lineTo(len / 2, 0); shape.lineTo(len / 2, CIN_H); shape.lineTo(-len / 2, CIN_H); shape.lineTo(-len / 2, 0);
     CI_HOLES[name].forEach(function (hx) {
       var x0 = hx - CI_WIN_W / 2, x1 = hx + CI_WIN_W / 2, y0 = CI_WIN_Y - CI_WIN_H / 2, y1 = CI_WIN_Y + CI_WIN_H / 2;
@@ -10840,12 +10885,35 @@ function startGame(THREE) {
       });
       ciWindowFrame(wgp, hx);
     });
-    ciPart(new THREE.ShapeGeometry(shape), plasterMat, 0, 0, 0, 0, 0, 0, wgp);
-    var beadTex = ciBeadTex.clone(); beadTex.needsUpdate = true; beadTex.repeat.set(len / 1.4, 1);
-    ciPart(new THREE.BoxGeometry(len, 1.0, 0.025), new THREE.MeshStandardMaterial({ map: beadTex, roughness: 0.6 }), 0, 0.5, 0.0125, 0, 0, 0, wgp);
-    ciPart(new THREE.BoxGeometry(len, 0.06, 0.06), CI.white, 0, 1.02, 0.03, 0, 0, 0, wgp);                                // the chair rail
-    ciPart(new THREE.BoxGeometry(len, 0.13, 0.045), CI.white, 0, 0.065, 0.035, 0, 0, 0, wgp);                             // the skirting
-    ciPart(new THREE.BoxGeometry(len, 0.09, 0.07), CI.white, 0, CIN_H - 0.045, 0.035, 0, 0, 0, wgp);                      // the cornice
+    var shapeGeo = new THREE.ShapeGeometry(shape), sgu = shapeGeo.attributes.uv, sgp = shapeGeo.attributes.position;
+    for (var v = 0; v < sgu.count; v++) sgu.setXY(v, sgp.getX(v) / len + 0.5, sgp.getY(v) / CIN_H);   // so the wallpaper tiles evenly
+    ciPart(shapeGeo, paperMat, 0, 0, 0, 0, 0, 0, wgp);
+    var segs = name === 'S' ? [[-len / 2, -0.73], [0.73, len / 2]] : [[-len / 2, len / 2]];   // (on the front wall, they stop at the door's casing)
+    var trim = CI.white;
+    segs.forEach(function (sg) {
+      var sl = sg[1] - sg[0], cx = (sg[0] + sg[1]) / 2;
+      var beadTex = ciBeadTex.clone(); beadTex.needsUpdate = true; beadTex.repeat.set(sl / 1.4, 1);
+      ciPart(new THREE.BoxGeometry(sl, 1.0, 0.025), new THREE.MeshStandardMaterial({ map: beadTex, bumpMap: beadTex, bumpScale: 0.01, roughness: 0.5 }), cx, 0.5, 0.0125, 0, 0, 0, wgp);
+      // the chair rail: a flat band with a rounded nose and a little bead underneath
+      ciPart(new THREE.BoxGeometry(sl, 0.07, 0.035), trim, cx, 1.02, 0.03, 0, 0, 0, wgp);
+      ciPart(new THREE.CylinderGeometry(0.022, 0.022, sl, 12), trim, cx, 1.04, 0.05, 0, 0, Math.PI / 2, wgp);
+      ciPart(new THREE.CylinderGeometry(0.008, 0.008, sl, 8), trim, cx, 0.983, 0.045, 0, 0, Math.PI / 2, wgp);
+      // the skirting: a tall board on a plinth, with a moulded top
+      ciPart(new THREE.BoxGeometry(sl, 0.16, 0.035), trim, cx, 0.08, 0.035, 0, 0, 0, wgp);
+      ciPart(new THREE.BoxGeometry(sl, 0.03, 0.045), trim, cx, 0.015, 0.04, 0, 0, 0, wgp);
+      ciPart(new THREE.CylinderGeometry(0.012, 0.012, sl, 10), trim, cx, 0.165, 0.045, 0, 0, Math.PI / 2, wgp);
+      ciPart(new THREE.BoxGeometry(sl, 0.006, 0.004), new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.6 }), cx, 0.12, 0.054, 0, 0, 0, wgp);   // a routed line along it
+    });
+    // a picture rail
+    ciPart(new THREE.BoxGeometry(len, 0.035, 0.025), trim, 0, 2.86, 0.0125, 0, 0, 0, wgp);
+    ciPart(new THREE.CylinderGeometry(0.012, 0.012, len, 8), trim, 0, 2.875, 0.025, 0, 0, Math.PI / 2, wgp);
+    // the cornice: a stepped crown with a deep cove, and a row of little dentils
+    ciPart(new THREE.BoxGeometry(len, 0.05, 0.09), trim, 0, CIN_H - 0.025, 0.045, 0, 0, 0, wgp);
+    ciPart(new THREE.CylinderGeometry(0.07, 0.07, len, 12, 1, false, 0, Math.PI / 2), trim, 0, CIN_H - 0.05, 0.0, 0, 0, Math.PI / 2, wgp).rotation.x = Math.PI;
+    ciPart(new THREE.BoxGeometry(len, 0.03, 0.03), trim, 0, CIN_H - 0.135, 0.015, 0, 0, 0, wgp);
+    var dent = new THREE.InstancedMesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), trim, Math.floor(len / 0.07)), dm = new THREE.Matrix4();
+    for (var d = 0; d < dent.count; d++) { dm.makeTranslation(-len / 2 + 0.035 + d * 0.07, CIN_H - 0.17, 0.012); dent.setMatrixAt(d, dm); }
+    wgp.add(dent);
     return wgp;
   }
   function ciWindowFrame(wgp, hx) {                                   // inside a window: six-over-six sashes, a white casing, a sill and a linen blind
