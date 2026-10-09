@@ -4518,6 +4518,70 @@ function startGame(THREE) {
     clPart(new THREE.BoxGeometry(0.34, 0.06, 0.34), CL.trim, cx, CL_BEAM_Y - 0.05, cz);
   });
   clPart(new THREE.BoxGeometry(PORCH_W * 2 + 0.2, 0.62, PORCH_D + 0.1), CL.trim, 0, CL_BEAM_Y + 0.31, CD + PORCH_D / 2);   // the beam
+  // the potted bay trees either side of the porch: rolled-rim terracotta pots with a moulded garland band, weathered
+  // with a white mineral bloom and a little moss, on feet in matching saucers; mossy soil with bark chips; three stems
+  // braided together into a trunk; and a clipped ball of real bay leaves, glossy and pointed, darker inside
+  var clPotTex = paintTexture(512, 128, function (g, w, h) {           // the pot's surface, from its foot (bottom) up to its rim (top)
+    var bg = g.createLinearGradient(0, h, 0, 0); bg.addColorStop(0, '#a85a38'); bg.addColorStop(0.5, '#c4704a'); bg.addColorStop(1, '#b8603e');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 1500; i++) { g.fillStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '255,210,170' : '90,40,20') + ',' + isle2Hash(i * 1.7) * 0.12 + ')'; g.fillRect(isle2Hash(i * 2.3) * w, isle2Hash(i * 3.1) * h, 2, 2); }
+    var bloom = g.createLinearGradient(0, h, 0, h * 0.55); bloom.addColorStop(0, 'rgba(240,235,220,0.55)'); bloom.addColorStop(1, 'rgba(240,235,220,0)');   // white mineral bloom near the foot
+    g.fillStyle = bloom; g.fillRect(0, h * 0.55, w, h * 0.45);
+    for (var m = 0; m < 30; m++) { g.fillStyle = 'rgba(90,120,50,' + (0.2 + isle2Hash(m * 3) * 0.3) + ')'; g.beginPath(); g.arc(isle2Hash(m * 5.3) * w, h * (0.85 + isle2Hash(m * 7.1) * 0.15), 2 + isle2Hash(m) * 5, 0, Math.PI * 2); g.fill(); }   // moss at the base
+    g.strokeStyle = 'rgba(80,35,20,0.5)'; g.lineWidth = 2; var by = h * 0.2;   // the garland band under the rim: swags with little rosettes
+    for (var sw = 0; sw < 8; sw++) {
+      var x0 = sw * w / 8;
+      g.beginPath(); g.moveTo(x0, by); g.quadraticCurveTo(x0 + w / 16, by + 18, x0 + w / 8, by); g.stroke();
+      g.fillStyle = 'rgba(230,150,110,0.9)'; g.beginPath(); g.arc(x0, by, 5, 0, Math.PI * 2); g.fill(); g.stroke();
+    }
+    g.fillStyle = 'rgba(80,35,20,0.35)'; g.fillRect(0, h * 0.08, w, 2); g.fillRect(0, h * 0.34, w, 2);
+  });
+  clPotTex.wrapS = THREE.RepeatWrapping;
+  var clPotMat = new THREE.MeshStandardMaterial({ map: clPotTex, bumpMap: clPotTex, bumpScale: 0.01, roughness: 0.85 });
+  var clBarkTex = paintTexture(64, 128, function (g, w, h) {
+    g.fillStyle = '#6a5040'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 40; i++) { g.strokeStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '40,28,20' : '150,125,100') + ',0.5)'; g.lineWidth = 1 + isle2Hash(i * 2) * 2; var x = isle2Hash(i * 3.3) * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (isle2Hash(i * 5) - 0.5) * 8, h); g.stroke(); }
+  });
+  clBarkTex.wrapS = clBarkTex.wrapT = THREE.RepeatWrapping;
+  var clBarkMat = new THREE.MeshStandardMaterial({ map: clBarkTex, roughness: 0.9 });
+  var clBayLeafGeo = (function () {                                    // a bay leaf: long and pointed, folded a little along its midrib
+    var sh = new THREE.Shape(); sh.moveTo(0, -0.045);
+    sh.bezierCurveTo(0.022, -0.03, 0.02, 0.02, 0, 0.05); sh.bezierCurveTo(-0.02, 0.02, -0.022, -0.03, 0, -0.045);
+    var g = new THREE.ShapeGeometry(sh, 6), p = g.attributes.position;
+    for (var v = 0; v < p.count; v++) p.setZ(v, Math.abs(p.getX(v)) * 0.5 - Math.pow(p.getY(v) / 0.05, 2) * 0.006);
+    g.computeVertexNormals();
+    return g;
+  })();
+  var clBayLeaves = [], clBayQ = new THREE.Quaternion(), clBayM = new THREE.Matrix4(), clBayN = new THREE.Vector3(), clBayT = new THREE.Vector3(), clBayB = new THREE.Vector3();
+  function clBayTree(tx, tz, seed) {
+    var potPts = [[0.001, 0.04], [0.16, 0.04], [0.19, 0.08], [0.25, 0.4], [0.262, 0.41], [0.262, 0.44], [0.29, 0.45], [0.305, 0.48], [0.295, 0.51], [0.26, 0.515], [0.245, 0.5]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+    clPart(new THREE.LatheGeometry(potPts, 36), clPotMat, tx, 0, tz);
+    clPart(new THREE.LatheGeometry([[0.001, 0.0], [0.24, 0.0], [0.25, 0.035], [0.235, 0.04], [0.22, 0.012], [0.001, 0.012]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 28), clPotMat, tx, 0, tz);   // the saucer
+    for (var f = 0; f < 3; f++) { var fa = f / 3 * Math.PI * 2 + seed; clPart(new THREE.BoxGeometry(0.05, 0.03, 0.05), clPotMat, tx + Math.cos(fa) * 0.14, 0.027, tz + Math.sin(fa) * 0.14, 0, -fa, 0); }   // pot feet
+    clPart(new THREE.CylinderGeometry(0.245, 0.245, 0.01, 28), CL.soil, tx, 0.49, tz);
+    for (var mo = 0; mo < 7; mo++) {                                   // cushions of moss and a few bark chips on the soil
+      var ma = mo * 0.9 + seed, mr = 0.08 + isle2Hash(seed + mo) * 0.12;
+      clPart(new THREE.SphereGeometry(0.05 + isle2Hash(mo * 3 + seed) * 0.03, 10, 6), new THREE.MeshStandardMaterial({ color: 0x6a8a3a, roughness: 1 }), tx + Math.cos(ma) * mr, 0.49, tz + Math.sin(ma) * mr).scale.set(1, 0.35, 1);
+      clPart(new THREE.BoxGeometry(0.04, 0.008, 0.025), new THREE.MeshStandardMaterial({ color: 0x8a5a3a, roughness: 0.9 }), tx + Math.cos(ma + 0.45) * (mr + 0.03), 0.497, tz + Math.sin(ma + 0.45) * (mr + 0.03), 0, ma * 2, 0.1);
+    }
+    for (var st = 0; st < 3; st++) {                                   // three stems braided into a trunk
+      var helix = [];
+      for (var hp = 0; hp <= 16; hp++) { var t = hp / 16, ha = st * Math.PI * 2 / 3 + t * Math.PI * 3; helix.push(new THREE.Vector3(tx + Math.cos(ha) * 0.018 * (1 - t * 0.4), 0.47 + t * 0.78, tz + Math.sin(ha) * 0.018 * (1 - t * 0.4))); }
+      clPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 40, 0.013 - st * 0.001, 6), clBarkMat, 0, 0, 0);
+    }
+    clPart(new THREE.CylinderGeometry(0.014, 0.022, 0.3, 8), clBarkMat, tx, 1.33, tz);
+    clPart(new THREE.SphereGeometry(0.38, 18, 14), new THREE.MeshStandardMaterial({ color: 0x1f3a1c, roughness: 0.9 }), tx, 1.52, tz);   // the dark heart of the ball
+    for (var l = 0; l < 760; l++) {                                    // and the leaves over it, each facing outward at its own angle
+      var u = isle2Hash(seed * 13 + l * 1.37), v = isle2Hash(seed * 7 + l * 2.11), th = u * Math.PI * 2, ph = Math.acos(2 * v - 1), rr = 0.39 + isle2Hash(seed + l * 3.3) * 0.06;
+      clBayN.set(Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th));
+      clBayT.set(isle2Hash(l * 5.1 + seed) - 0.5, isle2Hash(l * 6.3 + seed) - 0.5, isle2Hash(l * 7.7 + seed) - 0.5).cross(clBayN).normalize();
+      clBayB.crossVectors(clBayN, clBayT);
+      clBayM.makeBasis(clBayT, clBayB, clBayN); clBayQ.setFromRotationMatrix(clBayM);
+      var tilt = new THREE.Quaternion().setFromAxisAngle(clBayT, (isle2Hash(l * 9.9 + seed) - 0.3) * 0.9);   // tipped up or down a little, so they overlap like real leaves
+      clBayQ.premultiply(tilt);
+      clBayLeaves.push({ p: new THREE.Vector3(tx + clBayN.x * rr, 1.52 + clBayN.y * rr * 0.97, tz + clBayN.z * rr), q: clBayQ.clone(), s: 0.85 + isle2Hash(l * 4.4 + seed) * 0.5, c: isle2Hash(l * 8.8 + seed), top: clBayN.y });
+    }
+  }
   var clLampGlows = [];
   var CSZ = CD + PORCH_D + 0.05, CSY = CL_BEAM_Y + 0.31;               // the sign: a board on the front of the beam, in a white moulded frame with a gold bead
   clPart(new THREE.BoxGeometry(3.3, 0.58, 0.05), CL.teal, 0, CSY, CSZ + 0.025);
@@ -4559,13 +4623,16 @@ function startGame(THREE) {
     clPart(new THREE.CylinderGeometry(0.06, 0.08, 0.04, 6), houseMats.gold, lx, ly - 0.15, CD + 0.34);
     var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
     lg.position.set(lx, ly, CD + 0.36); lg.scale.set(1.2, 1.2, 1); clinicGroup.add(lg); clLampGlows.push(lg);
-    var tx = s * (PORCH_W + 0.55), tz = CD + 0.75;                    // a clipped bay tree, a ball on a bare stem
-    clPart(new THREE.CylinderGeometry(0.28, 0.2, 0.5, 16), CL.terracotta, tx, 0.25, tz);
-    clPart(new THREE.TorusGeometry(0.28, 0.035, 6, 16), CL.terracotta, tx, 0.48, tz, Math.PI / 2, 0, 0);
-    clPart(new THREE.CylinderGeometry(0.25, 0.25, 0.02, 14), CL.soil, tx, 0.46, tz);
-    clPart(new THREE.CylinderGeometry(0.025, 0.035, 0.9, 6), CL.wood, tx, 0.9, tz);
-    clFoliage(tx, 1.5, tz, 0.42, 0.42, 0.42, 420, s * 31 + 7);         // a dense ball of small glossy bay leaves
+    clBayTree(s * (PORCH_W + 0.55), CD + 0.75, s * 31 + 40);           // a potted bay tree on each side of the steps
   });
+  (function () {                                                       // every bay leaf, in one batch
+    var im = new THREE.InstancedMesh(clBayLeafGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.32, side: THREE.DoubleSide }), clBayLeaves.length), m = new THREE.Matrix4(), sc = new THREE.Vector3(), col = new THREE.Color();
+    clBayLeaves.forEach(function (lf, i) {
+      sc.set(lf.s, lf.s, lf.s); m.compose(lf.p, lf.q, sc); im.setMatrixAt(i, m);
+      im.setColorAt(i, col.setHSL(0.27 + lf.c * 0.05, 0.45 + lf.c * 0.1, 0.2 + lf.c * 0.1 + Math.max(0, lf.top) * 0.08));   // fresher, paler growth on top
+    });
+    im.castShadow = true; im.receiveShadow = true; clinicGroup.add(im);
+  })();
   var clBench = new THREE.Group(); clBench.position.set(-3.5, 0, CD + 1.35); clinicGroup.add(clBench);
   for (var cbs = 0; cbs < 4; cbs++) clPart(new THREE.BoxGeometry(1.5, 0.04, 0.09), CL.wood, 0, 0.45, -0.15 + cbs * 0.1, 0, 0, 0, clBench);
   for (var cbb = 0; cbb < 3; cbb++) clPart(new THREE.BoxGeometry(1.5, 0.08, 0.035), CL.wood, 0, 0.62 + cbb * 0.12, -0.24, -0.15, 0, 0, clBench);
@@ -4790,22 +4857,7 @@ function startGame(THREE) {
     clDummy2.rotation.set((q[3] - 0.5) * 0.6, 0, (q[3] - 0.5) * 0.4); return q[3] > 0.7 ? 0xfff1b8 : 0xfbfaf6;
   });
 
-  // an A-frame chalkboard out front, and a teal mailbox on a post by the path
-  var clBoardTex = paintTexture(128, 160, function (g, w, h) {
-    g.fillStyle = '#2a3430'; g.fillRect(0, 0, w, h);
-    for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i * 1.3) * 0.05 + ')'; g.fillRect(isle2Hash(i * 2.2) * w, isle2Hash(i * 3.1) * h, 3, 1); }
-    g.fillStyle = '#f7f3ea'; g.textAlign = 'center';
-    g.font = 'italic 16px Georgia, serif'; g.fillText('The doctor', w / 2, 34);
-    g.font = 'bold 30px Georgia, serif'; g.fillText('is IN', w / 2, 68);
-    g.fillStyle = '#f28aa8'; g.beginPath(); var cx = w / 2, cy = 98, s = 16; g.moveTo(cx, cy + s * 0.9); g.bezierCurveTo(cx - s * 1.3, cy, cx - s * 0.8, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.8, cy - s, cx + s * 1.3, cy, cx, cy + s * 0.9); g.fill();
-    g.fillStyle = '#bfe0d4'; g.font = '12px Georgia, serif'; g.fillText('Open 6am – 6pm', w / 2, 140);
-  });
-  var clBoard = new THREE.Group(); clBoard.position.set(2.1, 0, CD + 2.35); clBoard.rotation.y = -0.5; clinicGroup.add(clBoard);
-  [-1, 1].forEach(function (s) {
-    var pg = new THREE.Group(); pg.position.set(0, 0, s * 0.12); pg.rotation.x = s * 0.2; clBoard.add(pg);
-    clPart(new THREE.BoxGeometry(0.5, 0.82, 0.03), CL.wood, 0, 0.42, 0, 0, 0, 0, pg);
-    clPart(new THREE.PlaneGeometry(0.42, 0.62), new THREE.MeshStandardMaterial({ map: clBoardTex, roughness: 0.9 }), 0, 0.46, s * 0.017, 0, s < 0 ? Math.PI : 0, 0, pg);
-  });
+  // a teal mailbox on a post by the path
   var clMail = new THREE.Group(); clMail.position.set(-2.0, 0, CD + 2.4); clMail.rotation.y = 0.4; clinicGroup.add(clMail);
   clPart(new THREE.BoxGeometry(0.08, 1.0, 0.08), CL.trim, 0, 0.5, 0, 0, 0, 0, clMail);
   clPart(new THREE.BoxGeometry(0.22, 0.03, 0.42), CL.trim, 0, 1.0, 0, 0, 0, 0, clMail);
@@ -4837,7 +4889,7 @@ function startGame(THREE) {
     [-1, 1].forEach(function (s) { solidAt(s * CL_COL_X, CD + PORCH_D - 0.25, 0.2); solidAt(s * (PORCH_W + 0.55), CD + 0.75, 0.42); });
     solidAt(-3.9, CD + 1.35, 0.35); solidAt(-3.1, CD + 1.35, 0.35);
     clBedSpots.forEach(function (b) { solidAt(b[0], b[1], 0.35); });   // the shrubs in the flower beds
-    solidAt(2.1, CD + 2.35, 0.3); solidAt(-2.0, CD + 2.4, 0.12);       // the chalkboard and the mailbox
+    solidAt(-2.0, CD + 2.4, 0.12);                                    // the mailbox
   })();
 
   // ---------- The stone path to Whimsy & Bloom ----------
