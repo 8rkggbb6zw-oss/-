@@ -2314,7 +2314,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   canvas.addEventListener('pointercancel', pointerEnd);
 
   function tapToWalk(e) {
-    if (binOpen || shopOpen || barnShopOpen || glimNaming) return;    // a tap while a menu is open doesn't walk you away from it
+    if (glimNaming) return;
+    var bagUp = bagUi.box && !bagUi.box.hidden;
+    if (document.body.classList.contains('full') && (bagUp || binOpen || shopOpen || barnShopOpen)) {   // in full screen, a tap outside a menu closes it
+      if (!menuJustOpened()) { toggleBag(false); if (binOpen) closeBin(); if (shopOpen) closeShop(); if (barnShopOpen) closeBarnShop(); }
+      return;
+    }
+    if (binOpen || shopOpen || barnShopOpen) return;                  // a tap while a menu is open doesn't walk you away from it
     var rect = canvas.getBoundingClientRect();
     var ndc = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
@@ -2714,6 +2720,23 @@ EVERDAWN_PARTS.push(function (THREE) {
   document.addEventListener('fullscreenchange', fullscreenChanged);
   document.addEventListener('webkitfullscreenchange', fullscreenChanged);
   btnFull.addEventListener('click', function () { setFullScreen(!document.body.classList.contains('full')); focusGame(); });
+  // In full screen, menus sit beside the button column when there's room, so the buttons (Bag, Teleport...) stay
+  // tappable and can close the menu they opened. On a narrow screen there isn't room: the buttons fade while a menu is
+  // open, and a tap anywhere outside the menu closes it instead
+  var ctlBox = document.querySelector('.controls');
+  function layoutMenus() {
+    var b = document.body;
+    if (!b.classList.contains('full') || !ctlBox) { b.classList.remove('menu-side'); return; }
+    var r = ctlBox.getBoundingClientRect(), space = window.innerWidth - r.left + 10, side = window.innerWidth - space >= 330;
+    b.style.setProperty('--ctl-space', Math.round(space) + 'px');
+    if (b.classList.contains('menu-side') !== side) b.classList.toggle('menu-side', side);
+  }
+  window.addEventListener('resize', function () { setTimeout(layoutMenus, 60); });
+  window.addEventListener('orientationchange', function () { setTimeout(layoutMenus, 300); });
+  btnFull.addEventListener('click', function () { setTimeout(layoutMenus, 120); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyF') setTimeout(layoutMenus, 120); });
+  document.addEventListener('fullscreenchange', function () { setTimeout(layoutMenus, 120); });
+  document.addEventListener('webkitfullscreenchange', function () { setTimeout(layoutMenus, 120); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyF' && !e.repeat) setFullScreen(!document.body.classList.contains('full')); });
 
   // Only draw what you can see: every batch of grass, leaves, flowers and stones gets a sphere round all its pieces, and

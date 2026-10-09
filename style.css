@@ -287,6 +287,9 @@ body.full .help { display: none; }
 /* while a menu is open in full screen, the button column fades away so it can't catch taps meant for the menu */
 body.full .controls { transition: opacity .2s; }
 body.full.menu-open .controls { opacity: 0; pointer-events: none; }
+/* ...unless there's room for the menus beside the buttons: then the menus move over and the buttons stay */
+body.full.menu-side.menu-open .controls { opacity: 1; pointer-events: auto; }
+body.full.menu-side .inventory { left: calc((100% - var(--ctl-space, 0px)) / 2); max-width: calc(100% - var(--ctl-space, 0px) - 16px); }
 
 /* how much mana you have, written under the mana bar */
 .mana-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
