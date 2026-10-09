@@ -284,12 +284,28 @@ body.full .controls {
 body.full .controls button { padding: 7px 14px; font-size: .9rem; }
 body.full .hotbar { bottom: calc(14px + env(safe-area-inset-bottom)); }
 body.full .help { display: none; }
-/* while a menu is open in full screen, the button column fades away so it can't catch taps meant for the menu */
-body.full .controls { transition: opacity .2s; }
-body.full.menu-open .controls { opacity: 0; pointer-events: none; }
-/* ...unless there's room for the menus beside the buttons: then the menus move over and the buttons stay */
-body.full.menu-side.menu-open .controls { opacity: 1; pointer-events: auto; }
+/* menus in full screen never cover the buttons, so Bag, Teleport and the rest can always close or switch menus:
+   when there's room, the menus sit beside the button column... */
 body.full.menu-side .inventory { left: calc((100% - var(--ctl-space, 0px)) / 2); max-width: calc(100% - var(--ctl-space, 0px) - 16px); }
+/* ...and on a narrow screen, while a menu is open, the buttons line up in a compact row just above the hotbar and
+   the menu fits in the space between the stats along the top and that row (scrolling if it's long) */
+body.full.menu-open:not(.menu-side) .controls {
+  top: auto;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  left: calc(8px + env(safe-area-inset-left));
+  right: calc(8px + env(safe-area-inset-right));
+  transform: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+body.full.menu-open:not(.menu-side) .controls button { padding: 6px 11px; font-size: .82rem; }
+body.full.menu-open:not(.menu-side) .inventory {
+  top: var(--menu-top, 60px);
+  transform: translateX(-50%);
+  max-height: calc(100% - var(--menu-bottom, 190px) - var(--menu-top, 60px));
+}
 
 /* how much mana you have, written under the mana bar */
 .mana-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }

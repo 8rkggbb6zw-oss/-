@@ -3634,7 +3634,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     b.style.setProperty('--ctl-space', Math.round(space) + 'px');
     if (b.classList.contains('menu-side') !== side) b.classList.toggle('menu-side', side);
   }
-  window.addEventListener('resize', function () { setTimeout(layoutMenus, 60); });
+  function placeMenus() {                                            // on a narrow screen, keep the open menu clear of the row of buttons under it
+    var b = document.body;
+    if (!b.classList.contains('full') || b.classList.contains('menu-side') || !b.classList.contains('menu-open') || !ctlBox) return;
+    var r = ctlBox.getBoundingClientRect(), tb = document.querySelector('.topbar');
+    b.style.setProperty('--menu-bottom', Math.round(window.innerHeight - r.top + 8) + 'px');
+    b.style.setProperty('--menu-top', Math.round((tb ? tb.getBoundingClientRect().bottom : 50) + 8) + 'px');   // (below the stats, which can wrap onto two lines)
+  }
+  window.addEventListener('resize', function () { setTimeout(function () { layoutMenus(); placeMenus(); }, 60); });
   window.addEventListener('orientationchange', function () { setTimeout(layoutMenus, 300); });
   btnFull.addEventListener('click', function () { setTimeout(layoutMenus, 120); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyF') setTimeout(layoutMenus, 120); });
@@ -3705,7 +3712,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateClinicInterior(state.time);
     cullScene();
     var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
-    if (document.body.classList.contains('menu-open') !== menuUp) document.body.classList.toggle('menu-open', menuUp);
+    if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
