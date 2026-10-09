@@ -1150,19 +1150,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     var head = new THREE.Group(); head.position.set(0, BY + 0.24, 0.47); head.scale.setScalar(1.3); body.add(head);
     part(seg, plain, 0, 0, 0, 0.082, 0.085, 0.09, head, 0, 0, 0, true);                // the skull
     part(seg, plain, 0, 0.03, 0.035, 0.078, 0.055, 0.06, head, 0, 0, 0, true);          // the broad forehead
-    var snout = new THREE.CylinderGeometry(0.05, 0.07, 0.1, 24); snout.rotateX(Math.PI / 2);
-    part(snout, plain, 0, -0.03, 0.075, 1, 0.82, 1, head, 0.1, 0, 0, true);             // the short, soft muzzle
-    part(seg, plain, 0, -0.03, 0.12, 0.05, 0.04, 0.03, head, 0, 0, 0, true);
+    var snout = new THREE.CylinderGeometry(0.052, 0.07, 0.08, 24); snout.rotateX(Math.PI / 2);
+    part(snout, plain, 0, -0.03, 0.066, 1, 0.82, 1, head, 0.1, 0, 0, true);             // the short, soft muzzle
+    part(seg, plain, 0, -0.03, 0.104, 0.052, 0.04, 0.03, head, 0, 0, 0, true);
     var muzzleMat = new THREE.MeshStandardMaterial({ color: muzzleCol, roughness: 0.25, emissive: muzzleCol, emissiveIntensity: 0.14 });
-    part(seg, muzzleMat, 0, -0.036, 0.136, 0.05, 0.036, 0.022, head);                  // the soft pink nose pad
-    part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 }), -0.012, -0.022, 0.153, 0.012, 0.006, 0.003, head, 0, 0, 0.3);   // the shine on its nose
+    part(seg, muzzleMat, 0, -0.036, 0.12, 0.05, 0.036, 0.022, head);                  // the soft pink nose pad
+    part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 }), -0.012, -0.022, 0.137, 0.012, 0.006, 0.003, head, 0, 0, 0.3);   // the shine on its nose
     var nostrilMat = new THREE.MeshStandardMaterial({ color: 0x6a3a50, roughness: 0.4 });
-    [-1, 1].forEach(function (s) { part(seg, nostrilMat, s * 0.022, -0.036, 0.155, 0.009, 0.013, 0.005, head, 0, s * 0.3, s * 0.4); });   // little nostrils
-    abPart(new THREE.BoxGeometry(0.0015, 0.016, 0.004), nostrilMat, 0, -0.052, 0.153, 0, 0, 0, head);   // the groove under its nose
-    part(seg, belly, 0, -0.07, 0.095, 0.038, 0.022, 0.04, head, 0.1, 0, 0);              // the chin
+    [-1, 1].forEach(function (s) { part(seg, nostrilMat, s * 0.022, -0.036, 0.139, 0.009, 0.013, 0.005, head, 0, s * 0.3, s * 0.4); });   // little nostrils
+    abPart(new THREE.BoxGeometry(0.0015, 0.016, 0.004), nostrilMat, 0, -0.052, 0.137, 0, 0, 0, head);   // the groove under its nose
+    part(seg, belly, 0, -0.068, 0.082, 0.038, 0.022, 0.04, head, 0.1, 0, 0);              // the chin
     var mouthMat = new THREE.MeshStandardMaterial({ color: 0x6a4a5a, roughness: 0.6 });
-    [-1, 1].forEach(function (s) { abPart(new THREE.TorusGeometry(0.012, 0.0018, 5, 12, Math.PI * 0.9), mouthMat, s * 0.012, -0.06, 0.142, 0.35, 0, Math.PI * 1.05, head); });   // a little w-shaped smile
-    var tongue = new THREE.Group(); tongue.position.set(0, -0.062, 0.138); tongue.rotation.x = 0.5; head.add(tongue);
+    [-1, 1].forEach(function (s) { abPart(new THREE.TorusGeometry(0.012, 0.0018, 5, 12, Math.PI * 0.9), mouthMat, s * 0.012, -0.06, 0.126, 0.35, 0, Math.PI * 1.05, head); });   // a little w-shaped smile
+    var tongue = new THREE.Group(); tongue.position.set(0, -0.062, 0.122); tongue.rotation.x = 0.5; head.add(tongue);
     part(seg, new THREE.MeshStandardMaterial({ color: 0xff8aa8, roughness: 0.35, emissive: 0xff6a90, emissiveIntensity: 0.15 }), 0, 0, 0.006, 0.011, 0.004, 0.012, tongue);   // a tongue, for the odd little blep
     tongue.scale.set(1, 1, 0.01);
     // eyes: big and gentle, dark and glossy, with soft lids and lashes, set on the sides of the head
@@ -1170,14 +1170,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     var irisMat = new THREE.MeshStandardMaterial({ map: moonEyeTex(pal), roughness: 0.15, emissive: 0xffffff, emissiveMap: null, emissiveIntensity: 0 });
     irisMat.emissiveMap = irisMat.map; irisMat.emissiveIntensity = 0.35;   // a soft inner glow, so they sparkle even in the shade
     var corneaMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, roughness: 0.02, metalness: 0.1, depthWrite: false });
-    var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 0.85); irisGeo.rotateX(Math.PI / 2);   // the front of the eyeball, with the iris mapped straight on
-    (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.5 / Math.sin(0.85); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
+    var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.05); irisGeo.rotateX(Math.PI / 2);   // the front of the eyeball, with the iris mapped straight on
+    (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.46 / Math.sin(1.05); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
     var lidMat = new THREE.MeshStandardMaterial({ color: coatCol.clone().multiplyScalar(0.95), roughness: 0.8, emissive: coatCol, emissiveIntensity: 0.12, side: THREE.DoubleSide });
     var lashMat = new THREE.MeshStandardMaterial({ color: 0x241a20, roughness: 0.6 }), lids = [];
     var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
     [-1, 1].forEach(function (s) {
       var ey = new THREE.Group(); ey.position.set(s * 0.058, 0.014, 0.058); ey.rotation.set(0.05, s * 0.72, 0); ey.scale.setScalar(1.25); head.add(ey);
-      var RX = 0.026, RY = 0.025, RZ = 0.017;
+      var RX = 0.026, RY = 0.026, RZ = 0.015;
       part(seg, eyeMat, 0, 0, 0, RX, RY, RZ, ey);
       var ir = abPart(irisGeo, irisMat, 0, 0, 0, 0, 0, 0, ey); ir.scale.set(RX * 1.01, RY * 1.01, RZ * 1.01);
       var co = abPart(irisGeo, corneaMat, 0, 0, 0, 0, 0, 0, ey); co.scale.set(RX * 1.06, RY * 1.06, RZ * 1.18); co.castShadow = false;
@@ -1187,14 +1187,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       var lower = abPart(new THREE.TorusGeometry(1, 0.06, 6, 20, Math.PI * 0.7), lidMat, 0, 0, 0.004, 0, 0, Math.PI * 1.15, ey); lower.scale.set(RX * 1.02, RY * 1.02, RZ);   // the soft lower lid
       var lg = new THREE.Group(); ey.add(lg); lids.push(lg);           // the upper lid, which blinks, with its lashes
       var lid = abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg); lid.scale.set(RX * 1.1, RY * 1.1, RZ * 1.25);
-      var ph = Math.PI * 0.42;
-      for (var l = 0; l < 9; l++) {
-        var az = -1.15 + l * 0.2875, ex = Math.sin(ph) * Math.sin(az) * RX * 1.1, eY = Math.cos(ph) * RY * 1.1, ez = Math.sin(ph) * Math.cos(az) * RZ * 1.25;
-        var len = 0.008 + Math.sin(l / 8 * Math.PI) * 0.004 + (s * az > 0.6 ? 0.005 : 0);
-        var lash = abPart(new THREE.CylinderGeometry(0.0006, 0.0011, len, 4).translate(0, len / 2, 0), lashMat, ex, eY, ez, 0, 0, 0, lg);
-        lash.rotation.set(1.25, az, -az * 0.7);                         // curling up and out
-      }
-      for (l = 0; l < 3; l++) { var bz = -0.5 + l * 0.5, bl = abPart(new THREE.CylinderGeometry(0.0004, 0.0008, 0.004, 4).translate(0, -0.002, 0), lashMat, Math.sin(bz) * RX * 0.95, -RY * 0.55, Math.cos(bz) * RZ * 0.95, 0, 0, 0, ey); bl.rotation.set(-0.6, bz, 0); }   // a few tiny lower lashes
+      var liner = abPart(new THREE.TorusGeometry(1, 0.075, 6, 28, Math.PI * 0.8), lashMat, 0, 0, RZ * 0.3, 0, 0, Math.PI * 0.1, ey); liner.scale.set(RX * 0.98, RY * 0.98, RZ);   // a soft dark line along the top of the eye
+      [0.12, 0.34, 0.58].forEach(function (a, n) {                     // and three neat lashes flicking out at the outer corner
+        var len = 0.011 - n * 0.0015, lx = s * Math.cos(a) * RX * 0.98, ly = Math.sin(a) * RY * 0.98;
+        var lash = abPart(new THREE.ConeGeometry(0.0016, len, 5).translate(0, len / 2, 0), lashMat, lx, ly, RZ * 0.3, 0.25, 0, -Math.atan2(s * Math.cos(a), Math.sin(a) + 0.5), ey);
+        lash.castShadow = false;
+      });
       // a rosy blush on each cheek, dusted with a few tiny glowing star freckles
       var bl2 = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.034), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
       bl2.position.set(s * 0.067, -0.026, 0.06); bl2.rotation.set(0, s * 0.95, 0); head.add(bl2);
@@ -1375,7 +1373,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     var bt = (t * 0.23 + g.stall * 0.37) % 1, blink = bt < 0.035 ? Math.sin(bt / 0.035 * Math.PI) : 0;   // it blinks every few seconds
     if (g.pet > 0) blink = 0.75;                                       // and squeezes its eyes happily shut when petted
-    m.lids.forEach(function (l) { l.rotation.x = -0.62 + blink * 1.55; });
+    m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
     var bl = (t * 0.11 + g.stall * 0.29) % 1, blep = g.pet > 0 ? 1 : (bl < 0.06 ? Math.sin(bl / 0.06 * Math.PI) : 0);   // now and then a little blep
     m.tongue.scale.z = 0.01 + blep * 0.99;
     m.bellSpark.material.opacity = 0.4 + Math.sin(t * 3.3 + g.stall) * 0.4;
