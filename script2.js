@@ -1008,9 +1008,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   // its egg, nestled in the straw, and a bundle of hay in the manger when it's been fed
   function glimBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall];
-    var egg = new THREE.Group(); egg.position.set(-3.45, 0.04, sz - 0.62); abRoom.add(egg);
-    var nest = abPart(new THREE.TorusGeometry(0.075, 0.03, 6, 16), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.015, 0, Math.PI / 2, 0, 0, egg); nest.scale.set(1, 1, 0.6);
-    var e = abPart(new THREE.SphereGeometry(0.05, 20, 14), glimEggMat, 0, 0.06, 0, 0.15, 0, 0.1, egg); e.scale.set(1, 1.28, 1);
+    var egg = new THREE.Group(); egg.position.set(-3.3, 0.1, sz - 0.6); abRoom.add(egg);   // (sitting up on top of the straw bedding)
+    var nest = abPart(new THREE.TorusGeometry(0.085, 0.035, 8, 20), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.015, 0, Math.PI / 2, 0, 0, egg); nest.scale.set(1, 1, 0.6);
+    var e = abPart(new THREE.SphereGeometry(0.058, 24, 16), glimEggMat, 0, 0.07, 0, 0.15, 0, 0.1, egg); e.scale.set(1, 1.28, 1);
     var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xd8b8ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
     eg.scale.set(0.45, 0.45, 1); eg.position.y = 0.07; egg.add(eg);
     g.eggMesh = egg; g.eggGlow = eg;
