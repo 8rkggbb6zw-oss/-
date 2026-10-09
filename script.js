@@ -10878,23 +10878,103 @@ function startGame(THREE) {
     ciWallPart(name, new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.07, depthWrite: false }), x, y, 0.036);
   }
 
-  // the front door, seen from inside: teal, with a glass panel that looks out on the square
-  ciWallPart('S', new THREE.BoxGeometry(1.5, 2.55, 0.06), CI.white, 0, 1.275, 0.03);
-  ciWallPart('S', new THREE.BoxGeometry(1.2, 2.3, 0.06), CI.teal, 0, 1.15, 0.07);
-  ciPart(new THREE.PlaneGeometry(0.76, 0.9), siWindowMask, 0, 1.6, 0.105, 0, 0, 0, ciWalls.S.g).castShadow = false;
-  [[0, 1.15, 0.84, 0.05], [0, 2.07, 0.84, 0.05], [-0.4, 1.6, 0.05, 0.96], [0.4, 1.6, 0.05, 0.96], [0, 1.6, 0.03, 0.9], [0, 1.6, 0.8, 0.03]].forEach(function (b) {
-    ciWallPart('S', new THREE.BoxGeometry(b[2], b[3], 0.03), CI.white, b[0], b[1], 0.115);
+  // the front door, seen from inside: a teal four-panel door in a moulded white casing with plinth blocks and a crown,
+  // six panes of glass (and a transom above) that look out on the square, raised and bevelled lower panels, a brass
+  // lever handle on a backplate with a thumb-turn lock, three brass hinges, a kick plate and an oak threshold
+  var DR_W = 1.2, DR_H = 2.3;
+  var ciDoorTeal = new THREE.MeshStandardMaterial({ color: 0x2f6f68, roughness: 0.38 });
+  var ciDoorPanel = new THREE.MeshStandardMaterial({ color: 0x3b7f77, roughness: 0.4 });
+  var ciTrim = new THREE.MeshStandardMaterial({ color: 0xf8f6f0, roughness: 0.45 });
+  [-1, 1].forEach(function (s) {                                       // the casing: fluted sides on plinth blocks
+    ciWallPart('S', ciRoundBox(0.13, 2.55, 0.04, 0.01), ciTrim, s * (DR_W / 2 + 0.075), 1.275, 0.02);
+    [-0.035, 0, 0.035].forEach(function (fl) { ciWallPart('S', new THREE.BoxGeometry(0.012, 2.2, 0.006), new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.5 }), s * (DR_W / 2 + 0.075) + fl, 1.33, 0.041); });
+    ciWallPart('S', ciRoundBox(0.16, 0.22, 0.055, 0.01), ciTrim, s * (DR_W / 2 + 0.075), 0.11, 0.028);
+    ciWallPart('S', ciRoundBox(0.17, 0.17, 0.055, 0.01), ciTrim, s * (DR_W / 2 + 0.075), 2.64, 0.028);                // corner blocks
+    ciWallPart('S', new THREE.TorusGeometry(0.04, 0.008, 6, 20), new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.5 }), s * (DR_W / 2 + 0.075), 2.64, 0.057);   // with a carved rosette
   });
-  [-0.27, 0.27].forEach(function (px) { ciWallPart('S', new THREE.BoxGeometry(0.42, 0.6, 0.03), CI.tealVinyl, px, 0.6, 0.11); });
-  ciWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), CI.brass, -0.45, 1.1, 0.14);
+  ciWallPart('S', ciRoundBox(DR_W, 0.13, 0.04, 0.01), ciTrim, 0, 2.64, 0.02);                                         // the head casing
+  ciWallPart('S', ciRoundBox(DR_W + 0.42, 0.05, 0.1, 0.012), ciTrim, 0, 2.735, 0.05);                                 // its crown
+  ciWallPart('S', ciRoundBox(DR_W + 0.34, 0.025, 0.07, 0.008), ciTrim, 0, 2.7, 0.035);
+  // the transom light over the door: three panes, looking outside
+  ciWallPart('S', new THREE.BoxGeometry(DR_W, 0.3, 0.02), ciTrim, 0, 2.43, 0.01);
+  ciPart(new THREE.PlaneGeometry(DR_W - 0.08, 0.22), siWindowMask, 0, 2.43, 0.021, 0, 0, 0, ciWalls.S.g).castShadow = false;
+  ciWallPart('S', new THREE.PlaneGeometry(DR_W - 0.08, 0.22), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.6, roughness: 0.05, depthWrite: false }), 0, 2.43, 0.024).renderOrder = 3;
+  [-0.19, 0.19].forEach(function (tx) { ciWallPart('S', new THREE.BoxGeometry(0.025, 0.22, 0.03), ciTrim, tx, 2.43, 0.03); });
+  // the door itself: stiles, rails, glass and panels
+  ciWallPart('S', ciRoundBox(DR_W, DR_H, 0.05, 0.008), ciDoorTeal, 0, DR_H / 2, 0.045);
+  var GL_Y = 1.62, GL_W = 0.78, GL_H = 0.95;
+  ciPart(new THREE.PlaneGeometry(GL_W, GL_H), siWindowMask, 0, GL_Y, 0.0705, 0, 0, 0, ciWalls.S.g).castShadow = false;
+  ciWallPart('S', new THREE.PlaneGeometry(GL_W, GL_H), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.6, roughness: 0.05, depthWrite: false }), 0, GL_Y, 0.074).renderOrder = 3;
+  [[0, GL_H / 2 + 0.025, GL_W + 0.1, 0.05], [0, -GL_H / 2 - 0.025, GL_W + 0.1, 0.05], [-GL_W / 2 - 0.025, 0, 0.05, GL_H], [GL_W / 2 + 0.025, 0, 0.05, GL_H]].forEach(function (b) {   // a moulded bead round the glass
+    ciWallPart('S', ciRoundBox(b[2], b[3], 0.025, 0.008), ciDoorPanel, b[0], GL_Y + b[1], 0.08);
+  });
+  ciWallPart('S', new THREE.BoxGeometry(0.022, GL_H, 0.022), ciTrim, 0, GL_Y, 0.08);                                   // white glazing bars: two across and three down
+  [-GL_H / 6, GL_H / 6].forEach(function (gy) { ciWallPart('S', new THREE.BoxGeometry(GL_W, 0.022, 0.022), ciTrim, 0, GL_Y + gy, 0.08); });
+  ciWallPart('S', ciRoundBox(DR_W - 0.16, 0.06, 0.02, 0.008), ciDoorPanel, 0, 1.08, 0.075);                            // the lock rail
+  [-0.255, 0.255].forEach(function (px) {                              // two raised, bevelled lower panels
+    var PW = 0.4, PH = 0.72, PY = 0.56;
+    ciWallPart('S', new THREE.BoxGeometry(PW + 0.04, PH + 0.04, 0.008), new THREE.MeshStandardMaterial({ color: 0x245a54, roughness: 0.45 }), px, PY, 0.072);   // the shadowed groove round it
+    ciWallPart('S', ciRoundBox(PW, PH, 0.03, 0.012), ciDoorPanel, px, PY, 0.08);
+    ciWallPart('S', ciRoundBox(PW - 0.12, PH - 0.12, 0.012, 0.006), ciDoorTeal, px, PY, 0.097);                         // its raised field
+  });
+  ciWallPart('S', ciRoundBox(DR_W - 0.12, 0.16, 0.006, 0.004), CI.brass, 0, 0.1, 0.073);                                // the brass kick plate
+  [-0.5, 0.5].forEach(function (sx) { [0.05, 0.15].forEach(function (sy) { ciWallPart('S', new THREE.CylinderGeometry(0.006, 0.006, 0.004, 8), CI.brass, sx, sy, 0.077, Math.PI / 2, 0, 0); }); });
+  // the handle: a backplate, a curved brass lever, a keyhole, and a thumb-turn lock above
+  var HX = -0.46;
+  ciWallPart('S', ciRoundBox(0.06, 0.24, 0.012, 0.012), CI.brass, HX, 1.05, 0.077);
+  ciWallPart('S', new THREE.CylinderGeometry(0.018, 0.022, 0.04, 14), CI.brass, HX, 1.1, 0.1, Math.PI / 2, 0, 0);
+  var lever = new THREE.CatmullRomCurve3([new THREE.Vector3(HX, 1.1, 0.115), new THREE.Vector3(HX + 0.04, 1.1, 0.128), new THREE.Vector3(HX + 0.11, 1.097, 0.13), new THREE.Vector3(HX + 0.14, 1.088, 0.124)]);
+  ciPart(new THREE.TubeGeometry(lever, 16, 0.009, 8), CI.brass, 0, 0, 0, 0, 0, 0, ciWalls.S.g);
+  ciWallPart('S', new THREE.SphereGeometry(0.012, 10, 8), CI.brass, HX + 0.142, 1.088, 0.123);
+  ciWallPart('S', new THREE.BoxGeometry(0.008, 0.022, 0.004), CI.black, HX, 0.995, 0.085);                             // the keyhole
+  ciWallPart('S', new THREE.CylinderGeometry(0.022, 0.022, 0.01, 18), CI.brass, HX, 1.3, 0.077, Math.PI / 2, 0, 0);     // the thumb-turn
+  ciWallPart('S', ciRoundBox(0.012, 0.04, 0.016, 0.005), CI.brass, HX, 1.3, 0.088);
+  [0.3, 1.2, 2.05].forEach(function (hy) {                             // three brass butt hinges on the other side
+    ciWallPart('S', ciRoundBox(0.035, 0.1, 0.006, 0.003), CI.brass, DR_W / 2 - 0.01, hy, 0.072);
+    ciWallPart('S', new THREE.CylinderGeometry(0.008, 0.008, 0.105, 8), CI.brass, DR_W / 2 + 0.005, hy, 0.074);
+    [-0.05, 0.05].forEach(function (cp) { ciWallPart('S', new THREE.SphereGeometry(0.008, 8, 6), CI.brass, DR_W / 2 + 0.005, hy + cp, 0.074); });
+  });
+  ciPart(new THREE.BoxGeometry(DR_W + 0.1, 0.012, 0.12), CI_OAK, 0, 0.006, CIN_D / 2 - 0.06);                          // the oak threshold
+  ciPart(new THREE.CylinderGeometry(0.02, 0.025, 0.035, 12), CI.brass, -0.62, 0.0175, CIN_D / 2 - 0.55);               // a little brass door stop on the floor
+  ciPart(new THREE.SphereGeometry(0.02, 10, 8), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.9 }), -0.62, 0.04, CIN_D / 2 - 0.55);
   var CIN_EXIT_Z = CIN_D / 2 - 0.6;
-  // a round clock over the door
-  ciWallPart('S', new THREE.CylinderGeometry(0.24, 0.24, 0.05, 32), CI.white, 0, 2.95, 0.03, Math.PI / 2, 0, 0);
-  ciWallPart('S', new THREE.TorusGeometry(0.24, 0.025, 8, 32), CI.teal, 0, 2.95, 0.055);
-  for (var cih = 0; cih < 12; cih++) { var cha = cih / 12 * Math.PI * 2; ciWallPart('S', new THREE.BoxGeometry(0.015, cih % 3 ? 0.03 : 0.05, 0.01), CI.black, Math.sin(cha) * 0.19, 2.95 + Math.cos(cha) * 0.19, 0.06, 0, 0, -cha); }
-  var ciHourHand = ciWallPart('S', new THREE.BoxGeometry(0.018, 0.11, 0.01), CI.black, 0, 2.95, 0.065);
-  var ciMinHand = ciWallPart('S', new THREE.BoxGeometry(0.012, 0.17, 0.01), CI.black, 0, 2.95, 0.07);
-  [ciHourHand, ciMinHand].forEach(function (hnd) { hnd.geometry.translate(0, hnd.geometry.parameters.height / 2 - 0.01, 0); });
+  // a schoolhouse clock over the door: a teal case with a brass bezel and a domed glass, a painted face with numerals,
+  // spade hands and a red second hand that ticks round
+  var CLK_Y = 3.03, CLK_R = 0.2;
+  var ciClockTex = paintTexture(512, 512, function (g, w, h) {
+    var cx = w / 2, cy = h / 2, R = w / 2 - 4;
+    var fg = g.createRadialGradient(cx - 60, cy - 60, 20, cx, cy, R); fg.addColorStop(0, '#fffdf6'); fg.addColorStop(1, '#efe6d2');
+    g.fillStyle = fg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2f6f68'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, R - 34, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(cx, cy, R - 12, 0, Math.PI * 2); g.stroke();
+    for (var m = 0; m < 60; m++) {                                     // minute marks between the two rings, bolder at each hour
+      var a = m / 60 * Math.PI * 2, big = m % 5 === 0, r0 = R - 34, r1 = big ? R - 12 : R - 22;
+      g.strokeStyle = big ? '#1e1e24' : '#5a5a60'; g.lineWidth = big ? 6 : 2;
+      g.beginPath(); g.moveTo(cx + Math.sin(a) * r0, cy - Math.cos(a) * r0); g.lineTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1); g.stroke();
+    }
+    g.fillStyle = '#1e1e24'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 50px Georgia, serif';
+    for (var n = 1; n <= 12; n++) { var na = n / 12 * Math.PI * 2; g.fillText(String(n), cx + Math.sin(na) * (R - 82), cy - Math.cos(na) * (R - 82) + 2); }
+    g.fillStyle = '#2f6f68'; g.font = 'italic bold 24px Georgia, serif'; g.fillText('Everdawn', cx, cy - 82);
+    g.font = '15px Georgia, serif'; g.fillStyle = '#7a6a5a'; g.fillText('♥  CLINIC  ♥', cx, cy + 86);
+  });
+  ciClockTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var clkCase = []; [[0.001, -0.03], [CLK_R + 0.03, -0.03], [CLK_R + 0.045, -0.005], [CLK_R + 0.045, 0.03], [CLK_R + 0.03, 0.045], [CLK_R + 0.01, 0.045], [CLK_R + 0.005, 0.01]].forEach(function (q) { clkCase.push(new THREE.Vector2(q[0], q[1])); });
+  ciWallPart('S', new THREE.LatheGeometry(clkCase, 48), ciDoorTeal, 0, CLK_Y, 0.03, Math.PI / 2, 0, 0);                // the case
+  ciWallPart('S', new THREE.TorusGeometry(CLK_R + 0.012, 0.01, 10, 48), CI.brass, 0, CLK_Y, 0.077);                     // the brass bezel
+  ciWallPart('S', new THREE.CircleGeometry(CLK_R + 0.005, 48), new THREE.MeshStandardMaterial({ map: ciClockTex, roughness: 0.6 }), 0, CLK_Y, 0.042);
+  function ciHand(len, wide, tail, spade, mat, z) {                    // a clock hand pointing up, turning about its base
+    var sh = new THREE.Shape(); sh.moveTo(-wide / 2, -tail); sh.lineTo(wide / 2, -tail); sh.lineTo(wide * 0.35, len * 0.7);
+    if (spade) { sh.lineTo(wide * 1.4, len * 0.78); sh.lineTo(0, len); sh.lineTo(-wide * 1.4, len * 0.78); } else sh.lineTo(0, len);
+    sh.lineTo(-wide * 0.35, len * 0.7); sh.lineTo(-wide / 2, -tail);
+    return ciWallPart('S', new THREE.ExtrudeGeometry(sh, { depth: 0.003, bevelEnabled: false }), mat, 0, CLK_Y, z);
+  }
+  var ciHourHand = ciHand(0.105, 0.012, 0.02, true, CI.black, 0.046);
+  var ciMinHand = ciHand(0.16, 0.008, 0.025, true, CI.black, 0.05);
+  var ciSecHand = ciHand(0.17, 0.003, 0.045, false, new THREE.MeshStandardMaterial({ color: 0xd04a5a, roughness: 0.4 }), 0.054);
+  ciWallPart('S', new THREE.CylinderGeometry(0.01, 0.01, 0.014, 14), CI.brass, 0, CLK_Y, 0.056, Math.PI / 2, 0, 0);    // the centre cap
+  var clkDome = ciWallPart('S', new THREE.SphereGeometry(CLK_R + 0.01, 32, 12, 0, Math.PI * 2, 0, 0.55), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.03, metalness: 0.3, transparent: true, opacity: 0.12, depthWrite: false }), 0, CLK_Y, 0.07 - (CLK_R + 0.01) * Math.cos(0.55), Math.PI / 2, 0, 0);
+  clkDome.renderOrder = 3; clkDome.castShadow = false;
+  ciWallPart('S', new THREE.PlaneGeometry(CLK_R * 1.6, CLK_R * 1.6), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.45, roughness: 0.05, depthWrite: false }), 0, CLK_Y, 0.076).renderOrder = 4;   // a glint on the glass
 
 
   // ----- the waiting room, on the left -----
@@ -11846,6 +11926,7 @@ function startGame(THREE) {
     var mins = state.minutes % 720;                                     // the clock on the wall keeps the island's time
     ciHourHand.rotation.z = -mins / 720 * Math.PI * 2;
     ciMinHand.rotation.z = -(state.minutes % 60) / 60 * Math.PI * 2;
+    ciSecHand.rotation.z = -Math.floor(t % 60) / 60 * Math.PI * 2;      // the second hand ticks once a second
   }
   function inClinicRoom(x, z) { return Math.abs(x - CIN_X) < CIN_W / 2 - 0.35 && Math.abs(z - CIN_Z) < CIN_D / 2 - 0.35; }
   // the windows look out on the real island, just like the shop's
