@@ -13864,6 +13864,43 @@ function startGame(THREE) {
   btnFull.addEventListener('click', function () { setFullScreen(!document.body.classList.contains('full')); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyF' && !e.repeat) setFullScreen(!document.body.classList.contains('full')); });
 
+  // Only draw what you can see: every batch of grass, leaves, flowers and stones gets a sphere round all its pieces, and
+  // each frame a batch that's off screen, or so far off it's lost in the haze, is skipped. Batches whose pieces move
+  // (a tree regrowing, soil being tilled) get their sphere worked out again. Indoors everything stays on, so the
+  // windows still show the whole island
+  var cullList = [], cullFrustum = new THREE.Frustum(), cullPV = new THREE.Matrix4(), cullM = new THREE.Matrix4(), cullV = new THREE.Vector3(), cullBox = new THREE.Box3(), cullWasIndoors = null;
+  function cullMeasure(c) {
+    var o = c.o; o.updateMatrixWorld(true); cullBox.makeEmpty();
+    for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, cullM); cullV.setFromMatrixPosition(cullM).applyMatrix4(o.matrixWorld); cullBox.expandByPoint(cullV); }
+    if (cullBox.isEmpty()) { c.r = -1; return; }
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    cullBox.getBoundingSphere(c.s);
+    c.s.radius += o.geometry.boundingSphere.radius * 2 + 1;            // room for each piece's own size
+    c.ver = o.instanceMatrix.version; c.cnt = o.count;
+  }
+  scene.traverse(function (o) { if (o.isInstancedMesh) cullList.push({ o: o, s: new THREE.Sphere(), ver: -1, cnt: -1, far: o.geometry.boundingSphere && o.geometry.boundingSphere.radius > 1 ? 120 : 80 }); });
+  cullList.forEach(function (c) { if (!c.o.geometry.boundingSphere) c.o.geometry.computeBoundingSphere(); c.far = c.o.geometry.boundingSphere.radius > 1 ? 120 : 80; cullMeasure(c); });
+  var cullTurn = 0;
+  function cullScene() {
+    if (indoors) {                                                     // inside: put everything back on
+      if (cullWasIndoors !== true) { for (var a = 0; a < cullList.length; a++) cullList[a].o.layers.set(0); cullWasIndoors = true; }
+      return;
+    }
+    cullWasIndoors = false;
+    camera.updateMatrixWorld();
+    cullPV.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    cullFrustum.setFromProjectionMatrix(cullPV);
+    var redo = 0;
+    for (var i = 0; i < cullList.length; i++) {
+      var c = cullList[i];
+      if ((c.ver !== c.o.instanceMatrix.version || c.cnt !== c.o.count) && redo < 2 && (i + cullTurn) % 3 === 0) { cullMeasure(c); redo++; }   // re-measure a few changed batches a frame
+      var show = c.r !== -1 && cullFrustum.intersectsSphere(c.s) && c.s.center.distanceTo(camera.position) - c.s.radius < c.far;
+      c.o.layers.set(show ? 0 : 1);
+    }
+    cullTurn++;
+  }
+  setTimeout(function () { if (!mapBase) mapBase = drawMapBase(); }, 2500);   // get the world map ready in the background, so it opens straight away
+
   var clock = new THREE.Clock();
   cam.target.set(player.position.x, 0.8, player.position.z);
 
@@ -13885,6 +13922,7 @@ function startGame(THREE) {
     updateEffects(dt);
     updateCamera(dt);
     updateClinicInterior(state.time);
+    cullScene();
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     renderer.render(indoors ? (inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
