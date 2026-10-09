@@ -1455,6 +1455,264 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glow.material.opacity = 0.12 + pulse * 0.05;
     if (g.egg) { g.eggMesh.position.set(g.x, 1.0 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
+  // ---------- Puddlewisps ----------
+  // Little magical creatures shaped like a plump pond duck, but not a duck: their feathers are the deep blue of a night
+  // pond, rippling with silvery rings like moonlight on water and dusted with stars; they have big shining eyes with a
+  // moonlit ring round them, a soft pearly bill, a curl of plume feathers tipped with stars, glowing webbed feet, and
+  // little ripples of light spread out round them wherever they stand. Feed one hay and pet it every day, and the next
+  // morning there's a Dewdrop Egg in its straw
+  var DUCK_COST = 300;
+  var DUCK_PALS = [                                                   // midnight blue, twilight violet and deep lagoon teal
+    { name: 'Midnight', back: '#1c2c64', mid: '#3c62b4', breast: '#c4d8fa', ripple: '#d8ecff', glow: 0xa8c8ff, bill: 0xf4d68c, feet: 0xc4d4ff, spec: [0x4ad8ff, 0x9a6aff], iris: ['#3a5a9a', '#0e1830'] },
+    { name: 'Twilight', back: '#2e2062', mid: '#6a4cb8', breast: '#dccaf8', ripple: '#f2e2ff', glow: 0xd4b4ff, bill: 0xf6cc9c, feet: 0xdcc8ff, spec: [0xff7ad8, 0x7a8aff], iris: ['#5a3a8a', '#1a0e2a'] },
+    { name: 'Lagoon', back: '#123a52', mid: '#2a7a94', breast: '#bcece6', ripple: '#dcfff8', glow: 0x9cf0e0, bill: 0xf6de94, feet: 0xb8f0e8, spec: [0x5affc8, 0x4a9aff], iris: ['#2a6a6a', '#0a2222'] }
+  ];
+  function duckFeatherTex(pal, glowOnly) {                            // its feathers: night-pond blue, scalloped, with silver ripple rings and stars
+    return new THREE.CanvasTexture(glimCanvas(512, 256, function (g, w, h) {
+      if (glowOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+      else {
+        var gr = g.createLinearGradient(0, 0, 0, h);                  // dark along its back, paling to a moonlit breast underneath
+        gr.addColorStop(0, pal.back); gr.addColorStop(0.22, pal.mid); gr.addColorStop(0.46, pal.breast); gr.addColorStop(1, pal.breast);
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+        for (var row = 0; row < 30; row++) for (var col = 0; col < 40; col++) {   // overlapping scalloped feathers, each with a pale edge
+          var fx = col * 13 + (row % 2) * 6.5, fy = row * 9;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.05 + glimR(row * 41 + col) * 0.07) + ')'; g.lineWidth = 1.2;
+          g.beginPath(); g.arc(fx, fy, 7, 0.15, Math.PI - 0.15); g.stroke();
+          g.strokeStyle = 'rgba(0,0,20,0.12)'; g.beginPath(); g.arc(fx, fy + 1.5, 7, 0.3, Math.PI - 0.3); g.stroke();
+        }
+        for (var b = 0; b < 5000; b++) { var bx = glimR(b * 1.9 + 40) * w, by = glimR(b * 2.7 + 40) * h; g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(bx, by); g.lineTo(bx - 2, by + 3); g.stroke(); }   // fine barbs
+      }
+      var rc = [[60, 40], [190, 70], [330, 30], [450, 80], [110, 140], [270, 150], [410, 170], [40, 200], [200, 220], [350, 230]];
+      rc.forEach(function (c, k) {                                    // ripple rings, like moonlight on a still pond
+        [-w, 0, w].forEach(function (off) {
+          for (var r = 0; r < 5; r++) {
+            var rr = 6 + r * 9 + glimR(k * 7 + r) * 3;
+            g.strokeStyle = glowOnly ? 'rgba(200,225,255,' + (0.55 - r * 0.1) + ')' : pal.ripple; g.globalAlpha = glowOnly ? 1 : 0.42 - r * 0.07; g.lineWidth = glowOnly ? 1.6 : 1.3;
+            g.beginPath(); g.ellipse(c[0] + off, c[1], rr * 1.4, rr * 0.55, 0, 0, Math.PI * 2); g.stroke();
+          }
+          g.globalAlpha = 1;
+        });
+      });
+      for (var s = 0; s < 90; s++) {                                  // and a dusting of stars
+        var sx = glimR(s * 3.1 + 7) * w, sy = glimR(s * 4.3 + 7) * h * 0.8, sr = 0.6 + glimR(s * 5.9) * 1.5;
+        g.fillStyle = glowOnly ? 'rgba(255,255,240,0.9)' : 'rgba(255,255,240,0.85)'; g.beginPath(); g.arc(sx, sy, sr, 0, Math.PI * 2); g.fill();
+        if (sr > 1.7) { g.fillRect(sx - 0.5, sy - sr * 2.5, 1, sr * 5); g.fillRect(sx - sr * 2.5, sy - 0.5, sr * 5, 1); }
+      }
+    }));
+  }
+  var duckDownAlpha = null;
+  function duckDownTex() {                                            // fine down: a hair in every pixel, its brightness how long it is (made once, shared)
+    if (duckDownAlpha) return duckDownAlpha;
+    var cv = glimCanvas(1024, 512, function (g, w, h) {
+      var img = g.createImageData(w, h), d = img.data;
+      for (var i = 0; i < w * h; i++) { var v = Math.round(Math.pow(glimR(i * 0.731) * glimR(i * 1.913 + 3), 0.55) * 255); d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; }
+      g.putImageData(img, 0, 0);
+    });
+    duckDownAlpha = new THREE.CanvasTexture(cv); duckDownAlpha.minFilter = THREE.LinearFilter; duckDownAlpha.generateMipmaps = false;
+    return duckDownAlpha;
+  }
+  var duckRingTex = new THREE.CanvasTexture(glimCanvas(128, 128, function (g, w, h) {   // a ring of light spreading on the floor
+    var rg = g.createRadialGradient(64, 64, 40, 64, 64, 63); rg.addColorStop(0, 'rgba(255,255,255,0)'); rg.addColorStop(0.55, 'rgba(255,255,255,0.9)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, w, h);
+  }));
+  // a Dewdrop Egg: like a drop of pond water at night, pale blue and glassy with a glow inside and tiny stars
+  var duckEggTex = new THREE.CanvasTexture(glimCanvas(128, 64, function (g, w, h) {
+    var gg = g.createLinearGradient(0, 0, 0, h); gg.addColorStop(0, '#f4fbff'); gg.addColorStop(0.5, '#c4dcff'); gg.addColorStop(1, '#e6f0ff');
+    g.fillStyle = gg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1;
+    for (var r = 0; r < 4; r++) { g.beginPath(); g.ellipse(64, 40, 14 + r * 10, 4 + r * 3, 0, 0, Math.PI * 2); g.stroke(); }   // faint ripples round it
+    for (var i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(glimR(i * 3.3 + 9) * w, glimR(i * 4.4 + 9) * h, 0.6 + glimR(i) * 1.4, 0, Math.PI * 2); g.fill(); }
+  }));
+  var duckEggMat = new THREE.MeshStandardMaterial({ map: duckEggTex, emissive: 0x8ab8ff, emissiveIntensity: 0.4, roughness: 0.08, metalness: 0.15 });
+  var duckEggIcon = glimCanvas(96, 96, function (g, w, h) {
+    var glow = g.createRadialGradient(48, 52, 4, 48, 52, 46); glow.addColorStop(0, 'rgba(170,205,255,0.75)'); glow.addColorStop(1, 'rgba(170,205,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    var eg = g.createRadialGradient(40, 36, 3, 48, 54, 34); eg.addColorStop(0, '#ffffff'); eg.addColorStop(0.45, '#d4e6ff'); eg.addColorStop(0.85, '#9cbcf0'); eg.addColorStop(1, '#7a9ee0');
+    g.fillStyle = eg; g.beginPath(); g.ellipse(48, 54, 24, 31, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.beginPath(); g.ellipse(48, 62, 16, 5, 0, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.ellipse(48, 62, 9, 2.6, 0, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.85)'; g.beginPath(); g.ellipse(39, 40, 5, 9, -0.4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff'; [[24, 24], [72, 22], [76, 74]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  ITEMS.dewdropEgg = { name: 'Dewdrop Egg', price: 110, icon: '🥚', img: duckEggIcon, fill: 86, info: 'A glassy, softly glowing egg like a drop of pond water at night, laid by a happy Puddlewisp. Feed and pet yours every day for one each morning. Sells for a good price at the shipping bin.' };
+  var duckShopIcon = glimCanvas(128, 128, function (g, w, h) {      // a little portrait of one, for the shop
+    var glow = g.createRadialGradient(64, 70, 4, 64, 70, 64); glow.addColorStop(0, 'rgba(170,200,255,0.75)'); glow.addColorStop(1, 'rgba(170,200,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(200,225,255,0.7)'; g.lineWidth = 2; [0, 1, 2].forEach(function (r) { g.beginPath(); g.ellipse(64, 112, 30 + r * 14, 6 + r * 3, 0, 0, Math.PI * 2); g.stroke(); });
+    var bg = g.createLinearGradient(0, 50, 0, 110); bg.addColorStop(0, '#2a4486'); bg.addColorStop(1, '#9cb8e8');
+    g.fillStyle = bg; g.beginPath(); g.ellipse(70, 86, 38, 24, 0, 0, Math.PI * 2); g.fill();    // the body
+    g.beginPath(); g.moveTo(104, 80); g.quadraticCurveTo(118, 64, 116, 58); g.quadraticCurveTo(108, 70, 96, 74); g.fill();   // the tail
+    g.fillStyle = '#1c2c62'; g.beginPath(); g.ellipse(76, 80, 22, 12, -0.2, 0, Math.PI * 2); g.fill();   // the wing
+    g.fillStyle = '#2a4486'; g.beginPath(); g.arc(44, 52, 22, 0, Math.PI * 2); g.fill();          // the head
+    g.fillStyle = '#f4d68c'; g.beginPath(); g.ellipse(22, 58, 13, 6, 0.1, 0, Math.PI * 2); g.fill();   // the bill
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(42, 48, 8.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#10142a'; g.beginPath(); g.arc(41, 49, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(38.5, 46, 2.6, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,150,190,0.5)'; g.beginPath(); g.ellipse(50, 62, 6, 4, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#d8ecff'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(48, 31); g.quadraticCurveTo(54, 14, 66, 16); g.stroke();   // the plume
+    g.fillStyle = '#fff6c8'; g.beginPath(); for (var k = 0; k < 10; k++) { var a = -Math.PI / 2 + k * Math.PI / 5, r = k % 2 ? 2.5 : 6; g[k ? 'lineTo' : 'moveTo'](68 + Math.cos(a) * r, 16 + Math.sin(a) * r); } g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.9)'; [[84, 90], [62, 96], [96, 84], [70, 74]].forEach(function (p) { g.beginPath(); g.arc(p[0], p[1], 1.4, 0, Math.PI * 2); g.fill(); });
+  }).toDataURL();
+  // building one
+  function duckBuild(pal) {
+    var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
+    var featherMap = duckFeatherTex(pal, false), glowMap = duckFeatherTex(pal, true);
+    featherMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    var feathers = new THREE.MeshStandardMaterial({ map: featherMap, roughness: 0.6, emissive: 0xffffff, emissiveMap: glowMap, emissiveIntensity: 0.6 });
+    var down = moonFurMat({ map: featherMap, alphaMap: duckDownTex(), roughness: 1, emissive: 0xffffff, emissiveMap: glowMap, emissiveIntensity: 0.45 });   // a velvety layer of down over its feathers
+    var seg = new THREE.SphereGeometry(1, 40, 28);
+    function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz, downy) {
+      var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz);
+      if (downy) { var d = abPart(moonShellGeo(geo === seg ? moonSegLo : geo, 10, downy), down, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); d.scale.set(sx, sy, sz); d.castShadow = false; }
+      return m;
+    }
+    // a plump, round body, a full breast and a little tail that tips up at the back
+    part(seg, feathers, 0, 0.21, -0.02, 0.145, 0.125, 0.2, body, 0, 0, 0, 0.1);
+    part(seg, feathers, 0, 0.215, 0.09, 0.13, 0.13, 0.13, body, 0, 0, 0, 0.12);
+    var tail = new THREE.Group(); tail.position.set(0, 0.25, -0.19); body.add(tail);
+    part(seg, feathers, 0, 0.01, -0.03, 0.085, 0.05, 0.09, tail, -0.45, 0, 0, 0.1);
+    var tipMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back).lerp(new THREE.Color(pal.mid), 0.5), roughness: 0.5, emissive: pal.glow, emissiveIntensity: 0.15 });
+    for (var tf = 0; tf < 5; tf++) { var ta = (tf - 2) * 0.28; part(seg, tipMat, Math.sin(ta) * 0.035, 0.04, -0.09, 0.016, 0.006, 0.055, tail, -0.75, ta, 0); }   // tail feathers fanned out
+    // the neck and a big round head, with fluffy cheeks
+    part(new THREE.CylinderGeometry(0.05, 0.075, 0.12, 20), feathers, 0, 0.3, 0.12, 1, 1, 1, body, 0.35, 0, 0, 0.1);
+    var head = new THREE.Group(); head.position.set(0, 0.415, 0.15); head.scale.setScalar(1.2); body.add(head);
+    part(seg, feathers, 0, 0, 0, 0.092, 0.088, 0.09, head, 0, 0, 0, 0.14);
+    [-1, 1].forEach(function (s) { part(seg, feathers, s * 0.045, -0.03, 0.03, 0.05, 0.045, 0.05, head, 0, 0, 0, 0.2); });   // round, downy cheeks
+    // the bill: soft and pearly, flat and rounded, with a little glowing tip, nostrils and a gentle smile
+    var billMat = new THREE.MeshStandardMaterial({ color: pal.bill, roughness: 0.35, emissive: pal.bill, emissiveIntensity: 0.12 });
+    var bill = new THREE.Group(); bill.position.set(0, -0.022, 0.08); head.add(bill);
+    part(seg, billMat, 0, 0.004, 0.035, 0.044, 0.016, 0.058, bill, -0.08, 0, 0);
+    part(seg, billMat, 0, -0.009, 0.028, 0.038, 0.011, 0.05, bill, -0.02, 0, 0);
+    part(seg, new THREE.MeshStandardMaterial({ color: 0xfff8ec, emissive: pal.glow, emissiveIntensity: 0.7, roughness: 0.2 }), 0, 0.006, 0.088, 0.016, 0.008, 0.008, bill);   // the pearly tip
+    var nostril = new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.5 });
+    [-1, 1].forEach(function (s) { part(seg, nostril, s * 0.012, 0.018, 0.046, 0.004, 0.0025, 0.008, bill); });
+    abPart(new THREE.TorusGeometry(0.04, 0.0016, 5, 24, Math.PI * 0.7), new THREE.MeshStandardMaterial({ color: 0x9a7050, roughness: 0.6 }), 0, -0.002, 0.03, Math.PI / 2 - 0.1, 0, Math.PI * 0.15, bill);   // the line of its smile
+    // eyes: big, glossy and sparkly, each in a ring of moonlit feathers, with lids that blink
+    var eyeMat = new THREE.MeshStandardMaterial({ color: 0x0a0610, roughness: 0.05, metalness: 0.2 });
+    var irisMat = new THREE.MeshStandardMaterial({ map: moonEyeTex(pal), roughness: 0.15, emissive: 0xffffff, emissiveIntensity: 0 });
+    irisMat.emissiveMap = irisMat.map; irisMat.emissiveIntensity = 0.35;
+    var corneaMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, roughness: 0.02, metalness: 0.1, depthWrite: false });
+    var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.05); irisGeo.rotateX(Math.PI / 2);
+    (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.46 / Math.sin(1.05); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
+    var ringMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.ripple), roughness: 0.6, emissive: pal.glow, emissiveIntensity: 0.3 });
+    var lidMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.mid), roughness: 0.8, side: THREE.DoubleSide });
+    var lashMat = new THREE.MeshStandardMaterial({ color: 0x141020, roughness: 0.6 }), lids = [];
+    var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
+    [-1, 1].forEach(function (s) {
+      var ey = new THREE.Group(); ey.position.set(s * 0.054, 0.02, 0.06); ey.rotation.set(0.05, s * 0.6, 0); ey.scale.setScalar(1.5); head.add(ey);
+      var RX = 0.024, RY = 0.025, RZ = 0.016;
+      part(seg, eyeMat, 0, 0, 0, RX, RY, RZ, ey);
+      var ir = abPart(irisGeo, irisMat, 0, 0, 0, 0, 0, 0, ey); ir.scale.set(RX * 1.01, RY * 1.01, RZ * 1.01);
+      var co = abPart(irisGeo, corneaMat, 0, 0, 0, 0, 0, 0, ey); co.scale.set(RX * 1.06, RY * 1.06, RZ * 1.18); co.castShadow = false;
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.008, 0.009, RZ * 1.02, 0.006, 0.007, 0.002, ey);
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.001, 0.012, RZ, 0.0023, 0.0023, 0.001, ey);
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }), 0.008, -0.008, RZ * 0.98, 0.0032, 0.0028, 0.001, ey);
+      abPart(new THREE.TorusGeometry(1, 0.05, 6, 32), ringMat, 0, 0, RZ * 0.2, 0, 0, 0, ey).scale.set(RX * 1.12, RY * 1.12, RZ);   // the moonlit eye-ring
+      var lg = new THREE.Group(); ey.add(lg); lids.push(lg); lg.visible = false;
+      abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg).scale.set(RX * 1.15, RY * 1.15, RZ * 1.3);
+      [0.25, 0.5, 0.8].forEach(function (a, n) {                       // three little lashes at the outer corner
+        var len = 0.009 - n * 0.0015, lash = abPart(new THREE.ConeGeometry(0.0011, len, 5).translate(0, len / 2, 0), lashMat, s * Math.cos(a) * RX * 1.12, Math.sin(a) * RY * 1.12, RZ * 0.3, 0.4, 0, -Math.atan2(s * Math.cos(a) * 1.3, Math.sin(a) + 0.6), ey);
+        lash.castShadow = false;
+      });
+      var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.045, 0.03), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      bl.position.set(s * 0.078, -0.036, 0.056); bl.rotation.set(0, s * 0.9, 0); head.add(bl);   // rosy cheeks
+    });
+    // a curl of plume feathers on top of its head, each tipped with a little glowing star
+    var plumeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.ripple), roughness: 0.5, emissive: pal.glow, emissiveIntensity: 0.5 });
+    var plumes = [];
+    [[0, 1], [-0.012, 0.8], [0.012, 0.8]].forEach(function (p, k) {
+      var pg = new THREE.Group(); pg.position.set(p[0], 0.08, 0.01); pg.rotation.z = p[0] * 12; head.add(pg); plumes.push(pg);
+      var L = p[1], curve = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, 0.03 * L, -0.005), V3(0, 0.06 * L, 0.01), V3(0, 0.075 * L, 0.035 * L), V3(0, 0.065 * L, 0.05 * L)]);
+      abPart(new THREE.TubeGeometry(curve, 16, 0.0028, 5), plumeMat, 0, 0, 0, 0, 0, 0, pg);
+      for (var b = 0; b < 8; b++) { var pt = curve.getPoint(0.2 + b * 0.1); [-1, 1].forEach(function (side) { abPart(new THREE.ConeGeometry(0.0015, 0.012, 3), plumeMat, pt.x + side * 0.005, pt.y, pt.z, 0, 0, side * 1.2, pg); }); }   // soft barbs
+      var tip = curve.getPoint(1), st = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonStarTex, color: pal.glow, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+      st.scale.set(0.028, 0.028, 1); st.position.copy(tip); pg.add(st);
+    });
+    // folded wings: soft coverts, long primaries reaching back and a shimmering speculum patch that changes colour
+    var primMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back), roughness: 0.45, emissive: pal.glow, emissiveIntensity: 0.08 });
+    var specMat = new THREE.MeshStandardMaterial({ color: 0x223355, roughness: 0.2, metalness: 0.4, emissive: pal.spec[0], emissiveIntensity: 0.7 });
+    var edgeMat = new THREE.MeshStandardMaterial({ color: 0xf2f6ff, roughness: 0.5, emissive: pal.glow, emissiveIntensity: 0.4 });
+    var wings = [];
+    [-1, 1].forEach(function (s) {
+      var wg = new THREE.Group(); wg.position.set(s * 0.12, 0.27, 0.06); body.add(wg); wings.push({ g: wg, s: s });
+      part(seg, feathers, s * 0.012, -0.03, -0.09, 0.035, 0.07, 0.15, wg, 0.12, 0, 0, 0.08);
+      part(seg, specMat, s * 0.04, -0.035, -0.11, 0.008, 0.026, 0.05, wg, 0.15, 0, 0);
+      part(seg, edgeMat, s * 0.04, -0.035, -0.165, 0.006, 0.024, 0.006, wg, 0.15, 0, 0);
+      for (var pf = 0; pf < 5; pf++) part(seg, primMat, s * (0.02 + pf * 0.003), -0.005 - pf * 0.012, -0.2 - pf * 0.008, 0.008, 0.02, 0.085, wg, 0.3 + pf * 0.05, 0, 0);
+    });
+    // short legs on glowing webbed feet
+    var feetMat = new THREE.MeshStandardMaterial({ color: pal.feet, roughness: 0.4, emissive: pal.glow, emissiveIntensity: 0.55, side: THREE.DoubleSide });
+    var web = new THREE.Shape(); web.moveTo(0, 0); web.lineTo(-0.028, 0.05); web.quadraticCurveTo(-0.018, 0.045, -0.012, 0.055); web.quadraticCurveTo(-0.004, 0.048, 0, 0.062); web.quadraticCurveTo(0.004, 0.048, 0.012, 0.055); web.quadraticCurveTo(0.018, 0.045, 0.028, 0.05); web.closePath();
+    var webGeo = new THREE.ExtrudeGeometry(web, { depth: 0.004, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2 });
+    var legs = [];
+    [-1, 1].forEach(function (s, k) {
+      var lg = new THREE.Group(); lg.position.set(s * 0.06, 0.12, 0.02); body.add(lg);
+      abPart(new THREE.CylinderGeometry(0.009, 0.011, 0.1, 10), feetMat, 0, -0.05, 0, 0, 0, 0, lg);
+      abPart(webGeo, feetMat, 0, -0.105, -0.012, Math.PI / 2, 0, 0, lg);
+      [-1, 0, 1].forEach(function (t) { abPart(new THREE.CylinderGeometry(0.003, 0.004, 0.058, 6), feetMat, t * 0.014, -0.1, 0.014, Math.PI / 2, t * 0.42, 0, lg); });   // the toes, along the web
+      legs.push({ g: lg, ph: k * Math.PI });
+    });
+    // ripples of light spreading out on the floor round it, droplet sparkles drifting up, and a soft glow
+    var ripples = [];
+    for (var rp = 0; rp < 3; rp++) {
+      var rm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: duckRingTex, color: pal.glow, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      rm.rotation.x = -Math.PI / 2; rm.position.y = 0.012; root.add(rm); ripples.push({ m: rm, t: rp / 3 });
+    }
+    var sparks = [];
+    for (var sp = 0; sp < 6; sp++) { var sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color(pal.ripple), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); sk.scale.set(0.035, 0.035, 1); root.add(sk); sparks.push({ s: sk, t: glimR(sp) * 2, x: 0, z: 0 }); }
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(1.0, 1.0, 1); glow.position.set(0, 0.28, 0); root.add(glow);
+    var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
+    var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
+    tag.scale.set(0.36, 0.135, 1); tag.position.set(0, 0.78, 0); tag.renderOrder = 6; root.add(tag);
+    return { root: root, body: body, head: head, tail: tail, wings: wings, legs: legs, plumes: plumes, lids: lids, feathers: feathers, specMat: specMat, spec: [new THREE.Color(pal.spec[0]), new THREE.Color(pal.spec[1])], ripples: ripples, sparks: sparks, glow: glow, tagCv: tagCv, tagTex: tagTex };
+  }
+  // its Dewdrop Egg, nestled in the straw, and a bundle of hay in the manger when it's been fed
+  function duckBuildExtras(g) {
+    var sz = GLIM_STALLS[g.stall];
+    var egg = new THREE.Group(); egg.position.set(-3.3, 0.1, sz - 0.6); abRoom.add(egg);
+    var nest = abPart(new THREE.TorusGeometry(0.085, 0.035, 8, 20), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.015, 0, Math.PI / 2, 0, 0, egg); nest.scale.set(1, 1, 0.6);
+    var e = abPart(new THREE.SphereGeometry(0.058, 24, 16), duckEggMat, 0, 0.07, 0, 0.15, 0, 0.1, egg); e.scale.set(1, 1.28, 1);
+    var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xa8c8ff, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+    eg.scale.set(0.45, 0.45, 1); eg.position.y = 0.07; egg.add(eg);
+    g.eggMesh = egg; g.eggGlow = eg;
+    var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
+    hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
+    g.slate.map = glimSlateTex(g.name, 'Puddlewisp'); g.slate.needsUpdate = true;
+  }
+  // every frame, for a Puddlewisp: a waddle when it walks, a look about and a little preen now and then, a tail
+  // wiggle, blinking, its feathers' ripples shimmering, the wing patch changing colour and rings of light spreading
+  // round its feet; when petted it flaps its wings happily and wags its tail
+  function duckAnimate(g, dt, t, moving) {
+    var m = g.m;
+    if (moving) g.hop += dt * 9;
+    var wad = moving ? Math.sin(g.hop) : 0;
+    m.body.rotation.z = m.body.rotation.z * 0.85 + wad * 0.13 * 0.15;     // the waddle
+    m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.012 : Math.sin(t * 2 + g.stall) * 0.003;
+    m.legs.forEach(function (l) { l.g.rotation.x = moving ? Math.sin(g.hop + l.ph) * 0.45 : l.g.rotation.x * 0.85; });
+    var happy = g.pet > 0;
+    if (happy) g.pet -= dt;
+    var preen = Math.max(0, Math.sin(t * 0.27 + g.stall * 2.1) - 0.85) * 6;   // now and then it tucks its bill to preen
+    m.head.rotation.set(happy ? -0.15 + Math.sin(t * 9) * 0.06 : 0.15 + preen * 0.5 + (moving ? Math.sin(g.hop * 2) * 0.06 : 0), happy ? Math.sin(t * 6) * 0.25 : Math.sin(t * 0.5 + g.stall) * 0.45 * (1 - preen * 0.5) + preen * 0.6, happy ? Math.sin(t * 5) * 0.12 : 0);
+    m.tail.rotation.y = happy ? Math.sin(t * 16) * 0.45 : Math.sin(t * 0.8 + g.stall) * 0.08 + Math.max(0, Math.sin(t * 0.6 + g.stall) - 0.9) * Math.sin(t * 20) * 2;   // a wiggle of the tail
+    m.wings.forEach(function (w) { w.g.rotation.z = happy ? w.s * (0.25 + Math.sin(t * 18) * 0.4) : w.g.rotation.z * 0.85; w.g.rotation.y = happy ? -w.s * 0.2 : 0; });   // flapping happily
+    m.plumes.forEach(function (p, k) { p.rotation.x = Math.sin(t * 2.4 + k * 1.3) * 0.12 + (moving ? Math.sin(g.hop * 2) * 0.1 : 0); });
+    var bt = (t * 0.26 + g.stall * 0.41) % 1, blink = happy ? 0.8 : (bt < 0.035 ? Math.sin(bt / 0.035 * Math.PI) : 0);
+    m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
+    m.feathers.emissiveIntensity = 0.5 + Math.sin(t * 1.8 + g.stall) * 0.2;      // the ripples in its feathers shimmer
+    var sh = 0.5 + Math.sin(t * 1.3 + g.stall) * 0.5;
+    m.specMat.emissive.copy(m.spec[0]).lerp(m.spec[1], sh);
+    m.ripples.forEach(function (r) {                                // rings of light spreading round its feet
+      r.t += dt * 0.35; if (r.t > 1) r.t -= 1;
+      var sc = 0.15 + r.t * 0.6; r.m.scale.set(sc, sc, 1); r.m.material.opacity = Math.sin(r.t * Math.PI) * 0.35;
+    });
+    m.sparks.forEach(function (sp) {
+      sp.t += dt * 0.5;
+      if (sp.t > 1) { sp.t -= 1 + Math.random() * 1.5; sp.x = (Math.random() - 0.5) * 0.35; sp.z = (Math.random() - 0.5) * 0.4; }
+      sp.s.material.opacity = sp.t > 0 ? Math.sin(sp.t * Math.PI) * 0.85 : 0;
+      sp.s.position.set(sp.x, 0.2 + Math.max(0, sp.t) * 0.4, sp.z);
+    });
+    m.glow.material.opacity = 0.16 + sh * 0.06;
+    if (g.egg) g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12;
+  }
+
 
 
 
@@ -1486,12 +1744,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function glimRefresh(g) { g.eggMesh.visible = !!g.egg; g.hayMesh.visible = !!g.fed; glimDrawTag(g); }
   function glimAdd(d) {                                              // d: { kind ('glim' or 'moon'), name, stall, pal, fed, petted, egg }
-    var g = { kind: d.kind === 'moon' ? 'moon' : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg };
-    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
+    var g = { kind: d.kind === 'moon' || d.kind === 'duck' ? d.kind : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg };
+    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : g.kind === 'duck' ? duckBuild(DUCK_PALS[g.pal % DUCK_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
     g.slate = abStallSlates[g.stall];
     var sz = GLIM_STALLS[g.stall];
     g.x = g.kind === 'moon' ? -3.1 : -3.0; g.z = sz - 0.2; g.tx = g.x; g.tz = g.z; g.face = Math.PI / 2; g.wait = 1 + glimR(g.stall) * 2; g.hop = 0; g.pet = 0; g.flut = glimR(g.stall * 7) * 6;
-    if (g.kind === 'moon') moonBuildExtras(g); else glimBuildExtras(g);
+    if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else glimBuildExtras(g);
     glimmers.push(g); glimRefresh(g);
     return g;
   }
@@ -1509,14 +1767,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateGlimmers(dt) {
     if (glimDay === null) glimDay = state.day;
     if (state.day !== glimDay) {
-      var laid = [], milk = [];
+      var laid = [], milk = [], dew = [];
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.fed && g.petted && !g.egg) { g.egg = true; (g.kind === 'moon' ? milk : laid).push(g.name); }
+        if (g.fed && g.petted && !g.egg) { g.egg = true; (g.kind === 'moon' ? milk : g.kind === 'duck' ? dew : laid).push(g.name); }
         g.fed = false; g.petted = false; glimRefresh(g);
       });
       glimDay = state.day;
       var news = [];
       if (laid.length) news.push(laid.join(' and ') + (laid.length > 1 ? ' each laid' : ' laid') + ' a Glimmer Egg');
+      if (dew.length) news.push(dew.join(' and ') + (dew.length > 1 ? ' each laid' : ' laid') + ' a Dewdrop Egg');
       if (milk.length) news.push(milk.join(' and ') + (milk.length > 1 ? ' are' : ' is') + ' ready to milk');
       if (news.length) setTimeout(function () { showToast('✧ ' + news.join(', and ') + '! Visit them at Fluff & Feather.', 3600); }, 4200);
     }
@@ -1525,16 +1784,18 @@ EVERDAWN_PARTS.push(function (THREE) {
     glimmers.forEach(function (g) {
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
-      var moon = g.kind === 'moon';
+      var moon = g.kind === 'moon', duck = g.kind === 'duck';
       if (g.wait <= 0 && g.pet <= 0) {
-        if (moon) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }   // (bigger, so it ambles about less)
+        if (duck) { g.tx = -3.45 + Math.random() * 0.65; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 3 + Math.random() * 5; }
+        else if (moon) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }   // (bigger, so it ambles about less)
         else { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 2.5 + Math.random() * 4; }
       }
       var dx = g.tx - g.x, dz = g.tz - g.z, d = Math.hypot(dx, dz), moving = d > 0.03 && g.pet <= 0;
-      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon) g.hop += dt * 9; }
-      else if (!moon) g.hop = 0;
+      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : duck ? 0.22 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon && !duck) g.hop += dt * 9; }
+      else if (!moon && !duck) g.hop = 0;
       var cur = m.root.rotation.y, diff = Math.atan2(Math.sin(g.face - cur), Math.cos(g.face - cur));
-      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : 5));
+      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : duck ? 4 : 5));
+      if (duck) { m.root.position.set(g.x, 0, g.z); duckAnimate(g, dt, t, moving); return; }
       if (moon) { m.root.position.set(g.x, 0, g.z); moonAnimate(g, dt, t, moving); return; }
       var hopY = moving ? Math.abs(Math.sin(g.hop)) * 0.06 : 0, breathe = 1 + Math.sin(t * 2.2 + g.stall) * 0.02;
       m.root.position.set(g.x, hopY, g.z);
@@ -1575,6 +1836,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimmerInReach(); if (!g) return;
     var wx = AB_X + g.x, wz = AB_Z + g.z;
     if (g.kind === 'moon') { mooncalfAction(g, wx, wz); return; }
+    if (g.kind === 'duck') { puddlewispAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
       addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
@@ -1621,6 +1883,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.0; glimHeartBurst(g.x, 0.9, g.z);
     showToast(g.name + ' is fed, petted and happy ✧ Come back tomorrow!', 2000);
   }
+  function puddlewispAction(g, wx, wz) {                             // collecting its egg, feeding and petting a Puddlewisp
+    if (g.egg) {
+      if (!roomFor(['dewdropEgg'])) { bagFull(); return; }
+      addItem('dewdropEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      showToast('You collected a Dewdrop Egg from ' + g.name + '! \ud83d\udca7\u2727', 2200);
+      return;
+    }
+    if (!g.fed) {
+      if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them \ud83c\udf3e', 2600); return; }
+      g.fed = true; glimRefresh(g); popSound(); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
+      showToast(g.name + ' nibbles the hay with happy little quacks \ud83c\udf3e' + (g.petted ? ' An egg tomorrow morning!' : ' Now give them a pet!'), 2400);
+      return;
+    }
+    if (!g.petted) {
+      g.petted = true; glimRefresh(g); g.pet = 1.6;
+      g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
+      glimHeartBurst(g.x, 0.6, g.z); popSound();
+      showToast(g.name + ' ruffles their starry feathers and flaps happily \ud83d\udc9c An egg tomorrow morning!', 2400);
+      return;
+    }
+    g.pet = 1.0; glimHeartBurst(g.x, 0.6, g.z);
+    showToast(g.name + ' is fed, petted and happy \u2727 Come back tomorrow!', 2000);
+  }
   var glimBaseInteract = interact;                                   // pressing Interact near a stall looks after its Glimmerwing
   interact = function () {
     if (glimNaming) return;
@@ -1657,7 +1942,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -1668,11 +1953,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
-    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : GLIM_COST;
+    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : GLIM_COST;
     if (stall < 0) { showToast('All three stalls are full!', 2000); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= cost; showCoins(true); coinSound(5);
@@ -1691,11 +1976,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
-    chalk('Glimmerwings \u00b7 250 \u2605', w / 2 + 80, 140, 34, 'rgba(214,190,255,A)', false);
-    chalk('lay glowing Glimmer Eggs', w / 2 + 80, 174, 20, 'rgba(240,240,230,A)', true);
-    chalk('Mooncalves \u00b7 600 \u2605', w / 2 + 80, 222, 34, 'rgba(190,215,255,A)', false);
-    chalk('give shimmering Moonmilk', w / 2 + 80, 256, 20, 'rgba(240,240,230,A)', true);
-    chalk('feed with hay & pet every day!', w / 2 + 80, 296, 22, 'rgba(255,214,120,A)', true);
+    chalk('Glimmerwings \u00b7 250 \u2605', w / 2 + 80, 134, 32, 'rgba(214,190,255,A)', false);
+    chalk('lay glowing Glimmer Eggs', w / 2 + 80, 166, 19, 'rgba(240,240,230,A)', true);
+    chalk('Puddlewisps \u00b7 300 \u2605', w / 2 + 80, 210, 32, 'rgba(170,215,255,A)', false);
+    chalk('lay glassy Dewdrop Eggs', w / 2 + 80, 242, 19, 'rgba(240,240,230,A)', true);
+    chalk('Mooncalves \u00b7 600 \u2605', w / 2 + 80, 286, 32, 'rgba(190,215,255,A)', false);
+    chalk('give shimmering Moonmilk', w / 2 + 80, 318, 19, 'rgba(240,240,230,A)', true);
+    chalk('feed with hay & pet every day!', w / 2 + 80, 368, 22, 'rgba(255,214,120,A)', true);
     // a chalk doodle of one: a round fluffy body with moth wings and antennae
     var dx = 150, dy = 220;
     g.lineCap = 'round'; g.lineWidth = 3;
@@ -1713,7 +2000,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = 'rgba(255,150,190,0.5)'; g.beginPath(); g.ellipse(dx + s * 28, dy + 10, 8, 5, 0, 0, Math.PI * 2); g.fill();
     });
     g.strokeStyle = 'rgba(250,248,240,0.8)'; g.beginPath(); g.arc(dx - 5, dy + 12, 5, 0.2, Math.PI - 0.2); g.stroke(); g.beginPath(); g.arc(dx + 5, dy + 12, 5, 0.2, Math.PI - 0.2); g.stroke();
-    [[46, 300], [w - 50, 60], [w - 60, 300], [40, 60]].forEach(function (p) {
+    [[46, 400], [w - 50, 60], [w - 60, 410], [40, 60]].forEach(function (p) {
       g.strokeStyle = 'rgba(255,214,120,0.7)'; g.beginPath();
       for (var k = 0; k < 5; k++) { var a = -Math.PI / 2 + k * Math.PI * 4 / 5; g[k ? 'lineTo' : 'moveTo'](p[0] + Math.cos(a) * 12, p[1] + Math.sin(a) * 12); }
       g.closePath(); g.stroke();
@@ -2201,6 +2488,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic glim-pic"></div><div class="shop-text"><b>Glimmerwing</b><span>A gentle, glowing little creature with shimmering moth wings. Feed it hay and pet it every day, and it lays a Glimmer Egg each morning. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + GLIM_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="glim-adopt">Adopt</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic duck-pic"></div><div class="shop-text"><b>Puddlewisp</b><span>A plump little pond creature with night-blue feathers that ripple like moonlight on water, big shining eyes, star-tipped plumes and glowing webbed feet. Feed it hay and pet it every day, and it lays a Dewdrop Egg each morning. It lives in a stall here.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + DUCK_COST + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="duck-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="moon-adopt">Adopt</button></div>' +
@@ -2215,6 +2505,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   barnShopBox.querySelector('.glim-pic').appendChild(glimPic);
   var glimAdoptBtn = barnShopBox.querySelector('.glim-adopt'), glimStallsNote = barnShopBox.querySelector('.glim-stalls');
   glimAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('glim'); });
+  var duckPic = document.createElement('img'); duckPic.src = duckShopIcon; duckPic.alt = ''; duckPic.style.width = '96%'; duckPic.style.pointerEvents = 'none';
+  barnShopBox.querySelector('.duck-pic').appendChild(duckPic);
+  var duckAdoptBtn = barnShopBox.querySelector('.duck-adopt');
+  duckAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('duck'); });
   var moonPic = document.createElement('img'); moonPic.src = moonShopIcon; moonPic.alt = ''; moonPic.style.width = '96%'; moonPic.style.pointerEvents = 'none';
   barnShopBox.querySelector('.moon-pic').appendChild(moonPic);
   barnShopBox.querySelector('.pail-pic').appendChild(itemPicture('milkPail'));
@@ -2240,12 +2534,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     var full = glimFreeStall() < 0;                                    // the Glimmerwing: one for each empty stall
     glimAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GLIM_COST;
     glimAdoptBtn.disabled = full || state.coins < GLIM_COST;
+    duckAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + DUCK_COST;
+    duckAdoptBtn.disabled = full || state.coins < DUCK_COST;
     moonAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + MOON_COST;
     moonAdoptBtn.disabled = full || state.coins < MOON_COST;
     var gotPail = hasPail();
     pailBtn.innerHTML = gotPail ? 'You have one ✓' : 'Buy · <img class="coin-icon" alt=""> ' + PAIL_COST;
     pailBtn.disabled = gotPail || state.coins < PAIL_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
