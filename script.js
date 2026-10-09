@@ -5001,6 +5001,11 @@ function startGame(THREE) {
     for (var i = 0; i < clLampGlows.length; i++) clLampGlows[i].material.opacity = glow * 0.8;
     clVane.rotation.y = Math.sin(t * 0.21) * 0.9 + Math.sin(t * 0.53) * 0.3;
   }
+  function barnRampHeight(x, z) {                                      // how high Fluff & Feather's ramp lifts you
+    var dx = x - ANIMAL_X, dz = z - ANIMAL_Z, c = Math.cos(ANIMAL_TURN), si = Math.sin(ANIMAL_TURN), lx = dx * c - dz * si, lz = dx * si + dz * c;
+    if (Math.abs(lx) > 1.25 || lz < BD - 0.7 || lz > BD + 1.25) return 0;
+    return lz < BD + 0.15 ? B_FOUND : B_FOUND * (BD + 1.25 - lz) / 1.1;
+  }
   function clinicStepHeight(x, z) {                                   // how high the clinic's porch and step lift you
     var l = clinicLocal(x, z);
     if (Math.abs(l[0]) > PORCH_W || l[1] < CD - 0.6 || l[1] > CD + PORCH_D + 0.32) return 0;
@@ -5128,6 +5133,15 @@ function startGame(THREE) {
   var B_FZ = BD;
   apPart(new THREE.BoxGeometry(2.6, 2.2, 0.02), AM.warm, 0, B_FOUND + 1.1, B_FZ + 0.012);   // the lit doorway
   apPart(new THREE.BoxGeometry(3.6, 0.1, 0.1), AM.iron, 0, B_FOUND + 2.3, B_FZ + 0.1);    // the track
+  // a plank ramp up onto the barn floor, so you can walk in: boards across it on two stringers, worn in the middle
+  var RAMP_L = Math.hypot(1.1, B_FOUND), RAMP_A = Math.atan2(B_FOUND, 1.1);
+  [-1.15, 1.15].forEach(function (sx) { apPart(new THREE.BoxGeometry(0.1, 0.12, RAMP_L), AM.darkWood, sx, B_FOUND / 2 - 0.05, B_FZ + 0.15 + 0.55, RAMP_A, 0, 0); });
+  for (var rpb = 0; rpb < 8; rpb++) {
+    var rpT = (rpb + 0.5) / 8, rpZ = B_FZ + 0.15 + rpT * 1.1;
+    apPart(new THREE.BoxGeometry(2.5, 0.045, RAMP_L / 8 - 0.015), new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.07 + isle2Hash(rpb * 3.3) * 0.02, 0.3, 0.3 + isle2Hash(rpb * 5.1) * 0.08), roughness: 0.85 }), (isle2Hash(rpb) - 0.5) * 0.04, B_FOUND * (1 - rpT) + 0.01, rpZ, RAMP_A, 0, 0);
+    [-1.15, 1.15].forEach(function (sx) { apPart(new THREE.CylinderGeometry(0.012, 0.012, 0.01, 6), AM.iron, sx, B_FOUND * (1 - rpT) + 0.037, rpZ, RAMP_A, 0, 0); });   // nail heads
+  }
+  apPart(new THREE.BoxGeometry(2.6, 0.06, 0.16), AM.darkWood, 0, B_FOUND - 0.02, B_FZ + 0.08);   // the oak sill at the top
   [-1, 1].forEach(function (s) {                                       // the two doors, slid apart, each with a white frame and an X brace
     var dg = new THREE.Group(); dg.position.set(s * 1.5, B_FOUND + 1.12, B_FZ + 0.1); barnGroup.add(dg);
     apPart(new THREE.BoxGeometry(1.3, 2.2, 0.06), sidingMat(1.3 / 1.6, 2.2 / 1.6), 0, 0, 0, 0, 0, 0, dg);
@@ -5372,7 +5386,7 @@ function startGame(THREE) {
     return b;
   }
   var hayBaleCount = 0;
-  haybale(-2.6, 0, B_FZ + 0.9, 0.1); haybale(-3.5, 0, B_FZ + 0.7, -0.2); haybale(-3.05, HB_H, B_FZ + 0.8, 0.3);
+  var barnBaleProto = haybale(-2.6, 0, B_FZ + 0.9, 0.1); haybale(-3.5, 0, B_FZ + 0.7, -0.2); haybale(-3.05, HB_H, B_FZ + 0.8, 0.3);
   (function () {                                                       // all the loose wisps of straw, in one batch
     var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0025, 0.0015, 1, 3), hayWispMat, hayWisps.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
     hayWisps.forEach(function (w, i) {
@@ -5406,8 +5420,9 @@ function startGame(THREE) {
   });
   var sackMat = new THREE.MeshStandardMaterial({ map: burlapTex, bumpMap: burlapTex, bumpScale: 0.02, roughness: 1 });
   var sackTwine = new THREE.MeshStandardMaterial({ color: 0x9a7448, roughness: 0.9 });
+  var barnSackProtos = [];                                             // (kept so the barn's inside can have the same sacks)
   [[2.5, 0.85, 0.2, 0.24, 0], [2.98, 0.95, -0.3, 0.24, 1], [2.74, 0.82, 0.9, 0.62, 2]].forEach(function (sk) {
-    var sg = new THREE.Group(); sg.position.set(sk[0], sk[3] - 0.24, B_FZ + sk[1]); sg.rotation.y = sk[2]; barnGroup.add(sg);
+    var sg = new THREE.Group(); sg.position.set(sk[0], sk[3] - 0.24, B_FZ + sk[1]); sg.rotation.y = sk[2]; barnGroup.add(sg); barnSackProtos.push(sg);
     if (sk[4] === 2) sg.rotation.z = 1.2;                             // the top sack lies flopped across the others
     var geo = new THREE.SphereGeometry(0.28, 20, 16), gp = geo.attributes.position;
     for (var v = 0; v < gp.count; v++) {                              // a slumped sack: flat bottom, squared shoulders, lumpy sides
@@ -5531,8 +5546,9 @@ function startGame(THREE) {
   (function () {                                                       // you bump into the barn, the bales and the trough
     var c = Math.cos(ANIMAL_TURN), si = Math.sin(ANIMAL_TURN);
     function solidAt(lx, lz, r) { solids.push({ x: ANIMAL_X + lx * c + lz * si, z: ANIMAL_Z - lx * si + lz * c, r: r }); }
-    for (var x = -BW + 0.6; x <= BW - 0.59; x += 1.2) for (var z = -BD + 0.6; z <= BD - 0.59; z += 1.2) solidAt(x, z, 0.9);
-    for (var x2 = -BW; x2 <= BW + 0.01; x2 += 0.5) solidAt(x2, BD - 0.2, 0.4);
+    for (var x = -BW + 0.6; x <= BW - 0.59; x += 1.2) for (var z = -BD + 0.6; z <= BD - 1.1; z += 1.2) solidAt(x, z, 0.9);
+    for (var x2 = -BW; x2 <= BW + 0.01; x2 += 0.5) if (Math.abs(x2) > 1.3) solidAt(x2, BD - 0.2, 0.4);   // the front wall, with a gap for the doorway
+    solidAt(0, BD - 0.6, 0.35); solidAt(-0.9, BD - 0.45, 0.35); solidAt(0.9, BD - 0.45, 0.35);   // the doorway itself: walk up into it and in you go
     solidAt(-3.0, B_FZ + 0.8, 0.7); solidAt(2.7, B_FZ + 0.9, 0.5); solidAt(2.0, B_FZ + 0.6, 0.25); solidAt(BW + 1.0, 1.0, 0.75);
     solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the bird house, the wheel
   })();
@@ -6233,7 +6249,7 @@ function startGame(THREE) {
 
   var wallLook = new THREE.Vector3();
   function updateInterior(dt, t) {
-    if (!indoors || inShop || inClinic) return;
+    if (!indoors || inShop || inClinic || inBarn) return;
     for (var wn in inWalls) { // hide any wall the camera is behind, windows and all, so it never blocks the view
       var W = inWalls[wn];
       wallLook.set(camera.position.x - IN_X - W.c.x, 0, camera.position.z - IN_Z - W.c.z);
@@ -6265,8 +6281,8 @@ function startGame(THREE) {
   canvas.parentNode.appendChild(fadeBox);
   var doorBusy = false, doorArmed = true, outsideCam = null;
   var OUT_DOOR_X = HOUSE_X, OUT_DOOR_Z = HOUSE_Z + HD / 2 + 0.55;      // standing right in front of the door
-  function inRoom(x, z) { return inClinic ? inClinicRoom(x, z) : inShop ? inShopRoom(x, z) : Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
-  function useDoor(goIn, toShop) {                                   // toShop: true for the seed shop's door, 'clinic' for the clinic's, or nothing for the farmhouse's
+  function inRoom(x, z) { return inBarn ? inBarnRoom(x, z) : inClinic ? inClinicRoom(x, z) : inShop ? inShopRoom(x, z) : Math.abs(x - IN_X) < ROOM_W / 2 - 0.35 && Math.abs(z - IN_Z) < ROOM_D / 2 - 0.35; }
+  function useDoor(goIn, toShop) {                                   // toShop: true for the seed shop's door, 'clinic' for the clinic's, 'barn' for Fluff & Feather's, or nothing for the farmhouse's
     if (doorBusy) return;
     doorBusy = true;
     doorArmed = false;
@@ -6274,12 +6290,16 @@ function startGame(THREE) {
     doorSound();
     fadeBox.style.opacity = 1;
     setTimeout(function () {
-      var leftShop = inShop, leftClinic = inClinic;
+      var leftShop = inShop, leftClinic = inClinic, leftBarn = inBarn;
       indoors = goIn;
       inShop = goIn && toShop === true;
       inClinic = goIn && toShop === 'clinic';
+      inBarn = goIn && toShop === 'barn';
       if (goIn) {
-        if (inClinic) {
+        if (inBarn) {
+          abScene.add(player);
+          player.position.set(AB_X, 0, AB_Z + AB_EXIT_Z - 1.0);
+        } else if (inClinic) {
           clinicScene.add(player);
           player.position.set(CIN_X, 0, CIN_Z + CIN_EXIT_Z - 1.0);
         } else if (inShop) {
@@ -6291,10 +6311,14 @@ function startGame(THREE) {
         }
         facing = Math.PI;                                           // facing into the room
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
-        cam.dist = inShop || inClinic ? 8.5 : 7.5; cam.pitch = 0.85; cam.yaw = 0;
+        cam.dist = inBarn ? 9 : inShop || inClinic ? 8.5 : 7.5; cam.pitch = 0.85; cam.yaw = 0;
       } else {
         scene.add(player);
-        if (leftClinic) {
+        if (leftBarn) {
+          var bOut = animalFront(1.6);
+          player.position.set(bOut.x, 0, bOut.z);
+          facing = ANIMAL_TURN;                                     // facing out, down the ramp
+        } else if (leftClinic) {
           var cOut = clinicFront(2.3);
           player.position.set(cOut.x, 0, cOut.z);
           facing = CLINIC_TURN;                                     // facing out, away from the clinic
@@ -6317,11 +6341,13 @@ function startGame(THREE) {
     var px = player.position.x, pz = player.position.z;
     var dShop = indoors ? (inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99) : dist(px, pz, shopDoor.x, shopDoor.z);
     var dClinic = indoors ? (inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99) : dist(px, pz, clinicDoor.x, clinicDoor.z);
-    var d = indoors ? (inShop || inClinic ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
-    if (!doorArmed) { if (Math.min(d, dShop, dClinic) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
+    var dBarn = indoors ? (inBarn ? dist(px, pz, AB_X, AB_Z + AB_EXIT_Z) : 99) : dist(px, pz, barnDoor.x, barnDoor.z);
+    var d = indoors ? (inShop || inClinic || inBarn ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z)) : dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z);
+    if (!doorArmed) { if (Math.min(d, dShop, dClinic, dBarn) > 0.85) doorArmed = true; return; }  // you have to step away before a door works again
     if (d < 0.5) useDoor(!indoors);
     else if (dShop < (indoors ? 0.5 : 0.22)) useDoor(!indoors, true);   // outside, you have to climb right up to the shop door
     else if (dClinic < (indoors ? 0.5 : 0.22)) useDoor(!indoors, 'clinic');
+    else if (dBarn < (indoors ? 0.5 : 0.25)) useDoor(!indoors, 'barn');
   }
   // Sleeping: stand next to your bed and a Sleep button appears (or press Z). You drift off and wake at 6 am the next morning
   var sleepBtn = document.createElement('button');
@@ -6387,6 +6413,7 @@ function startGame(THREE) {
     walkTarget = null; keys = {};
     if (binOpen) closeBin();
     if (shopOpen) closeShop();
+    if (barnShopOpen) closeBarnShop();
     toggleBag(false);
     sleepSound();
     showToast('You\'re exhausted… 💫', 1800);
@@ -6394,7 +6421,7 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
-      indoors = true; inShop = false; inClinic = false;                 // carried home, next to your bed
+      indoors = true; inShop = false; inClinic = false; inBarn = false;  // carried home, next to your bed
       interiorScene.add(player);
       player.position.set(IN_X + BX - BED_W / 2 - 0.55, 0, IN_Z + MZ);
       facing = -Math.PI / 2;
@@ -6433,6 +6460,7 @@ function startGame(THREE) {
     walkTarget = null; keys = {};
     if (binOpen) closeBin();
     if (shopOpen) closeShop();
+    if (barnShopOpen) closeBarnShop();
     toggleBag(false);
     sleepSound();
     showToast('It\'s 2 am… you can\'t keep your eyes open 💫', 1800);
@@ -6440,7 +6468,7 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
-      indoors = true; inShop = false; inClinic = true;                  // carried to the clinic, beside the exam table
+      indoors = true; inShop = false; inClinic = true; inBarn = false;   // carried to the clinic, beside the exam table
       clinicScene.add(player);
       player.position.set(CIN_X + 2.0, 0, CIN_Z - 1.1);
       facing = Math.PI;
@@ -8796,6 +8824,8 @@ function startGame(THREE) {
     if (nearBin()) { openBin(); return; }                         // next to the shipping bin: open it
     if (shopOpen) { if (!menuJustOpened()) closeShop(); return; }
     if (nearShop()) { openShop(); return; }                       // at the seed shop's door: open the shop
+    if (barnShopOpen) { if (!menuJustOpened()) closeBarnShop(); return; }
+    if (atBarnCounter()) { openBarnShop(); return; }              // at Fluff & Feather's counter: see the animals for sale
     var nearTree = treeInReach();
     if (nearTree && heldItem() === 'axe') { chopTree(nearTree); return; }
     var nearRock = heldItem() === 'pickaxe' ? rockInReach() : null;
@@ -12943,10 +12973,588 @@ function startGame(THREE) {
     clinicGroup.visible = true;
   }
 
+  // ---------- Inside Fluff & Feather ----------
+  // Its own room, drawn instead of the island while you're inside, just like the clinic and Whimsy & Bloom: the inside
+  // of the big red barn. Rough honey-coloured plank walls between heavy timber posts with knee braces, a wide-board
+  // floor scattered with straw, and windows (and the big open doorway) that look out on the real island. Down the left,
+  // three empty stalls bedded with fresh straw, waiting for their animals; down the right, feed sacks, a feed bin, tack
+  // on a peg, buckets, nesting boxes, hay bales and a ladder up to the loft. At the back, the counter where animals
+  // will be sold, under a chalkboard and the shop's sign. Walk back out through the doorway to leave
+  var abScene = new THREE.Scene();
+  abScene.background = new THREE.Color(0x1c1228);
+  var AB_X = -400, AB_Z = 1000, AB_W = ANIMAL_HW * 2, AB_D = ANIMAL_HD * 2, AB_H = 3.0;   // far from everything; the same size as the barn outside
+  var inBarn = false;
+  var abRoom = new THREE.Group();
+  abRoom.position.set(AB_X, 0, AB_Z);
+  abScene.add(abRoom);
+  abScene.add(new THREE.HemisphereLight(0xfff0d8, 0x6a5a48, 0.5));
+  var abSun = new THREE.DirectionalLight(0xfff0dc, 0.45);              // daylight slanting in through the windows and the doorway
+  abSun.position.set(AB_X - 6, 8, AB_Z + 5);
+  abSun.target.position.set(AB_X + 1, 0, AB_Z - 0.5);
+  abSun.castShadow = true;
+  abSun.shadow.mapSize.set(2048, 2048);
+  abSun.shadow.camera.left = -8; abSun.shadow.camera.right = 8; abSun.shadow.camera.top = 8; abSun.shadow.camera.bottom = -8;
+  abSun.shadow.camera.near = 1; abSun.shadow.camera.far = 25;
+  abSun.shadow.bias = -0.0006; abSun.shadow.normalBias = 0.02;
+  abScene.add(abSun); abScene.add(abSun.target);
+  var abLamps = [];                                                    // warm lantern light
+  [[-3.3, 2.0, 0], [3.3, 2.0, 0], [0, 2.2, -4.2]].forEach(function (lp, k) {
+    var L = new THREE.PointLight(0xffc27a, 0.45, 9);
+    L.position.set(AB_X + lp[0], lp[1], AB_Z + lp[2]);
+    abScene.add(L); abLamps.push({ l: L, p: k * 2.1 });
+  });
+  function abPart(geo, mat, x, y, z, rx, ry, rz, parent) {            // one piece of the barn room (x, z from the middle of the floor)
+    var m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx || 0, ry || 0, rz || 0);
+    m.castShadow = !mat.transparent && !mat.emissiveMap;
+    m.receiveShadow = true;
+    (parent || abRoom).add(m);
+    return m;
+  }
+  var abSolids = [];                                                   // things you bump into (room positions: x, z, radius)
+
+  // painted textures
+  var abPlankTex = paintTexture(512, 512, function (g, w, h) {        // the walls: rough-sawn boards, each its own shade of honey brown, with grain, knots, gaps and nails
+    var bw = w / 10;
+    for (var b = 0; b < 10; b++) {
+      var x0 = b * bw, l = 36 + isle2Hash(b * 3.3 + 900) * 12, hue = 25 + isle2Hash(b * 5.1 + 900) * 9;
+      var bg = g.createLinearGradient(x0, 0, x0 + bw, 0);
+      bg.addColorStop(0, 'hsl(' + hue + ',40%,' + (l - 7) + '%)'); bg.addColorStop(0.15, 'hsl(' + hue + ',44%,' + l + '%)');
+      bg.addColorStop(0.85, 'hsl(' + hue + ',42%,' + (l - 2) + '%)'); bg.addColorStop(1, 'hsl(' + hue + ',38%,' + (l - 10) + '%)');
+      g.fillStyle = bg; g.fillRect(x0, 0, bw, h);
+      for (var k = 0; k < 16; k++) {                                   // the grain, wandering down the board
+        var gx = x0 + 3 + isle2Hash(b * 17 + k * 1.3 + 900) * (bw - 6);
+        g.strokeStyle = isle2Hash(k * 2.7 + b) > 0.45 ? 'rgba(60,30,10,' + (0.08 + isle2Hash(k * 7 + b) * 0.12) + ')' : 'rgba(255,215,160,' + (0.05 + isle2Hash(k * 7 + b) * 0.08) + ')';
+        g.lineWidth = 0.6 + isle2Hash(k * 3 + b) * 1.3;
+        g.beginPath(); g.moveTo(gx, 0);
+        for (var y = 0; y <= h; y += 16) g.lineTo(gx + Math.sin(y * 0.018 + k * 1.7 + b) * 2.2, y);
+        g.stroke();
+      }
+      if (isle2Hash(b * 9.7 + 900) > 0.4) {                            // a knot, with the grain swirling round it
+        var kx = x0 + bw * (0.3 + isle2Hash(b * 4.4) * 0.4), ky = isle2Hash(b * 6.6 + 900) * h, kr = 4 + isle2Hash(b * 8.8) * 5;
+        for (var r = 4; r > 0; r--) { g.strokeStyle = 'rgba(70,35,12,' + (0.12 + r * 0.05) + ')'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(kx, ky, kr + r * 3, kr * 1.8 + r * 6, 0, 0, Math.PI * 2); g.stroke(); }
+        var kg = g.createRadialGradient(kx, ky, 0, kx, ky, kr); kg.addColorStop(0, '#2a1608'); kg.addColorStop(1, 'rgba(60,30,10,0.6)');
+        g.fillStyle = kg; g.beginPath(); g.ellipse(kx, ky, kr, kr * 1.5, 0, 0, Math.PI * 2); g.fill();
+      }
+      for (var s = 0; s < 40; s++) { g.fillStyle = 'rgba(255,235,200,' + isle2Hash(s * 3 + b) * 0.07 + ')'; g.fillRect(x0 + isle2Hash(s + b * 11) * bw, isle2Hash(s * 5 + b) * h, 1, 3 + isle2Hash(s * 7) * 12); }   // saw marks
+      g.fillStyle = 'rgba(18,9,3,0.85)'; g.fillRect(x0, 0, 2.5, h);    // the gap between boards
+      g.fillStyle = 'rgba(255,220,170,0.12)'; g.fillRect(x0 + 2.5, 0, 1.5, h);
+      [0.24, 0.76].forEach(function (ny) {                             // nails into the girts behind
+        [0.3, 0.7].forEach(function (nx) {
+          g.fillStyle = '#1e1a18'; g.beginPath(); g.arc(x0 + bw * nx, h * ny, 2.2, 0, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(120,60,30,0.35)'; g.beginPath(); g.arc(x0 + bw * nx + 1, h * ny + 3, 2.5, 0, Math.PI * 2); g.fill();   // a rust streak
+        });
+      });
+    }
+  });
+  abPlankTex.wrapS = abPlankTex.wrapT = THREE.RepeatWrapping;
+  var AF_PPM = 96;                                                     // floor canvas pixels per metre
+  var abFloorTex = paintTexture(Math.round(AB_W * AF_PPM), Math.round(AB_D * AF_PPM), function (g, w, h) {
+    var bw = 0.24 * AF_PPM;                                            // wide, worn floorboards running front to back
+    for (var c = 0; c * bw < w; c++) {
+      var y = -isle2Hash(c * 7.7 + 300) * 2 * AF_PPM, n = 0;
+      while (y < h) {
+        var bl = (1.6 + isle2Hash(c * 3.1 + n * 1.9 + 300) * 2.2) * AF_PPM, l = 30 + isle2Hash(c * 5.3 + n * 2.3) * 11, hue = 26 + isle2Hash(c * 2.9 + n * 3.7) * 9;
+        g.fillStyle = 'hsl(' + hue + ',30%,' + l + '%)'; g.fillRect(c * bw, y, bw, bl);
+        for (var k = 0; k < 9; k++) {
+          var gx = c * bw + 2 + isle2Hash(c * 13 + n * 5 + k) * (bw - 4);
+          g.strokeStyle = isle2Hash(k + c + n) > 0.5 ? 'rgba(40,20,8,' + (0.1 + isle2Hash(k * 3 + c) * 0.12) + ')' : 'rgba(255,220,170,' + (0.04 + isle2Hash(k * 5 + c) * 0.06) + ')';
+          g.lineWidth = 0.8 + isle2Hash(k * 9 + n) * 1.2;
+          g.beginPath(); g.moveTo(gx, y); g.lineTo(gx + (isle2Hash(k * 11 + c) - 0.5) * 5, y + bl); g.stroke();
+        }
+        g.fillStyle = 'rgba(15,8,3,0.75)'; g.fillRect(c * bw, y, bw, 2.5);   // the butt joint, with two nails each side
+        g.fillStyle = '#1a1614';
+        [0.3, 0.7].forEach(function (nx) { g.beginPath(); g.arc(c * bw + bw * nx, y + 7, 1.8, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(c * bw + bw * nx, y - 6, 1.8, 0, Math.PI * 2); g.fill(); });
+        y += bl; n++;
+      }
+      g.fillStyle = 'rgba(15,8,3,0.7)'; g.fillRect(c * bw, 0, 2, h);   // the gap between boards
+    }
+    var aisle = g.createLinearGradient(1.8 * AF_PPM, 0, 7.2 * AF_PPM, 0);   // the aisle, worn paler by boots and hooves
+    aisle.addColorStop(0, 'rgba(230,205,160,0)'); aisle.addColorStop(0.45, 'rgba(230,205,160,0.13)'); aisle.addColorStop(1, 'rgba(230,205,160,0)');
+    g.fillStyle = aisle; g.fillRect(0, 0, w, h);
+    for (var d = 0; d < 40; d++) {                                     // dusty, darker patches
+      var dx = isle2Hash(d * 3.3 + 40) * w, dy = isle2Hash(d * 4.1 + 40) * h, dr = 20 + isle2Hash(d) * 70, dg = g.createRadialGradient(dx, dy, 2, dx, dy, dr);
+      dg.addColorStop(0, 'rgba(40,25,12,0.18)'); dg.addColorStop(1, 'rgba(40,25,12,0)'); g.fillStyle = dg; g.fillRect(dx - dr, dy - dr, dr * 2, dr * 2);
+    }
+    for (var i = 0; i < 3800; i++) {                                   // loose straw everywhere, thickest by the stalls and along the walls
+      var sx = isle2Hash(i * 1.31 + 7) * w, sy = isle2Hash(i * 2.17 + 7) * h;
+      var near = sx < 1.9 * AF_PPM || sx > w - 0.9 * AF_PPM || sy < 0.9 * AF_PPM;
+      if (!near && isle2Hash(i * 3.7) > 0.35) continue;
+      var a = isle2Hash(i * 5.3) * Math.PI * 2, len = 8 + isle2Hash(i * 7.1) * 22;
+      g.strokeStyle = 'hsl(' + (40 + isle2Hash(i * 9) * 10) + ',' + (50 + isle2Hash(i * 11) * 20) + '%,' + (52 + isle2Hash(i * 13) * 22) + '%)';
+      g.lineWidth = 1 + isle2Hash(i * 15) * 1.3;
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len); g.stroke();
+    }
+  });
+  abFloorTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var abStrawTex = paintTexture(256, 256, function (g, w, h) {         // stall bedding: deep straw, ragged at the edges (see-through between strands)
+    g.clearRect(0, 0, w, h);
+    for (var i = 0; i < 5200; i++) {
+      var sx = isle2Hash(i * 1.7 + 11) * w, sy = isle2Hash(i * 2.9 + 11) * h, ex = Math.abs(sx / w - 0.5) * 2, ey = Math.abs(sy / h - 0.5) * 2;
+      if (Math.max(ex, ey) > 0.82 + isle2Hash(i * 4.3) * 0.18) continue;
+      var a = isle2Hash(i * 5.9) * Math.PI * 2, len = 8 + isle2Hash(i * 7.3) * 26;
+      g.strokeStyle = 'hsl(' + (38 + isle2Hash(i * 9) * 12) + ',' + (48 + isle2Hash(i * 11) * 25) + '%,' + (40 + isle2Hash(i * 13) * 32) + '%)';
+      g.lineWidth = 1 + isle2Hash(i * 15) * 1.6;
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len); g.stroke();
+    }
+  });
+  function abChalkPaint(g, w, h) {                                     // the chalkboard behind the counter
+    var bg = g.createLinearGradient(0, 0, w, h); bg.addColorStop(0, '#2c3a34'); bg.addColorStop(1, '#222e2a');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    for (var s = 0; s < 18; s++) {                                     // smudges of old chalk, wiped away
+      var cx = isle2Hash(s * 3.1 + 5) * w, cy = isle2Hash(s * 4.7 + 5) * h, cr = 30 + isle2Hash(s) * 90, cg = g.createRadialGradient(cx, cy, 4, cx, cy, cr);
+      cg.addColorStop(0, 'rgba(230,240,235,0.07)'); cg.addColorStop(1, 'rgba(230,240,235,0)'); g.fillStyle = cg; g.fillRect(0, 0, w, h);
+    }
+    function chalk(text, x, y, size, col, italic) {                    // chalky letters: drawn a few times, a little offset and faint
+      g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (var k = 0; k < 4; k++) { g.fillStyle = col.replace('A', (0.25 + k * 0.12).toFixed(2)); g.fillText(text, x + (isle2Hash(k * 3 + size) - 0.5) * 2, y + (isle2Hash(k * 5 + size) - 0.5) * 2); }
+    }
+    chalk('Animals for Sale', w / 2, 62, 54, 'rgba(250,248,240,A)', true);
+    g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 102); g.bezierCurveTo(w / 2 - 80, 94, w / 2 + 80, 110, w / 2 + 210, 100); g.stroke();
+    chalk('Coming soon!', w / 2, 158, 46, 'rgba(255,214,120,A)', false);
+    chalk('Our first animals are on their way.', w / 2, 214, 24, 'rgba(240,240,230,A)', true);
+    chalk('Check back soon, little witch.', w / 2, 248, 24, 'rgba(240,240,230,A)', true);
+    g.strokeStyle = 'rgba(250,248,240,0.7)'; g.lineWidth = 3; g.lineCap = 'round';
+    function hen(x, y, s) {                                            // little chalk doodles: a hen
+      g.beginPath(); g.ellipse(x, y, 34 * s, 26 * s, 0, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc(x + 30 * s, y - 28 * s, 13 * s, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = 'rgba(240,120,110,0.75)'; g.beginPath(); g.moveTo(x + 24 * s, y - 40 * s); g.lineTo(x + 28 * s, y - 50 * s); g.lineTo(x + 33 * s, y - 42 * s); g.lineTo(x + 38 * s, y - 50 * s); g.lineTo(x + 40 * s, y - 38 * s); g.stroke();
+      g.strokeStyle = 'rgba(255,214,120,0.8)'; g.beginPath(); g.moveTo(x + 42 * s, y - 30 * s); g.lineTo(x + 52 * s, y - 26 * s); g.lineTo(x + 42 * s, y - 22 * s); g.stroke();
+      g.beginPath(); g.moveTo(x - 6 * s, y + 24 * s); g.lineTo(x - 8 * s, y + 42 * s); g.moveTo(x + 8 * s, y + 24 * s); g.lineTo(x + 8 * s, y + 42 * s); g.stroke();
+      g.strokeStyle = 'rgba(250,248,240,0.7)'; g.beginPath(); g.moveTo(x - 34 * s, y - 6 * s); g.lineTo(x - 50 * s, y - 24 * s); g.lineTo(x - 40 * s, y + 4 * s); g.stroke();
+    }
+    function sheep(x, y, s) {                                          // and a woolly sheep
+      for (var k = 0; k < 9; k++) { var a = k / 9 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 26 * s, y + Math.sin(a) * 16 * s, 12 * s, 0, Math.PI * 2); g.stroke(); }
+      g.beginPath(); g.ellipse(x - 40 * s, y - 6 * s, 11 * s, 14 * s, -0.4, 0, Math.PI * 2); g.stroke();
+      [-14, -4, 8, 18].forEach(function (lx) { g.beginPath(); g.moveTo(x + lx * s, y + 26 * s); g.lineTo(x + lx * s, y + 44 * s); g.stroke(); });
+    }
+    hen(92, 196, 1); sheep(w - 96, 190, 1);
+    [[46, 290], [w - 60, 286], [w / 2 - 230, 150], [w / 2 + 232, 150]].forEach(function (p) {   // little stars
+      g.strokeStyle = 'rgba(255,214,120,0.7)'; g.beginPath();
+      for (var k = 0; k < 5; k++) { var a = -Math.PI / 2 + k * Math.PI * 4 / 5; g[k ? 'lineTo' : 'moveTo'](p[0] + Math.cos(a) * 12, p[1] + Math.sin(a) * 12); }
+      g.closePath(); g.stroke();
+    });
+  }
+  var abChalkTex = paintTexture(768, 460, abChalkPaint);
+  abChalkTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var abSlateTex = paintTexture(256, 128, function (g, w, h) {         // little slates hung on each stall
+    g.fillStyle = '#2c3430'; g.fillRect(0, 0, w, h);
+    g.font = 'italic bold 30px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (var k = 0; k < 3; k++) { g.fillStyle = 'rgba(250,248,240,' + (0.3 + k * 0.2) + ')'; g.fillText('Coming soon', w / 2 + k * 0.6, h / 2 - 8 + k * 0.5); }
+    g.strokeStyle = 'rgba(255,214,120,0.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(60, 92); g.quadraticCurveTo(128, 100, 196, 90); g.stroke();
+  });
+  var AB = {
+    floor: new THREE.MeshStandardMaterial({ map: abFloorTex, bumpMap: abFloorTex, bumpScale: 0.012, roughness: 0.85 }),
+    beam: new THREE.MeshStandardMaterial({ map: abPlankTex.clone(), color: 0x9a7a62, roughness: 0.85 }),   // heavy timbers, darker with age
+    wood: new THREE.MeshStandardMaterial({ color: 0x9a7048, roughness: 0.75 }),
+    pale: new THREE.MeshStandardMaterial({ color: 0xc09a68, roughness: 0.7 }),
+    top: new THREE.MeshStandardMaterial({ color: 0x7a4a28, roughness: 0.38 }),   // the counter's polished top
+    reveal: new THREE.MeshStandardMaterial({ color: 0x6a4a30, roughness: 0.9 }),
+    iron: new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.45, metalness: 0.6 }),
+    zinc: new THREE.MeshStandardMaterial({ color: 0xd0d6dc, roughness: 0.35, metalness: 0.35 }),
+    brass: new THREE.MeshStandardMaterial({ color: 0xd4a84e, emissive: 0x5a3e0c, emissiveIntensity: 0.2, metalness: 0.8, roughness: 0.28 }),
+    rope: new THREE.MeshStandardMaterial({ color: 0xc8a870, roughness: 1 }),
+    leather: new THREE.MeshStandardMaterial({ color: 0x6a3a22, roughness: 0.6 }),
+    paper: new THREE.MeshStandardMaterial({ color: 0xf6f0e0, roughness: 0.9 }),
+    straw: new THREE.MeshStandardMaterial({ map: abStrawTex, transparent: true, alphaTest: 0.35, roughness: 1, side: THREE.DoubleSide }),
+    lamp: new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0xffbe6a, emissiveIntensity: 1.2, roughness: 0.3 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0xeef7ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.25, depthWrite: false })
+  };
+  AB.beam.map.needsUpdate = true; AB.beam.map.repeat.set(0.3, 1);
+
+  // the floor and ceiling
+  abPart(new THREE.PlaneGeometry(AB_W, AB_D), AB.floor, 0, 0, 0, -Math.PI / 2).castShadow = false;
+  abPart(new THREE.PlaneGeometry(AB_W, AB_D), new THREE.MeshStandardMaterial({ color: 0x5a3e28, roughness: 1 }), 0, AB_H, 0, Math.PI / 2).castShadow = false;   // faces down, so it never blocks the camera above
+
+  // the walls: plank boards on a frame of heavy posts, a girt and a top plate, with knee braces up at the posts. Each
+  // wall is its own group (its local +z points into the room), so it can hide when the camera's behind it. The
+  // windows and the doorway look out on the real island, just like the clinic's
+  var abWalls = {};
+  var AB_WIN_Y = 1.8, AB_WIN = 0.9, AB_DOOR_W = 2.6, AB_DOOR_H = 2.2;  // the same as the windows and doorway outside
+  function abWall(name, x, z, ry, len, wins, door, posts) {
+    var wgp = new THREE.Group();
+    wgp.position.set(x, 0, z); wgp.rotation.y = ry;
+    abRoom.add(wgp);
+    abWalls[name] = { g: wgp, c: new THREE.Vector3(x, 0, z), n: new THREE.Vector3(Math.sin(ry), 0, Math.cos(ry)) };
+    var tex = abPlankTex.clone(); tex.needsUpdate = true; tex.repeat.set(len / 2, AB_H / 2);
+    var plankMat = new THREE.MeshStandardMaterial({ map: tex, bumpMap: tex, bumpScale: 0.015, roughness: 0.9 });
+    var shape = new THREE.Shape(), DW2 = AB_DOOR_W / 2;
+    shape.moveTo(-len / 2, 0);
+    if (door) { shape.lineTo(-DW2, 0); shape.lineTo(-DW2, AB_DOOR_H); shape.lineTo(DW2, AB_DOOR_H); shape.lineTo(DW2, 0); }   // the doorway is a notch out of the bottom
+    shape.lineTo(len / 2, 0); shape.lineTo(len / 2, AB_H); shape.lineTo(-len / 2, AB_H); shape.lineTo(-len / 2, 0);
+    var WT = 0.22;                                                     // the wall's thickness, seen in the sides of each opening
+    wins.forEach(function (hx) {
+      var x0 = hx - AB_WIN / 2, x1 = hx + AB_WIN / 2, y0 = AB_WIN_Y - AB_WIN / 2, y1 = AB_WIN_Y + AB_WIN / 2;
+      var hp = new THREE.Path(); hp.moveTo(x0, y0); hp.lineTo(x0, y1); hp.lineTo(x1, y1); hp.lineTo(x1, y0); hp.lineTo(x0, y0);
+      shape.holes.push(hp);
+      var mask = abPart(new THREE.PlaneGeometry(AB_WIN, AB_WIN), siWindowMask, hx, AB_WIN_Y, -0.005, 0, 0, 0, wgp);   // the view outside
+      mask.castShadow = false; mask.receiveShadow = false;
+      [[0, AB_WIN / 2, AB_WIN, 0.02], [0, -AB_WIN / 2, AB_WIN, 0.02], [-AB_WIN / 2, 0, 0.02, AB_WIN], [AB_WIN / 2, 0, 0.02, AB_WIN]].forEach(function (rv) {
+        abPart(new THREE.BoxGeometry(rv[2], rv[3], WT), AB.reveal, hx + rv[0], AB_WIN_Y + rv[1], -WT / 2, 0, 0, 0, wgp);
+      });
+      abWindowFrame(wgp, hx);
+    });
+    if (door) {
+      var dm = abPart(new THREE.PlaneGeometry(AB_DOOR_W, AB_DOOR_H), siWindowMask, 0, AB_DOOR_H / 2, -0.005, 0, 0, 0, wgp);
+      dm.castShadow = false; dm.receiveShadow = false;
+      abPart(new THREE.BoxGeometry(AB_DOOR_W, 0.02, WT), AB.reveal, 0, AB_DOOR_H, -WT / 2, 0, 0, 0, wgp);
+      [-1, 1].forEach(function (s) { abPart(new THREE.BoxGeometry(0.02, AB_DOOR_H, WT), AB.reveal, s * DW2, AB_DOOR_H / 2, -WT / 2, 0, 0, 0, wgp); });
+      abPart(new THREE.BoxGeometry(AB_DOOR_W + 0.5, 0.24, 0.2), AB.beam, 0, AB_DOOR_H + 0.12, 0.1, 0, 0, 0, wgp);   // a heavy header over it
+      abPart(new THREE.BoxGeometry(AB_DOOR_W, 0.04, 0.3), AB.beam, 0, 0.02, 0.05, 0, 0, 0, wgp);                    // a worn oak sill
+      [-0.9, 0, 0.9].forEach(function (bx) { abPart(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 10), AB.iron, bx, AB_DOOR_H + 0.12, 0.205, Math.PI / 2, 0, 0, wgp); });   // its bolts
+    }
+    var shapeGeo = new THREE.ShapeGeometry(shape), sgu = shapeGeo.attributes.uv, sgp = shapeGeo.attributes.position;
+    for (var v = 0; v < sgu.count; v++) sgu.setXY(v, sgp.getX(v) / len + 0.5, sgp.getY(v) / AB_H);   // so the boards tile evenly
+    abPart(shapeGeo, plankMat, 0, 0, 0, 0, 0, 0, wgp);
+    var segs = door ? [[-len / 2, -DW2 - 0.12], [DW2 + 0.12, len / 2]] : [[-len / 2, len / 2]];   // (the girt and kick board stop at the doorway)
+    segs.forEach(function (sg) {
+      var sl = sg[1] - sg[0], cx = (sg[0] + sg[1]) / 2;
+      abPart(new THREE.BoxGeometry(sl, 0.26, 0.04), AB.reveal, cx, 0.13, 0.02, 0, 0, 0, wgp);        // a kick board along the bottom
+      abPart(new THREE.BoxGeometry(sl, 0.14, 0.09), AB.beam, cx, 1.0, 0.045, 0, 0, 0, wgp);         // the girt the boards are nailed to
+    });
+    abPart(new THREE.BoxGeometry(len, 0.22, 0.2), AB.beam, 0, AB_H - 0.11, 0.1, 0, 0, 0, wgp);      // the top plate
+    posts.forEach(function (px) {
+      abPart(new THREE.BoxGeometry(0.22, AB_H - 0.22, 0.2), AB.beam, px, (AB_H - 0.22) / 2, 0.1, 0, 0, 0, wgp);
+      [0.6, 1.4, 2.3].forEach(function (py) { abPart(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 8), AB.iron, px, py, 0.205, Math.PI / 2, 0, 0, wgp); });   // pegs holding the frame together
+      if (Math.abs(px) > len / 2 - 0.3) return;
+      [-1, 1].forEach(function (s) {                                   // knee braces up to the plate
+        if (door && Math.abs(px + s * 0.4) < DW2) return;
+        abPart(new THREE.BoxGeometry(0.12, 0.66, 0.12), AB.beam, px + s * 0.27, AB_H - 0.22 - 0.24, 0.1, 0, 0, -s * Math.PI / 4, wgp);
+      });
+    });
+    return wgp;
+  }
+  function abWindowFrame(wgp, hx) {                                    // inside a window: a plain wooden casing, cross bars, glass and a deep sill
+    var W = AB_WIN, y = AB_WIN_Y;
+    abPart(new THREE.PlaneGeometry(W, W), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, roughness: 0.05, metalness: 0.3, depthWrite: false }), hx, y, 0.03, 0, 0, 0, wgp).renderOrder = 3;
+    abPart(new THREE.BoxGeometry(0.04, W, 0.04), AB.pale, hx, y, 0.02, 0, 0, 0, wgp);
+    abPart(new THREE.BoxGeometry(W, 0.04, 0.04), AB.pale, hx, y, 0.02, 0, 0, 0, wgp);
+    var cw = 0.1;
+    [[0, W / 2 + cw / 2, W + cw * 2, cw], [-W / 2 - cw / 2, 0, cw, W], [W / 2 + cw / 2, 0, cw, W]].forEach(function (f) {
+      abPart(new THREE.BoxGeometry(f[2], f[3], 0.06), AB.pale, hx + f[0], y + f[1], 0.03, 0, 0, 0, wgp);
+    });
+    abPart(new THREE.BoxGeometry(W + cw * 2 + 0.08, 0.05, 0.2), AB.pale, hx, y - W / 2 - 0.025, 0.1, 0, 0, 0, wgp);   // the sill
+    abPart(new THREE.CylinderGeometry(0.004, 0.004, W - 0.05, 4), AB.rope, hx - W / 2 + 0.06, y + 0.02, 0.07, 0.15, 0, 0, wgp).castShadow = false;   // a cobweb thread in the corner
+  }
+  var ANW = -AB_D / 2;
+  abWall('N', 0, ANW, 0, AB_W, [], false, [-AB_W / 2 + 0.11, -1.6, 1.6, AB_W / 2 - 0.11]);
+  abWall('S', 0, -ANW, Math.PI, AB_W, [], true, [-AB_W / 2 + 0.11, -AB_DOOR_W / 2 - 0.11, AB_DOOR_W / 2 + 0.11, AB_W / 2 - 0.11]);
+  abWall('W', -AB_W / 2, 0, Math.PI / 2, AB_D, [-2.6, 0, 2.6], false, [-1.3, 1.3]);
+  abWall('E', AB_W / 2, 0, -Math.PI / 2, AB_D, [-2.6, 2.6], false, [-1.3, 1.3]);
+  function abWallPart(name, geo, mat, x, y, z, rx, ry, rz) { return abPart(geo, mat, x, y, z, rx, ry, rz, abWalls[name].g); }
+  var AB_EXIT_Z = AB_D / 2 - 0.6;
+
+  // lanterns on iron brackets on the posts, glowing warm
+  var abLanternGlows = [];
+  function abLantern(name, px, py) {                                   // px along the wall (wall coordinates), py its height
+    abWallPart(name, new THREE.BoxGeometry(0.06, 0.22, 0.03), AB.iron, px, py + 0.2, 0.215);
+    var arm = new THREE.CatmullRomCurve3([new THREE.Vector3(px, py + 0.28, 0.22), new THREE.Vector3(px, py + 0.32, 0.36), new THREE.Vector3(px, py + 0.28, 0.48)]);
+    abPart(new THREE.TubeGeometry(arm, 10, 0.012, 6), AB.iron, 0, 0, 0, 0, 0, 0, abWalls[name].g);
+    var lz = 0.48, ly = py;
+    abWallPart(name, new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), AB.iron, px, ly + 0.23, lz);
+    abWallPart(name, new THREE.TorusGeometry(0.025, 0.005, 6, 12), AB.iron, px, ly + 0.19, lz);
+    abWallPart(name, new THREE.ConeGeometry(0.08, 0.08, 12), AB.iron, px, ly + 0.14, lz);          // the cap
+    abWallPart(name, new THREE.CylinderGeometry(0.075, 0.075, 0.02, 12), AB.iron, px, ly + 0.1, lz);
+    abWallPart(name, new THREE.CylinderGeometry(0.06, 0.06, 0.18, 12, 1, true), AB.glass, px, ly, lz);
+    abWallPart(name, new THREE.CylinderGeometry(0.08, 0.07, 0.04, 12), AB.iron, px, ly - 0.11, lz);  // the base
+    for (var k = 0; k < 4; k++) { var a = k * Math.PI / 2 + 0.4; abWallPart(name, new THREE.CylinderGeometry(0.004, 0.004, 0.2, 4), AB.iron, px + Math.cos(a) * 0.065, ly, lz + Math.sin(a) * 0.065); }   // wire guards
+    abWallPart(name, new THREE.CylinderGeometry(0.012, 0.014, 0.05, 8), AB.paper, px, ly - 0.06, lz).castShadow = false;   // the candle
+    var flame = abWallPart(name, new THREE.SphereGeometry(0.018, 8, 6), AB.lamp, px, ly - 0.02, lz); flame.scale.set(1, 1.8, 1); flame.castShadow = false;
+    var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc070, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    lg.position.set(px, ly - 0.01, lz); lg.scale.set(0.7, 0.7, 1); abWalls[name].g.add(lg);
+    abLanternGlows.push({ g: lg, f: flame, p: abLanternGlows.length * 1.7 });
+  }
+  abLantern('W', -1.3, 2.05); abLantern('W', 1.3, 2.05);
+  abLantern('E', -1.3, 2.05); abLantern('E', 1.3, 2.05);
+  abLantern('N', -1.6, 2.2); abLantern('N', 1.6, 2.2);
+
+  // at the back: the shop's sign, and a chalkboard saying the animals are coming soon
+  abWallPart('N', new THREE.BoxGeometry(2.36, 0.48, 0.05), new THREE.MeshStandardMaterial({ color: 0x23402e, roughness: 0.5 }), 0, 2.5, 0.03);
+  abWallPart('N', new THREE.PlaneGeometry(2.24, 0.4), barnSignMat, 0, 2.5, 0.056);
+  [[0, 0.25, 2.42, 0.04], [0, -0.25, 2.42, 0.04], [-1.2, 0, 0.04, 0.54], [1.2, 0, 0.04, 0.54]].forEach(function (f) { abWallPart('N', new THREE.BoxGeometry(f[2], f[3], 0.06), houseMats.gold, f[0], 2.5 + f[1], 0.05); });
+  [-0.9, 0.9].forEach(function (cx) { abWallPart('N', new THREE.CylinderGeometry(0.004, 0.004, 0.16, 4), AB.iron, cx, 2.8, 0.05); });   // hung on two chains from the plate
+  abWallPart('N', new THREE.BoxGeometry(2.04, 1.24, 0.03), AB.beam, 0, 1.6, 0.015);
+  abWallPart('N', new THREE.PlaneGeometry(1.92, 1.14), new THREE.MeshStandardMaterial({ map: abChalkTex, roughness: 0.95 }), 0, 1.6, 0.032);
+  [[0, 0.6, 2.06, 0.07], [0, -0.6, 2.06, 0.07], [-1.0, 0, 0.07, 1.27], [1.0, 0, 0.07, 1.27]].forEach(function (f) { abWallPart('N', new THREE.BoxGeometry(f[2], f[3], 0.05), AB.wood, f[0], 1.6 + f[1], 0.035); });
+  abWallPart('N', new THREE.BoxGeometry(1.9, 0.025, 0.08), AB.wood, 0, 0.99, 0.06);                 // the chalk ledge
+  [[-0.5, 0xf8f6f0], [-0.42, 0xffd6e0], [-0.35, 0xfff0a8]].forEach(function (ch) { abWallPart('N', new THREE.CylinderGeometry(0.008, 0.008, 0.07, 6), new THREE.MeshStandardMaterial({ color: ch[1], roughness: 1 }), ch[0], 1.012, 0.07, 0, 0, Math.PI / 2 + ch[0]); });
+  abWallPart('N', new THREE.BoxGeometry(0.12, 0.035, 0.05), new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 1 }), 0.55, 1.02, 0.065);   // the eraser
+  // shelves in the back corner, with tins of feed, jars, folded blankets and a basket
+  [1.15, 1.75].forEach(function (sy) {
+    abWallPart('N', new THREE.BoxGeometry(1.3, 0.04, 0.32), AB.wood, -2.85, sy, 0.16);
+    [-3.4, -2.3].forEach(function (bx) { abWallPart('N', new THREE.BoxGeometry(0.03, 0.2, 0.22), AB.iron, bx, sy - 0.12, 0.12); });
+  });
+  [[-3.35, 0xb83a32, 0.18], [-3.12, 0x3a6a4a, 0.2], [-2.9, 0x2f4a6a, 0.16]].forEach(function (tn) {   // painted feed tins with labels
+    abWallPart('N', new THREE.CylinderGeometry(0.08, 0.08, tn[2], 16), new THREE.MeshStandardMaterial({ color: tn[1], roughness: 0.4, metalness: 0.4 }), tn[0], 1.17 + tn[2] / 2, 0.16);
+    abWallPart('N', new THREE.CylinderGeometry(0.0805, 0.0805, tn[2] * 0.4, 16, 1, true), AB.paper, tn[0], 1.17 + tn[2] / 2, 0.16);
+    abWallPart('N', new THREE.CylinderGeometry(0.083, 0.083, 0.015, 16), AB.zinc, tn[0], 1.17 + tn[2], 0.16);
+  });
+  [-2.6, -2.45, -2.3].forEach(function (jx, k) {                      // jars of seed and grit
+    abWallPart('N', new THREE.CylinderGeometry(0.05, 0.05, 0.14, 12), AB.glass, jx, 1.24, 0.15);
+    abWallPart('N', new THREE.CylinderGeometry(0.046, 0.046, 0.09, 12), new THREE.MeshStandardMaterial({ color: [0xd8b060, 0x8a6a4a, 0xc8c0b0][k], roughness: 1 }), jx, 1.215, 0.15);
+    abWallPart('N', new THREE.CylinderGeometry(0.053, 0.053, 0.025, 12), AB.zinc, jx, 1.32, 0.15);
+  });
+  [[0xb84a3a, 0], [0x4a6a8a, 0.07], [0xd8c8a0, 0.14]].forEach(function (bl) {   // folded wool blankets in a stack
+    abWallPart('N', ciRoundBox(0.4, 0.07, 0.26, 0.03), new THREE.MeshStandardMaterial({ color: bl[0], roughness: 1 }), -3.15, 1.81 + bl[1], 0.16);
+  });
+  var abBasket = abWallPart('N', new THREE.CylinderGeometry(0.15, 0.11, 0.16, 16, 1, true), new THREE.MeshStandardMaterial({ map: burlapTex, color: 0xb08850, roughness: 1, side: THREE.DoubleSide }), -2.5, 1.85, 0.16);
+  abWallPart('N', new THREE.TorusGeometry(0.15, 0.012, 6, 20, Math.PI), AB.wood, -2.5, 1.93, 0.16);
+  abBasket.castShadow = true;
+  abSolids.push([-2.85, ANW + 0.2, 0.35], [-3.35, ANW + 0.2, 0.35]);
+
+  // the counter: a plank-fronted bench with X braces and a polished top, with a bell, a ledger and quill, a cash tin and
+  // a jar of treats on it, and a stool behind. Step up to it to see what's for sale
+  var ABC_X = 0, ABC_Z = -3.6, ABC_W = 2.6, ABC_D = 0.7, ABC_H = 1.0;
+  var abCounterFront = abPlankTex.clone(); abCounterFront.needsUpdate = true; abCounterFront.repeat.set(ABC_W / 2, ABC_H / 2);
+  abPart(new THREE.BoxGeometry(ABC_W, ABC_H - 0.07, ABC_D - 0.04), new THREE.MeshStandardMaterial({ map: abCounterFront, roughness: 0.85 }), ABC_X, (ABC_H - 0.07) / 2, ABC_Z);
+  [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (c) { abPart(new THREE.BoxGeometry(0.1, ABC_H - 0.07, 0.1), AB.beam, ABC_X + c[0] * (ABC_W / 2 - 0.03), (ABC_H - 0.07) / 2, ABC_Z + c[1] * (ABC_D / 2 - 0.03)); });
+  var FZ2 = ABC_Z + ABC_D / 2 + 0.01;
+  [0.85, 0.12].forEach(function (ry) { abPart(new THREE.BoxGeometry(ABC_W - 0.1, 0.08, 0.04), AB.beam, ABC_X, ry, FZ2); });   // top and bottom rails
+  abPart(new THREE.BoxGeometry(0.08, 0.7, 0.04), AB.beam, ABC_X, 0.485, FZ2);
+  [-1, 1].forEach(function (s) {                                       // an X brace in each panel
+    var cx = ABC_X + s * ABC_W / 4, pw = ABC_W / 2 - 0.12, ph = 0.65, ln = Math.hypot(pw, ph), an = Math.atan2(ph, pw);
+    abPart(new THREE.BoxGeometry(ln, 0.07, 0.03), AB.beam, cx, 0.485, FZ2 + 0.01, 0, 0, an);
+    abPart(new THREE.BoxGeometry(ln, 0.07, 0.03), AB.beam, cx, 0.485, FZ2 + 0.012, 0, 0, -an);
+  });
+  abPart(ciRoundBox(ABC_W + 0.18, 0.07, ABC_D + 0.16, 0.02), AB.top, ABC_X, ABC_H - 0.035, ABC_Z);
+  var ABT = ABC_H;                                                     // the top surface
+  // a brass service bell
+  abPart(new THREE.CylinderGeometry(0.05, 0.055, 0.015, 18), AB.iron, -0.95, ABT + 0.008, ABC_Z + 0.12);
+  abPart(new THREE.SphereGeometry(0.045, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), AB.brass, -0.95, ABT + 0.015, ABC_Z + 0.12);
+  abPart(new THREE.CylinderGeometry(0.006, 0.006, 0.025, 6), AB.brass, -0.95, ABT + 0.07, ABC_Z + 0.12);
+  abPart(new THREE.SphereGeometry(0.01, 8, 6), AB.brass, -0.95, ABT + 0.085, ABC_Z + 0.12);
+  // the ledger: open, with ruled pages, and a ribbon
+  var abLedgerTex = paintTexture(256, 160, function (g, w, h) {
+    g.fillStyle = '#f6f0e0'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(w / 2 - 3, 0, 6, h);
+    for (var y = 22; y < h - 8; y += 10) { g.fillStyle = 'rgba(80,110,160,0.35)'; g.fillRect(8, y, w / 2 - 18, 1); g.fillRect(w / 2 + 10, y, w / 2 - 18, 1); }
+    g.fillStyle = 'rgba(190,60,60,0.5)'; g.fillRect(28, 8, 1, h - 16); g.fillRect(w / 2 + 30, 8, 1, h - 16);
+    g.fillStyle = 'rgba(40,40,60,0.7)'; g.font = 'italic 11px Georgia, serif'; g.fillText('Animals', 34, 18); g.fillText('(none yet)', 36, 38);
+  });
+  abPart(new THREE.BoxGeometry(0.46, 0.015, 0.32), AB.leather, 0.1, ABT + 0.008, ABC_Z + 0.05, 0, 0.12, 0);
+  abPart(new THREE.PlaneGeometry(0.43, 0.29), new THREE.MeshStandardMaterial({ map: abLedgerTex, roughness: 0.9 }), 0.1, ABT + 0.022, ABC_Z + 0.05, -Math.PI / 2, 0, 0.12);
+  abPart(new THREE.BoxGeometry(0.012, 0.002, 0.2), new THREE.MeshStandardMaterial({ color: 0xa82a3a, roughness: 0.6 }), 0.1, ABT + 0.025, ABC_Z + 0.19, 0, 0.12, 0);
+  abPart(new THREE.CylinderGeometry(0.025, 0.03, 0.05, 12), new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.1, metalness: 0.3 }), 0.45, ABT + 0.025, ABC_Z - 0.08);   // the inkwell
+  abPart(new THREE.ConeGeometry(0.004, 0.22, 5), AB.paper, 0.47, ABT + 0.12, ABC_Z - 0.07, 0, 0, -0.35);   // and a quill
+  var quill = abPart(new THREE.SphereGeometry(0.03, 10, 6), new THREE.MeshStandardMaterial({ color: 0xf8f4ec, roughness: 0.8 }), 0.5, ABT + 0.17, ABC_Z - 0.07, 0, 0, -0.35);
+  quill.scale.set(0.35, 2.4, 0.08);
+  // a green cash tin with a brass handle
+  abPart(ciRoundBox(0.28, 0.1, 0.2, 0.01), new THREE.MeshStandardMaterial({ color: 0x2f5a3a, roughness: 0.35, metalness: 0.5 }), 0.85, ABT + 0.05, ABC_Z + 0.02);
+  abPart(new THREE.TorusGeometry(0.035, 0.006, 6, 12, Math.PI), AB.brass, 0.85, ABT + 0.1, ABC_Z + 0.02);
+  abPart(new THREE.BoxGeometry(0.03, 0.02, 0.004), AB.brass, 0.85, ABT + 0.06, ABC_Z + 0.122);
+  // a glass jar of treats with a cork lid
+  abPart(new THREE.CylinderGeometry(0.07, 0.07, 0.18, 16, 1, true), AB.glass, -0.55, ABT + 0.09, ABC_Z + 0.05).renderOrder = 2;
+  abPart(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 14), new THREE.MeshStandardMaterial({ color: 0xb08860, roughness: 1 }), -0.55, ABT + 0.195, ABC_Z + 0.05);
+  for (var abTr = 0; abTr < 14; abTr++) abPart(new THREE.SphereGeometry(0.018, 6, 5), new THREE.MeshStandardMaterial({ color: [0x9a6a3a, 0xc8925a, 0x6a4a2a][abTr % 3], roughness: 0.9 }), -0.55 + (isle2Hash(abTr) - 0.5) * 0.08, ABT + 0.02 + Math.floor(abTr / 5) * 0.03, ABC_Z + 0.05 + (isle2Hash(abTr * 3) - 0.5) * 0.08);
+  // a little jug of wildflowers
+  abPart(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 14), new THREE.MeshStandardMaterial({ color: 0xe8e2d4, roughness: 0.4 }), 1.15, ABT + 0.06, ABC_Z - 0.15);
+  for (var abWf = 0; abWf < 7; abWf++) {
+    var abWa = abWf / 7 * Math.PI * 2;
+    abPart(new THREE.CylinderGeometry(0.003, 0.003, 0.18, 4), new THREE.MeshStandardMaterial({ color: 0x4a7a3a, roughness: 0.8 }), 1.15 + Math.cos(abWa) * 0.02, ABT + 0.19, ABC_Z - 0.15 + Math.sin(abWa) * 0.02, Math.sin(abWa) * 0.3, 0, -Math.cos(abWa) * 0.3);
+    abPart(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshStandardMaterial({ color: [0xf2c14e, 0xffffff, 0xc89aff][abWf % 3], roughness: 0.7 }), 1.15 + Math.cos(abWa) * 0.05, ABT + 0.27, ABC_Z - 0.15 + Math.sin(abWa) * 0.05);
+  }
+  // a stool behind
+  abPart(new THREE.CylinderGeometry(0.17, 0.16, 0.05, 18), AB.wood, 0.5, 0.68, ABC_Z - 0.75);
+  for (var sl2 = 0; sl2 < 3; sl2++) { var abSla = sl2 / 3 * Math.PI * 2; abPart(new THREE.CylinderGeometry(0.02, 0.025, 0.68, 6), AB.beam, 0.5 + Math.cos(abSla) * 0.12, 0.33, ABC_Z - 0.75 + Math.sin(abSla) * 0.12, Math.sin(abSla) * 0.12, 0, -Math.cos(abSla) * 0.12); }
+  for (var abCs = -1.1; abCs <= 1.11; abCs += 0.55) abSolids.push([ABC_X + abCs, ABC_Z, 0.42]);
+
+  // the stalls down the left: plank partitions with posts and caps, a front panel and a gate swung open, deep straw
+  // bedding, a hay rack on the wall, a water bucket, and a slate on each one saying who's coming
+  var AB_SX = -2.2;                                                    // the stall fronts
+  var abWispList = [];
+  function abBoardRun(x0, z0, x1, z1, ys, mat, th) {                   // horizontal boards from one point to another
+    var ln = Math.hypot(x1 - x0, z1 - z0), an = Math.atan2(-(z1 - z0), x1 - x0);
+    ys.forEach(function (by) { abPart(new THREE.BoxGeometry(ln, 0.17, th || 0.04), mat || AB.wood, (x0 + x1) / 2, by, (z0 + z1) / 2, 0, an, 0); });
+  }
+  function abPost(x, z, h) {
+    abPart(new THREE.BoxGeometry(0.12, h, 0.12), AB.beam, x, h / 2, z);
+    abPart(new THREE.BoxGeometry(0.16, 0.04, 0.16), AB.beam, x, h + 0.02, z);
+    abPart(new THREE.SphereGeometry(0.05, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), AB.beam, x, h + 0.04, z);   // a rounded cap
+  }
+  [-3.9, -1.3, 1.3, 3.9].forEach(function (pz) {                       // the partitions between them
+    abBoardRun(-AB_W / 2 + 0.05, pz, AB_SX, pz, [0.2, 0.4, 0.6, 0.8, 1.0], AB.wood);
+    abPart(new THREE.BoxGeometry(AB_W / 2 + AB_SX, 0.08, 0.08), AB.beam, (-AB_W / 2 + AB_SX) / 2, 1.14, pz);   // a top rail
+    abPost(AB_SX, pz, 1.3);
+    for (var abPx = -AB_W / 2 + 0.3; abPx <= AB_SX; abPx += 0.3) abSolids.push([abPx, pz, 0.1]);
+  });
+  [-2.6, 0, 2.6].forEach(function (sz, k) {
+    var z0 = sz - 1.3, z1 = sz + 1.3;
+    abBoardRun(AB_SX, z0 + 0.06, AB_SX, z0 + 1.22, [0.25, 0.5, 0.75, 1.0], AB.wood, 0.05);   // the fixed front panel
+    abPost(AB_SX, z0 + 1.25, 1.2);
+    for (var fz = z0 + 0.2; fz <= z0 + 1.25; fz += 0.3) abSolids.push([AB_SX, fz, 0.12]);
+    // the gate, hinged on the partition post and swung open into the stall
+    var gate = new THREE.Group(); gate.position.set(AB_SX, 0, z1 - 0.06); gate.rotation.y = 1.05 + k * 0.12; abRoom.add(gate);
+    [0.25, 0.55, 0.85].forEach(function (gy) { abPart(new THREE.BoxGeometry(0.05, 0.12, 1.15), AB.wood, 0, gy, -0.62, 0, 0, 0, gate); });
+    [-0.08, -1.16].forEach(function (gz) { abPart(new THREE.BoxGeometry(0.06, 0.95, 0.07), AB.beam, 0, 0.55, gz, 0, 0, 0, gate); });
+    abPart(new THREE.BoxGeometry(0.04, 0.08, Math.hypot(1.08, 0.6)), AB.beam, 0.035, 0.55, -0.62, Math.atan2(0.6, 1.08), 0, 0, gate);   // its diagonal
+    [0.3, 0.8].forEach(function (hy) { abPart(new THREE.BoxGeometry(0.012, 0.04, 0.3), AB.iron, 0.035, hy, -0.2, 0, 0, 0, gate); });   // strap hinges
+    abPart(new THREE.BoxGeometry(0.02, 0.03, 0.12), AB.iron, 0.04, 0.85, -1.08, 0, 0, 0, gate);       // the latch
+    var ga = gate.rotation.y;
+    [0.4, 0.8, 1.15].forEach(function (t) { abSolids.push([AB_SX - t * Math.sin(ga), z1 - 0.06 - t * Math.cos(ga), 0.1]); });   // (it swings into the stall)
+    // deep straw bedding, a little heaped against the back wall
+    var bed = new THREE.PlaneGeometry(AB_W / 2 + AB_SX - 0.1, 2.5, 8, 10), bp = bed.attributes.position;
+    for (var v = 0; v < bp.count; v++) bp.setZ(v, Math.max(0, (-bp.getX(v) / (AB_W / 2 + AB_SX)) * 0.12) + isle2Hash(v * 1.3 + k * 50) * 0.04);
+    bed.computeVertexNormals();
+    var bedM = abPart(bed, AB.straw, (-AB_W / 2 + AB_SX) / 2, 0.012, sz, -Math.PI / 2, 0, 0); bedM.castShadow = false;
+    var bed2 = abPart(new THREE.PlaneGeometry(1.2, 1.6), AB.straw, -AB_W / 2 + 0.7, 0.04, sz + 0.2, -Math.PI / 2, 0, 0.4 + k);
+    bed2.castShadow = false;
+    for (var abWs = 0; abWs < 110; abWs++) abWispList.push([-AB_W / 2 + 0.1 + isle2Hash(abWs * 1.9 + k * 300) * (AB_W / 2 + AB_SX - 0.2), sz + (isle2Hash(abWs * 2.3 + k * 300) - 0.5) * 2.4, isle2Hash(abWs * 3.1 + k * 300)]);
+    // a hay rack on the wall under the window, with hay poking through
+    var rx = -AB_W / 2 + 0.22;
+    abPart(new THREE.BoxGeometry(0.04, 0.06, 0.9), AB.beam, rx + 0.18, 1.25, sz);
+    abPart(new THREE.BoxGeometry(0.06, 0.06, 0.9), AB.beam, rx - 0.1, 0.9, sz);
+    for (var abRb = -0.4; abRb <= 0.41; abRb += 0.1) abPart(new THREE.CylinderGeometry(0.008, 0.008, 0.42, 5), AB.iron, rx + 0.04, 1.07, sz + abRb, 0, 0, -0.72);
+    var rh = abPart(new THREE.SphereGeometry(0.26, 12, 8), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), rx - 0.02, 1.1, sz, 0, 0, 0.3);
+    rh.scale.set(0.5, 0.55, 1.65);
+    // a galvanised water bucket in the front corner
+    var bkx = AB_SX - 0.35, bkz = z0 + 0.35;
+    abPart(new THREE.CylinderGeometry(0.15, 0.12, 0.28, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), bkx, 0.14, bkz);
+    abPart(new THREE.CircleGeometry(0.14, 18), new THREE.MeshStandardMaterial({ color: 0x5a8aa8, roughness: 0.05, metalness: 0.2 }), bkx, 0.22, bkz, -Math.PI / 2, 0, 0);   // water
+    [0.03, 0.26].forEach(function (ry) { abPart(new THREE.TorusGeometry(0.15 - (ry > 0.1 ? 0 : 0.025), 0.006, 5, 24), AB.zinc, bkx, ry, bkz, Math.PI / 2, 0, 0); });
+    abPart(new THREE.TorusGeometry(0.15, 0.004, 5, 20, Math.PI), AB.iron, bkx, 0.28, bkz, 0, 0.6, 0);
+    abSolids.push([bkx, bkz, 0.15]);
+    // the slate on the front panel
+    abPart(new THREE.BoxGeometry(0.03, 0.2, 0.38), AB.beam, AB_SX + 0.04, 1.12, z0 + 0.65);
+    abPart(new THREE.PlaneGeometry(0.34, 0.17), new THREE.MeshStandardMaterial({ map: abSlateTex, roughness: 0.95 }), AB_SX + 0.056, 1.12, z0 + 0.65, 0, Math.PI / 2, 0);
+    abPart(new THREE.CylinderGeometry(0.003, 0.003, 0.14, 4), AB.rope, AB_SX + 0.05, 1.27, z0 + 0.65, 0, 0, 0);
+  });
+
+  // down the right: feed sacks, a feed bin, a Dutch door, tack on a peg, buckets, nesting boxes and hay bales
+  var AEX = AB_W / 2;
+  [[AEX - 0.42, -3.35, 1.5, 0], [AEX - 0.42, -2.85, 1.7, 1], [AEX - 0.45, -3.1, 1.6, 2]].forEach(function (sk, k) {   // sacks, the top one flopped over
+    var sg = barnSackProtos[sk[3]].clone();
+    sg.position.set(sk[0], k === 2 ? 0.38 : 0, sk[1]); sg.rotation.set(0, sk[2], k === 2 ? 1.2 : 0);
+    abRoom.add(sg);
+  });
+  abSolids.push([AEX - 0.42, -3.1, 0.45]);
+  // the feed bin: a wooden chest with its lid propped open, grain inside and a scoop
+  var FB_Z = -1.95, FB_X = AEX - 0.4;
+  abPart(new THREE.BoxGeometry(0.55, 0.62, 0.9), AB.wood, FB_X, 0.31, FB_Z);
+  [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (c) { abPart(new THREE.BoxGeometry(0.07, 0.66, 0.07), AB.beam, FB_X + c[0] * 0.26, 0.33, FB_Z + c[1] * 0.43); });
+  [0.15, 0.5].forEach(function (by) { abPart(new THREE.BoxGeometry(0.03, 0.06, 0.92), AB.iron, FB_X - 0.28, by, FB_Z); });
+  abPart(new THREE.BoxGeometry(0.5, 0.02, 0.85), new THREE.MeshStandardMaterial({ color: 0xd8b060, roughness: 1 }), FB_X, 0.58, FB_Z);   // the grain
+  var fbLid = new THREE.Group(); fbLid.position.set(FB_X + 0.28, 0.66, FB_Z); fbLid.rotation.z = 1.2; abRoom.add(fbLid);
+  abPart(new THREE.BoxGeometry(0.58, 0.04, 0.94), AB.wood, -0.29, 0.02, 0, 0, 0, 0, fbLid);
+  [-0.3, 0.3].forEach(function (lz2) { abPart(new THREE.BoxGeometry(0.58, 0.05, 0.06), AB.beam, -0.29, 0.05, lz2, 0, 0, 0, fbLid); });
+  abPart(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), FB_X - 0.05, 0.63, FB_Z + 0.15, 1.2, 0, 0.3);   // the scoop
+  abPart(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 6), AB.wood, FB_X - 0.06, 0.66, FB_Z + 0.25, 1.2, 0, 0.3);
+  abSolids.push([FB_X, FB_Z - 0.25, 0.35], [FB_X, FB_Z + 0.25, 0.35]);
+  // the Dutch door in the side wall, shut, its top and bottom halves each with a Z brace
+  [[0.52, 1.0], [1.52, 1.0]].forEach(function (hf) {
+    abWallPart('E', new THREE.BoxGeometry(1.0, 0.98, 0.05), AB.wood, 0, hf[0], 0.04);
+    [-0.4, 0.4].forEach(function (ry2) { abWallPart('E', new THREE.BoxGeometry(0.9, 0.09, 0.03), AB.beam, 0, hf[0] + ry2, 0.075); });
+    abWallPart('E', new THREE.BoxGeometry(Math.hypot(0.82, 0.7), 0.08, 0.03), AB.beam, 0, hf[0], 0.078, 0, 0, Math.atan2(0.7, 0.82));
+    [-0.4, 0.4].forEach(function (hy) { abWallPart('E', new THREE.BoxGeometry(0.3, 0.035, 0.01), AB.iron, -0.36, hf[0] + hy, 0.095); });
+  });
+  abWallPart('E', new THREE.BoxGeometry(0.14, 0.03, 0.03), AB.iron, 0.4, 1.02, 0.1);                  // the bolt between the halves
+  [[-1, 0.56], [1, 0.56]].forEach(function (c) { abWallPart('E', new THREE.BoxGeometry(0.1, 2.1, 0.08), AB.beam, c[0] * c[1], 1.05, 0.05); });   // its frame
+  abWallPart('E', new THREE.BoxGeometry(1.22, 0.1, 0.08), AB.beam, 0, 2.08, 0.05);
+  // tack on a peg: a coiled rope and a leather halter
+  abWallPart('E', new THREE.CylinderGeometry(0.02, 0.02, 0.14, 8), AB.beam, 0.88, 1.55, 0.08, Math.PI / 2, 0, 0);
+  abWallPart('E', new THREE.TorusGeometry(0.13, 0.018, 6, 24), AB.rope, 0.88, 1.43, 0.12, 0, 0, 0);
+  abWallPart('E', new THREE.TorusGeometry(0.11, 0.018, 6, 24), AB.rope, 0.89, 1.42, 0.14, 0.1, 0, 0.2);
+  abWallPart('E', new THREE.TorusGeometry(0.1, 0.012, 5, 20), AB.leather, 0.86, 1.36, 0.17, 0.15, 0, 0);
+  abWallPart('E', new THREE.TorusGeometry(0.018, 0.005, 5, 10), AB.brass, 0.86, 1.26, 0.18);
+  // buckets stacked up, and a broom and a pitchfork leaning on the wall
+  [0, 0.07, 0.14].forEach(function (by, k) {
+    abPart(new THREE.CylinderGeometry(0.16, 0.12, 0.28, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), AEX - 0.32, 0.14 + by, 1.8 + k * 0.004);
+    abPart(new THREE.TorusGeometry(0.16, 0.006, 5, 24), AB.zinc, AEX - 0.32, 0.28 + by, 1.8, Math.PI / 2, 0, 0);
+  });
+  abSolids.push([AEX - 0.32, 1.8, 0.18]);
+  abPart(new THREE.CylinderGeometry(0.014, 0.014, 1.4, 6), AB.wood, AEX - 0.12, 0.72, 2.2, 0.18, 0, 0.08);   // the broom
+  var broom = abPart(new THREE.CylinderGeometry(0.06, 0.13, 0.28, 12), new THREE.MeshStandardMaterial({ color: 0xc8a050, roughness: 1 }), AEX - 0.24, 0.1, 2.08, 0.18, 0, 0.08);
+  broom.scale.set(1, 1, 0.45);
+  // nesting boxes, empty for now, each with a little bed of straw
+  var NB_X = AEX - 0.3, NB_Z = 4.05;
+  [-1, 0, 1].forEach(function (k) { abPart(new THREE.BoxGeometry(0.06, 0.7, 0.06), AB.beam, NB_X - 0.2, 0.35, NB_Z + k * 0.48); });
+  [0.7, 1.1].forEach(function (sy) {
+    abPart(new THREE.BoxGeometry(0.5, 0.03, 1.0), AB.wood, NB_X, sy, NB_Z);
+    abPart(new THREE.BoxGeometry(0.5, 0.36, 0.03), AB.wood, NB_X, sy + 0.18, NB_Z - 0.5);
+    abPart(new THREE.BoxGeometry(0.5, 0.36, 0.03), AB.wood, NB_X, sy + 0.18, NB_Z + 0.5);
+    abPart(new THREE.BoxGeometry(0.5, 0.36, 0.03), AB.wood, NB_X, sy + 0.18, NB_Z);
+    abPart(new THREE.BoxGeometry(0.03, 0.12, 1.0), AB.wood, NB_X - 0.24, sy + 0.07, NB_Z);           // a lip to keep the straw in
+    [-0.25, 0.25].forEach(function (nz) { abPart(new THREE.PlaneGeometry(0.44, 0.44), AB.straw, NB_X, sy + 0.03, NB_Z + nz, -Math.PI / 2, 0, nz * 3).castShadow = false; });
+  });
+  abPart(new THREE.BoxGeometry(0.56, 0.04, 1.06), AB.beam, NB_X, 1.48, NB_Z, 0, 0, -0.25);          // a sloped roof so nobody roosts on top
+  abPart(new THREE.BoxGeometry(0.05, 0.05, 0.9), AB.wood, NB_X - 0.42, 0.45, NB_Z);                  // a perch rail in front
+  [-0.38, 0.38].forEach(function (pz) { abPart(new THREE.BoxGeometry(0.2, 0.04, 0.04), AB.wood, NB_X - 0.33, 0.45, NB_Z + pz); });
+  abSolids.push([NB_X, NB_Z - 0.3, 0.35], [NB_X, NB_Z + 0.3, 0.35]);
+  // hay bales stacked in the back corner, and a ladder up to the loft
+  [[AEX - 0.66, 0, -4.6, 0.03], [AEX - 0.66, 0, -4.1, -0.05], [AEX - 0.68, HB_H, -4.35, 0.08]].forEach(function (bb) {
+    var bale = barnBaleProto.clone(); bale.position.set(bb[0], bb[1] + HB_H / 2, bb[2]); bale.rotation.set(0, bb[3], 0); abRoom.add(bale);
+  });
+  abSolids.push([AEX - 0.66, -4.35, 0.55]);
+  var LAD_X = 2.35;
+  [-0.2, 0.2].forEach(function (lx) { abPart(new THREE.BoxGeometry(0.06, 3.1, 0.05), AB.wood, LAD_X + lx, 1.5, ANW + 0.42, -0.13, 0, 0); });
+  for (var abLr = 0.3; abLr < 2.9; abLr += 0.32) abPart(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 8), AB.pale, LAD_X, abLr, ANW + 0.615 - abLr * 0.13, 0, 0, Math.PI / 2);
+  abSolids.push([LAD_X, ANW + 0.4, 0.3]);
+  // a wheelbarrow of hay in the aisle near the door
+  var abWb = new THREE.Group(); abWb.position.set(2.1, 0, 2.9); abWb.rotation.y = -0.6; abRoom.add(abWb);
+  var tray = new THREE.CylinderGeometry(0.42, 0.3, 0.3, 4, 1, true); tray.rotateY(Math.PI / 4); tray.scale(1, 1, 1.35);
+  abPart(tray, new THREE.MeshStandardMaterial({ color: 0x3a6a5a, roughness: 0.5, metalness: 0.4, side: THREE.DoubleSide }), 0, 0.5, 0, 0, 0, 0, abWb);
+  abPart(new THREE.BoxGeometry(0.4, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x3a6a5a, roughness: 0.5, metalness: 0.4 }), 0, 0.36, 0, 0, 0, 0, abWb);
+  var wbHay = abPart(new THREE.SphereGeometry(0.32, 12, 8), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.6, 0, 0, 0, 0, abWb); wbHay.scale.set(1, 0.45, 1.3);
+  abPart(new THREE.TorusGeometry(0.16, 0.04, 8, 18), new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.9 }), 0, 0.16, -0.62, 0, Math.PI / 2, 0, abWb);   // the wheel
+  abPart(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 8), AB.iron, 0, 0.16, -0.62, 0, 0, Math.PI / 2, abWb);
+  [-0.18, 0.18].forEach(function (hx) {
+    abPart(new THREE.BoxGeometry(0.04, 0.04, 1.4), AB.wood, hx, 0.36, -0.05, -0.12, 0, 0, abWb);      // the handles
+    abPart(new THREE.BoxGeometry(0.03, 0.34, 0.03), AB.iron, hx, 0.17, 0.3, 0, 0, 0, abWb);          // the legs
+  });
+  abSolids.push([2.1, 2.9, 0.45]);
+  // loose wisps of straw in the stalls, in one batch
+  (function () {
+    var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.004, 0.003, 1, 3), hayWispMat, abWispList.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
+    abWispList.forEach(function (w, i) {
+      e.set(Math.PI / 2 + (isle2Hash(i * 3) - 0.5) * 0.8, isle2Hash(i * 5) * 6.3, (isle2Hash(i * 7) - 0.5) * 0.6); q.setFromEuler(e);
+      sc.set(1, 0.08 + w[2] * 0.14, 1); pos.set(w[0], 0.03 + isle2Hash(i * 9) * 0.08, w[1]);
+      m.compose(pos, q, sc); im.setMatrixAt(i, m);
+      im.setColorAt(i, col.setHSL(0.11 + isle2Hash(i * 11) * 0.03, 0.55, 0.45 + isle2Hash(i * 13) * 0.25));
+    });
+    im.receiveShadow = true; abRoom.add(im);
+  })();
+
+  for (var abWn in abWalls) abWalls[abWn].g.traverse(function (o) { o.castShadow = false; });   // the walls and what's on them don't block the daylight
+  var abLook = new THREE.Vector3();
+  function updateBarnInterior(t) {
+    if (!inBarn) return;
+    for (var wn in abWalls) {                                           // hide any wall the camera is behind, so it never blocks the view
+      var W = abWalls[wn];
+      abLook.set(camera.position.x - AB_X - W.c.x, 0, camera.position.z - AB_Z - W.c.z);
+      W.g.visible = abLook.dot(W.n) > 0;
+    }
+    var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
+    abSun.intensity = 0.45 * (1 - nt);                                  // daylight only comes in by day; the lanterns light it at night
+    abLamps.forEach(function (L) { L.l.intensity = (0.4 + nt * 0.25) * (1 + Math.sin(t * 9 + L.p) * 0.05 + Math.sin(t * 13.7 + L.p * 2) * 0.04); });
+    abLanternGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.12 + Math.sin(t * 6.3 + L.p * 2) * 0.08; L.f.scale.set(1, 1.8 * fl, 1); L.g.material.opacity = 0.45 * fl; });
+  }
+  function inBarnRoom(x, z) { return Math.abs(x - AB_X) < AB_W / 2 - 0.35 && Math.abs(z - AB_Z) < AB_D / 2 - 0.35; }
+  function atBarnCounter(margin) {                                     // standing in front of the counter (margin: how far past it still counts)
+    if (!inBarn) return false;
+    var lx = player.position.x - AB_X - ABC_X, lz = player.position.z - AB_Z, m = margin || 0;
+    return Math.abs(lx) < ABC_W / 2 + 0.4 + m && lz > ABC_Z + 0.3 && lz < ABC_Z + 1.9 + m;
+  }
+  // the windows and the doorway look out on the real island, just like the shop's and the clinic's
+  function drawBarnView() {
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    shopViewMap.makeTranslation(ANIMAL_X, B_FOUND, ANIMAL_Z).multiply(shopViewTmp.makeRotationY(ANIMAL_TURN)).multiply(shopViewTmp.makeTranslation(-AB_X, 0, -AB_Z));   // (the barn's floor sits up on its foundation)
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    barnGroup.visible = false;                                         // you're inside it, so don't draw its own outside walls in the way
+    renderer.setRenderTarget(shopViewTarget);
+    renderer.render(scene, shopViewCam);
+    renderer.setRenderTarget(null);
+    barnGroup.visible = true;
+  }
+
   // ---------- The seed shop: step up to the counter inside to buy seeds with Star Coins ----------
   var SEED_COST = 10;
   function shopFront(d) { return { x: SHOP_X + Math.sin(SHOP_TURN) * (SHOP_HD + d), z: SHOP_Z + Math.cos(SHOP_TURN) * (SHOP_HD + d) }; }
   var shopDoor = shopFront(0.12);
+  var barnDoor = animalFront(0.12);                                   // and into Fluff & Feather's big doorway
   var clinicDoor = clinicFront(0.12);                                 // and up onto the clinic's porch to its door                                     // walk up the steps to the front door to go in
   function shopStepHeight(x, z) {                                     // how high the shop's front steps lift you
     var dx = x - SHOP_X, dz = z - SHOP_Z, c = Math.cos(SHOP_TURN), si = Math.sin(SHOP_TURN);
@@ -13010,6 +13618,36 @@ function startGame(THREE) {
     if (shopBtn.classList.contains('show') !== show) shopBtn.classList.toggle('show', show);
     updateShopBuilding(state.time);
     updateShopInterior(state.time);
+  }
+  // ---------- Fluff & Feather's counter: step up to it inside the barn to see the animals for sale (none yet) ----------
+  var barnShopOpen = false;
+  var barnShopBtn = document.createElement('button');
+  barnShopBtn.type = 'button';
+  barnShopBtn.className = 'sleep-btn ship-btn';
+  barnShopBtn.innerHTML = '🐾 Buy animals <kbd>E</kbd>';
+  canvas.parentNode.appendChild(barnShopBtn);
+  var barnShopBox = document.createElement('div');
+  barnShopBox.className = 'inventory ship shop';
+  barnShopBox.hidden = true;
+  barnShopBox.innerHTML = '<div class="inv-head"><b>🐾 Fluff &amp; Feather</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+    '<p class="ship-hint">Welcome to Fluff &amp; Feather! This is where you\'ll buy animals for your farm.</p>' +
+    '<div class="animal-empty"><span class="animal-empty-icon" aria-hidden="true">🐣</span><b>No animals for sale yet</b><span>Our first animals are still on their way. Check back soon!</span></div>' +
+    '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(barnShopBox);
+  paintCoinIcons(barnShopBox);
+  var barnShopCoins = barnShopBox.querySelector('.ship-total b');
+  function openBarnShop() { if (barnShopOpen) return; toggleBag(false); barnShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; barnShopBox.hidden = false; barnShopCoins.textContent = state.coins; }
+  function closeBarnShop() { barnShopOpen = false; barnShopBox.hidden = true; }
+  barnShopBox.querySelector('.inv-close').addEventListener('click', function () { closeBarnShop(); focusGame(); });
+  barnShopBtn.addEventListener('click', function () { openBarnShop(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && barnShopOpen) closeBarnShop(); });
+  function updateBarnShop() {
+    var near = atBarnCounter();
+    if (barnShopOpen && !atBarnCounter(1.2)) closeBarnShop();          // it stays open until you really walk away from the counter
+    if (barnShopOpen && barnShopCoins.textContent !== String(state.coins)) barnShopCoins.textContent = state.coins;
+    var show = near && !barnShopOpen;
+    if (barnShopBtn.classList.contains('show') !== show) barnShopBtn.classList.toggle('show', show);
+    updateBarnInterior(state.time);
   }
   // One slot button, for the bag or the hotbar. Tap to select it; press and drag to move it to another slot
   function makeSlot(i, onPick) {
@@ -13147,6 +13785,7 @@ function startGame(THREE) {
     if (show) {
       if (typeof binOpen !== 'undefined' && binOpen) closeBin();      // only one menu open at a time
       if (typeof shopOpen !== 'undefined' && shopOpen) closeShop();
+      if (typeof barnShopOpen !== 'undefined' && barnShopOpen) closeBarnShop();
       walkTarget = null;
     }
     bagUi.box.hidden = !show;
@@ -13379,8 +14018,8 @@ function startGame(THREE) {
     });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
-    if (indoors) you = inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
-    var yp = mapXY(you.x, you.z), fa = indoors ? (inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    if (indoors) you = inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
     var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
     g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
@@ -13443,7 +14082,7 @@ function startGame(THREE) {
   if (ui.btnSpell && ui.btnSpell.parentNode) ui.btnSpell.parentNode.insertBefore(tpBtn, ui.btnSpell.nextSibling);
   function openTeleport() {                                           // the world map, with its teleport pins
     if (teleporting || sleeping || doorBusy) return;
-    if (binOpen) closeBin(); if (shopOpen) closeShop();
+    if (binOpen) closeBin(); if (shopOpen) closeShop(); if (barnShopOpen) closeBarnShop();
     if (bagUi.box && !bagUi.box.hidden && mapPage) { toggleBag(false); return; }   // pressing it again closes the map
     if (bagUi.box && !bagUi.box.hidden) showMapPage(true);            // the bag's already open: flip to its map page
     else toggleBag(true, true);
@@ -13467,7 +14106,7 @@ function startGame(THREE) {
     fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (indoors) {                                                  // stepping out of the house or the shop
-        indoors = false; inShop = false; inClinic = false;
+        indoors = false; inShop = false; inClinic = false; inBarn = false;
         scene.add(player);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; }
       }
@@ -13576,7 +14215,7 @@ function startGame(THREE) {
   canvas.addEventListener('pointercancel', pointerEnd);
 
   function tapToWalk(e) {
-    if (binOpen || shopOpen) return;                                  // a tap while a menu is open doesn't walk you away from it
+    if (binOpen || shopOpen || barnShopOpen) return;                  // a tap while a menu is open doesn't walk you away from it
     var rect = canvas.getBoundingClientRect();
     var ndc = new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
@@ -13615,11 +14254,11 @@ function startGame(THREE) {
       player.position.z += mz * SPEED * dt;
 
       if (indoors) { // inside the farmhouse or the seed shop: stay between the walls and bump into the furniture
-        var rx0 = inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
-        var hw = (inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.35, hd = (inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.35;
+        var rx0 = inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
+        var hw = (inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.35, hd = (inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.35;
         player.position.x = Math.max(rx0 - hw, Math.min(rx0 + hw, player.position.x));
         player.position.z = Math.max(rz0 - hd, Math.min(rz0 + hd, player.position.z));
-        (inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
+        (inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
           var dx = player.position.x - (rx0 + o[0]), dz = player.position.z - (rz0 + o[1]);
           var d = Math.hypot(dx, dz), min = o[2] + 0.35;
           if (d < min && d > 0.0001) {
@@ -13656,7 +14295,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    var footY = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : onBridge2(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(-player.position.x)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
+    var footY = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : onBridge2(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(-player.position.x)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z) + barnRampHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, the barn's ramp, and over the bridge
     var stepUp = footY - player.position.y;                             // ease up and down steps instead of popping, but snap after a door or a teleport
     player.position.y = Math.abs(stepUp) > 0.5 ? footY : player.position.y + stepUp * Math.min(1, dt * 16);
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
@@ -13833,6 +14472,7 @@ function startGame(THREE) {
     if (indoors) { px = OUT_DOOR_X; pz = OUT_DOOR_Z + 1.0; }          // saved inside the house? you'll load in at the front door
     if (inShop) { var so = shopFront(2.0); px = so.x; pz = so.z; }    // saved inside the shop? you'll load in outside its door
     if (inClinic) { var co = clinicFront(2.3); px = co.x; pz = co.z; } // and the same for the clinic
+    if (inBarn) { var bo = animalFront(1.6); px = bo.x; pz = bo.z; }  // and Fluff & Feather
     var data = {
       v: 1,
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
@@ -13935,6 +14575,7 @@ function startGame(THREE) {
       indoors = false;
       inShop = false;
       inClinic = false;
+      inBarn = false;
       scene.add(player);
       if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
     }
@@ -14025,6 +14666,7 @@ function startGame(THREE) {
     updateStamina();
     updateShipping(dt);
     updateShop(dt);
+    updateBarnShop();
     updateBridge(state.time, night);
     updateInterior(dt, state.time);
     updateCrops(dt, night);
@@ -14033,11 +14675,12 @@ function startGame(THREE) {
     updateCamera(dt);
     updateClinicInterior(state.time);
     cullScene();
-    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
+    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) document.body.classList.toggle('menu-open', menuUp);
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
-    renderer.render(indoors ? (inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
+    if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
+    renderer.render(indoors ? (inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
 
