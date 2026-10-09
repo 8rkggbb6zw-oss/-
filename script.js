@@ -10978,42 +10978,183 @@ function startGame(THREE) {
 
 
   // ----- the waiting room, on the left -----
-  // the reception desk: teal panels with white trim, a wooden top and a raised ledge, facing the door
-  var RCP_X = -2.6, RCP_Z = -0.7, RCP_L = 2.6;
-  ciPart(new THREE.BoxGeometry(RCP_L, 1.0, 0.1), CI.teal, RCP_X, 0.5, RCP_Z + 0.3);
-  for (var rp = 0; rp < 4; rp++) ciPart(new THREE.BoxGeometry(RCP_L / 4 - 0.14, 0.62, 0.03), CI.tealVinyl, RCP_X - RCP_L / 2 + (rp + 0.5) * RCP_L / 4, 0.48, RCP_Z + 0.36);   // raised panels
-  ciPart(new THREE.BoxGeometry(RCP_L + 0.06, 0.12, 0.08), CI.white, RCP_X, 0.06, RCP_Z + 0.34);
-  [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(0.1, 1.0, 0.7), CI.teal, RCP_X + s * (RCP_L / 2 - 0.05), 0.5, RCP_Z); });
-  ciPart(new THREE.BoxGeometry(RCP_L + 0.1, 0.05, 0.78), CI.wood, RCP_X, 0.78, RCP_Z - 0.02);                           // the desk top behind
-  ciPart(new THREE.BoxGeometry(RCP_L + 0.16, 0.05, 0.32), CI.white, RCP_X, 1.07, RCP_Z + 0.32);                          // the ledge at the front
-  ciPart(new THREE.BoxGeometry(RCP_L, 0.29, 0.06), CI.white, RCP_X, 0.93, RCP_Z + 0.2);
-  // on the ledge: a brass bell, a jar of lollipops, a sign-in clipboard and a little orchid
-  ciPart(new THREE.CylinderGeometry(0.06, 0.07, 0.015, 16), CI.black, RCP_X + 0.7, 1.1, RCP_Z + 0.33);
-  ciPart(new THREE.SphereGeometry(0.055, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), CI.brass, RCP_X + 0.7, 1.105, RCP_Z + 0.33);
-  ciPart(new THREE.SphereGeometry(0.012, 8, 6), CI.brass, RCP_X + 0.7, 1.165, RCP_Z + 0.33);
-  ciPart(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 20), CI.glass, RCP_X - 0.75, 1.21, RCP_Z + 0.33);
-  ciPart(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 20), CI.coral, RCP_X - 0.75, 1.335, RCP_Z + 0.33);
-  for (var lp = 0; lp < 9; lp++) {
-    var la = lp * 2.4, lr = 0.04 + (lp % 3) * 0.015;
-    ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.18, 4), CI.paper, RCP_X - 0.75 + Math.cos(la) * lr * 0.6, 1.22, RCP_Z + 0.33 + Math.sin(la) * lr * 0.6, Math.sin(la) * 0.2, 0, Math.cos(la) * 0.2);
-    ciPart(new THREE.SphereGeometry(0.028, 10, 8), new THREE.MeshStandardMaterial({ color: [0xff6a8a, 0xffd04a, 0x7ad0a0, 0x9a8aff][lp % 4], roughness: 0.2 }), RCP_X - 0.75 + Math.cos(la) * lr, 1.16 + (lp % 3) * 0.05, RCP_Z + 0.33 + Math.sin(la) * lr);
+  // the reception desk, facing the door: a teal front of raised and bevelled panels between fluted pilasters, a white
+  // marble-look transaction ledge on brass brackets with a brass footrail below, a brass "Welcome" plaque, an oak desk
+  // top behind, and a drawer pedestal at each end
+  var RCP_X = -2.6, RCP_Z = -0.7, RCP_L = 2.6, RF = RCP_Z + 0.35;   // RF: the front face
+  var rcpPanel = new THREE.MeshStandardMaterial({ color: 0x3b7f77, roughness: 0.4 }), rcpGroove = new THREE.MeshStandardMaterial({ color: 0x245a54, roughness: 0.45 });
+  var rcpTop = new THREE.MeshStandardMaterial({ color: 0xf6f4ef, roughness: 0.18, metalness: 0.02 });
+  ciPart(ciRoundBox(RCP_L, 1.0, 0.1, 0.01), CI.teal, RCP_X, 0.5, RCP_Z + 0.3);
+  ciPart(new THREE.BoxGeometry(RCP_L - 0.04, 0.1, 0.04), CI_KICK, RCP_X, 0.05, RF + 0.005);                             // the toe kick
+  ciPart(ciRoundBox(RCP_L + 0.04, 0.05, 0.05, 0.012), CI.white, RCP_X, 0.125, RF + 0.02);                               // the base moulding
+  for (var rp = 0; rp < 4; rp++) {                                     // four raised, bevelled panels
+    var rpx = RCP_X - RCP_L / 2 + (rp + 0.5) * RCP_L / 4, rpw = RCP_L / 4 - 0.2;
+    ciPart(new THREE.BoxGeometry(rpw + 0.04, 0.66, 0.006), rcpGroove, rpx, 0.53, RF + 0.003);
+    ciPart(ciRoundBox(rpw, 0.62, 0.025, 0.01), rcpPanel, rpx, 0.53, RF + 0.012);
+    ciPart(ciRoundBox(rpw - 0.12, 0.5, 0.012, 0.006), CI.teal, rpx, 0.53, RF + 0.027);
   }
-  ciPart(new THREE.BoxGeometry(0.24, 0.012, 0.32), CI.darkWood, RCP_X + 0.1, 1.1, RCP_Z + 0.32, 0, 0.15, 0);
-  ciPart(new THREE.BoxGeometry(0.2, 0.004, 0.27), CI.paper, RCP_X + 0.1, 1.108, RCP_Z + 0.33, 0, 0.15, 0);
-  ciPart(new THREE.BoxGeometry(0.08, 0.02, 0.03), CI.steel, RCP_X + 0.1 - 0.02, 1.115, RCP_Z + 0.19, 0, 0.15, 0);
-  ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 5), CI.black, RCP_X + 0.28, 1.11, RCP_Z + 0.34, Math.PI / 2, 0.6, 0);
-  // behind the ledge: the computer, a keyboard and mouse, a telephone, a pen pot and a stack of files
-  ciPart(new THREE.BoxGeometry(0.62, 0.38, 0.03), CI.black, RCP_X - 0.2, 1.1, RCP_Z - 0.2, 0, 0, 0);
-  ciPart(new THREE.PlaneGeometry(0.57, 0.33), new THREE.MeshStandardMaterial({ map: ciScreenTex, emissive: 0xffffff, emissiveMap: ciScreenTex, emissiveIntensity: 0.7 }), RCP_X - 0.2, 1.1, RCP_Z - 0.184, 0, Math.PI, 0);
-  ciPart(new THREE.BoxGeometry(0.05, 0.25, 0.04), CI.black, RCP_X - 0.2, 0.9, RCP_Z - 0.24);
-  ciPart(new THREE.BoxGeometry(0.22, 0.015, 0.16), CI.black, RCP_X - 0.2, 0.81, RCP_Z - 0.25);
-  ciPart(new THREE.BoxGeometry(0.44, 0.02, 0.14), CI.white, RCP_X - 0.2, 0.815, RCP_Z - 0.48);
-  ciPart(new THREE.SphereGeometry(0.03, 10, 6), CI.white, RCP_X + 0.15, 0.815, RCP_Z - 0.48).scale.set(1, 0.5, 1.4);
-  ciPart(new THREE.BoxGeometry(0.2, 0.06, 0.2), CI.white, RCP_X - 1.0, 0.835, RCP_Z - 0.3, 0, 0.3, 0);
-  ciPart(new THREE.CylinderGeometry(0.025, 0.025, 0.2, 8), CI.white, RCP_X - 1.0, 0.89, RCP_Z - 0.3, 0, 0.3, Math.PI / 2);
-  ciPart(new THREE.CylinderGeometry(0.04, 0.035, 0.1, 12), CI.coral, RCP_X + 0.65, 0.85, RCP_Z - 0.3);
-  [0, 1, 2].forEach(function (k) { ciPart(new THREE.CylinderGeometry(0.004, 0.004, 0.15, 4), [CI.teal, CI.black, CI.coral][k], RCP_X + 0.65 + (k - 1) * 0.015, 0.92, RCP_Z - 0.3, (k - 1) * 0.15, 0, (k - 1) * 0.2); });
-  [0, 1, 2, 3].forEach(function (k) { ciPart(new THREE.BoxGeometry(0.32, 0.025, 0.24), [CI.mint, CI.coral, CI.white, CI.tealVinyl][k], RCP_X + 0.95, 0.815 + k * 0.026, RCP_Z - 0.3, 0, (isle2Hash(k + 70) - 0.5) * 0.3, 0); });
+  for (var pl = 0; pl <= 4; pl++) {                                    // fluted pilasters between them
+    var plx = RCP_X - RCP_L / 2 + pl * RCP_L / 4 + (pl === 0 ? 0.04 : pl === 4 ? -0.04 : 0);
+    ciPart(ciRoundBox(0.08, 0.72, 0.03, 0.008), CI.teal, plx, 0.52, RF + 0.015);
+    [-0.02, 0, 0.02].forEach(function (fl) { ciPart(new THREE.BoxGeometry(0.008, 0.6, 0.004), rcpGroove, plx + fl, 0.52, RF + 0.031); });
+    ciPart(ciRoundBox(0.1, 0.035, 0.04, 0.008), CI.white, plx, 0.89, RF + 0.02);
+  }
+  ciPart(ciRoundBox(RCP_L + 0.04, 0.04, 0.05, 0.01), CI.white, RCP_X, 0.92, RF + 0.02);                                 // the frieze moulding
+  ciPart(new THREE.BoxGeometry(RCP_L - 0.04, 0.1, 0.02), CI.white, RCP_X, 0.99, RF + 0.005);
+  ciPart(ciRoundBox(RCP_L + 0.2, 0.045, 0.34, 0.015), rcpTop, RCP_X, 1.07, RCP_Z + 0.33);                               // the ledge, with a brass edge
+  ciPart(new THREE.BoxGeometry(RCP_L + 0.16, 0.012, 0.012), CI.brass, RCP_X, 1.05, RCP_Z + 0.5);
+  [-1.05, -0.35, 0.35, 1.05].forEach(function (bx) {                   // brass brackets under the ledge
+    var br = new THREE.Shape(); br.moveTo(0, 0); br.lineTo(0.09, 0); br.quadraticCurveTo(0.02, -0.02, 0, -0.09); br.lineTo(0, 0);
+    ciPart(new THREE.ExtrudeGeometry(br, { depth: 0.012, bevelEnabled: false }), CI.brass, RCP_X + bx - 0.006, 1.047, RF + 0.005, 0, -Math.PI / 2, 0);
+  });
+  ciRod(new THREE.Vector3(RCP_X - RCP_L / 2 + 0.1, 0.2, RF + 0.13), new THREE.Vector3(RCP_X + RCP_L / 2 - 0.1, 0.2, RF + 0.13), 0.016, CI.brass);   // the footrail
+  [-1.1, 0, 1.1].forEach(function (fx) {
+    ciRod(new THREE.Vector3(RCP_X + fx, 0.2, RF + 0.13), new THREE.Vector3(RCP_X + fx, 0.2, RF + 0.01), 0.01, CI.brass);
+    ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.008, 16), CI.brass, RCP_X + fx, 0.2, RF + 0.01, Math.PI / 2, 0, 0);
+  });
+  [-1.3, 1.3].forEach(function (ex) { ciPart(new THREE.SphereGeometry(0.022, 12, 8), CI.brass, RCP_X + ex, 0.2, RF + 0.13); });
+  var rcpPlaqueTex = paintTexture(256, 64, function (g, w, h) {
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#f6dc8a'); bg.addColorStop(0.5, '#c9a24a'); bg.addColorStop(1, '#a8802c');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h); g.strokeStyle = '#7a5a1a'; g.lineWidth = 3; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = '#3a2a0a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'italic bold 30px Georgia, serif'; g.fillText('♥ Welcome ♥', w / 2, h / 2 + 2);
+  });
+  ciPart(new THREE.PlaneGeometry(0.4, 0.1), new THREE.MeshStandardMaterial({ map: rcpPlaqueTex, metalness: 0.5, roughness: 0.3 }), RCP_X, 0.99, RF + 0.016);
+  [-1, 1].forEach(function (s) {                                       // the end panels and a drawer pedestal at each end, behind
+    ciPart(ciRoundBox(0.1, 1.0, 0.7, 0.01), CI.teal, RCP_X + s * (RCP_L / 2 - 0.05), 0.5, RCP_Z);
+    var px = RCP_X + s * (RCP_L / 2 - 0.33);
+    ciPart(ciRoundBox(0.44, 0.72, 0.5, 0.01), CI.white, px, 0.38, RCP_Z - 0.1);
+    [0.62, 0.42, 0.18].forEach(function (dy, k) {
+      ciPart(ciRoundBox(0.4, k === 2 ? 0.26 : 0.17, 0.02, 0.006), CI.mint, px, dy, RCP_Z - 0.36);
+      ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 8), CI_CHROME, px, dy + 0.02, RCP_Z - 0.39, 0, 0, Math.PI / 2);
+    });
+  });
+  ciPart(ciRoundBox(RCP_L + 0.1, 0.045, 0.78, 0.01), CI_OAK, RCP_X, 0.78, RCP_Z - 0.02);                                // the oak desk top behind
+  ciPart(new THREE.BoxGeometry(RCP_L, 0.26, 0.04), CI.white, RCP_X, 0.92, RCP_Z + 0.2);
+  // a cable grommet in the desk top
+  ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 16), CI_KICK, RCP_X - 0.2, 0.805, RCP_Z + 0.08);
+
+  // on the ledge: a brass service bell on a wooden base
+  var BL_X = RCP_X + 0.7, BL_Z = RCP_Z + 0.33, BL_Y = 1.0925;
+  ciPart(new THREE.CylinderGeometry(0.07, 0.075, 0.025, 24), CI.darkWood, BL_X, BL_Y + 0.0125, BL_Z);
+  ciPart(new THREE.TorusGeometry(0.072, 0.004, 6, 28), CI.brass, BL_X, BL_Y + 0.025, BL_Z, Math.PI / 2, 0, 0);
+  var bellG = []; for (var bj = 0; bj <= 12; bj++) { var ba = bj / 12 * Math.PI / 2; bellG.push(new THREE.Vector2(Math.sin(ba) * 0.056, Math.cos(ba) * 0.05)); }
+  var bellBrass = new THREE.MeshStandardMaterial({ color: 0xf2c860, emissive: 0x6a4a10, emissiveIntensity: 0.35, metalness: 0.75, roughness: 0.22 });   // polished brass, so it gleams
+  ciPart(new THREE.LatheGeometry(bellG, 28), bellBrass, BL_X, BL_Y + 0.03, BL_Z);
+  ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.02, 8), bellBrass, BL_X, BL_Y + 0.09, BL_Z);
+  ciPart(new THREE.SphereGeometry(0.012, 10, 8), CI.black, BL_X, BL_Y + 0.105, BL_Z).scale.set(1, 0.6, 1);
+  // a glass jar of lollipops with a pink lid and a little label
+  var JR_X = RCP_X - 0.75, JR_Z = RCP_Z + 0.33;
+  var jarPts = []; [[0.001, 0], [0.085, 0], [0.09, 0.01], [0.09, 0.2], [0.075, 0.215], [0.06, 0.22], [0.06, 0.235]].forEach(function (q) { jarPts.push(new THREE.Vector2(q[0], q[1])); });
+  ciPart(new THREE.LatheGeometry(jarPts, 28), new THREE.MeshStandardMaterial({ color: 0xeef7ff, roughness: 0.03, metalness: 0.1, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }), JR_X, BL_Y, JR_Z).renderOrder = 3;
+  ciPart(new THREE.CylinderGeometry(0.07, 0.068, 0.03, 24), CI.coral, JR_X, BL_Y + 0.25, JR_Z);
+  ciPart(new THREE.SphereGeometry(0.018, 12, 8), CI.coral, JR_X, BL_Y + 0.27, JR_Z);
+  var jarLabel = paintTexture(128, 48, function (g, w, h) { g.fillStyle = '#fffaf0'; g.fillRect(0, 0, w, h); g.strokeStyle = '#e0607a'; g.lineWidth = 3; g.strokeRect(3, 3, w - 6, h - 6); g.fillStyle = '#c8344a'; g.textAlign = 'center'; g.font = 'italic bold 20px Georgia, serif'; g.fillText('Brave Pops', w / 2, 30); });
+  ciPart(new THREE.CylinderGeometry(0.0905, 0.0905, 0.05, 28, 1, true, -0.6, 1.2), new THREE.MeshStandardMaterial({ map: jarLabel, roughness: 0.7, side: THREE.DoubleSide }), JR_X, BL_Y + 0.07, JR_Z);
+  for (var lp = 0; lp < 11; lp++) {                                    // lollipops: swirled candy on paper sticks
+    var la = lp * 2.4, lr = 0.025 + (lp % 3) * 0.02, lh = 0.05 + (lp % 4) * 0.035;
+    var top = new THREE.Vector3(JR_X + Math.cos(la) * lr, BL_Y + lh + 0.06, JR_Z + Math.sin(la) * lr);
+    ciRod(new THREE.Vector3(JR_X + Math.cos(la) * lr * 0.5, BL_Y + 0.005, JR_Z + Math.sin(la) * lr * 0.5), top, 0.003, CI.paper);
+    var lc = [0xff6a8a, 0xffd04a, 0x7ad0a0, 0x9a8aff, 0xff9a4a][lp % 5];
+    var pop = ciPart(new THREE.CylinderGeometry(0.026, 0.026, 0.012, 18), new THREE.MeshStandardMaterial({ color: lc, roughness: 0.15 }), top.x, top.y + 0.02, top.z, Math.PI / 2, la, 0);
+    ciPart(new THREE.TorusGeometry(0.015, 0.003, 6, 16), CI.paper, 0, 0.0065, 0, Math.PI / 2, 0, 0, pop);              // the white swirl
+  }
+  // a sign-in clipboard with a pen on a little chain
+  var SN_X = RCP_X + 0.1, SN_Z = RCP_Z + 0.32;
+  var signTex = paintTexture(128, 176, function (g, w, h) {
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2f6f68'; g.font = 'bold 13px sans-serif'; g.textAlign = 'center'; g.fillText('Please sign in ♥', w / 2, 18);
+    g.strokeStyle = 'rgba(80,100,120,0.4)'; g.lineWidth = 1; g.font = '8px sans-serif'; g.textAlign = 'left';
+    g.fillStyle = '#7a7a80'; g.fillText('NAME', 8, 32); g.fillText('TIME', 88, 32);
+    for (var r = 0; r < 10; r++) { g.beginPath(); g.moveTo(6, 44 + r * 13); g.lineTo(w - 6, 44 + r * 13); g.stroke(); }
+    g.beginPath(); g.moveTo(84, 26); g.lineTo(84, h - 6); g.stroke();
+    g.strokeStyle = '#3a4a8a'; g.lineWidth = 1.2;
+    for (var n = 0; n < 4; n++) { g.beginPath(); g.moveTo(10, 41 + n * 13); for (var x = 10; x < 40 + isle2Hash(n + 4) * 30; x += 3) g.lineTo(x, 41 + n * 13 + Math.sin(x + n) * 1.6); g.stroke(); g.fillStyle = '#3a4a8a'; g.fillText((8 + n) + ':' + (n * 15 || '00'), 90, 42 + n * 13); }
+  });
+  var snG = new THREE.Group(); snG.position.set(SN_X, BL_Y, SN_Z); snG.rotation.y = 0.15; clinicRoom.add(snG);
+  ciPart(ciRoundBox(0.23, 0.008, 0.32, 0.004), new THREE.MeshStandardMaterial({ color: 0x8a6440, roughness: 0.6 }), 0, 0.004, 0, 0, 0, 0, snG);
+  ciPart(new THREE.PlaneGeometry(0.2, 0.275), new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.9 }), 0, 0.0085, 0.012, -Math.PI / 2, Math.PI, 0, snG);
+  ciPart(ciRoundBox(0.1, 0.014, 0.035, 0.005), CI_CHROME, 0, 0.012, -0.14, 0, 0, 0, snG);
+  ciPart(new THREE.CylinderGeometry(0.005, 0.005, 0.14, 8), CI.teal, 0.15, 0.007, 0.02, Math.PI / 2, 0.5, 0, snG);
+  var chain = new THREE.CatmullRomCurve3([new THREE.Vector3(0.05, 0.012, -0.14), new THREE.Vector3(0.12, 0.006, -0.1), new THREE.Vector3(0.18, 0.006, -0.03)]);
+  ciPart(new THREE.TubeGeometry(chain, 10, 0.0015, 4), CI_CHROME, 0, 0, 0, 0, 0, 0, snG);
+  // a little white orchid in a teal pot at the end of the ledge
+  var OR_X = RCP_X + 1.2, OR_Z = RCP_Z + 0.33;
+  ciPart(new THREE.CylinderGeometry(0.05, 0.04, 0.09, 18), CI.teal, OR_X, BL_Y + 0.045, OR_Z);
+  ciPart(new THREE.CylinderGeometry(0.046, 0.046, 0.005, 14), new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 1 }), OR_X, BL_Y + 0.085, OR_Z);
+  for (var ol = 0; ol < 3; ol++) { var oa = ol * 2.1; var olf = ciPart(new THREE.SphereGeometry(1, 10, 6), new THREE.MeshStandardMaterial({ color: 0x2f5a2c, roughness: 0.4 }), OR_X + Math.cos(oa) * 0.04, BL_Y + 0.095, OR_Z + Math.sin(oa) * 0.04); olf.scale.set(0.06, 0.008, 0.025); olf.rotation.y = -oa; }
+  var spike = new THREE.CatmullRomCurve3([new THREE.Vector3(OR_X, BL_Y + 0.09, OR_Z), new THREE.Vector3(OR_X, BL_Y + 0.3, OR_Z), new THREE.Vector3(OR_X - 0.05, BL_Y + 0.36, OR_Z), new THREE.Vector3(OR_X - 0.12, BL_Y + 0.33, OR_Z)]);
+  ciPart(new THREE.TubeGeometry(spike, 16, 0.003, 5), CI.leaf, 0, 0, 0);
+  for (var of = 0; of < 5; of++) {
+    var fp = spike.getPoint(0.55 + of * 0.1), fgp = new THREE.Group(); fgp.position.copy(fp); fgp.position.y -= 0.02; fgp.rotation.set(0, Math.PI / 2, 0.3); clinicRoom.add(fgp);
+    for (var op = 0; op < 5; op++) { var opa = op / 5 * Math.PI * 2; var pe = ciPart(new THREE.CircleGeometry(0.016, 10), new THREE.MeshStandardMaterial({ color: 0xfdfbff, roughness: 0.5, side: THREE.DoubleSide }), Math.cos(opa) * 0.013, Math.sin(opa) * 0.013, 0, 0, 0, opa, fgp); pe.scale.set(1.2, 0.85, 1); pe.castShadow = false; }
+    ciPart(new THREE.SphereGeometry(0.006, 6, 4), new THREE.MeshStandardMaterial({ color: 0xf2b63a }), 0, 0, 0.004, 0, 0, 0, fgp);
+  }
+  // a little framed photo of the island, facing the visitors
+  var photoTex = paintTexture(128, 96, function (g, w, h) {
+    var sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#9fd8ff'); sky.addColorStop(1, '#ffe0f0'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#7ac860'; g.beginPath(); g.ellipse(w / 2, h, 70, 30, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#f4b8d8'; g.beginPath(); g.arc(w / 2, 46, 22, 0, Math.PI * 2); g.fill(); g.fillStyle = '#6a4a3a'; g.fillRect(w / 2 - 3, 50, 6, 26);
+  });
+  var pf = new THREE.Group(); pf.position.set(RCP_X - 1.15, BL_Y, RCP_Z + 0.36); pf.rotation.set(-0.2, 0.25, 0); clinicRoom.add(pf);
+  ciPart(ciRoundBox(0.16, 0.13, 0.015, 0.005), CI.brass, 0, 0.065, 0, 0, 0, 0, pf);
+  ciPart(new THREE.PlaneGeometry(0.13, 0.1), new THREE.MeshStandardMaterial({ map: photoTex, roughness: 0.5 }), 0, 0.065, 0.008, 0, 0, 0, pf);
+  // behind the ledge: a slim computer monitor on a stand, a keyboard with keys, a mouse on a mat, a desk phone, an
+  // appointment book, a pen pot, a stack of files in a tray, a stapler and a mug
+  var MN_X = RCP_X - 0.2, MN_Z = RCP_Z - 0.2, DT = 0.8025;
+  ciPart(ciRoundBox(0.6, 0.37, 0.025, 0.012), CI.black, MN_X, 1.13, MN_Z);
+  ciPart(new THREE.PlaneGeometry(0.565, 0.32), new THREE.MeshStandardMaterial({ map: ciScreenTex, emissive: 0xffffff, emissiveMap: ciScreenTex, emissiveIntensity: 0.75, roughness: 0.2 }), MN_X, 1.135, MN_Z - 0.0135, 0, Math.PI, 0);
+  ciPart(ciRoundBox(0.6, 0.37, 0.025, 0.012), CI_ALU, MN_X, 1.13, MN_Z + 0.006).scale.set(0.98, 0.98, 0.5);            // its silver back
+  ciPart(ciRoundBox(0.06, 0.26, 0.02, 0.008), CI_ALU, MN_X, 0.93, MN_Z + 0.03, -0.12, 0, 0);
+  ciPart(ciRoundBox(0.22, 0.012, 0.16, 0.006), CI_ALU, MN_X, DT + 0.006, MN_Z + 0.02);
+  var rcpKeys = new THREE.MeshStandardMaterial({ color: 0xf2f2f0, roughness: 0.5 });
+  ciPart(ciRoundBox(0.44, 0.016, 0.14, 0.006), CI_ALU, MN_X, DT + 0.008, RCP_Z - 0.46);
+  for (var kr = 0; kr < 4; kr++) for (var kc = 0; kc < 15; kc++) ciPart(new THREE.BoxGeometry(0.022, 0.006, 0.022), rcpKeys, MN_X - 0.2 + kc * 0.0285 + (kr % 2) * 0.006, DT + 0.018, RCP_Z - 0.5 + kr * 0.028);
+  ciPart(new THREE.BoxGeometry(0.16, 0.006, 0.022), rcpKeys, MN_X, DT + 0.018, RCP_Z - 0.395);                           // the space bar
+  ciPart(ciRoundBox(0.2, 0.004, 0.16, 0.01), CI.teal, RCP_X + 0.2, DT + 0.002, RCP_Z - 0.46);                           // the mouse mat and mouse
+  ciPart(new THREE.SphereGeometry(0.03, 14, 10), CI.white, RCP_X + 0.2, DT + 0.008, RCP_Z - 0.46).scale.set(0.9, 0.5, 1.4);
+  ciPart(new THREE.BoxGeometry(0.002, 0.004, 0.03), CI_KICK, RCP_X + 0.2, DT + 0.023, RCP_Z - 0.48);
+  // the desk phone: a body with a keypad and little screen, and a curly corded handset
+  var PH_X = RCP_X - 1.0, PH_Z = RCP_Z - 0.3;
+  var phG = new THREE.Group(); phG.position.set(PH_X, DT, PH_Z); phG.rotation.y = 0.3; clinicRoom.add(phG);
+  ciPart(ciRoundBox(0.2, 0.05, 0.2, 0.015), CI.white, 0, 0.025, 0, -0.15, 0, 0, phG);
+  for (var pk = 0; pk < 12; pk++) ciPart(new THREE.BoxGeometry(0.018, 0.006, 0.014), CI_KICK, -0.02 + (pk % 3) * 0.025, 0.05 + 0.006 * Math.floor(pk / 3) * 0.5, 0.06 - Math.floor(pk / 3) * 0.022, -0.15, 0, 0, phG);
+  ciPart(new THREE.PlaneGeometry(0.06, 0.025), new THREE.MeshStandardMaterial({ color: 0x9adfc8, emissive: 0x6ac8a8, emissiveIntensity: 0.4 }), 0.06, 0.058, 0.03, -Math.PI / 2 - 0.15, 0, 0, phG);
+  ciPart(ciRoundBox(0.2, 0.03, 0.045, 0.014), CI.white, -0.05, 0.07, -0.04, 0, Math.PI / 2, 0, phG);
+  [-1, 1].forEach(function (s) { ciPart(ciRoundBox(0.05, 0.035, 0.055, 0.015), CI.white, -0.05, 0.065, -0.04 + s * 0.085, 0, 0, 0, phG); });
+  var coil = []; for (var cp = 0; cp <= 60; cp++) { var ct = cp / 60; coil.push(new THREE.Vector3(-0.08 - Math.sin(ct * Math.PI) * 0.06 + Math.cos(cp * 1.6) * 0.008, 0.06 - ct * 0.04 + Math.sin(cp * 1.6) * 0.008, -0.12 + ct * 0.14)); }
+  ciPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coil), 140, 0.003, 4), CI.white, 0, 0, 0, 0, 0, 0, phG);
+  // an open appointment book
+  var bookTex = paintTexture(256, 160, function (g, w, h) {
+    g.fillStyle = '#fbf8ef'; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(w / 2 - 3, 0, 6, h);
+    g.strokeStyle = 'rgba(80,140,170,0.4)'; g.lineWidth = 1;
+    for (var r = 0; r < 12; r++) { g.beginPath(); g.moveTo(8, 22 + r * 11); g.lineTo(w / 2 - 8, 22 + r * 11); g.moveTo(w / 2 + 8, 22 + r * 11); g.lineTo(w - 8, 22 + r * 11); g.stroke(); }
+    g.fillStyle = '#2f6f68'; g.font = 'bold 11px Georgia, serif'; g.fillText('MONDAY', 10, 14); g.fillText('TUESDAY', w / 2 + 10, 14);
+    g.strokeStyle = '#3a4a8a'; for (var n = 0; n < 9; n++) { var px = n % 2 ? w / 2 + 12 : 12, py = 20 + Math.floor(n / 2) * 22; g.beginPath(); g.moveTo(px, py); for (var x = 0; x < 40 + isle2Hash(n) * 50; x += 3) g.lineTo(px + x, py + Math.sin(x + n) * 1.4); g.stroke(); }
+    g.fillStyle = '#e0607a'; g.beginPath(); g.arc(w - 20, h - 18, 5, 0, Math.PI * 2); g.fill();
+  });
+  ciPart(ciRoundBox(0.34, 0.012, 0.23, 0.004), CI.coral, RCP_X + 0.55, DT + 0.006, RCP_Z - 0.32, 0, -0.1, 0);
+  ciPart(new THREE.PlaneGeometry(0.32, 0.21), new THREE.MeshStandardMaterial({ map: bookTex, roughness: 0.9 }), RCP_X + 0.55, DT + 0.0125, RCP_Z - 0.32, -Math.PI / 2, 0, -0.1 + Math.PI);
+  ciPart(new THREE.BoxGeometry(0.004, 0.002, 0.18), new THREE.MeshStandardMaterial({ color: 0xe0607a }), RCP_X + 0.6, DT + 0.014, RCP_Z - 0.38, 0, -0.1, 0);   // a ribbon bookmark
+  // a pen pot, a tray of files, a stapler and a mug of tea
+  var PP_X = RCP_X + 0.95, PP_Z = RCP_Z - 0.12;
+  ciPart(new THREE.CylinderGeometry(0.035, 0.032, 0.1, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xe0889a, roughness: 0.35, side: THREE.DoubleSide }), PP_X, DT + 0.05, PP_Z);
+  ciPart(new THREE.CircleGeometry(0.032, 16), CI_KICK, PP_X, DT + 0.002, PP_Z, -Math.PI / 2, 0, 0);
+  [[0.01, 0.005, CI.black, 0.15], [-0.012, 0.008, CI.teal, -0.12], [0.003, -0.012, CI.coral, 0.05], [-0.005, -0.004, CI.brass, -0.2]].forEach(function (pn) {
+    ciPart(new THREE.CylinderGeometry(0.0045, 0.0045, 0.15, 8), pn[2], PP_X + pn[0] + pn[3] * 0.06, DT + 0.08, PP_Z + pn[1], pn[3] * 0.6, 0, pn[3]);
+  });
+  var TR_X = RCP_X + 1.0, TR_Z = RCP_Z - 0.4;
+  ciPart(new THREE.BoxGeometry(0.3, 0.006, 0.36), CI_KICK, TR_X, DT + 0.003, TR_Z);
+  [[0, 0.18, 0.3, 0.004], [0, -0.18, 0.3, 0.004], [0.15, 0, 0.004, 0.36], [-0.15, 0, 0.004, 0.36]].forEach(function (t) { ciPart(new THREE.BoxGeometry(t[2], 0.05, t[3]), CI_KICK, TR_X + t[0], DT + 0.025, TR_Z + t[1]); });   // the tray's wire sides
+  [CI.mint, CI.coral, CI.paper, CI.tealVinyl, CI.paper].forEach(function (m, k) { ciPart(new THREE.BoxGeometry(0.26, 0.008, 0.33), m, TR_X + (isle2Hash(k + 80) - 0.5) * 0.02, DT + 0.01 + k * 0.009, TR_Z, 0, (isle2Hash(k + 70) - 0.5) * 0.08, 0); });
+  var stp = new THREE.Group(); stp.position.set(RCP_X - 0.62, DT, RCP_Z - 0.5); stp.rotation.y = 0.6; clinicRoom.add(stp);
+  ciPart(ciRoundBox(0.16, 0.02, 0.045, 0.008), CI_KICK, 0, 0.01, 0, 0, 0, 0, stp);
+  ciPart(ciRoundBox(0.15, 0.025, 0.04, 0.01), CI.teal, 0.005, 0.035, 0, 0, 0, 0.04, stp);
+  var MG_X = RCP_X - 0.62, MG_Z = RCP_Z - 0.25;
+  var mugPts2 = [new THREE.Vector2(0.001, 0), new THREE.Vector2(0.034, 0), new THREE.Vector2(0.037, 0.004), new THREE.Vector2(0.039, 0.09), new THREE.Vector2(0.036, 0.092), new THREE.Vector2(0.034, 0.088), new THREE.Vector2(0.033, 0.01)];
+  ciPart(new THREE.LatheGeometry(mugPts2, 24), new THREE.MeshStandardMaterial({ color: 0xe0889a, roughness: 0.2, side: THREE.DoubleSide }), MG_X, DT, MG_Z);
+  ciPart(new THREE.TorusGeometry(0.022, 0.006, 8, 16, Math.PI * 1.2), new THREE.MeshStandardMaterial({ color: 0xe0889a, roughness: 0.2 }), MG_X + 0.04, DT + 0.045, MG_Z, 0, 0, -Math.PI * 0.6);
+  ciPart(new THREE.CircleGeometry(0.033, 20), new THREE.MeshStandardMaterial({ color: 0x8a4a1c, roughness: 0.08 }), MG_X, DT + 0.075, MG_Z, -Math.PI / 2, 0, 0);
   // a swivel office chair: five legs on casters, a gas lift, a tilt mechanism, a padded seat and a curved back with
   // a lumbar pad on a support spine, and padded arm rests
   function ciOfficeChair(x, z, ry) {
