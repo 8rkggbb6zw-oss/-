@@ -5697,11 +5697,12 @@ function startGame(THREE) {
     fadeBox.style.transition = 'opacity 0.9s';
     fadeBox.style.opacity = 1;
     showToast('Zzz…', 1600);
+    var stayedUpLate = state.minutes < 2 * 60;                         // got to bed between midnight and 2 am?
     setTimeout(function () {
-      wakeNextMorning();                                               // well rested: full mana and stamina, at 6 am
+      wakeNextMorning(stayedUpLate);                                   // well rested: full mana and stamina at 6 am (only half if you stayed up late)
       setTimeout(function () {
         fadeBox.style.opacity = 0;
-        showToast('Good morning! ☀ Day ' + state.day, 2600);
+        showToast(stayedUpLate ? 'Good morning… you stayed up late, so you only have half your stamina 🥱 ☀ Day ' + state.day : 'Good morning! ☀ Day ' + state.day, stayedUpLate ? 3400 : 2600);
         setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = false; }, 900);
       }, 1200);
     }, 1000);
@@ -5725,11 +5726,11 @@ function startGame(THREE) {
     popSound();
     showToast('Yum! +' + Math.round(state.stamina - before) + ' stamina 🌸', 1800);
   }
-  function wakeNextMorning() {                                        // shared by sleeping and collapsing
+  function wakeNextMorning(halfStamina) {                             // shared by sleeping and collapsing (halfStamina: you stayed up past midnight)
     if (state.minutes >= 6 * 60) state.day += 1;                      // wake at 6 am the next morning
     state.minutes = 6 * 60;                                            // (after midnight, it's 6 am that same morning)
     state.mana = MAX_MANA;
-    state.stamina = MAX_STAMINA;
+    state.stamina = halfStamina ? MAX_STAMINA / 2 : MAX_STAMINA;
     tiredWarned = false;
     updateClock(0);
   }
@@ -5761,11 +5762,59 @@ function startGame(THREE) {
       }, 1500);
     }, 1400);
   }
+  // Bedtime: at midnight the clock turns red and chimes. Get to bed by 2 am (you'll wake with half stamina). Still up at
+  // 2 am? You pass out, wake up at the clinic at 6 am with half stamina, and the visit costs 500 Star Coins
+  var CLINIC_FEE = 500, wasLate = null;
+  function lateAlarm() {                                               // a little two-tone alarm: ding-dong, ding-dong
+    if (!audioCtx) return;
+    [988, 740, 988, 740].forEach(function (fr, i) { bellTone(fr, 0.07, 0.6, i * 0.28); bellTone(fr * 2, 0.02, 0.4, i * 0.28 + 0.01); });
+  }
+  function updateBedtime() {
+    var late = state.minutes < 6 * 60;                                 // from midnight until morning
+    if (wasLate !== late) {
+      ui.clock.style.color = late ? '#e0304a' : '';
+      ui.clock.style.fontWeight = late ? '700' : '';
+      if (late && wasLate === false && !sleeping) { lateAlarm(); showToast('It\'s midnight! 🌙 Get to bed by 2 am…', 3000); }
+      wasLate = late;
+    }
+    if (state.minutes >= 2 * 60 && state.minutes < 6 * 60 && !sleeping && !passingOut) collapseToClinic();
+  }
+  function collapseToClinic() {                                        // up too late: you pass out and wake up at the clinic
+    passingOut = sleeping = true;
+    walkTarget = null; keys = {};
+    if (binOpen) closeBin();
+    if (shopOpen) closeShop();
+    toggleBag(false);
+    sleepSound();
+    showToast('It\'s 2 am… you can\'t keep your eyes open 💫', 1800);
+    fadeBox.style.transition = 'opacity 1.2s';
+    fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (!indoors) outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw };
+      indoors = true; inShop = false; inClinic = true;                  // carried to the clinic, beside the exam table
+      clinicScene.add(player);
+      player.position.set(CIN_X + 2.0, 0, CIN_Z - 1.1);
+      facing = Math.PI;
+      cam.dist = 8.5; cam.pitch = 0.85; cam.yaw = 0;
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      doorArmed = false;
+      var paid = Math.min(CLINIC_FEE, state.coins);                    // the visit costs 500 Star Coins (or all you have, if you have less)
+      state.coins -= paid;
+      showCoins(true);
+      wakeNextMorning(true);
+      setTimeout(function () {
+        fadeBox.style.opacity = 0;
+        showToast('You passed out and woke up at Everdawn Clinic. The visit cost ' + paid + ' Star Coins, and you only have half your stamina. ☀ Day ' + state.day, 4200);
+        setTimeout(function () { fadeBox.style.transition = 'opacity 0.35s'; sleeping = passingOut = false; }, 1300);
+      }, 1500);
+    }, 1400);
+  }
   function updateStamina() {
     if (ui.stamina) ui.stamina.style.width = (state.stamina / MAX_STAMINA * 100).toFixed(1) + '%';
     var stText = Math.ceil(state.stamina - 0.001) + ' / ' + MAX_STAMINA;
     if (ui.staminaNum && ui.staminaNum.textContent !== stText) ui.staminaNum.textContent = stText;
     if (state.stamina <= 0 && !passingOut && !sleeping) passOut();
+    updateBedtime();
   }
   sleepBtn.addEventListener('click', function () { goToSleep(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyZ') goToSleep(); });
