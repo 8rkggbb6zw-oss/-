@@ -10826,7 +10826,6 @@ function startGame(THREE) {
   });
   [-0.27, 0.27].forEach(function (px) { ciWallPart('S', new THREE.BoxGeometry(0.42, 0.6, 0.03), CI.tealVinyl, px, 0.6, 0.11); });
   ciWallPart('S', new THREE.SphereGeometry(0.055, 10, 8), CI.brass, -0.45, 1.1, 0.14);
-  ciPart(new THREE.BoxGeometry(1.1, 0.02, 0.6), new THREE.MeshStandardMaterial({ color: 0x8a5a5a, roughness: 1 }), 0, 0.01, CIN_D / 2 - 0.45);   // a doormat
   var CIN_EXIT_Z = CIN_D / 2 - 0.6;
   // a round clock over the door
   ciWallPart('S', new THREE.CylinderGeometry(0.24, 0.24, 0.05, 32), CI.white, 0, 2.95, 0.03, Math.PI / 2, 0, 0);
@@ -10979,26 +10978,140 @@ function startGame(THREE) {
   ciSolids.push([MAG_X, MAG_Z, 0.36]);
   // a heart poster over the chairs, on the left wall (along the left wall, x on the wall is minus the room's z)
   ciFramed('W', -2.0, 2.05, 0.55, 0.75, ciHeartTex, CI.white);
-  // a water cooler by the door, with a stack of paper cups
-  var WC_X = -1.45, WC_Z = CIN_D / 2 - 0.35;
-  ciPart(new THREE.BoxGeometry(0.34, 0.95, 0.34), CI.white, WC_X, 0.475, WC_Z);
-  ciPart(new THREE.BoxGeometry(0.2, 0.12, 0.02), CI.black, WC_X, 0.78, WC_Z - 0.17);
-  [-0.05, 0.05].forEach(function (tx, k) { ciPart(new THREE.BoxGeometry(0.035, 0.05, 0.04), k ? new THREE.MeshStandardMaterial({ color: 0x4a8ad0 }) : new THREE.MeshStandardMaterial({ color: 0xd04a5a }), WC_X + tx, 0.82, WC_Z - 0.19); });
-  ciPart(new THREE.CylinderGeometry(0.15, 0.15, 0.4, 20), new THREE.MeshStandardMaterial({ color: 0x9fd0f0, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55 }), WC_X, 1.17, WC_Z);
-  ciPart(new THREE.CylinderGeometry(0.15, 0.06, 0.08, 20), new THREE.MeshStandardMaterial({ color: 0x9fd0f0, roughness: 0.05, transparent: true, opacity: 0.55 }), WC_X, 0.99, WC_Z);
-  ciPart(new THREE.CylinderGeometry(0.035, 0.03, 0.25, 12), CI.paper, WC_X + 0.22, 0.75, WC_Z, 0, 0, 0);
+  // a water cooler by the door: a white cabinet with a recessed dispensing alcove, hot and cold taps, indicator lights,
+  // a slotted drip tray, side vents, a label, a cup dispenser on its side, and a big ribbed jug of spring water on top
+  // with bubbles rising through it now and then
+  var WC_X = -1.45, WC_Z = CIN_D / 2 - 0.36, WC_F = WC_Z - 0.165;     // WC_F: its front, facing into the room
+  var wcBlue = new THREE.MeshStandardMaterial({ color: 0x4a8ad0, roughness: 0.3 }), wcRed = new THREE.MeshStandardMaterial({ color: 0xd04a5a, roughness: 0.3 });
+  ciPart(ciRoundBox(0.32, 0.9, 0.32, 0.025), CI.white, WC_X, 0.47, WC_Z);
+  ciPart(ciRoundBox(0.3, 0.04, 0.3, 0.012), CI_KICK, WC_X, 0.02, WC_Z);                                                // the base
+  ciPart(ciRoundBox(0.34, 0.05, 0.34, 0.015), CI.white, WC_X, 0.94, WC_Z);                                             // the top collar
+  ciPart(new THREE.CylinderGeometry(0.07, 0.07, 0.025, 20), CI_KICK, WC_X, 0.975, WC_Z);
+  ciPart(new THREE.BoxGeometry(0.22, 0.26, 0.05), new THREE.MeshStandardMaterial({ color: 0x3a4248, roughness: 0.5 }), WC_X, 0.66, WC_F + 0.02);   // the alcove
+  ciPart(new THREE.BoxGeometry(0.2, 0.012, 0.09), CI_CHROME, WC_X, 0.54, WC_F - 0.02);                                 // the drip tray, with slots
+  for (var ds = 0; ds < 6; ds++) ciPart(new THREE.BoxGeometry(0.018, 0.004, 0.07), CI_KICK, WC_X - 0.075 + ds * 0.03, 0.547, WC_F - 0.02);
+  [[-0.05, wcRed], [0.05, wcBlue]].forEach(function (tp) {              // the taps: a spout and a push paddle each, the hot one with a safety catch
+    ciPart(new THREE.CylinderGeometry(0.012, 0.01, 0.05, 10), CI.white, WC_X + tp[0], 0.74, WC_F - 0.005);
+    ciPart(ciRoundBox(0.045, 0.06, 0.02, 0.008), tp[1], WC_X + tp[0], 0.775, WC_F - 0.025, 0.25, 0, 0);
+    if (tp[1] === wcRed) ciPart(new THREE.BoxGeometry(0.02, 0.01, 0.012), CI.white, WC_X + tp[0], 0.81, WC_F - 0.03);
+  });
+  [[-0.06, 0xff6a6a], [0.06, 0x6ad0ff]].forEach(function (ld) {        // little indicator lights
+    ciPart(new THREE.SphereGeometry(0.007, 8, 6), new THREE.MeshStandardMaterial({ color: ld[1], emissive: ld[1], emissiveIntensity: 1 }), WC_X + ld[0], 0.86, WC_F - 0.003);
+  });
+  var wcLabelTex = paintTexture(128, 48, function (g, w, h) {
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#4a8ad0'; g.beginPath(); g.moveTo(18, 8); g.quadraticCurveTo(30, 24, 18, 38); g.quadraticCurveTo(6, 24, 18, 8); g.fill();
+    g.fillStyle = '#2f6f68'; g.font = 'bold 14px Georgia, serif'; g.fillText('Everdawn', 34, 22); g.font = 'italic 11px Georgia, serif'; g.fillText('spring water', 36, 37);
+  });
+  ciPart(new THREE.PlaneGeometry(0.2, 0.075), new THREE.MeshStandardMaterial({ map: wcLabelTex, roughness: 0.6 }), WC_X, 0.36, WC_F - 0.001, 0, Math.PI, 0);
+  for (var wv = 0; wv < 7; wv++) [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(0.004, 0.012, 0.18), CI_KICK, WC_X + s * 0.161, 0.2 + wv * 0.03, WC_Z); });   // vents down the sides
+  // the cup dispenser on its right side, with paper cones stacked inside
+  var cupX = WC_X + 0.205;
+  ciPart(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xcfe6f2, roughness: 0.1, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), cupX, 0.7, WC_Z - 0.06);
+  ciPart(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), CI.white, cupX, 0.86, WC_Z - 0.06);
+  ciPart(new THREE.TorusGeometry(0.036, 0.006, 6, 16), CI.white, cupX, 0.55, WC_Z - 0.06, Math.PI / 2, 0, 0);
+  ciPart(new THREE.BoxGeometry(0.03, 0.08, 0.02), CI.white, cupX - 0.035, 0.7, WC_Z - 0.06);
+  for (var cu = 0; cu < 8; cu++) ciPart(new THREE.ConeGeometry(0.03, 0.08, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xfbfbf6, roughness: 0.9, side: THREE.DoubleSide }), cupX, 0.56 + cu * 0.035, WC_Z - 0.06, Math.PI, 0, 0);
+  // the jug: upside down in the collar, with moulded ribs, a grip and a label band, full of water up to an air pocket
+  var jugPts = [], waterPts = [];
+  [[0.032, 0], [0.034, 0.05], [0.06, 0.08], [0.12, 0.11], [0.145, 0.15], [0.148, 0.38], [0.14, 0.44], [0.1, 0.48], [0.02, 0.495], [0, 0.496]].forEach(function (q) { jugPts.push(new THREE.Vector2(q[0], q[1])); });
+  [[0.001, 0.005], [0.028, 0.005], [0.03, 0.05], [0.056, 0.08], [0.115, 0.11], [0.14, 0.15], [0.142, 0.4], [0.001, 0.4]].forEach(function (q) { waterPts.push(new THREE.Vector2(q[0], q[1])); });
+  var JUG_Y = 0.985;
+  ciPart(new THREE.LatheGeometry(waterPts, 28), new THREE.MeshStandardMaterial({ color: 0x8ec8ee, roughness: 0.05, metalness: 0.05, transparent: true, opacity: 0.5, depthWrite: false }), WC_X, JUG_Y, WC_Z).renderOrder = 2;
+  ciPart(new THREE.LatheGeometry(jugPts, 28), new THREE.MeshStandardMaterial({ color: 0xd8eefa, roughness: 0.03, metalness: 0.1, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }), WC_X, JUG_Y, WC_Z).renderOrder = 3;
+  [0.19, 0.26, 0.33].forEach(function (ry2) { ciPart(new THREE.TorusGeometry(0.149, 0.005, 6, 32), new THREE.MeshStandardMaterial({ color: 0xc8e6f6, roughness: 0.05, transparent: true, opacity: 0.5, depthWrite: false }), WC_X, JUG_Y + ry2, WC_Z, Math.PI / 2, 0, 0).renderOrder = 3; });
+  ciPart(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 28, 1, true), new THREE.MeshStandardMaterial({ map: wcLabelTex, roughness: 0.6, side: THREE.DoubleSide }), WC_X, JUG_Y + 0.225, WC_Z).renderOrder = 4;
+  ciPart(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), wcBlue, WC_X, JUG_Y + 0.02, WC_Z);                       // the cap, seated in the collar
+  var wcBubbles = [];
+  for (var bb = 0; bb < 4; bb++) {
+    var bub = ciPart(new THREE.SphereGeometry(0.012 + bb * 0.003, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.6, depthWrite: false }), WC_X, JUG_Y + 0.1, WC_Z);
+    bub.castShadow = false; bub.renderOrder = 2; wcBubbles.push({ m: bub, p: bb * 0.27, x: (isle2Hash(bb * 3.3) - 0.5) * 0.12, z: (isle2Hash(bb * 5.1) - 0.5) * 0.12 });
+  }
   ciSolids.push([WC_X, WC_Z, 0.3]);
-  // big leafy plants in the corners
+
+  // big leafy monsteras in the corners: split, holey leaves on long curving stems around a moss pole, with an aerial
+  // root or two, in a ribbed ceramic pot on a little wooden stand
+  var ciMonsteraTex = paintTexture(128, 128, function (g, w, h) {     // the leaf's surface: glossy deep green with paler veins
+    var lg = g.createLinearGradient(0, h, 0, 0); lg.addColorStop(0, '#2a5a2c'); lg.addColorStop(1, '#3f7a3a');
+    g.fillStyle = lg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(170,210,140,0.75)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 0); g.stroke();   // the midrib
+    g.lineWidth = 1.1; g.strokeStyle = 'rgba(150,200,130,0.45)';
+    for (var v = 0; v < 9; v++) { var vy = h - 14 - v * 12; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + s * 30, vy - 10, w / 2 + s * 64, vy - 22); g.stroke(); }); }
+    for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i) * 0.05 + ')'; g.fillRect(isle2Hash(i * 2.2) * w, isle2Hash(i * 3.6) * h, 2, 1); }
+  });
+  var ciMonsteraMat = new THREE.MeshStandardMaterial({ map: ciMonsteraTex, roughness: 0.35, side: THREE.DoubleSide });
+  function ciMonsteraLeaf(L, seed) {                                  // a heart-shaped leaf with slits from the edge and small holes by the midrib
+    var shape = new THREE.Shape(), N = 34, slits = [0.28, 0.42, 0.56, 0.7, 0.83];
+    function W(u) { return 0.48 * L * Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, u))), 0.72); }
+    function Y(u) { return -0.06 * L + u * 1.06 * L; }
+    var side = function (s, forward) {
+      for (var i = 0; i <= N; i++) {
+        var u = forward ? 0.04 + (i / N) * 0.96 : 1 - (i / N) * 0.96;
+        var slit = -1;
+        for (var k = 0; k < slits.length; k++) if (Math.abs(u - slits[k] - (isle2Hash(seed + k + s) - 0.5) * 0.03) < 0.5 / N) slit = k;
+        if (slit >= 0 && isle2Hash(seed * 3 + slit + s * 7) > 0.15) {    // cut a slit in toward the midrib
+          var du = 0.022, o1 = forward ? -du : du;
+          shape.lineTo(s * W(u + o1), Y(u + o1));
+          shape.lineTo(s * W(u) * 0.24, Y(u + o1) - 0.07 * L);
+          shape.lineTo(s * W(u) * 0.26, Y(u - o1) - 0.07 * L);
+          shape.lineTo(s * W(u - o1), Y(u - o1));
+        } else shape.lineTo(s * W(u), Y(u));
+      }
+    };
+    shape.moveTo(0, 0.05 * L);                                          // the notch where the stem joins
+    side(1, true); side(-1, false);
+    shape.lineTo(0, 0.05 * L);
+    [0.35, 0.49, 0.63].forEach(function (hu, k) {                       // little oval holes beside the midrib
+      [-1, 1].forEach(function (s) {
+        if (isle2Hash(seed + k * 5 + s) < 0.3) return;
+        var hole = new THREE.Path(); hole.absellipse(s * W(hu) * 0.42, Y(hu) - 0.054 * L, 0.035 * L, 0.018 * L, 0, Math.PI * 2, true, s * 0.5); shape.holes.push(hole);
+      });
+    });
+    var geo = new THREE.ShapeGeometry(shape, 6), p = geo.attributes.position, uv = geo.attributes.uv;
+    for (var vi = 0; vi < p.count; vi++) {
+      var x = p.getX(vi), y = p.getY(vi);
+      uv.setXY(vi, x / L + 0.5, (y + 0.06 * L) / (1.06 * L));
+      p.setZ(vi, Math.pow(x / (0.5 * L), 2) * 0.08 * L - Math.pow(Math.max(0, y) / L, 2) * 0.22 * L);   // cupped a little, its tip drooping
+    }
+    geo.computeVertexNormals();
+    return geo;
+  }
+  var ciStemMat = new THREE.MeshStandardMaterial({ color: 0x4a7a3a, roughness: 0.5 }), ciRootMat = new THREE.MeshStandardMaterial({ color: 0x6a5038, roughness: 0.8 });
+  var ciPotMat = new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.55 });
   function ciPlant(x, z, s) {
-    ciPart(new THREE.CylinderGeometry(0.24 * s, 0.18 * s, 0.42 * s, 18), CI.white, x, 0.21 * s, z);
-    ciPart(new THREE.TorusGeometry(0.24 * s, 0.02 * s, 6, 18), CI.teal, x, 0.4 * s, z, Math.PI / 2, 0, 0);
-    ciPart(new THREE.CylinderGeometry(0.22 * s, 0.22 * s, 0.02, 16), CI.soil, x, 0.39 * s, z);
-    for (var l = 0; l < 11; l++) {
-      var a = l * 2.4 + x, up = 0.35 + isle2Hash(l + x * 3) * 0.75, out = 0.12 + isle2Hash(l * 2 + z) * 0.25;
-      var lx = x + Math.cos(a) * out * s, lz = z + Math.sin(a) * out * s, ly = (0.4 + up) * s;
-      ciPart(new THREE.CylinderGeometry(0.008 * s, 0.01 * s, up * s, 5), CI.leaf, (x + lx) / 2, (0.4 * s + ly) / 2, (z + lz) / 2, Math.sin(a) * out * 1.2, 0, -Math.cos(a) * out * 1.2);
-      var leaf = ciPart(new THREE.CircleGeometry(0.17 * s, 14), CI.leaf, lx + Math.cos(a) * 0.08 * s, ly, lz + Math.sin(a) * 0.08 * s, 0, 0, 0);
-      leaf.rotation.set(-Math.PI / 2 + 0.6, 0, 0); leaf.rotation.order = 'YXZ'; leaf.rotation.y = -a + Math.PI / 2; leaf.scale.set(0.7, 1.2, 1);
+    var STAND = 0.14 * s, potH = 0.38 * s, potR = 0.22 * s;
+    // the stand: a ring on four splayed legs
+    ciPart(new THREE.TorusGeometry(potR * 0.82, 0.016 * s, 8, 24), CI_OAK, x, STAND, z, Math.PI / 2, 0, 0);
+    for (var lg = 0; lg < 4; lg++) { var la = lg / 4 * Math.PI * 2 + 0.785; ciRod(new THREE.Vector3(x + Math.cos(la) * potR * 0.8, STAND, z + Math.sin(la) * potR * 0.8), new THREE.Vector3(x + Math.cos(la) * potR * 1.05, 0, z + Math.sin(la) * potR * 1.05), 0.014 * s, CI_OAK); }
+    // the ribbed pot
+    var potPts = [new THREE.Vector2(0.001, 0), new THREE.Vector2(potR * 0.72, 0), new THREE.Vector2(potR * 0.78, 0.02 * s), new THREE.Vector2(potR * 0.98, potH * 0.85), new THREE.Vector2(potR, potH), new THREE.Vector2(potR * 1.04, potH), new THREE.Vector2(potR * 1.04, potH + 0.02 * s), new THREE.Vector2(potR * 0.93, potH + 0.02 * s), new THREE.Vector2(potR * 0.9, potH - 0.03 * s)];
+    var potGeo = new THREE.LatheGeometry(potPts, 48), pp = potGeo.attributes.position;
+    for (var v = 0; v < pp.count; v++) {
+      var px = pp.getX(v), pz = pp.getZ(v), r = Math.sqrt(px * px + pz * pz), ang = Math.atan2(pz, px), py = pp.getY(v);
+      if (r > 0.01 && py > 0.03 * s && py < potH - 0.01) { var k = 1 + Math.abs(Math.cos(ang * 12)) * 0.035; pp.setX(v, px * k); pp.setZ(v, pz * k); }
+    }
+    potGeo.computeVertexNormals();
+    ciPart(potGeo, ciPotMat, x, STAND, z);
+    var soilY = STAND + potH - 0.04 * s;
+    ciPart(new THREE.CylinderGeometry(potR * 0.9, potR * 0.9, 0.01, 24), CI.soil, x, soilY, z);
+    for (var pb = 0; pb < 14; pb++) { var pa = pb * 2.4, pr = isle2Hash(pb + x) * potR * 0.8; ciPart(new THREE.SphereGeometry(0.012 * s, 6, 4), new THREE.MeshStandardMaterial({ color: pb % 3 ? 0xd8d2c4 : 0xa89a88, roughness: 0.9 }), x + Math.cos(pa) * pr, soilY + 0.006, z + Math.sin(pa) * pr).scale.set(1, 0.6, 1); }   // pebbles on the soil
+    // the moss pole, and an aerial root or two
+    ciPart(new THREE.CylinderGeometry(0.03 * s, 0.035 * s, 0.6 * s, 10), new THREE.MeshStandardMaterial({ color: 0x6a7a3a, roughness: 1 }), x - 0.03 * s, soilY + 0.3 * s, z - 0.02 * s);
+    for (var rt = 0; rt < 2; rt++) {
+      var ra = rt * 2.7 + x, root = new THREE.CatmullRomCurve3([new THREE.Vector3(x + Math.cos(ra) * 0.05 * s, soilY + 0.3 * s, z + Math.sin(ra) * 0.05 * s), new THREE.Vector3(x + Math.cos(ra) * 0.16 * s, soilY + 0.15 * s, z + Math.sin(ra) * 0.16 * s), new THREE.Vector3(x + Math.cos(ra) * 0.2 * s, soilY, z + Math.sin(ra) * 0.2 * s)]);
+      ciPart(new THREE.TubeGeometry(root, 12, 0.005 * s, 5), ciRootMat, 0, 0, 0);
+    }
+    // the leaves, each on its own curving stem
+    for (var l = 0; l < 9; l++) {
+      var a = l * 2.4 + x * 1.3, h = (0.45 + isle2Hash(l + x * 3) * 0.55) * s, out = (0.14 + isle2Hash(l * 2 + z) * 0.2) * s, pitch = -(0.25 + isle2Hash(l * 5 + x) * 0.55);   // tipped outward, so you see their faces
+      var start = new THREE.Vector3(x + Math.cos(a) * 0.03 * s, soilY, z + Math.sin(a) * 0.03 * s);
+      var end = new THREE.Vector3(x + Math.cos(a) * out, soilY + h, z + Math.sin(a) * out);
+      var stem = new THREE.CatmullRomCurve3([start, new THREE.Vector3(x + Math.cos(a) * out * 0.3, soilY + h * 0.6, z + Math.sin(a) * out * 0.3), new THREE.Vector3(x + Math.cos(a) * out * 0.8, soilY + h * 1.02, z + Math.sin(a) * out * 0.8), end]);
+      ciPart(new THREE.TubeGeometry(stem, 16, 0.007 * s, 6), ciStemMat, 0, 0, 0);
+      var L = (0.38 + isle2Hash(l * 7 + x) * 0.16) * s;
+      var leaf = ciPart(ciMonsteraLeaf(L, l * 11 + Math.round(x * 7)), ciMonsteraMat, end.x, end.y, end.z);
+      var F = new THREE.Vector3(Math.cos(a) * Math.cos(pitch), Math.sin(pitch), Math.sin(a) * Math.cos(pitch)), R = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)), Nn = new THREE.Vector3().crossVectors(R, F);
+      leaf.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(R, F, Nn));
     }
   }
   ciPlant(-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 1.25); ciSolids.push([-CIN_W / 2 + 0.45, CIN_D / 2 - 0.45, 0.35]);
@@ -11567,6 +11680,11 @@ function startGame(THREE) {
     ciSun.intensity = 0.5 * (1 - nt);                                   // daylight only comes in through the windows by day
     for (var i = 0; i < ciTonics.length; i++) ciTonics[i].emissiveIntensity = 0.45 + Math.sin(t * 1.8 + i) * 0.15;
     mcGlow.material.opacity = 0.3 + Math.sin(t * 1.3) * 0.06;
+    for (var wb = 0; wb < wcBubbles.length; wb++) {                     // a bubble glugs up through the water cooler's jug now and then
+      var B = wcBubbles[wb], bt = (t * 0.35 + B.p) % 1.6;
+      B.m.visible = bt < 1;
+      B.m.position.set(WC_X + B.x * (0.4 + bt * 0.6), JUG_Y + 0.06 + bt * 0.33, WC_Z + B.z * (0.4 + bt * 0.6));
+    }
     for (var cc = 0; cc < ciCurtains.length; cc++) ciCurtains[cc].rotation.x = Math.sin(t * 0.7 + cc * 2) * 0.012;   // the curtains sway very gently
     ciMonLed.material.emissiveIntensity = (t % 0.83) < 0.12 ? 1.6 : 0.4;   // the monitor's light blinks with each heartbeat
     var mins = state.minutes % 720;                                     // the clock on the wall keeps the island's time
