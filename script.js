@@ -2019,12 +2019,13 @@ function startGame(THREE) {
   // carved edge beams, a balustrade of turned stone balusters with a handrail, tall iron lamp posts on stone plinths,
   // a great arched gateway at each end, and under the deck a rugged rock keel with crystals glinting in it
   var BRIDGE_X = 0, BRIDGE_Z0 = 31.5, BRIDGE_Z1 = 80.5, BRIDGE_W = 3.4, BRIDGE_RISE = 1.6;
+  var bridgeFirstChild = scene.children.length, bridgeFirstSolid = solids.length;   // (everything built from here on is the bridge: it's copied for the second bridge)
   function onBridge(x, z) { return Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 - 0.45 && z > BRIDGE_Z0 - 1 && z < BRIDGE_Z1 + 1; }
   function bridgeY(z) {                                               // the height of the walkway: level with the land at each end, arching up in the middle
     var t = Math.max(0, Math.min(1, (z - BRIDGE_Z0) / (BRIDGE_Z1 - BRIDGE_Z0)));
     return 0.06 + Math.sin(t * Math.PI) * BRIDGE_RISE;
   }
-  function nearBridgeLanding(x, z, r) { return Math.abs(x - BRIDGE_X) < 3.6 + r && z > BRIDGE_Z0 - 6 - r; } // keep the way onto the bridge clear
+  function nearBridgeLanding(x, z, r) { return (Math.abs(x - BRIDGE_X) < 3.6 + r && z > BRIDGE_Z0 - 6 - r) || (Math.abs(z - BRIDGE2_Z) < 3.6 + r && x < -(BRIDGE_Z0 - 6 - r)); } // keep the way onto both bridges clear
   function bridgeStoneTexture(base, blocksX, blocksY, mortar) {                 // dressed limestone blocks with weathering
     return paintTexture(256, 256, function (g, w, h) {
       g.fillStyle = mortar; g.fillRect(0, 0, w, h);
@@ -2341,6 +2342,7 @@ function startGame(THREE) {
     scene.add(gate);
     solids.push({ x: BRIDGE_X - PIER_X, z: az, r: 0.45 }, { x: BRIDGE_X + PIER_X, z: az, r: 0.45 }); // you walk between the piers
   });
+  var bridgeEndSolid = solids.length;
   function updateBridge(t, night) {
     bridgeGlass.emissiveIntensity = 0.5 + (night || 0) * 1.3;            // the lamps glow brighter after dark
     var nt = night || 0;
@@ -2363,8 +2365,124 @@ function startGame(THREE) {
     });
     bridgeGlows.forEach(function (gl) { gl.s.material.opacity = gl.crystal ? 0.3 + Math.sin(t * 1.6 + gl.p) * 0.12 : 0.15 + (night || 0) * 0.45 + Math.sin(t * 3 + gl.p) * 0.03; });
     bridgeDrifters.forEach(function (d) { d.m.position.y = d.y + Math.sin(t * 0.7 + d.p) * 0.12; d.m.rotation.y = t * 0.12 + d.p; });
+    updateBridge2();
   }
-  function walkable(x, z) { return islandR(x, z) < ISLAND - 1.5 || onBridge(x, z) || onIsle2(x, z, 1.5); } // your island, the bridge, or the new island
+  // ---------- A second bridge, west to a third island ----------
+  // The same grand floating bridge, built again off the west side of your island: every piece of the first bridge is
+  // copied, turned to face west and set down here. Its floating lanterns bob and turn along with the first bridge's
+  var BRIDGE2_Z = 6;                                                   // where it leaves your island's west side (it runs out along -x)
+  var bridge2 = new THREE.Group();
+  bridge2.position.set(0, 0, BRIDGE2_Z); bridge2.rotation.y = -Math.PI / 2;   // the first bridge's (x, z) becomes (-z, BRIDGE2_Z + x)
+  scene.add(bridge2);
+  var bridgeOriginals = scene.children.slice(bridgeFirstChild).filter(function (o) { return o !== bridge2; });
+  var bridgeCopies = bridgeOriginals.map(function (o) { var c = o.clone(true); bridge2.add(c); return c; });
+  var bridge2Sync = [];                                                // the moving parts, kept in step with the first bridge's
+  bridgeLanterns.forEach(function (l) { var i = bridgeOriginals.indexOf(l.g); if (i >= 0) bridge2Sync.push([l.g, bridgeCopies[i]]); });
+  bridgeDrifters.forEach(function (d) { var i = bridgeOriginals.indexOf(d.m); if (i >= 0) bridge2Sync.push([d.m, bridgeCopies[i]]); });
+  function syncTree(a, b) {
+    b.position.copy(a.position); b.quaternion.copy(a.quaternion); b.scale.copy(a.scale);
+    for (var i = 0; i < a.children.length && i < b.children.length; i++) syncTree(a.children[i], b.children[i]);
+  }
+  function updateBridge2() { for (var i = 0; i < bridge2Sync.length; i++) syncTree(bridge2Sync[i][0], bridge2Sync[i][1]); }
+  solids.slice(bridgeFirstSolid, bridgeEndSolid).forEach(function (s) { solids.push({ x: -s.z, z: BRIDGE2_Z + s.x, r: s.r }); });   // its piers bump you too
+  function onBridge2(x, z) { return Math.abs(z - BRIDGE2_Z) < BRIDGE_W / 2 - 0.45 && x < -(BRIDGE_Z0 - 1) && x > -(BRIDGE_Z1 + 1); }
+
+  // ---------- The third island, out to the west ----------
+  // Open grass and wildflowers for now, waiting to become something new
+  var ISLE3_X = -109, ISLE3_Z = BRIDGE2_Z, ISLE3 = 30, ISLE3_SQ = 5;   // its middle, half its width (its near edge meets the bridge), and how square it is
+  function isle3Edge(a) { return ISLE3 / Math.pow(Math.pow(Math.abs(Math.cos(a)), ISLE3_SQ) + Math.pow(Math.abs(Math.sin(a)), ISLE3_SQ), 1 / ISLE3_SQ); }
+  function isle3Band(sTop, sBot, yTop, yBot) {                        // its grassy rim and cliffs
+    var SEG = 180, pos = [], idx = [];
+    for (var i = 0; i <= SEG; i++) {
+      var a = (i / SEG) * Math.PI * 2, e = isle3Edge(a);
+      pos.push(ISLE3_X + Math.cos(a) * e * sTop, yTop, ISLE3_Z + Math.sin(a) * e * sTop, ISLE3_X + Math.cos(a) * e * sBot, yBot, ISLE3_Z + Math.sin(a) * e * sBot);
+    }
+    for (var j = 0; j < SEG; j++) { var k = j * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  }
+  scene.add(new THREE.Mesh(isle3Band(1.03, 0.92, 0, -2.4), sideMat));
+  scene.add(new THREE.Mesh(isle3Band(0.92, 0.3, -2.4, -11), cliffMat));
+  var isle3Top = (function () {                                       // the grassy top, coloured like the other islands' grass
+    var RINGS = 56, SEG = 180, pos = [], col = [], uv = [], idx = [], c = new THREE.Color();
+    var grassA = new THREE.Color(0x8fcb68), grassB = new THREE.Color(0x5a9643), lush = new THREE.Color(0x4a8a3a), sunny = new THREE.Color(0xb8cf72);
+    for (var r = 0; r <= RINGS; r++) {
+      for (var sg = 0; sg <= SEG; sg++) {
+        var a = (sg / SEG) * Math.PI * 2, rr = (r / RINGS) * isle3Edge(a) * 1.03;
+        var x = ISLE3_X + Math.cos(a) * rr, z = ISLE3_Z + Math.sin(a) * rr;
+        pos.push(x, 0, z);
+        uv.push(x * 0.55, z * 0.55);
+        c.copy(grassA).lerp(grassB, noise(x * 0.8, z * 0.8) * 0.5 + 0.5);
+        var lushy = noise(x * 0.45 - 7, z * 0.45 + 2);
+        if (lushy > 0.15) c.lerp(lush, Math.min(0.7, (lushy - 0.15) * 1.4));
+        var patch = noise(x * 2.7 + 5, z * 2.7 - 3);
+        if (patch > 0.3) c.lerp(sunny, Math.min(0.8, (patch - 0.3) * 1.5));
+        c.multiplyScalar(0.94 + noise(x * 9, z * 9) * 0.06);
+        col.push(c.r, c.g, c.b);
+      }
+    }
+    for (var r2 = 0; r2 < RINGS; r2++) for (var s2 = 0; s2 < SEG; s2++) {
+      var p0 = r2 * (SEG + 1) + s2, p1 = p0 + SEG + 1;
+      idx.push(p0, p0 + 1, p1, p0 + 1, p1 + 1, p1);
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return new THREE.Mesh(g, terrain.material);
+  })();
+  isle3Top.receiveShadow = true;
+  scene.add(isle3Top);
+  function onIsle3(x, z, margin) {
+    var dx = x - ISLE3_X, dz = z - ISLE3_Z;
+    return Math.pow(Math.pow(Math.abs(dx), ISLE3_SQ) + Math.pow(Math.abs(dz), ISLE3_SQ), 1 / ISLE3_SQ) < ISLE3 - margin;
+  }
+  var ISLE3_BLADES = 14000, isle3Grass = new THREE.InstancedMesh(tuftGeometry(), grassMat, ISLE3_BLADES), i3n = 0;
+  for (var ib3 = 0; ib3 < ISLE3_BLADES * 2 && i3n < ISLE3_BLADES; ib3++) {   // thick grass all over
+    var jx = ISLE3_X + (isle2Hash(ib3 * 3.1 + 7000) * 2 - 1) * ISLE3, jz = ISLE3_Z + (isle2Hash(ib3 * 7.7 + 7000) * 2 - 1) * ISLE3;
+    if (!onIsle3(jx, jz, 0.5)) continue;
+    var meadow3 = noise(jx * 0.35 + 11, jz * 0.35 - 4);
+    gEuler.set((isle2Hash(ib3 * 1.3 + 7000) - 0.5) * 0.6, isle2Hash(ib3 * 2.9 + 7000) * Math.PI, (isle2Hash(ib3 * 5.3 + 7000) - 0.5) * 0.6);
+    gQuat.setFromEuler(gEuler);
+    var jgs = 0.5 + isle2Hash(ib3 * 9.1 + 7000) * 0.8 + Math.max(0, meadow3) * 0.6;
+    gScale.set(jgs, jgs * (0.55 + isle2Hash(ib3 * 4.4 + 7000) * 0.9) * (isle2Hash(ib3 * 6.6 + 7000) < 0.12 ? 1.6 : 1), jgs);
+    gPos.set(jx, 0, jz);
+    gMatrix.compose(gPos, gQuat, gScale);
+    isle3Grass.setMatrixAt(i3n, gMatrix);
+    var sunny3 = isle2Hash(ib3 * 2.7 + 7000) < 0.25;
+    gColor.setHSL((sunny3 ? 0.19 : 0.25) + isle2Hash(ib3 * 6.2 + 7000) * 0.06, 0.35 + isle2Hash(ib3 * 8.3 + 7000) * 0.25, (sunny3 ? 0.6 : 0.42) + isle2Hash(ib3 * 2.2 + 7000) * 0.22);
+    isle3Grass.setColorAt(i3n, gColor);
+    i3n++;
+  }
+  isle3Grass.count = i3n;
+  isle3Grass.frustumCulled = false;
+  isle3Grass.receiveShadow = true;
+  scene.add(isle3Grass);
+  var ISLE3_FLOWERS = 800, isle3Stems = new THREE.InstancedMesh(stemGeoW, flowerStems.material, ISLE3_FLOWERS), isle3Heads = new THREE.InstancedMesh(headGeoW, flowerHeads.material, ISLE3_FLOWERS), i3f = 0;
+  for (var iw3 = 0; iw3 < ISLE3_FLOWERS * 4 && i3f < ISLE3_FLOWERS; iw3++) {   // wildflowers in little drifts
+    var kx = ISLE3_X + (isle2Hash(iw3 * 13.7 + 9000) * 2 - 1) * ISLE3, kz = ISLE3_Z + (isle2Hash(iw3 * 17.3 + 9000) * 2 - 1) * ISLE3, kh = isle2Hash(iw3 * 3.3 + 9000);
+    if (!onIsle3(kx, kz, 1) || noise(kx * 0.6 + 3, kz * 0.6 - 1) < 0.05 + kh * 0.2) continue;
+    wfE.set((kh - 0.5) * 0.3, isle2Hash(iw3 * 5.5 + 9000) * 6.28, 0);
+    wfQ.setFromEuler(wfE);
+    wfS.setScalar(0.8 + kh * 0.6);
+    wfP.set(kx, 0, kz);
+    wfM.compose(wfP, wfQ, wfS);
+    isle3Stems.setMatrixAt(i3f, wfM);
+    isle3Heads.setMatrixAt(i3f, wfM);
+    isle3Heads.setColorAt(i3f, FLOWER_COLORS[Math.floor(isle2Hash(iw3 * 7.1 + 9000) * FLOWER_COLORS.length)]);
+    i3f++;
+  }
+  isle3Stems.count = isle3Heads.count = i3f;
+  isle3Stems.frustumCulled = isle3Heads.frustumCulled = false;
+  scene.add(isle3Stems);
+  scene.add(isle3Heads);
+
+  function walkable(x, z) { return islandR(x, z) < ISLAND - 1.5 || onBridge(x, z) || onIsle2(x, z, 1.5) || onBridge2(x, z) || onIsle3(x, z, 1.5); } // your island, the bridges, the town square or the western island
 
   // Small flat stones pressed into the dirt paths
   var PEBBLES = 160;
@@ -12511,7 +12629,7 @@ function startGame(THREE) {
   // Press "Next ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
   // the Dawn Tree, the lake and dock, your crops, the shipping bin, the bridge, Whimsy & Bloom, every standing tree,
   // bush and rock, and you, as a little witch's hat, which moves along with you while the map is open
-  var MAP_X0 = -47, MAP_X1 = 47, MAP_Z0 = -42, MAP_Z1 = 168, MAP_S = 6;   // the area it covers, and how many pixels per step
+  var MAP_X0 = -142, MAP_X1 = 47, MAP_Z0 = -42, MAP_Z1 = 168, MAP_S = 6;   // the area it covers, and how many pixels per step
   var MAP_W = Math.round((MAP_X1 - MAP_X0) * MAP_S), MAP_H = Math.round((MAP_Z1 - MAP_Z0) * MAP_S);
   var mapPage = false, mapBase = null, mapTimer = null, mapFollow = true;
   var mapHead = bagUi.box ? bagUi.box.querySelector('.inv-head b') : null;
@@ -12558,10 +12676,11 @@ function startGame(THREE) {
     var BS = 3, bw = Math.round((MAP_X1 - MAP_X0) * BS), bh = Math.round((MAP_Z1 - MAP_Z0) * BS);
     var cv = document.createElement('canvas'); cv.width = bw; cv.height = bh;
     var g = cv.getContext('2d'), img = g.createImageData(bw, bh), d = img.data;
-    function land(x, z) { return islandR(x, z) < ISLAND || onIsle2(x, z, 0); }
+    function land(x, z) { return islandR(x, z) < ISLAND || onIsle2(x, z, 0) || onIsle3(x, z, 0); }
     for (var py = 0; py < bh; py++) for (var px = 0; px < bw; px++) {
       var x = MAP_X0 + (px + 0.5) / BS, z = MAP_Z0 + (py + 0.5) / BS, c, i = (py * bw + px) * 4;
-      var main = islandR(x, z) < ISLAND, isle = onIsle2(x, z, 0), br = Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + 0.3 && z > BRIDGE_Z0 - 1.5 && z < BRIDGE_Z1 + 1.5;
+      var main = islandR(x, z) < ISLAND, isle3 = onIsle3(x, z, 0), isle = onIsle2(x, z, 0) || isle3, br = Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + 0.3 && z > BRIDGE_Z0 - 1.5 && z < BRIDGE_Z1 + 1.5;
+      var br2 = Math.abs(z - BRIDGE2_Z) < BRIDGE_W / 2 + 0.3 && x < -(BRIDGE_Z0 - 1.5) && x > -(BRIDGE_Z1 + 1.5);   // the west bridge
       var n = (isle2Hash(px * 7.1 + py * 3.3) - 0.5) * 10, n2 = Math.sin(x * 0.9 + Math.sin(z * 0.7) * 2) * 6 + Math.sin(z * 1.3 + x * 0.4) * 5;   // speckle and soft patches of lighter and darker grass
       if (main && inLake(x, z)) {
         if (onDock(x, z)) c = [170, 122, 80];
@@ -12572,11 +12691,12 @@ function startGame(THREE) {
         else if (main && nearLake(x, z)) c = [196, 206, 150];                                  // a sandy shore round the lake
         else c = isle ? [128, 194, 108] : [122, 188, 100];
         if (edge < 1.4) c = [c[0] - 30, c[1] - 30, c[2] - 26];                                  // the grassy rim at the edge
-        if (isle && !onIsle2(x, z, 1.2)) c = [96, 156, 82];
+        if (isle && !onIsle2(x, z, 1.2) && !onIsle3(x, z, 1.2)) c = [96, 156, 82];
         if (isle && stonePathDist(x, z) < SP_W) c = (Math.floor(x * 1.6) + Math.floor(z * 1.6)) % 2 ? [222, 214, 198] : [206, 198, 184];   // the stone path to the shop
-      } else if (br) {
-        c = Math.abs(x - BRIDGE_X) > BRIDGE_W / 2 - 0.15 ? [170, 160, 150] : [210, 200, 186];  // railings and paving
-        if (Math.abs(x - BRIDGE_X) <= BRIDGE_W / 2 - 0.15 && (Math.floor(z * 1.5) % 2 === 0)) c = [200, 190, 176];
+      } else if (br || br2) {
+        var across = br ? Math.abs(x - BRIDGE_X) : Math.abs(z - BRIDGE2_Z), along = br ? z : x;
+        c = across > BRIDGE_W / 2 - 0.15 ? [170, 160, 150] : [210, 200, 186];  // railings and paving
+        if (across <= BRIDGE_W / 2 - 0.15 && (Math.floor(along * 1.5) % 2 === 0)) c = [200, 190, 176];
         n = n * 0.4; n2 = 0;
       } else {
         var shadow = land(x - 1.2, z - 1.6) ? 22 : 0;                                          // the islands cast a soft shadow on the clouds below
@@ -12669,8 +12789,12 @@ function startGame(THREE) {
     label('Shipping Bin', binWorld.x, binWorld.z, 20, 15);
     // the bridge's gateways and its floating lanterns
     [BRIDGE_Z0, BRIDGE_Z1].forEach(function (gz) { var a2 = mapXY(BRIDGE_X - BRIDGE_W / 2 - 0.3, gz), b2 = mapXY(BRIDGE_X + BRIDGE_W / 2 + 0.3, gz); g.fillStyle = '#d8ccbc'; g.fillRect(a2[0] - 6, a2[1] - 6, 12, 12); g.fillRect(b2[0] - 6, b2[1] - 6, 12, 12); });
+    [BRIDGE_Z0, BRIDGE_Z1].forEach(function (gz) { var a3 = mapXY(-gz, BRIDGE2_Z - BRIDGE_W / 2 - 0.3), b3 = mapXY(-gz, BRIDGE2_Z + BRIDGE_W / 2 + 0.3); g.fillStyle = '#d8ccbc'; g.fillRect(a3[0] - 6, a3[1] - 6, 12, 12); g.fillRect(b3[0] - 6, b3[1] - 6, 12, 12); });   // and the west bridge's
+    for (var bl2 = BRIDGE_Z0 + 6; bl2 < BRIDGE_Z1 - 3; bl2 += 9) { [-1, 1].forEach(function (sd) { var lp = mapXY(-bl2, BRIDGE2_Z + sd * (BRIDGE_W / 2 + 0.9)); var lg = g.createRadialGradient(lp[0], lp[1], 1, lp[0], lp[1], 12); lg.addColorStop(0, 'rgba(200,150,255,0.95)'); lg.addColorStop(1, 'rgba(200,150,255,0)'); g.fillStyle = lg; g.fillRect(lp[0] - 12, lp[1] - 12, 24, 24); }); }
     for (var bl = BRIDGE_Z0 + 6; bl < BRIDGE_Z1 - 3; bl += 9) { [-1, 1].forEach(function (sd) { var lp = mapXY(BRIDGE_X + sd * (BRIDGE_W / 2 + 0.9), bl); var lg = g.createRadialGradient(lp[0], lp[1], 1, lp[0], lp[1], 12); lg.addColorStop(0, 'rgba(200,150,255,0.95)'); lg.addColorStop(1, 'rgba(200,150,255,0)'); g.fillStyle = lg; g.fillRect(lp[0] - 12, lp[1] - 12, 24, 24); }); }
     label('Bridge', BRIDGE_X + 7, (BRIDGE_Z0 + BRIDGE_Z1) / 2, 0);
+    label('West Bridge', -(BRIDGE_Z0 + BRIDGE_Z1) / 2, BRIDGE2_Z - 6, 0);
+    label('Western Isle', ISLE3_X, ISLE3_Z, 0, 26);
     // Whimsy & Bloom: its slate roof, turned the way it faces, with the front steps
     var sp = mapXY(SHOP_X, SHOP_Z);
     g.save(); g.translate(sp[0], sp[1]); g.rotate(-SHOP_TURN);
@@ -12992,7 +13116,7 @@ function startGame(THREE) {
       facing += turn * Math.min(1, dt * 14);
     }
     player.rotation.y = facing;
-    var footY = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
+    var footY = indoors ? 0 : onDock(player.position.x, player.position.z) ? DOCK_Y : onBridge(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(player.position.z)) : onBridge2(player.position.x, player.position.z) ? Math.max(groundHeight(player.position.x, player.position.z), bridgeY(-player.position.x)) : groundHeight(player.position.x, player.position.z) + porchHeight(player.position.x, player.position.z) + shopStepHeight(player.position.x, player.position.z) + clinicStepHeight(player.position.x, player.position.z); // up the porch, shop and clinic steps, and over the bridge
     var stepUp = footY - player.position.y;                             // ease up and down steps instead of popping, but snap after a door or a teleport
     player.position.y = Math.abs(stepUp) > 0.5 ? footY : player.position.y + stepUp * Math.min(1, dt * 16);
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
