@@ -5327,18 +5327,59 @@ function startGame(THREE) {
     });
     im.castShadow = true; barnGroup.add(im);
   })();
-  var sackMat = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 1 });
-  [[2.5, 0.85], [2.95, 0.95], [2.72, 0.85]].forEach(function (sk, k) {
-    var sack = apPart(new THREE.SphereGeometry(0.28, 12, 10), sackMat, sk[0], k === 2 ? 0.55 : 0.24, B_FZ + sk[1]);
-    sack.scale.set(0.8, 0.95, 0.55);
-    apPart(new THREE.CylinderGeometry(0.06, 0.1, 0.12, 8), sackMat, sk[0], (k === 2 ? 0.55 : 0.24) + 0.28, B_FZ + sk[1]);
+  // burlap feed sacks: a coarse woven cloth with a printed label, plump and slumped, their necks gathered and tied
+  // with twine, the top one flopped over the others
+  var burlapTex = paintTexture(128, 128, function (g, w, h) {
+    g.fillStyle = '#c8b088'; g.fillRect(0, 0, w, h);
+    for (var y = 0; y < h; y += 3) { g.fillStyle = 'rgba(90,65,35,' + (0.18 + isle2Hash(y) * 0.12) + ')'; g.fillRect(0, y, w, 1); }     // the weave: weft
+    for (var x = 0; x < w; x += 3) { g.fillStyle = 'rgba(255,240,210,' + (0.1 + isle2Hash(x + 50) * 0.1) + ')'; g.fillRect(x, 0, 1, h); }   // and warp
+    for (var i = 0; i < 400; i++) { g.fillStyle = 'rgba(80,55,25,' + isle2Hash(i * 3) * 0.2 + ')'; g.fillRect(isle2Hash(i) * w, isle2Hash(i * 2) * h, 1 + isle2Hash(i * 5) * 3, 1); }   // slubs
+  });
+  burlapTex.wrapS = burlapTex.wrapT = THREE.RepeatWrapping; burlapTex.repeat.set(3, 3);
+  var sackLabels = ['HEN FEED', 'SHEEP MIX', 'OATS'].map(function (t, k) {
+    return paintTexture(128, 96, function (g, w, h) {
+      g.fillStyle = '#c8b088'; g.fillRect(0, 0, w, h);
+      for (var y = 0; y < h; y += 3) { g.fillStyle = 'rgba(90,65,35,0.2)'; g.fillRect(0, y, w, 1); }
+      g.strokeStyle = ['#8a2a20', '#2f5a3a', '#2f4a6a'][k]; g.lineWidth = 4; g.strokeRect(10, 10, w - 20, h - 20);
+      g.fillStyle = g.strokeStyle; g.textAlign = 'center'; g.font = 'bold 19px Georgia, serif'; g.fillText(t, w / 2, 46);
+      g.font = 'italic 11px Georgia, serif'; g.fillText('Fluff & Feather', w / 2, 66);
+      g.beginPath(); g.moveTo(w / 2, 82); g.bezierCurveTo(w / 2 - 8, 74, w / 2 - 5, 70, w / 2, 74); g.bezierCurveTo(w / 2 + 5, 70, w / 2 + 8, 74, w / 2, 82); g.fill();
+    });
+  });
+  var sackMat = new THREE.MeshStandardMaterial({ map: burlapTex, bumpMap: burlapTex, bumpScale: 0.02, roughness: 1 });
+  var sackTwine = new THREE.MeshStandardMaterial({ color: 0x9a7448, roughness: 0.9 });
+  [[2.5, 0.85, 0.2, 0.24, 0], [2.98, 0.95, -0.3, 0.24, 1], [2.74, 0.82, 0.9, 0.62, 2]].forEach(function (sk) {
+    var sg = new THREE.Group(); sg.position.set(sk[0], sk[3] - 0.24, B_FZ + sk[1]); sg.rotation.y = sk[2]; barnGroup.add(sg);
+    if (sk[4] === 2) sg.rotation.z = 1.2;                             // the top sack lies flopped across the others
+    var geo = new THREE.SphereGeometry(0.28, 20, 16), gp = geo.attributes.position;
+    for (var v = 0; v < gp.count; v++) {                              // a slumped sack: flat bottom, squared shoulders, lumpy sides
+      var x = gp.getX(v), y = gp.getY(v), z = gp.getZ(v);
+      if (y < -0.2) y = -0.2 - (y + 0.2) * 0.15;
+      var sq = 1 + 0.18 * (1 - Math.abs(y) / 0.28);
+      x *= sq * 0.85; z *= sq * 0.6;
+      var lump = (isle2Hash(x * 41 + y * 73 + z * 29 + sk[4]) - 0.5) * 0.02;
+      gp.setXYZ(v, x + lump, y * 1.05 + 0.2, z + lump);
+    }
+    geo.computeVertexNormals();
+    apPart(geo, sackMat, 0, 0, 0, 0, 0, 0, sg);
+    apPart(new THREE.PlaneGeometry(0.26, 0.2), new THREE.MeshStandardMaterial({ map: sackLabels[sk[4]], roughness: 1, transparent: true, opacity: 0.95 }), 0, 0.2, 0.172, -0.08, 0, 0, sg);   // the printed label
+    apPart(new THREE.CylinderGeometry(0.05, 0.11, 0.1, 12), sackMat, 0, 0.52, 0, 0, 0, 0, sg);       // the gathered neck
+    apPart(new THREE.TorusGeometry(0.052, 0.008, 6, 14), sackTwine, 0, 0.55, 0, Math.PI / 2, 0, 0, sg);
+    for (var f = 0; f < 6; f++) { var fa = f / 6 * Math.PI * 2; apPart(new THREE.ConeGeometry(0.03, 0.09, 4), sackMat, Math.cos(fa) * 0.04, 0.62, Math.sin(fa) * 0.04, Math.cos(fa) * 0.5, 0, -Math.sin(fa) * 0.5, sg); }   // the frilled top
+    apPart(new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), sackTwine, 0.05, 0.51, 0.03, 0.3, 0, 0.6, sg);   // a twine tail
   });
   var trough = new THREE.Group(); trough.position.set(BW + 1.0, 0, 1.0); trough.rotation.y = Math.PI / 2; barnGroup.add(trough);
   apPart(new THREE.BoxGeometry(1.4, 0.4, 0.5), AM.darkWood, 0, 0.25, 0, 0, 0, 0, trough);
   apPart(new THREE.BoxGeometry(1.3, 0.02, 0.4), new THREE.MeshStandardMaterial({ color: 0x6ab0d8, roughness: 0.05, metalness: 0.2 }), 0, 0.4, 0, 0, 0, 0, trough);
   [-0.55, 0.55].forEach(function (lx) { apPart(new THREE.BoxGeometry(0.08, 0.1, 0.55), AM.iron, lx, 0.05, 0, 0, 0, 0, trough); });
   var churnPts = [[0.001, 0], [0.16, 0], [0.17, 0.05], [0.17, 0.4], [0.1, 0.5], [0.07, 0.55], [0.08, 0.6], [0.001, 0.62]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
-  apPart(new THREE.LatheGeometry(churnPts, 20), new THREE.MeshStandardMaterial({ color: 0xc8ccd0, roughness: 0.35, metalness: 0.7 }), 2.0, 0, B_FZ + 0.6);
+  var churnMat = new THREE.MeshStandardMaterial({ color: 0xd8dde2, roughness: 0.38, metalness: 0.35 });   // an old steel milk churn: bands, side handles, a lid and a few dull patches
+  apPart(new THREE.LatheGeometry(churnPts, 28), churnMat, 2.0, 0, B_FZ + 0.6);
+  [0.04, 0.2, 0.38].forEach(function (by) { apPart(new THREE.TorusGeometry(0.172, 0.01, 6, 28), churnMat, 2.0, by, B_FZ + 0.6, Math.PI / 2, 0, 0); });
+  [-1, 1].forEach(function (s) { apPart(new THREE.TorusGeometry(0.05, 0.01, 6, 14, Math.PI), churnMat, 2.0 + s * 0.17, 0.42, B_FZ + 0.6, 0, s * Math.PI / 2, -Math.PI / 2 * s).rotation.set(0, Math.PI / 2, s > 0 ? -Math.PI / 2 : Math.PI / 2); });
+  apPart(new THREE.CylinderGeometry(0.09, 0.09, 0.04, 20), churnMat, 2.0, 0.62, B_FZ + 0.6);
+  apPart(new THREE.TorusGeometry(0.035, 0.01, 6, 14, Math.PI), churnMat, 2.0, 0.64, B_FZ + 0.6);
+  [[0.11, 0.25, 0.5], [-0.08, 0.12, 2.2]].forEach(function (pt) { apPart(new THREE.CircleGeometry(0.035, 10), new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.9, transparent: true, opacity: 0.6 }), 2.0 + Math.sin(pt[2]) * 0.172, pt[1], B_FZ + 0.6 + Math.cos(pt[2]) * 0.172, 0, pt[2], 0); });   // dull, worn patches
   // ----- more of the farmyard -----
   // lightning rods along the ridge, each with a blue glass ball, joined by a twisted cable
   [-3.2, 0, 3.2].forEach(function (rz, k) {
@@ -5368,16 +5409,39 @@ function startGame(THREE) {
   [-0.7, 0.7].forEach(function (bx) { apPart(new THREE.BoxGeometry(0.06, 0.06, 0.62), AM.darkWood, bx, 2.15, 0.3, -0.62, 0, 0, DD); });
   apPart(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 10), AM.iron, -0.35, 0.75, 0.1, Math.PI / 2, 0, 0, DD);       // the latch knob
   // half-barrel planters of flowers either side of the doors, and a wagon wheel leaning on the wall
+  var staveTex = paintTexture(256, 64, function (g, w, h) {           // weathered oak staves, each a slightly different shade
+    for (var x = 0; x < w; x += 16) {
+      var l = 36 + isle2Hash(x * 0.7 + 3) * 10;
+      g.fillStyle = 'hsl(28,40%,' + l + '%)'; g.fillRect(x, 0, 16, h);
+      for (var gr = 0; gr < 5; gr++) { g.strokeStyle = 'rgba(40,20,8,0.25)'; g.lineWidth = 1; var gx = x + 2 + isle2Hash(x + gr) * 12; g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + (isle2Hash(gr + x * 2) - 0.5) * 3, h); g.stroke(); }
+      g.fillStyle = 'rgba(20,10,4,0.55)'; g.fillRect(x, 0, 1.5, h);
+    }
+  });
+  staveTex.wrapS = THREE.RepeatWrapping; staveTex.repeat.set(3, 1);
+  var staveMat = new THREE.MeshStandardMaterial({ map: staveTex, bumpMap: staveTex, bumpScale: 0.01, roughness: 0.85, side: THREE.DoubleSide });
+  var barrelPetal = [0xf6a6c8, 0xffd04a, 0xf7f3ec, 0xc8b4ec].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, side: THREE.DoubleSide }); });
+  var barrelLeaf = new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.6, side: THREE.DoubleSide });
   [-1, 1].forEach(function (s) {
     var bx = s * 2.55, bz = B_FZ + 0.45;
-    var barrelPts = [[0.001, 0], [0.26, 0], [0.29, 0.1], [0.3, 0.22], [0.29, 0.34], [0.27, 0.36], [0.25, 0.32]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
-    apPart(new THREE.LatheGeometry(barrelPts, 18), AM.wood, bx, 0, bz);
-    [0.08, 0.26].forEach(function (hy) { apPart(new THREE.TorusGeometry(0.295, 0.012, 6, 24), AM.iron, bx, hy, bz, Math.PI / 2, 0, 0); });
-    apPart(new THREE.CylinderGeometry(0.26, 0.26, 0.02, 18), new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }), bx, 0.33, bz);
-    for (var fbl = 0; fbl < 22; fbl++) {
-      var fa = fbl * 2.4, fr = (fbl % 4) * 0.06;
-      apPart(new THREE.IcosahedronGeometry(0.06, 0), new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.8, flatShading: true }), bx + Math.cos(fa) * fr, 0.4 + isle2Hash(fbl + s) * 0.1, bz + Math.sin(fa) * fr);
-      if (fbl % 2) apPart(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshStandardMaterial({ color: [0xf6a6c8, 0xffd04a, 0xf7f3ec, 0xc8b4ec][fbl % 4], roughness: 0.6 }), bx + Math.cos(fa + 0.5) * fr, 0.5 + isle2Hash(fbl * 3 + s) * 0.08, bz + Math.sin(fa + 0.5) * fr);
+    var barrelPts = [[0.26, 0], [0.29, 0.1], [0.3, 0.22], [0.29, 0.34], [0.285, 0.36]].map(function (q) { return new THREE.Vector2(q[0], q[1]); });
+    apPart(new THREE.LatheGeometry(barrelPts, 32), staveMat, bx, 0, bz);
+    apPart(new THREE.TorusGeometry(0.285, 0.014, 6, 28), AM.darkWood, bx, 0.36, bz, Math.PI / 2, 0, 0);   // the rim of the staves
+    [0.07, 0.29].forEach(function (hy) {                                // iron hoops, with rivets
+      apPart(new THREE.CylinderGeometry(0.296, 0.296, 0.035, 32, 1, true), AM.iron, bx, hy, bz);
+      for (var r = 0; r < 8; r++) { var ra = r / 8 * Math.PI * 2; apPart(new THREE.SphereGeometry(0.008, 6, 4), AM.iron, bx + Math.cos(ra) * 0.3, hy, bz + Math.sin(ra) * 0.3); }
+    });
+    apPart(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 24), new THREE.MeshStandardMaterial({ color: 0x4a3222, roughness: 1 }), bx, 0.33, bz);
+    for (var fbl = 0; fbl < 18; fbl++) {                               // a mound of leaves, and pansies and daisies with real petals
+      var fa = fbl * 2.4, fr = 0.04 + (fbl % 4) * 0.055;
+      var lf = apPart(new THREE.SphereGeometry(1, 8, 5), barrelLeaf, bx + Math.cos(fa) * fr, 0.38 + isle2Hash(fbl + s) * 0.08, bz + Math.sin(fa) * fr);
+      lf.scale.set(0.07, 0.012, 0.035); lf.rotation.set(isle2Hash(fbl * 3) - 0.5, -fa, 0.3);
+    }
+    for (var fl = 0; fl < 9; fl++) {
+      var fla = fl * 2.4 + s, flr = (fl % 3) * 0.08, fx = bx + Math.cos(fla) * flr, fz = bz + Math.sin(fla) * flr, fy = 0.46 + isle2Hash(fl * 5 + s) * 0.08;
+      var fg = new THREE.Group(); fg.position.set(fx, fy, fz); fg.rotation.set(-Math.PI / 2 + (isle2Hash(fl) - 0.5) * 0.6, 0, fla); barnGroup.add(fg);
+      var pm = barrelPetal[(fl + (s > 0 ? 1 : 0)) % 4], np = pm === barrelPetal[2] ? 10 : 5;
+      for (var pt = 0; pt < np; pt++) { var pa = pt / np * Math.PI * 2; var pe = apPart(new THREE.CircleGeometry(np === 10 ? 0.012 : 0.022, 8), pm, Math.cos(pa) * (np === 10 ? 0.018 : 0.02), Math.sin(pa) * (np === 10 ? 0.018 : 0.02), 0, 0, 0, pa, fg); pe.scale.set(np === 10 ? 1.8 : 1.1, 0.8, 1); pe.castShadow = false; }
+      apPart(new THREE.SphereGeometry(0.011, 8, 6), new THREE.MeshStandardMaterial({ color: np === 10 ? 0xf2b63a : 0x4a2a5a }), 0, 0, 0.004, 0, 0, 0, fg);
     }
   });
   var wheel = new THREE.Group(); wheel.position.set(BW + 0.12, 0.62, -3.9); wheel.rotation.set(0, Math.PI / 2, 0.12); barnGroup.add(wheel);
@@ -5390,16 +5454,6 @@ function startGame(THREE) {
   apPart(new THREE.CylinderGeometry(0.018, 0.018, 1.4, 6), AM.wood, 0, 0.7, 0, 0, 0, 0, fork);
   apPart(new THREE.BoxGeometry(0.22, 0.03, 0.03), AM.iron, 0, 1.42, 0, 0, 0, 0, fork);
   [-0.09, -0.03, 0.03, 0.09].forEach(function (tx) { apPart(new THREE.CylinderGeometry(0.008, 0.004, 0.28, 5), AM.iron, tx, 1.56, 0, 0, 0, 0, fork); });
-  // a sleepy farm dog curled up by the doors
-  var dog = new THREE.Group(); dog.position.set(1.45, 0, B_FZ + 0.85); dog.rotation.y = 0.4; barnGroup.add(dog);
-  var dogFur = new THREE.MeshStandardMaterial({ color: 0xb07a4a, roughness: 0.9 }), dogPale = new THREE.MeshStandardMaterial({ color: 0xf2e6d2, roughness: 0.9 });
-  apPart(new THREE.SphereGeometry(0.28, 16, 12), dogFur, 0, 0.17, 0, 0, 0, 0, dog).scale.set(1.25, 0.6, 0.85);
-  apPart(new THREE.SphereGeometry(0.13, 14, 10), dogFur, 0.3, 0.16, 0.16, 0, 0, 0, dog).scale.set(1, 0.85, 1);
-  apPart(new THREE.SphereGeometry(0.07, 10, 8), dogPale, 0.42, 0.13, 0.2, 0, 0, 0, dog).scale.set(1.2, 0.8, 0.9);
-  apPart(new THREE.SphereGeometry(0.02, 8, 6), AM.black, 0.5, 0.15, 0.21, 0, 0, 0, dog);
-  [-1, 1].forEach(function (s) { apPart(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.9 }), 0.27, 0.22, 0.16 + s * 0.09, 0, 0, s * 0.6, dog).scale.set(0.5, 1.2, 0.8); });
-  apPart(new THREE.BoxGeometry(0.06, 0.004, 0.012), AM.black, 0.38, 0.19, 0.27, 0, 0, 0, dog);   // a closed, sleepy eye
-  var dogTail = apPart(new THREE.CylinderGeometry(0.03, 0.02, 0.3, 8), dogFur, -0.32, 0.12, -0.12, Math.PI / 2, 0.6, 0, dog);
   // a bird house on a post by the path
   var bh = new THREE.Group(); bh.position.set(ANIMAL_HW + 1.6, 0, B_FZ + 2.2); barnGroup.add(bh);
   apPart(new THREE.BoxGeometry(0.07, 1.6, 0.07), AM.wood, 0, 0.8, 0, 0, 0, 0, bh);
@@ -5414,7 +5468,6 @@ function startGame(THREE) {
     barnSignMat.emissiveIntensity = 0.25 + glow * 0.45;                 // the little lamps make the gold letters shine at night
     barnSignLampInner.emissiveIntensity = 0.2 + glow * 1.2;
     for (var sgl = 0; sgl < barnSignGlows.length; sgl++) barnSignGlows[sgl].material.opacity = glow * 0.75;
-    dogTail.rotation.y = 0.6 + Math.sin(t * 1.3) * 0.25;               // the dog's tail thumps now and then in its sleep
     rooster.rotation.y = Math.sin(t * 0.17) * 1.2 + Math.sin(t * 0.43) * 0.3;
   }
   (function () {                                                       // you bump into the barn, the bales and the trough
@@ -5423,7 +5476,7 @@ function startGame(THREE) {
     for (var x = -BW + 0.6; x <= BW - 0.59; x += 1.2) for (var z = -BD + 0.6; z <= BD - 0.59; z += 1.2) solidAt(x, z, 0.9);
     for (var x2 = -BW; x2 <= BW + 0.01; x2 += 0.5) solidAt(x2, BD - 0.2, 0.4);
     solidAt(-3.0, B_FZ + 0.8, 0.7); solidAt(2.7, B_FZ + 0.9, 0.5); solidAt(2.0, B_FZ + 0.6, 0.25); solidAt(BW + 1.0, 1.0, 0.75);
-    solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(1.45, B_FZ + 0.85, 0.35); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the dog, the bird house, the wheel
+    solidAt(-2.55, B_FZ + 0.45, 0.32); solidAt(2.55, B_FZ + 0.45, 0.32); solidAt(ANIMAL_HW + 1.6, B_FZ + 2.2, 0.12); solidAt(BW + 0.3, -3.9, 0.35);   // barrels, the bird house, the wheel
   })();
 
   // ---------- The stone path to Whimsy & Bloom ----------
