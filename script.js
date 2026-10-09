@@ -13923,6 +13923,8 @@ function startGame(THREE) {
     updateCamera(dt);
     updateClinicInterior(state.time);
     cullScene();
+    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
+    if (document.body.classList.contains('menu-open') !== menuUp) document.body.classList.toggle('menu-open', menuUp);
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     renderer.render(indoors ? (inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn

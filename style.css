@@ -284,6 +284,9 @@ body.full .controls {
 body.full .controls button { padding: 7px 14px; font-size: .9rem; }
 body.full .hotbar { bottom: calc(14px + env(safe-area-inset-bottom)); }
 body.full .help { display: none; }
+/* while a menu is open in full screen, the button column fades away so it can't catch taps meant for the menu */
+body.full .controls { transition: opacity .2s; }
+body.full.menu-open .controls { opacity: 0; pointer-events: none; }
 
 /* how much mana you have, written under the mana bar */
 .mana-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
