@@ -5258,12 +5258,75 @@ function startGame(THREE) {
     });
   });
   // props out front: hay bales, feed sacks, a water trough, a milk churn and a wheelbarrow of pumpkins
+  // hay bales: straw pressed into a slightly lumpy block, long golden strands along the sides, chopped flakes on the
+  // cut ends, two tight loops of baling twine sinking into the straw, and loose wisps sticking out everywhere
+  var hayRnd = function (n) { return isle2Hash(n * 1.37 + 4400); };
+  var haySideTex = paintTexture(256, 128, function (g, w, h) {         // the long sides: strands of straw lying lengthwise
+    g.fillStyle = '#b8903e'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 2600; i++) {
+      var x = hayRnd(i) * w, y = hayRnd(i + 0.5) * h, len = 12 + hayRnd(i + 0.25) * 40, a = (hayRnd(i + 0.75) - 0.5) * 0.25, l = 45 + hayRnd(i * 3) * 30;
+      g.strokeStyle = 'hsl(' + (40 + hayRnd(i * 5) * 10) + ',' + (45 + hayRnd(i * 7) * 25) + '%,' + l + '%)'; g.lineWidth = 0.8 + hayRnd(i * 9) * 1.4;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); g.stroke();
+    }
+    for (var d = 0; d < 300; d++) { g.fillStyle = 'rgba(70,45,15,' + hayRnd(d * 11) * 0.35 + ')'; g.fillRect(hayRnd(d * 13) * w, hayRnd(d * 17) * h, 3 + hayRnd(d) * 8, 1); }   // shadowy gaps between strands
+  });
+  var hayEndTex = paintTexture(128, 128, function (g, w, h) {          // the cut ends: packed flakes of chopped stalks
+    g.fillStyle = '#a07a32'; g.fillRect(0, 0, w, h);
+    for (var f = 0; f < 6; f++) { g.fillStyle = 'rgba(60,35,10,0.35)'; g.fillRect(f * w / 6 + hayRnd(f) * 4, 0, 1.5, h); }   // the flakes the baler packed in
+    for (var i = 0; i < 1400; i++) {
+      var x = hayRnd(i * 2) * w, y = hayRnd(i * 3) * h, r = 0.8 + hayRnd(i * 4) * 2.2, l = 40 + hayRnd(i * 5) * 35;
+      g.fillStyle = 'hsl(' + (38 + hayRnd(i * 6) * 12) + ',55%,' + l + '%)'; g.beginPath(); g.ellipse(x, y, r * 1.6, r, hayRnd(i * 7) * 3, 0, Math.PI * 2); g.fill();
+      if (hayRnd(i * 8) > 0.7) { g.fillStyle = 'rgba(50,30,8,0.5)'; g.beginPath(); g.arc(x, y, r * 0.4, 0, Math.PI * 2); g.fill(); }   // hollow stalk ends
+    }
+  });
+  haySideTex.wrapS = haySideTex.wrapT = hayEndTex.wrapS = hayEndTex.wrapT = THREE.RepeatWrapping;
+  var haySide = new THREE.MeshStandardMaterial({ map: haySideTex, bumpMap: haySideTex, bumpScale: 0.025, roughness: 1 });
+  var hayEnd = new THREE.MeshStandardMaterial({ map: hayEndTex, bumpMap: hayEndTex, bumpScale: 0.03, roughness: 1 });
+  var hayTwineMat = new THREE.MeshStandardMaterial({ color: 0xc89a5a, roughness: 0.9 });
+  var hayWisps = [], hayWispMat = new THREE.MeshStandardMaterial({ color: 0xd8b060, roughness: 0.9 });
+  var HB_L = 0.9, HB_H = 0.42, HB_W = 0.48;
   function haybale(x, y, z, ry) {
-    var b = apPart(new THREE.BoxGeometry(0.9, 0.45, 0.5), AM.straw, x, y + 0.225, z, 0, ry, 0);
-    [-0.25, 0.25].forEach(function (tx) { apPart(new THREE.BoxGeometry(0.02, 0.46, 0.51), new THREE.MeshStandardMaterial({ color: 0x8a5a3a }), tx, 0, 0, 0, 0, 0, b); });   // the twine
+    var n = hayBaleCount++;
+    var geo = new THREE.BoxGeometry(HB_L, HB_H, HB_W, 14, 6, 8), p = geo.attributes.position;
+    for (var v = 0; v < p.count; v++) {                                // round the edges and make it a little lumpy and bulging
+      var vx = p.getX(v), vy = p.getY(v), vz = p.getZ(v), ex = Math.abs(vx) / (HB_L / 2), ey = Math.abs(vy) / (HB_H / 2), ez = Math.abs(vz) / (HB_W / 2);
+      var edge = Math.max(0, ey + ez - 1.55) + Math.max(0, ex + ey - 1.7) + Math.max(0, ex + ez - 1.7);
+      var k = 1 - edge * 0.12, bulge = 1 + (1 - ex * ex) * 0.035;
+      var jit = (isle2Hash(vx * 37.1 + vy * 91.7 + vz * 53.3 + n * 7) - 0.5) * 0.018;
+      p.setXYZ(v, vx * k + jit, vy * k * bulge + jit * 0.6, vz * k * bulge + jit);
+    }
+    geo.computeVertexNormals();
+    var b = apPart(geo, [hayEnd, hayEnd, haySide, haySide, haySide, haySide], x, y + HB_H / 2, z, 0, ry, 0);
+    [-0.22, 0.22].forEach(function (tx) {                               // a loop of twine round it, pressed into the straw
+      var loop = [], hy = HB_H / 2 + 0.002, hz = HB_W / 2 + 0.002, r = 0.03;
+      for (var a = 0; a <= 32; a++) {
+        var t = a / 32 * Math.PI * 2, cx = Math.cos(t), cy = Math.sin(t);
+        loop.push(new THREE.Vector3(tx + (isle2Hash(a + n) - 0.5) * 0.006, Math.sign(cy) * Math.min(hy, Math.abs(cy) * (hy + 0.2)) - Math.sign(cy) * (Math.abs(cy) > 0.7 ? 0.004 : 0), Math.sign(cx) * Math.min(hz, Math.abs(cx) * (hz + 0.2))));
+      }
+      apPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(loop, true), 64, 0.0055, 5, true), hayTwineMat, 0, 0, 0, 0, 0, 0, b);
+    });
+    for (var w = 0; w < 70; w++) {                                     // loose wisps poking out of every face
+      var face = Math.floor(hayRnd(n * 100 + w) * 6), u = hayRnd(n * 100 + w + 0.3) - 0.5, q = hayRnd(n * 100 + w + 0.6) - 0.5;
+      var px = face < 2 ? (face ? -1 : 1) * HB_L / 2 : u * HB_L * 0.95, py = face === 2 ? HB_H / 2 : face === 3 ? -HB_H / 2 + 0.03 : (face < 2 ? u : q) * HB_H * 0.9, pz = face > 3 ? (face === 4 ? 1 : -1) * HB_W / 2 : q * HB_W * 0.9;
+      if (face === 3) continue;                                         // (none underneath)
+      hayWisps.push({ b: b, p: new THREE.Vector3(px, py, pz), ax: (hayRnd(w * 7 + n) - 0.5) * 2.4, az: (hayRnd(w * 11 + n) - 0.5) * 2.4, ay: hayRnd(w * 13 + n) * 6, len: 0.06 + hayRnd(w * 17 + n) * 0.12 });
+    }
     return b;
   }
-  haybale(-2.6, 0, B_FZ + 0.9, 0.1); haybale(-3.5, 0, B_FZ + 0.7, -0.2); haybale(-3.0, 0.45, B_FZ + 0.8, 0.3);
+  var hayBaleCount = 0;
+  haybale(-2.6, 0, B_FZ + 0.9, 0.1); haybale(-3.5, 0, B_FZ + 0.7, -0.2); haybale(-3.05, HB_H, B_FZ + 0.8, 0.3);
+  (function () {                                                       // all the loose wisps of straw, in one batch
+    var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0025, 0.0015, 1, 3), hayWispMat, hayWisps.length), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
+    hayWisps.forEach(function (w, i) {
+      w.b.updateMatrix(); barnGroup.updateMatrix();
+      e.set(w.ax, w.ay, w.az); q.setFromEuler(e); sc.set(1, w.len, 1);
+      pos.copy(w.p).applyMatrix4(w.b.matrix);
+      q.premultiply(new THREE.Quaternion().setFromRotationMatrix(w.b.matrix));
+      m.compose(pos, q, sc); im.setMatrixAt(i, m);
+      im.setColorAt(i, col.setHSL(0.11 + hayRnd(i * 3) * 0.03, 0.55, 0.45 + hayRnd(i * 5) * 0.25));
+    });
+    im.castShadow = true; barnGroup.add(im);
+  })();
   var sackMat = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 1 });
   [[2.5, 0.85], [2.95, 0.95], [2.72, 0.85]].forEach(function (sk, k) {
     var sack = apPart(new THREE.SphereGeometry(0.28, 12, 10), sackMat, sk[0], k === 2 ? 0.55 : 0.24, B_FZ + sk[1]);
@@ -5327,7 +5390,7 @@ function startGame(THREE) {
   apPart(new THREE.CylinderGeometry(0.018, 0.018, 1.4, 6), AM.wood, 0, 0.7, 0, 0, 0, 0, fork);
   apPart(new THREE.BoxGeometry(0.22, 0.03, 0.03), AM.iron, 0, 1.42, 0, 0, 0, 0, fork);
   [-0.09, -0.03, 0.03, 0.09].forEach(function (tx) { apPart(new THREE.CylinderGeometry(0.008, 0.004, 0.28, 5), AM.iron, tx, 1.56, 0, 0, 0, 0, fork); });
-  // a sleepy farm dog curled up by the doors, and a ginger cat napping on the hay
+  // a sleepy farm dog curled up by the doors
   var dog = new THREE.Group(); dog.position.set(1.45, 0, B_FZ + 0.85); dog.rotation.y = 0.4; barnGroup.add(dog);
   var dogFur = new THREE.MeshStandardMaterial({ color: 0xb07a4a, roughness: 0.9 }), dogPale = new THREE.MeshStandardMaterial({ color: 0xf2e6d2, roughness: 0.9 });
   apPart(new THREE.SphereGeometry(0.28, 16, 12), dogFur, 0, 0.17, 0, 0, 0, 0, dog).scale.set(1.25, 0.6, 0.85);
@@ -5337,13 +5400,6 @@ function startGame(THREE) {
   [-1, 1].forEach(function (s) { apPart(new THREE.SphereGeometry(0.06, 10, 8), new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.9 }), 0.27, 0.22, 0.16 + s * 0.09, 0, 0, s * 0.6, dog).scale.set(0.5, 1.2, 0.8); });
   apPart(new THREE.BoxGeometry(0.06, 0.004, 0.012), AM.black, 0.38, 0.19, 0.27, 0, 0, 0, dog);   // a closed, sleepy eye
   var dogTail = apPart(new THREE.CylinderGeometry(0.03, 0.02, 0.3, 8), dogFur, -0.32, 0.12, -0.12, Math.PI / 2, 0.6, 0, dog);
-  var cat = new THREE.Group(); cat.position.set(-3.0, 0.9, B_FZ + 0.8); cat.rotation.y = -0.6; barnGroup.add(cat);
-  var catFur = new THREE.MeshStandardMaterial({ color: 0xe0904a, roughness: 0.9 });
-  apPart(new THREE.SphereGeometry(0.15, 14, 10), catFur, 0, 0.08, 0, 0, 0, 0, cat).scale.set(1.2, 0.6, 1);
-  apPart(new THREE.SphereGeometry(0.08, 12, 10), catFur, 0.15, 0.1, 0.06, 0, 0, 0, cat);
-  [-1, 1].forEach(function (s) { apPart(new THREE.ConeGeometry(0.03, 0.06, 4), catFur, 0.15, 0.18, 0.06 + s * 0.045, 0, 0, 0, cat); });
-  apPart(new THREE.TorusGeometry(0.13, 0.022, 6, 16, Math.PI * 1.2), catFur, -0.02, 0.05, 0, Math.PI / 2, 0, 0.6, cat);
-  var catBreath = cat.children[0];
   // a bird house on a post by the path
   var bh = new THREE.Group(); bh.position.set(ANIMAL_HW + 1.6, 0, B_FZ + 2.2); barnGroup.add(bh);
   apPart(new THREE.BoxGeometry(0.07, 1.6, 0.07), AM.wood, 0, 0.8, 0, 0, 0, 0, bh);
@@ -5359,7 +5415,6 @@ function startGame(THREE) {
     barnSignLampInner.emissiveIntensity = 0.2 + glow * 1.2;
     for (var sgl = 0; sgl < barnSignGlows.length; sgl++) barnSignGlows[sgl].material.opacity = glow * 0.75;
     dogTail.rotation.y = 0.6 + Math.sin(t * 1.3) * 0.25;               // the dog's tail thumps now and then in its sleep
-    catBreath.scale.y = 0.6 + Math.sin(t * 1.8) * 0.03;                 // and the cat breathes slowly
     rooster.rotation.y = Math.sin(t * 0.17) * 1.2 + Math.sin(t * 0.43) * 0.3;
   }
   (function () {                                                       // you bump into the barn, the bales and the trough
