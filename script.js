@@ -5091,8 +5091,11 @@ function startGame(THREE) {
   // the gambrel roof: steep lower slopes and shallow upper slopes, with white-trimmed gable ends above the walls
   var GP = [[-BW - 0.35, B_TOP - 0.15], [-BW * 0.6, B_TOP + 1.7], [0, B_TOP + 2.6], [BW * 0.6, B_TOP + 1.7], [BW + 0.35, B_TOP - 0.15]];
   var barnGable = new THREE.Shape(); barnGable.moveTo(-BW, B_TOP); barnGable.lineTo(-BW * 0.6 + 0.2, B_TOP + 1.55); barnGable.lineTo(0, B_TOP + 2.42); barnGable.lineTo(BW * 0.6 - 0.2, B_TOP + 1.55); barnGable.lineTo(BW, B_TOP); barnGable.lineTo(-BW, B_TOP);
+  var barnFrontGable = new THREE.Shape(barnGable.getPoints());          // the front one has the hayloft opening cut through it
+  var loftHole = new THREE.Path(); loftHole.moveTo(-0.6, B_TOP + 0.2); loftHole.lineTo(-0.6, B_TOP + 1.3); loftHole.lineTo(0.6, B_TOP + 1.3); loftHole.lineTo(0.6, B_TOP + 0.2); loftHole.lineTo(-0.6, B_TOP + 0.2);
+  barnFrontGable.holes.push(loftHole);
   [-1, 1].forEach(function (e) {
-    apPart(new THREE.ShapeGeometry(barnGable), sidingMat(1 / 1.6, 1 / 1.6), 0, 0, e * (BD - 0.01), 0, e < 0 ? Math.PI : 0, 0);
+    apPart(new THREE.ShapeGeometry(e > 0 ? barnFrontGable : barnGable), sidingMat(1 / 1.6, 1 / 1.6), 0, 0, e * (BD - 0.01), 0, e < 0 ? Math.PI : 0, 0);
     for (var k = 0; k < 4; k++) {                                       // white barge boards along each edge of the gable
       var a = GP[k], b = GP[k + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
       apPart(new THREE.BoxGeometry(len + 0.1, 0.18, 0.08), AM.trim, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2 - 0.04, e * (BD + 0.32), 0, 0, Math.atan2(b[1] - a[1], b[0] - a[0]));
@@ -5134,22 +5137,77 @@ function startGame(THREE) {
     apPart(new THREE.BoxGeometry(0.04, 0.3, 0.04), AM.iron, -s * 0.5, 0, 0.09, 0, 0, 0, dg);   // a handle
   });
   apPart(new THREE.BoxGeometry(3.0, 0.12, 0.1), AM.trim, 0, B_FOUND + 2.42, B_FZ + 0.03);
-  // the hayloft door above, open, with hay spilling out, and a hoist beam with a pulley, rope and hook
-  apPart(new THREE.BoxGeometry(1.2, 1.1, 0.05), new THREE.MeshStandardMaterial({ color: 0x2a1a12, roughness: 1 }), 0, B_TOP + 0.75, B_FZ - 0.0);
-  [[0, 0.6, 1.4, 0.1], [0, -0.6, 1.4, 0.1], [-0.65, 0, 0.1, 1.2], [0.65, 0, 0.1, 1.2]].forEach(function (f) { apPart(new THREE.BoxGeometry(f[2], f[3], 0.08), AM.trim, f[0], B_TOP + 0.75 + f[1], B_FZ + 0.02); });
-  var loftDoor = new THREE.Group(); loftDoor.position.set(0.6, B_TOP + 0.75, B_FZ + 0.05); loftDoor.rotation.y = 1.9; barnGroup.add(loftDoor);
-  apPart(new THREE.BoxGeometry(1.15, 1.08, 0.05), AM.siding, -0.575, 0, 0, 0, 0, 0, loftDoor);
-  apPart(new THREE.BoxGeometry(1.5, 0.08, 0.04), AM.trim, -0.575, 0, 0.04, 0, 0, 0.75, loftDoor);
-  for (var hayS = 0; hayS < 30; hayS++) apPart(new THREE.CylinderGeometry(0.008, 0.008, 0.35, 4), AM.straw, (isle2Hash(hayS) - 0.5) * 1.0, B_TOP + 0.25 + isle2Hash(hayS * 2) * 0.12, B_FZ + 0.12, Math.PI / 2 + (isle2Hash(hayS * 3) - 0.5) * 0.8, 0, (isle2Hash(hayS * 5) - 0.5) * 1.2).castShadow = false;
-  apPart(new THREE.BoxGeometry(0.16, 0.16, 1.4), AM.darkWood, 0, B_TOP + 1.65, B_FZ + 0.5);
-  apPart(new THREE.CylinderGeometry(0.11, 0.11, 0.06, 16), AM.iron, 0, B_TOP + 1.5, B_FZ + 1.1, 0, 0, Math.PI / 2);
-  apPart(new THREE.CylinderGeometry(0.012, 0.012, 0.75, 5), new THREE.MeshStandardMaterial({ color: 0xc8a870, roughness: 1 }), 0.1, B_TOP + 1.12, B_FZ + 1.1);   // (short, so it hangs clear of the sign)
-  apPart(new THREE.TorusGeometry(0.06, 0.012, 6, 12, Math.PI * 1.3), AM.iron, 0.1, B_TOP + 0.7, B_FZ + 1.1, 0, 0, Math.PI);
-  // a round window up in the gable
-  apPart(new THREE.CircleGeometry(0.34, 24), AM.warm, 0, B_TOP + 1.85, B_FZ + 0.02);
-  apPart(new THREE.TorusGeometry(0.36, 0.06, 8, 24), AM.trim, 0, B_TOP + 1.85, B_FZ + 0.04);
-  apPart(new THREE.BoxGeometry(0.04, 0.7, 0.04), AM.trim, 0, B_TOP + 1.85, B_FZ + 0.05);
-  apPart(new THREE.BoxGeometry(0.7, 0.04, 0.04), AM.trim, 0, B_TOP + 1.85, B_FZ + 0.05);
+  // the hayloft above the big doors: a deep opening with plank walls and a warm lantern inside, hay heaped on the loft
+  // floor and spilling over the sill, a white casing with a drip cap, and a board-and-batten door with a Z brace, swung
+  // open on long iron strap hinges and held back by a hook. Above it, a hoist beam on a knee brace with an iron pulley
+  // block, a rope and a hook
+  var HL_Y = B_TOP + 0.75, HL_W = 1.2, HL_H = 1.1, HL_D = 0.6;          // the middle of the opening, its size and how deep it goes
+  var loftDark = new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 1 });
+  var loftPlank = new THREE.MeshStandardMaterial({ map: barnSidingTex.clone(), color: 0x7a5236, roughness: 0.95 });
+  loftPlank.map.needsUpdate = true; loftPlank.map.repeat.set(0.8, 0.8);
+  apPart(new THREE.PlaneGeometry(HL_W, HL_H), loftDark, 0, HL_Y, B_FZ - HL_D);                                  // the back of the loft
+  [-1, 1].forEach(function (s) { apPart(new THREE.PlaneGeometry(HL_D, HL_H), loftPlank, s * HL_W / 2, HL_Y, B_FZ - HL_D / 2, 0, -s * Math.PI / 2, 0); });   // its plank side walls
+  apPart(new THREE.PlaneGeometry(HL_W, HL_D), loftDark, 0, HL_Y + HL_H / 2, B_FZ - HL_D / 2, Math.PI / 2, 0, 0);                    // the ceiling
+  apPart(new THREE.BoxGeometry(HL_W, 0.04, HL_D + 0.02), AM.wood, 0, HL_Y - HL_H / 2 + 0.02, B_FZ - HL_D / 2);                       // the loft floor
+  apPart(new THREE.SphereGeometry(0.1, 10, 8), AM.lamp, 0.35, HL_Y + 0.25, B_FZ - HL_D + 0.12);                                    // a lantern glowing at the back
+  apPart(new THREE.CylinderGeometry(0.004, 0.004, 0.25, 4), AM.iron, 0.35, HL_Y + 0.42, B_FZ - HL_D + 0.12);
+  var loftHay = apPart(new THREE.SphereGeometry(0.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), AM.straw, -0.1, HL_Y - HL_H / 2 + 0.04, B_FZ - 0.3);   // a heap of loose hay
+  loftHay.scale.set(1.05, 0.55, 0.6);
+  for (var hayS = 0; hayS < 70; hayS++) {                              // wisps on the heap and hanging over the sill
+    var hx = (isle2Hash(hayS) - 0.5) * 1.05, over = hayS % 3 === 0;
+    apPart(new THREE.CylinderGeometry(0.004, 0.003, over ? 0.22 : 0.18, 3), AM.straw, hx, HL_Y - HL_H / 2 + (over ? -0.03 : 0.12 + isle2Hash(hayS * 2) * 0.15), B_FZ + (over ? 0.07 : -0.1 - isle2Hash(hayS * 7) * 0.3),
+      over ? 0.4 + isle2Hash(hayS * 3) * 0.6 : Math.PI / 2 + (isle2Hash(hayS * 3) - 0.5) * 1.2, isle2Hash(hayS * 11) * 3, (isle2Hash(hayS * 5) - 0.5) * 0.8).castShadow = false;
+  }
+  // the casing: white boards round the opening, a drip cap over the top, and a sill board
+  [[0, HL_H / 2 + 0.06, HL_W + 0.24, 0.12], [-HL_W / 2 - 0.06, 0, 0.12, HL_H], [HL_W / 2 + 0.06, 0, 0.12, HL_H]].forEach(function (f) { apPart(new THREE.BoxGeometry(f[2], f[3], 0.06), AM.trim, f[0], HL_Y + f[1], B_FZ + 0.03); });
+  apPart(new THREE.BoxGeometry(HL_W + 0.34, 0.05, 0.14), AM.trim, 0, HL_Y + HL_H / 2 + 0.14, B_FZ + 0.07);
+  apPart(new THREE.BoxGeometry(HL_W + 0.3, 0.05, 0.16), AM.trim, 0, HL_Y - HL_H / 2 - 0.025, B_FZ + 0.06);
+  // the door: vertical boards with grooves, a white Z brace, swung open about its hinge side and resting against the wall
+  var loftDoor = new THREE.Group(); loftDoor.position.set(HL_W / 2 + 0.02, HL_Y, B_FZ + 0.06); loftDoor.rotation.y = 1.75; barnGroup.add(loftDoor);
+  var DW = HL_W - 0.04, DH = HL_H - 0.04;
+  for (var ldb = 0; ldb < 6; ldb++) apPart(new THREE.BoxGeometry(DW / 6 - 0.008, DH, 0.045), AM.siding, -DW + (ldb + 0.5) * DW / 6, 0, 0, 0, 0, 0, loftDoor);   // the boards
+  [0.035, -0.035].forEach(function (fz) {                               // top and bottom rails and the diagonal, on both faces so it looks right swung open
+    [0.42, -0.42].forEach(function (ry) { apPart(new THREE.BoxGeometry(DW - 0.04, 0.1, 0.03), AM.trim, -DW / 2, ry, fz, 0, 0, 0, loftDoor); });
+    apPart(new THREE.BoxGeometry(Math.hypot(DW - 0.16, 0.74), 0.09, 0.028), AM.trim, -DW / 2, 0, fz, 0, 0, -Math.atan2(0.74, DW - 0.16), loftDoor);
+  });
+  [0.42, -0.42].forEach(function (hy) {                                 // long iron strap hinges, with bolts, reaching across the door
+    apPart(new THREE.BoxGeometry(0.55, 0.04, 0.01), AM.iron, -0.27, hy, 0.055, 0, 0, 0, loftDoor);
+    apPart(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 6), AM.iron, -0.54, hy, 0.055, Math.PI / 2, 0, 0, loftDoor);
+    for (var bt = 0; bt < 4; bt++) apPart(new THREE.SphereGeometry(0.009, 6, 4), AM.iron, -0.06 - bt * 0.14, hy, 0.062, 0, 0, 0, loftDoor);
+    apPart(new THREE.CylinderGeometry(0.014, 0.014, 0.1, 8), AM.iron, 0.0, hy, 0.0, 0, 0, 0, loftDoor);   // the hinge pin
+  });
+  apPart(new THREE.TorusGeometry(0.03, 0.006, 6, 12), AM.iron, -DW + 0.08, 0, 0.06, 0, 0, 0, loftDoor);   // a ring pull
+  var hookRod = new THREE.CatmullRomCurve3([new THREE.Vector3(HL_W / 2 + 0.95, HL_Y - 0.1, B_FZ + 0.02), new THREE.Vector3(HL_W / 2 + 0.85, HL_Y - 0.12, B_FZ + 0.12), new THREE.Vector3(HL_W / 2 + 0.75, HL_Y - 0.1, B_FZ + 0.22)]);
+  apPart(new THREE.TubeGeometry(hookRod, 8, 0.006, 5), AM.iron, 0, 0, 0);                                          // the hook holding it open
+  // the hoist beam: a heavy timber out of the gable on a knee brace, with an iron pulley block, rope and hook
+  var HB_Y = B_TOP + 1.43;
+  apPart(new THREE.BoxGeometry(0.16, 0.16, 1.3), AM.darkWood, 0, HB_Y, B_FZ + 0.6);
+  apPart(new THREE.BoxGeometry(0.1, 0.1, 0.7), AM.darkWood, 0, HB_Y - 0.28, B_FZ + 0.27, -0.85, 0, 0);       // the knee brace
+  apPart(new THREE.BoxGeometry(0.17, 0.03, 0.17), AM.iron, 0, HB_Y + 0.0, B_FZ + 1.2);                       // an iron cap on the end
+  var PU_Z = B_FZ + 1.05, PU_Y = HB_Y - 0.2;
+  [-1, 1].forEach(function (sd) { apPart(new THREE.BoxGeometry(0.015, 0.3, 0.18), AM.iron, sd * 0.05, PU_Y + 0.04, PU_Z); });   // the cheeks of the block
+  apPart(new THREE.CylinderGeometry(0.075, 0.075, 0.035, 18), AM.wood, 0, PU_Y, PU_Z, 0, 0, Math.PI / 2);     // the sheave
+  apPart(new THREE.TorusGeometry(0.075, 0.008, 6, 18), new THREE.MeshStandardMaterial({ color: 0xc8a870, roughness: 1 }), 0, PU_Y, PU_Z, 0, Math.PI / 2, 0);   // rope round it
+  apPart(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), AM.iron, 0, PU_Y, PU_Z, 0, 0, Math.PI / 2);
+  var ropeMat = new THREE.MeshStandardMaterial({ color: 0xc8a870, roughness: 1 });
+  apPart(new THREE.CylinderGeometry(0.01, 0.01, 0.45, 5), ropeMat, 0, PU_Y - 0.3, PU_Z + 0.075);           // the rope down to the hook (short, so it hangs clear of the sign)
+  apPart(new THREE.TorusGeometry(0.05, 0.011, 6, 14, Math.PI * 1.4), AM.iron, 0, PU_Y - 0.58, PU_Z + 0.075, 0, Math.PI / 2, Math.PI);
+  apPart(new THREE.CylinderGeometry(0.01, 0.01, 0.42, 5), ropeMat, 0, PU_Y - 0.25, PU_Z - 0.075);          // the other end, tied off to a cleat on the wall
+  // a round window up in the gable: a deep white surround with four keystones, a sill, glazing bars with an inner
+  // ring, and glass that glows warm inside and catches the light
+  var RW_Y = B_TOP + 1.97, RW_R = 0.28;
+  apPart(new THREE.CircleGeometry(RW_R, 32), AM.warm, 0, RW_Y, B_FZ + 0.01);
+  apPart(new THREE.CircleGeometry(RW_R, 32), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.6, roughness: 0.05, depthWrite: false }), 0, RW_Y, B_FZ + 0.035).renderOrder = 2;
+  apPart(new THREE.CylinderGeometry(RW_R + 0.01, RW_R + 0.01, 0.12, 32, 1, true), AM.trim, 0, RW_Y, B_FZ - 0.02, Math.PI / 2, 0, 0);   // the depth of the opening
+  apPart(new THREE.TorusGeometry(RW_R + 0.06, 0.06, 10, 36), AM.trim, 0, RW_Y, B_FZ + 0.04);
+  apPart(new THREE.TorusGeometry(RW_R + 0.11, 0.018, 8, 36), AM.trim, 0, RW_Y, B_FZ + 0.06);                  // a moulded outer bead
+  [0, 1, 2, 3].forEach(function (k) {                                   // four keystones
+    var ka = k * Math.PI / 2;
+    apPart(new THREE.BoxGeometry(0.12, 0.16, 0.08), AM.trim, Math.sin(ka) * (RW_R + 0.1), RW_Y + Math.cos(ka) * (RW_R + 0.1), B_FZ + 0.06, 0, 0, -ka);
+  });
+  apPart(new THREE.TorusGeometry(RW_R * 0.42, 0.014, 6, 28), AM.trim, 0, RW_Y, B_FZ + 0.04);                  // glazing: an inner ring and four spokes
+  [0, 1, 2, 3].forEach(function (k) { apPart(new THREE.BoxGeometry(0.025, RW_R * 0.58, 0.025), AM.trim, Math.sin(k * Math.PI / 2) * RW_R * 0.71, RW_Y + Math.cos(k * Math.PI / 2) * RW_R * 0.71, B_FZ + 0.04, 0, 0, -k * Math.PI / 2); });
+  apPart(new THREE.BoxGeometry(0.5, 0.04, 0.12), AM.trim, 0, RW_Y - RW_R - 0.14, B_FZ + 0.06);              // a little sill
   // the sign over the doors, in the same style as Whimsy & Bloom's and the clinic's: a hand-painted board (a deep
   // forest green here) with raised gilded letters that catch the light, a gold pinstripe border, little gold feather
   // ornaments, in a moulded frame with a gold bead, lit by two brass gooseneck lamps
