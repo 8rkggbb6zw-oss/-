@@ -34,6 +34,206 @@ EVERDAWN_PARTS.push(function (THREE) {
   abWallPart('N', new THREE.BoxGeometry(1.9, 0.025, 0.08), AB.wood, 0, 0.99, 0.06);                 // the chalk ledge
   [[-0.5, 0xf8f6f0], [-0.42, 0xffd6e0], [-0.35, 0xfff0a8]].forEach(function (ch) { abWallPart('N', new THREE.CylinderGeometry(0.008, 0.008, 0.07, 6), new THREE.MeshStandardMaterial({ color: ch[1], roughness: 1 }), ch[0], 1.012, 0.07, 0, 0, Math.PI / 2 + ch[0]); });
   abWallPart('N', new THREE.BoxGeometry(0.12, 0.035, 0.05), new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 1 }), 0.55, 1.02, 0.065);   // the eraser
+  // ---------- More detail for the barn's walls and floor ----------
+  // The walls are repainted in finer detail: every board its own shade, with tight grain, knots and splits, rusty nail
+  // streaks, water stains and dust darkening toward the floor, and a bump map that sinks the gaps between boards. Up
+  // high, cobwebs in the corners; over the doorway, lucky horseshoes; and an old tin feed sign on the side wall.
+  // The floor gets wide worn boards with cut nails, dark gaps, scuffs and stains and a paler path down the middle, and
+  // real loose straws lying on it
+  (function () {                                                     // (kept to itself, so its names can't clash)
+    function canvasOf(w, h, paint) { var cv = document.createElement('canvas'); cv.width = w; cv.height = h; paint(cv.getContext('2d'), w, h); return cv; }
+    function R(n) { return isle2Hash(n * 1.618 + 7000); }
+    // the wall boards: 10 boards across a 2 m tile
+    function wallPaint(g, w, h, bump) {
+      var bw = w / 10;
+      for (var b = 0; b < 10; b++) {
+        var x0 = b * bw, l = 34 + R(b * 3.3) * 14, hue = 24 + R(b * 5.1) * 10, sat = 36 + R(b * 7.7) * 14;
+        if (bump) { g.fillStyle = '#9a9a9a'; g.fillRect(x0, 0, bw, h); }
+        else {
+          var bg = g.createLinearGradient(x0, 0, x0 + bw, 0);
+          bg.addColorStop(0, 'hsl(' + hue + ',' + sat + '%,' + (l - 8) + '%)'); bg.addColorStop(0.12, 'hsl(' + hue + ',' + sat + '%,' + l + '%)');
+          bg.addColorStop(0.88, 'hsl(' + hue + ',' + sat + '%,' + (l - 2) + '%)'); bg.addColorStop(1, 'hsl(' + hue + ',' + sat + '%,' + (l - 11) + '%)');
+          g.fillStyle = bg; g.fillRect(x0, 0, bw, h);
+        }
+        for (var k = 0; k < 34; k++) {                                 // fine grain, wandering down the board
+          var gx = x0 + 4 + R(b * 31 + k * 1.3) * (bw - 8), dark = R(k * 2.7 + b) > 0.4;
+          g.strokeStyle = bump ? (dark ? 'rgba(60,60,60,0.35)' : 'rgba(200,200,200,0.2)') : (dark ? 'rgba(55,28,10,' + (0.06 + R(k * 7 + b) * 0.14) + ')' : 'rgba(255,215,160,' + (0.04 + R(k * 7 + b) * 0.07) + ')');
+          g.lineWidth = 0.5 + R(k * 3 + b) * 1.4;
+          g.beginPath(); g.moveTo(gx, 0);
+          for (var y = 0; y <= h; y += 24) g.lineTo(gx + Math.sin(y * 0.012 + k * 1.7 + b) * 3 + Math.sin(y * 0.041 + k) * 1.2, y);
+          g.stroke();
+        }
+        for (var kn = 0; kn < 2; kn++) if (R(b * 9.7 + kn * 3) > 0.45) {   // knots, with the grain swirling round them
+          var kx = x0 + bw * (0.25 + R(b * 4.4 + kn) * 0.5), ky = R(b * 6.6 + kn * 5) * h, kr = 5 + R(b * 8.8 + kn) * 7;
+          for (var rr = 6; rr > 0; rr--) { g.strokeStyle = bump ? 'rgba(80,80,80,0.3)' : 'rgba(70,35,12,' + (0.08 + rr * 0.04) + ')'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(kx, ky, kr + rr * 3.5, kr * 1.7 + rr * 8, 0, 0, Math.PI * 2); g.stroke(); }
+          var kg = g.createRadialGradient(kx, ky, 0, kx, ky, kr); kg.addColorStop(0, bump ? '#303030' : '#24120a'); kg.addColorStop(1, bump ? 'rgba(80,80,80,0.5)' : 'rgba(60,30,10,0.6)');
+          g.fillStyle = kg; g.beginPath(); g.ellipse(kx, ky, kr, kr * 1.5, 0, 0, Math.PI * 2); g.fill();
+        }
+        if (R(b * 12.1) > 0.6) {                                       // a split running along the grain
+          var sx = x0 + bw * (0.3 + R(b * 13) * 0.4), sy = R(b * 14) * h * 0.7;
+          g.strokeStyle = bump ? '#202020' : 'rgba(20,8,2,0.75)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(sx, sy);
+          for (var sp = 1; sp < 8; sp++) g.lineTo(sx + (R(sp + b) - 0.5) * 3, sy + sp * 14);
+          g.stroke();
+        }
+        if (!bump) {
+          for (var sm = 0; sm < 60; sm++) { g.fillStyle = 'rgba(255,235,200,' + R(sm * 3 + b) * 0.06 + ')'; g.fillRect(x0 + R(sm + b * 11) * bw, R(sm * 5 + b) * h, 1, 4 + R(sm * 7) * 14); }   // saw marks
+          [0.24, 0.76].forEach(function (ny) {                         // nails into the girts behind, each weeping a little rust
+            [0.3, 0.7].forEach(function (nx) {
+              var cx = x0 + bw * nx, cy = h * ny, st = g.createLinearGradient(cx, cy, cx, cy + 40);
+              st.addColorStop(0, 'rgba(120,55,20,0.45)'); st.addColorStop(1, 'rgba(120,55,20,0)'); g.fillStyle = st; g.fillRect(cx - 2, cy, 4, 40);
+              g.fillStyle = '#1c1816'; g.beginPath(); g.arc(cx, cy, 3, 0, Math.PI * 2); g.fill();
+              g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.arc(cx - 0.8, cy - 0.8, 1.2, 0, Math.PI * 2); g.fill();
+            });
+          });
+        } else {
+          [0.24, 0.76].forEach(function (ny) { [0.3, 0.7].forEach(function (nx) { g.fillStyle = '#e0e0e0'; g.beginPath(); g.arc(x0 + bw * nx, h * ny, 3, 0, Math.PI * 2); g.fill(); }); });
+        }
+        g.fillStyle = bump ? '#000000' : 'rgba(14,6,2,0.9)'; g.fillRect(x0, 0, 4, h);   // the gap between boards
+        if (!bump) { g.fillStyle = 'rgba(255,220,170,0.12)'; g.fillRect(x0 + 4, 0, 2, h); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(x0 + bw - 3, 0, 3, h); }
+      }
+      if (!bump) {
+        for (var ws = 0; ws < 5; ws++) {                               // old water stains, drip-shaped
+          var wx = R(ws * 4.3 + 50) * w, wy = R(ws * 5.9 + 50) * h * 0.6, wg = g.createLinearGradient(0, wy, 0, wy + 220);
+          wg.addColorStop(0, 'rgba(40,25,12,0)'); wg.addColorStop(0.3, 'rgba(40,25,12,0.16)'); wg.addColorStop(1, 'rgba(40,25,12,0)');
+          g.fillStyle = wg; g.beginPath(); g.ellipse(wx, wy + 110, 16 + R(ws) * 20, 110, 0, 0, Math.PI * 2); g.fill();
+        }
+      }
+    }
+    var wallCv = canvasOf(1024, 1024, function (g, w, h) { wallPaint(g, w, h, false); });
+    var wallBumpCv = canvasOf(512, 512, function (g, w, h) { wallPaint(g, w, h, true); });
+    for (var wn in abWalls) abWalls[wn].g.traverse(function (o) {
+      var m = o.material;
+      if (!m || !m.map || m.map.image !== abPlankTex.image) return;
+      m.map.image = wallCv; m.map.anisotropy = renderer.capabilities.getMaxAnisotropy(); m.map.needsUpdate = true;
+      var bt = new THREE.CanvasTexture(wallBumpCv); bt.wrapS = bt.wrapT = THREE.RepeatWrapping; bt.repeat.copy(m.map.repeat);
+      m.bumpMap = bt; m.bumpScale = 0.035;
+      m.needsUpdate = true;
+    });
+    // and a dusty shadow along the foot of each wall
+    var footCv = canvasOf(8, 64, function (g, w, h) { var fg = g.createLinearGradient(0, 0, 0, h); fg.addColorStop(0, 'rgba(30,18,8,0)'); fg.addColorStop(1, 'rgba(30,18,8,0.55)'); g.fillStyle = fg; g.fillRect(0, 0, w, h); });
+    var footMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(footCv), transparent: true, depthWrite: false });
+    ['N', 'S', 'E', 'W'].forEach(function (wn2) {
+      var len = wn2 === 'N' || wn2 === 'S' ? AB_W : AB_D;
+      var segs = wn2 === 'S' ? [[-len / 2, -AB_DOOR_W / 2], [AB_DOOR_W / 2, len / 2]] : [[-len / 2, len / 2]];
+      segs.forEach(function (sg) { abWallPart(wn2, new THREE.PlaneGeometry(sg[1] - sg[0], 0.5), footMat, (sg[0] + sg[1]) / 2, 0.51, 0.045).castShadow = false; });
+    });
+    // cobwebs in the top corners and over a window
+    var webCv = canvasOf(256, 256, function (g, w, h) {
+      g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(240,240,240,0.55)'; g.lineWidth = 1;
+      var spokes = 9;
+      var ox = w / 2;                                                  // the web fans down from the middle of its top edge
+      for (var s = 0; s < spokes; s++) { var a = 0.15 + s / (spokes - 1) * (Math.PI - 0.3); g.beginPath(); g.moveTo(ox, 0); g.lineTo(ox + Math.cos(a) * w * 0.5, Math.sin(a) * h); g.stroke(); }
+      for (var r = 14; r < h; r += 14 + R(r) * 8) {
+        g.beginPath();
+        for (var s2 = 0; s2 < spokes; s2++) { var a2 = 0.15 + s2 / (spokes - 1) * (Math.PI - 0.3), rr2 = r * (0.92 + R(r + s2) * 0.12), px = ox + Math.cos(a2) * rr2 * 0.5 * w / h, py = Math.sin(a2) * rr2; if (s2) g.lineTo(px, py - 3); else g.moveTo(px, py); }
+        g.stroke();
+      }
+      g.strokeStyle = 'rgba(240,240,240,0.25)'; for (var t = 0; t < 5; t++) { g.beginPath(); g.moveTo(ox + (R(t) - 0.5) * w * 0.6, R(t * 3) * h * 0.3); g.quadraticCurveTo(ox, h * 0.7, ox + (R(t * 5) - 0.5) * w * 0.4, h * (0.6 + R(t * 7) * 0.4)); g.stroke(); }   // stray strands
+    });
+    var webMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(webCv), transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c, k) {     // in each top corner, across the angle
+      var web = abPart(new THREE.PlaneGeometry(0.7, 0.5), webMat, c[0] * (AB_W / 2 - 0.3), AB_H - 0.47, c[1] * (AB_D / 2 - 0.3), 0, Math.atan2(-c[0], -c[1]), 0);
+      web.castShadow = false; web.renderOrder = 4;
+    });
+    var winWeb = abWallPart('E', new THREE.PlaneGeometry(0.3, 0.24), webMat, 2.6 + 0.3, AB_WIN_Y + 0.34, 0.07, 0, 0, -0.5); winWeb.castShadow = false;
+    // three lucky horseshoes nailed over the doorway, points up
+    var shoeMat = new THREE.MeshStandardMaterial({ color: 0x6a6a70, roughness: 0.55, metalness: 0.6 });
+    [-0.45, 0, 0.45].forEach(function (hx, k) {
+      var shoe = abWallPart('S', new THREE.TorusGeometry(0.07, 0.014, 6, 20, Math.PI * 1.5), shoeMat, hx, AB_DOOR_H + 0.13, 0.215, 0, 0, Math.PI * 0.25 + Math.PI);
+      shoe.scale.set(1, 1.15, 0.6);
+      for (var n = 0; n < 4; n++) { var na = Math.PI * 1.25 + (n - 1.5) * 0.7; abWallPart('S', new THREE.CylinderGeometry(0.005, 0.005, 0.012, 6), AB.iron, hx + Math.cos(na) * 0.07, AB_DOOR_H + 0.13 + Math.sin(na) * 0.08, 0.225, Math.PI / 2, 0, 0); }
+    });
+    // an old enamelled tin sign on the side wall, rusting at the edges
+    var signCv = canvasOf(256, 160, function (g, w, h) {
+      g.fillStyle = '#2f5a3a'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#e8c870'; g.lineWidth = 5; g.strokeRect(10, 10, w - 20, h - 20);
+      g.fillStyle = '#f2e6c4'; g.textAlign = 'center'; g.font = 'bold 30px Georgia, serif'; g.fillText('HAPPY HENS', w / 2, 56);
+      g.font = 'italic 17px Georgia, serif'; g.fillText('lay golden eggs', w / 2, 84);
+      g.fillStyle = '#e8c870'; g.font = 'bold 15px Georgia, serif'; g.fillText('FLUFF & FEATHER FEEDS', w / 2, 120);
+      for (var i = 0; i < 160; i++) {                                  // rust and chipped enamel, worst at the edges
+        var ex = R(i * 2.3 + 90) * w, ey = R(i * 3.1 + 90) * h, edge = Math.min(ex, w - ex, ey, h - ey);
+        if (edge > 26 && R(i * 4.7) > 0.15) continue;
+        g.fillStyle = R(i) > 0.5 ? 'rgba(130,60,25,0.75)' : 'rgba(90,40,18,0.6)'; g.beginPath(); g.ellipse(ex, ey, 2 + R(i * 5.3) * 6, 1.5 + R(i * 6.1) * 4, R(i) * 3, 0, Math.PI * 2); g.fill();
+      }
+    });
+    var tinSign = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(signCv), roughness: 0.45, metalness: 0.3 });
+    var sg = new THREE.PlaneGeometry(0.5, 0.31, 6, 3), sgp = sg.attributes.position;
+    for (var v = 0; v < sgp.count; v++) sgp.setZ(v, Math.sin(sgp.getX(v) * 9) * 0.004 + (isle2Hash(v) - 0.5) * 0.003);   // a bit wavy and dented
+    sg.computeVertexNormals();
+    abWallPart('E', sg, tinSign, -1.68, 1.65, 0.012);
+    [[-0.23, 0.14], [0.23, 0.14], [-0.23, -0.14], [0.23, -0.14]].forEach(function (p) { abWallPart('E', new THREE.CylinderGeometry(0.006, 0.006, 0.006, 6), AB.iron, -1.68 + p[0], 1.65 + p[1], 0.018, Math.PI / 2, 0, 0); });
+    // the floor: wide worn boards with cut nails, dark gaps, scuffs, stains and a paler path, with a bump map
+    var FPPM = 128, FW = Math.round(AB_W * FPPM), FH = Math.round(AB_D * FPPM);
+    function floorPaint(g, w, h, bump) {
+      var bw = 0.24 * FPPM;
+      for (var c = 0; c * bw < w; c++) {
+        var y = -R(c * 7.7 + 300) * 2 * FPPM, n = 0;
+        while (y < h) {
+          var bl = (1.6 + R(c * 3.1 + n * 1.9 + 300) * 2.4) * FPPM, l = 28 + R(c * 5.3 + n * 2.3) * 13, hue = 24 + R(c * 2.9 + n * 3.7) * 10;
+          g.fillStyle = bump ? '#9a9a9a' : 'hsl(' + hue + ',' + (24 + R(c + n * 5) * 12) + '%,' + l + '%)'; g.fillRect(c * bw, y, bw, bl);
+          for (var k = 0; k < 16; k++) {
+            var gx = c * bw + 3 + R(c * 13 + n * 5 + k) * (bw - 6), dk = R(k + c + n) > 0.45;
+            g.strokeStyle = bump ? (dk ? 'rgba(60,60,60,0.3)' : 'rgba(210,210,210,0.2)') : (dk ? 'rgba(40,20,8,' + (0.08 + R(k * 3 + c) * 0.14) + ')' : 'rgba(255,220,170,' + (0.03 + R(k * 5 + c) * 0.06) + ')');
+            g.lineWidth = 0.6 + R(k * 9 + n) * 1.3;
+            g.beginPath(); g.moveTo(gx, y); g.bezierCurveTo(gx + (R(k * 11 + c) - 0.5) * 8, y + bl * 0.33, gx + (R(k * 13 + c) - 0.5) * 8, y + bl * 0.66, gx + (R(k * 17 + c) - 0.5) * 6, y + bl); g.stroke();
+          }
+          if (R(c * 19 + n * 7) > 0.55) {                              // a knot
+            var kx = c * bw + bw * (0.3 + R(c + n) * 0.4), ky = y + bl * R(c * 3 + n * 9);
+            g.fillStyle = bump ? '#404040' : 'rgba(40,18,6,0.8)'; g.beginPath(); g.ellipse(kx, ky, 4, 7, 0, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = bump ? 'rgba(70,70,70,0.4)' : 'rgba(50,24,8,0.3)'; g.lineWidth = 1; for (var kr = 1; kr < 4; kr++) { g.beginPath(); g.ellipse(kx, ky, 4 + kr * 3, 7 + kr * 7, 0, 0, Math.PI * 2); g.stroke(); }
+          }
+          g.fillStyle = bump ? '#000' : 'rgba(12,6,2,0.85)'; g.fillRect(c * bw, y, bw, 3);   // the butt joint, with square cut nails each side
+          g.fillStyle = bump ? '#e0e0e0' : '#1a1614';
+          [0.28, 0.72].forEach(function (nx) { g.fillRect(c * bw + bw * nx - 2, y + 7, 4, 3); g.fillRect(c * bw + bw * nx - 2, y - 9, 4, 3); });
+          if (!bump) { g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(c * bw + 3, y + 3, bw - 6, 2); }
+          y += bl; n++;
+        }
+        g.fillStyle = bump ? '#000' : 'rgba(10,5,2,0.8)'; g.fillRect(c * bw, 0, 3, h);   // the gap, packed with dirt
+      }
+      if (bump) return;
+      var aisle = g.createLinearGradient(1.9 * FPPM, 0, 7.4 * FPPM, 0);   // the aisle, worn paler by boots
+      aisle.addColorStop(0, 'rgba(235,210,165,0)'); aisle.addColorStop(0.45, 'rgba(235,210,165,0.14)'); aisle.addColorStop(1, 'rgba(235,210,165,0)');
+      g.fillStyle = aisle; g.fillRect(0, 0, w, h);
+      var door = g.createRadialGradient(w / 2, h, 10, w / 2, h, 2.2 * FPPM);   // and darker where muddy boots come in
+      door.addColorStop(0, 'rgba(50,32,16,0.3)'); door.addColorStop(1, 'rgba(50,32,16,0)'); g.fillStyle = door; g.fillRect(0, h - 2.2 * FPPM, w, 2.2 * FPPM);
+      for (var d = 0; d < 26; d++) {                                   // stains: water rings, an old oil spill
+        var dx = R(d * 3.3 + 40) * w, dy = R(d * 4.1 + 40) * h, dr = 18 + R(d) * 60, dg2 = g.createRadialGradient(dx, dy, dr * 0.3, dx, dy, dr);
+        dg2.addColorStop(0, 'rgba(30,18,8,' + (0.08 + R(d * 5) * 0.12) + ')'); dg2.addColorStop(0.85, 'rgba(30,18,8,0.05)'); dg2.addColorStop(1, 'rgba(30,18,8,0)');
+        g.fillStyle = dg2; g.beginPath(); g.ellipse(dx, dy, dr, dr * (0.6 + R(d * 7) * 0.4), R(d * 9) * 3, 0, Math.PI * 2); g.fill();
+      }
+      for (var sc = 0; sc < 140; sc++) {                               // scuffs and scrapes
+        var sx = R(sc * 2.1 + 500) * w, sy = R(sc * 3.7 + 500) * h, sa = R(sc * 5.3) * Math.PI;
+        g.strokeStyle = 'rgba(' + (R(sc) > 0.5 ? '230,200,160' : '30,15,5') + ',' + (0.06 + R(sc * 7) * 0.1) + ')'; g.lineWidth = 1 + R(sc * 9) * 2;
+        g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(sa) * (10 + R(sc * 11) * 30), sy + Math.sin(sa) * (10 + R(sc * 11) * 30)); g.stroke();
+      }
+      for (var i = 0; i < 2600; i++) {                                 // fine chaff, thickest near the stalls and walls
+        var px = R(i * 1.31 + 7) * w, py = R(i * 2.17 + 7) * h, near = px < 1.9 * FPPM || px > w - 0.9 * FPPM || py < 0.9 * FPPM;
+        if (!near && R(i * 3.7) > 0.3) continue;
+        var a = R(i * 5.3) * Math.PI * 2, len = 4 + R(i * 7.1) * 14;
+        g.strokeStyle = 'hsl(' + (40 + R(i * 9) * 10) + ',' + (45 + R(i * 11) * 20) + '%,' + (48 + R(i * 13) * 22) + '%)';
+        g.lineWidth = 0.8 + R(i * 15) * 1;
+        g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * len, py + Math.sin(a) * len); g.stroke();
+      }
+    }
+    var floorTex = new THREE.CanvasTexture(canvasOf(FW, FH, function (g, w, h) { floorPaint(g, w, h, false); }));
+    floorTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    var floorBump = new THREE.CanvasTexture(canvasOf(FW / 2, FH / 2, function (g, w, h) { g.scale(0.5, 0.5); floorPaint(g, w * 2, h * 2, true); }));
+    AB.floor.map = floorTex; AB.floor.bumpMap = floorBump; AB.floor.bumpScale = 0.025; AB.floor.roughness = 0.82; AB.floor.needsUpdate = true;
+    // loose straws lying on the floor, gathered along the stall fronts, the walls, the doorway and round the hay
+    var n = 900, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.004, 0.003, 1, 3), hayWispMat, n), m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), scl = new THREE.Vector3(), pos = new THREE.Vector3(), col = new THREE.Color();
+    var spots = [[-2.2 + 0.25, 0, 0.35, 4.8], [AB_W / 2 - 0.7, -3.3, 0.6, 1.2], [0, AB_D / 2 - 0.5, 1.4, 0.4], [AB_W / 2 - 0.5, 1.0, 0.4, 3.2], [1.0, 0, 3.0, 4.5]];
+    for (var i2 = 0; i2 < n; i2++) {
+      var sp2 = spots[i2 < 250 ? 0 : i2 < 380 ? 1 : i2 < 470 ? 2 : i2 < 560 ? 3 : 4];
+      var fx = sp2[0] + (R(i2 * 2.3) - 0.5) * 2 * sp2[2], fz = sp2[1] + (R(i2 * 3.9) - 0.5) * 2 * sp2[3];
+      if (fx > -1.45 && fx < 1.45 && fz > -4.05 && fz < -3.15) continue;   // (not under the counter)
+      e.set(Math.PI / 2 + (R(i2 * 5.1) - 0.5) * 0.25, R(i2 * 6.7) * 6.3, (R(i2 * 7.3) - 0.5) * 0.25); q.setFromEuler(e);
+      scl.set(1, 0.06 + R(i2 * 8.9) * 0.12, 1); pos.set(fx, 0.004 + R(i2 * 9.7) * 0.008, fz);
+      m.compose(pos, q, scl); im.setMatrixAt(i2, m);
+      im.setColorAt(i2, col.setHSL(0.11 + R(i2 * 11) * 0.03, 0.5, 0.45 + R(i2 * 13) * 0.25));
+    }
+    im.receiveShadow = true; abRoom.add(im);
+  })();
+
   // shelves in the back corner: two thick planks with rounded fronts on wrought-iron scroll brackets. Below: painted
   // feed tins with labels and knobbed lids, and mason jars of seed, grit and sunflower seeds, one with a tag; an oil can.
   // Above: a stack of folded wool blankets (one fringed), a wicker basket of wool yarn with knitting needles, a brass
@@ -989,24 +1189,51 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateShopBuilding(state.time);
     updateShopInterior(state.time);
   }
-  // ---------- Fluff & Feather's counter: step up to it inside the barn to see the animals for sale (none yet) ----------
+  // ---------- Fluff & Feather's counter: step up to it inside the barn to buy hay (and, one day, animals) ----------
+  var HAY_COST = 12;                                                   // Star Coins a bundle (it sells back for less)
+  ITEMS.hay.info = 'A bundle of sweet hay. Buy it at Fluff & Feather, or find it trimming bushes (they have a 50% chance of dropping some).';
   var barnShopOpen = false;
   var barnShopBtn = document.createElement('button');
   barnShopBtn.type = 'button';
   barnShopBtn.className = 'sleep-btn ship-btn';
-  barnShopBtn.innerHTML = '🐾 Buy animals <kbd>E</kbd>';
+  barnShopBtn.innerHTML = '🐾 Shop <kbd>E</kbd>';
   canvas.parentNode.appendChild(barnShopBtn);
   var barnShopBox = document.createElement('div');
   barnShopBox.className = 'inventory ship shop';
   barnShopBox.hidden = true;
   barnShopBox.innerHTML = '<div class="inv-head"><b>🐾 Fluff &amp; Feather</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
-    '<p class="ship-hint">Welcome to Fluff &amp; Feather! This is where you\'ll buy animals for your farm.</p>' +
-    '<div class="animal-empty"><span class="animal-empty-icon" aria-hidden="true">🐣</span><b>No animals for sale yet</b><span>Our first animals are still on their way. Check back soon!</span></div>' +
+    '<p class="ship-hint">Welcome to Fluff &amp; Feather! Feed and supplies for your farm, and soon, animals too.</p>' +
+    '<div class="shop-item"><div class="slot shop-pic"></div><div class="shop-text"><b>Hay</b><span>A bundle of sweet, sun-dried hay, fresh from the loft.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + HAY_COST + ' each</span></div></div>' +
+    '<div class="shop-buy"><button type="button" data-n="1">Buy 1</button><button type="button" data-n="5">Buy 5</button><button type="button" data-n="10">Buy 10</button></div>' +
+    '<div class="animal-empty" style="margin-top:14px"><span class="animal-empty-icon" aria-hidden="true">🐣</span><b>No animals for sale yet</b><span>Our first animals are still on their way. Check back soon!</span></div>' +
     '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(barnShopBox);
+  barnShopBox.querySelector('.shop-pic').appendChild(itemPicture('hay'));
   paintCoinIcons(barnShopBox);
-  var barnShopCoins = barnShopBox.querySelector('.ship-total b');
-  function openBarnShop() { if (barnShopOpen) return; toggleBag(false); barnShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; barnShopBox.hidden = false; barnShopCoins.textContent = state.coins; }
+  var barnShopCoins = barnShopBox.querySelector('.ship-total b'), barnBuyBtns = barnShopBox.querySelectorAll('.shop-buy button');
+  function renderBarnShop() {
+    barnShopCoins.textContent = state.coins;
+    for (var i = 0; i < barnBuyBtns.length; i++) {
+      var n = +barnBuyBtns[i].getAttribute('data-n');
+      barnBuyBtns[i].innerHTML = 'Buy ' + n + ' · <img class="coin-icon" alt=""> ' + n * HAY_COST;
+      barnBuyBtns[i].disabled = state.coins < n * HAY_COST;
+    }
+    paintCoinIcons(barnShopBox);
+  }
+  function buyHay(n) {
+    var cost = n * HAY_COST;
+    if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
+    if (!roomFor(['hay'])) { bagFull(); return; }
+    addItem('hay', n);
+    state.coins -= cost;
+    showCoins(true);
+    coinSound(n);
+    showToast('Bought ' + n + ' Hay 🌾', 1800);
+    renderBarnShop();
+  }
+  for (var bbi = 0; bbi < barnBuyBtns.length; bbi++) barnBuyBtns[bbi].addEventListener('click', function () { buyHay(+this.getAttribute('data-n')); });
+  function openBarnShop() { if (barnShopOpen) return; toggleBag(false); barnShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; barnShopBox.hidden = false; renderBarnShop(); }
   function closeBarnShop() { barnShopOpen = false; barnShopBox.hidden = true; }
   barnShopBox.querySelector('.inv-close').addEventListener('click', function () { closeBarnShop(); focusGame(); });
   barnShopBtn.addEventListener('click', function () { openBarnShop(); focusGame(); });
@@ -1014,7 +1241,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateBarnShop() {
     var near = atBarnCounter();
     if (barnShopOpen && !atBarnCounter(1.2)) closeBarnShop();          // it stays open until you really walk away from the counter
-    if (barnShopOpen && barnShopCoins.textContent !== String(state.coins)) barnShopCoins.textContent = state.coins;
+    if (barnShopOpen && barnShopCoins.textContent !== String(state.coins)) renderBarnShop();   // keep the prices up to date with your coins
     var show = near && !barnShopOpen;
     if (barnShopBtn.classList.contains('show') !== show) barnShopBtn.classList.toggle('show', show);
     updateBarnInterior(state.time);
