@@ -113,67 +113,151 @@ EVERDAWN_PARTS.push(function (THREE) {
   for (var sl2 = 0; sl2 < 3; sl2++) { var abSla = sl2 / 3 * Math.PI * 2; abPart(new THREE.CylinderGeometry(0.02, 0.025, 0.68, 6), AB.beam, 0.5 + Math.cos(abSla) * 0.12, 0.33, ABC_Z - 0.75 + Math.sin(abSla) * 0.12, Math.sin(abSla) * 0.12, 0, -Math.cos(abSla) * 0.12); }
   for (var abCs = -1.1; abCs <= 1.11; abCs += 0.55) abSolids.push([ABC_X + abCs, ABC_Z, 0.42]);
 
-  // the stalls down the left: plank partitions with posts and caps, a front panel and a gate swung open, deep straw
-  // bedding, a hay rack on the wall, a water bucket, and a slate on each one saying who's coming
+  // the stalls down the left, built like proper horse stalls: solid tongue-and-groove lower walls in a heavy timber
+  // frame, black iron bars above up to a capped top rail, posts with iron shoes and ball finials, and a barred gate
+  // swung open into each stall on strap hinges. Inside: deep straw heaped against the back wall, a corner manger of
+  // feed, a hay rack under the window, a salt lick on its bracket, and a galvanised water bucket on a hook; outside,
+  // a wool blanket hung over the front and a brass-framed nameplate slate saying who's coming
   var AB_SX = -2.2;                                                    // the stall fronts
-  var abWispList = [];
-  function abBoardRun(x0, z0, x1, z1, ys, mat, th) {                   // horizontal boards from one point to another
-    var ln = Math.hypot(x1 - x0, z1 - z0), an = Math.atan2(-(z1 - z0), x1 - x0);
-    ys.forEach(function (by) { abPart(new THREE.BoxGeometry(ln, 0.17, th || 0.04), mat || AB.wood, (x0 + x1) / 2, by, (z0 + z1) / 2, 0, an, 0); });
+  var SB_LOW = 1.05, SB_TOP = 1.9;                                     // the top of the boarded part, and of the bars
+  var abWispList = [], abBars = [];                                    // (the bars are all drawn in one batch)
+  var stallBoard = new THREE.MeshStandardMaterial({ map: abPlankTex.clone(), color: 0xe6cfae, bumpMap: abPlankTex, bumpScale: 0.01, roughness: 0.8 });
+  stallBoard.map.needsUpdate = true; stallBoard.map.repeat.set(0.9, 0.5);
+  var stallIron = new THREE.MeshStandardMaterial({ color: 0x23232a, roughness: 0.4, metalness: 0.55 });
+  function abStallRun(x0, z0, x1, z1, parent) {                       // one run of stall wall: boards below, bars above, in a frame
+    var ln = Math.hypot(x1 - x0, z1 - z0), an = Math.atan2(-(z1 - z0), x1 - x0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, dx = (x1 - x0) / ln, dz = (z1 - z0) / ln;
+    abPart(new THREE.BoxGeometry(ln, SB_LOW - 0.12, 0.045), stallBoard, cx, 0.12 + (SB_LOW - 0.12) / 2, cz, 0, an, 0, parent);   // the boards
+    abPart(new THREE.BoxGeometry(ln, 0.12, 0.07), AB.beam, cx, 0.06, cz, 0, an, 0, parent);                    // a kick board at the bottom
+    abPart(new THREE.BoxGeometry(ln, 0.1, 0.1), AB.beam, cx, SB_LOW + 0.05, cz, 0, an, 0, parent);             // the middle rail
+    abPart(new THREE.BoxGeometry(ln, 0.09, 0.11), AB.beam, cx, SB_TOP + 0.045, cz, 0, an, 0, parent);         // the top rail,
+    abPart(new THREE.BoxGeometry(ln, 0.02, 0.13), stallIron, cx, SB_TOP + 0.1, cz, 0, an, 0, parent);         // capped in iron
+    abPart(new THREE.BoxGeometry(ln, 0.025, 0.03), stallIron, cx, SB_LOW + 0.11, cz, 0, an, 0, parent);       // the iron channel the bars sit in
+    abPart(new THREE.BoxGeometry(ln, 0.025, 0.03), stallIron, cx, SB_TOP - 0.01, cz, 0, an, 0, parent);
+    var nb = Math.max(2, Math.round(ln / 0.11));
+    for (var b = 1; b < nb; b++) abBars.push({ p: parent, x: x0 + dx * ln * b / nb, z: z0 + dz * ln * b / nb });
+    for (var r = 0; r < ln / 0.6; r++) abPart(new THREE.CylinderGeometry(0.012, 0.012, 0.11, 8).rotateX(Math.PI / 2), stallIron, x0 + dx * (0.3 + r * 0.6), SB_LOW + 0.05, z0 + dz * (0.3 + r * 0.6), 0, an, 0, parent);   // bolt heads through the rail
   }
-  function abPost(x, z, h) {
-    abPart(new THREE.BoxGeometry(0.12, h, 0.12), AB.beam, x, h / 2, z);
-    abPart(new THREE.BoxGeometry(0.16, 0.04, 0.16), AB.beam, x, h + 0.02, z);
-    abPart(new THREE.SphereGeometry(0.05, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), AB.beam, x, h + 0.04, z);   // a rounded cap
+  function abStallPost(x, z, h) {                                      // a post on an iron shoe, with a chamfered cap and a ball finial
+    abPart(new THREE.BoxGeometry(0.14, h, 0.14), AB.beam, x, h / 2, z);
+    abPart(new THREE.BoxGeometry(0.16, 0.16, 0.16), stallIron, x, 0.08, z);
+    abPart(new THREE.CylinderGeometry(0.075, 0.11, 0.06, 4, 1), AB.beam, x, h + 0.03, z, 0, Math.PI / 4, 0);
+    abPart(new THREE.CylinderGeometry(0.02, 0.03, 0.05, 10), stallIron, x, h + 0.085, z);
+    abPart(new THREE.SphereGeometry(0.045, 14, 10), stallIron, x, h + 0.14, z);
+    [SB_LOW + 0.05, SB_TOP + 0.045].forEach(function (ry) { abPart(new THREE.BoxGeometry(0.15, 0.03, 0.15), stallIron, x, ry - 0.06, z); });   // iron bands where the rails meet it
   }
-  [-3.9, -1.3, 1.3, 3.9].forEach(function (pz) {                       // the partitions between them
-    abBoardRun(-AB_W / 2 + 0.05, pz, AB_SX, pz, [0.2, 0.4, 0.6, 0.8, 1.0], AB.wood);
-    abPart(new THREE.BoxGeometry(AB_W / 2 + AB_SX, 0.08, 0.08), AB.beam, (-AB_W / 2 + AB_SX) / 2, 1.14, pz);   // a top rail
-    abPost(AB_SX, pz, 1.3);
+  var PH = SB_TOP + 0.1;                                               // post height
+  [-3.9, -1.3, 1.3, 3.9].forEach(function (pz) {                       // the partitions between the stalls
+    abStallRun(-AB_W / 2 + 0.03, pz, AB_SX, pz);
+    abStallPost(AB_SX, pz, PH);
+    abPart(new THREE.BoxGeometry(0.06, PH, 0.16), AB.beam, -AB_W / 2 + 0.05, PH / 2, pz);   // a ledger post against the wall
     for (var abPx = -AB_W / 2 + 0.3; abPx <= AB_SX; abPx += 0.3) abSolids.push([abPx, pz, 0.1]);
   });
+  var abPlaid = [['#9a2a2a', '#e8d8b0', '#2a2a2a'], ['#2a3f6a', '#c8a050', '#f0ead8'], ['#2f5a3a', '#d8b860', '#7a2a2a']].map(function (c) {
+    return paintTexture(128, 128, function (g, w, h) {                 // wool blankets in tartan
+      g.fillStyle = c[0]; g.fillRect(0, 0, w, h);
+      [[0, 24, 'rgba(0,0,0,0.25)'], [64, 24, 'rgba(0,0,0,0.25)'], [30, 4, c[1]], [94, 4, c[1]], [46, 2, c[2]], [110, 2, c[2]]].forEach(function (st) {
+        g.fillStyle = st[2]; g.globalAlpha = st[2].charAt(0) === 'r' ? 1 : 0.8; g.fillRect(st[0], 0, st[1], h); g.fillRect(0, st[0], w, st[1]);
+      });
+      g.globalAlpha = 1;
+      for (var i = 0; i < 900; i++) { g.fillStyle = 'rgba(255,255,255,' + isle2Hash(i * 1.3 + 77) * 0.06 + ')'; g.fillRect(isle2Hash(i * 2.1 + 77) * w, isle2Hash(i * 3.7 + 77) * h, 2, 1); }   // the wool's weave
+    });
+  });
+  var stallBrass = new THREE.MeshStandardMaterial({ color: 0xd4a84e, emissive: 0x5a3e0c, emissiveIntensity: 0.25, metalness: 0.8, roughness: 0.3 });
   [-2.6, 0, 2.6].forEach(function (sz, k) {
-    var z0 = sz - 1.3, z1 = sz + 1.3;
-    abBoardRun(AB_SX, z0 + 0.06, AB_SX, z0 + 1.22, [0.25, 0.5, 0.75, 1.0], AB.wood, 0.05);   // the fixed front panel
-    abPost(AB_SX, z0 + 1.25, 1.2);
+    var z0 = sz - 1.3, z1 = sz + 1.3, FW = 1.16;                       // the fixed front panel's width
+    abStallRun(AB_SX, z0 + 0.07, AB_SX, z0 + FW + 0.07);               // the fixed front
+    [-1, 1].forEach(function (s) {                                     // an X brace on its boards, facing the aisle
+      var bl = Math.hypot(FW - 0.08, SB_LOW - 0.2);
+      abPart(new THREE.BoxGeometry(0.03, 0.08, bl), AB.beam, AB_SX + 0.04, 0.12 + (SB_LOW - 0.12) / 2, z0 + 0.07 + FW / 2, s * Math.atan2(SB_LOW - 0.2, FW - 0.08), 0, 0);
+    });
+    abStallPost(AB_SX, z0 + FW + 0.1, PH);                             // the gate post
     for (var fz = z0 + 0.2; fz <= z0 + 1.25; fz += 0.3) abSolids.push([AB_SX, fz, 0.12]);
-    // the gate, hinged on the partition post and swung open into the stall
-    var gate = new THREE.Group(); gate.position.set(AB_SX, 0, z1 - 0.06); gate.rotation.y = 1.05 + k * 0.12; abRoom.add(gate);
-    [0.25, 0.55, 0.85].forEach(function (gy) { abPart(new THREE.BoxGeometry(0.05, 0.12, 1.15), AB.wood, 0, gy, -0.62, 0, 0, 0, gate); });
-    [-0.08, -1.16].forEach(function (gz) { abPart(new THREE.BoxGeometry(0.06, 0.95, 0.07), AB.beam, 0, 0.55, gz, 0, 0, 0, gate); });
-    abPart(new THREE.BoxGeometry(0.04, 0.08, Math.hypot(1.08, 0.6)), AB.beam, 0.035, 0.55, -0.62, Math.atan2(0.6, 1.08), 0, 0, gate);   // its diagonal
-    [0.3, 0.8].forEach(function (hy) { abPart(new THREE.BoxGeometry(0.012, 0.04, 0.3), AB.iron, 0.035, hy, -0.2, 0, 0, 0, gate); });   // strap hinges
-    abPart(new THREE.BoxGeometry(0.02, 0.03, 0.12), AB.iron, 0.04, 0.85, -1.08, 0, 0, 0, gate);       // the latch
+    // the gate: a boarded lower half and barred upper half in a frame, braced, swung open into the stall on long
+    // strap hinges, with a sliding bolt and a little chain to hold it
+    var gate = new THREE.Group(); gate.position.set(AB_SX, 0, z1 - 0.07); gate.rotation.y = 1.05 + k * 0.12; abRoom.add(gate);
+    var GW = 1.12, GZ = -0.06 - GW / 2;
+    abPart(new THREE.BoxGeometry(0.04, SB_LOW - 0.2, GW), stallBoard, 0, 0.15 + (SB_LOW - 0.2) / 2, GZ, 0, 0, 0, gate);
+    [-0.06, -0.06 - GW].forEach(function (gz) { abPart(new THREE.BoxGeometry(0.07, PH - 0.12, 0.08), AB.beam, 0, 0.1 + (PH - 0.12) / 2, gz, 0, 0, 0, gate); });   // stiles
+    [0.14, SB_LOW, PH - 0.05].forEach(function (gy) { abPart(new THREE.BoxGeometry(0.07, 0.08, GW), AB.beam, 0, gy, GZ, 0, 0, 0, gate); });                     // rails
+    abPart(new THREE.BoxGeometry(0.03, 0.07, Math.hypot(GW - 0.1, SB_LOW - 0.25)), AB.beam, 0.035, 0.6, GZ, Math.atan2(SB_LOW - 0.25, GW - 0.1), 0, 0, gate);   // the brace
+    abPart(new THREE.BoxGeometry(0.03, 0.07, Math.hypot(GW - 0.1, SB_LOW - 0.25)), AB.beam, -0.035, 0.6, GZ, Math.atan2(SB_LOW - 0.25, GW - 0.1), 0, 0, gate);
+    for (var gb = 1; gb < 10; gb++) abBars.push({ p: gate, x: 0, z: -0.06 - GW * gb / 10 });
+    [0.3, SB_LOW, PH - 0.15].forEach(function (hy) {                   // strap hinges, both faces, with their pins on the post
+      [-1, 1].forEach(function (f) { abPart(new THREE.BoxGeometry(0.008, 0.045, 0.42), stallIron, f * 0.042, hy, -0.24, 0, 0, 0, gate); });
+      abPart(new THREE.CylinderGeometry(0.016, 0.016, 0.09, 8), stallIron, 0, hy, 0.0, 0, 0, 0, gate);
+    });
+    abPart(new THREE.BoxGeometry(0.03, 0.04, 0.16), stallIron, 0.045, SB_LOW + 0.1, -GW - 0.02, 0, 0, 0, gate);   // the sliding bolt
+    abPart(new THREE.SphereGeometry(0.014, 8, 6), stallBrass, 0.07, SB_LOW + 0.1, -GW + 0.03, 0, 0, 0, gate);
+    for (var ch = 0; ch < 6; ch++) abPart(new THREE.TorusGeometry(0.012, 0.003, 4, 8), stallIron, 0.045, SB_LOW - 0.02 - ch * 0.022, -GW - 0.06, 0, ch % 2 ? Math.PI / 2 : 0, 0, gate);   // a short chain hanging from it
     var ga = gate.rotation.y;
-    [0.4, 0.8, 1.15].forEach(function (t) { abSolids.push([AB_SX - t * Math.sin(ga), z1 - 0.06 - t * Math.cos(ga), 0.1]); });   // (it swings into the stall)
-    // deep straw bedding, a little heaped against the back wall
-    var bed = new THREE.PlaneGeometry(AB_W / 2 + AB_SX - 0.1, 2.5, 8, 10), bp = bed.attributes.position;
-    for (var v = 0; v < bp.count; v++) bp.setZ(v, Math.max(0, (-bp.getX(v) / (AB_W / 2 + AB_SX)) * 0.12) + isle2Hash(v * 1.3 + k * 50) * 0.04);
+    [0.4, 0.8, 1.15].forEach(function (t) { abSolids.push([AB_SX - t * Math.sin(ga), z1 - 0.07 - t * Math.cos(ga), 0.1]); });   // (it swings into the stall)
+    // deep straw bedding, banked up against the back wall the way grooms leave it
+    var bed = new THREE.PlaneGeometry(AB_W / 2 + AB_SX - 0.1, 2.5, 10, 12), bp = bed.attributes.position;
+    for (var v = 0; v < bp.count; v++) bp.setZ(v, Math.pow(Math.max(0, -bp.getX(v) / (AB_W / 2 + AB_SX) + 0.1), 2) * 0.5 + isle2Hash(v * 1.3 + k * 50) * 0.05);
     bed.computeVertexNormals();
     var bedM = abPart(bed, AB.straw, (-AB_W / 2 + AB_SX) / 2, 0.012, sz, -Math.PI / 2, 0, 0); bedM.castShadow = false;
-    var bed2 = abPart(new THREE.PlaneGeometry(1.2, 1.6), AB.straw, -AB_W / 2 + 0.7, 0.04, sz + 0.2, -Math.PI / 2, 0, 0.4 + k);
-    bed2.castShadow = false;
-    for (var abWs = 0; abWs < 110; abWs++) abWispList.push([-AB_W / 2 + 0.1 + isle2Hash(abWs * 1.9 + k * 300) * (AB_W / 2 + AB_SX - 0.2), sz + (isle2Hash(abWs * 2.3 + k * 300) - 0.5) * 2.4, isle2Hash(abWs * 3.1 + k * 300)]);
+    var bank = abPart(new THREE.SphereGeometry(0.5, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.12, 0, sz, 0, 0, 0);
+    bank.scale.set(0.5, 0.45, 2.3); bank.castShadow = false;           // the bank of straw along the wall
+    [0, 1].forEach(function (L) { abPart(new THREE.PlaneGeometry(1.3, 1.7), AB.straw, -AB_W / 2 + 0.75 + L * 0.3, 0.05 + L * 0.03, sz + 0.2 - L * 0.4, -Math.PI / 2, 0, 0.4 + k + L).castShadow = false; });
+    for (var abWs = 0; abWs < 160; abWs++) abWispList.push([-AB_W / 2 + 0.1 + isle2Hash(abWs * 1.9 + k * 300) * (AB_W / 2 + AB_SX - 0.2), sz + (isle2Hash(abWs * 2.3 + k * 300) - 0.5) * 2.4, isle2Hash(abWs * 3.1 + k * 300)]);
     // a hay rack on the wall under the window, with hay poking through
     var rx = -AB_W / 2 + 0.22;
     abPart(new THREE.BoxGeometry(0.04, 0.06, 0.9), AB.beam, rx + 0.18, 1.25, sz);
     abPart(new THREE.BoxGeometry(0.06, 0.06, 0.9), AB.beam, rx - 0.1, 0.9, sz);
+    [-0.45, 0.45].forEach(function (ez) { abPart(new THREE.BoxGeometry(0.3, 0.4, 0.03), AB.beam, rx + 0.04, 1.07, sz + ez); });   // its end boards
     for (var abRb = -0.4; abRb <= 0.41; abRb += 0.1) abPart(new THREE.CylinderGeometry(0.008, 0.008, 0.42, 5), AB.iron, rx + 0.04, 1.07, sz + abRb, 0, 0, -0.72);
     var rh = abPart(new THREE.SphereGeometry(0.26, 12, 8), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), rx - 0.02, 1.1, sz, 0, 0, 0.3);
     rh.scale.set(0.5, 0.55, 1.65);
-    // a galvanised water bucket in the front corner
-    var bkx = AB_SX - 0.35, bkz = z0 + 0.35;
-    abPart(new THREE.CylinderGeometry(0.15, 0.12, 0.28, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), bkx, 0.14, bkz);
-    abPart(new THREE.CircleGeometry(0.14, 18), new THREE.MeshStandardMaterial({ color: 0x5a8aa8, roughness: 0.05, metalness: 0.2 }), bkx, 0.22, bkz, -Math.PI / 2, 0, 0);   // water
-    [0.03, 0.26].forEach(function (ry) { abPart(new THREE.TorusGeometry(0.15 - (ry > 0.1 ? 0 : 0.025), 0.006, 5, 24), AB.zinc, bkx, ry, bkz, Math.PI / 2, 0, 0); });
-    abPart(new THREE.TorusGeometry(0.15, 0.004, 5, 20, Math.PI), AB.iron, bkx, 0.28, bkz, 0, 0.6, 0);
-    abSolids.push([bkx, bkz, 0.15]);
-    // the slate on the front panel
-    abPart(new THREE.BoxGeometry(0.03, 0.2, 0.38), AB.beam, AB_SX + 0.04, 1.12, z0 + 0.65);
-    abPart(new THREE.PlaneGeometry(0.34, 0.17), new THREE.MeshStandardMaterial({ map: abSlateTex, roughness: 0.95 }), AB_SX + 0.056, 1.12, z0 + 0.65, 0, Math.PI / 2, 0);
-    abPart(new THREE.CylinderGeometry(0.003, 0.003, 0.14, 4), AB.rope, AB_SX + 0.05, 1.27, z0 + 0.65, 0, 0, 0);
+    for (var hw = 0; hw < 12; hw++) abPart(new THREE.CylinderGeometry(0.004, 0.003, 0.18, 3), hayWispMat, rx + 0.12, 0.95 - isle2Hash(hw + k * 20) * 0.1, sz + (isle2Hash(hw * 3 + k) - 0.5) * 0.8, 0.3, 0, -0.4 + isle2Hash(hw * 5) * 0.8).castShadow = false;   // wisps hanging out
+    // a corner manger in the back corner by the gate, with feed in it
+    var MX = -AB_W / 2 + 0.3, MZ = z1 - 0.3;
+    var manger = new THREE.CylinderGeometry(0.34, 0.24, 0.26, 4, 1, true); manger.rotateY(Math.PI / 4);
+    abPart(manger, new THREE.MeshStandardMaterial({ color: 0x8a6440, roughness: 0.8, side: THREE.DoubleSide }), MX, 0.82, MZ);
+    abPart(new THREE.BoxGeometry(0.34, 0.02, 0.34), AB.beam, MX, 0.7, MZ);
+    abPart(new THREE.BoxGeometry(0.44, 0.03, 0.44), stallIron, MX, 0.95, MZ, 0, 0, 0).scale.set(1, 1, 1);
+    abPart(new THREE.BoxGeometry(0.4, 0.02, 0.4), new THREE.MeshStandardMaterial({ color: 0xc89a50, roughness: 1 }), MX, 0.88, MZ);   // the feed
+    for (var oat = 0; oat < 10; oat++) abPart(new THREE.SphereGeometry(0.012, 5, 4), new THREE.MeshStandardMaterial({ color: 0xe0c070, roughness: 1 }), MX + (isle2Hash(oat + k * 9) - 0.5) * 0.3, 0.895, MZ + (isle2Hash(oat * 2 + k) - 0.5) * 0.3).castShadow = false;
+    abPart(new THREE.BoxGeometry(0.05, 0.7, 0.05), AB.beam, MX + 0.17, 0.35, MZ - 0.17);              // its leg
+    abSolids.push([MX, MZ, 0.3]);
+    // a salt lick on a bracket on the wall
+    var SLZ = z0 + 0.55;
+    abPart(new THREE.BoxGeometry(0.03, 0.2, 0.2), stallIron, -AB_W / 2 + 0.04, 1.0, SLZ);
+    abPart(new THREE.BoxGeometry(0.16, 0.02, 0.18), stallIron, -AB_W / 2 + 0.1, 0.9, SLZ);
+    abPart(ciRoundBox(0.13, 0.12, 0.14, 0.03), new THREE.MeshStandardMaterial({ color: 0xb8605a, roughness: 0.7 }), -AB_W / 2 + 0.11, 0.97, SLZ);
+    // a galvanised water bucket hung on a hook in the front corner
+    var bkx = AB_SX - 0.2, bkz = z0 + 0.3, bky = 0.55;
+    abPart(new THREE.CylinderGeometry(0.15, 0.12, 0.28, 18, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3, side: THREE.DoubleSide }), bkx, bky, bkz);
+    abPart(new THREE.CircleGeometry(0.12, 18), new THREE.MeshStandardMaterial({ color: 0xc8ced4, roughness: 0.4, metalness: 0.3 }), bkx, bky - 0.14, bkz, -Math.PI / 2, 0, 0);
+    abPart(new THREE.CircleGeometry(0.14, 18), new THREE.MeshStandardMaterial({ color: 0x5a8aa8, roughness: 0.05, metalness: 0.2 }), bkx, bky + 0.08, bkz, -Math.PI / 2, 0, 0);   // water
+    [-0.11, 0.12].forEach(function (ry) { abPart(new THREE.TorusGeometry(ry > 0 ? 0.15 : 0.125, 0.006, 5, 24), AB.zinc, bkx, bky + ry, bkz, Math.PI / 2, 0, 0); });
+    abPart(new THREE.TorusGeometry(0.15, 0.004, 5, 20, Math.PI), stallIron, bkx, bky + 0.14, bkz, 0, Math.PI / 2, 0);   // its handle,
+    abPart(new THREE.BoxGeometry(0.02, 0.18, 0.04), stallIron, AB_SX - 0.03, bky + 0.24, bkz);          // on a hook on the front
+    abPart(new THREE.TorusGeometry(0.03, 0.006, 5, 10, Math.PI), stallIron, AB_SX - 0.06, bky + 0.17, bkz, 0, Math.PI / 2, Math.PI);
+    // a wool blanket folded over the front's middle rail, on the aisle side
+    var blk = new THREE.PlaneGeometry(0.62, 0.62, 6, 10), bkp = blk.attributes.position;
+    for (var bv = 0; bv < bkp.count; bv++) {                           // draped: up one side, over the rail, down the other
+      var by = bkp.getY(bv) + 0.31, fold = by / 0.62 * Math.PI;
+      bkp.setXYZ(bv, bkp.getX(bv), SB_LOW + 0.1 - Math.abs(Math.cos(fold)) * 0.32 + Math.sin(fold) * 0.02, Math.cos(fold) * 0.07 + (isle2Hash(bv + k) - 0.5) * 0.006);
+    }
+    blk.computeVertexNormals();
+    abPart(blk, new THREE.MeshStandardMaterial({ map: abPlaid[k], roughness: 1, side: THREE.DoubleSide }), AB_SX + 0.0, 0, z0 + 0.38, 0, Math.PI / 2, 0).castShadow = false;
+    // the nameplate: a slate in a brass frame, with a lucky horseshoe above it
+    var NZ = z0 + 0.86;
+    abPart(new THREE.BoxGeometry(0.02, 0.22, 0.4), stallBrass, AB_SX + 0.045, 0.62, NZ);
+    abPart(new THREE.PlaneGeometry(0.36, 0.18), new THREE.MeshStandardMaterial({ map: abSlateTex, roughness: 0.95 }), AB_SX + 0.057, 0.62, NZ, 0, Math.PI / 2, 0);
+    [-1, 1].forEach(function (s) { abPart(new THREE.CylinderGeometry(0.008, 0.008, 0.01, 8), stallBrass, AB_SX + 0.058, 0.62, NZ + s * 0.17, 0, 0, Math.PI / 2); });
+    abPart(new THREE.TorusGeometry(0.055, 0.012, 6, 16, Math.PI * 1.5), new THREE.MeshStandardMaterial({ color: 0x8a8e94, roughness: 0.4, metalness: 0.7 }), AB_SX + 0.05, 0.85, NZ, 0, Math.PI / 2, -Math.PI * 0.25);
   });
-
+  (function () {                                                       // all the iron bars, in one batch
+    var byParent = [];
+    abBars.forEach(function (b) { var e = byParent.filter(function (q) { return q.p === b.p; })[0]; if (!e) { e = { p: b.p, list: [] }; byParent.push(e); } e.list.push(b); });
+    var bm = new THREE.Matrix4(), bh = SB_TOP - SB_LOW - 0.11;
+    byParent.forEach(function (e) {
+      var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.011, 0.011, bh, 6), stallIron, e.list.length);
+      e.list.forEach(function (b, i) { bm.makeTranslation(b.x, SB_LOW + 0.1 + bh / 2, b.z); im.setMatrixAt(i, bm); });
+      im.castShadow = true; (e.p || abRoom).add(im);
+    });
+  })();
   // down the right: feed sacks, a feed bin, a Dutch door, tack on a peg, buckets, nesting boxes and hay bales
   var AEX = AB_W / 2;
   [[AEX - 0.42, -3.35, 1.5, 0], [AEX - 0.42, -2.85, 1.7, 1], [AEX - 0.45, -3.1, 1.6, 2]].forEach(function (sk, k) {   // sacks, the top one flopped over
