@@ -11187,29 +11187,92 @@ function startGame(THREE) {
   }
   ciOfficeChair(RCP_X - 0.3, RCP_Z - 0.85, Math.PI - 0.3);
   ciSolids.push([RCP_X - 0.9, RCP_Z, 0.55], [RCP_X, RCP_Z, 0.55], [RCP_X + 0.9, RCP_Z, 0.55], [RCP_X - 0.3, RCP_Z - 0.85, 0.35]);
-  // a hanging "Reception" sign above the desk
-  var ciRecTex = paintTexture(256, 64, function (g, w, h) {
-    g.fillStyle = '#2f6f68'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.strokeRect(5, 5, w - 10, h - 10);
-    g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 30px Georgia, serif'; g.fillText('Reception', w / 2, h / 2 + 2);
-  });
-  ciPart(new THREE.BoxGeometry(1.0, 0.25, 0.03), new THREE.MeshStandardMaterial({ map: ciRecTex, roughness: 0.6 }), RCP_X, 2.55, RCP_Z + 0.1);
-  [-0.4, 0.4].forEach(function (sx) { ciPart(new THREE.CylinderGeometry(0.004, 0.004, CIN_H - 2.68, 4), CI.brass, RCP_X + sx, (CIN_H + 2.68) / 2, RCP_Z + 0.1); });
-  // filing cabinets under the back window, with binders and a tray of letters on top
-  [-3.25, -1.95].forEach(function (fx) {
-    ciPart(new THREE.BoxGeometry(1.2, 0.86, 0.5), CI.white, fx, 0.43, CNW + 0.27);
-    [0.24, 0.62].forEach(function (dy) {
-      ciPart(new THREE.BoxGeometry(1.12, 0.34, 0.02), CI.mint, fx, dy, CNW + 0.53);
-      ciPart(new THREE.BoxGeometry(0.22, 0.03, 0.03), CI.brass, fx, dy + 0.1, CNW + 0.555);
-      ciPart(new THREE.BoxGeometry(0.12, 0.05, 0.005), CI.paper, fx, dy + 0.02, CNW + 0.545);
+  // a hanging "Reception" sign above the desk: a painted teal board in a routed oak frame, with gold-leaf letters, a
+  // heart crest and little flourishes on both faces, hanging on brass chains from a ceiling plate
+  var ciRecTex = paintTexture(1024, 256, function (g, w, h) {
+    var bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#2c6a62'); bg.addColorStop(1, '#1f544d');
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 160; i++) { g.strokeStyle = 'rgba(' + (isle2Hash(i) > 0.5 ? '120,190,170' : '10,30,28') + ',' + (0.04 + isle2Hash(i * 2) * 0.05) + ')'; g.lineWidth = 1 + isle2Hash(i * 3) * 2; var y = isle2Hash(i * 1.3) * h; g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * 0.3, y + 4, w * 0.6, y - 4, w, y + 2); g.stroke(); }   // grain under the paint
+    var gold = g.createLinearGradient(0, 40, 0, h - 40); gold.addColorStop(0, '#fff3c0'); gold.addColorStop(0.35, '#e9bb4e'); gold.addColorStop(0.6, '#a87824'); gold.addColorStop(1, '#f0cd68');
+    g.strokeStyle = gold; g.lineWidth = 6; g.strokeRect(22, 22, w - 44, h - 44); g.lineWidth = 2; g.strokeRect(36, 36, w - 72, h - 72);
+    [[36, 36], [w - 36, 36], [36, h - 36], [w - 36, h - 36]].forEach(function (c) { g.fillStyle = gold; g.beginPath(); g.arc(c[0], c[1], 8, 0, Math.PI * 2); g.fill(); });
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'italic bold 118px Georgia, serif';
+    g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillText('Reception', w / 2 + 5, h / 2 + 12);
+    g.fillStyle = gold; g.fillText('Reception', w / 2, h / 2 + 6);
+    g.strokeStyle = 'rgba(255,248,215,0.5)'; g.lineWidth = 1.5; g.strokeText('Reception', w / 2 - 1, h / 2 + 4);
+    [[120, 1], [w - 120, -1]].forEach(function (c) {                   // a heart with a white cross, and a flourish, at each end
+      var cx = c[0], cy = h / 2 + 4, s = 36;
+      g.fillStyle = '#e0607a'; g.beginPath(); g.moveTo(cx, cy + s * 0.9); g.bezierCurveTo(cx - s * 1.3, cy, cx - s * 0.8, cy - s, cx, cy - s * 0.35); g.bezierCurveTo(cx + s * 0.8, cy - s, cx + s * 1.3, cy, cx, cy + s * 0.9); g.fill();
+      g.strokeStyle = gold; g.lineWidth = 4; g.stroke();
+      g.fillStyle = '#fff'; g.fillRect(cx - 5, cy - 18, 10, 28); g.fillRect(cx - 14, cy - 9, 28, 10);
     });
   });
+  ciRecTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  var RS_Y = 2.55, RS_Z = RCP_Z + 0.1, recMat = new THREE.MeshStandardMaterial({ map: ciRecTex, roughness: 0.45, metalness: 0.15 });
+  ciPart(ciRoundBox(1.06, 0.29, 0.04, 0.012), CI_OAK, RCP_X, RS_Y, RS_Z);                                               // the oak frame
+  ciPart(new THREE.PlaneGeometry(0.98, 0.245), recMat, RCP_X, RS_Y, RS_Z + 0.0205);
+  ciPart(new THREE.PlaneGeometry(0.98, 0.245), recMat, RCP_X, RS_Y, RS_Z - 0.0205, 0, Math.PI, 0);
+  [-0.4, 0.4].forEach(function (sx) {
+    ciPart(new THREE.TorusGeometry(0.018, 0.004, 6, 14), CI.brass, RCP_X + sx, RS_Y + 0.16, RS_Z, 0, Math.PI / 2, 0);   // eye hooks
+    for (var ch = RS_Y + 0.19; ch < CIN_H - 0.03; ch += 0.035) ciPart(new THREE.TorusGeometry(0.009, 0.0025, 4, 10), CI.brass, RCP_X + sx, ch, RS_Z, 0, Math.round(ch / 0.035) % 2 ? 0 : Math.PI / 2, 0);   // chain links
+    ciPart(new THREE.CylinderGeometry(0.03, 0.03, 0.012, 16), CI.brass, RCP_X + sx, CIN_H - 0.006, RS_Z);                // ceiling plates
+  });
+  // two lateral filing cabinets under the back window: white cases on a plinth with oak tops, mint drawer fronts with
+  // recessed panels, brass cup handles, label holders with typed labels and a little lock
+  var fileLabels = [['A – F', 'G – M'], ['N – S', 'T – Z']];
+  [-3.25, -1.95].forEach(function (fx, ci) {
+    var FZ = CNW + 0.27, FF = FZ + 0.25;
+    ciPart(ciRoundBox(1.2, 0.8, 0.5, 0.012), CI.white, fx, 0.46, FZ);
+    ciPart(new THREE.BoxGeometry(1.14, 0.06, 0.46), CI_KICK, fx, 0.03, FZ - 0.01);
+    ciPart(ciRoundBox(1.24, 0.035, 0.54, 0.01), CI_OAK, fx, 0.877, FZ + 0.01);
+    [0.27, 0.66].forEach(function (dy, k) {
+      ciPart(ciRoundBox(1.12, 0.35, 0.025, 0.008), CI.mint, fx, dy, FF + 0.012);
+      ciPart(ciRoundBox(1.0, 0.25, 0.01, 0.005), new THREE.MeshStandardMaterial({ color: 0xa9d2bf, roughness: 0.5 }), fx, dy - 0.02, FF + 0.026);
+      ciPart(new THREE.CylinderGeometry(0.04, 0.04, 0.025, 16, 1, true, 0, Math.PI), CI.brass, fx, dy + 0.08, FF + 0.04, 0, 0, Math.PI / 2).scale.set(1, 3, 0.6);   // the cup handle
+      ciPart(ciRoundBox(0.14, 0.05, 0.006, 0.004), CI.brass, fx, dy - 0.02, FF + 0.033);
+      var lbl = paintTexture(128, 40, function (g, w, h) { g.fillStyle = '#fbf8ef'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a2a30'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 22px "Courier New", monospace'; g.fillText(fileLabels[ci][k], w / 2, h / 2 + 1); });
+      ciPart(new THREE.PlaneGeometry(0.115, 0.035), new THREE.MeshStandardMaterial({ map: lbl, roughness: 0.8 }), fx, dy - 0.02, FF + 0.0365);
+    });
+    ciPart(new THREE.CylinderGeometry(0.012, 0.012, 0.01, 12), CI_CHROME, fx + 0.5, 0.82, FF + 0.03, Math.PI / 2, 0, 0);   // the lock
+    ciPart(new THREE.BoxGeometry(0.003, 0.012, 0.002), CI.black, fx + 0.5, 0.82, FF + 0.036);
+  });
+  // books and binders on the left cabinet, between brass bookends: rounded spines, gilt bands, spine labels and
+  // slightly different heights and tilts, with two lying flat
+  var bookTitles = ['Herbal Remedies', 'Patient Files', 'Anatomy', 'Moon Tonics', 'Records 1', 'Records 2', 'First Aid', 'Island Flora', 'Recipes', 'Appointments', 'Poultices'];
+  var bookCols = ['#2f6f68', '#e0889a', '#8fc7b0', '#f6f2e8', '#3f8a80', '#c8344a', '#7a6ad0', '#e9b84a', '#2f4a6a', '#8fc7b0', '#6a4a3a'];
+  var bkX = -3.73, BK_Y = 0.895, BK_Z = CNW + 0.25;
+  [-1, 1].forEach(function (s) { var be = new THREE.Group(); be.position.set(s < 0 ? -3.79 : -3.79 + 0.98, BK_Y, BK_Z); clinicRoom.add(be); ciPart(new THREE.BoxGeometry(0.008, 0.18, 0.14), CI.brass, 0, 0.09, 0, 0, 0, 0, be); ciPart(new THREE.BoxGeometry(0.1, 0.008, 0.14), CI.brass, -s * 0.05, 0.004, 0, 0, 0, 0, be); });
   for (var bd = 0; bd < 11; bd++) {
-    var bw = 0.065 + isle2Hash(bd * 3.3) * 0.02, bh = 0.28 + isle2Hash(bd * 1.7) * 0.05;
-    ciPart(new THREE.BoxGeometry(bw, bh, 0.26), [CI.teal, CI.coral, CI.mint, CI.white, CI.tealVinyl][bd % 5], -3.75 + bd * 0.08, 0.86 + bh / 2, CNW + 0.24, 0, 0, bd === 10 ? 0.25 : 0);
+    var bw = 0.055 + isle2Hash(bd * 3.3) * 0.03, bh = 0.24 + isle2Hash(bd * 1.7) * 0.08, bdp = 0.2 + isle2Hash(bd * 4.1) * 0.05, lean = bd === 10 ? -0.22 : 0;
+    (function (bd, bw, bh, bdp) {
+      var spine = paintTexture(48, 192, function (g, w, h) {           // the spine: cloth colour, gilt bands, a title and a label
+        g.fillStyle = bookCols[bd]; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 200; i++) { g.fillStyle = 'rgba(0,0,0,' + isle2Hash(i + bd * 9) * 0.08 + ')'; g.fillRect(isle2Hash(i * 2.1 + bd) * w, isle2Hash(i * 3.3 + bd) * h, 2, 1); }
+        var light = bookCols[bd] === '#f6f2e8' || bookCols[bd] === '#e9b84a' || bookCols[bd] === '#8fc7b0';
+        g.fillStyle = light ? '#6a4a1a' : '#e9c46a';
+        [10, 18, h - 22, h - 14].forEach(function (y) { g.fillRect(4, y, w - 8, 3); });
+        g.save(); g.translate(w / 2 + 6, h / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.font = 'bold 15px Georgia, serif'; g.fillText(bookTitles[bd], 0, 0); g.restore();
+        g.fillStyle = '#fbf8ef'; g.fillRect(8, h - 52, w - 16, 20); g.fillStyle = '#2a2a30'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.fillText(String(bd + 1), w / 2, h - 38);
+      });
+      var cover = new THREE.MeshStandardMaterial({ map: spine, roughness: 0.7 }), plain = new THREE.MeshStandardMaterial({ color: bookCols[bd], roughness: 0.7 }), pages = new THREE.MeshStandardMaterial({ color: 0xf4efe2, roughness: 0.9 });
+      var g2 = new THREE.Group(); g2.position.set(bkX + bw / 2, BK_Y, BK_Z); g2.rotation.z = lean; clinicRoom.add(g2);
+      ciPart(new THREE.BoxGeometry(bw, bh, bdp), [plain, plain, pages, plain, cover, pages], 0, bh / 2, 0, 0, 0, 0, g2);   // pages show on top and at the back
+      ciPart(new THREE.CylinderGeometry(bw / 2, bw / 2, bh, 12, 1, false, -Math.PI / 2, Math.PI), cover, 0, bh / 2, bdp / 2 - 0.004, 0, 0, 0, g2).scale.set(1, 1, 0.35);   // the rounded spine
+    })(bd, bw, bh, bdp);
+    bkX += bw + 0.004 + (bd === 9 ? 0.04 : 0);
   }
-  ciPart(new THREE.BoxGeometry(0.36, 0.06, 0.28), CI.wood, -1.7, 0.89, CNW + 0.26);
-  ciPart(new THREE.BoxGeometry(0.3, 0.02, 0.22), CI.paper, -1.7, 0.92, CNW + 0.26);
+  [[0.26, 0.04, CI.teal], [0.25, 0.035, CI.coral]].forEach(function (fb, k) {   // two books lying flat on the other end
+    ciPart(ciRoundBox(fb[0], fb[1], 0.19, 0.006), fb[2], -2.82, BK_Y + fb[1] / 2 + k * 0.04, BK_Z, 0, (k - 0.5) * 0.15, 0);
+    ciPart(new THREE.BoxGeometry(fb[0] - 0.01, fb[1] - 0.008, 0.002), new THREE.MeshStandardMaterial({ color: 0xf4efe2, roughness: 0.9 }), -2.82, BK_Y + fb[1] / 2 + k * 0.04, BK_Z - 0.096, 0, (k - 0.5) * 0.15, 0);
+  });
+  // on the right cabinet: a wooden letter tray with envelopes, a little succulent and a desk tidy of pens
+  var LT_X = -1.7, LT_Z = CNW + 0.26;
+  ciPart(new THREE.BoxGeometry(0.36, 0.012, 0.28), CI_OAK, LT_X, 0.902, LT_Z);
+  [[0, 0.135, 0.36, 0.01], [0, -0.135, 0.36, 0.01], [0.175, 0, 0.01, 0.28], [-0.175, 0, 0.01, 0.28]].forEach(function (t) { ciPart(new THREE.BoxGeometry(t[2], 0.05, t[3]), CI_OAK, LT_X + t[0], 0.92, LT_Z + t[1]); });
+  for (var en = 0; en < 6; en++) ciPart(new THREE.BoxGeometry(0.24, 0.005, 0.16), new THREE.MeshStandardMaterial({ color: [0xfbf8ef, 0xf2e6c8, 0xe6f2fb][en % 3], roughness: 0.9 }), LT_X + (isle2Hash(en) - 0.5) * 0.03, 0.912 + en * 0.006, LT_Z + (isle2Hash(en + 3) - 0.5) * 0.04, 0, (isle2Hash(en + 7) - 0.5) * 0.3, 0);
+  ciPart(new THREE.BoxGeometry(0.02, 0.002, 0.015), new THREE.MeshStandardMaterial({ color: 0xe0607a }), LT_X + 0.08, 0.95, LT_Z - 0.04);   // a stamp
+  ciPart(new THREE.CylinderGeometry(0.04, 0.032, 0.06, 16), CI.clay, -2.3, 0.925, LT_Z);
+  for (var su = 0; su < 10; su++) { var sua = su * 2.4, sur = su < 5 ? 0.022 : 0.01; var sl = ciPart(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: 0x7aae8a, roughness: 0.5 }), -2.3 + Math.cos(sua) * sur, 0.965 + (su < 5 ? 0 : 0.008), LT_Z + Math.sin(sua) * sur); sl.scale.set(0.03, 0.008, 0.012); sl.rotation.set(0, -sua, 0.5); }
   ciSolids.push([-3.25, CNW + 0.27, 0.6], [-1.95, CNW + 0.27, 0.6]);
 
   // upholstered waiting chairs along the left wall, under the window, with a magazine table on a rug
@@ -11897,28 +11960,60 @@ function startGame(THREE) {
   ciPart(new THREE.TubeGeometry(cable, 16, 0.006, 6), CI.black, 0, 0, 0, 0, 0, 0, mon);                                // its lead, looped below
   // the poster over the monitor: how to wash your hands, in four little pictures
   ciFramed('E', SK_Z - 0.05, 2.38, 0.56, 0.42, ciWashTex, CI.teal);
-  // a cabinet of tonics between the back windows: a cupboard below and a glass-fronted cabinet of glowing bottles above
-  var MC_Z = CNW;
-  ciPart(new THREE.BoxGeometry(1.3, 0.88, 0.5), CI.white, 0, 0.44, MC_Z + 0.25);
-  [-0.32, 0.32].forEach(function (dx) { ciPart(new THREE.BoxGeometry(0.6, 0.74, 0.02), CI.mint, dx, 0.44, MC_Z + 0.51); ciPart(new THREE.BoxGeometry(0.02, 0.12, 0.03), CI.brass, dx * 0.2, 0.6, MC_Z + 0.53); });
-  ciPart(new THREE.BoxGeometry(1.36, 0.04, 0.54), CI.wood, 0, 0.9, MC_Z + 0.27);
-  ciPart(new THREE.BoxGeometry(1.2, 1.3, 0.32), CI.white, 0, 1.95, MC_Z + 0.16);
-  ciPart(new THREE.BoxGeometry(1.1, 1.2, 0.02), new THREE.MeshStandardMaterial({ color: 0xe8f0ec, roughness: 0.8 }), 0, 1.95, MC_Z + 0.02);
-  var ciTonics = [];
+  // an apothecary cabinet between the back windows: a cupboard below with shaker doors and a drawer, an oak worktop,
+  // and above it a glass-fronted cabinet with a crown, its shelves lined with glowing bottles of tonic (each with a
+  // neck, a cork and a little label), round flasks and lidded jars
+  var MC_Z = CNW, MCF = MC_Z + 0.5;
+  ciPart(new THREE.BoxGeometry(1.24, 0.08, 0.44), CI_KICK, 0, 0.04, MC_Z + 0.24);
+  ciPart(ciRoundBox(1.3, 0.8, 0.5, 0.012), CI.white, 0, 0.48, MC_Z + 0.25);
+  ciPart(ciRoundBox(1.2, 0.14, 0.02, 0.006), CI.mint, 0, 0.78, MCF + 0.01);                                              // the drawer
+  ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 8), CI_CHROME, 0, 0.78, MCF + 0.04, 0, 0, Math.PI / 2);
+  [-0.04, 0.04].forEach(function (o) { ciPart(new THREE.CylinderGeometry(0.005, 0.005, 0.03, 6), CI_CHROME, o * 2, 0.78, MCF + 0.028, Math.PI / 2, 0, 0); });
+  [-0.31, 0.31].forEach(function (dx) {                                // two shaker doors with chrome bar pulls
+    [[0, 0.25, 0.58, 0.06], [0, -0.25, 0.58, 0.06], [-0.26, 0, 0.06, 0.56], [0.26, 0, 0.06, 0.56]].forEach(function (f) { ciPart(new THREE.BoxGeometry(f[2], f[3], 0.022), CI.mint, dx + f[0], 0.41 + f[1], MCF + 0.011); });
+    ciPart(new THREE.BoxGeometry(0.48, 0.46, 0.01), new THREE.MeshStandardMaterial({ color: 0xa9d2bf, roughness: 0.5 }), dx, 0.41, MCF + 0.005);
+    ciPart(new THREE.CylinderGeometry(0.006, 0.006, 0.14, 8), CI_CHROME, dx * 0.3, 0.52, MCF + 0.04);
+  });
+  ciPart(ciRoundBox(1.36, 0.04, 0.54, 0.01), CI_OAK, 0, 0.9, MC_Z + 0.27);
+  // the upper cabinet: hollow, so you can see the bottles through its glass doors
+  var UC_Y = 1.95, UC_D = 0.32;
+  ciPart(new THREE.BoxGeometry(1.2, 1.3, 0.02), new THREE.MeshStandardMaterial({ color: 0xe8f0ec, roughness: 0.8 }), 0, UC_Y, MC_Z + 0.02);   // the back
+  [-1, 1].forEach(function (s) { ciPart(new THREE.BoxGeometry(0.03, 1.3, UC_D), CI.white, s * 0.585, UC_Y, MC_Z + UC_D / 2); });
+  ciPart(new THREE.BoxGeometry(1.2, 0.03, UC_D), CI.white, 0, UC_Y - 0.635, MC_Z + UC_D / 2);
+  ciPart(new THREE.BoxGeometry(1.2, 0.03, UC_D), CI.white, 0, UC_Y + 0.635, MC_Z + UC_D / 2);
+  ciPart(ciRoundBox(1.32, 0.05, UC_D + 0.08, 0.012), CI.white, 0, UC_Y + 0.67, MC_Z + UC_D / 2 + 0.03);                  // the crown
+  ciPart(ciRoundBox(1.28, 0.03, UC_D + 0.05, 0.008), CI.white, 0, UC_Y + 0.705, MC_Z + UC_D / 2 + 0.015);
+  var ciTonics = [], corkMat = new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 0.9 }), labelMat = new THREE.MeshStandardMaterial({ color: 0xfbf8ef, roughness: 0.8 });
+  var jarGlass = new THREE.MeshStandardMaterial({ color: 0xeef7ff, roughness: 0.04, transparent: true, opacity: 0.35, depthWrite: false });
   [1.42, 1.85, 2.28].forEach(function (shy, k) {
-    ciPart(new THREE.BoxGeometry(1.1, 0.02, 0.28), CI.white, 0, shy - 0.02, MC_Z + 0.16);
+    ciPart(new THREE.BoxGeometry(1.14, 0.02, UC_D - 0.02), CI.white, 0, shy - 0.01, MC_Z + UC_D / 2);
+    ciPart(new THREE.BoxGeometry(1.14, 0.012, 0.004), CI.brass, 0, shy - 0.012, MC_Z + UC_D - 0.01);
     for (var b = 0; b < 6; b++) {
-      var bx = -0.45 + b * 0.18 + (isle2Hash(b + k * 7) - 0.5) * 0.04, bh = 0.14 + isle2Hash(b * 3 + k) * 0.1, col = [0xc89aff, 0x7ad0b0, 0xff9ab8, 0x8ac8ff, 0xffd27a][(b + k) % 5];
-      var tm = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.15, transparent: true, opacity: 0.88 });
+      var bx = -0.45 + b * 0.18 + (isle2Hash(b + k * 7) - 0.5) * 0.04, bz = MC_Z + 0.15, col = [0xc89aff, 0x7ad0b0, 0xff9ab8, 0x8ac8ff, 0xffd27a][(b + k) % 5], kind = (b + k * 2) % 3;
+      var tm = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.5, roughness: 0.12 });
       ciTonics.push(tm);
-      ciPart(b % 3 ? new THREE.CylinderGeometry(0.045, 0.05, bh, 14) : new THREE.SphereGeometry(0.06, 14, 10), tm, bx, shy + (b % 3 ? bh / 2 : 0.06), MC_Z + 0.16);
-      ciPart(new THREE.CylinderGeometry(0.018, 0.022, 0.04, 8), CI.wood, bx, shy + (b % 3 ? bh : 0.11) + 0.02, MC_Z + 0.16);
+      if (kind === 0) {                                                // a tall bottle: shoulders, a neck, a lip, a cork and a label
+        var bh = 0.16 + isle2Hash(b * 3 + k) * 0.08, pts = [[0.001, 0], [0.04, 0], [0.042, 0.01], [0.042, bh * 0.7], [0.03, bh * 0.82], [0.014, bh * 0.88], [0.014, bh], [0.017, bh + 0.005], [0.014, bh + 0.01]];
+        ciPart(new THREE.LatheGeometry(pts.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 18), tm, bx, shy, bz);
+        ciPart(new THREE.CylinderGeometry(0.013, 0.011, 0.03, 10), corkMat, bx, shy + bh + 0.02, bz);
+        ciPart(new THREE.CylinderGeometry(0.0425, 0.0425, bh * 0.3, 18, 1, true, -0.7, 1.4), labelMat, bx, shy + bh * 0.38, bz);
+      } else if (kind === 1) {                                         // a round-bottomed flask
+        ciPart(new THREE.SphereGeometry(0.05, 18, 14), tm, bx, shy + 0.05, bz);
+        ciPart(new THREE.CylinderGeometry(0.013, 0.016, 0.07, 12), tm, bx, shy + 0.12, bz);
+        ciPart(new THREE.CylinderGeometry(0.015, 0.012, 0.025, 10), corkMat, bx, shy + 0.165, bz);
+        ciPart(new THREE.TorusGeometry(0.016, 0.003, 6, 14), CI.brass, bx, shy + 0.146, bz, Math.PI / 2, 0, 0);
+      } else {                                                         // a lidded glass jar of dried petals or seeds
+        ciPart(new THREE.CylinderGeometry(0.038, 0.038, 0.06, 16), tm, bx, shy + 0.03, bz);
+        ciPart(new THREE.CylinderGeometry(0.045, 0.045, 0.12, 18), jarGlass, bx, shy + 0.06, bz).renderOrder = 2;
+        ciPart(new THREE.CylinderGeometry(0.048, 0.048, 0.02, 18), CI.white, bx, shy + 0.13, bz);
+        ciPart(new THREE.SphereGeometry(0.014, 10, 8), CI.brass, bx, shy + 0.145, bz);
+      }
     }
   });
-  [-0.3, 0.3].forEach(function (dx) {                                  // the glass doors in white frames
-    ciPart(new THREE.PlaneGeometry(0.54, 1.18), CI.glass, dx, 1.95, MC_Z + 0.33).renderOrder = 2;
-    [[0, 0.6, 0.58, 0.04], [0, -0.6, 0.58, 0.04], [-0.28, 0, 0.04, 1.2], [0.28, 0, 0.04, 1.2]].forEach(function (f) { ciPart(new THREE.BoxGeometry(f[2], f[3], 0.03), CI.white, dx + f[0], 1.95 + f[1], MC_Z + 0.33); });
-    ciPart(new THREE.SphereGeometry(0.018, 8, 6), CI.brass, dx * 0.15, 1.95, MC_Z + 0.355);
+  [-0.3, 0.3].forEach(function (dx) {                                  // the glass doors in white frames, with brass knobs
+    ciPart(new THREE.PlaneGeometry(0.54, 1.18), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.55, roughness: 0.05, metalness: 0.2, depthWrite: false }), dx, UC_Y, MC_Z + UC_D + 0.01).renderOrder = 3;
+    [[0, 0.6, 0.58, 0.05], [0, -0.6, 0.58, 0.05], [-0.28, 0, 0.05, 1.2], [0.28, 0, 0.05, 1.2], [0, 0.2, 0.54, 0.02], [0, -0.2, 0.54, 0.02]].forEach(function (f) { ciPart(new THREE.BoxGeometry(f[2], f[3], 0.03), CI.white, dx + f[0], UC_Y + f[1], MC_Z + UC_D + 0.01); });
+    ciPart(new THREE.SphereGeometry(0.018, 10, 8), CI.brass, dx * 0.15, UC_Y, MC_Z + UC_D + 0.035);
   });
   var mcGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xc8a0ff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
   mcGlow.position.set(0, 1.9, MC_Z + 0.3); mcGlow.scale.set(1.6, 1.6, 1); clinicRoom.add(mcGlow);
