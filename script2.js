@@ -993,10 +993,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     return { root: root, body: body, wings: wings, antennae: antennae, glow: glow, sparks: sparks, gem: [upHalo, loHalo], wingMats: [upMat, loMat], tagCv: tagCv, tagTex: tagTex };
   }
   // ---------- Mooncalves ----------
-  // Strange, sweet little creatures that share the stalls with the Glimmerwings: a round ball of fuzz in moonlight
-  // white, silver or pale gold on six tiny legs, with big glossy eyes, a glowing crescent third eye, long antenna-ears
-  // with glowing tips and a patch of starry night sky on its back. Feed it hay and pet it every day, and the next
-  // morning it can be milked (you'll need a Milk Pail) for a bottle of shimmering Moonmilk
+  // Gentle, cow-like creatures that share the stalls with the Glimmerwings, but not cows: a pearly white, silver or
+  // gold coat whose spots are patches of starry night sky, crescent-moon horns, star-bright hooves and a starlight tuft
+  // on its tail. Feed it hay and pet it every day, and the next morning it can be milked (you'll need a Milk Pail) for
+  // a bottle of shimmering Moonmilk
   var MOON_COST = 600, PAIL_COST = 80;
   var MOON_PALS = [                                                   // moonlight whites: pearly white, silver and pale gold
     { name: 'Pearl', coat: 0xf6f2ea, belly: 0xffffff, nose: 0xe8b8c0, hoof: 0xe0c890, glow: 0xfff2d0, iris: ['#6a5a8a', '#1a1428'] },
@@ -1050,125 +1050,140 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#fff4c8'; g.beginPath(); g.arc(64, 22, 9, 0.7, Math.PI * 2 - 0.7); g.arc(68, 20, 7, Math.PI * 2 - 1.0, 1.0, true); g.fill();   // the crescent
     g.fillStyle = '#fff'; [[24, 96], [104, 90], [100, 22]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  // building one: a round, very fuzzy little creature on six tiny legs, with big glossy eyes, rosy cheeks and a tiny
-  // smile, a glowing crescent third eye on its forehead, two long antenna-ears with glowing tips, and a patch of
-  // starry night sky on its back
-  var moonSkyTex = new THREE.CanvasTexture(glimCanvas(256, 256, function (g, w, h) {   // the night-sky patch: deep blue, stars, soft edges
-    var sg = g.createRadialGradient(128, 128, 10, 128, 128, 128);
-    sg.addColorStop(0, '#1a1a4a'); sg.addColorStop(0.55, '#24205a'); sg.addColorStop(0.8, 'rgba(40,30,90,0.85)'); sg.addColorStop(1, 'rgba(40,30,90,0)');
-    g.fillStyle = sg; g.fillRect(0, 0, w, h);
-    var neb = g.createRadialGradient(100, 150, 5, 100, 150, 70); neb.addColorStop(0, 'rgba(160,110,220,0.35)'); neb.addColorStop(1, 'rgba(160,110,220,0)'); g.fillStyle = neb; g.fillRect(0, 0, w, h);
-    for (var i = 0; i < 140; i++) {
-      var x = 128 + (glimR(i * 1.7 + 3) - 0.5) * 200, y = 128 + (glimR(i * 2.3 + 3) - 0.5) * 200;
-      if (Math.hypot(x - 128, y - 128) > 100) continue;
-      g.fillStyle = 'rgba(255,250,230,' + (0.4 + glimR(i * 3.1) * 0.6) + ')'; g.beginPath(); g.arc(x, y, 0.6 + glimR(i * 4.3) * 1.4, 0, Math.PI * 2); g.fill();
-    }
-  }));
+  // building one: shaped like a gentle young cow (a barrel body on four sturdy legs, a broad soft muzzle, floppy ears
+  // sticking out sideways, a tufted tail), but not quite: its coat is pearly white, silver or gold, its spots are
+  // patches of night sky full of twinkling stars, its horns are two glowing crescent moons, its hooves shine like stars
+  // and the tuft of its tail is a little cloud of starlight
+  function moonCoatTex(pal, glowOnly) {                             // the coat with its night-sky spots (or, for glowOnly, just what glows)
+    return new THREE.CanvasTexture(glimCanvas(512, 256, function (g, w, h) {
+      var coat = new THREE.Color(pal.coat), belly = new THREE.Color(pal.belly);
+      if (glowOnly) { g.fillStyle = '#222'; g.fillRect(0, 0, w, h); }
+      else {
+        var gr = g.createLinearGradient(0, 0, 0, h);
+        gr.addColorStop(0, '#' + coat.clone().multiplyScalar(0.92).getHexString()); gr.addColorStop(0.5, '#' + coat.getHexString()); gr.addColorStop(1, '#' + coat.clone().lerp(belly, 0.7).getHexString());
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 9000; i++) { var x = glimR(i * 1.3 + 90) * w, y = glimR(i * 2.9 + 90) * h; g.strokeStyle = glimR(i * 6.3) > 0.45 ? 'rgba(255,255,255,0.12)' : 'rgba(80,70,60,0.05)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 4, y + 1); g.stroke(); }
+      }
+      // the spots: soft-edged blobs like a cow's patches, wrapping round the body (and across the seam)
+      var spots = [[70, 70, 60, 46], [200, 60, 70, 50], [330, 90, 55, 60], [450, 60, 64, 44], [140, 150, 50, 40], [390, 165, 46, 36], [260, 140, 36, 30]];
+      spots.forEach(function (sp, k) {
+        [-w, 0, w].forEach(function (off) {
+          g.save(); g.translate(sp[0] + off, sp[1]);
+          g.beginPath();
+          for (var a = 0; a <= 24; a++) { var an = a / 24 * Math.PI * 2, r = 1 + (glimR(k * 31 + a) - 0.5) * 0.35 + Math.sin(an * 3 + k) * 0.12; g[a ? 'lineTo' : 'moveTo'](Math.cos(an) * sp[2] * r, Math.sin(an) * sp[3] * r); }
+          g.closePath();
+          if (glowOnly) { g.fillStyle = '#2a2850'; g.fill(); }
+          else {
+            var sg = g.createRadialGradient(0, 0, 4, 0, 0, Math.max(sp[2], sp[3]) * 1.1);
+            sg.addColorStop(0, '#1c1a4c'); sg.addColorStop(0.7, '#2a2160'); sg.addColorStop(1, '#4a3a80');
+            g.fillStyle = sg; g.fill();
+            var neb = g.createRadialGradient(sp[2] * 0.2, -sp[3] * 0.2, 2, sp[2] * 0.2, -sp[3] * 0.2, sp[2] * 0.7); neb.addColorStop(0, 'rgba(170,120,230,0.35)'); neb.addColorStop(1, 'rgba(170,120,230,0)'); g.fillStyle = neb; g.fill();
+          }
+          g.save(); g.clip();
+          for (var s = 0; s < 40; s++) {                               // stars inside each spot
+            var sx = (glimR(k * 50 + s * 1.7) - 0.5) * sp[2] * 2, sy = (glimR(k * 50 + s * 2.9) - 0.5) * sp[3] * 2, sr = 0.6 + glimR(k * 50 + s * 3.7) * 1.6;
+            g.fillStyle = 'rgba(255,250,230,' + (0.5 + glimR(s + k) * 0.5) + ')'; g.beginPath(); g.arc(sx, sy, sr, 0, Math.PI * 2); g.fill();
+            if (sr > 1.8) { g.fillRect(sx - 0.5, sy - sr * 2.4, 1, sr * 4.8); g.fillRect(sx - sr * 2.4, sy - 0.5, sr * 4.8, 1); }   // a few bright twinkling ones
+          }
+          g.restore(); g.restore();
+        });
+      });
+    }));
+  }
   function moonBuild(pal) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
-    var P = function (geo, mat, x, y, z, rx, ry, rz, parent) { return abPart(geo, mat, x, y, z, rx, ry, rz, parent || body); };
-    var furCol = new THREE.Color(pal.coat), furCol2 = new THREE.Color(pal.belly), rootCol = furCol.clone().multiplyScalar(0.7);
-    var NS = 20, shellMats = [];
-    for (var k = 0; k < NS; k++) {
-      var f = k / (NS - 1), c = rootCol.clone().lerp(furCol, Math.min(1, f * 1.4)).lerp(furCol2, Math.max(0, f - 0.7) * 0.8);
-      shellMats.push(new THREE.MeshStandardMaterial({ map: glimHairTex, color: c, transparent: true, alphaTest: 0.06 + f * 0.88, roughness: 1, emissive: c, emissiveIntensity: 0.16 + f * 0.12 }));
+    var coatCol = new THREE.Color(pal.coat), bellyCol = new THREE.Color(pal.belly), muzzleCol = new THREE.Color(pal.belly).lerp(new THREE.Color(pal.nose), 0.45);
+    var coatMap = moonCoatTex(pal, false), glowMap = moonCoatTex(pal, true);
+    coatMap.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    var coat = new THREE.MeshStandardMaterial({ map: coatMap, roughness: 0.75, emissive: 0xffffff, emissiveMap: glowMap, emissiveIntensity: 0.9 });
+    var plain = new THREE.MeshStandardMaterial({ color: coatCol, roughness: 0.8, emissive: coatCol, emissiveIntensity: 0.13 });
+    var belly = new THREE.MeshStandardMaterial({ color: bellyCol, roughness: 0.8, emissive: bellyCol, emissiveIntensity: 0.16 });
+    var nap = new THREE.MeshStandardMaterial({ map: glimHairTex, color: coatCol.clone().lerp(bellyCol, 0.4), transparent: true, alphaTest: 0.62, roughness: 1, emissive: coatCol, emissiveIntensity: 0.12 });
+    var seg = new THREE.SphereGeometry(1, 40, 28);
+    function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz, napped) {
+      var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz);
+      if (napped) { var v = abPart(geo, nap, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); v.scale.set(sx * 1.02, sy * 1.02, sz * 1.02); v.castShadow = false; }
+      return m;
     }
-    var core = new THREE.MeshStandardMaterial({ color: rootCol, roughness: 1, emissive: rootCol, emissiveIntensity: 0.1 });
-    var BY = 0.22, BR = 0.16, SX = 1.05, SY = 0.9, SZ = 1.2, DEPTH = 0.5;
-    var seg = new THREE.SphereGeometry(BR, 36, 26);
-    P(seg, core, 0, BY, 0).scale.set(SX, SY, SZ);
-    for (var k2 = 0; k2 < NS; k2++) { var fk = 1 + (k2 + 1) / NS * DEPTH, sh = P(seg, shellMats[k2], 0, BY, 0, 0, k2 * 0.37, 0); sh.scale.set(SX * fk, SY * fk, SZ * fk); sh.castShadow = false; }
-    function surf(nx, ny, nz, out) { var l = Math.hypot(nx, ny, nz); return V3(nx / l * BR * SX * out, BY + ny / l * BR * SY * out, nz / l * BR * SZ * out); }
-    // loose hairs standing out all round, leaving the face and the sky patch clear
-    var faceDirs = [[-0.34, 0.12, 0.93], [0.34, 0.12, 0.93], [0, 0.45, 0.89], [0, -0.1, 1]];
-    function clear(nx, ny, nz) {
-      for (var i = 0; i < faceDirs.length; i++) { var d = faceDirs[i], l = Math.hypot(d[0], d[1], d[2]); if ((nx * d[0] + ny * d[1] + nz * d[2]) / l > 0.93) return true; }
-      return ny > 0.55 && nz < 0.3;                                    // (the sky patch on its back)
-    }
-    var hairs = [];
-    for (var hh = 0; hh < 7000; hh++) {
-      var u = glimR(hh * 1.7 + 51) * 2 - 1, th = glimR(hh * 2.3 + 51) * Math.PI * 2, rr = Math.sqrt(1 - u * u), nx = rr * Math.cos(th), ny = u, nz = rr * Math.sin(th);
-      if (clear(nx, ny, nz)) continue;
-      var at = 0.98 + glimR(hh * 4.3) * 0.12;
-      hairs.push([nx * BR * SX * at, BY + ny * BR * SY * at, nz * BR * SZ * at, nx, ny, nz, BR * DEPTH * (1.0 + glimR(hh * 3.1) * 0.35), glimR(hh * 5.9)]);
-    }
-    (function () {
-      var im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0016, 0.0004, 1, 3).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, emissive: furCol, emissiveIntensity: 0.28 }), hairs.length), hc = new THREE.Color();
-      var mx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), pos = new THREE.Vector3();
-      hairs.forEach(function (hr, i) {
-        dir.set(hr[3] + (glimR(i * 5.1) - 0.5) * 0.3, hr[4] + (glimR(i * 6.3) - 0.5) * 0.3 - 0.04, hr[5] + (glimR(i * 7.7) - 0.5) * 0.3).normalize();
-        q.setFromUnitVectors(up, dir); sc.set(1, hr[6], 1); pos.set(hr[0], hr[1], hr[2]);
-        mx.compose(pos, q, sc); im.setMatrixAt(i, mx);
-        im.setColorAt(i, hc.copy(furCol).multiplyScalar(0.9 + hr[7] * 0.1).lerp(furCol2, hr[7] * 0.3));
-      });
-      im.castShadow = false; body.add(im);
-    })();
-    // the starry night-sky patch on its back, with stars that twinkle
-    var skyR = 1 + DEPTH * 0.55;
-    var sky = P(new THREE.SphereGeometry(BR, 32, 12, 0, Math.PI * 2, 0, 0.75), new THREE.MeshStandardMaterial({ map: moonSkyTex, transparent: true, roughness: 0.6, emissive: 0x2a2470, emissiveIntensity: 0.35, depthWrite: false }), 0, BY, -0.03, -0.25, 0, 0);
-    sky.scale.set(SX * skyR, SY * skyR, SZ * skyR); sky.castShadow = false; sky.renderOrder = 2;
-    var stars = [];
-    for (var st = 0; st < 9; st++) {
-      var sa = glimR(st * 3.3) * Math.PI * 2, srd = 0.12 + glimR(st * 5.1) * 0.5, dn = V3(Math.sin(srd) * Math.cos(sa), Math.cos(srd), Math.sin(srd) * Math.sin(sa) - 0.25).normalize();
-      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonStarTex, color: 0xfff6d8, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
-      var sscale = 0.025 + glimR(st * 7.7) * 0.03; sp.scale.set(sscale, sscale, 1);
-      var spos = surf(dn.x, dn.y, dn.z, skyR + 0.02); sp.position.copy(spos); body.add(sp); stars.push({ s: sp, p: glimR(st) * 6 });
-    }
-    // big glossy eyes, rosy cheeks and a tiny smile
-    var eyeBall = new THREE.MeshStandardMaterial({ color: 0x120a14, roughness: 0.05, metalness: 0.2 }), irisMat = new THREE.MeshStandardMaterial({ map: glimEyeTex(pal), roughness: 0.15 });
-    var shine = new THREE.MeshBasicMaterial({ color: 0xffffff }), shine2 = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
-    var head = new THREE.Group(); body.add(head);
+    var BY = 0.45;
+    // the body: a deep, round barrel, with a soft pale belly
+    part(seg, coat, 0, BY, -0.01, 0.2, 0.195, 0.34, body, 0, 0.4, 0, true);
+    part(seg, coat, 0, BY + 0.01, 0.16, 0.19, 0.2, 0.17, body, 0, 2.1, 0, true);        // the chest
+    part(seg, coat, 0, BY + 0.02, -0.19, 0.195, 0.2, 0.16, body, 0, 4.0, 0, true);      // the rump
+    part(seg, belly, 0, BY - 0.12, 0.0, 0.13, 0.08, 0.26);
+    // a short thick neck and a broad, gentle head
+    part(seg, plain, 0, BY + 0.07, 0.3, 0.13, 0.14, 0.13, body, 0, 0, 0, true);
+    var head = new THREE.Group(); head.position.set(0, BY + 0.13, 0.42); body.add(head);
+    part(seg, plain, 0, 0, 0, 0.115, 0.12, 0.12, head, 0, 0, 0, true);
+    var muzzleMat = new THREE.MeshStandardMaterial({ color: muzzleCol, roughness: 0.45, emissive: muzzleCol, emissiveIntensity: 0.16 });
+    part(seg, muzzleMat, 0, -0.06, 0.1, 0.095, 0.07, 0.075, head);                       // a broad soft muzzle
+    [-1, 1].forEach(function (s) { part(seg, new THREE.MeshStandardMaterial({ color: 0x6a4a5a, roughness: 0.5 }), s * 0.035, -0.045, 0.168, 0.013, 0.018, 0.008, head, 0, 0, s * 0.3); });   // nostrils
+    var smile = new THREE.TorusGeometry(0.016, 0.003, 5, 14, Math.PI);
+    abPart(smile, new THREE.MeshStandardMaterial({ color: 0x6a4a5a, roughness: 0.6 }), 0, -0.088, 0.158, 0.4, 0, Math.PI, head);
+    // a fluffy forelock between the horns
+    var tuftMats = [0, 1, 2, 3, 4, 5].map(function (k) { return new THREE.MeshStandardMaterial({ map: glimHairTex, color: coatCol.clone().lerp(bellyCol, 0.3), transparent: true, alphaTest: 0.1 + k * 0.15, roughness: 1, emissive: coatCol, emissiveIntensity: 0.2 }); });
+    part(seg, plain, 0, 0.09, 0.03, 0.05, 0.035, 0.05, head);
+    for (var tk = 0; tk < 6; tk++) { var tf = 1 + (tk + 1) * 0.12, tm = abPart(seg, tuftMats[tk], 0, 0.09, 0.03, 0, tk, 0, head); tm.scale.set(0.05 * tf, 0.035 * tf, 0.05 * tf); tm.castShadow = false; }
+    // big gentle eyes, and rosy cheeks
+    var eyeBall = new THREE.MeshStandardMaterial({ color: 0x120a14, roughness: 0.04, metalness: 0.2 }), irisMat = new THREE.MeshStandardMaterial({ map: glimEyeTex(pal), roughness: 0.12 });
+    var shine = new THREE.MeshBasicMaterial({ color: 0xffffff }), shine2 = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
     [-1, 1].forEach(function (s) {
-      var c = surf(s * 0.34, 0.12, 0.93, 1.38), ey = new THREE.Group(); ey.position.copy(c); ey.rotation.set(-0.06, s * 0.3, 0); ey.scale.set(1, 1, 0.42); head.add(ey);
-      abPart(new THREE.SphereGeometry(0.048, 28, 20), eyeBall, 0, 0, 0, 0, 0, 0, ey).scale.set(1, 1.08, 0.82);
-      abPart(new THREE.CircleGeometry(0.041, 32), irisMat, 0, -0.002, 0.0395, 0, 0, 0, ey).scale.set(1, 1.08, 1);
-      abPart(new THREE.CircleGeometry(0.014, 18), shine, -0.014, 0.017, 0.044, 0, 0, 0, ey).scale.set(1, 1.2, 1);
-      abPart(new THREE.CircleGeometry(0.0065, 14), shine2, 0.015, -0.016, 0.044, 0, 0, 0, ey);
-      var cp = surf(s * 0.6, -0.08, 0.8, 1.48), ch = abPart(new THREE.CircleGeometry(0.03, 20), new THREE.MeshBasicMaterial({ color: 0xff8fb0, transparent: true, opacity: 0.45, depthWrite: false }), cp.x, cp.y, cp.z, 0, s * 0.64, 0, head); ch.scale.set(1.3, 0.8, 1); ch.castShadow = false;
+      var ey = new THREE.Group(); ey.position.set(s * 0.068, 0.025, 0.088); ey.rotation.set(-0.05, s * 0.55, 0); ey.scale.set(1, 1, 0.45); head.add(ey);
+      abPart(new THREE.SphereGeometry(0.036, 24, 18), eyeBall, 0, 0, 0, 0, 0, 0, ey).scale.set(1, 1.08, 0.85);
+      abPart(new THREE.CircleGeometry(0.031, 28), irisMat, 0, -0.002, 0.0305, 0, 0, 0, ey).scale.set(1, 1.08, 1);
+      abPart(new THREE.CircleGeometry(0.011, 16), shine, -0.011, 0.014, 0.034, 0, 0, 0, ey).scale.set(1, 1.2, 1);
+      abPart(new THREE.CircleGeometry(0.005, 12), shine2, 0.012, -0.012, 0.034, 0, 0, 0, ey);
+      for (var l = 0; l < 3; l++) abPart(new THREE.ConeGeometry(0.003, 0.018, 5), new THREE.MeshStandardMaterial({ color: 0x2a1a20 }), s * (0.028 + l * 0.006), 0.026 - l * 0.008, 0.018, 0.4, 0, -s * (1.0 + l * 0.3), ey);
+      var ch = abPart(new THREE.CircleGeometry(0.024, 18), new THREE.MeshBasicMaterial({ color: 0xff9ab4, transparent: true, opacity: 0.4, depthWrite: false }), s * 0.088, -0.035, 0.07, 0, s * 0.8, 0, head); ch.scale.set(1.3, 0.8, 1); ch.castShadow = false;
     });
-    var mp = surf(0, -0.12, 1, 1.47), smile = new THREE.TorusGeometry(0.01, 0.0026, 5, 12, Math.PI);
-    [-1, 1].forEach(function (s) { abPart(smile, new THREE.MeshStandardMaterial({ color: 0x6a2a4a, roughness: 0.6 }), mp.x + s * 0.01, mp.y, mp.z, 0, 0, Math.PI, head); });
-    // the third eye: a crescent of light on its forehead, in a dark almond socket
-    var te = surf(0, 0.45, 0.89, 1.4), third = new THREE.Group(); third.position.copy(te); third.rotation.set(-0.45, 0, 0); head.add(third);
-    abPart(new THREE.SphereGeometry(0.03, 20, 14), new THREE.MeshStandardMaterial({ color: 0x1a1430, roughness: 0.1, metalness: 0.3 }), 0, 0, 0, 0, 0, 0, third).scale.set(1, 0.62, 0.35);
-    var thirdMat = new THREE.MeshStandardMaterial({ color: 0xfffbe8, emissive: pal.glow, emissiveIntensity: 1.2, roughness: 0.3 });
-    abPart(new THREE.TorusGeometry(0.017, 0.005, 8, 20, Math.PI * 1.2), thirdMat, 0, 0, 0.011, 0, 0, Math.PI * 0.4, third);
-    var thirdGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
-    thirdGlow.scale.set(0.16, 0.16, 1); thirdGlow.position.z = 0.015; third.add(thirdGlow);
-    // long antenna-ears, curving up and out and drooping, with glowing tips
-    var antMat = new THREE.MeshStandardMaterial({ color: furCol.clone().multiplyScalar(0.85), roughness: 0.6, emissive: furCol, emissiveIntensity: 0.15 });
-    var tipMat = new THREE.MeshStandardMaterial({ color: 0xfffbe8, emissive: pal.glow, emissiveIntensity: 1.1, roughness: 0.3 });
+    // floppy ears sticking out sideways, pink inside
+    var innerMat = new THREE.MeshStandardMaterial({ color: muzzleCol, roughness: 0.7, emissive: muzzleCol, emissiveIntensity: 0.12 });
     var ears = [];
     [-1, 1].forEach(function (s) {
-      var ap = surf(s * 0.32, 0.8, 0.5, 1.2), ag = new THREE.Group(); ag.position.copy(ap); head.add(ag);
-      var curve = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(s * 0.04, 0.1, 0.01), V3(s * 0.13, 0.17, -0.01), V3(s * 0.22, 0.15, -0.03), V3(s * 0.27, 0.09, -0.03)]);
-      abPart(new THREE.TubeGeometry(curve, 24, 0.006, 6), antMat, 0, 0, 0, 0, 0, 0, ag);
-      var tipPos = curve.getPoint(1);
-      abPart(new THREE.SphereGeometry(0.016, 14, 10), tipMat, tipPos.x, tipPos.y, tipPos.z, 0, 0, 0, ag);
-      var tg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
-      tg.scale.set(0.1, 0.1, 1); tg.position.copy(tipPos); ag.add(tg);
-      ears.push({ g: ag, s: s, glow: tg });
+      var ep = new THREE.Group(); ep.position.set(s * 0.1, 0.045, -0.02); head.add(ep);
+      part(seg, plain, s * 0.055, 0, 0, 0.065, 0.024, 0.036, ep, 0, 0, 0, true);
+      part(seg, innerMat, s * 0.058, 0.008, 0.006, 0.052, 0.012, 0.026, ep);
+      ears.push({ g: ep, s: s });
     });
-    // six tiny jointed legs with round little feet
-    var legMat = new THREE.MeshStandardMaterial({ color: furCol.clone().multiplyScalar(0.82), roughness: 0.7, emissive: furCol, emissiveIntensity: 0.12 });
-    var footMat = new THREE.MeshStandardMaterial({ color: pal.hoof, roughness: 0.3, metalness: 0.4, emissive: pal.hoof, emissiveIntensity: 0.18 });
-    var legs = [];
-    [0.1, 0.0, -0.1].forEach(function (lz, row) {
-      [-1, 1].forEach(function (s) {
-        var lg = new THREE.Group(); lg.position.set(s * 0.11, BY - 0.11, lz); body.add(lg);
-        abRod(V3(0, 0, 0), V3(s * 0.07, 0.035, 0), 0.011, legMat, lg);
-        abPart(new THREE.SphereGeometry(0.013, 10, 8), legMat, s * 0.07, 0.035, 0, 0, 0, 0, lg);
-        abRod(V3(s * 0.07, 0.035, 0), V3(s * 0.1, -0.1, 0), 0.008, legMat, lg);
-        abPart(new THREE.SphereGeometry(0.015, 12, 10), footMat, s * 0.1, -0.103, 0.004, 0, 0, 0, lg).scale.set(1, 0.65, 1.3);
-        legs.push({ g: lg, s: s, ph: ((row + (s > 0 ? 1 : 0)) % 2) * Math.PI });   // a tripod gait: three legs step while the other three stand
-      });
+    // horns: two glowing crescent moons
+    var hornMat = new THREE.MeshStandardMaterial({ color: 0xfffbe8, emissive: pal.glow, emissiveIntensity: 1.0, roughness: 0.3 });
+    var hornGlows = [];
+    [-1, 1].forEach(function (s) {
+      var hg = new THREE.Group(); hg.position.set(s * 0.065, 0.095, -0.01); hg.rotation.set(0, 0, -s * 0.25); head.add(hg);
+      var crescent = new THREE.TorusGeometry(0.045, 0.012, 10, 24, Math.PI * 0.95);
+      var horn = abPart(crescent, hornMat, s * 0.045, 0.0, 0, 0, 0, s > 0 ? 0 : Math.PI * 0.05, hg); horn.scale.set(s, 1, 1);   // curving up and out, then in, like a crescent
+      var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+      gl.scale.set(0.16, 0.16, 1); gl.position.set(s * 0.045, 0.03, 0); hg.add(gl); hornGlows.push(gl);
     });
-    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.scale.set(1.0, 1.0, 1); glow.position.set(0, 0.28, 0); root.add(glow);
+    // four sturdy legs, each on a hoof that shines like a star
+    var hoofMat = new THREE.MeshStandardMaterial({ color: 0xfffaf0, emissive: pal.glow, emissiveIntensity: 0.9, roughness: 0.3 });
+    var legs = [], hoofGlows = [];
+    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp) {
+      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.11, BY - 0.08, front ? 0.17 : -0.2); body.add(hip);
+      part(new THREE.CylinderGeometry(0.04, 0.06, 0.2, 16), coat, 0, -0.08, 0, 1, 1, 1, hip, 0, lp[0] + lp[1], 0, true);
+      var knee = new THREE.Group(); knee.position.set(0, -0.19, 0); hip.add(knee);
+      part(seg, plain, 0, 0, 0, 0.036, 0.034, 0.036, knee);
+      part(new THREE.CylinderGeometry(0.03, 0.036, 0.15, 14), plain, 0, -0.075, 0, 1, 1, 1, knee, 0, 0, 0, true);
+      abPart(new THREE.CylinderGeometry(0.036, 0.042, 0.04, 16), hoofMat, 0, -0.165, 0.004, 0, 0, 0, knee);
+      var hgl = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonStarTex, color: pal.glow, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+      hgl.scale.set(0.1, 0.1, 1); hgl.position.set(0, -0.165, 0.03); knee.add(hgl); hoofGlows.push(hgl);
+      legs.push({ hip: hip, knee: knee, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, back: !front });
+    });
+    // a long thin tail with a tuft of starlight at the end
+    var tail = new THREE.Group(); tail.position.set(0, BY + 0.13, -0.33); body.add(tail);
+    var tc = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, -0.03, -0.04), V3(0, -0.13, -0.06), V3(0, -0.26, -0.05)]);
+    abPart(new THREE.TubeGeometry(tc, 16, 0.009, 6), plain, 0, 0, 0, 0, 0, 0, tail);
+    var tuftCol = new THREE.Color(pal.glow);
+    var tuftM = [0, 1, 2, 3, 4].map(function (k) { return new THREE.MeshStandardMaterial({ map: glimHairTex, color: 0xffffff, transparent: true, alphaTest: 0.1 + k * 0.17, roughness: 1, emissive: tuftCol, emissiveIntensity: 0.5 }); });
+    for (var tt = 0; tt < 5; tt++) { var f2 = 1 + tt * 0.25, tf2 = abPart(seg, tuftM[tt], 0, -0.29, -0.05, 0, tt, 0, tail); tf2.scale.set(0.025 * f2, 0.045 * f2, 0.025 * f2); tf2.castShadow = false; }
+    var star = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonStarTex, color: pal.glow, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    star.scale.set(0.11, 0.11, 1); star.position.set(0, -0.3, -0.05); tail.add(star);
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(1.5, 1.5, 1); glow.position.set(0, 0.5, 0); root.add(glow);
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
-    tag.scale.set(0.38, 0.145, 1); tag.position.set(0, 0.85, 0); tag.renderOrder = 6; root.add(tag);
-    return { root: root, body: body, head: head, ears: ears, legs: legs, stars: stars, thirdMat: thirdMat, thirdGlow: thirdGlow, third: third, tipMat: tipMat, glow: glow, tagCv: tagCv, tagTex: tagTex };
+    tag.scale.set(0.42, 0.16, 1); tag.position.set(0, 1.1, 0); tag.renderOrder = 6; root.add(tag);
+    return { root: root, body: body, head: head, ears: ears, legs: legs, tail: tail, star: star, coat: coat, hornMat: hornMat, hornGlows: hornGlows, hoofMat: hoofMat, hoofGlows: hoofGlows, glow: glow, tagCv: tagCv, tagTex: tagTex };
   }
   // when it's ready to milk, a shimmering drop of Moonmilk floats over it
   function moonBuildExtras(g) {
@@ -1182,33 +1197,41 @@ EVERDAWN_PARTS.push(function (THREE) {
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
     g.slate.map = glimSlateTex(g.name, 'Mooncalf'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Mooncalf: scuttling about on six little legs, antenna-ears swaying with their tips glowing,
-  // its third eye pulsing (and now and then blinking shut), the stars on its back twinkling; a happy wiggle when petted
+  // every frame, for a Mooncalf: an unhurried amble, head nodding, ears flicking, tail swishing, the stars in its
+  // spots twinkling and its moon horns glowing softly; when petted, it leans in, ears up and tail swishing happily
   function moonAnimate(g, dt, t, moving) {
     var m = g.m;
-    if (moving) g.hop += dt * 16;
+    if (moving) g.hop += dt * 5.5;
     m.legs.forEach(function (l) {
-      var c = moving ? Math.sin(g.hop + l.ph) : 0;
-      l.g.rotation.y = l.s * c * 0.35;                                  // swinging forward and back
-      l.g.rotation.z = l.s * Math.max(0, c) * 0.3;                      // and lifting
+      var sw = moving ? Math.sin(g.hop + l.ph) : 0;
+      l.hip.rotation.x = l.hip.rotation.x * 0.8 + sw * 0.35 * 0.2;
+      l.knee.rotation.x = l.knee.rotation.x * 0.8 + (moving ? Math.max(0, Math.sin(g.hop + l.ph + 1.2)) * (l.back ? 0.45 : -0.45) : 0) * 0.2;
     });
-    var breathe = 1 + Math.sin(t * 2 + g.stall) * 0.02;
-    m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.008 : 0;
-    if (g.pet > 0) { g.pet -= dt; m.body.rotation.z = Math.sin(g.pet * 16) * 0.12; m.body.scale.set(1 + Math.sin(g.pet * 12) * 0.05, 1 - Math.sin(g.pet * 12) * 0.05, 1); }
-    else { m.body.rotation.z = 0; m.body.scale.set(breathe, 1 / breathe, breathe); }
+    var breathe = 1 + Math.sin(t * 1.3 + g.stall) * 0.012;
+    m.body.scale.set(breathe, breathe, 1);
+    m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.01 : 0;
+    if (g.pet > 0) { g.pet -= dt; m.head.rotation.set(0.12 + Math.sin(g.pet * 4) * 0.06, Math.sin(g.pet * 5) * 0.15, Math.sin(g.pet * 3) * 0.08); }
+    else {
+      var graze = Math.max(0, Math.sin(t * 0.21 + g.stall * 2.3) - 0.6) * 2.2;   // now and then it lowers its head to nose at the straw
+      m.head.rotation.set(graze * 0.45 + Math.sin(t * 0.7 + g.stall) * 0.05 + (moving ? Math.sin(g.hop * 2) * 0.05 : 0), Math.sin(t * 0.4 + g.stall * 2) * 0.3 * (1 - graze * 0.6), Math.sin(t * 0.33 + g.stall) * 0.06);
+    }
     m.ears.forEach(function (e, k) {
-      e.g.rotation.z = e.s * (Math.sin(t * 1.4 + k * 2 + g.stall) * 0.12 + (g.pet > 0 ? Math.sin(g.pet * 18) * 0.25 : 0));
-      e.g.rotation.x = Math.sin(t * 1.1 + k) * 0.12 + (moving ? 0.15 : 0);
-      e.glow.material.opacity = 0.45 + Math.sin(t * 2.5 + k * 2) * 0.25;
+      var flick = Math.max(0, Math.sin(t * 0.9 + k * 2.3 + g.stall) - 0.94) * 12;
+      e.g.rotation.z = e.s * (-0.25 + Math.sin(t * 1.2 + k) * 0.06 + flick * 0.3 + (g.pet > 0 ? 0.35 : 0));
+      e.g.rotation.y = e.s * flick * 0.2;
     });
-    var pulse = 0.5 + Math.sin(t * 1.6 + g.stall * 1.3) * 0.5, blink = Math.max(0, Math.sin(t * 0.37 + g.stall * 3) - 0.97) * 33;
-    m.third.scale.set(1, Math.max(0.1, 1 - blink), 1);
-    m.thirdMat.emissiveIntensity = 0.9 + pulse * 0.5 + (g.egg ? 0.4 : 0); m.thirdGlow.material.opacity = 0.4 + pulse * 0.3 + (g.egg ? 0.2 : 0);
-    m.tipMat.emissiveIntensity = 0.8 + pulse * 0.4;
-    m.stars.forEach(function (s) { s.s.material.opacity = 0.3 + Math.max(0, Math.sin(t * 2.2 + s.p * 3)) * 0.7; });
-    m.glow.material.opacity = 0.14 + pulse * 0.06;
-    if (g.egg) { g.eggMesh.position.set(g.x, 0.8 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
+    m.tail.rotation.z = Math.sin(t * 1.6 + g.stall) * 0.25 + (g.pet > 0 ? Math.sin(t * 9) * 0.35 : 0);
+    m.tail.rotation.x = -0.1 + Math.sin(t * 1.1) * 0.05;
+    var pulse = 0.5 + Math.sin(t * 1.5 + g.stall * 1.3) * 0.5;
+    m.coat.emissiveIntensity = 0.75 + Math.sin(t * 2.6 + g.stall) * 0.25;           // the stars in its spots twinkle
+    m.hornMat.emissiveIntensity = 0.8 + pulse * 0.4 + (g.egg ? 0.4 : 0);
+    m.hornGlows.forEach(function (h) { h.material.opacity = 0.35 + pulse * 0.25 + (g.egg ? 0.2 : 0); });
+    m.hoofGlows.forEach(function (h, k) { h.material.opacity = 0.35 + Math.sin(t * 2.2 + k * 1.7) * 0.2; });
+    m.star.material.opacity = 0.6 + Math.sin(t * 3 + g.stall) * 0.3;
+    m.glow.material.opacity = 0.12 + pulse * 0.05;
+    if (g.egg) { g.eggMesh.position.set(g.x, 1.0 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
+
 
 
   function glimDrawTag(g) {
@@ -1280,14 +1303,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.wait -= dt;
       var moon = g.kind === 'moon';
       if (g.wait <= 0 && g.pet <= 0) {
-        if (moon) { g.tx = -3.55 + Math.random() * 0.9; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 2.5 + Math.random() * 4; }
+        if (moon) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }   // (bigger, so it ambles about less)
         else { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 2.5 + Math.random() * 4; }
       }
       var dx = g.tx - g.x, dz = g.tz - g.z, d = Math.hypot(dx, dz), moving = d > 0.03 && g.pet <= 0;
-      if (moving) { var stp = Math.min(d, dt * (moon ? 0.3 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon) g.hop += dt * 9; }
+      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon) g.hop += dt * 9; }
       else if (!moon) g.hop = 0;
       var cur = m.root.rotation.y, diff = Math.atan2(Math.sin(g.face - cur), Math.cos(g.face - cur));
-      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 4 : 5));
+      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : 5));
       if (moon) { m.root.position.set(g.x, 0, g.z); moonAnimate(g, dt, t, moving); return; }
       var hopY = moving ? Math.abs(Math.sin(g.hop)) * 0.06 : 0, breathe = 1 + Math.sin(t * 2.2 + g.stall) * 0.02;
       m.root.position.set(g.x, hopY, g.z);
@@ -1954,7 +1977,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic glim-pic"></div><div class="shop-text"><b>Glimmerwing</b><span>A gentle, glowing little creature with shimmering moth wings. Feed it hay and pet it every day, and it lays a Glimmer Egg each morning. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + GLIM_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="glim-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A strange, sweet ball of fuzz on six tiny legs, with a glowing crescent third eye, long antenna-ears and a patch of starry night sky on its back. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="moon-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic pail-pic"></div><div class="shop-text"><b>Milk Pail</b><span>You need one to milk your Mooncalves. It never wears out.</span>' +
