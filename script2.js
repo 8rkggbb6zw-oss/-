@@ -2371,16 +2371,541 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 2.0; glimHeartBurst(g.x, 0.8, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= EMBER_DAYS ? ' A Cinder Quill tomorrow morning!' : ' Day ' + day + ' of ' + EMBER_DAYS + ' done. Come back tomorrow!'), 2400);
   }
+  // ---------- Gemwrens ----------
+  // Plump little ground birds a little like a quail (round and short-tailed, scurrying about on quick little feet,
+  // with a nodding plume on top of the head, but not a quail): their feathers are speckled and scaled like the inside
+  // of a geode, glittering here and there with tiny crystals, and the plume curling forward over their brow is tipped
+  // with a faceted gem that glows. Feed one hay and pet it every day for four days in a row, and the next morning
+  // there's a speckled Geode Egg in its straw, sparkling with crystals inside. Miss a day and the count starts over
+  var GEM_COST = 380, GEM_DAYS = 4, GEM_BUMP = 0.012;
+  var GEM_PALS = [                                                    // amethyst, rose quartz and citrine
+    { name: 'Amethyst', back: '#4a3a66', mid: '#8a6ab8', breast: '#dccdf2', scale: '#2e2048', bib: '#3a2266', white: '#f4eeff', gem: 0xb07aff, glow: 0xc8a0ff, crystal: '#e8d8ff', beak: 0x3a3040, leg: 0xb8a8c8, iris: ['#7a4ab0', '#1a0a2a'] },
+    { name: 'Rose Quartz', back: '#6a4050', mid: '#c4809a', breast: '#f8dde4', scale: '#4a2232', bib: '#7a2a4a', white: '#fff2f6', gem: 0xff8ab8, glow: 0xffb4d4, crystal: '#ffe2ee', beak: 0x4a3036, leg: 0xd8b0b8, iris: ['#b04a70', '#2a0a14'] },
+    { name: 'Citrine', back: '#5e4626', mid: '#b88a44', breast: '#f6e8c0', scale: '#3a2a14', bib: '#6a4414', white: '#fffaea', gem: 0xffc23a, glow: 0xffdc8a, crystal: '#fff0c8', beak: 0x3a3024, leg: 0xc8a878, iris: ['#c08a20', '#2a1a04'] }
+  ];
+  function gemDiamond(g, x, y, w, h) {                               // a cut gem, seen from the front: a flat table on top, facets down to a point
+    g.beginPath(); g.moveTo(x - w * 0.25, y - h * 0.5); g.lineTo(x + w * 0.25, y - h * 0.5); g.lineTo(x + w * 0.5, y - h * 0.18);
+    g.lineTo(x, y + h * 0.5); g.lineTo(x - w * 0.5, y - h * 0.18); g.closePath();
+  }
+  // painting one of its feathers in fine detail: hundreds of barbs off a tapering shaft, each drawn in short segments
+  // so its markings can change along it (o.col(x, y, k, s, j): x and y where on the feather, 0 to 1 from base to tip;
+  // k how far out along the barb; s which side; j a little jitter), a glint of light on some barbs, splits in the vane
+  // here and there, and loose down at the base. Drawn base at the top, tip at the bottom
+  function gemPaintFeather(g, w, h, o) {
+    var cx = w / 2, step = o.step || 0.4, N = o.segs || 8, sd = o.seed || 0, sweep = o.sweep || 0.62, skip = [0, 0];
+    g.lineCap = 'round';
+    for (var y = 1; y < h - 1; y += step) {
+      var t = y / h;
+      for (var si = 0; si < 2; si++) {
+        var s = si ? 1 : -1, r = glimR(y * 13.7 + si * 71 + sd), r2 = glimR(y * 7.3 + si * 11 + sd), j = (glimR(y * 3.1 + si * 5 + sd) - 0.5) * 2;
+        if (t < o.from) {                                              // loose, fluffy down near the base
+          var fl = o.fluff * (0.6 + r2 * 0.6), fa = 0.9 + r * 0.5;
+          g.globalAlpha = 0.5; g.strokeStyle = grey(o.col(0.5 + s * 0.2, t, 0.4, s, j)); g.lineWidth = 0.7;
+          g.beginPath(); g.moveTo(cx, y); g.bezierCurveTo(cx + s * fl * 0.4, y + fl * 0.1, cx + s * fl * 0.8, y + fl * (0.3 + r * 0.5), cx + s * fl * Math.cos(fa) * 1.1, y + fl * Math.sin(fa)); g.stroke();
+          continue;
+        }
+        if (skip[si] > 0) { skip[si]--; continue; }
+        if (r < (o.split || 0.012)) skip[si] = 2 + Math.floor(r2 * 5);  // a split in the vane
+        var a = sweep + (r - 0.5) * 0.1, len = 0;
+        for (var it = 0; it < 4; it++) { var eu = Math.min(1, (y + len * Math.sin(a)) / h); len = o.edge(eu, s) / Math.cos(a); }
+        len *= 0.92 + r2 * 0.14;
+        if (len < 0.8) continue;
+        var ex = cx + s * len * Math.cos(a), ey = y + len * Math.sin(a), qx = cx + s * len * 0.55 * Math.cos(a * 0.6), qy = y + len * 0.55 * Math.sin(a * 0.6);   // (each barb curving gently toward the tip)
+        g.globalAlpha = 1;
+        var px = cx, py = y;
+        for (var n = 1; n <= N; n++) {
+          var f = n / N, m = 1 - f, nx = m * m * cx + 2 * m * f * qx + f * f * ex, ny = m * m * y + 2 * m * f * qy + f * f * ey;
+          g.strokeStyle = grey(o.col(((px + nx) / 2) / w, ((py + ny) / 2) / h, f - 0.5 / N, s, j));
+          g.lineWidth = (o.lw || 1.1) * (1 - f * 0.45);
+          g.beginPath(); g.moveTo(px, py); g.lineTo(nx, ny); g.stroke();
+          px = nx; py = ny;
+        }
+        if (r2 > 0.62) {                                               // a glint of light catching the barbules
+          g.globalAlpha = 0.35; g.strokeStyle = '#ffffff'; g.lineWidth = 0.5;
+          g.beginPath(); g.moveTo(cx + s * len * 0.15, y + len * 0.1); g.quadraticCurveTo(qx, qy + 0.4, cx + s * len * 0.6 * Math.cos(a * 0.8), y + len * 0.6 * Math.sin(a * 0.8)); g.stroke();
+          g.globalAlpha = 1;
+        }
+      }
+    }
+    var sw = o.shaftW || 1.6;                                          // the shaft: tapering, with darker edges and a pale core
+    for (var k = 0; k < 2; k++) {
+      g.strokeStyle = k ? (o.shaft || '#e8e8e8') : 'rgba(40,40,40,0.5)';
+      for (var q = 0; q < 10; q++) { g.lineWidth = sw * (k ? 0.55 : 1) * (1 - q * 0.085); g.beginPath(); g.moveTo(cx, q * h * 0.096); g.lineTo(cx, (q + 1) * h * 0.096); g.stroke(); }
+    }
+  }
+  function gemVerm(x, y) { return Math.sin(x * 170 + y * 61) * Math.sin(y * 97 - x * 43) + Math.sin(x * 61 - y * 140) * 0.5; }   // fine wavy vermiculation, as on a real quail
+  // its body feathers, in greys so each one can be tinted its own colour. Four patterns, as on a real quail: scaled,
+  // pale with a crisp dark crescent and a fine pale fringe at the tip (its belly); streaked, dark with a white stripe
+  // down the shaft, edged in black and ending in a pale spot (its flanks); barred, with wavy dark bars, a pale shaft
+  // streak and a buff edge down one side (its back and wings); and plain (its face and breast). All finely vermiculated
+  // Each feather is shaded darker toward its base, where it tucks under the row above, so the rows stand out in
+  // depth. Each also has a bump map, painted with the very same barbs: every barb a ridge of its own and the shaft
+  // raised, so light catches the texture of the vane
+  function gemContourCanvas(pat, bump) {
+    return glimCanvas(192, 288, function (g, w, h) {
+      if (bump) { g.fillStyle = grey(128); g.fillRect(0, 0, w, h); }
+      gemPaintFeather(g, w, h, { from: 0.16, fluff: 34, seed: 61 + pat * 40, sweep: 0.62, step: 0.4, lw: 1.3, segs: 9,
+        edge: function (u) { return w * 0.4 * Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.52) / 0.47, 2))) * (1 - Math.max(0, u - 0.9) * 1.5); },
+        col: function (x, y, k, s, j) {
+          if (bump) return 112 + j * 48 + (k < 0.07 ? 40 : 0) - k * 20;
+          var vm = gemVerm(x, y) * 12, v;
+          if (pat === 0) {                                             // (the crescent follows the feather's rounded tip)
+            var e = Math.sqrt(Math.pow((x - 0.5) / 0.4, 2) + Math.pow((y - 0.52) / 0.47, 2));
+            v = 200 + y * 30 + vm * 0.6 + j * 10;
+            if (y > 0.5) { if (e > 0.7 && e < 0.88) v = 58 + vm; else if (e >= 0.88) v = 234; }
+          }
+          else if (pat === 1) {
+            var wS = y > 0.18 && y < 0.95 ? 0.26 * Math.sin(Math.PI * (y - 0.18) / 0.77) : 0;
+            v = 100 + y * 28 + vm + j * 10;
+            if (k < wS) v = 246 - k * 40; else if (k < wS + 0.09 && wS > 0.02) v = 55;   // the white stripe, edged in black
+            if (y > 0.9 && k < 0.4) v = 228;
+          }
+          else if (pat === 2) {
+            v = 152 + y * 34 + vm + j * 12;
+            if (y > 0.3 && Math.sin(y * 24 + k * 1.4 + s * 0.4 + Math.sin(k * 9) * 0.3) > 0.5) v = 62 + vm * 0.5;   // wavy dark bars
+            if (y > 0.28 && k < 0.1) v = 214;                                                                       // a pale shaft streak
+            if (s > 0 && k > 0.8 && y > 0.25) v = 232;                                                              // a buff edge down one side
+          }
+          else v = 186 + y * 44 + vm * 0.7 + j * 10;
+          var u = Math.max(0, Math.min(1, (y - 0.18) / 0.42));
+          v *= 0.6 + 0.4 * u * u * (3 - 2 * u);                       // (shaded toward the base)
+          if (k > 0.9 && pat !== 0) v *= 0.9;                          // (and a touch darker at the very edge)
+          return v;
+        }, shaft: bump ? '#ffffff' : pat === 1 ? '#ffffff' : '#d2d2d2', shaftW: 1.8 });
+      if (!bump) emberBleed(g, w, h, [200, 200, 200]);
+    });
+  }
+  var gemContourTexes = [0, 1, 2, 3].map(function (pat) {
+    var tex = new THREE.CanvasTexture(gemContourCanvas(pat, false));
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return tex;
+  });
+  var gemContourBumps = [0, 1, 2, 3].map(function (pat) { return new THREE.CanvasTexture(gemContourCanvas(pat, true)); });
+  // the plume: a narrow, teardrop-shaped feather, darkest and glossiest at the tip, curling forward over its brow
+  var gemPlumeTex = new THREE.CanvasTexture(glimCanvas(96, 320, function (g, w, h) {
+    gemPaintFeather(g, w, h, { from: 0.12, fluff: 12, seed: 77, sweep: 0.8, step: 0.45, lw: 1.1, segs: 7,
+      edge: function (u) { return w * 0.45 * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, 1.6))), 0.7); },   // (narrow at its base, a teardrop at the top)
+      col: function (x, y, k, s, j) { return 118 - y * 60 + k * 16 + gemVerm(x, y) * 5 + j * 10; }, shaft: '#6a6a6a', shaftW: 1.4 });
+    emberBleed(g, w, h, [80, 80, 80]);
+  }));
+  // a flight or tail feather: long and narrow, grey-brown, its broad trailing side notched with buff bars, darker at
+  // the very tip, the leading side narrower and plainer
+  var gemFlightTex = new THREE.CanvasTexture(glimCanvas(96, 480, function (g, w, h) {
+    gemPaintFeather(g, w, h, { from: 0.06, fluff: 14, seed: 91, sweep: 0.85, step: 0.45, lw: 1.1, segs: 7, split: 0.015,
+      edge: function (u, s) { return w * 0.46 * (s < 0 ? 0.55 : 1) * Math.pow(Math.max(0, 1 - Math.pow((u - 0.45) / 0.55, 2)), 0.35); },
+      col: function (x, y, k, s, j) {
+        var v = 150 + y * 28 + gemVerm(x, y) * 10 + j * 12;
+        if (s > 0 && k > 0.35 && Math.sin(y * 34 + k * 0.8) > 0.35) v = 222;   // buff notches
+        if (y > 0.92) v -= 40;
+        return v;
+      }, shaft: '#e6e6e6', shaftW: 1.8 });
+    emberBleed(g, w, h, [190, 190, 190]);
+  }));
+  gemFlightTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  // a Geode Egg: a speckled little egg, cracked open on one side to show the glittering crystals inside
+  function gemEggTex(pal) {
+    return new THREE.CanvasTexture(glimCanvas(256, 128, function (g, w, h) {
+      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fbf6ee'); gr.addColorStop(1, '#ece0cc');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 260; i++) {                                 // speckles and blotches, like a quail's egg
+        var x = glimR(i * 2.3 + 400) * w, y = glimR(i * 3.1 + 400) * h, r = 0.8 + Math.pow(glimR(i * 4.7), 3) * 7;
+        g.fillStyle = glimR(i * 5.9) > 0.35 ? 'rgba(70,50,40,' + (0.5 + glimR(i) * 0.4) + ')' : 'rgba(140,110,90,0.5)';
+        g.beginPath(); g.ellipse(x, y, r * (1 + glimR(i * 6.1)), r, glimR(i * 7.3) * 3, 0, Math.PI * 2); g.fill();
+      }
+      for (var c = 0; c < 70; c++) { g.fillStyle = pal.crystal; g.globalAlpha = 0.6 + glimR(c) * 0.4; g.fillRect(glimR(c * 3.3 + 9) * w, glimR(c * 4.4 + 9) * h, 1.5, 1.5); }   // crystal flecks
+      g.globalAlpha = 1;
+    }));
+  }
+  var gemEggIcon = glimCanvas(96, 96, function (g, w, h) {
+    var pal = GEM_PALS[0];
+    var glow = g.createRadialGradient(48, 54, 4, 48, 54, 46); glow.addColorStop(0, 'rgba(200,160,255,0.7)'); glow.addColorStop(1, 'rgba(200,160,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    g.save(); g.beginPath(); g.ellipse(48, 54, 23, 30, 0, 0, Math.PI * 2); g.clip();
+    var eg = g.createRadialGradient(40, 40, 3, 48, 56, 34); eg.addColorStop(0, '#fffaf2'); eg.addColorStop(1, '#e2d2ba'); g.fillStyle = eg; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 46; i++) { g.fillStyle = 'rgba(70,50,40,0.75)'; g.beginPath(); g.arc(glimR(i * 2.9 + 3) * w, glimR(i * 3.7 + 3) * h, 0.8 + Math.pow(glimR(i * 5.3), 2) * 3, 0, Math.PI * 2); g.fill(); }   // speckles
+    g.fillStyle = '#2a1a40'; g.beginPath(); g.moveTo(52, 30); g.lineTo(60, 40); g.lineTo(56, 48); g.lineTo(66, 58); g.lineTo(62, 70); g.lineTo(80, 76); g.lineTo(80, 24); g.closePath(); g.fill();   // the cracked-open side
+    [[64, 44, '#d8b8ff'], [70, 56, '#b07aff'], [72, 38, '#f2e6ff'], [68, 66, '#c8a0ff'], [76, 50, '#e8d8ff']].forEach(function (cr) {   // the crystals inside
+      g.fillStyle = cr[2]; g.beginPath(); g.moveTo(cr[0], cr[1] - 7); g.lineTo(cr[0] + 4, cr[1]); g.lineTo(cr[0], cr[1] + 6); g.lineTo(cr[0] - 4, cr[1]); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.moveTo(cr[0], cr[1] - 7); g.lineTo(cr[0] + 4, cr[1]); g.lineTo(cr[0], cr[1]); g.closePath(); g.fill();
+    });
+    g.restore();
+    g.strokeStyle = 'rgba(120,90,70,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(48, 54, 23, 30, 0, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#fff'; [[20, 24], [80, 18], [18, 74]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  ITEMS.geodeEgg = { name: 'Geode Egg', price: 360, icon: '🥚', img: gemEggIcon, fill: 86, info: 'A speckled little egg that has cracked open on one side to show glittering crystals inside, laid by a happy Gemwren. Feed and pet yours every day for four days in a row for one. Sells for a very good price at the shipping bin.' };
+  var gemShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
+    var pal = GEM_PALS[0];
+    var glow = g.createRadialGradient(64, 70, 4, 64, 70, 64); glow.addColorStop(0, 'rgba(200,160,255,0.75)'); glow.addColorStop(1, 'rgba(200,160,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    var bg = g.createLinearGradient(0, 56, 0, 112); bg.addColorStop(0, pal.mid); bg.addColorStop(1, pal.breast);
+    g.fillStyle = bg; g.beginPath(); g.ellipse(60, 84, 38, 30, 0, 0, Math.PI * 2); g.fill();          // the round body
+    g.fillStyle = pal.back; g.beginPath(); g.ellipse(48, 78, 24, 15, -0.25, 0, Math.PI * 2); g.fill(); // the wing
+    g.fillStyle = 'rgba(255,255,255,0.75)'; for (var s = 0; s < 6; s++) { g.beginPath(); g.ellipse(40 + s * 5, 72 + (s % 2) * 6, 2, 3.5, 0, 0, Math.PI * 2); g.fill(); }   // its spots
+    g.strokeStyle = pal.scale; g.lineWidth = 1.5; for (var r = 0; r < 3; r++) for (var c = 0; c < 4; c++) { g.beginPath(); g.arc(68 + c * 7 + (r % 2) * 3.5, 92 + r * 6, 3.5, 0.2, Math.PI - 0.2); g.stroke(); }   // the scaled belly
+    g.fillStyle = pal.mid; g.beginPath(); g.arc(88, 52, 17, 0, Math.PI * 2); g.fill();               // the head
+    g.fillStyle = pal.bib; g.beginPath(); g.moveTo(84, 58); g.quadraticCurveTo(92, 72, 104, 58); g.quadraticCurveTo(98, 54, 84, 58); g.fill();   // the bib,
+    g.strokeStyle = pal.white; g.lineWidth = 2; g.beginPath(); g.moveTo(84, 58); g.quadraticCurveTo(92, 74, 105, 57); g.stroke();             // bordered in white
+    g.beginPath(); g.moveTo(80, 44); g.quadraticCurveTo(90, 40, 100, 45); g.stroke();                // and a white brow stripe
+    g.fillStyle = '#2a2230'; g.beginPath(); g.moveTo(102, 50); g.quadraticCurveTo(110, 51, 104, 56); g.closePath(); g.fill();   // the beak
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(94, 50, 4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1a0a2a'; g.beginPath(); g.arc(94.5, 50.5, 3, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(93.4, 49.2, 1.1, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = pal.scale; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(86, 36); g.quadraticCurveTo(88, 20, 100, 18); g.stroke();   // the plume,
+    g.fillStyle = '#c8a0ff'; gemDiamond(g, 104, 18, 14, 13); g.fill();                               // tipped with a gem
+    g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.moveTo(100.5, 11.5); g.lineTo(107.5, 11.5); g.lineTo(104, 18); g.closePath(); g.fill();
+    g.fillStyle = '#fff'; [[18, 40], [112, 92], [30, 112]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  // building one: a plump, rounded body clad in hundreds of small tinted feathers (scaled on the belly, streaked on
+  // the flanks, spotted on the back and wings), with a glittering crystal feather here and there; a small round head
+  // with a dark bib edged in white, a white brow stripe and a short stubby beak; a curl of plume feathers tipped with a
+  // faceted gem; folded wings; a short tail; and short legs on little clawed feet
+  function gemBuild(pal) {
+    var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
+    var seg = new THREE.SphereGeometry(1, 40, 28);
+    var under = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.mid).multiplyScalar(0.7), roughness: 0.9 });   // (the body under its feathers)
+    function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
+    var sheenCol = new THREE.Color(pal.crystal).multiplyScalar(0.35);
+    var contourMats = gemContourTexes.map(function (tex, ti) { return new THREE.MeshPhysicalMaterial({ map: tex, bumpMap: gemContourBumps[ti], bumpScale: GEM_BUMP, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.05, clearcoat: 0.25, clearcoatRoughness: 0.5, sheen: sheenCol, emissive: pal.glow, emissiveIntensity: 0.03 }); });
+    var crystalMat = new THREE.MeshPhysicalMaterial({ map: gemContourTexes[3], bumpMap: gemContourBumps[3], bumpScale: GEM_BUMP, alphaTest: 0.3, side: THREE.DoubleSide, color: new THREE.Color(pal.gem).lerp(new THREE.Color(pal.crystal), 0.7), roughness: 0.1, metalness: 0.45, clearcoat: 1, clearcoatRoughness: 0.05, emissive: pal.gem, emissiveIntensity: 0.18 });   // (glassy, like a sliver of the gem)
+    var cPlane = emberCurvedPlane(0.3, 0.15);
+    var cM = new THREE.Matrix4(), cN = new THREE.Vector3(), cT = new THREE.Vector3(), cX = new THREE.Vector3(), cY = new THREE.Vector3(), cZ = new THREE.Vector3();
+    var cBack = V3(0, -0.35, -1), cDown = V3(0, -1, 0.15), crystals = [];
+    function shingles(parent, list) {                                 // list: [x, y, z, normal, flow, width, length, colour, pattern]; drawn in one batch per pattern
+      var groups = [[], [], [], [], []];
+      list.forEach(function (f, i) { groups[glimR(i * 7.1 + list.length) < 0.022 && f[8] !== 3 ? 4 : f[8]].push(f); });   // (one in twenty or so is a glittering crystal feather)
+      groups.forEach(function (grp, gi) {
+        if (!grp.length) return;
+        var im = new THREE.InstancedMesh(cPlane, gi === 4 ? crystalMat : contourMats[gi], grp.length); im.castShadow = true;
+        grp.forEach(function (f, i) {
+          var r1 = glimR(i * 3.7 + gi * 91 + grp.length), r2 = glimR(i * 6.1 + gi * 37 + grp.length);
+          cN.copy(f[3]).normalize();
+          cT.copy(f[4]).addScaledVector(cN, -f[4].dot(cN)).normalize().addScaledVector(cN, 0.06 + r2 * 0.08).normalize();
+          cT.applyAxisAngle(cN, (r1 - 0.5) * 0.3);
+          cY.copy(cT).negate(); cZ.copy(cN).addScaledVector(cT, -cN.dot(cT)).normalize(); cX.crossVectors(cY, cZ);
+          var sw = f[5] * (0.86 + r1 * 0.28), sl = f[6] * (0.88 + r2 * 0.26);
+          cM.makeBasis(cX, cY, cZ).scale(V3(sw, sl, sw)).setPosition(f[0], f[1], f[2]);
+          im.setMatrixAt(i, cM); im.setColorAt(i, gi === 4 ? new THREE.Color(1, 1, 1) : f[7]);
+          if (gi === 4) crystals.push(V3(f[0], f[1], f[2]).addScaledVector(cN, 0.004).addScaledVector(cY, f[6] * 0.6));   // (a twinkle by each crystal feather)
+        });
+        parent.add(im);
+      });
+    }
+    function onEgg(c, r, u, v, out) {
+      var d = V3(Math.sin(u) * Math.cos(v), Math.sin(v), Math.cos(u) * Math.cos(v));
+      var n = V3(d.x / r[0], d.y / r[1], d.z / r[2]).normalize();
+      return [c[0] + d.x * r[0] + n.x * out, c[1] + d.y * r[1] + n.y * out, c[2] + d.z * r[2] + n.z * out, n];
+    }
+    function tint(a, b, k, j) { return a.clone().lerp(b, Math.max(0, Math.min(1, k))).offsetHSL((glimR(j) - 0.5) * 0.03, 0, (glimR(j + 7) - 0.5) * 0.08); }
+    var colBack = new THREE.Color(pal.back), colMid = new THREE.Color(pal.mid), colBreast = new THREE.Color(pal.breast), colScale = new THREE.Color(pal.scale), colBib = new THREE.Color(pal.bib), colWhite = new THREE.Color(pal.white);
+    var BODY = [0, 0.17, -0.01], BR = [0.115, 0.1, 0.15], BREAST = [0, 0.2, 0.07], RR = [0.1, 0.098, 0.095];
+    part(seg, under, BODY[0], BODY[1], BODY[2], BR[0], BR[1], BR[2]);
+    part(seg, under, BREAST[0], BREAST[1], BREAST[2], RR[0], RR[1], RR[2]);
+    // under the feathers, a layer of soft down, so no bare skin shows between them
+    var downMat = moonFurMat({ color: colMid.clone().lerp(colBreast, 0.35), alphaMap: duckDownTex(), roughness: 1 });
+    function downy(x, y, z, sx, sy, sz, parent, depth) { var d = abPart(moonShellGeo(moonSegLo, 10, depth), downMat, x, y, z, 0, 0, 0, parent || body); d.scale.set(sx, sy, sz); d.castShadow = false; }
+    downy(BODY[0], BODY[1], BODY[2], BR[0], BR[1], BR[2], body, 0.025); downy(BREAST[0], BREAST[1], BREAST[2], RR[0], RR[1], RR[2], body, 0.025);   // (kept just under the feathers)
+    var bodyF = [];
+    for (var br = 0; br < 26; br++) {                                 // the breast: plain and smooth up top, then scaled lower down (and round the back of it, the mantle)
+      var bv = 1.5 - br * 0.108, bn = Math.round(60 * Math.cos(bv) + 12);
+      for (var bc = 0; bc < bn; bc++) {
+        var bu = -Math.PI + (bc + (br % 2) * 0.5) * Math.PI * 2 / bn, pt = onEgg(BREAST, RR, bu, bv, 0.003 + (26 - br) * 0.0002);
+        if (Math.abs(bu) > 1.8) {                                     // (behind: only where it rises above the body, as back feathers)
+          if (Math.pow((pt[0] - BODY[0]) / BR[0], 2) + Math.pow((pt[1] - BODY[1]) / BR[1], 2) + Math.pow((pt[2] - BODY[2]) / BR[2], 2) < 1.02) continue;
+          bodyF.push([pt[0], pt[1], pt[2], pt[3], cBack, 0.018 + glimR(br * 5 + bc) * 0.004, 0.028, tint(colBack, colMid, 0.2 + (glimR(br * 7 + bc) - 0.5) * 0.3, 800 + br * 71 + bc), 2]);
+          continue;
+        }
+        var scaled = bv < 0.25 + (glimR(br * 3 + bc) - 0.5) * 0.25;
+        bodyF.push([pt[0], pt[1], pt[2], pt[3], cDown, 0.016 + glimR(br * 5 + bc) * 0.003, 0.024, scaled ? tint(colBreast, colMid, 0.15 + (glimR(br * 9 + bc) - 0.5) * 0.2, br * 31 + bc) : tint(colMid, colBreast, (1.5 - bv) / 1.4 + (glimR(br * 9 + bc) - 0.5) * 0.25, br * 31 + bc), scaled ? 0 : 3]);
+      }
+    }
+    for (var bk = 0; bk < 25; bk++) {                                 // the back, barred; the flanks, streaked; and the belly, scaled
+      var kv = 1.55 - bk * 0.118, kn = Math.round(54 * Math.cos(kv) + 9);   // (all the way round; the breast covers the front)
+      for (var kc = 0; kc < kn; kc++) {
+        var ku = Math.PI + (-0.5 + (kc + (bk % 2) * 0.5) / kn) * Math.PI * 2, kp = onEgg(BODY, BR, ku, kv, 0.003 + (25 - bk) * 0.0002);
+        if (Math.pow((kp[0] - BREAST[0]) / RR[0], 2) + Math.pow((kp[1] - BREAST[1]) / RR[1], 2) + Math.pow((kp[2] - BREAST[2]) / RR[2], 2) < 1 && Math.abs(Math.atan2(kp[0], kp[2] - BREAST[2])) < 1.75) continue;   // (the breast covers this)
+        var flank = Math.abs(kp[3].x) > 0.5 && kv < 0.6 && kv > -0.55, belly = kv <= -0.55, j = 900 + bk * 61 + kc;
+        var col = flank ? tint(colMid, colBack, 0.35 + (glimR(j) - 0.5) * 0.35, j) : belly ? tint(colBreast, colMid, 0.2 + (glimR(j) - 0.5) * 0.2, j) : tint(colBack, colMid, 0.15 + Math.max(0, 0.9 - kv) * 0.25 + (glimR(j) - 0.5) * 0.3, j);
+        bodyF.push([kp[0], kp[1], kp[2], kp[3], cBack, (belly ? 0.016 : 0.019) + glimR(bk * 3 + kc) * 0.004, belly ? 0.025 : 0.031, col, flank ? 1 : belly ? 0 : 2]);
+      }
+    }
+    shingles(body, bodyF);
+    // the tail: a short fan of barred feathers, tipped up a little, over a puff of pale, scaled undertail feathers
+    var tail = new THREE.Group(); tail.position.set(0, 0.2, -0.15); body.add(tail);
+    var tailMat = new THREE.MeshPhysicalMaterial({ map: gemFlightTex, color: colBack.clone().lerp(colMid, 0.3), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.5, sheen: sheenCol });
+    var tailGeo = new THREE.PlaneGeometry(1, 1, 1, 4).translate(0, -0.5, 0);
+    for (var tf = 0; tf < 12; tf++) {
+      var ta = (tf - 5.5) * 0.11, tm = new THREE.Mesh(tailGeo, tailMat); tm.castShadow = true;
+      tm.scale.set(0.022, 0.06 - Math.abs(tf - 5.5) * 0.003, 1); tm.position.set(Math.sin(ta) * 0.012, 0.004 - Math.abs(tf - 5.5) * 0.001, -0.004 - Math.abs(tf - 5.5) * 0.0015);
+      tm.quaternion.setFromUnitVectors(V3(0, -1, 0), V3(Math.sin(ta) * 0.9, 0.3, -1).normalize()); tm.rotateY(ta * 0.5); tail.add(tm);
+    }
+    var tailF = [];
+    for (var tu = 0; tu < 3; tu++) for (var tc = 0; tc < 9; tc++) { var tq = onEgg([0, -0.03, 0.01], [0.04, 0.03, 0.035], Math.PI + (tc - 4) * 0.28, -0.2 - tu * 0.35, 0.002); tailF.push([tq[0], tq[1], tq[2], tq[3], V3(0, -0.4, -1), 0.016, 0.024, tint(colBreast, colMid, 0.25 + tu * 0.1, 7100 + tu * 13 + tc), 0]); }
+    shingles(tail, tailF);
+    // the head: small and round on a short neck, with a dark bib edged in white, a white band over its brow and back
+    // past each eye, a dark line from beak to eye, a buff forehead, a darker cap, and a speckled, scaly nape
+    var head = new THREE.Group(); head.position.set(0, 0.335, 0.125); body.add(head);   // (held up, so its bib shows)
+    part(seg, under, 0, -0.06, -0.01, 0.05, 0.06, 0.05, head);         // (the neck)
+    part(seg, under, 0, 0, 0, 0.046, 0.044, 0.05, head);
+    downy(0, -0.06, -0.01, 0.05, 0.06, 0.05, head, 0.03); downy(0, 0, 0, 0.046, 0.044, 0.05, head, 0.025);
+    var neckF = [];                                                   // feathers round the neck, joining head to body
+    for (var nr = 0; nr < 13; nr++) for (var nc = 0; nc < 28; nc++) {
+      var nq = onEgg([0, -0.06, -0.01], [0.05, 0.06, 0.05], (nc + (nr % 2) * 0.5) / 28 * Math.PI * 2 - Math.PI, 1.2 - nr * 0.17, 0.002), front = Math.abs(nq[0]) < 0.03 && nq[2] > 0;
+      if (Math.pow(nq[0] / 0.046, 2) + Math.pow(nq[1] / 0.044, 2) + Math.pow(nq[2] / 0.05, 2) < 1.05) continue;   // (the head covers this)
+      neckF.push([nq[0], nq[1], nq[2], nq[3], V3(0, -1, -0.3), 0.012, 0.018, front ? tint(colMid, colBreast, 0.3 + nr * 0.05, 6600 + nr * 31 + nc) : tint(colBreast, colMid, 0.3, 6600 + nr * 31 + nc), front ? 3 : 0]);
+    }
+    shingles(head, neckF);
+    var headF = [], HR = [0.046, 0.044, 0.05];
+    for (var hr = 0; hr < 28; hr++) {
+      var hv = 1.5 - hr * 0.1, hn = Math.round(42 * Math.cos(hv) + 8);
+      for (var hc = 0; hc < hn; hc++) {
+        var hu = (hc + (hr % 2) * 0.5) / hn * Math.PI * 2 - Math.PI, au = Math.abs(hu);
+        if (au < 0.22 && hv > -0.12 && hv < 0.18) continue;             // (room for its beak)
+        if (Math.abs(au - 0.95) < 0.19 && Math.abs(hv - 0.2) < 0.19) continue;   // (and its eyes)
+        var hq = onEgg([0, 0, 0], HR, hu, hv, 0.0012), j2 = 5000 + hr * 61 + hc, col, pat = 3;
+        if (au < 1.15 && hv < -0.05 && hv > -1.0) col = au > 0.92 || hv < -0.84 ? colWhite : tint(colBib, colScale, glimR(j2) * 0.3, j2);   // the bib, and its white border
+        else if (hv > 0.46 && hv < 0.6 && au > 0.2 && au < 1.95) col = colWhite;                             // the white band over the brow
+        else if (hv > 0.04 && hv < 0.32 && au > 0.22 && au < 0.72) col = tint(colBib, colScale, 0.3, j2);   // the dark line from beak to eye
+        else if (hv >= 0.2 && hv <= 0.5 && au < 0.34) col = tint(colWhite, colBreast, 0.6, j2);          // the buff forehead
+        else if (au > 1.9 && hv < 0.45 && hv > -0.8) { col = tint(colBreast, colMid, 0.2 + glimR(j2) * 0.3, j2); pat = 0; }   // the scaly nape
+        else if (hv >= 0.62) col = tint(colBack, colScale, 0.2 + glimR(j2) * 0.3, j2);            // the cap
+        else col = tint(colMid, colBack, 0.25 + (glimR(j2) - 0.5) * 0.3, j2);
+        headF.push([hq[0], hq[1], hq[2], hq[3], V3(0, -0.4, -1), au < 0.8 && hv > -0.2 ? 0.0095 : 0.0078, au < 0.8 && hv > -0.2 ? 0.012 : 0.0098, col, pat]);   // (a little larger over its face, where the head curves most)
+      }
+    }
+    shingles(head, headF);
+    // a short, stout beak: a curved upper half over a smaller lower one, with nostrils, a fine gape line and a few
+    // bristles at its base
+    var beakMat = new THREE.MeshPhysicalMaterial({ color: pal.beak, roughness: 0.3, metalness: 0.15, clearcoat: 0.6 });
+    function stubby(r, len, hook) {
+      var g2 = new THREE.ConeGeometry(r, len, 18, 8).rotateX(Math.PI / 2).translate(0, 0, len / 2), bp = g2.attributes.position;
+      for (var bi = 0; bi < bp.count; bi++) { var bz = bp.getZ(bi) / len; bp.setY(bi, bp.getY(bi) * 0.85 - hook * bz * bz * bz); }
+      g2.computeVertexNormals(); return g2;
+    }
+    var beak = new THREE.Group(); beak.position.set(0, -0.003, 0.044); beak.rotation.x = 0.12; head.add(beak);
+    abPart(stubby(0.0105, 0.024, 0.006), beakMat, 0, 0.002, 0, 0, 0, 0, beak);   // the upper half
+    abPart(stubby(0.008, 0.017, 0.001), beakMat, 0, -0.004, 0.001, 0.15, 0, 0, beak).scale.set(1, 0.6, 1);   // the lower half
+    var nostril = new THREE.MeshStandardMaterial({ color: 0x0c080c, roughness: 0.6 });
+    [-1, 1].forEach(function (s) {
+      part(seg, nostril, s * 0.0042, 0.0062, 0.006, 0.0015, 0.0009, 0.0026, beak);
+      abPart(new THREE.TorusGeometry(0.009, 0.0005, 4, 10, 1.1), nostril, s * 0.0005, -0.002, 0.004, 0, s > 0 ? -Math.PI / 2 : Math.PI / 2, 0.2, beak);   // the gape
+      for (var bb = 0; bb < 3; bb++) { var bst = abPart(new THREE.CylinderGeometry(0.00025, 0.0001, 0.008, 3), nostril, s * (0.008 + bb * 0.001), 0.002 - bb * 0.002, 0.002, 1.3, 0, -s * (0.5 + bb * 0.15), beak); bst.castShadow = false; }   // bristles
+    });
+    // big glossy eyes with lids that blink
+    var eyeMat = new THREE.MeshStandardMaterial({ color: 0x0a0610, roughness: 0.05, metalness: 0.2 });
+    var irisMat = new THREE.MeshStandardMaterial({ map: moonEyeTex(pal), roughness: 0.15, emissive: 0xffffff, emissiveIntensity: 0.35 });
+    irisMat.emissiveMap = irisMat.map;
+    var corneaMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, roughness: 0.02, metalness: 0.1, depthWrite: false });
+    var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.05); irisGeo.rotateX(Math.PI / 2);
+    (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.46 / Math.sin(1.05); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
+    var lidMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.mid), roughness: 0.8, side: THREE.DoubleSide }), lids = [];
+    var lashMat = new THREE.MeshStandardMaterial({ color: 0x140a18, roughness: 0.6 });
+    var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
+    [-1, 1].forEach(function (s) {
+      var ey = new THREE.Group(); ey.position.set(s * 0.034, 0.008, 0.028); ey.rotation.set(0.05, s * 0.75, 0); head.add(ey);
+      var RX = 0.016, RY = 0.017, RZ = 0.011;
+      part(seg, eyeMat, 0, 0, 0, RX, RY, RZ, ey);
+      abPart(irisGeo, irisMat, 0, 0, 0, 0, 0, 0, ey).scale.set(RX * 1.01, RY * 1.01, RZ * 1.01);
+      var co = abPart(irisGeo, corneaMat, 0, 0, 0, 0, 0, 0, ey); co.scale.set(RX * 1.06, RY * 1.06, RZ * 1.18); co.castShadow = false;
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.005, 0.006, RZ * 1.02, 0.004, 0.0047, 0.0015, ey);
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }), 0.005, -0.005, RZ * 0.98, 0.002, 0.0018, 0.001, ey);
+      abPart(new THREE.TorusGeometry(1, 0.06, 6, 32), new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.white), roughness: 0.5 }), 0, 0, RZ * 0.25, 0, 0, 0, ey).scale.set(RX * 1.04, RY * 1.04, RZ);   // a pale eye-ring
+      var lg = new THREE.Group(); ey.add(lg); lids.push(lg); lg.visible = false;
+      abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg).scale.set(RX * 1.15, RY * 1.15, RZ * 1.3);
+      [0.3, 0.6, 0.9].forEach(function (a, n) {
+        var len = 0.006 - n * 0.001, lash = abPart(new THREE.ConeGeometry(0.0008, len, 5).translate(0, len / 2, 0), lashMat, s * Math.cos(a) * RX * 1.12, Math.sin(a) * RY * 1.12, RZ * 0.3, 0.4, 0, -Math.atan2(s * Math.cos(a) * 1.3, Math.sin(a) + 0.6), ey);
+        lash.castShadow = false;
+      });
+      var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.018), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      bl.position.set(s * 0.042, -0.016, 0.028); bl.rotation.set(0, s * 0.85, 0); head.add(bl);   // rosy cheeks
+    });
+    // the plume: a slender stalk springing from its forehead and curling forward, carrying a teardrop of seven small,
+    // overlapping feathers that droop over its beak, with a faceted gem glowing at the tip and a sparkle that winks
+    var plumeMat = new THREE.MeshPhysicalMaterial({ map: gemPlumeTex, color: colScale.clone().lerp(colBack, 0.3).multiplyScalar(2.2), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.35, metalness: 0.1, sheen: sheenCol, clearcoat: 0.4 });
+    var plume = new THREE.Group(); plume.position.set(0, 0.041, 0.018); head.add(plume);
+    var stalk = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, 0.012, 0.001), V3(0, 0.024, 0.007), V3(0, 0.032, 0.017), V3(0, 0.034, 0.028)]);
+    abPart(new THREE.TubeGeometry(stalk, 16, 0.0012, 5), new THREE.MeshStandardMaterial({ color: colScale, roughness: 0.5 }), 0, 0, 0, 0, 0, 0, plume);
+    var plumeGeo = new THREE.PlaneGeometry(1, 1, 2, 10).translate(0, 0.5, 0), pp = plumeGeo.attributes.position;
+    for (var pi = 0; pi < pp.count; pi++) { var px = pp.getX(pi), py = pp.getY(pi); pp.setZ(pi, -px * px * 0.3 + py * py * 0.25); }   // (cupped, and curling at the tip)
+    plumeGeo.computeVertexNormals();
+    for (var pf = 0; pf < 7; pf++) {
+      var tt = 0.42 + pf * 0.08, ppt = stalk.getPoint(tt), droop = 0.3 + pf * 0.24;
+      var pg = new THREE.Group(); pg.position.copy(ppt); plume.add(pg);
+      pg.quaternion.setFromUnitVectors(V3(0, 1, 0), V3((pf % 2 ? 1 : -1) * 0.08, Math.cos(droop), Math.sin(droop)).normalize());
+      var pm = new THREE.Mesh(plumeGeo, plumeMat); pm.rotation.y = Math.PI / 2 + (pf % 2 ? 0.55 : -0.55); pm.scale.set(0.02 - pf * 0.0009, 0.036 - pf * 0.0016, 0.036); pm.castShadow = true; pg.add(pm);   // (its vane facing sideways, so the teardrop shows from the side)
+    }
+    var gemMat = new THREE.MeshPhysicalMaterial({ color: pal.gem, roughness: 0.04, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.02, emissive: pal.gem, emissiveIntensity: 0.45, flatShading: true });
+    var gemG = new THREE.OctahedronGeometry(1, 0); gemG.scale(0.62, 1, 0.62);
+    var gemTip = stalk.getPoint(1).add(V3(0, -0.006, 0.01));
+    var gem = new THREE.Mesh(gemG, gemMat); gem.scale.setScalar(0.01); gem.position.copy(gemTip); gem.rotation.set(1.3, 0.4, 0); gem.castShadow = true; plume.add(gem);
+    var setting = abPart(new THREE.TorusGeometry(0.0055, 0.0011, 6, 14), new THREE.MeshStandardMaterial({ color: 0xf2d080, metalness: 0.8, roughness: 0.25 }), gemTip.x, gemTip.y + 0.004, gemTip.z - 0.004, 1.0, 0, 0, plume);   // a tiny gold setting holding it
+    setting.castShadow = false;
+    var gemGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+    gemGlow.scale.set(0.08, 0.08, 1); gemGlow.position.copy(gemTip); plume.add(gemGlow);
+    var gemSpark = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    gemSpark.scale.set(0.04, 0.04, 1); gemSpark.position.copy(gemTip).add(V3(0.004, 0.004, 0.006)); plume.add(gemSpark);
+    // folded wings: a rounded shoulder of small barred coverts in overlapping rows, larger coverts below them, and the
+    // long barred flight feathers lying back along its side, their tips crossing over its tail; and long, pale-edged
+    // tertials draped over the top
+    var wingMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back), roughness: 0.6 });
+    var flightMat = new THREE.MeshPhysicalMaterial({ map: gemFlightTex, color: colBack.clone().lerp(colMid, 0.45), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.5, sheen: sheenCol });
+    var flightGeo = new THREE.PlaneGeometry(1, 1, 1, 4).translate(0, -0.5, 0);
+    var wings = [];
+    [-1, 1].forEach(function (s) {
+      var wg = new THREE.Group(); wg.position.set(s * 0.098, 0.19, 0.02); body.add(wg); wings.push({ g: wg, s: s });
+      part(seg, wingMat, 0, 0, -0.06, 0.02, 0.06, 0.1, wg, 0.15, 0, 0);
+      downy(0, 0, -0.06, 0.02, 0.06, 0.1, wg, 0.04);
+      for (var ff = 0; ff < 13; ff++) {                               // the flight feathers: secondaries first, then the longer primaries
+        var prim = ff >= 6, k2 = prim ? ff - 6 : ff, fm = new THREE.Mesh(flightGeo, flightMat); fm.castShadow = true;
+        fm.scale.set(prim ? 0.022 : 0.026, prim ? 0.1 + k2 * 0.005 : 0.075 + k2 * 0.004, 1);
+        fm.position.set(s * (0.012 + ff * 0.0007), -0.022 - k2 * 0.004 - (prim ? 0.004 : 0), -0.035 - k2 * 0.008 - (prim ? 0.02 : 0));
+        fm.rotation.set(Math.PI / 2 - 0.12 + k2 * 0.025 - (prim ? 0.05 : 0), s * (Math.PI / 2 - 0.07), 0); wg.add(fm);
+      }
+      var wf = [];
+      for (var wr = 0; wr < 11; wr++) {                                // coverts, small on the shoulder and larger lower down
+        var wn = 14;
+        for (var wc = 0; wc < wn; wc++) {
+          var wp = onEgg([0, 0, -0.06], [0.02, 0.06, 0.1], s * (Math.PI / 2) + (wc - (wn - 1) / 2) * 0.17 + (wr % 2) * 0.08, 1.0 - wr * 0.19, 0.003 + (11 - wr) * 0.0003);
+          if (wp[3].x * s < 0.08) continue;
+          var big = wr > 6;
+          wf.push([wp[0], wp[1], wp[2], wp[3], V3(0, -0.45, -1), big ? 0.019 : 0.014, big ? 0.03 : 0.02, tint(colBack, colMid, 0.15 + wr * 0.05 + (glimR(wr * 13 + wc) - 0.5) * 0.3, 4000 + wr * 29 + wc + (s > 0 ? 499 : 0)), 2]);
+        }
+      }
+      for (var tt2 = 0; tt2 < 4; tt2++) { var tp2 = onEgg([0, 0, -0.06], [0.02, 0.06, 0.1], s * 0.6 + Math.PI - s * tt2 * 0.12, 0.9, 0.004); wf.push([tp2[0], tp2[1], tp2[2], tp2[3], V3(-s * 0.2, -0.2, -1), 0.026, 0.06, tint(colBack, colScale, 0.3, 4900 + tt2), 2]); }   // tertials
+      shingles(wg, wf);
+    });
+    // short legs, scaled in rings down the front, on little feet with scaled, padded toes and curved claws
+    var legMat = new THREE.MeshPhysicalMaterial({ color: pal.leg, roughness: 0.45, metalness: 0.1, clearcoat: 0.3 });
+    var scuteMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.leg).multiplyScalar(0.8), roughness: 0.5 });
+    var clawMat = new THREE.MeshPhysicalMaterial({ color: 0x2a2026, roughness: 0.25, clearcoat: 0.6 });
+    var legs = [];
+    [-1, 1].forEach(function (s, k) {
+      var lg = new THREE.Group(); lg.position.set(s * 0.04, 0.095, 0.01); body.add(lg);
+      abPart(new THREE.CylinderGeometry(0.0055, 0.0065, 0.09, 12), legMat, 0, -0.045, 0, 0, 0, 0, lg);
+      for (var sc = 0; sc < 9; sc++) part(seg, scuteMat, 0, -0.03 - sc * 0.0065, 0.0045, 0.0045, 0.0028, 0.0022, lg, -0.2);   // overlapping scutes down the front
+      for (var sr = 0; sr < 7; sr++) abPart(new THREE.TorusGeometry(0.0062, 0.0008, 4, 14), scuteMat, 0, -0.035 - sr * 0.008, 0, Math.PI / 2 + 0.2, 0, 0, lg);
+      part(seg, legMat, 0, -0.088, 0, 0.0075, 0.005, 0.0075, lg);     // the ball of the foot
+      [-1, 0, 1].forEach(function (t) {
+        var toe = new THREE.Group(); toe.position.set(0, -0.09, 0); toe.rotation.y = -t * 0.5; lg.add(toe);
+        var tl = t ? 0.026 : 0.032;
+        abPart(new THREE.CylinderGeometry(0.0021, 0.003, tl, 8), legMat, 0, 0, tl / 2, Math.PI / 2, 0, 0, toe);
+        for (var ts = 0; ts < 4; ts++) part(seg, scuteMat, 0, 0.0018, 0.005 + ts * tl * 0.22, 0.0024, 0.0013, 0.003, toe);   // scutes along the top of each toe,
+        for (var tp = 0; tp < 3; tp++) part(seg, legMat, 0, -0.0018, 0.007 + tp * tl * 0.3, 0.0025, 0.0016, 0.0035, toe);  // and little pads beneath
+        abPart(new THREE.ConeGeometry(0.0018, 0.008, 8).translate(0, 0.004, 0), clawMat, 0, -0.0005, tl, Math.PI / 2 + 0.35, 0, 0, toe);
+      });
+      abPart(new THREE.CylinderGeometry(0.0018, 0.0026, 0.014, 6), legMat, 0, -0.088, -0.007, -Math.PI / 2 + 0.3, 0, 0, lg);   // and one behind,
+      abPart(new THREE.ConeGeometry(0.0014, 0.005, 6), clawMat, 0, -0.091, -0.015, -Math.PI / 2 - 0.2, 0, 0, lg);              // with its claw
+      legs.push({ g: lg, ph: k * Math.PI });
+    });
+    // twinkles on its crystal feathers, sparkles drifting up off it, and a soft glow
+    var glints = crystals.slice(0, 18).map(function (p, i) {
+      var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color(pal.crystal), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      gl.scale.set(0.03, 0.03, 1); gl.position.copy(p); body.add(gl); return { s: gl, ph: glimR(i * 9.3) * 6 };
+    });
+    var sparks = [];
+    for (var sp = 0; sp < 8; sp++) { var sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color(sp % 2 ? pal.crystal : '#ffffff'), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); sk.scale.set(0.028, 0.028, 1); root.add(sk); sparks.push({ s: sk, t: glimR(sp + 70) * 2, x: 0, z: 0 }); }
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(0.9, 0.9, 1); glow.position.set(0, 0.22, 0); root.add(glow);
+    var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
+    var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
+    tag.scale.set(0.36, 0.135, 1); tag.position.set(0, 0.7, 0); tag.renderOrder = 6; root.add(tag);
+    return { root: root, body: body, head: head, plume: plume, gem: gem, gemMat: gemMat, gemGlow: gemGlow, gemSpark: gemSpark, tail: tail, wings: wings, legs: legs, lids: lids, glints: glints, sparks: sparks, glow: glow, tagCv: tagCv, tagTex: tagTex, dash: 0, peck: 0, peckWait: 2 + Math.random() * 4 };
+  }
+  // its Geode Egg, nestled in a little nest in the straw, and a bundle of hay in the manger when it's been fed
+  function gemBuildExtras(g) {
+    var sz = GLIM_STALLS[g.stall], pal = GEM_PALS[g.pal % GEM_PALS.length];
+    var egg = new THREE.Group(); egg.position.set(-3.3, 0.1, sz - 0.6); abRoom.add(egg);
+    var nest = abPart(new THREE.TorusGeometry(0.07, 0.03, 8, 20), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.013, 0, Math.PI / 2, 0, 0, egg); nest.scale.set(1, 1, 0.6);
+    var shell = abPart(new THREE.SphereGeometry(0.045, 24, 16), new THREE.MeshStandardMaterial({ map: gemEggTex(pal), roughness: 0.4 }), 0, 0.055, 0, 0.2, 0, 0.15, egg); shell.scale.set(1, 1.25, 1);
+    var crystalMat = new THREE.MeshPhysicalMaterial({ color: pal.gem, roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: pal.gem, emissiveIntensity: 0.5, flatShading: true });
+    var cg = new THREE.OctahedronGeometry(1, 0); cg.scale(0.5, 1, 0.5);
+    var hole = abPart(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a1024, roughness: 0.6 }), 0.036, 0.06, 0.004, 0, 0, 0, egg);   // a crack in its side, dark within,
+    hole.scale.set(0.012, 0.03, 0.022);
+    for (var c = 0; c < 9; c++) {                                     // and crystals crowding out through it
+      var a = -0.55 + c * 0.14, cr = abPart(cg, crystalMat, Math.cos(a) * 0.041, 0.042 + (c % 3) * 0.012 + glimR(c * 7) * 0.006, Math.sin(a) * 0.03, 0, -a, -Math.PI / 2 + 0.5 - glimR(c * 3) * 1.0, egg);
+      cr.scale.setScalar(0.006 + glimR(c * 5) * 0.005);
+    }
+    var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+    eg.scale.set(0.38, 0.38, 1); eg.position.y = 0.06; egg.add(eg);
+    g.eggMesh = egg; g.eggGlow = eg;
+    var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
+    hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
+    g.slate.map = glimSlateTex(g.name, 'Gemwren'); g.slate.needsUpdate = true;
+  }
+  // every frame, for a Gemwren: quick little scurrying steps with its head held steady and its plume nodding; when it
+  // stops it pecks at the straw now and then, looks about and blinks; its gem glows and winks and its crystal feathers
+  // twinkle; when petted it fluffs itself up round and gives a happy little hop
+  function gemAnimate(g, dt, t, moving) {
+    var m = g.m;
+    if (moving) g.hop += dt * 22;                                     // (tiny, fast steps)
+    var happy = g.pet > 0;
+    if (happy) g.pet -= dt;
+    m.peckWait -= dt;
+    if (m.peckWait <= 0 && !moving && !happy) { m.peck = 1.2; m.peckWait = 3 + Math.random() * 6; }
+    if (m.peck > 0) m.peck -= dt;
+    var peck = m.peck > 0 ? Math.max(0, Math.sin(m.peck * Math.PI * 3.3)) : 0;
+    var fluff = happy ? 1 + Math.min(1, g.pet) * 0.09 : 1 + Math.sin(t * 2.4 + g.stall) * 0.012;   // fluffing up round when petted
+    m.body.scale.set(fluff, fluff * (happy ? 0.98 : 1), fluff);
+    m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.006 : happy ? Math.max(0, Math.sin(t * 9)) * 0.03 * Math.min(1, g.pet) : 0;
+    m.body.rotation.x = moving ? 0.12 : peck * 0.35;                  // leaning forward as it runs, or down to peck
+    m.legs.forEach(function (l) { l.g.rotation.x = moving ? Math.sin(g.hop + l.ph) * 0.55 : l.g.rotation.x * 0.8; });
+    m.head.rotation.set(happy ? -0.15 + Math.sin(t * 8) * 0.06 : peck * 0.7 - (moving ? 0.12 : 0), happy ? Math.sin(t * 5) * 0.25 : moving ? 0 : Math.round(Math.sin(t * 0.6 + g.stall) * 2) * 0.3, 0);   // (it looks about in quick little turns)
+    m.plume.rotation.x = Math.sin(t * 3 + g.stall) * 0.06 + (moving ? Math.sin(g.hop * 0.5) * 0.18 : 0) + (happy ? Math.sin(t * 12) * 0.15 : 0) + peck * 0.2;   // the plume nods
+    m.tail.rotation.x = (moving ? 0.15 : 0) + Math.max(0, Math.sin(t * 0.9 + g.stall) - 0.92) * Math.sin(t * 30) * 2;   // a flick of the tail now and then
+    m.wings.forEach(function (w) { w.g.rotation.z = happy ? w.s * (0.1 + Math.max(0, Math.sin(t * 20)) * 0.25) : w.g.rotation.z * 0.85; });
+    var bt = (t * 0.27 + g.stall * 0.37) % 1, blink = happy ? 0.7 : (bt < 0.035 ? Math.sin(bt / 0.035 * Math.PI) : 0);
+    m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
+    var pulse = 0.5 + Math.sin(t * 1.6 + g.stall) * 0.5;
+    m.gemMat.emissiveIntensity = 0.35 + pulse * 0.35 + (g.egg ? 0.2 : 0);
+    m.gemGlow.material.opacity = 0.35 + pulse * 0.3;
+    m.gem.rotation.y += dt * 0.6;                                     // (catching the light as it turns)
+    m.gemSpark.material.opacity = Math.pow(Math.max(0, Math.sin(t * 1.3 + g.stall * 2)), 14);
+    m.glints.forEach(function (gl) { gl.s.material.opacity = Math.pow(Math.max(0, Math.sin(t * 0.9 + gl.ph * 3)), 18) * 0.9; });
+    m.sparks.forEach(function (sp) {
+      sp.t += dt * (happy ? 0.9 : 0.4);
+      if (sp.t > 1) { sp.t -= 1 + Math.random() * 2; sp.x = (Math.random() - 0.5) * 0.3; sp.z = (Math.random() - 0.5) * 0.35; }
+      sp.s.material.opacity = sp.t > 0 ? Math.sin(sp.t * Math.PI) * 0.85 : 0;
+      sp.s.position.set(sp.x, 0.15 + Math.max(0, sp.t) * 0.35, sp.z);
+    });
+    m.glow.material.opacity = 0.14 + pulse * 0.06;
+    if (g.egg) g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12;
+  }
+  function gemwrenAction(g, wx, wz) {                                // collecting its egg, feeding and petting a Gemwren
+    if (g.egg) {
+      if (!roomFor(['geodeEgg'])) { bagFull(); return; }
+      addItem('geodeEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      showToast('You collected a sparkling Geode Egg from ' + g.name + '! 🥚💎', 2400);
+      return;
+    }
+    var day = Math.min(GEM_DAYS, g.days + 1);                        // (counting today, once it's fed and petted)
+    var news = day >= GEM_DAYS ? ' A Geode Egg tomorrow morning!' : ' Day ' + day + ' of ' + GEM_DAYS + ' toward a Geode Egg.';
+    if (!g.fed) {
+      if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
+      g.fed = true; glimRefresh(g); popSound(); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
+      showToast(g.name + ' pecks busily at the hay 🌾' + (g.petted ? news : ' Now give them a pet!'), 2600);
+      return;
+    }
+    if (!g.petted) {
+      g.petted = true; glimRefresh(g); g.pet = 1.8;
+      g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
+      glimHeartBurst(g.x, 0.45, g.z); popSound();
+      showToast(g.name + ' fluffs up round and chirps happily 💜' + news, 2800);
+      return;
+    }
+    g.pet = 1.2; glimHeartBurst(g.x, 0.45, g.z);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= GEM_DAYS ? ' A Geode Egg tomorrow morning!' : ' Day ' + day + ' of ' + GEM_DAYS + ' done. Come back tomorrow!'), 2400);
+  }
   function glimDrawTag(g) {
     var c = g.m.tagCv.getContext('2d'), w = 256, h = 96;
     c.clearRect(0, 0, w, h);
     c.fillStyle = 'rgba(255,255,255,0.88)'; c.beginPath(); c.moveTo(24, 6); c.lineTo(w - 24, 6); c.quadraticCurveTo(w - 4, 6, w - 4, 26); c.lineTo(w - 4, h - 26); c.quadraticCurveTo(w - 4, h - 6, w - 24, h - 6); c.lineTo(24, h - 6); c.quadraticCurveTo(4, h - 6, 4, h - 26); c.lineTo(4, 26); c.quadraticCurveTo(4, 6, 24, 6); c.fill();
     c.strokeStyle = '#c8a8f0'; c.lineWidth = 3; c.stroke();
-    var ember = g.kind === 'ember';
+    var ember = g.kind === 'ember' || g.kind === 'gem';                // (the ones that count four days in a row)
     c.fillStyle = '#5a3d9a'; c.font = 'bold ' + (ember ? 26 : 30) + 'px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(g.name, w / 2, ember ? 26 : 34);
-    if (ember) {                                                       // an Emberwing's four days toward a quill: a little flame lit for each day it's been looked after
-      var done = Math.min(EMBER_DAYS, g.days + (g.fed && g.petted ? 1 : 0));
-      for (var p = 0; p < EMBER_DAYS; p++) { c.fillStyle = g.egg || p < done ? '#ff7a2a' : '#d8d0e0'; emberFlame(c, w / 2 + (p - 1.5) * 18, 49, 11, 15); c.fill(); }
+    if (ember) {                                                       // its four days toward a quill or an egg: a little flame (or gem) lit for each day it's been looked after
+      var done = Math.min(4, g.days + (g.fed && g.petted ? 1 : 0));
+      for (var p = 0; p < 4; p++) {
+        if (g.kind === 'gem') { c.fillStyle = g.egg || p < done ? '#a86aff' : '#d8d0e0'; gemDiamond(c, w / 2 + (p - 1.5) * 18, 49, 13, 12); }
+        else { c.fillStyle = g.egg || p < done ? '#ff7a2a' : '#d8d0e0'; emberFlame(c, w / 2 + (p - 1.5) * 18, 49, 11, 15); }
+        c.fill();
+      }
     }
     function hay(x, y, on) { c.fillStyle = on ? '#e0b040' : '#cfc8d8'; for (var i = -3; i <= 3; i++) { c.save(); c.translate(x + i * 2, y); c.rotate(i * 0.12); c.fillRect(-1.5, -12, 3, 24); c.restore(); } c.fillStyle = on ? '#a86a2a' : '#b8b0c4'; c.fillRect(x - 9, y - 2, 18, 4); }
     function heart(x, y, on) { c.fillStyle = on ? '#ff6aa8' : '#cfc8d8'; c.beginPath(); c.moveTo(x, y + 10); c.bezierCurveTo(x - 14, y, x - 12, y - 11, x - 5, y - 11); c.bezierCurveTo(x - 2, y - 11, x, y - 8, x, y - 6); c.bezierCurveTo(x, y - 8, x + 2, y - 11, x + 5, y - 11); c.bezierCurveTo(x + 12, y - 11, x + 14, y, x, y + 10); c.fill(); }
@@ -2403,13 +2928,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.slate.map = glimSlateTex(g.name); g.slate.needsUpdate = true;
   }
   function glimRefresh(g) { g.eggMesh.visible = !!g.egg; g.hayMesh.visible = !!g.fed; glimDrawTag(g); }
-  function glimAdd(d) {                                              // d: { kind ('glim', 'moon', 'duck' or 'ember'), name, stall, pal, fed, petted, egg, days (an Emberwing's days in a row) }
-    var g = { kind: d.kind === 'moon' || d.kind === 'duck' || d.kind === 'ember' ? d.kind : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg, days: d.days || 0 };
-    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : g.kind === 'duck' ? duckBuild(DUCK_PALS[g.pal % DUCK_PALS.length]) : g.kind === 'ember' ? emberBuild(EMBER_PALS[g.pal % EMBER_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
+  function glimAdd(d) {                                              // d: { kind ('glim', 'moon', 'duck', 'ember' or 'gem'), name, stall, pal, fed, petted, egg, days (an Emberwing's or Gemwren's days in a row) }
+    var g = { kind: d.kind === 'moon' || d.kind === 'duck' || d.kind === 'ember' || d.kind === 'gem' ? d.kind : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg, days: d.days || 0 };
+    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : g.kind === 'duck' ? duckBuild(DUCK_PALS[g.pal % DUCK_PALS.length]) : g.kind === 'ember' ? emberBuild(EMBER_PALS[g.pal % EMBER_PALS.length]) : g.kind === 'gem' ? gemBuild(GEM_PALS[g.pal % GEM_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
     g.slate = abStallSlates[g.stall];
     var sz = GLIM_STALLS[g.stall];
     g.x = g.kind === 'moon' ? -3.1 : -3.0; g.z = sz - 0.2; g.tx = g.x; g.tz = g.z; g.face = Math.PI / 2; g.wait = 1 + glimR(g.stall) * 2; g.hop = 0; g.pet = 0; g.flut = glimR(g.stall * 7) * 6;
-    if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else if (g.kind === 'ember') emberBuildExtras(g); else glimBuildExtras(g);
+    if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else if (g.kind === 'ember') emberBuildExtras(g); else if (g.kind === 'gem') gemBuildExtras(g); else glimBuildExtras(g);
     glimmers.push(g); glimRefresh(g);
     return g;
   }
@@ -2427,12 +2952,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateGlimmers(dt) {
     if (glimDay === null) glimDay = state.day;
     if (state.day !== glimDay) {
-      var laid = [], milk = [], dew = [], quill = [], missed = [], gap = state.day - glimDay;
+      var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.kind === 'ember') {                                     // an Emberwing counts the days in a row it's been fed and petted
-          if (g.fed && g.petted && gap === 1) g.days = Math.min(EMBER_DAYS, g.days + 1);
-          else { if (g.days) missed.push(g.name); g.days = 0; }
-          if (g.days >= EMBER_DAYS && !g.egg) { g.egg = true; g.days = 0; quill.push(g.name); }
+        if (g.kind === 'ember' || g.kind === 'gem') {                 // an Emberwing or a Gemwren counts the days in a row it's been fed and petted
+          var gem = g.kind === 'gem', need = gem ? GEM_DAYS : EMBER_DAYS;
+          if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
+          else { if (g.days) (gem ? missedGem : missed).push(g.name); g.days = 0; }
+          if (g.days >= need && !g.egg) { g.egg = true; g.days = 0; (gem ? geode : quill).push(g.name); }
         } else if (g.fed && g.petted && !g.egg) { g.egg = true; (g.kind === 'moon' ? milk : g.kind === 'duck' ? dew : laid).push(g.name); }
         g.fed = false; g.petted = false; glimRefresh(g);
       });
@@ -2442,6 +2968,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (dew.length) news.push(dew.join(' and ') + (dew.length > 1 ? ' each laid' : ' laid') + ' a Dewdrop Egg');
       if (milk.length) news.push(milk.join(' and ') + (milk.length > 1 ? ' are' : ' is') + ' ready to milk');
       if (quill.length) news.push(quill.join(' and ') + (quill.length > 1 ? ' each left' : ' left') + ' a Cinder Quill');
+      if (geode.length) news.push(geode.join(' and ') + (geode.length > 1 ? ' each laid' : ' laid') + ' a Geode Egg');
+      if (missedGem.length) news.push(missedGem.join(' and ') + ' missed a day of care, so ' + (missedGem.length > 1 ? 'their egg counts start' : 'their egg count starts') + ' over');
       if (missed.length) news.push(missed.join(' and ') + ' missed a day of care, so ' + (missed.length > 1 ? 'their quill counts start' : 'their quill count starts') + ' over');
       if (news.length) setTimeout(function () { showToast('✧ ' + news.join(', and ') + '! Visit them at Fluff & Feather.', 3600); }, 4200);
     }
@@ -2450,18 +2978,20 @@ EVERDAWN_PARTS.push(function (THREE) {
     glimmers.forEach(function (g) {
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
-      var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember';
+      var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember', gem = g.kind === 'gem';
       if (g.wait <= 0 && g.pet <= 0) {
-        if (ember) { g.tx = -3.3 + Math.random() * 0.45; g.tz = sz - 0.6 + Math.random() * 0.9; g.wait = (m.show > 0 ? 6 : 4) + Math.random() * 6; }
+        if (gem) { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 1.5 + Math.random() * 4; }   // (quick little dashes, then a pause)
+        else if (ember) { g.tx = -3.3 + Math.random() * 0.45; g.tz = sz - 0.6 + Math.random() * 0.9; g.wait = (m.show > 0 ? 6 : 4) + Math.random() * 6; }
         else if (duck) { g.tx = -3.45 + Math.random() * 0.65; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 3 + Math.random() * 5; }
         else if (moon) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }   // (bigger, so it ambles about less)
         else { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 2.5 + Math.random() * 4; }
       }
       var dx = g.tx - g.x, dz = g.tz - g.z, d = Math.hypot(dx, dz), moving = d > 0.03 && g.pet <= 0 && !(ember && m.show > 0);   // (an Emberwing stands still to show off its fan)
-      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : duck ? 0.22 : ember ? 0.18 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon && !duck && !ember) g.hop += dt * 9; }
-      else if (!moon && !duck && !ember) g.hop = 0;
+      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : duck ? 0.22 : ember ? 0.18 : gem ? 0.5 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon && !duck && !ember && !gem) g.hop += dt * 9; }
+      else if (!moon && !duck && !ember && !gem) g.hop = 0;
       var cur = m.root.rotation.y, diff = Math.atan2(Math.sin(g.face - cur), Math.cos(g.face - cur));
-      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : duck ? 4 : ember ? 2.5 : 5));
+      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : duck ? 4 : ember ? 2.5 : gem ? 8 : 5));
+      if (gem) { m.root.position.set(g.x, 0, g.z); gemAnimate(g, dt, t, moving); return; }
       if (ember) { m.root.position.set(g.x, 0, g.z); emberAnimate(g, dt, t, moving); return; }
       if (duck) { m.root.position.set(g.x, 0, g.z); duckAnimate(g, dt, t, moving); return; }
       if (moon) { m.root.position.set(g.x, 0, g.z); moonAnimate(g, dt, t, moving); return; }
@@ -2506,6 +3036,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'moon') { mooncalfAction(g, wx, wz); return; }
     if (g.kind === 'duck') { puddlewispAction(g, wx, wz); return; }
     if (g.kind === 'ember') { emberwingAction(g, wx, wz); return; }
+    if (g.kind === 'gem') { gemwrenAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
       addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
@@ -2611,7 +3142,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -2622,11 +3153,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
-    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : GLIM_COST;
+    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : kind === 'gem' ? GEM_COST : GLIM_COST;
     if (stall < 0) { showToast('All three stalls are full!', 2000); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= cost; showCoins(true); coinSound(5);
@@ -2645,15 +3176,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
-    chalk('Glimmerwings \u00b7 250 \u2605', w / 2 + 80, 124, 30, 'rgba(214,190,255,A)', false);
-    chalk('lay glowing Glimmer Eggs', w / 2 + 80, 152, 18, 'rgba(240,240,230,A)', true);
-    chalk('Puddlewisps \u00b7 300 \u2605', w / 2 + 80, 190, 30, 'rgba(170,215,255,A)', false);
-    chalk('lay glassy Dewdrop Eggs', w / 2 + 80, 218, 18, 'rgba(240,240,230,A)', true);
-    chalk('Emberwings \u00b7 450 \u2605', w / 2 + 80, 256, 30, 'rgba(255,170,110,A)', false);
-    chalk('leave a Cinder Quill every 4 days', w / 2 + 80, 284, 18, 'rgba(240,240,230,A)', true);
-    chalk('Mooncalves \u00b7 600 \u2605', w / 2 + 80, 322, 30, 'rgba(190,215,255,A)', false);
-    chalk('give shimmering Moonmilk', w / 2 + 80, 350, 18, 'rgba(240,240,230,A)', true);
-    chalk('feed with hay & pet every day!', w / 2 + 80, 394, 22, 'rgba(255,214,120,A)', true);
+    [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
+      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'],
+      ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
+      chalk(an[0], w / 2 + 80, 118 + k * 54, 28, an[2], false);
+      chalk(an[1], w / 2 + 80, 142 + k * 54, 17, 'rgba(240,240,230,A)', true);
+    });
+    chalk('feed with hay & pet every day!', w / 2 + 80, 400, 22, 'rgba(255,214,120,A)', true);
     // a chalk doodle of one: a round fluffy body with moth wings and antennae
     var dx = 150, dy = 220;
     g.lineCap = 'round'; g.lineWidth = 3;
@@ -3162,6 +3691,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic duck-pic"></div><div class="shop-text"><b>Puddlewisp</b><span>A plump little pond creature with night-blue feathers that ripple like moonlight on water, big shining eyes, star-tipped plumes and glowing webbed feet. Feed it hay and pet it every day, and it lays a Dewdrop Egg each morning. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + DUCK_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="duck-adopt">Adopt</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic gem-pic"></div><div class="shop-text"><b>Gemwren</b><span>A plump little ground bird with feathers speckled like the inside of a geode, glittering crystal feathers, a dark bib edged in white and a nodding plume tipped with a glowing gem. Feed it hay and pet it every day for four days in a row, and the next morning it lays a Geode Egg that sparkles with crystals inside. It lives in a stall here.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + GEM_COST + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="gem-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ember-pic"></div><div class="shop-text"><b>Emberwing</b><span>A proud, fiery bird with sunset-coloured feathers, a crown of little flickering flames and a long train of flame-shaped feathers that it raises into a blazing fan. Feed it hay and pet it every day for four days in a row, and the next morning it leaves a warm Cinder Quill in its straw. Miss a day and the count starts over. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + EMBER_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ember-adopt">Adopt</button></div>' +
@@ -3186,6 +3718,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   var emberPic = document.createElement('img'); emberPic.src = emberShopIcon; emberPic.alt = ''; emberPic.style.width = '96%'; emberPic.style.pointerEvents = 'none';
   barnShopBox.querySelector('.ember-pic').appendChild(emberPic);
   var emberAdoptBtn = barnShopBox.querySelector('.ember-adopt');
+  var gemPic = document.createElement('img'); gemPic.src = gemShopIcon; gemPic.alt = ''; gemPic.style.width = '96%'; gemPic.style.pointerEvents = 'none';
+  barnShopBox.querySelector('.gem-pic').appendChild(gemPic);
+  var gemAdoptBtn = barnShopBox.querySelector('.gem-adopt');
+  gemAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('gem'); });
   emberAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('ember'); });
   var moonPic = document.createElement('img'); moonPic.src = moonShopIcon; moonPic.alt = ''; moonPic.style.width = '96%'; moonPic.style.pointerEvents = 'none';
   barnShopBox.querySelector('.moon-pic').appendChild(moonPic);
@@ -3216,12 +3752,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     duckAdoptBtn.disabled = full || state.coins < DUCK_COST;
     emberAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + EMBER_COST;
     emberAdoptBtn.disabled = full || state.coins < EMBER_COST;
+    gemAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GEM_COST;
+    gemAdoptBtn.disabled = full || state.coins < GEM_COST;
     moonAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + MOON_COST;
     moonAdoptBtn.disabled = full || state.coins < MOON_COST;
     var gotPail = hasPail();
     pailBtn.innerHTML = gotPail ? 'You have one ✓' : 'Buy · <img class="coin-icon" alt=""> ' + PAIL_COST;
     pailBtn.disabled = gotPail || state.coins < PAIL_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
