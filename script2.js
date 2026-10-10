@@ -3510,8 +3510,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   var zWoolMat = null;
   function zCloudMesh(puffs, pal, len) {                              // a cloud of fleece: its soft body, and the fine wool over it
     var geo = zCloud(puffs, pal), g = new THREE.Group(), m = new THREE.Mesh(geo, zSoftMat({ vertexColors: true, roughness: 1, color: 0xf2eeea }, 0.3, 0.5, 0.15)); m.castShadow = true; g.add(m);
-    if (!zWoolMat) zWoolMat = zFurMat(new THREE.Color(1.16, 1.16, 1.16), 1400, 0.4, true, 0.9, 1);   // (very fine and dense, so it looks soft as a cloud)
-    g.add(new THREE.Mesh(zFurShell(geo, 18, len || 0.02, [1, 1, 1], [0, -1, 0], 0.5), zWoolMat));
+    if (!zWoolMat) zWoolMat = zFurMat(new THREE.Color(1.14, 1.14, 1.14), 1150, 0, true, 0.9, 0.7);   // (a coat of soft, silky fur, smooth and fine)
+    g.add(new THREE.Mesh(zFurShell(geo, 16, (len || 0.02) * 0.55, [1, 1, 1], [0, -0.45, -1], 2.2), zWoolMat));   // (combed back along its body, lying smooth)
     return g;
   }
   // a bundle of Cloud Wool: a soft little cloud, blushed with sunrise, tied with a golden ribbon
