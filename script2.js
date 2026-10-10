@@ -6878,45 +6878,42 @@ EVERDAWN_PARTS.push(function (THREE) {
   // over its hindquarters, traced with glowing constellations; a broad, gentle head carried low, with a shaggy
   // forelock, a soft beard, kind dark eyes and a wide velvety nose; sweeping horns of moonstone banded in gold;
   // feathered fetlocks over pearly cloven hooves; and a long tail ending in a starry tuft. Feed one hay and pet it
-  // every day for four days in a row, and the next morning it has shed a Starmane, a glowing tuft of its mane, for
-  // you to take. Miss a day and the count starts over
-  var BIS_COST = 720, BIS_DAYS = 4;
+  // every day for three days in a row, and the next morning you can milk it (with a Milk Pail) for Nebula Milk, pale
+  // milk swirled with the colours of its mane and glittering with tiny stars. Miss a day and the count starts over
+  var BIS_COST = 720, BIS_DAYS = 3;
   var BIS_PALS = [                                                    // a dusk one, a frost one and an ember one
     { name: 'Dusk', coat: 0xb8a0cc, mane: 0x4a3c8e, neb: 0xe08ac8, neb2: 0x6aa8ff, belly: 0xeadcf0, muzzle: 0x7a5e88, horn: 0xf4f0ff, glow: 0xc8b8ff, star: 0xfff4c8, hoof: 0xf6eefa, iris: ['#8a6ad0', '#1a0e30'] },
     { name: 'Frost', coat: 0xc8d6ea, mane: 0x3e5aa0, neb: 0x8ae0f0, neb2: 0xb090ff, belly: 0xf2f6fc, muzzle: 0x6a7a96, horn: 0xf4faff, glow: 0xc8e8ff, star: 0xe8f8ff, hoof: 0xf8fbff, iris: ['#4a8ad0', '#08142a'] },
     { name: 'Ember', coat: 0xe0b098, mane: 0x6a2e6a, neb: 0xffa070, neb2: 0xff6aa8, belly: 0xfaead8, muzzle: 0x9a6a5a, horn: 0xfff4e4, glow: 0xffd8a8, star: 0xfff0b8, hoof: 0xfff8ee, iris: ['#c87a2a', '#2a0e04'] }
   ];
   function bisCss(hex, a) { var c = new THREE.Color(hex); return 'rgba(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ',' + (a === undefined ? 1 : a) + ')'; }
-  // a Starmane: a soft, glowing tuft of its mane, the twilight-blue of the night sky, flecked with stars and bound with gold
-  var starmaneIcon = glimCanvas(96, 96, function (g, w, h) {
-    var glow = g.createRadialGradient(48, 48, 4, 48, 48, 46); glow.addColorStop(0, 'rgba(200,190,255,0.7)'); glow.addColorStop(1, 'rgba(120,110,200,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
-    g.lineCap = 'round';
-    for (var k = 0; k < 26; k++) { var a = -0.9 + k / 25 * 1.8, len = 30 + glimR(k * 3.1) * 12; var gr = g.createLinearGradient(48, 70, 48 + Math.sin(a) * len, 70 - Math.cos(a) * len); gr.addColorStop(0, '#3e2e5a'); gr.addColorStop(1, '#a898e8'); g.strokeStyle = gr; g.lineWidth = 2.6; g.beginPath(); g.moveTo(48, 72); g.quadraticCurveTo(48 + Math.sin(a) * len * 0.5 + 4, 72 - Math.cos(a) * len * 0.5, 48 + Math.sin(a) * len, 70 - Math.cos(a) * len); g.stroke(); }   // (soft strands fanning out)
-    g.fillStyle = '#ffd27a'; g.fillRect(40, 68, 16, 8); g.fillStyle = '#c89a40'; g.fillRect(40, 71, 16, 2);   // (a gold band)
-    g.fillStyle = '#fff'; [[34, 34], [56, 28], [46, 46], [64, 44], [30, 52]].forEach(function (p) { g.beginPath(); g.arc(p[0], p[1], 1.6, 0, Math.PI * 2); g.fill(); });   // (stars in it)
-    [[14, 22], [82, 30], [78, 82]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  // Nebula Milk: a bottle of pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars
+  var nebulaMilkIcon = glimCanvas(96, 96, function (g, w, h) {
+    var glow = g.createRadialGradient(48, 56, 4, 48, 56, 46); glow.addColorStop(0, 'rgba(200,190,255,0.65)'); glow.addColorStop(1, 'rgba(140,130,220,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    function bottle() { g.beginPath(); g.moveTo(40, 12); g.lineTo(56, 12); g.lineTo(56, 28); g.quadraticCurveTo(70, 34, 70, 48); g.lineTo(70, 82); g.quadraticCurveTo(70, 88, 64, 88); g.lineTo(32, 88); g.quadraticCurveTo(26, 88, 26, 82); g.lineTo(26, 48); g.quadraticCurveTo(26, 34, 40, 28); g.closePath(); }
+    g.fillStyle = 'rgba(240,244,255,0.5)'; bottle(); g.fill();
+    g.save(); g.beginPath(); g.moveTo(27, 46); g.lineTo(69, 46); g.lineTo(69, 82); g.quadraticCurveTo(69, 87, 64, 87); g.lineTo(32, 87); g.quadraticCurveTo(27, 87, 27, 82); g.closePath(); g.clip();
+    var mg = g.createLinearGradient(26, 46, 70, 88); mg.addColorStop(0, '#f8f4ff'); mg.addColorStop(0.5, '#ece4ff'); mg.addColorStop(1, '#e4eeff'); g.fillStyle = mg; g.fillRect(26, 46, 44, 42);
+    [['rgba(224,138,200,0.45)', 36, 60, 14], ['rgba(106,168,255,0.4)', 58, 72, 15], ['rgba(140,110,230,0.4)', 44, 80, 12]].forEach(function (b) { var r = g.createRadialGradient(b[1], b[2], 1, b[1], b[2], b[3]); r.addColorStop(0, b[0]); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(26, 46, 44, 42); });   // (swirls of nebula colour)
+    g.fillStyle = '#fffbe8'; [[34, 54], [52, 58], [62, 52], [40, 72], [58, 80], [48, 66], [66, 70], [32, 82]].forEach(function (p, k) { g.beginPath(); g.arc(p[0], p[1], k % 3 ? 0.9 : 1.5, 0, Math.PI * 2); g.fill(); });   // (tiny stars glittering in it)
+    g.restore();
+    g.strokeStyle = 'rgba(130,110,200,0.9)'; g.lineWidth = 2.5; bottle(); g.stroke();
+    g.fillStyle = '#ffd27a'; g.fillRect(38, 6, 20, 9); g.fillStyle = '#c89a40'; g.fillRect(38, 12, 20, 2);   // (a gold stopper)
+    g.fillStyle = '#7a6aff'; g.fillRect(40, 25, 16, 4);                // (a ribbon round its neck)
+    g.fillStyle = '#fff'; [[16, 30], [80, 40], [78, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.starmane = { name: 'Starmane', price: 360, icon: '✨', img: starmaneIcon, fill: 88, info: 'A soft, glowing tuft of night-sky mane, flecked with tiny stars, shed by a happy Nocturra. Feed and pet yours every day for four days in a row, and it sheds one for you the next morning. Sells for a very good price at the shipping bin.' };
-  function bisTuftModel(pal) {                                        // a Starmane on its own (for holding, and floating over its stall)
-    var g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }), sg = new THREE.CylinderGeometry(0.4, 1, 1, 4, 1).translate(0, 0.5, 0), n = 70, im = new THREE.InstancedMesh(sg, mat, n), o = new THREE.Object3D(), c = new THREE.Color(), c0 = new THREE.Color(pal.mane), c1 = new THREE.Color(pal.mane).lerp(new THREE.Color(pal.glow), 0.6);
-    for (var i = 0; i < n; i++) { var a = (glimR(i * 3.7) - 0.5) * 1.6, b = (glimR(i * 5.1) - 0.5) * 1.6, len = 0.06 + glimR(i * 2.3) * 0.035; o.position.set((glimR(i * 1.3) - 0.5) * 0.008, 0, (glimR(i * 7.7) - 0.5) * 0.008); o.rotation.set(b, 0, a); o.scale.set(0.0016, len, 0.0016); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.copy(c0).lerp(c1, glimR(i * 4.4))); }
-    im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; g.add(im);
-    var band = new THREE.Mesh(new THREE.CylinderGeometry(0.0075, 0.0075, 0.008, 16), new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.3, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 })); band.position.y = 0.004; g.add(band);
-    for (var s = 0; s < 8; s++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); sp.scale.set(0.012, 0.012, 1); sp.position.set((glimR(s * 2.1) - 0.5) * 0.05, 0.03 + glimR(s * 3.3) * 0.05, (glimR(s * 4.9) - 0.5) * 0.04); g.add(sp); }
-    g.add(holdGlow(pal.glow, 0.3, 0.05));
-    return g;
-  }
+  ITEMS.nebulaMilk = { name: 'Nebula Milk', price: 330, icon: '🥛', img: nebulaMilkIcon, fill: 88, info: 'Pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars, from a happy Nocturra. Feed and pet yours every day for three days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
   var bisShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 60, 4, 64, 60, 64); sky.addColorStop(0, 'rgba(210,200,255,0.7)'); sky.addColorStop(1, 'rgba(150,140,220,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#6a4e6a'; [[36, 100], [50, 102], [80, 102], [94, 100]].forEach(function (p) { g.fillRect(p[0] - 4, p[1] - 20, 8, 20); g.fillStyle = '#f0e8f4'; g.fillRect(p[0] - 5, p[1] - 2, 10, 5); g.fillStyle = '#6a4e6a'; });
+    g.fillStyle = '#b8a0cc'; [[36, 100], [50, 102], [80, 102], [94, 100]].forEach(function (p) { g.fillRect(p[0] - 4, p[1] - 20, 8, 20); g.fillStyle = '#f0e8f4'; g.fillRect(p[0] - 5, p[1] - 2, 10, 5); g.fillStyle = '#b8a0cc'; });
     g.beginPath(); g.ellipse(52, 78, 30, 20, 0, 0, Math.PI * 2); g.fill();   // (its hindquarters)
-    g.strokeStyle = '#6a4e6a'; g.lineWidth = 3; g.beginPath(); g.moveTo(24, 74); g.quadraticCurveTo(14, 84, 18, 96); g.stroke(); g.fillStyle = '#3e2e5a'; g.beginPath(); g.ellipse(18, 98, 4, 6, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#3e2e5a'; g.beginPath(); g.ellipse(80, 66, 30, 28, 0, 0, Math.PI * 2); g.fill();   // (its great shaggy mane over the hump)
+    g.strokeStyle = '#b8a0cc'; g.lineWidth = 3; g.beginPath(); g.moveTo(24, 74); g.quadraticCurveTo(14, 84, 18, 96); g.stroke(); g.fillStyle = '#4a3c8e'; g.beginPath(); g.ellipse(18, 98, 4, 6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#4a3c8e'; g.beginPath(); g.ellipse(80, 66, 30, 28, 0, 0, Math.PI * 2); g.fill();   // (its great shaggy mane over the hump)
     g.strokeStyle = 'rgba(160,140,220,0.5)'; g.lineWidth = 1.5; for (var k = 0; k < 18; k++) { var x = 56 + k * 3; g.beginPath(); g.moveTo(x, 44 + Math.abs(k - 9)); g.lineTo(x + 2, 92); g.stroke(); }
     g.fillStyle = '#fff4c8'; [[70, 56], [84, 50], [92, 64], [76, 74]].forEach(function (p) { g.beginPath(); g.arc(p[0], p[1], 1.4, 0, Math.PI * 2); g.fill(); });
-    g.fillStyle = '#6a4e6a'; g.beginPath(); g.ellipse(106, 84, 13, 15, 0.2, 0, Math.PI * 2); g.fill();   // (the broad head, carried low)
-    g.fillStyle = '#2e2228'; g.beginPath(); g.ellipse(110, 96, 9, 6, 0, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#e8e4f4'; g.lineWidth = 4; g.beginPath(); g.moveTo(98, 74); g.quadraticCurveTo(88, 64, 96, 54); g.stroke(); g.beginPath(); g.moveTo(112, 72); g.quadraticCurveTo(122, 62, 116, 52); g.stroke();   // (moonstone horns)
+    g.fillStyle = '#b8a0cc'; g.beginPath(); g.ellipse(106, 84, 13, 15, 0.2, 0, Math.PI * 2); g.fill();   // (the broad head, carried low)
+    g.fillStyle = '#7a5e88'; g.beginPath(); g.ellipse(110, 96, 9, 6, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#f4f0ff'; g.lineWidth = 4; g.beginPath(); g.moveTo(98, 74); g.quadraticCurveTo(88, 64, 96, 54); g.stroke(); g.beginPath(); g.moveTo(112, 72); g.quadraticCurveTo(122, 62, 116, 52); g.stroke();   // (moonstone horns)
     g.fillStyle = '#ffd27a'; g.fillRect(90, 63, 5, 3); g.fillRect(117, 61, 5, 3);
     g.fillStyle = '#1a0e06'; g.beginPath(); g.arc(104, 82, 2.6, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(103.2, 81.2, 0.9, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#fff'; [[16, 26], [44, 16], [118, 108]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
@@ -7081,11 +7078,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.78, 0); tag.renderOrder = 6; root.add(tag);
     return { maneTwinkle: maneTwinkle, conStars: conStars, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
-  // when it's ready, the Starmane it has shed floats softly over it
+  // when it's ready to milk, a shimmering drop of Nebula Milk floats softly over it
   function bisBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall], pal = BIS_PALS[g.pal % BIS_PALS.length];
     var drop = new THREE.Group(); abRoom.add(drop);
-    var tf = bisTuftModel(pal); tf.scale.setScalar(1.3); drop.add(tf);
+    var ds = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonDropTex, color: 0xece4ff, transparent: true, depthWrite: false })); ds.scale.set(0.16, 0.16, 1); drop.add(ds);
+    for (var k = 0; k < 5; k++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); sp.scale.set(0.03, 0.03, 1); sp.position.set(Math.cos(k * 1.26) * 0.09, (glimR(k * 3.3) - 0.5) * 0.08, Math.sin(k * 1.26) * 0.09); drop.add(sp); }   // (little stars circling it)
     var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
     eg.scale.set(0.42, 0.42, 1); drop.add(eg);
     g.eggMesh = drop; g.eggGlow = eg;
@@ -7119,17 +7117,18 @@ EVERDAWN_PARTS.push(function (THREE) {
       o.s.position.set(Math.cos(o.a + o.t) * o.r, 0.46 + o.t * 0.35, 0.04 + Math.sin(o.a + o.t) * o.r); o.s.material.opacity = Math.sin(o.t * Math.PI) * 0.6;
     });
     m.glow.material.opacity = 0.02 + (0.5 + Math.sin(t * 1.0 + g.stall) * 0.5) * 0.015;
-    if (g.egg) { g.eggMesh.position.set(g.x, 0.85 + Math.sin(t * 2) * 0.03, g.z); g.eggMesh.rotation.y = t * 0.6; g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
+    if (g.egg) { g.eggMesh.position.set(g.x, 0.85 + Math.sin(t * 2) * 0.03, g.z); g.eggMesh.rotation.y = t * 0.8; g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
-  function nocturraAction(g, wx, wz) {                               // taking its Starmane, feeding and petting a Nocturra
+  function nocturraAction(g, wx, wz) {                               // milking, feeding and petting a Nocturra
     if (g.egg) {
-      if (!roomFor(['starmane'])) { bagFull(); return; }
-      addItem('starmane', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.4;
-      showToast(g.name + ' has shed a glowing Starmane for you! ✨', 2400);
+      if (!bag.some(function (b) { return b && b.id === 'milkPail'; })) { showToast(g.name + ' is ready to milk! You need a Milk Pail: buy one at the counter 🪣', 2800); return; }
+      if (!roomFor(['nebulaMilk'])) { bagFull(); return; }
+      addItem('nebulaMilk', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.4;
+      showToast('You milked ' + g.name + ' and got a bottle of glittering Nebula Milk! 🥛✨', 2400);
       return;
     }
     var day = Math.min(BIS_DAYS, g.days + 1);
-    var news = day >= BIS_DAYS ? ' A Starmane tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' toward a Starmane.';
+    var news = day >= BIS_DAYS ? ' Nebula Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' toward Nebula Milk.';
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
       g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
@@ -7144,7 +7143,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return;
     }
     g.pet = 1.4; glimHeartBurst(g.x, 0.55, g.z);
-    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BIS_DAYS ? ' A Starmane tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' done. Come back tomorrow!'), 2400);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BIS_DAYS ? ' Nebula Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' done. Come back tomorrow!'), 2400);
   }
 
   // ---------- Holding what your animals give you ----------
@@ -7185,7 +7184,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     lotusMilk: function () { return holdBottle(0xffeef6, 0xffc8e4, 0x5ac890, 0xffa8d0); },
     glimmerkelp: function () { return axoKelpBundle(AXO_PALS[0]); },   // (a bundle of glowing kelp, tied with a ribbon)
     starbloom: function () { return tortBloomModel(TORT_PALS[0]); },   // (a Starbloom held by its stem)
-    starmane: function () { return bisTuftModel(BIS_PALS[0]); },   // (a soft starry tuft)
+    nebulaMilk: function () { return holdBottle(0xf2ecff, 0xc8b8ff, 0xffd27a, 0x7a6aff); },
     sunscale: function () { var g = lizScaleModel(LIZ_PALS[0]); g.position.y = 0.05; g.rotation.set(0.3, 0.4, -0.2); return g; },   // (a Sunscale resting on your palm)
     cinderQuill: function () {                                       // held by its shaft, the flame end up
       var g = new THREE.Group(), q = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.33).translate(0, 0.165, 0), emberFeatherMat(EMBER_PALS[0]));
@@ -7253,7 +7252,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         else if (g.kind === 'lotus') { var lx2 = w / 2 + (p - 0.5) * 22; c.fillStyle = g.egg || p < done ? ['#ff9ac8', '#b8a0e8'][p % 2] : '#d8d0e0'; c.beginPath(); for (var lk = 0; lk < 5; lk++) { var la2 = -Math.PI / 2 + (lk - 2) * 0.5; c.ellipse(lx2 + Math.cos(la2) * 4, 51 + Math.sin(la2) * 4, 3, 6.5, la2 + Math.PI / 2, 0, Math.PI * 2); } }   // (a little lotus for each day)
         else if (g.kind === 'axo') { var ax = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#ff7aa8', '#b0a4ff', '#ffc8e4'][p % 3] : '#d8d0e0'; c.beginPath(); [-0.6, 0, 0.6].forEach(function (fa) { c.ellipse(ax + Math.sin(fa) * 5, 51 - Math.cos(fa) * 5, 2.4, 6.5, fa, 0, Math.PI * 2); }); }   // (a little sprig of kelp for each day)
         else if (g.kind === 'liz') { var lzx = w / 2 + (p - 0.5) * 22; c.fillStyle = g.egg || p < done ? ['#ffb040', '#ff7a4a'][p % 2] : '#d8d0e0'; c.beginPath(); c.moveTo(lzx, 41); c.bezierCurveTo(lzx + 8, 43, lzx + 8, 53, lzx, 58); c.bezierCurveTo(lzx - 8, 53, lzx - 8, 43, lzx, 41); }   // (a little Sunscale for each day)
-        else if (g.kind === 'bison') { var bx2 = w / 2 + (p - 1.5) * 20; c.fillStyle = g.egg || p < done ? ['#c8b8ff', '#9ad0ff', '#ffd890', '#ffb0e0'][p % 4] : '#d8d0e0'; c.beginPath(); for (var bk2 = 0; bk2 < 10; bk2++) { var ba2 = bk2 / 10 * Math.PI * 2, br2 = bk2 % 2 ? 2.6 : 6.4; c[bk2 ? 'lineTo' : 'moveTo'](bx2 + Math.sin(ba2) * br2, 50 - Math.cos(ba2) * br2); } c.closePath(); }   // (a little star for each day)
+        else if (g.kind === 'bison') { var bx2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#c8b8ff', '#9ad0ff', '#ffb0e0'][p % 3] : '#d8d0e0'; c.beginPath(); for (var bk2 = 0; bk2 < 10; bk2++) { var ba2 = bk2 / 10 * Math.PI * 2, br2 = bk2 % 2 ? 2.6 : 6.4; c[bk2 ? 'lineTo' : 'moveTo'](bx2 + Math.sin(ba2) * br2, 50 - Math.cos(ba2) * br2); } c.closePath(); }   // (a little star for each day)
         else if (g.kind === 'tort') { var tx2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#ff9ac8', '#9ae0b0', '#c8b0ff'][p % 3] : '#d8d0e0'; c.beginPath(); for (var tk2 = 0; tk2 < 5; tk2++) { var ta2 = tk2 / 5 * Math.PI * 2; c.moveTo(tx2 + Math.sin(ta2) * 4 + 3, 50 - Math.cos(ta2) * 4); c.arc(tx2 + Math.sin(ta2) * 4, 50 - Math.cos(ta2) * 4, 3.2, 0, Math.PI * 2); } }   // (a little flower for each day)
         else if (g.kind === 'prism') { var px = w / 2 + (p - 0.5) * 22; c.fillStyle = g.egg || p < done ? ['#ff8ab8', '#8ab8ff'][p % 2] : '#d8d0e0'; c.beginPath(); c.moveTo(px, 41); c.lineTo(px + 7, 49); c.lineTo(px, 57); c.lineTo(px - 7, 49); c.closePath(); }   // (a little prism for each day)
         else if (g.kind === 'bubble') { var bx = w / 2 + (p - 1) * 22; c.strokeStyle = g.egg || p < done ? ['#3ac8c0', '#8a7aff', '#ff8aa0'][p % 3] : '#d8d0e0'; c.lineWidth = 3; c.beginPath(); c.arc(bx, 50, 7.5, 0, Math.PI * 2); c.stroke(); c.fillStyle = c.strokeStyle; c.beginPath(); c.arc(bx - 2.5, 47.5, 1.8, 0, Math.PI * 2); }   // (a little bubble for each day)
@@ -7309,13 +7308,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateGlimmers(dt) {
     if (glimDay === null) glimDay = state.day;
     if (state.day !== glimDay) {
-      var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], pearl = [], missedPearl = [], pbub = [], missedBub = [], pwool = [], missedPw = [], frond = [], missedFrond = [], sscale = [], missedScale = [], sbloom = [], missedBloom = [], smane = [], missedMane = [], gap = state.day - glimDay;
+      var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], pearl = [], missedPearl = [], pbub = [], missedBub = [], pwool = [], missedPw = [], frond = [], missedFrond = [], sscale = [], missedScale = [], sbloom = [], missedBloom = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
         if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort' || g.kind === 'bison') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra, Sirenna, Prismara, Nymphalia or Veilaris counts the days in a row it's been fed and petted
           var gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', pri = g.kind === 'prism', lot = g.kind === 'lotus', axo = g.kind === 'axo', liz = g.kind === 'liz', tort = g.kind === 'tort', bis = g.kind === 'bison', need = bis ? BIS_DAYS : tort ? TORT_DAYS : liz ? LIZ_DAYS : axo ? AXO_DAYS : gem ? GEM_DAYS : aur ? AURORA_DAYS : zep ? ZEPHYRA_DAYS : lun ? LUNA_DAYS : bub ? BUBBLE_DAYS : pri ? PRISM_DAYS : lot ? LOTUS_DAYS : EMBER_DAYS;
           if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
-          else { if (g.days) (bis ? missedMane : tort ? missedBloom : liz ? missedScale : axo ? missedFrond : gem ? missedGem : aur || lot ? missedMilk : zep ? missedWool : lun ? missedPearl : bub ? missedBub : pri ? missedPw : missed).push(g.name); g.days = 0; }
-          if (g.days >= need && !g.egg) { g.egg = true; g.days = 0; (bis ? smane : tort ? sbloom : liz ? sscale : axo ? frond : gem ? geode : aur || lot ? milk : zep ? wool : lun ? pearl : bub ? pbub : pri ? pwool : quill).push(g.name); }
+          else { if (g.days) (tort ? missedBloom : liz ? missedScale : axo ? missedFrond : gem ? missedGem : aur || lot || bis ? missedMilk : zep ? missedWool : lun ? missedPearl : bub ? missedBub : pri ? missedPw : missed).push(g.name); g.days = 0; }
+          if (g.days >= need && !g.egg) { g.egg = true; g.days = 0; (tort ? sbloom : liz ? sscale : axo ? frond : gem ? geode : aur || lot || bis ? milk : zep ? wool : lun ? pearl : bub ? pbub : pri ? pwool : quill).push(g.name); }
         } else if (g.fed && g.petted && !g.egg) { g.egg = true; (g.kind === 'moon' ? milk : g.kind === 'duck' ? dew : laid).push(g.name); }
         g.fed = false; g.petted = false; glimRefresh(g);
       });
@@ -7329,7 +7328,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (pearl.length) news.push(pearl.join(' and ') + (pearl.length > 1 ? ' each found' : ' found') + ' a Moonpearl');
       if (pbub.length) news.push(pbub.join(' and ') + (pbub.length > 1 ? ' each blew' : ' blew') + ' a Wishbubble');
       if (pwool.length) news.push(pwool.join(' and ') + (pwool.length > 1 ? ' have fleeces' : ' has a fleece') + ' ready to shear');
-      if (smane.length) news.push(smane.join(' and ') + (smane.length > 1 ? ' each shed' : ' shed') + ' a Starmane');
       if (sbloom.length) news.push(sbloom.join(' and ') + (sbloom.length > 1 ? ' each have' : ' has') + ' a Starbloom in bloom');
       if (sscale.length) news.push(sscale.join(' and ') + (sscale.length > 1 ? ' each shed' : ' shed') + ' a Sunscale');
       if (frond.length) news.push(frond.join(' and ') + (frond.length > 1 ? ' have Glimmerkelp' : ' has Glimmerkelp') + ' ready to shear');
@@ -7340,7 +7338,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (missedPearl.length) news.push(missedPearl.join(' and ') + ' missed a day of care, so ' + (missedPearl.length > 1 ? 'their pearl counts start' : 'their pearl count starts') + ' over');
       if (missedBub.length) news.push(missedBub.join(' and ') + ' missed a day of care, so ' + (missedBub.length > 1 ? 'their bubble counts start' : 'their bubble count starts') + ' over');
       if (missedPw.length) news.push(missedPw.join(' and ') + ' missed a day of care, so ' + (missedPw.length > 1 ? 'their wool counts start' : 'their wool count starts') + ' over');
-      if (missedMane.length) news.push(missedMane.join(' and ') + ' missed a day of care, so ' + (missedMane.length > 1 ? 'their mane counts start' : 'their mane count starts') + ' over');
       if (missedBloom.length) news.push(missedBloom.join(' and ') + ' missed a day of care, so ' + (missedBloom.length > 1 ? 'their flower counts start' : 'their flower count starts') + ' over');
       if (missedScale.length) news.push(missedScale.join(' and ') + ' missed a day of care, so ' + (missedScale.length > 1 ? 'their scale counts start' : 'their scale count starts') + ' over');
       if (missedFrond.length) news.push(missedFrond.join(' and ') + ' missed a day of care, so ' + (missedFrond.length > 1 ? 'their kelp counts start' : 'their kelp count starts') + ' over');
@@ -7523,7 +7520,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var glimBtnText = '';
   function updateGlimButton() {
     var g = glimmerInReach(), txt = '';
-    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'lotus' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' || g.kind === 'prism' || g.kind === 'axo' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Wishbubble' : g.kind === 'liz' ? '☀️ Take the Sunscale' : g.kind === 'tort' ? '🌸 Pick the Starbloom' : g.kind === 'bison' ? '✨ Take the Starmane' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
+    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'lotus' || g.kind === 'bison' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' || g.kind === 'prism' || g.kind === 'axo' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Wishbubble' : g.kind === 'liz' ? '☀️ Take the Sunscale' : g.kind === 'tort' ? '🌸 Pick the Starbloom' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
     if (txt !== glimBtnText) { glimBtnText = txt; if (txt) glimBtn.innerHTML = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <kbd>E</kbd>'; }
     var show = !!txt;
     if (glimBtn.classList.contains('show') !== show) glimBtn.classList.toggle('show', show);
@@ -7557,7 +7554,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every four days in a row they\'ll shed a Starmane for you.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Nebula Milk (with a Milk Pail).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -7582,7 +7579,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nocturras \u00b7 720 \u2605', 'shed a Starmane every 4 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nocturras \u00b7 720 \u2605', 'give Nebula Milk every 3 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 100 + k * 19.8, 13, an[2], false);
       chalk(an[1], w / 2 + 80, 110 + k * 19.8, 8.5, 'rgba(240,240,230,A)', true);
     });
@@ -8128,7 +8125,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic tort-pic"></div><div class="shop-text"><b>Amarys</b><span>A gentle, slow little wanderer in soft plush, carrying a whole tiny garden on its back: a high shell like polished opal rimmed in gold, topped with soft moss, glowing mushrooms, tiny flowers, a cluster of crystals and a little tree hung with glowing fruit, with fireflies drifting over it. It has big shining eyes and two leafy sprouts on its head. Feed it hay and pet it every day for three days in a row, and the next morning a Starbloom opens in its garden for you to pick. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + TORT_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="tort-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nocturra</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for four days in a row, and the next morning it sheds a Starmane for you to take. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nocturra</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Nebula Milk (bring a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bis-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
