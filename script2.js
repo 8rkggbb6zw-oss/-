@@ -4938,17 +4938,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hornMat = new THREE.MeshPhysicalMaterial({ color: pal.horn, roughness: 0.04, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, opacity: 0.9, emissive: pal.glow, emissiveIntensity: 0.4, flatShading: true });
     var hornFilm = filmMat(0xffffff, 1.1), hornGlows = [];
     [-1, 1].forEach(function (s) {
-      var pts = []; for (var hi = 0; hi <= 30; hi++) { var t = hi / 30, a = t * Math.PI * 1.75, R = 0.024 * (1 - 0.4 * t); pts.push(V3(s * (0.03 + t * 0.03), 0.028 + R * Math.sin(a), R * Math.cos(a) - 0.014)); }
-      var crv = new THREE.CatmullRomCurve3(pts), TS = 90, RS = 6, geo = new THREE.TubeGeometry(crv, TS, 1, RS, false), p = geo.attributes.position, off = new THREE.Vector3(), tq = new THREE.Quaternion();
+      var pts = []; for (var hi = 0; hi <= 30; hi++) { var t = hi / 30, a = t * Math.PI * 1.9, R = 0.044 * (1 - 0.42 * t); pts.push(V3(s * (0.03 + t * 0.05), 0.03 + R * Math.sin(a), R * Math.cos(a) - 0.03)); }
+      var crv = new THREE.CatmullRomCurve3(pts), TS = 140, RS = 7, geo = new THREE.TubeGeometry(crv, TS, 1, RS, false), p = geo.attributes.position, off = new THREE.Vector3(), tq = new THREE.Quaternion();
       for (var i = 0; i <= TS; i++) {
-        var t2 = i / TS, c = crv.getPointAt(t2), r = (0.0105 - 0.0088 * t2) * (1 + 0.12 * Math.max(0, Math.sin(t2 * 55)) * (1 - t2));   // (tapering, ridged)
+        var t2 = i / TS, c = crv.getPointAt(t2), r = (0.0175 - 0.0155 * t2) * (1 + 0.12 * Math.max(0, Math.sin(t2 * 55)) * (1 - t2));   // (tapering, ridged)
         tq.setFromAxisAngle(crv.getTangentAt(t2), t2 * Math.PI * 2.5);   // (its facets spiralling round it)
         for (var j = 0; j <= RS; j++) { var k = i * (RS + 1) + j; off.set(p.getX(k) - c.x, p.getY(k) - c.y, p.getZ(k) - c.z).applyQuaternion(tq).multiplyScalar(r); p.setXYZ(k, c.x + off.x, c.y + off.y, c.z + off.z); }
       }
       geo.computeVertexNormals();
       var hm = new THREE.Mesh(geo, hornMat); hm.castShadow = true; hm.renderOrder = 2; head.add(hm);
       var hf = new THREE.Mesh(geo, hornFilm); hf.renderOrder = 3; hf.scale.setScalar(1.002); head.add(hf);
-      var tip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); tip.scale.set(0.03, 0.03, 1); tip.position.copy(crv.getPointAt(1)); head.add(tip); hornGlows.push(tip);
+      var tip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); tip.scale.set(0.045, 0.045, 1); tip.position.copy(crv.getPointAt(1)); head.add(tip); hornGlows.push(tip);
     });
     // slim legs, woolly at the top, pale and velvety below, on little hooves of clear crystal
     function limb(prof, colAt) {
