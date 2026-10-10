@@ -6954,14 +6954,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       d = sm(d, ell(x, y, z, 0, 0.02, 0.145, 0.056, 0.068, 0.062), 0.04);     // (its neck)
       return d;
     }
-    function maneF(q) { return ss(-0.04, 0.04, q.z + 0.016 * Math.sin(q.x * 55 + q.y * 31) + 0.01 * Math.sin(q.y * 73 + q.x * 20) + 0.035 * ss(0.02, 0.13, q.y) - 0.03 * ss(0.0, -0.07, q.y)); }   // (how much of its mane grows here: a soft, wavy edge, reaching further back over its hump)
+    function maneB(q) { return q.z + 0.016 * Math.sin(q.x * 55 + q.y * 31) + 0.01 * Math.sin(q.y * 73 + q.x * 20) + 0.035 * ss(0.02, 0.13, q.y) - 0.03 * ss(0.0, -0.07, q.y); }   // (where its mane meets its coat, a soft wavy line)
+    function maneLock(q) { return 0.024 * Math.sin(q.y * 240 + Math.sin(q.x * 80) * 2.2) + 0.015 * Math.sin(q.x * 190 - q.y * 70 + Math.sin(q.y * 120)) + 0.008 * Math.sin(q.y * 410 + q.x * 150); }   // (locks of mane reaching back into its coat, some further than others)
+    function maneF(q) { return ss(-0.075, 0.05, maneB(q) + maneLock(q) * 0.7); }   // (how long its fur grows here: shaggiest in its mane, easing down into its coat)
+    function maneC(q) { return ss(-0.095, 0.045, maneB(q) + maneLock(q)); }   // (how much of its mane's colour shows here)   // (how much of its mane grows here: a soft, wavy edge, reaching further back over its hump)
     function nebCol(q, n, c) { var nb = 0.5 + 0.5 * Math.sin(q.x * 31 + q.z * 23 + Math.sin(q.y * 41) * 1.5), nb2 = 0.5 + 0.5 * Math.sin(q.y * 37 - q.x * 19 + Math.sin(q.z * 29) * 1.7); c.copy(maneCol).lerp(new THREE.Color(pal.neb), ss(0.55, 0.95, nb) * 0.55).lerp(new THREE.Color(pal.neb2), ss(0.6, 0.95, nb2) * 0.5).lerp(new THREE.Color(pal.glow), ss(0.3, 0.95, n.y) * 0.25); c.multiplyScalar(0.9 + 0.2 * glimR(Math.floor(q.x * 400) * 3.1 + Math.floor(q.z * 400) * 7.3)); return c; }   // (swirls of nebula colour through the night-blue)
     var nc = new THREE.Color(), topCol = coatCol0.clone().lerp(maneCol, 0.18), dapCol = coatCol0.clone().lerp(new THREE.Color(pal.glow), 0.5).lerp(new THREE.Color(0xffffff), 0.25);
     var bodyGeo = sdfShape(bodySdf, [160, 120], 0.32, function (n, q, c) {
       c.copy(bellyCol).lerp(coatCol0, ss(-0.6, -0.1, n.y)).lerp(topCol, ss(0.3, 0.95, n.y) * 0.6);
       var dap = ss(0.56, 0.86, 0.5 + 0.25 * Math.sin(q.x * 160 + Math.sin(q.z * 140) * 2) + 0.25 * Math.sin(q.z * 170 + Math.sin(q.y * 150) * 2)) * ss(0.02, -0.06, q.z) * ss(-0.4, 0.2, n.y);   // (soft starlight dapples over its hindquarters)
       c.lerp(dapCol, dap * 0.7); grain(n, c);
-      c.lerp(nebCol(q, n, nc), maneF(q));
+      var mb = maneB(q); nebCol(q, n, nc); c.lerp(nc.clone().lerp(c, 0.45), ss(-0.17, -0.03, mb) * 0.4); c.lerp(nc, maneC(q));   // (a faint wash of its mane's colours over the coat nearby, then the mane itself, blending in through long locks)
     });
     // its constellations, woven right into its fur: drawn onto a map of its body, so the hairs where they fall glow
     // with starlight from root to tip, among a dusting of tiny star freckles over its hindquarters
@@ -7012,7 +7015,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       d = sm(d, ell(x, y, z, 0, -0.03, 0.058, 0.036, 0.022, 0.016), 0.014);   // (squared off softly at the front)
       [-1, 1].forEach(function (s) { d = sm(d, ell(x, y, z, s * 0.032, 0.022, -0.005, 0.02, 0.02, 0.022), 0.015); });   // (the bosses where its horns grow)
       return d;
-    }, [110, 80], 0.15, function (n, q, c) { c.copy(coatCol0).lerp(muzCol.clone().lerp(coatCol0, 0.35), ss(0.04, 0.075, q.z) * ss(0.0, -0.02, q.y)); grain(n, c); });
+    }, [110, 80], 0.15, function (n, q, c) { c.copy(coatCol0).lerp(muzCol.clone().lerp(coatCol0, 0.35), ss(0.04, 0.075, q.z) * ss(0.0, -0.02, q.y)); grain(n, c); c.lerp(nebCol(q, n, new THREE.Color()), Math.min(1, ss(0.0, -0.045, q.z + 0.006 * Math.sin(q.y * 300 + q.x * 120)) + ss(0.025, 0.05, q.y) * ss(0.02, -0.01, q.z)) * 0.9); });   // (its mane's colours growing up over the back and crown of its head, so its face sits softly in its mane)
     furred(headGeo, head, 0.006, [0, 0.3, -1], faceFur);
     var hRay = new THREE.Raycaster(), hMesh = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); hMesh.updateMatrixWorld(true);
     function onHead(from, dir) { hRay.set(from, dir.clone().normalize()); var h = hRay.intersectObject(hMesh); h = h[h.length - 1] || h[0]; return h ? { p: h.point.clone(), n: h.face.normal.clone().normalize() } : { p: from.clone(), n: dir.clone().normalize() }; }
@@ -7076,7 +7079,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       abPart(tg, skin, 0, 0, 0, 0, 0, 0, grp); abPart(zFurShell(tg, 20, len, [1, 1, 1], flow, comb || 0.8), fur || maneFur, 0, 0, 0, 0, 0, 0, grp).castShadow = false; return grp;
     }
     tuft(head, onHead(V3(0, 0.03, 0.0), V3(0, 1, 0.3)).p.add(V3(0, -0.004, -0.004)), 0.027, 0.013, 0.028, 0.022, [0, -0.2, 1], null, 1.3);   // (a shaggy forelock, tumbling forward)
-    [-1, 1].forEach(function (s) { tuft(head, onHead(V3(s * 0.035, -0.014, -0.004), V3(s, -0.25, -0.3)).p.add(V3(-s * 0.004, 0, 0)), 0.016, 0.022, 0.022, 0.017, [s * 0.3, -0.4, -1], coatCol0.clone().lerp(bellyCol, 0.35), 1.4, faceFur); });   // (soft fluffy cheeks, brushed back)
+    [-1, 1].forEach(function (s) { tuft(head, onHead(V3(s * 0.035, -0.014, -0.004), V3(s, -0.25, -0.3)).p.add(V3(-s * 0.004, 0, 0)), 0.016, 0.022, 0.022, 0.015, [s * 0.3, -0.4, -1], coatCol0.clone().lerp(maneCol.clone().lerp(new THREE.Color(pal.neb), 0.4), 0.22), 0.9, faceFur); });   // (soft fluffy cheeks, brushed back)
     var frMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.star).lerp(new THREE.Color(pal.glow), 0.4) });
     [-1, 1].forEach(function (s) { [[0.0, 0.0], [0.006, -0.004], [0.0115, -0.002]].forEach(function (o, k) { var fp = onHead(V3(s * (0.03 - o[0] * 0.3), -0.0105 + o[1], 0.012 + o[0]), V3(s * 0.85, -0.1, 0.55)); part(seg, frMat, fp.p.x + fp.n.x * 0.0035, fp.p.y + fp.n.y * 0.0035, fp.p.z + fp.n.z * 0.0035, 0.0011 - k * 0.0002, 0.0011 - k * 0.0002, 0.0011 - k * 0.0002, head); }); });   // (three little star freckles under each eye)
     tuft(head, onHead(V3(0, -0.04, 0.016), V3(0, -1, 0.2)).p.add(V3(0, 0.004, 0)), 0.018, 0.016, 0.024, 0.026, [0, -1, -0.15], null, 1.4);   // (a soft beard)
@@ -7086,7 +7089,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.05, BY - 0.03, front ? 0.075 : -0.115); body.add(hip);   // (the ground is 0.27 below its hip)
       var lcv = new THREE.CatmullRomCurve3(front ? [V3(0, 0.012, 0), V3(0, -0.06, 0.006), V3(0, -0.125, -0.002), V3(0, -0.175, 0.002), V3(0, -0.208, 0.006)] : [V3(0, 0.012, 0), V3(0, -0.055, -0.01), V3(0, -0.11, -0.024), V3(0, -0.165, -0.008), V3(0, -0.208, -0.006)]);
       var lgeo = new THREE.TubeGeometry(lcv, 56, 1, 18, false), lpa = lgeo.attributes.position, lcol = [], lc = new THREE.Color(), lowCol = coatCol0.clone().lerp(maneCol, 0.3);
-      for (var lk = 0; lk <= 56; lk++) { var lt = lk / 56, lcp = lcv.getPointAt(lt), lr = 0.0135 + (front ? 0.022 : 0.027) * (1 - ss(0.04, 0.52, lt)) + 0.0035 * Math.exp(-Math.pow((lt - (front ? 0.6 : 0.52)) / 0.07, 2)) + 0.0035 * ss(0.84, 1, lt); for (var lj = 0; lj <= 18; lj++) { var lq = lk * 19 + lj, dz = 1 + 0.18 * (1 - ss(0.0, 0.5, lt)); lpa.setXYZ(lq, lcp.x + (lpa.getX(lq) - lcp.x) * lr, lcp.y + (lpa.getY(lq) - lcp.y) * lr, lcp.z + (lpa.getZ(lq) - lcp.z) * lr * dz); lc.copy(coatCol0).lerp(lowCol, ss(0.55, 1, lt)); lc.multiplyScalar(0.94 + 0.06 * Math.sin(lj * 1.7 + lk * 0.9)); lcol.push(lc.r, lc.g, lc.b); } }   // (a strong, rounded thigh, a neat knee or hock, a slender cannon and a rounded fetlock)
+      for (var lk = 0; lk <= 56; lk++) { var lt = lk / 56, lcp = lcv.getPointAt(lt), lr = 0.0135 + (front ? 0.022 : 0.027) * (1 - ss(0.04, 0.52, lt)) + 0.0035 * Math.exp(-Math.pow((lt - (front ? 0.6 : 0.52)) / 0.07, 2)) + 0.0035 * ss(0.84, 1, lt); for (var lj = 0; lj <= 18; lj++) { var lq = lk * 19 + lj, dz = 1 + 0.18 * (1 - ss(0.0, 0.5, lt)); lpa.setXYZ(lq, lcp.x + (lpa.getX(lq) - lcp.x) * lr, lcp.y + (lpa.getY(lq) - lcp.y) * lr, lcp.z + (lpa.getZ(lq) - lcp.z) * lr * dz); lc.copy(coatCol0).lerp(lowCol, ss(0.55, 1, lt)); if (front) lc.lerp(nebCol(V3(lp[0] * 0.05 + lcp.x, lcp.y - 0.03, 0.075 + lcp.z), V3(0, 0, 1), nc).clone().lerp(lc, 0.3), (1 - ss(0.12, 0.42, lt)) * 0.9); lc.multiplyScalar(0.94 + 0.06 * Math.sin(lj * 1.7 + lk * 0.9)); lcol.push(lc.r, lc.g, lc.b); } }   // (a strong, rounded thigh, a neat knee or hock, a slender cannon and a rounded fetlock, its mane's colours running down into the tops of its front legs)
       lgeo.setAttribute('color', new THREE.Float32BufferAttribute(lcol, 3)); lgeo.computeVertexNormals(); furred(lgeo, hip, 0.017, [0, -1, 0], maneFur, 1.0);
       var fet = tuft(hip, V3(0, -0.203, front ? 0.007 : -0.005), 0.0165, 0.016, 0.0175, 0.017, [0, -1, 0.1], null, 1.5); fet.scale.set(1, 1.05, 1);   // (long, silky feathering round its fetlock, falling over its hoof)
       [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0072, -0.24, front ? 0.01 : -0.006, 0.009, 0.028, 0.0145, hip, Math.PI, 0, 0); hm.castShadow = true; });   // (a pearly cloven hoof)
