@@ -5295,18 +5295,33 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-1, 0.004], [1, 0.004], [-1, -0.003], [1, -0.003]].forEach(function (w3) { var wm3 = new THREE.Mesh(new THREE.CircleGeometry(1, 16), dWingMat); wm3.scale.set(0.016, 0.0045, 1); wm3.position.set(w3[0] * 0.016, 0.001, w3[1]); wm3.rotation.x = -Math.PI / 2; dfly.add(wm3); dWings.push({ m: wm3, s: w3[0] }); });
     // swirling vine markings glowing on its sides, like water-lily tendrils painted in light, with tiny leaves along them
     var vineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(pal.side), 0.3), transparent: true, opacity: 0.45, depthWrite: false }), vines = [];
-    [-1, 1].forEach(function (s) {
-      for (var vv = 0; vv < 2; vv++) {
-        var pts = [];
-        for (var i = 0; i <= 26; i++) { var t2 = i / 26, a = t2 * Math.PI * (2.2 + vv * 0.6), r = 0.025 + t2 * 0.04; var dir = V3(s, 0.15 + Math.sin(a) * r * 6 - vv * 0.4, (vv ? -0.35 : 0.3) + Math.cos(a) * r * 6 - t2 * 0.2).normalize(); ray.set(V3(0, 0, 0), dir); var hh = ray.intersectObject(bodyMesh)[0]; if (hh) pts.push(hh.point.clone().addScaledVector(hh.face.normal.clone().normalize(), 0.0075)); }
-        if (pts.length < 4) continue;
-        var vc = new THREE.CatmullRomCurve3(pts), vmsh = new THREE.Mesh(new THREE.TubeGeometry(vc, 60, 0.0012, 5, false), vineMat); torso.add(vmsh); vines.push(vmsh);
-        for (var lf = 1; lf < 6; lf++) { var lp3 = vc.getPointAt(lf / 6), leaf = new THREE.Mesh(new THREE.CircleGeometry(0.0045, 10), vineMat); leaf.position.copy(lp3); leaf.lookAt(lp3.clone().multiplyScalar(2)); leaf.scale.set(0.6, 1, 1); leaf.rotateZ(lf * 1.3); torso.add(leaf); }
-        var vtip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.spot, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); vtip.scale.set(0.018, 0.018, 1); vtip.position.copy(vc.getPointAt(1)); torso.add(vtip); vines.push(vtip);
+    function vineTrail(dir0, s, turns, r0, seed) {                    // one swirling tendril over its body: a spiral curling in on itself, with fine side-curls branching off it and little leaves along it
+      var pts = [], base = dir0.clone().normalize(), up = Math.abs(base.y) > 0.9 ? V3(1, 0, 0) : V3(0, 1, 0), u = up.clone().cross(base).normalize(), w = base.clone().cross(u).normalize();
+      for (var i = 0; i <= 40; i++) { var t2 = i / 40, a = t2 * Math.PI * 2 * turns, r = r0 * (1 - t2 * 0.85); var dir = base.clone().addScaledVector(u, Math.cos(a) * r).addScaledVector(w, Math.sin(a) * r).normalize(); ray.set(V3(0, 0, 0), dir); var hh = ray.intersectObject(bodyMesh)[0]; if (hh) pts.push(hh.point.clone().addScaledVector(hh.face.normal.clone().normalize(), 0.0078)); }
+      if (pts.length < 6) return null;
+      return new THREE.CatmullRomCurve3(pts);
+    }
+    function drawVine(vc, thick, seed) {
+      var tg = new THREE.TubeGeometry(vc, 90, 1, 6, false), p = tg.attributes.position;
+      for (var i = 0; i <= 90; i++) { var t2 = i / 90, c = vc.getPointAt(t2), r = thick * (0.35 + 0.65 * Math.sin(Math.min(1, t2 * 1.2 + 0.1) * Math.PI)); for (var j = 0; j <= 6; j++) { var k = i * 7 + j; p.setXYZ(k, c.x + (p.getX(k) - c.x) * r, c.y + (p.getY(k) - c.y) * r, c.z + (p.getZ(k) - c.z) * r); } }   // (thick in the middle, tapering to fine points)
+      var vm = new THREE.Mesh(tg, vineMat); torso.add(vm); vines.push(vm);
+      for (var lf = 1; lf < 9; lf++) {                                  // little leaves along it, alternating sides
+        var lt = lf / 9, lp3 = vc.getPointAt(lt), tan = vc.getTangentAt(lt), nrm = lp3.clone().normalize(), side = tan.clone().cross(nrm).normalize().multiplyScalar(lf % 2 ? 1 : -1);
+        var ls = new THREE.Shape(); ls.moveTo(0, 0); ls.quadraticCurveTo(0.0028, 0.003, 0, 0.0075); ls.quadraticCurveTo(-0.0028, 0.003, 0, 0);
+        var leaf = new THREE.Mesh(new THREE.ShapeGeometry(ls, 6), vineMat); leaf.position.copy(lp3).addScaledVector(nrm, 0.0003); leaf.lookAt(lp3.clone().add(nrm)); var ang = Math.atan2(side.dot(new THREE.Vector3(0, 1, 0).applyQuaternion(leaf.quaternion).cross(nrm)), side.dot(new THREE.Vector3(0, 1, 0).applyQuaternion(leaf.quaternion))); leaf.rotateZ(-ang + (lf % 2 ? 0.5 : -0.5)); leaf.scale.setScalar(0.8 + Math.sin(lt * Math.PI) * 0.5); torso.add(leaf);
       }
+      for (var cu = 0; cu < 3; cu++) {                                  // fine curls branching off it
+        var ct = 0.2 + cu * 0.25, cp = vc.getPointAt(ct), cn = cp.clone().normalize(), cs = vc.getTangentAt(ct).clone().cross(cn).normalize().multiplyScalar(cu % 2 ? 1 : -1), cpts = [];
+        for (var q = 0; q <= 14; q++) { var qa = q / 14 * Math.PI * 1.6, qr = 0.012 * (1 - q / 18); var d2 = cp.clone().addScaledVector(cs, Math.sin(qa) * qr + qr * 0.3).addScaledVector(vc.getTangentAt(ct), (1 - Math.cos(qa)) * qr * 0.8); ray.set(V3(0, 0, 0), d2.clone().normalize()); var hh2 = ray.intersectObject(bodyMesh)[0]; if (hh2) cpts.push(hh2.point.clone().addScaledVector(hh2.face.normal.clone().normalize(), 0.0078)); }
+        if (cpts.length > 4) { var cg2 = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cpts), 24, thick * 0.45, 5, false); var cm2 = new THREE.Mesh(cg2, vineMat); torso.add(cm2); vines.push(cm2); var dot = new THREE.Mesh(new THREE.SphereGeometry(thick * 0.9, 8, 6), vineMat); dot.position.copy(cpts[cpts.length - 1]); torso.add(dot); }
+      }
+      var vtip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.spot, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); vtip.scale.set(0.016, 0.016, 1); vtip.position.copy(vc.getPointAt(1)); torso.add(vtip); vines.push(vtip);
+    }
+    [-1, 1].forEach(function (s) {
+      [[V3(s, 0.2, 0.45), 1.6, 0.42], [V3(s, 0.1, -0.35), 1.8, 0.45], [V3(s, -0.35, 0.05), 1.4, 0.36], [V3(s * 0.6, 0.65, 0.05), 1.3, 0.3], [V3(s * 0.7, 0.45, -0.6), 1.2, 0.3], [V3(s * 0.75, -0.25, 0.7), 1.2, 0.28]].forEach(function (v, k) {
+        var vc = vineTrail(v[0], s, v[1], v[2], k * 13 + (s > 0 ? 7 : 0)); if (vc) drawVine(vc, 0.0016 - k * 0.00008, k);
+      });
     });
-    // a sheen of shimmering pond-light over its whole coat, like light through ripples
-    
     // little glowing pearls set in its fur in a curving line down each shoulder
     var pearlM = new THREE.MeshPhysicalMaterial({ color: 0xfaf6ff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.35 });
     [-1, 1].forEach(function (s) { for (var pp = 0; pp < 6; pp++) { ray.set(V3(0, 0, 0), V3(s, 0.55 - pp * 0.13, 0.55 - pp * 0.05).normalize()); var ph = ray.intersectObject(bodyMesh)[0]; if (!ph) continue; var pm4 = new THREE.Mesh(new THREE.SphereGeometry(0.0035 - pp * 0.0003, 12, 10), pearlM); pm4.position.copy(ph.point).addScaledVector(ph.face.normal.clone().normalize(), 0.008); torso.add(pm4); } });
