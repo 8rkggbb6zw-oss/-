@@ -3422,7 +3422,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n  float zm = zN(vZPos * 60.0) * 0.55 + zN(vZPos * 140.0) * 0.3 + zN(vZPos * 320.0) * 0.15;\n  diffuseColor.rgb *= 1.0 - uMottle * 0.5 + uMottle * zm;')
           .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  float zr = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.2);\n  totalEmissiveRadiance += diffuseColor.rgb * (uFill + uRim * zr);');
     };
-    m.customProgramCacheKey = function () { return 'zephyrasoft' + (opts.vertexColors ? 'v' : '') + (opts.map ? 'm' : ''); };
+    m.customProgramCacheKey = function () { return 'zephyrasoft' + (opts.vertexColors ? 'v' : '') + (opts.map ? 'm' : '') + (opts.bumpMap ? 'b' : ''); };
     return m;
   }
   // its fur and its fleece: layers of shells over each part, and in every layer a hair drawn wherever one grows
@@ -3589,24 +3589,62 @@ EVERDAWN_PARTS.push(function (THREE) {
     var vg = g.createLinearGradient(0, 0, 0, h); vg.addColorStop(0, 'rgba(0,0,0,1)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,1)');
     g.globalCompositeOperation = 'destination-out'; g.fillStyle = vg; g.fillRect(0, 0, w, h);
   }));
-  function zFeatherTex(pal) {                                         // a real feather: a fine shaft, and hundreds of barbs sweeping out from it, the vane soft-edged with a few splits, white fading to sunrise at the tip
-    var top = new THREE.Color(pal.top), low = new THREE.Color(pal.low).lerp(new THREE.Color(pal.gold), 0.25);
-    var tx = new THREE.CanvasTexture(glimCanvas(128, 512, function (g, w, h) {
-      g.clearRect(0, 0, w, h);
-      function col(f, a) { var c = top.clone().lerp(low, Math.pow(f, 1.8)); return 'rgba(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ',' + a + ')'; }
-      for (var y = 10; y < h - 8; y += 1.6) {
-        var f = y / h, half = w * 0.46 * Math.sin(Math.min(1, (1 - f) * 1.15) * Math.PI * 0.5) * (f < 0.1 ? f / 0.1 : 1) * (0.92 + glimR(y * 0.37) * 0.08);   // (rounded at the tip, narrowing to the quill)
-        if (glimR(Math.floor(y / 14) * 3.1) < 0.12) half *= 0.85;      // (a few little splits in the vane)
-        [-1, 1].forEach(function (s) {
-          g.strokeStyle = col(f, f < 0.12 ? 0.5 : 0.9); g.lineWidth = 1.2; g.beginPath(); g.moveTo(w / 2, h - y);
-          g.quadraticCurveTo(w / 2 + s * half * 0.6, h - y - half * 0.25, w / 2 + s * half, h - y - half * 0.5); g.stroke();   // (each barb sweeping out toward the tip)
-        });
+  // a real feather, painted fine: a tapering shaft, and hundreds of barbs sweeping out from it toward the tip, each
+  // a little different, with the faint gaps between them; the outer vane narrower than the inner one; the vane
+  // soft-edged with a few little splits where the barbs have parted; a fluffy tuft of down at the base, a little
+  // shadowed where the next feather covers it; white fading to sunrise at the tip, edged in gold. Painted twice: once
+  // in colour, once as a height map so each barb and the shaft catch the light. kind: 0 a flight feather (long, the
+  // tip a little pointed), 1 a covert (round-tipped)
+  function zFeatherTex(pal, kind) {
+    var round = kind === 1, W = 256, H = round ? 320 : 1024, cv = document.createElement('canvas'), bv = document.createElement('canvas');
+    cv.width = bv.width = W; cv.height = bv.height = H;
+    var g = cv.getContext('2d'), b = bv.getContext('2d');
+    var top = new THREE.Color(pal.top), low = new THREE.Color(pal.low), gold = new THREE.Color(pal.gold);
+    b.fillStyle = '#000'; b.fillRect(0, 0, W, H);
+    function col(f, a, k, dim) { var c = top.clone().lerp(low, Math.pow(Math.max(0, f - 0.3) / 0.7, 1.4) * 0.9); if (f > 0.88) c.lerp(gold, (f - 0.88) / 0.12 * 0.55); c.multiplyScalar((0.93 + glimR(k) * 0.09) * (dim || 1)); return 'rgba(' + Math.round(Math.min(1, c.r) * 255) + ',' + Math.round(Math.min(1, c.g) * 255) + ',' + Math.round(Math.min(1, c.b) * 255) + ',' + a + ')'; }
+    var base = H * (round ? 0.16 : 0.08), tipY = 6, L = H - base - tipY;
+    function halfW(f, side) {                                         // how wide the vane is at f (0 at its base, 1 at its tip), on one side
+      var wMax = W * (round ? 0.47 : 0.45) * (side > 0 ? 1 : (round ? 0.85 : 0.5));   // (the outer vane narrower)
+      var tipShape = round ? Math.sqrt(Math.max(0, 1 - Math.pow(Math.max(0, f - 0.5) / 0.5, 2))) : Math.pow(Math.max(0, 1 - Math.max(0, f - 0.62) / 0.38), 0.65) * (1 - Math.max(0, f - 0.85) * (side < 0 ? 1.8 : 1.1));
+      return wMax * Math.min(1, f / 0.06 + 0.35) * tipShape;
+    }
+    var step = round ? 1.2 : 1.35;
+    for (var k0 = 0; k0 < 2; k0++) {                                  // first the vane itself, solid, so no light shows through between the barbs
+      var sd0 = k0 ? 1 : -1, grd = g.createLinearGradient(0, H - base, 0, tipY);
+      [0, 0.3, 0.6, 0.85, 1].forEach(function (f) { grd.addColorStop(f, col(f, 1, 5, 0.97)); });
+      g.fillStyle = grd; g.beginPath(); g.moveTo(W / 2, H - base);
+      for (var y1 = 0; y1 <= L; y1 += 4) { var hw1 = halfW(y1 / L, sd0); g.lineTo(W / 2 + sd0 * hw1, H - base - y1 - hw1 * (round ? 0.38 : 0.6)); }
+      g.lineTo(W / 2, tipY); g.closePath(); g.fill();
+    }
+    for (var k = 0; k < 2; k++) {
+      var side = k ? 1 : -1;
+      for (var y = 0; y < L; y += step) {
+        var f = y / L, hw = halfW(f, side), n = Math.round(y / step), split = glimR(Math.floor(y / 11) * 3.1 + side * 7) < 0.09 ? 0.78 : 1;   // (a few places where the barbs have parted)
+        if (hw < 1) continue;
+        var y0 = H - base - y, sweep = hw * (round ? 0.38 : 0.6), shade = n % 3 === 0 ? 0.96 : 1, cover = round ? 1 : (f < 0.35 ? 0.88 + f * 0.34 : 1);   // (every third barb in shadow, the faint gaps between them; the covered base a little darker)
+        g.strokeStyle = col(f, 0.95, y * 1.7 + side, shade * cover); g.lineWidth = 1.3;
+        g.beginPath(); g.moveTo(W / 2, y0); g.quadraticCurveTo(W / 2 + side * hw * 0.55, y0 - sweep * 0.32, W / 2 + side * hw * split, y0 - sweep); g.stroke();
+        b.strokeStyle = 'rgba(255,255,255,' + (n % 3 === 0 ? 0.35 : 0.8) + ')'; b.lineWidth = 1.1;
+        b.beginPath(); b.moveTo(W / 2, y0); b.quadraticCurveTo(W / 2 + side * hw * 0.55, y0 - sweep * 0.32, W / 2 + side * hw * split, y0 - sweep); b.stroke();
+        if (n % 4 === 1) { g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(W / 2 + side * 3, y0 - 1.2); g.quadraticCurveTo(W / 2 + side * hw * 0.5, y0 - sweep * 0.36, W / 2 + side * hw * 0.92 * split, y0 - sweep - 1); g.stroke(); }   // (the sheen along a barb)
       }
-      for (var d = 0; d < 40; d++) { g.strokeStyle = col(0.05, 0.6); g.lineWidth = 0.8; var dy = h - 10 - glimR(d) * 50, ds = glimR(d * 3.1) > 0.5 ? 1 : -1; g.beginPath(); g.moveTo(w / 2, dy); g.quadraticCurveTo(w / 2 + ds * 12, dy - 6 + glimR(d * 7) * 12, w / 2 + ds * (14 + glimR(d * 5) * 16), dy - 14); g.stroke(); }   // (fluffy afterfeather near the base)
-      var sg = g.createLinearGradient(0, h, 0, 0); sg.addColorStop(0, 'rgba(255,250,240,0.95)'); sg.addColorStop(1, 'rgba(255,240,220,0.6)');
-      g.strokeStyle = sg; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 10); g.stroke();   // the shaft
-    }));
-    tx.anisotropy = renderer.capabilities.getMaxAnisotropy(); return tx;
+    }
+    for (var e = 0; e < L; e += 2) {                                  // a thin golden edge round the tip
+      var f2 = e / L; if (f2 < (round ? 0.62 : 0.75)) continue;
+      [-1, 1].forEach(function (sd) { var hw2 = halfW(f2, sd), y2 = H - base - e, sw = hw2 * (round ? 0.38 : 0.6); g.fillStyle = 'rgba(255,212,120,' + (0.6 * (f2 - 0.6) / 0.4) + ')'; g.beginPath(); g.arc(W / 2 + sd * hw2, y2 - sw, 1.8, 0, Math.PI * 2); g.fill(); });
+    }
+    for (var d = 0; d < 90; d++) {                                    // fluffy down at the base
+      var dy = H - glimR(d) * base * 1.4, ds = glimR(d * 3.1) > 0.5 ? 1 : -1, dl = 12 + glimR(d * 5) * W * 0.3;
+      g.strokeStyle = col(0.1, 0.6, d, 0.95); g.lineWidth = 0.9; g.beginPath(); g.moveTo(W / 2, dy); g.bezierCurveTo(W / 2 + ds * dl * 0.4, dy - 8, W / 2 + ds * dl * 0.8, dy + (glimR(d * 7) - 0.5) * 16, W / 2 + ds * dl, dy - 12 + glimR(d * 9) * 10); g.stroke();
+    }
+    var sg = g.createLinearGradient(0, H, 0, tipY); sg.addColorStop(0, 'rgba(255,252,246,1)'); sg.addColorStop(0.7, 'rgba(255,240,222,0.95)'); sg.addColorStop(1, 'rgba(255,226,200,0.7)');
+    g.fillStyle = sg; g.beginPath(); g.moveTo(W / 2 - 3.5, H); g.lineTo(W / 2 + 3.5, H); g.lineTo(W / 2 + 0.6, tipY + 4); g.lineTo(W / 2 - 0.6, tipY + 4); g.closePath(); g.fill();   // the shaft, tapering
+    g.strokeStyle = 'rgba(190,150,130,0.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(W / 2 + 2, H); g.lineTo(W / 2 + 0.4, tipY + 6); g.stroke();   // (its shadowed side)
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(W / 2 - 1.6, H); g.lineTo(W / 2 - 0.3, tipY + 6); g.stroke();   // (and its shine)
+    b.fillStyle = '#fff'; b.beginPath(); b.moveTo(W / 2 - 3.5, H); b.lineTo(W / 2 + 3.5, H); b.lineTo(W / 2 + 0.6, tipY + 4); b.lineTo(W / 2 - 0.6, tipY + 4); b.closePath(); b.fill();
+    var map = new THREE.CanvasTexture(cv), bump = new THREE.CanvasTexture(bv);
+    map.anisotropy = bump.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return { map: map, bump: bump };
   }
   function zBandTex(pal) {                                            // the silk band round its neck: shading into each other, golden swirls embroidered along it
     var tx = new THREE.CanvasTexture(glimCanvas(512, 64, function (g, w, h) {
@@ -3751,28 +3789,64 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bezel = new THREE.Mesh(new THREE.TorusGeometry(0.0048, 0.0006, 6, 24), goldMat); gemSet.add(bezel);
     for (var pr = 0; pr < 8; pr++) { var pa2 = pr / 8 * Math.PI * 2, ray = new THREE.Mesh(new THREE.ConeGeometry(0.0007, pr % 2 ? 0.0035 : 0.0055, 4), goldMat); ray.position.set(Math.cos(pa2) * (pr % 2 ? 0.0066 : 0.0075), Math.sin(pa2) * (pr % 2 ? 0.0066 : 0.0075), -0.0004); ray.rotation.z = pa2 - Math.PI / 2; gemSet.add(ray); }   // (set in a tiny golden sun)
     var gemSpark = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.gem, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); gemSpark.scale.set(0.03, 0.03, 1); gemSpark.position.set(0, 0.03, 0.052); head.add(gemSpark);
-    // wings of real feathers on its shoulders, white fading to sunrise at the tips: long flight feathers, then rows
-    // of shorter coverts over them, and a soft fluff of down where they join the body
-    var featherTex = zFeatherTex(pal), featherMat = zSoftMat({ map: featherTex, color: 0xffffff, roughness: 0.85, side: THREE.DoubleSide, alphaTest: 0.35 }, 0.3, 0.3, 0);
-    var featherGeoBase = (function () {
-      var geo = new THREE.PlaneGeometry(1, 1, 4, 10).translate(0, 0.5, 0), p = geo.attributes.position;
-      for (var i = 0; i < p.count; i++) { var x = p.getX(i), y = p.getY(i); p.setZ(i, -x * x * 0.35 + y * y * 0.12); }   // (cupped across, curving gently along)
+    // big wings, built like a bird's: a curved arm and hand along the leading edge; long primaries fanned from the hand
+    // with little gaps between their tips, secondaries along the arm and tertials by the body; four rows of coverts
+    // shingled over their bases (greater, median, lesser and tiny marginals along the edge, each row smaller and
+    // rounder); a little alula at the wrist; soft scapulars over its shoulder; and a soft furred leading edge. Each
+    // feather a little different in tint, length and twist, cupped across and curving along its length; every barb
+    // and shaft catching the light. Drawn in batches, a row at a time
+    var ft = zFeatherTex(pal, 0), ct = zFeatherTex(pal, 1);
+    var flightMat = zSoftMat({ map: ft.map, bumpMap: ft.bump, bumpScale: 0.12, color: 0xffffff, roughness: 0.75, side: THREE.DoubleSide, alphaTest: 0.4 }, 0.38, 0.45, 0);
+    var covertMat = zSoftMat({ map: ct.map, bumpMap: ct.bump, bumpScale: 0.1, color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide, alphaTest: 0.4 }, 0.4, 0.45, 0);
+    var featherGeo = (function () {
+      var geo = new THREE.PlaneGeometry(1, 1, 8, 20).translate(0, 0.5, 0), p = geo.attributes.position;
+      for (var i = 0; i < p.count; i++) { var x = p.getX(i), y = p.getY(i); p.setZ(i, -x * x * 0.28 + y * y * 0.1 + x * y * 0.05); }   // (cupped across, curving along, a slight twist)
       geo.computeVertexNormals(); return geo;
     })();
     var wings = [];
     [-1, 1].forEach(function (s) {
-      var wg = new THREE.Group(); wg.position.set(s * 0.15, BY + 0.08, 0.08); body.add(wg); wings.push({ g: wg, s: s });
-      var fold = new THREE.Group(); fold.rotation.set(0, s * 0.25, s * -0.45); wg.add(fold);
-      [[10, 0.2, 0.05, 0.25, 1.35, 0], [9, 0.12, 0.045, 0.3, 1.3, 0.003], [8, 0.07, 0.038, 0.35, 1.2, 0.006], [7, 0.042, 0.03, 0.4, 1.1, 0.009]].forEach(function (row, r) {   // rows: count, length, width, first angle, last angle, offset outward
-        for (var f = 0; f < row[0]; f++) {
-          var th = row[3] + (row[4] - row[3]) * f / (row[0] - 1), len = row[1] * (0.82 + Math.sin(f / (row[0] - 1) * Math.PI) * 0.25) * (r === 0 && f < 2 ? 0.85 : 1);
-          var fm = new THREE.Mesh(featherGeoBase, featherMat); fm.scale.set(row[2], len, len);
-          fm.rotation.order = 'XYZ'; fm.rotation.set(th - Math.PI / 2, s * Math.PI / 2, 0);   // (lying back and up along its side)
-          fm.position.set(s * row[5], -f * 0.0012, -r * 0.004); fm.castShadow = r < 2; fold.add(fm);
+      var wg = new THREE.Group(); wg.position.set(s * 0.1, BY + 0.075, 0.07); body.add(wg); wings.push({ g: wg, s: s });   // (rooted in the fleece over its shoulders)
+      var arm = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(s * 0.025, 0.05, -0.02), V3(s * 0.04, 0.1, -0.07), V3(s * 0.036, 0.135, -0.15), V3(s * 0.022, 0.15, -0.23)]);   // (swept back along its back)   // shoulder, elbow, wrist, hand, tip
+      var out = V3(s, 0.45, 0.1).normalize(), rows = [],   // (tilted to follow the curve of its back)
+          q = new THREE.Quaternion();
+      function addRow(n, u0, u1, lenF, wid, lift, mat, tint, shadow, dirF, back) {   // n feathers along the arm from u0 to u1, lifted out over the rows beneath
+        var im = new THREE.InstancedMesh(featherGeo, mat, n), mx = new THREE.Matrix4(), X = new THREE.Vector3(), Y = new THREE.Vector3(), Z = new THREE.Vector3(), c = new THREE.Color();
+        for (var i = 0; i < n; i++) {
+          var u = u0 + (u1 - u0) * (n > 1 ? i / (n - 1) : 0), p = arm.getPointAt(u), len = lenF(u) * (0.94 + glimR(i * 2.3 + n * 7) * 0.1);
+          Y.copy(dirF(u)).normalize();
+          q.setFromAxisAngle(out, (glimR(i * 4.1 + n) - 0.5) * 0.08); Y.applyQuaternion(q);   // (each a little askew)
+          Z.copy(out).addScaledVector(Y, -out.dot(Y)).normalize(); X.crossVectors(Y, Z).normalize();
+          q.setFromAxisAngle(Y, (glimR(i * 6.7 + n) - 0.5) * 0.25); X.applyQuaternion(q); Z.applyQuaternion(q);   // (and twisted a touch)
+          mx.makeBasis(X, Y, Z).scale(V3(wid * (0.9 + glimR(i * 3.1 + n) * 0.2), len, len));
+          var lf = lift + i * 0.0005;
+          mx.setPosition(p.x + out.x * lf - Y.x * (back || 0), p.y - 0.004 - Y.y * (back || 0), p.z + out.z * lf - Y.z * (back || 0));
+          im.setMatrixAt(i, mx); c.setRGB(1, 1, 1).multiplyScalar(tint * (0.94 + glimR(i * 5.7 + n * 3) * 0.1)); im.setColorAt(i, c);
         }
-      });
-      var down = []; for (var cf = 0; cf < 6; cf++) down.push([s * 0.004, 0.008 + cf * 0.005, -0.004 - cf * 0.009, 0.022 - cf * 0.002, 0.1]);
-      cloud(down, wg, 0, 0, 0, 0.008);                                 // (soft down where they join its body)
+        im.castShadow = !!shadow; wg.add(im); rows.push(im); return im;
+      }
+      function sweep(a, b) { return function (u) { return V3(0, a + (b - a) * u, -1); }; }
+      addRow(12, 0.6, 1, function (u) { return 0.2 + 0.08 * Math.sin((u - 0.6) / 0.4 * Math.PI * 0.75); }, 0.05, 0, flightMat, 1, true, function (u) { return V3(0, -0.05 + (u - 0.6) * 2.4, -1); });   // the primaries, fanned from the hand
+      addRow(14, 0.06, 0.6, function (u) { return 0.15 + u * 0.06; }, 0.052, 0.0015, flightMat, 1, true, sweep(-0.45, 0.15));   // the secondaries, along the arm
+      addRow(4, 0, 0.1, function () { return 0.12; }, 0.05, 0.003, flightMat, 1.02, true, sweep(-0.75, -0.6));   // the tertials, by its body
+      addRow(24, 0.04, 0.98, function (u) { return 0.075 + u * 0.035; }, 0.045, 0.005, covertMat, 1.02, true, sweep(-0.35, 0.95), 0.004);   // the greater coverts
+      addRow(22, 0.05, 0.94, function (u) { return 0.046 + u * 0.012; }, 0.036, 0.009, covertMat, 1.03, false, sweep(-0.3, 0.9), 0.004);   // the median coverts
+      addRow(20, 0.06, 0.9, function () { return 0.03; }, 0.028, 0.013, covertMat, 1.04, false, sweep(-0.25, 0.85), 0.006);   // the lesser coverts
+      addRow(26, 0.04, 0.88, function () { return 0.017; }, 0.018, 0.017, covertMat, 1.06, false, sweep(-0.2, 0.8), 0.008);   // and tiny marginals along the edge
+      var alula = new THREE.InstancedMesh(featherGeo, covertMat, 4), mx2 = new THREE.Matrix4(), wr = arm.getPointAt(0.55);   // the alula: little feathers at the wrist
+      for (var a = 0; a < 4; a++) { mx2.makeRotationFromEuler(new THREE.Euler(-1.75 + a * 0.15, s * Math.PI / 2, 0, 'XYZ')).scale(V3(0.022, 0.05 - a * 0.007, 0.05)); mx2.setPosition(wr.x + s * (0.02 + a * 0.0015), wr.y + 0.004, wr.z + 0.004); alula.setMatrixAt(a, mx2); alula.setColorAt(a, new THREE.Color(1.04, 1.04, 1.04)); }
+      wg.add(alula);
+      var scap = new THREE.InstancedMesh(featherGeo, covertMat, 8);   // scapulars: soft feathers lying back over its shoulder
+      for (var sc = 0; sc < 8; sc++) { mx2.makeRotationFromEuler(new THREE.Euler(-1.75 + sc * 0.04, s * (Math.PI / 2 - 0.2), 0, 'XYZ')).scale(V3(0.035, 0.07 + sc * 0.005, 0.07)); mx2.setPosition(s * (-0.016 + sc * 0.002), 0.01 + sc * 0.005, 0.008 - sc * 0.006); scap.setMatrixAt(sc, mx2); scap.setColorAt(sc, new THREE.Color(1, 1, 1).multiplyScalar(0.98 + glimR(sc * 2.3) * 0.06)); }   // (each tinted, like the rows: they share their material)
+      wg.add(scap);
+      var edgeGeo = new THREE.TubeGeometry(arm, 48, 1, 14, false), ep = edgeGeo.attributes.position;   // the leading edge, soft and furred, slimming toward the tip
+      for (var ti = 0; ti <= 48; ti++) { var tu = ti / 48, cpt = arm.getPointAt(tu), r = 0.014 - tu * 0.009; for (var tj = 0; tj <= 14; tj++) { var tk = ti * 15 + tj; ep.setXYZ(tk, cpt.x + (ep.getX(tk) - cpt.x) * r, cpt.y + (ep.getY(tk) - cpt.y) * r, cpt.z + (ep.getZ(tk) - cpt.z) * r); } }
+      edgeGeo.computeVertexNormals();
+      abPart(edgeGeo, plush, 0, 0, 0, 0, 0, 0, wg).castShadow = true;
+      furred(edgeGeo, fur, 0, 0, 0, [1, 1, 1], wg, 0.004, [0, -0.3, -1]);
+      var down = []; for (var cf = 0; cf < 9; cf++) down.push([s * (0.004 + cf * 0.002), 0.002 + cf * 0.007, 0.01 - cf * 0.011, 0.032 - cf * 0.0026, 0.1]);
+      for (var cr = 0; cr < 5; cr++) { var ca3 = cr / 4 * Math.PI; down.push([-s * 0.01 + Math.cos(ca3) * s * 0.02, -0.012, 0.02 - cr * 0.016, 0.03, 0.15]); }   // (a fluffy ring of fleece round the root)
+      cloud(zBillow(down, [-s * 0.04, -0.03, -0.02], 1, 1700 + s * 9), wg, 0, 0, 0, 0.012);   // (soft down and fleece where they grow from its body, so they blend in)
+      wings[wings.length - 1].rows = rows;
     });
     // short, plush legs, each ending in a puff of cloud instead of a hoof, with a gold band round the ankle
     var bandMat = new THREE.MeshStandardMaterial({ color: 0xffe0a0, metalness: 0.75, roughness: 0.25, emissive: pal.gold, emissiveIntensity: 0.15 });
@@ -3841,7 +3915,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.head.rotation.set(0.1 + (happy ? -0.15 + Math.sin(m.hum * 5) * 0.08 : Math.max(0, Math.sin(t * 0.17 + g.stall) - 0.75) * 1.0), look * 0.5 * (happy ? 0.2 : 1), happy ? Math.sin(m.hum * 2.5) * 0.18 : Math.sin(t * 0.37 + g.stall) * 0.06);
     m.ears.forEach(function (e, k) { var flick = Math.max(0, Math.sin(t * 0.7 + k * 2.4 + g.stall) - 0.92) * 12; e.g.rotation.z = e.s * (-Math.sin(t * 1.1 + k) * 0.05 - flick * 0.2 - (happy ? 0.25 : 0)); e.g.rotation.x = Math.sin(t * 0.8 + k) * 0.05; });
     var flap = happy ? Math.sin(m.hum * 18) : Math.sin(t * 2.2 + g.stall) * 0.5 + (moving ? Math.sin(g.hop * 2) * 0.5 : 0);
-    m.wings.forEach(function (w) { w.g.rotation.set(0, 0, w.s * (0.05 + flap * 0.3)); });
+    m.wings.forEach(function (w) { w.g.rotation.set(happy ? -0.15 : 0, happy ? -w.s * 0.25 : 0, w.s * (0.02 + flap * 0.28)); });   // (held a little open, opening wider and fluttering when happy)
     m.tail.rotation.set(Math.sin(t * 1.2 + g.stall) * 0.08, Math.sin(t * 0.9 + g.stall) * 0.25 + (happy ? Math.sin(m.hum * 9) * 0.3 : 0), 0);
     m.tails.forEach(function (sc) {                                   // the scarf ends rippling in the breeze
       var p = sc.m.geometry.attributes.position, b = sc.base;
