@@ -5679,14 +5679,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     var starMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(0xffffff), 0.4), transparent: true, opacity: 0.55 }), starGeo = new THREE.SphereGeometry(1, 10, 8), stars = [];
     [-1, 1].forEach(function (s) { for (var k = 0; k < 9; k++) { ray.set(V3(0, 0, 0.1 - k * 0.026), V3(s, 0.3 + Math.sin(k * 0.9) * 0.1, 0).normalize()); var sh = ray.intersectObject(bodyMesh)[0]; if (!sh) continue; var st = new THREE.Mesh(starGeo, starMat); st.scale.setScalar(0.0022 - Math.abs(k - 4) * 0.00015); st.position.copy(sh.point).addScaledVector(sh.face.normal.clone().normalize(), 0.0042); torso.add(st); var sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.spot, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); sg.scale.set(0.022, 0.022, 1); sg.position.copy(st.position); torso.add(sg); stars.push(sg); } });
     function topOf(mesh, z, dirY) { ray.set(V3(0, 0, z), V3(0, dirY, 0)); var h = ray.intersectObject(mesh)[0]; return h ? h.point.clone().add(V3(0, -dirY * 0.003, 0)) : V3(0, 0, z); }
-    // the tail: long, slender and round, curving gracefully up behind it, in two parts so it can sway
-    var tail = new THREE.Group(); tail.position.set(0, 0.012, -0.11); tail.rotation.x = -0.45; torso.add(tail);
-    var tailGeo = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, -0.065, 0.026, 0.028, 0.09); }, [60, 40], 0.2, function (n, q, c) { skinCol(n, c, n.y * 1.2 + 0.05); c.multiplyScalar(1 - 0.06 * Math.pow(0.5 + 0.5 * Math.sin(q.z * 140), 3) * ss(-0.3, 0.3, n.y)); });   // (faint rings along it, like a lemur's)
-    coat(tailGeo, tail, 0.0045, [0, 0, -1]);
-    var tail2 = new THREE.Group(); tail2.position.set(0, 0.002, -0.13); tail2.rotation.x = -0.4; tail.add(tail2);
-    var tail2Geo = sdfShape(function (x, y, z) { return sm(ell(x, y, z, 0, 0, -0.04, 0.017, 0.019, 0.07), ell(x, y, z, 0, 0, -0.095, 0.007, 0.008, 0.04), 0.02); }, [56, 36], 0.2, function (n, q, c) { skinCol(n, c, n.y * 1.2 + 0.1); });
-    coat(tail2Geo, tail2, 0.004, [0, 0, -1]);
-    var tailTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.gill[1], transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); tailTip.scale.set(0.035, 0.035, 1); tailTip.position.set(0, 0.004, -0.13); tail2.add(tailTip);
+    // the tail: one long, smooth, plush tail, rising from its rump and arching gracefully up and over like a plume,
+    // tapering, then filling out into a soft brush of longer fur at the end; it bends along its whole length as it sways
+    var tail = new THREE.Group(); tail.position.set(0, 0.012, -0.095); torso.add(tail);
+    var tCrv = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, 0.03, -0.06), V3(0, 0.075, -0.115), V3(0, 0.115, -0.18), V3(0, 0.125, -0.245), V3(0, 0.105, -0.3), V3(0, 0.07, -0.335)]);
+    var TN = 72, TM = 18, tFr = tCrv.computeFrenetFrames(TN, false), tPos = [], tCol = [], tIdx = [], tc = new THREE.Color(), tn = new THREE.Vector3();
+    function tailR(u) { return 0.024 * Math.pow(1 - u, 0.8) + 0.007 + 0.011 * Math.exp(-Math.pow((u - 0.86) / 0.09, 2)) - (u > 0.97 ? (u - 0.97) / 0.03 * 0.012 : 0); }   // (thick at the root, slender in the middle, a soft brush near the end)
+    for (var ti = 0; ti <= TN; ti++) {
+      var tu = ti / TN, tp = tCrv.getPointAt(tu), tr = Math.max(0.0015, tailR(tu));
+      for (var tj = 0; tj <= TM; tj++) {
+        var ta = tj / TM * Math.PI * 2; tn.copy(tFr.normals[ti]).multiplyScalar(Math.cos(ta)).addScaledVector(tFr.binormals[ti], Math.sin(ta));
+        tPos.push(tp.x + tn.x * tr, tp.y + tn.y * tr * 1.05, tp.z + tn.z * tr);
+        skinCol(tn, tc, tn.y * 0.75 + 0.05); tc.multiplyScalar(1 - 0.07 * Math.pow(0.5 + 0.5 * Math.sin(tu * 46), 3) * ss(-0.3, 0.3, tn.y) * ss(0.1, 0.2, tu) * ss(0.8, 0.7, tu)); tc.lerp(bellyCol, ss(0.72, 0.95, tu) * 0.55);   // (faint rings along it, the brush paling at the tip)
+        tCol.push(tc.r, tc.g, tc.b);
+        if (ti < TN && tj < TM) { var q0 = ti * (TM + 1) + tj; tIdx.push(q0, q0 + 1, q0 + TM + 1, q0 + 1, q0 + TM + 2, q0 + TM + 1); }
+      }
+    }
+    var tailGeo = new THREE.BufferGeometry(); tailGeo.setAttribute('position', new THREE.Float32BufferAttribute(tPos, 3)); tailGeo.setAttribute('color', new THREE.Float32BufferAttribute(tCol, 3)); tailGeo.setIndex(tIdx); tailGeo.computeVertexNormals();
+    var tailSkin = abPart(tailGeo, skinV, 0, 0, 0, 0, 0, 0, tail); tailSkin.castShadow = true;
+    var tailFurGeo = zFurShell(tailGeo, 16, 0.0095, [1, 1, 1], [0, 0.1, -1], 0.9), tailFur = abPart(tailFurGeo, furV, 0, 0, 0, 0, 0, 0, tail); tailFur.castShadow = false;
+    var tailBend = [{ a: tailGeo.attributes.position, rest: tailGeo.attributes.position.array.slice() }, { a: tailFurGeo.attributes.position, rest: tailFurGeo.attributes.position.array.slice() }];
+    var tipEnd = tCrv.getPointAt(0.93), tipTan = tCrv.getTangentAt(0.93);
+    var tail2 = new THREE.Group(); tail2.position.copy(tipEnd); tail2.quaternion.setFromUnitVectors(V3(0, 0, -1), tipTan); tail.add(tail2);   // (the end of its tail, where the brush and veils are)
+    var tailTipRest = tipEnd.clone(), tailTipQ = tail2.quaternion.clone();
+    var tailTip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.gill[1], transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); tailTip.scale.set(0.035, 0.035, 1); tailTip.position.set(0, 0, -0.03); tail2.add(tailTip);
     // slender legs on soft round paws with glowing toe-beans, a little frill of fin at each ankle (added with the veils)
     function limb(prof, colAt) {
       var pts = prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }).reverse(), geo = new THREE.LatheGeometry(pts, 24), p = geo.attributes.position, cols = [], c = new THREE.Color();
@@ -5726,7 +5742,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [-1, 0, 1].forEach(function (k) { veil(head, onHead(V3(k * 0.012, 0.05, -0.02), V3(k * 0.2, 1, -0.5)).p, V3(k * 0.25, 0.15, -1), 0.17, 0.034, Math.PI / 2 + k * 0.3, k * 1.7); });   // (a mane of flowing ribbons of light from its crown)
     [0.06, 0.015, -0.03, -0.07].forEach(function (z, k) { veil(torso, topOf(bodyMesh, z, 1), V3(0, 0.25, -1), 0.12 - k * 0.01, 0.03, Math.PI / 2, k * 0.9 + 0.5); });   // (and down along its spine)
     legs.forEach(function (l, k) { veil(l.hip, V3(0, -0.1, -0.008), V3(0, -0.65, -0.75), 0.042, 0.02, Math.PI / 2, k * 1.1); });   // (little frills of fin at its ankles)
-    [0.45, 0, -0.45].forEach(function (a, k) { veil(tail2, V3(0, 0.002, -0.125), V3(0, a, -1), 0.22 - Math.abs(a) * 0.07, 0.075, Math.PI / 2, k * 1.3); });   // (veils of light trailing from its tail)
+    [[0, 0.5], [0.25, 0.2], [0, 0], [-0.25, 0.2], [0, -0.45]].forEach(function (v, k) { veil(tail2, V3(v[0] * 0.01, v[1] * 0.012, -0.012), V3(v[0], v[1] - 0.25, -1), 0.24 - Math.abs(v[1]) * 0.08 - Math.abs(v[0]) * 0.1, 0.07, Math.PI / 2 + v[0] * 1.6, k * 1.1); });   // (long veils of light streaming from the brush at its tip)
     // two long tendrils of light drifting from its cheeks, curling at the ends, each with a spark at its tip
     var tendMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.gill[1]).lerp(new THREE.Color(0xffffff), 0.3), transparent: true, opacity: 0.45 }), tendrils = [];
     [-1, 1].forEach(function (s) {
@@ -5791,7 +5807,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       tuft(l.hip, V3(0, -0.04, -0.012), 0.01, 0.03, 0.008, 0.009, [0, -1, -0.7], sideCol.clone().lerp(bellyCol, 0.4));   // (soft feathering down the back of each leg)
       [[-0.0095, 0.014], [-0.0033, 0.02], [0.0033, 0.02], [0.0095, 0.014]].forEach(function (b) { var cl = new THREE.Mesh(new THREE.ConeGeometry(0.0012, 0.0042, 6), clawMat); cl.position.set(b[0], -0.1535, b[1] + 0.0062); cl.rotation.x = Math.PI / 2 + 0.5; l.hip.add(cl); });   // (a tiny pale claw on each toe)
     });
-    tuft(tail2, V3(0, 0, -0.1), 0.012, 0.013, 0.028, 0.012, [0, 0, -1], sideCol.clone().lerp(bellyCol, 0.3));   // (a fluffy tuft where its tail-veils begin)
+    tuft(tail2, V3(0, 0, -0.008), 0.016, 0.017, 0.03, 0.016, [0, 0, -1], sideCol.clone().lerp(bellyCol, 0.55));   // (a long, soft plume of fur at the tip)
     function guardHairs(geo, parent, count, lenA, lenB, flow, seed) {   // longer, finer hairs standing out of the coat here and there, catching the light
       var gp = geo.attributes.position, gn = geo.attributes.normal, gc = geo.attributes.color, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 1, 1, 3, 1).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 }), count), o = new THREE.Object3D(), col = new THREE.Color(), fl = V3(flow[0], flow[1], flow[2]).normalize();
       for (var i = 0; i < count; i++) {
@@ -5803,7 +5819,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     guardHairs(bodyGeo, torso, 700, 0.007, 0.014, [0, -0.2, -1], 3);
     guardHairs(headGeo, head, 260, 0.004, 0.009, [0, 0.2, -1], 7);
-    guardHairs(tailGeo, tail, 160, 0.006, 0.012, [0, 0, -1], 11);
     // pearly scales over the fronts of its lower legs, a pearl anklet round each, with a little moonstone charm
     var scaleMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.side).lerp(new THREE.Color(0xffffff), 0.12), roughness: 0.4, clearcoat: 0.5, emissive: pal.glow, emissiveIntensity: 0.04 }), pearl2 = new THREE.MeshPhysicalMaterial({ color: 0xfffaff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.1 });
     legs.forEach(function (l) {
@@ -5826,7 +5841,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.76, 0); tag.renderOrder = 6; root.add(tag);
-    return { swirls: swirls, orbs: orbs, coralGlows: coralGlows, veils: veils, tendrils: tendrils, algae: algae, kelp: kelp, kelpGlow: kelpGlow, stars: stars, msGlow: msGlow, tailTip: tailTip, bubbles: bubbles, motes: motes, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, tail2: tail2, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { swirls: swirls, orbs: orbs, coralGlows: coralGlows, veils: veils, tendrils: tendrils, algae: algae, kelp: kelp, kelpGlow: kelpGlow, stars: stars, msGlow: msGlow, tailTip: tailTip, bubbles: bubbles, motes: motes, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, tail2: tail2, tailBend: tailBend, tailTipRest: tailTipRest, tailTipQ: tailTipQ, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready, its Glimmerkelp is the glowing algae grown over its back
   function axoBuildExtras(g) {
@@ -5849,8 +5864,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.005 : Math.sin(t * 1.3 + g.stall) * 0.002;
     m.torso.rotation.y = sway * 0.03 + (happy ? Math.sin(m.wig * 10) * 0.08 : 0);
     m.torso.rotation.z = happy ? Math.sin(m.wig * 9) * 0.05 : 0;
-    m.tail.rotation.y = -Math.sin((moving ? g.hop : t * 1.3 + g.stall) - 0.9) * (happy ? 0.45 : moving ? 0.25 : 0.15) + (happy ? Math.sin(m.wig * 12) * 0.2 : 0);   // (swaying gracefully)
-    m.tail2.rotation.y = -Math.sin((moving ? g.hop : t * 1.3 + g.stall) - 1.9) * (happy ? 0.6 : moving ? 0.35 : 0.22);
+    var tph = moving ? g.hop : t * 1.3 + g.stall, tamp = happy ? 0.07 : moving ? 0.04 : 0.025, twag = happy ? Math.sin(m.wig * 11) * 0.03 : 0;
+    function tOff(u) { return (tamp * Math.sin(tph - u * 3.4) + twag) * Math.pow(u, 1.5); }   // (a wave running down it, growing toward the tip)
+    m.tailBend.forEach(function (tb) { var r = tb.rest, a = tb.a; for (var i = 0; i < a.count; i++) { var u = Math.min(1, Math.max(0, (-r[i * 3 + 2]) / 0.335)); a.array[i * 3] = r[i * 3] + tOff(u); } a.needsUpdate = true; });
+    var tipU = 0.93 * 0.95, tx2 = tOff(tipU), tdx = (tOff(tipU) - tOff(tipU - 0.04)) / (0.04 * 0.335);
+    m.tail2.position.set(m.tailTipRest.x + tx2, m.tailTipRest.y, m.tailTipRest.z); m.tail2.quaternion.copy(m.tailTipQ); m.tail2.rotateY(-Math.atan(tdx) * 0.9);   // (the brush and veils following the tip)
     var look = Math.sin(t * 0.3 + g.stall * 1.7);
     m.head.rotation.set(happy ? -0.18 : Math.max(0, Math.sin(t * 0.21 + g.stall) - 0.7) * 0.6 - 0.05, look * 0.35 * (happy ? 0.3 : 1) - sway * 0.06, Math.sin(t * 0.4 + g.stall) * 0.06 + (happy ? Math.sin(m.wig * 7) * 0.1 : 0));
     m.swirls.forEach(function (sw, k) { sw.material.opacity = (sw.isSprite ? 0.3 : 0.25) + (0.5 + 0.5 * Math.sin(t * 1.3 - k * 0.7)) * 0.15; });   // (the filigree softly pulsing with light)
