@@ -5156,21 +5156,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     var spots = []; for (var sp = 0; sp < 22; sp++) { var su = glimR(sp * 3.7 + 21) * Math.PI * 2, sv = -0.1 + glimR(sp * 5.9 + 21) * 1.1; spots.push([V3(Math.sin(su) * Math.cos(sv), Math.sin(sv), Math.cos(su) * Math.cos(sv)), 0.06 + glimR(sp * 2.3) * 0.08]); }
     function pondCol(n, c) {                                          // lilac over its back, fading through soft lavender to pale mint underneath, dappled with glowing pond-light spots
       c.copy(bellyCol).lerp(sideCol, ss(-0.55, 0.0, n.y)).lerp(backCol, ss(0.1, 0.7, n.y + Math.sin(n.z * 4 + n.x * 3) * 0.06));
-      spots.forEach(function (s2) { var a = n.angleTo(s2[0]); if (a < s2[1]) c.lerp(spotCol, ss(s2[1], s2[1] * 0.55, a) * 0.6); });
+      spots.forEach(function (s2) {
+        var a = n.angleTo(s2[0]); if (a < s2[1]) c.lerp(spotCol, ss(s2[1], s2[1] * 0.55, a) * 0.6);
+        else if (a < s2[1] * 2.1) { var ring = Math.pow(Math.max(0, Math.cos((a - s2[1]) / s2[1] * Math.PI * 2.5)), 6) * (1 - (a - s2[1]) / (s2[1] * 1.1)); c.lerp(spotCol, ring * 0.32); }   // (rings of ripples spreading out from each spot, like rain on a pond)
+      });
       c.multiplyScalar(0.97 + 0.04 * Math.sin(n.x * 23 + n.y * 17) * Math.sin(n.z * 19 - n.y * 13));
     }
     // the body: a big round barrel, heavy and low, a full chest and a broad rump
-    var BY = 0.2, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
+    var BY = 0.25, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
     var bodyGeo = sdfShape(function (x, y, z) {
-      var d = ell(x, y, z, 0, 0, 0, 0.125, 0.118, 0.145);   // (round as a dewdrop)
-      d = sm(d, ell(x, y, z, 0, 0.005, 0.07, 0.11, 0.108, 0.08), 0.04);
-      d = sm(d, ell(x, y, z, 0, -0.005, -0.08, 0.118, 0.11, 0.08), 0.04);
-      d = sm(d, ell(x, y, z, 0, -0.04, 0, 0.11, 0.085, 0.12), 0.04);   // (a round tummy)
-      return Math.max(d, -(y + 0.1) * 0.7);
+      var d = ell(x, y, z, 0, 0, 0, 0.1, 0.095, 0.14);   // (a graceful, rounded body)
+      d = sm(d, ell(x, y, z, 0, 0.01, 0.07, 0.088, 0.09, 0.07), 0.04);
+      d = sm(d, ell(x, y, z, 0, 0.0, -0.08, 0.095, 0.092, 0.07), 0.04);
+      d = sm(d, ell(x, y, z, 0, 0.07, 0.12, 0.05, 0.075, 0.05), 0.04);   // (a neck, rising to its head)
+      return d;
     }, [110, 76], 0.3, function (n, q, c) { pondCol(n, c); });
     coat(bodyGeo, furV, torso, 0.006, [0, -0.25, -1]);
     // the head: broad and gentle, a wide soft muzzle with little nostrils on top, eyes and ears set high
-    var head = new THREE.Group(); head.position.set(0, 0.06, 0.15); head.rotation.x = 0.05; torso.add(head);
+    var head = new THREE.Group(); head.position.set(0, 0.14, 0.15); head.rotation.x = 0.05; head.scale.setScalar(0.85); torso.add(head);
     var headGeo = sdfShape(function (x, y, z) {
       var d = ell(x, y, z, 0, 0.02, 0, 0.082, 0.08, 0.078);   // (a big, round head)
       d = sm(d, ell(x, y, z, 0, -0.03, 0.06, 0.05, 0.036, 0.034), 0.03);   // (a small, soft, rounded snout)
@@ -5248,6 +5251,48 @@ EVERDAWN_PARTS.push(function (THREE) {
       var bud = new THREE.Group(); bud.position.set(0, 0.002, 0.004); bud.scale.setScalar(0.7); ep.add(bud);
       for (var bk = 0; bk < 5; bk++) { var bp = new THREE.Mesh(petalGeo, petalMat); bp.scale.set(0.009, 0.016, 0.016); bp.rotation.order = 'YXZ'; bp.rotation.set(-0.35, bk / 5 * Math.PI * 2, 0); bud.add(bp); }
     });
+    // two curving lotus stems growing up from its brow like antlers, each branching, with glowing lotus buds and a
+    // tiny opening flower at their tips
+    var stemMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.pad).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.5, emissive: pal.pad, emissiveIntensity: 0.15 }), budGlows = [];
+    function bloom(parent, pos, sc, open) {
+      var b = new THREE.Group(); b.position.copy(pos); b.scale.setScalar(sc); parent.add(b);
+      for (var k = 0; k < 6; k++) { var bp = new THREE.Mesh(petalGeo, petalMat); bp.scale.set(0.01, 0.018, 0.018); bp.rotation.order = 'YXZ'; bp.rotation.set(-(open ? 0.9 : 0.25), k / 6 * Math.PI * 2, 0); b.add(bp); }
+      var bg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.petal[1], transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); bg.scale.set(0.05, 0.05, 1); bg.position.y = 0.008; b.add(bg); budGlows.push(bg);
+    }
+    [-1, 1].forEach(function (s) {
+      var pts = [V3(s * 0.03, 0.06, 0.01), V3(s * 0.045, 0.1, -0.005), V3(s * 0.065, 0.135, -0.03), V3(s * 0.07, 0.165, -0.06)], crv = new THREE.CatmullRomCurve3(pts);
+      var sg = new THREE.TubeGeometry(crv, 30, 1, 8, false), p = sg.attributes.position;
+      for (var i = 0; i <= 30; i++) { var t = i / 30, c = crv.getPointAt(t), r = 0.0045 - t * 0.0022; for (var j = 0; j <= 8; j++) { var k = i * 9 + j; p.setXYZ(k, c.x + (p.getX(k) - c.x) * r, c.y + (p.getY(k) - c.y) * r, c.z + (p.getZ(k) - c.z) * r); } }
+      sg.computeVertexNormals(); head.add(new THREE.Mesh(sg, stemMat));
+      bloom(head, crv.getPointAt(1), 2.0, true);
+      var bpt = crv.getPointAt(0.5), br = new THREE.CatmullRomCurve3([bpt, bpt.clone().add(V3(s * 0.025, 0.02, 0.01)), bpt.clone().add(V3(s * 0.038, 0.035, 0.02))]);   // (a branch, with a closed bud)
+      head.add(new THREE.Mesh(new THREE.TubeGeometry(br, 12, 0.0022, 6, false), stemMat)); bloom(head, br.getPointAt(1), 1.3, false);
+    });
+    // long, glowing whiskers drifting from its snout, like a koi's
+    var whiskMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(0xffffff), 0.3), transparent: true, opacity: 0.85 }), whiskers = [];
+    [-1, 1].forEach(function (s) {
+      var wg2 = new THREE.Group(); var wp = onHead(V3(s * 0.02, -0.03, 0.06), V3(s * 0.6, -0.2, 0.8)); wg2.position.copy(wp.p); head.add(wg2);
+      var pts2 = []; for (var i = 0; i <= 16; i++) { var t2 = i / 16; pts2.push(V3(s * t2 * 0.06, -t2 * 0.03 - Math.sin(t2 * 3) * 0.006, t2 * 0.02 - t2 * t2 * 0.04)); }
+      var wm = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts2), 24, 0.0012, 5, false), whiskMat); wg2.add(wm); whiskers.push({ g: wg2, s: s });
+      var wt = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.spot, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); wt.scale.set(0.02, 0.02, 1); wt.position.copy(pts2[16]); wg2.add(wt);
+    });
+    // a glowing lotus mark on its brow, between its eyes
+    var markP = onHead(V3(0, 0.03, 0.0), V3(0, 0.5, 0.86)), mark = new THREE.Group(); mark.position.copy(markP.p).addScaledVector(markP.n, 0.0045); mark.lookAt(mark.position.clone().add(markP.n)); head.add(mark);
+    var markMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.petal[1]).lerp(new THREE.Color(0xffffff), 0.35), transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+    for (var mk = 0; mk < 5; mk++) { var ps = new THREE.Shape(); ps.moveTo(0, 0); ps.bezierCurveTo(-0.004, 0.004, -0.003, 0.009, 0, 0.012); ps.bezierCurveTo(0.003, 0.009, 0.004, 0.004, 0, 0); var pm3 = new THREE.Mesh(new THREE.ShapeGeometry(ps, 8), markMat); pm3.rotation.z = (mk - 2) * 0.55; pm3.scale.setScalar(mk === 2 ? 1.15 : 0.85); mark.add(pm3); }
+    var markGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.petal[1], transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); markGlow.scale.set(0.04, 0.04, 1); markGlow.position.z = 0.002; mark.add(markGlow);
+    // a row of little closed lotus buds sprouting along its spine, glowing faintly
+    var spineBuds = [];
+    for (var sb = 0; sb < 5; sb++) { ray.set(V3(0, 0, 0), V3(0, 1, 0.55 - sb * 0.3).normalize()); var sh2 = ray.intersectObject(bodyMesh)[0]; if (!sh2) continue; var bn2 = sh2.face.normal.clone().normalize(), bg2 = new THREE.Group(); bg2.position.copy(sh2.point).addScaledVector(bn2, 0.005); bg2.quaternion.setFromUnitVectors(V3(0, 1, 0), bn2); bg2.scale.setScalar(0.9 - Math.abs(sb - 2) * 0.12); torso.add(bg2);
+      bg2.add(new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0016, 0.012, 6).translate(0, 0.006, 0), stemMat));
+      var bud2 = new THREE.Group(); bud2.position.y = 0.012; bg2.add(bud2); for (var bk2 = 0; bk2 < 5; bk2++) { var bpm = new THREE.Mesh(petalGeo, petalMat); bpm.scale.set(0.006, 0.012, 0.012); bpm.rotation.order = 'YXZ'; bpm.rotation.set(-0.15, bk2 / 5 * Math.PI * 2, 0); bud2.add(bpm); }
+      var sg2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.petal[1], transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); sg2.scale.set(0.03, 0.03, 1); sg2.position.y = 0.016; bg2.add(sg2); spineBuds.push(sg2); }
+    // a little dragonfly companion with shimmering wings, darting about it
+    var dfly = new THREE.Group(); root.add(dfly);
+    var dBody = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0009, 0.03, 8), new THREE.MeshPhysicalMaterial({ color: pal.spot, roughness: 0.2, clearcoat: 1, metalness: 0.4, emissive: pal.spot, emissiveIntensity: 0.25 })); dBody.rotation.x = Math.PI / 2; dfly.add(dBody);
+    var dHead = new THREE.Mesh(new THREE.SphereGeometry(0.0028, 10, 8), dBody.material); dHead.position.z = 0.016; dfly.add(dHead);
+    var dWings = [], dWingMat = filmMat(0xffffff, 1.3);
+    [[-1, 0.004], [1, 0.004], [-1, -0.003], [1, -0.003]].forEach(function (w3) { var wm3 = new THREE.Mesh(new THREE.CircleGeometry(1, 16), dWingMat); wm3.scale.set(0.016, 0.0045, 1); wm3.position.set(w3[0] * 0.016, 0.001, w3[1]); wm3.rotation.x = -Math.PI / 2; dfly.add(wm3); dWings.push({ m: wm3, s: w3[0] }); });
     // short, sturdy legs on wide, round feet with pearly toenails
     function limb(prof, colAt) {
       var pts = prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }).reverse(), geo = new THREE.LatheGeometry(pts, 28), p = geo.attributes.position, cols = [], c = new THREE.Color();
@@ -5257,20 +5302,41 @@ EVERDAWN_PARTS.push(function (THREE) {
     var nailMat = new THREE.MeshPhysicalMaterial({ color: pal.nail, roughness: 0.15, clearcoat: 1, sheen: new THREE.Color(pal.spot), emissive: pal.glow, emissiveIntensity: 0.1 });
     var legs = [];
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp) {
-      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.075, BY - 0.04, front ? 0.075 : -0.085); body.add(hip);
-      var lg = limb([[0.0005, 0.03], [0.022, 0.026], [0.03, 0.0], [0.026, -0.05], [0.024, -0.09], [0.03, -0.11], [0.0005, -0.116]], function (y2, c) { c.copy(sideCol).lerp(bellyCol, 0.35); });
+      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.06, BY - 0.045, front ? 0.07 : -0.08); body.add(hip);
+      var lg = limb([[0.0005, 0.03], [0.02, 0.026], [0.026, 0.0], [0.02, -0.06], [0.016, -0.12], [0.022, -0.145], [0.0005, -0.152]], function (y2, c) { c.copy(sideCol).lerp(bellyCol, 0.35); });
       coat(lg, furV, hip, 0.005, [0, -1, 0]);
-      for (var tn = 0; tn < 4; tn++) { var ta = (tn - 1.5) * 0.42, nm = part(new THREE.SphereGeometry(1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), nailMat, Math.sin(ta) * 0.024, -0.107, Math.cos(ta) * 0.024, 0.0075, 0.007, 0.006, hip, -1.2, ta, 0); nm.castShadow = true; }   // (four pearly toenails round the front of each foot)
+      for (var tn = 0; tn < 4; tn++) { var ta = (tn - 1.5) * 0.42, nm = part(new THREE.SphereGeometry(1, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), nailMat, Math.sin(ta) * 0.018, -0.143, Math.cos(ta) * 0.018, 0.0075, 0.007, 0.006, hip, -1.2, ta, 0); nm.castShadow = true; }   // (four pearly toenails round the front of each foot)
+      var fet = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, 0.022, 0.012, 0.022); }, [32, 20], 0.04, function (n, q, c) { c.copy(bellyCol).lerp(new THREE.Color(pal.petal[1]), 0.15); }); coat(fet, furV, hip, 0.008, [0, -1, 0], 0, -0.128, 0);   // (soft feathery tufts round its ankles)
       legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front });
     });
-    // a little tail with a tuft
-    var tail = new THREE.Group(); tail.position.set(0, 0.02, -0.165); tail.rotation.x = -0.4; torso.add(tail);
-    var tg = limb([[0.0005, 0.0], [0.009, -0.004], [0.006, -0.03], [0.0005, -0.034]], function (y2, c) { c.copy(backCol); });
+    // a long, flowing tail like a koi's: a slender root fanning into veils of translucent fin that ripple as it moves,
+    // lilac flushing to lotus pink at the tips, with fine rays and a soft glow
+    var tail = new THREE.Group(); tail.position.set(0, 0.03, -0.13); tail.rotation.x = 1.25; torso.add(tail);   // (held out behind, flowing)
+    var tg = limb([[0.0005, 0.0], [0.012, -0.004], [0.008, -0.04], [0.0005, -0.045]], function (y2, c) { c.copy(backCol); });
     coat(tg, fineV, tail, 0.003, [0, -1, 0]);
-    var tuft = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, 0.007, 0.01, 0.007); }, [24, 18], 0.03, function (n, q, c) { c.copy(new THREE.Color(pal.petal[1])).lerp(new THREE.Color(0xffffff), 0.3); });
-    coat(tuft, furV, tail, 0.004, [0, -1, 0], 0, -0.034, 0);
-    var tfin = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.04), padMat); tfin.position.set(0, -0.05, 0); tfin.rotation.set(0.2, 0, Math.PI); tail.add(tfin);   // (ending in a little lily pad, like a fin)
+    var veilTex = new THREE.CanvasTexture(glimCanvas(128, 256, function (g, w, h) {
+      var c0 = new THREE.Color(pal.side), c1 = new THREE.Color(pal.petal[1]), gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, 'rgba(' + Math.round(c0.r * 255) + ',' + Math.round(c0.g * 255) + ',' + Math.round(c0.b * 255) + ',0.95)'); gr.addColorStop(1, 'rgba(' + Math.round(c1.r * 255) + ',' + Math.round(c1.g * 255) + ',' + Math.round(c1.b * 255) + ',0.55)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(w / 2, 0); g.bezierCurveTo(w * 0.1, h * 0.3, 0, h * 0.8, w * 0.2, h); g.lineTo(w * 0.8, h); g.bezierCurveTo(w, h * 0.8, w * 0.9, h * 0.3, w / 2, 0); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1.2; for (var r = -4; r <= 4; r++) { g.beginPath(); g.moveTo(w / 2, 0); g.quadraticCurveTo(w / 2 + r * 6, h * 0.5, w / 2 + r * 12, h); g.stroke(); }
+    }));
+    var veilMat = new THREE.MeshStandardMaterial({ map: veilTex, transparent: true, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveMap: veilTex, emissiveIntensity: 0.3 });
+    var veils = [];
+    [-0.35, 0, 0.35].forEach(function (a, k) {
+      var vg = new THREE.PlaneGeometry(0.09, 0.26, 4, 20).translate(0, -0.13, 0), vm = new THREE.Mesh(vg, veilMat); vm.position.set(0, -0.04, 0); vm.rotation.set(0, a * 1.2, a * 1.4); vm.renderOrder = 3; tail.add(vm);
+      veils.push({ m: vm, base: vg.attributes.position.array.slice(), ph: k * 1.3 });
+    });
     // dewdrops drifting up off it, lotus petals floating down round it, ripples spreading beneath it, a soft glow
+    // dewdrops beaded on its fur, catching the light like tiny pearls
+    var beadMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, clearcoat: 1, transparent: true, opacity: 0.4, emissive: 0xffffff, emissiveIntensity: 0.35 }), beadGeo = new THREE.SphereGeometry(1, 10, 8);
+    [[bodyGeo, torso, 60, 0.01]].forEach(function (bd, bi) {
+      var bp = bd[0].attributes.position, bn = bd[0].attributes.normal, im = new THREE.InstancedMesh(beadGeo, beadMat, bd[2]), o = new THREE.Object3D(), kk = 0;
+      for (var i = 0; i < 2000 && kk < bd[2]; i++) { var vi = Math.floor(glimR(i * 5.3 + bi * 91) * bp.count); if (bn.getY(vi) < 0.35) continue; o.position.set(bp.getX(vi), bp.getY(vi), bp.getZ(vi)).addScaledVector(V3(bn.getX(vi), bn.getY(vi), bn.getZ(vi)), bd[3] * 0.65); o.scale.setScalar(0.0016 + glimR(i * 2.7) * 0.0018); o.updateMatrix(); im.setMatrixAt(kk++, o.matrix); }
+      im.count = kk; bd[1].add(im);
+    });
+    // fireflies drifting round it in the dusk of its own little pond
+    var fireflies = [];
+    for (var ff = 0; ff < 9; ff++) { var fs = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: ff % 3 ? 0xfff0a0 : pal.spot, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); fs.scale.set(0.035, 0.035, 1); root.add(fs); var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.012, 0.012, 1); fs.add(core); fireflies.push({ s: fs, a: glimR(ff * 3.3) * Math.PI * 2, r: 0.16 + glimR(ff * 5.7) * 0.12, h: 0.15 + glimR(ff * 7.1) * 0.35, sp: 0.2 + glimR(ff) * 0.3 }); }
     var dew = [], dropMat = filmMat(pal.glow, 1.1), dropGeo = new THREE.SphereGeometry(1, 16, 12);
     for (var dd = 0; dd < 14; dd++) { var dm = new THREE.Mesh(dropGeo, dropMat); dm.renderOrder = 4; root.add(dm); dew.push({ m: dm, t: glimR(dd * 3.3), a: glimR(dd * 5.1) * Math.PI * 2, r: 0.1 + glimR(dd * 7.3) * 0.12, y0: 0.15 + glimR(dd * 2.1) * 0.18 }); }
     var petals = [];
@@ -5281,8 +5347,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     glow.scale.set(1.1, 1.1, 1); glow.position.set(0, 0.25, 0); root.add(glow);
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
-    tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.62, 0); tag.renderOrder = 6; root.add(tag);
-    return { root: root, body: body, torso: torso, head: head, ears: ears, legs: legs, tail: tail, lids: lids, lotuses: lotuses, dew: dew, petals: petals, ripples: ripples, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.72, 0); tag.renderOrder = 6; root.add(tag);
+    return { markGlow: markGlow, spineBuds: spineBuds, dfly: dfly, dWings: dWings, fireflies: fireflies, veils: veils, whiskers: whiskers, budGlows: budGlows, root: root, body: body, torso: torso, head: head, ears: ears, legs: legs, tail: tail, lids: lids, lotuses: lotuses, dew: dew, petals: petals, ripples: ripples, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready to milk, a pale drop of Lotus Milk floats over it
   function lotusBuildExtras(g) {
@@ -5310,7 +5376,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     var look = Math.sin(t * 0.25 + g.stall * 1.6);
     m.head.rotation.set(0.08 + (happy ? -0.15 : Math.max(0, Math.sin(t * 0.18 + g.stall) - 0.75) * 0.8), look * 0.4 * (happy ? 0.3 : 1), Math.sin(t * 0.35 + g.stall) * 0.05);
     m.ears.forEach(function (e, k) { var wg = Math.max(0, Math.sin(t * 1.1 + k * 2.3 + g.stall) - 0.85) * 6; e.g.rotation.y = e.s * (0.4 + Math.sin(t * 22) * 0.25 * (wg + (happy ? 1 : 0))); });   // (a quick wiggle now and then)
-    m.tail.rotation.y = Math.sin(t * (happy ? 14 : 2) + g.stall) * (happy ? 0.5 : 0.15);
+    m.tail.rotation.y = Math.sin(t * (happy ? 6 : 1.5) + g.stall) * (happy ? 0.4 : 0.15);
+    m.veils.forEach(function (v) { var p = v.m.geometry.attributes.position, b = v.base; for (var i = 0; i < p.count; i++) { var f = -b[i * 3 + 1] / 0.26; p.setXYZ(i, b[i * 3], b[i * 3 + 1] * (1 - f * 0.05), Math.sin(t * 2.4 - f * 5 + v.ph) * 0.02 * f + f * f * -0.04); } p.needsUpdate = true; });   // (its veils of fin rippling as if underwater)
+    m.whiskers.forEach(function (w, k) { w.g.rotation.set(Math.sin(t * 1.6 + k) * 0.25, w.s * Math.sin(t * 1.2 + k * 2) * 0.2, 0); });
+    m.fireflies.forEach(function (f, k) { var a = f.a + t * f.sp * (k % 2 ? 1 : -1); f.s.position.set(Math.cos(a) * f.r, f.h + Math.sin(t * 1.3 + k) * 0.04, Math.sin(a) * f.r * 1.3); f.s.material.opacity = 0.25 + Math.pow(0.5 + 0.5 * Math.sin(t * 2.2 + k * 2.4), 3) * 0.75; });   // (blinking softly as they drift)
+    m.markGlow.material.opacity = 0.25 + (0.5 + 0.5 * Math.sin(t * 1.2 + g.stall)) * 0.3;
+    m.spineBuds.forEach(function (sb, k) { sb.material.opacity = 0.2 + Math.pow(0.5 + 0.5 * Math.sin(t * 1.4 - k * 0.8), 2) * 0.35; });   // (a soft wave of light along its back)
+    var da = t * 0.7 + g.stall, dx2 = Math.cos(da) * 0.24 + Math.sin(t * 2.3) * 0.03, dz2 = Math.sin(da * 1.3) * 0.26, dy2 = 0.45 + Math.sin(t * 1.7) * 0.06;   // (the dragonfly darting in loops)
+    m.dfly.position.set(dx2, dy2, dz2); m.dfly.rotation.y = Math.atan2(-Math.sin(da) * 0.24, Math.cos(da * 1.3) * 0.34);
+    m.dWings.forEach(function (w, k) { w.m.rotation.z = w.s * Math.sin(t * 60 + k) * 0.5; });
+    m.budGlows.forEach(function (bg, k) { bg.material.opacity = 0.35 + (0.5 + 0.5 * Math.sin(t * 1.5 + k * 1.7)) * 0.35; });
     var bt = (t * 0.17 + g.stall * 0.41) % 1, blink = happy ? 0.65 : (bt < 0.045 ? Math.sin(bt / 0.045 * Math.PI) : 0);   // (slow, sleepy blinks)
     m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
     m.lotuses.forEach(function (fl, k) { fl.rotation.y = Math.sin(t * 0.5 + k) * 0.15; var op = 1 + (happy ? 0.12 : 0) + Math.sin(t * 0.8 + k * 2) * 0.03; fl.scale.set(op, 1, op); });
