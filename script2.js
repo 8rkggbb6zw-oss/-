@@ -4385,7 +4385,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.6; glimHeartBurst(g.x, 0.45, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= LUNA_DAYS ? ' A Moonpearl tomorrow morning!' : ' Day ' + day + ' of ' + LUNA_DAYS + ' done. Come back tomorrow!'), 2400);
   }
-  // ---------- Snorkling ----------
+  // ---------- Sirenna ----------
   // Round little sea spirits shaped a bit like a piglet (but not a pig): a chubby body in soft seafoam fur, deepening
   // to ocean teal over its back and dappled with pale bubble spots; a big round head with a soft coral snout; huge
   // ocean eyes with ripples in them; floppy ears of translucent fin, ribbed like a fish's, shimmering with rainbow;
@@ -4425,7 +4425,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(36, 34, 7, 4, -0.7, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#fff'; [[14, 24], [82, 30], [80, 80]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.pearlBubble = { name: 'Wishbubble', price: 300, icon: '🫧', img: pearlBubbleIcon, fill: 88, info: 'A shimmering bubble that never pops, with a little pearl floating inside it, blown by a happy Snorkling. Feed and pet yours every day for three days in a row, and it blows you one the next morning. Sells for a very good price at the shipping bin.' };
+  ITEMS.pearlBubble = { name: 'Wishbubble', price: 300, icon: '🫧', img: pearlBubbleIcon, fill: 88, info: 'A shimmering bubble that never pops, with a little pearl floating inside it, blown by a happy Sirenna. Feed and pet yours every day for three days in a row, and it blows you one the next morning. Sells for a very good price at the shipping bin.' };
   var bubbleShopIcon = glimCanvas(128, 128, function (g, w, h) {     // a little portrait of one, for the shop
     var sea = g.createRadialGradient(64, 64, 4, 64, 64, 64); sea.addColorStop(0, 'rgba(150,240,230,0.7)'); sea.addColorStop(1, 'rgba(150,200,255,0)'); g.fillStyle = sea; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#d8fbf2'; g.lineWidth = 5; g.beginPath(); for (var a = 0; a < 12; a += 0.3) g.lineTo(16 + a * 0.6 + Math.cos(a) * 5, 74 - a * 1.4 + Math.sin(a) * 5); g.stroke();   // the corkscrew tail
@@ -4595,8 +4595,24 @@ EVERDAWN_PARTS.push(function (THREE) {
       geo.computeVertexNormals(); return geo;
     })();
     var shellMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.coral).lerp(new THREE.Color(0xffffff), 0.55), roughness: 0.3, clearcoat: 1, sheen: new THREE.Color(0xffffff), side: THREE.DoubleSide });
+    var starShape = new THREE.Shape(); for (var sk = 0; sk < 10; sk++) { var sa = sk * Math.PI / 5, sr = sk % 2 ? 0.42 : 1; starShape[sk ? 'lineTo' : 'moveTo'](Math.sin(sa) * sr, Math.cos(sa) * sr); }   // a little starfish clinging to the other side of its head
+    var starfish = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 3 }), new THREE.MeshStandardMaterial({ color: pal.coral, roughness: 0.7, emissive: pal.coral, emissiveIntensity: 0.1 }));
+    starfish.scale.setScalar(0.0085); starfish.position.set(-0.047, 0.04, 0.02); starfish.rotation.set(-0.5, -0.9, 0.3); head.add(starfish);
+    for (var sd = 0; sd < 10; sd++) { var sa2 = Math.floor(sd / 2) * Math.PI * 2 / 5, sr2 = 0.3 + (sd % 2) * 0.35, dot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 4), new THREE.MeshStandardMaterial({ color: 0xfff4ec, roughness: 0.5 })); dot.position.set(Math.sin(sa2) * sr2, Math.cos(sa2) * sr2, 0.26); starfish.add(dot); }   // (with little bumps along its arms)
     var shell = new THREE.Mesh(shellGeo, shellMat); shell.scale.setScalar(0.017); shell.position.set(0.042, 0.05, 0.012); shell.rotation.set(-0.4, 0.5, 0.5); head.add(shell);
     part(seg, shellMat, 0.042, 0.042, 0.012, 0.004, 0.003, 0.003, head);   // (its little hinge)
+    // a strand of pearls round its neck, with a little conch shell charm hanging from it
+    var pearlMat = new THREE.MeshPhysicalMaterial({ color: 0xfaf6ff, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05, sheen: new THREE.Color(pal.fin[1]), emissive: pal.glow, emissiveIntensity: 0.08 }), pearlGeo = new THREE.SphereGeometry(1, 14, 10);
+    var neck = new THREE.Group(); neck.position.set(0, 0.014, 0.092); neck.rotation.x = -0.9; torso.add(neck);   // (low round its neck, under its chin)
+    for (var pk = 0; pk < 26; pk++) { var pa = pk / 26 * Math.PI * 2, pm = new THREE.Mesh(pearlGeo, pearlMat); pm.scale.setScalar(pk % 2 ? 0.005 : 0.0058); pm.position.set(Math.sin(pa) * 0.068, -Math.cos(pa) * 0.06, 0); neck.add(pm); }
+    var conch = new THREE.Group(); conch.position.set(0, -0.068, 0.006); conch.rotation.x = 0.9; conch.scale.setScalar(1.3); neck.add(conch);
+    (function () {
+      var pts = []; for (var ci = 0; ci <= 40; ci++) { var t = ci / 40, a = t * Math.PI * 5, r = 0.0055 * (1 - t * 0.85); pts.push(V3(Math.cos(a) * r, -t * 0.016, Math.sin(a) * r)); }
+      var crv = new THREE.CatmullRomCurve3(pts), cg = new THREE.TubeGeometry(crv, 80, 1, 10, false), p = cg.attributes.position;
+      for (var i = 0; i <= 80; i++) { var t2 = i / 80, cp = crv.getPointAt(t2), rr = 0.0042 * (1 - t2 * 0.8); for (var j = 0; j <= 10; j++) { var k = i * 11 + j; p.setXYZ(k, cp.x + (p.getX(k) - cp.x) * rr, cp.y + (p.getY(k) - cp.y) * rr, cp.z + (p.getZ(k) - cp.z) * rr); } }
+      cg.computeVertexNormals();
+      conch.add(new THREE.Mesh(cg, new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.coral).lerp(new THREE.Color(0xfff0e0), 0.6), roughness: 0.3, clearcoat: 1 })));
+    })();
     // short, chubby legs on pearly cloven hooves
     function limb(prof, colAt) {
       var pts = prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }).reverse(), geo = new THREE.LatheGeometry(pts, 28), p = geo.attributes.position, cols = [], c = new THREE.Color();
@@ -4612,8 +4628,28 @@ EVERDAWN_PARTS.push(function (THREE) {
       var hoof = new THREE.Group(); hoof.position.set(0, -0.072, 0.002); hip.add(hoof);
       [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0095, -0.012, 0.002, 0.0105, 0.016, 0.013, hoof, Math.PI, 0, 0); hm.castShadow = true; });   // (two pearly toes)
       part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }), 0.004, -0.004, 0.014, 0.0035, 0.002, 0.001, hoof);
-      legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front });
+      var af = new THREE.Mesh(earFinGeo, finMat); af.scale.set(0.022, 0.026, 0.022); af.position.set(lp[0] * 0.016, -0.05, -0.012); af.rotation.set(-2.3, lp[0] * 0.5, lp[0] * 0.4); hip.add(af);   // (a frilly little fin flowing back from each ankle, like a mermaid's)
+      legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front, fin: af });
     });
+    // shimmering pearly scales over its haunches, in neat overlapping rows, like a mermaid's tail
+    (function () {
+      var scGeo = new THREE.CircleGeometry(1, 16, 0, Math.PI).rotateZ(Math.PI), scMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, vertexColors: false, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, sheen: new THREE.Color(pal.fin[1]), emissive: pal.fin[0], emissiveIntensity: 0.18, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+      var ray = new THREE.Raycaster(), bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bodyMesh.updateMatrixWorld(true);
+      var list = [], c0 = new THREE.Color(pal.fin[0]), c1 = new THREE.Color(pal.fin[1]), cc = new THREE.Color();
+      [-1, 1].forEach(function (s) {
+        for (var r = 0; r < 5; r++) for (var k = 0; k < 7 - r; k++) {
+          var a = -0.55 + (k + (r % 2) * 0.5) * 0.16, el = 0.45 - r * 0.15, dir = V3(s * Math.cos(el) * Math.cos(a) * 0.9, Math.sin(el), -0.55 + Math.sin(a) * 0.6).normalize();
+          ray.set(V3(0, 0, -0.03), dir); var hit = ray.intersectObject(bodyMesh)[0]; if (!hit) continue;
+          list.push([hit.point, hit.face.normal.clone().normalize(), 0.012 - r * 0.0009, (r + k) / 10]);
+        }
+      });
+      var im = new THREE.InstancedMesh(scGeo, scMat, list.length), mx = new THREE.Matrix4(), o = new THREE.Object3D();
+      list.forEach(function (sc2, i) {
+        o.position.copy(sc2[0]).addScaledVector(sc2[1], 0.0095); o.lookAt(o.position.clone().add(sc2[1])); o.rotateZ(Math.atan2(sc2[1].x, sc2[1].y) * 0.0); o.scale.setScalar(sc2[2]); o.updateMatrix();
+        im.setMatrixAt(i, o.matrix); cc.copy(c0).lerp(c1, sc2[3]).lerp(new THREE.Color(0xffffff), 0.45); im.setColorAt(i, cc);
+      });
+      torso.add(im);
+    })();
     // a springy corkscrew tail, a sprig of coral at its tip
     var tail = new THREE.Group(); tail.position.set(0, BY + 0.02, -0.122); body.add(tail);
     (function () {
@@ -4630,13 +4666,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     })();
     // iridescent bubbles drifting up off it, and a soft glow round it
     var bMat = filmMat(pal.glow, 1), bGeo = new THREE.SphereGeometry(1, 24, 16), bubbles = [];
-    for (var bb = 0; bb < 12; bb++) { var bm = new THREE.Mesh(bGeo, bMat); bm.renderOrder = 4; root.add(bm); bubbles.push({ m: bm, t: glimR(bb * 3.1 + 5) * 1.5, x: 0, z: 0, r: 0.01, w: 0 }); }
+    var glints = []; for (var gl = 0; gl < 14; gl++) { var gs = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: gl % 2 ? 0xffffff : pal.fin[0], transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); var ga = glimR(gl * 3.3) * Math.PI * 2, gv = glimR(gl * 5.1) * 1.2; gs.position.set(Math.sin(ga) * Math.cos(gv) * 0.1, BY + 0.06 + Math.sin(gv) * 0.08, Math.cos(ga) * Math.cos(gv) * 0.13); gs.scale.setScalar(0.022); body.add(gs); glints.push(gs); }   // (glints of light twinkling in its fur, like sun on water)
+    var orbitB = new THREE.Group(); orbitB.position.y = 0.24; root.add(orbitB);   // (a few bubbles lazily circling round it)
+    for (var ob = 0; ob < 5; ob++) { var om = new THREE.Mesh(bGeo, bMat); om.renderOrder = 4; var oa = ob / 5 * Math.PI * 2; om.position.set(Math.cos(oa) * 0.2, Math.sin(ob * 2.1) * 0.05, Math.sin(oa) * 0.2); om.scale.setScalar(0.012 + glimR(ob) * 0.012); orbitB.add(om); }
+    for (var bb = 0; bb < 34; bb++) { var bm = new THREE.Mesh(bGeo, bMat); bm.renderOrder = 4; root.add(bm); var ba0 = glimR(bb * 7.7) * Math.PI * 2, br0 = 0.06 + glimR(bb * 2.9) * 0.14; bubbles.push({ m: bm, t: glimR(bb * 3.1 + 5), x: Math.sin(ba0) * br0, z: Math.cos(ba0) * br0 * 1.2, y0: 0.08 + glimR(bb * 4.3) * 0.2, r: (bb % 4 === 0 ? 0.02 : 0.007) + glimR(bb * 6.1) * 0.014, w: glimR(bb) * 6 }); }   // (scattered all round it from the start)
     var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.scale.set(0.9, 0.9, 1); glow.position.set(0, 0.25, 0); root.add(glow);
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.6, 0); tag.renderOrder = 6; root.add(tag);
-    return { root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { glints: glints, orbitB: orbitB, root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's blown its Wishbubble, the bubble floats beside it, bobbing
   function bubbleBuildExtras(g) {
@@ -4649,9 +4688,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = pb; g.eggGlow = eg; g.pearlIn = pearl;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Snorkling'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Sirenna'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Snorkling: a bouncy little trot, ears flopping and tail springing; it snuffles about (its
+  // every frame, for a Sirenna: a bouncy little trot, ears flopping and tail springing; it snuffles about (its
   // snout wiggling), looks around and blinks; bubbles drift up off it; and when petted it wiggles happily, hopping,
   // blowing a stream of bubbles from its snout
   function bubbleAnimate(g, dt, t, moving) {
@@ -4672,22 +4711,25 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bt = (t * 0.2 + g.stall * 0.43) % 1, blink = happy ? 0.6 : (bt < 0.035 ? Math.sin(bt / 0.035 * Math.PI) : 0);
     m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
     m.bubbles.forEach(function (b, k) {                                // bubbles drifting up off it, wobbling, then fading away; a stream from its snout when it's happy
-      b.t += dt * (happy ? 0.9 : 0.32);
+      b.t += dt * (happy ? 0.9 : 0.28) * (0.7 + (k % 5) * 0.12);
       if (b.t > 1) {
-        b.t = 0; b.r = 0.012 + Math.random() * 0.016; b.w = Math.random() * 6;
+        b.t = 0; b.r = (k % 4 === 0 ? 0.02 : 0.007) + Math.random() * 0.014; b.w = Math.random() * 6;   // (some big, most small)
         if (happy && k % 2) { var sp = V3(0, -0.016, 0.075).applyMatrix4(m.head.matrix).applyMatrix4(m.torso.matrix).applyMatrix4(m.body.matrix); b.x = sp.x; b.y0 = sp.y; b.z = sp.z; }
-        else { var a = Math.random() * Math.PI * 2; b.x = Math.sin(a) * 0.08; b.y0 = 0.2 + Math.random() * 0.08; b.z = Math.cos(a) * 0.11; }
+        else { var a = Math.random() * Math.PI * 2, rr = 0.06 + Math.random() * 0.14; b.x = Math.sin(a) * rr; b.y0 = 0.08 + Math.random() * 0.2; b.z = Math.cos(a) * rr * 1.2; }   // (all round it, low and high)
       }
       var f = b.t, s2 = b.r * Math.min(1, f * 6) * (1 + Math.sin(t * 9 + b.w) * 0.06);
       b.m.scale.set(s2, s2 * (1 + Math.sin(t * 7 + b.w) * 0.05), s2);
       b.m.position.set(b.x + Math.sin(f * 6 + b.w) * 0.015, (b.y0 || 0.2) + f * 0.35, b.z + Math.cos(f * 5 + b.w) * 0.01);
       b.m.material.opacity = 1; b.m.visible = f < 0.97;
     });
+    m.glints.forEach(function (gs, k) { gs.material.opacity = Math.pow(Math.max(0, Math.sin(t * 1.3 + k * 2.7)), 8) * 0.9; gs.material.rotation = t * 0.5 + k; });
+    m.orbitB.rotation.y = t * (happy ? 1.2 : 0.35); m.orbitB.children.forEach(function (ob, k) { ob.position.y = Math.sin(t * 0.8 + k * 2.1) * 0.05; });
+    m.legs.forEach(function (l, k) { l.fin.rotation.y = (k % 2 ? 1 : -1) * 0.5 + Math.sin(t * 3 + k) * 0.15; });
     var pulse = 0.5 + Math.sin(t * 1.2 + g.stall) * 0.5;
     m.glow.material.opacity = 0.1 + pulse * 0.05;
     if (g.egg) { g.eggMesh.position.y = 0.2 + Math.sin(t * 1.6 + g.stall) * 0.025; g.eggMesh.rotation.y = t * 0.4; g.pearlIn.position.set(Math.sin(t * 1.3) * 0.006, Math.sin(t * 1.7) * 0.006, 0); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
-  function snorklingAction(g, wx, wz) {                             // taking its Wishbubble, feeding and petting a Snorkling
+  function sirennaAction(g, wx, wz) {                             // taking its Wishbubble, feeding and petting a Sirenna
     if (g.egg) {
       if (!roomFor(['pearlBubble'])) { bagFull(); return; }
       addItem('pearlBubble', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.4;
@@ -4858,7 +4900,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.day !== glimDay) {
       var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], pearl = [], missedPearl = [], pbub = [], missedBub = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra or Snorkling counts the days in a row it's been fed and petted
+        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra or Sirenna counts the days in a row it's been fed and petted
           var gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', need = gem ? GEM_DAYS : aur ? AURORA_DAYS : zep ? ZEPHYRA_DAYS : lun ? LUNA_DAYS : bub ? BUBBLE_DAYS : EMBER_DAYS;
           if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
           else { if (g.days) (gem ? missedGem : aur ? missedMilk : zep ? missedWool : lun ? missedPearl : bub ? missedBub : missed).push(g.name); g.days = 0; }
@@ -4959,7 +5001,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'aurora') { auroraramAction(g, wx, wz); return; }
     if (g.kind === 'zephyra') { zephyraAction(g, wx, wz); return; }
     if (g.kind === 'luna') { lunastraAction(g, wx, wz); return; }
-    if (g.kind === 'bubble') { snorklingAction(g, wx, wz); return; }
+    if (g.kind === 'bubble') { sirennaAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
       addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
@@ -5065,7 +5107,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Snorkling' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -5100,7 +5142,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
-      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Snorklings \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'],
+      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'],
       ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 108 + k * 32, 19, an[2], false);
       chalk(an[1], w / 2 + 80, 123 + k * 32, 12, 'rgba(240,240,230,A)', true);
@@ -5623,7 +5665,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic luna-pic"></div><div class="shop-text"><b>Lunastra</b><span>A little plush spirit of the moonlit night, in soft moon-white fur that deepens into a starry sky over its back, with a night-sky mask full of glowing stars, huge galaxy eyes, tall ears tipped with starlight, a crescent moon on its brow, a big curling tail banded with stars and a tiny moon of its own orbiting round it. Feed it hay and pet it every day for two days in a row, and the next morning it leaves you a Moonpearl it found in the night. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + LUNA_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="luna-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bubble-pic"></div><div class="shop-text"><b>Snorkling</b><span>A chubby little sea spirit in soft seafoam fur dappled with bubble spots, with a coral snout, huge ocean eyes, floppy ears of shimmering fin, a scallop shell tucked behind one ear, pearly hooves and a corkscrew tail tipped with coral. Bubbles always drift up off it. Feed it hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bubble-pic"></div><div class="shop-text"><b>Sirenna</b><span>A chubby little sea spirit in soft seafoam fur dappled with bubble spots, with a coral snout, huge ocean eyes, floppy ears of shimmering fin, a scallop shell tucked behind one ear, pearly hooves and a corkscrew tail tipped with coral. Bubbles always drift up off it. Feed it hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BUBBLE_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bubble-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic aurora-pic"></div><div class="shop-text"><b>Auroraram</b><span>A graceful creature with a long, silky night-blue coat that ripples with the colours of the northern lights, spiralling horns of clear ice, a silky beard and glowing hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Aurora Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
@@ -5734,7 +5776,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Snorkling)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
