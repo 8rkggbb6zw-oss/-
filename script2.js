@@ -4498,6 +4498,18 @@ EVERDAWN_PARTS.push(function (THREE) {
       spots.forEach(function (s2) { var a = n.angleTo(s2[0]); if (a < s2[1]) c.lerp(spotCol, ss(s2[1], s2[1] * 0.7, a) * 0.85 * top); });
       c.multiplyScalar(0.965 + 0.05 * (0.5 + 0.5 * Math.sin(n.x * 23 + n.y * 17) * Math.sin(n.z * 19 - n.y * 13)));
     }
+    function waveCol(n, c) {                                          // a band of curling waves round its sides, like an old painting of the sea: deep ocean below a scalloped crest edged in foam, curling into spirals over its shoulders and haunches
+      var side = Math.abs(n.x); if (side < 0.25) return;
+      var crest = -0.12 + 0.07 * Math.sin(n.z * 10 + 0.6) + 0.03 * Math.sin(n.z * 23), d = n.y - crest;
+      var deep = backCol.clone().lerp(new THREE.Color(pal.fin[0]), 0.25).multiplyScalar(0.9), m = ss(0.25, 0.4, side);
+      if (d < 0 && d > -0.16) c.lerp(deep, ss(-0.16, -0.1, d) * ss(0.0, -0.025, d) * 0.55 * m);   // (the wave)
+      if (Math.abs(d) < 0.022) c.lerp(spotCol, (1 - Math.abs(d) / 0.022) * 0.9 * m);            // (and its foam edge)
+      [[0.5, 0.12], [-0.52, 0.12]].forEach(function (sp2) {             // (spirals of curling water)
+        var dz = n.z - sp2[0], dy = n.y - sp2[1], r = Math.hypot(dz, dy); if (r > 0.3) return;
+        var arm = Math.sin(Math.atan2(dy, dz) * (sp2[0] > 0 ? 1 : -1) + r * 22), w = ss(0.3, 0.18, r) * m;
+        if (arm > 0.55) c.lerp(deep, (arm - 0.55) / 0.45 * 0.5 * w); else if (arm < -0.75) c.lerp(spotCol, (-arm - 0.75) / 0.25 * 0.7 * w);
+      });
+    }
     // the body: chubby and round as a dumpling, a full chest and a round rump, all melted softly together
     var BY = 0.15, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
     function plushBody(x, y, z) {
@@ -4510,7 +4522,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bodyGeo = shaped([80, 56], function (n, q, c) {
       var lo = 0.02, hi = 0.2;
       for (var it = 0; it < 22; it++) { var mid = (lo + hi) / 2; if (plushBody(n.x * mid, n.y * mid, n.z * mid) < 0) lo = mid; else hi = mid; }
-      q.copy(n).multiplyScalar(lo); seaCol(n, c, 1);
+      q.copy(n).multiplyScalar(lo); seaCol(n, c, 1); waveCol(n, c);
     });
     coat(bodyGeo, furV, torso, 0.008, [0, -0.25, -1]);
     // a flowing crest of fin down its back, rising in a wave over its shoulders, scalloped between its rays and rippling down to its tail
@@ -4523,6 +4535,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       var df = new THREE.Mesh(geo, finMat); df.position.set(0, 0.07, -0.01); df.rotation.set(0.05, Math.PI / 2, 0); torso.add(df);
       var dfs = new THREE.Mesh(geo, finIri); dfs.position.copy(df.position); dfs.rotation.copy(df.rotation); dfs.scale.setScalar(1.005); dfs.renderOrder = 3; torso.add(dfs);   // (with a rainbow shimmer over it)
       crest = df;
+      var froth = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.15, clearcoat: 1, transparent: true, opacity: 0.85, emissive: pal.glow, emissiveIntensity: 0.15 }), 46), fo = new THREE.Object3D();
+      for (var fi = 0; fi < 46; fi++) { var fz = -0.075 + (fi / 45) * 0.15, fy = 0.071 - Math.pow(fz / 0.11, 2) * 0.02; fo.position.set((glimR(fi * 3.1) - 0.5) * 0.016, fy + glimR(fi * 5.7) * 0.004, fz - 0.01); fo.scale.setScalar(0.0018 + glimR(fi * 7.3) * 0.0024); fo.updateMatrix(); froth.setMatrixAt(fi, fo.matrix); }
+      torso.add(froth);   // (a froth of tiny sea-foam bubbles along the base of its crest)
     })();
     // the head: big and round, plump cheeks, a short soft coral snout
     var head = new THREE.Group(); head.position.set(0, 0.07, 0.1); head.scale.setScalar(1.25); torso.add(head);
