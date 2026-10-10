@@ -6325,7 +6325,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var gp = geo.attributes.position, gn = geo.attributes.normal, gc = geo.attributes.color, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 1, 1, 3, 1).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 }), count), o = new THREE.Object3D(), col = new THREE.Color(), fl = V3(flow[0], flow[1], flow[2]).normalize();
       for (var i = 0; i < count; i++) {
         var vi = Math.floor(glimR(i * 5.7 + seed) * gp.count), nn2 = V3(gn.getX(vi), gn.getY(vi), gn.getZ(vi)), dir = nn2.clone().multiplyScalar(0.55).addScaledVector(fl, 0.75).add(V3(glimR(i * 2.3) - 0.5, glimR(i * 3.9) - 0.5, glimR(i * 1.7) - 0.5).multiplyScalar(0.5)).normalize();
-        o.position.set(gp.getX(vi), gp.getY(vi), gp.getZ(vi)); o.quaternion.setFromUnitVectors(V3(0, 1, 0), dir); o.scale.set(0.00011, lenA + glimR(i * 4.3 + seed) * (lenB - lenA), 0.00011);   // (very fine, so they read as soft wisps) o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+        o.position.set(gp.getX(vi), gp.getY(vi), gp.getZ(vi)); o.quaternion.setFromUnitVectors(V3(0, 1, 0), dir); o.scale.set(0.00011, lenA + glimR(i * 4.3 + seed) * (lenB - lenA), 0.00011); o.updateMatrix(); im.setMatrixAt(i, o.matrix);   // (very fine, so they read as soft wisps)
         im.setColorAt(i, col.setRGB(gc.getX(vi), gc.getY(vi), gc.getZ(vi)).lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(1.05));
       }
       im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.castShadow = false; parent.add(im);
@@ -6544,37 +6544,26 @@ EVERDAWN_PARTS.push(function (THREE) {
       c.lerp(bellyCol, ss(0.45, 0.85, n.z) * ss(0.25, -0.2, n.y) * 0.6);   // (a pale bib on its chest)
       c.multiplyScalar(0.95 + 0.05 * Math.sin(n.x * 23 + n.z * 17) * Math.sin(n.y * 19) + 0.03 * Math.sin(n.x * 71 + n.z * 53) * Math.sin(n.y * 61));   // (gentle mottling and fur grain)
     });
-    plush(bodyGeo, torso, 0.0045, [0, -0.2, -1]);
+    // (its body is the rosebud itself, built below)
     // the shell: high and rounded like polished opal, its scutes rimmed in fine gold, flaring into a soft rim round its edge
     var mossCol0 = new THREE.Color(pal.moss);
     var seeds = [[0, 0]]; for (var s6 = 0; s6 < 6; s6++) { var a6 = s6 / 6 * Math.PI * 2 + Math.PI / 6; seeds.push([Math.cos(a6) * 0.5, Math.sin(a6) * 0.5]); } for (var s12 = 0; s12 < 12; s12++) { var a12 = s12 / 12 * Math.PI * 2; seeds.push([Math.cos(a12) * 0.92, Math.sin(a12) * 0.92]); }
     var shA = new THREE.Color(pal.shell[0]), shB = new THREE.Color(pal.shell[1]), seamCol = new THREE.Color(pal.seam), rimCol = new THREE.Color(pal.rim);
-    var coatTop = skinCol.clone().multiplyScalar(0.9);
-    var shell = new THREE.Group(); shell.position.set(0, 0.03, -0.012); shell.scale.setScalar(0.82); torso.add(shell);   // (sitting up on its back, its soft body showing beneath)
+        var shell = new THREE.Group(); shell.position.y = 0.034; torso.add(shell);   // (its whole body is a rosebud)
     function budSdf(x, y, z) {
-      var w = 0.52 + 0.48 * ss(-0.085, 0.035, y), d = ell(x / w, y, z / w, 0, 0.01, 0, 0.11, 0.13, 0.128);   // (a round bud, swelling out and narrowing at its base into its body, like a flower on its stem)
-      return sm(d, ell(x, y, z, 0, 0.09, 0, 0.06, 0.06, 0.07), 0.04);   // (rising toward the garden at its top)
+      var w = 0.78 + 0.22 * ss(-0.08, 0.0, y), d = ell(x / w, y, z / w, 0, 0.012, 0, 0.084, 0.092, 0.112);   // (a plump bud the size of its body, rounding in a little underneath)
+      return sm(d, ell(x, y, z, 0, 0.075, -0.004, 0.05, 0.045, 0.062), 0.035);   // (rising softly toward the garden at its top)
     }
     var shellGeo = sdfShape(budSdf, [150, 110], 0.22, function (n, q, c) {
-      var px = q.x / 0.115, pz = q.z / 0.135, d1 = 9, d2 = 9, ci = 0;
-      seeds.forEach(function (sd, k) { var dd = Math.hypot(px - sd[0], pz - sd[1]); if (dd < d1) { d2 = d1; d1 = dd; ci = k; } else if (dd < d2) d2 = dd; });
-      var ang = Math.atan2(pz, px), tier = n.y > 0.45 ? 1 : 0, np = tier ? 9 : 12, off = tier ? 0.5 : 0, fa = (ang / (Math.PI * 2) * np + off + 100) % 1, ux = fa - 0.5;   // (overlapping petal-plates like the bud of a flower, two tiers of them)
-      var vrel = tier ? ss(0.45, 0.95, n.y) : ss(-0.1, 0.45, n.y), edge = Math.abs(ux) * 2 - (1 - Math.pow(vrel, 1.6)) * 0.15 - 0.85 * vrel * vrel;   // (each plate rounding to a point at its tip)
-      c.copy(shA).lerp(shB, Math.min(1, Math.abs(ux) * 1.6 + (1 - vrel) * 0.35));   // (pale down its middle, deepening to its edges, like opal)
-      c.lerp(new THREE.Color(1, 1, 1), 0.07 * Math.sin(ux * 30) * Math.sin(vrel * 20));   // (a play of light across each one)
-      c.lerp(seamCol, ss(0.02, 0.0, Math.abs(ux)) * 0.55);   // (a fine golden vein down its middle)
-      c.lerp(seamCol, ss(0.42, 0.49, Math.abs(ux)) * 0.85);   // (golden edges)
-      if (tier === 0 && n.y > 0.32) c.lerp(seamCol, ss(0.36, 0.45, n.y) * 0.8);   // (where the tiers overlap)
-      var ccl = c.clone(); c.copy(coatTop).lerp(ccl, ss(0.03, 0.1, q.y));   // (its coat colour flowing up onto the base of the bud)
-      
+      c.copy(shA).lerp(shB, 0.35 + 0.4 * (1 - n.y) * 0.5);   // (the heart of the bud, showing between its petals)
     });
-    var shellMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15, emissive: pal.glow, emissiveIntensity: 0.06 });
+    var shellMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.62, sheen: new THREE.Color(0xffffff), emissive: pal.glow, emissiveIntensity: 0.03 });
     abPart(shellGeo, shellMat, 0, 0, 0, 0, 0, 0, shell).castShadow = true;
-    var shellSheen = new THREE.Mesh(shellGeo, filmMat(pal.glow, 0.5)); shellSheen.scale.setScalar(1.003); shellSheen.renderOrder = 4; shell.add(shellSheen);   // (an opal shimmer over it)
+    var shellSheen = new THREE.Mesh(shellGeo, filmMat(pal.glow, 0.1)); shellSheen.scale.setScalar(1.003); shellSheen.renderOrder = 4; shell.add(shellSheen);   // (an opal shimmer over it)
     var goldM = new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.28, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 });
     var ray = new THREE.Raycaster(), shellMesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); shellMesh.updateMatrixWorld(true);
     function onShell(dx, dz) { ray.set(V3(0, 0, 0), V3(dx, 1, dz).normalize()); var h = ray.intersectObject(shellMesh)[0]; return h ? { p: h.point.clone(), n: h.face.normal.clone().normalize() } : { p: V3(dx * 0.05, 0.08, dz * 0.05), n: V3(0, 1, 0) }; }
-    function plant(dx, dz, sink) { var sp = onShell(dx, dz), grp = new THREE.Group(); grp.position.copy(sp.p).addScaledVector(sp.n, -(sink || 0)); grp.quaternion.setFromUnitVectors(V3(0, 1, 0), sp.n.clone().lerp(V3(0, 1, 0), 0.5).normalize()); grp.scale.setScalar(1.7); shell.add(grp); return grp; }   // (a lush little garden)
+    function plant(dx, dz, sink) { var sp = onShell(dx, dz), grp = new THREE.Group(); grp.position.copy(sp.p).addScaledVector(sp.n, -(sink || 0)); grp.quaternion.setFromUnitVectors(V3(0, 1, 0), sp.n.clone().lerp(V3(0, 1, 0), 0.5).normalize()); grp.scale.setScalar(1.4); shell.add(grp); return grp; }   // (a lush little garden)
     var leafMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.moss).lerp(new THREE.Color(0xffffff), 0.1), roughness: 0.5, side: THREE.DoubleSide, emissive: pal.moss, emissiveIntensity: 0.12 }), sprouts = [];
     var leafShape = new THREE.Shape(); leafShape.moveTo(0, 0); leafShape.quadraticCurveTo(0.006, 0.006, 0, 0.016); leafShape.quadraticCurveTo(-0.006, 0.006, 0, 0); var leafGeo2 = new THREE.ShapeGeometry(leafShape, 8);
     // a crystal set in gold at the heart of each scute round its sides, and a ring of gold beads round its rim
@@ -6583,8 +6572,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var rb = 0; rb < 48; rb++) { var ra = rb / 48 * Math.PI * 2, rbp = onShell(Math.cos(ra) * 0.6, Math.sin(ra) * 0.6), bead = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 8, 6), goldM); bead.position.copy(rbp.p).addScaledVector(rbp.n, 0.001); shell.add(bead); }   // (a ring of gold beads round the rim of its garden)
     // a lawn of fine grass blades growing all over the top of its shell
     // a layer of dark, rich soil over the top of its shell, for its garden to grow in
-    var soilGeo = sdfShape(function (x, y, z) { return Math.max(sm(ell(x, y, z, 0, 0.01, 0, 0.112, 0.132, 0.13), ell(x, y, z, 0, 0.09, 0, 0.062, 0.062, 0.072), 0.04), -(y - 0.1)); }, [120, 90], 0.2, function (n, q, c) { c.setRGB(0.36, 0.26, 0.18).multiplyScalar(0.75 + 0.35 * glimR(Math.floor(q.x * 900) * 7.1 + Math.floor(q.z * 900) * 3.3)).lerp(new THREE.Color(0.28, 0.32, 0.18), 0.25 * (0.5 + 0.5 * Math.sin(q.x * 300) * Math.sin(q.z * 260))); });   // (dark earth, flecked and patchy)
-    var soil = new THREE.Mesh(soilGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); soil.scale.setScalar(1.012); shell.add(soil);
+    var soilGeo = sdfShape(function (x, y, z) { return Math.max(budSdf(x, y, z) - 0.0014, -(y - 0.092)); }, [120, 90], 0.2, function (n, q, c) { c.setRGB(0.36, 0.26, 0.18).multiplyScalar(0.75 + 0.35 * glimR(Math.floor(q.x * 900) * 7.1 + Math.floor(q.z * 900) * 3.3)).lerp(new THREE.Color(0.28, 0.32, 0.18), 0.25 * (0.5 + 0.5 * Math.sin(q.x * 300) * Math.sin(q.z * 260))); });   // (dark earth, flecked and patchy)
+    var soil = new THREE.Mesh(soilGeo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));  shell.add(soil);
     var bladeGeo = (function () { var g2 = new THREE.PlaneGeometry(0.0009, 1, 1, 4).translate(0, 0.5, 0), bp = g2.attributes.position; for (var i = 0; i < bp.count; i++) { var y = bp.getY(i); bp.setX(i, bp.getX(i) * (1 - y * 0.92)); bp.setZ(i, y * y * 0.25); } g2.computeVertexNormals(); return g2; })();   // (a flat, tapering blade that bends over a little)
     var grass = new THREE.InstancedMesh(bladeGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75, side: THREE.DoubleSide }), 1400), go = new THREE.Object3D(), gcol = new THREE.Color(), gn = 0;
     var grassCols = [new THREE.Color(0.36, 0.56, 0.22), new THREE.Color(0.48, 0.66, 0.26), new THREE.Color(0.28, 0.46, 0.2), new THREE.Color(0.62, 0.66, 0.34)];   // (fresh greens, deep greens and a few sun-bleached blades)
@@ -6607,7 +6596,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function budPetalTex(c0, c1, gold) {                              // a petal in fine detail: pale at its base flushing to colour, fine veins fanning from its base, soft streaks, a translucent edge rimmed in gold, and a shimmer
       return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
         var A = new THREE.Color(c0), B = new THREE.Color(c1), gr = g.createLinearGradient(0, h, 0, 0);
-        gr.addColorStop(0, tortCss(skinCol.clone().multiplyScalar(1.04))); gr.addColorStop(0.22, tortCss(skinCol.clone().lerp(A, 0.45))); gr.addColorStop(0.5, tortCss(A)); gr.addColorStop(0.85, tortCss(B)); gr.addColorStop(1, tortCss(B.clone().lerp(new THREE.Color(1, 1, 1), 0.25)));   // (its coat colour at the base, flowing into the petal's own colour)
+        gr.addColorStop(0, tortCss(A.clone().lerp(new THREE.Color(1, 1, 1), 0.3))); gr.addColorStop(0.45, tortCss(A)); gr.addColorStop(0.85, tortCss(B)); gr.addColorStop(1, tortCss(B.clone().lerp(new THREE.Color(1, 1, 1), 0.25)));   // (pale at its base, flushing to colour)
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
         for (var st = 0; st < 40; st++) { var sx = glimR(st * 3.3) * w; g.fillStyle = st % 2 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; g.fillRect(sx, 0, 2 + glimR(st) * 6, h); }   // (soft streaks along it)
         for (var vn = 0; vn < 34; vn++) { var tx = (vn + 0.5) / 34 * w; g.strokeStyle = 'rgba(255,255,255,' + (0.1 + glimR(vn * 2.7) * 0.12) + ')'; g.lineWidth = vn % 5 === 0 ? 1.4 : 0.7; g.beginPath(); g.moveTo(w / 2 + (tx - w / 2) * 0.15, h); g.bezierCurveTo(w / 2 + (tx - w / 2) * 0.5, h * 0.7, tx, h * 0.45, tx + (tx - w / 2) * 0.05, 0); g.stroke(); }   // (fine veins fanning up from its base)
@@ -6619,7 +6608,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     function sepalTex() {                                             // a sepal: deep green at its base, paler toward its tip, with a midrib, branching veins and fine hairs along its edges
       return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
-        var G = new THREE.Color(pal.moss).lerp(new THREE.Color(0.3, 0.5, 0.22), 0.4), gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, tortCss(skinCol)); gr.addColorStop(0.28, tortCss(skinCol.clone().lerp(G, 0.5))); gr.addColorStop(0.6, tortCss(G));   // (its coat colour at the base, turning green) gr.addColorStop(1, tortCss(G.clone().lerp(new THREE.Color(1, 1, 0.85), 0.3)));
+        var G = new THREE.Color(pal.moss).lerp(new THREE.Color(0.3, 0.5, 0.22), 0.4), gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, tortCss(G.clone().multiplyScalar(0.62))); gr.addColorStop(0.6, tortCss(G)); gr.addColorStop(1, tortCss(G.clone().lerp(new THREE.Color(1, 1, 0.85), 0.3)));   // (deep green at its base, paler at its tip)
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
         g.strokeStyle = 'rgba(230,255,200,0.45)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 0); g.stroke();
         g.lineWidth = 1.1; for (var vb = 1; vb < 14; vb++) { var vy = h - vb / 14 * h * 0.95; [-1, 1].forEach(function (s) { g.strokeStyle = 'rgba(230,255,200,0.3)'; g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + s * w * 0.2, vy - 14, w / 2 + s * w * 0.45, vy - 40); g.stroke(); }); }
@@ -6631,15 +6620,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var outerPetal = new THREE.MeshPhysicalMaterial({ map: budPetalTex(new THREE.Color(pal.shell[0]).lerp(new THREE.Color(pal.shell[1]), 0.3).getHex(), pal.shell[1], true), side: THREE.DoubleSide, roughness: 0.62, sheen: new THREE.Color(0xffffff), clearcoat: 0.08, clearcoatRoughness: 0.6, emissive: pal.glow, emissiveIntensity: 0.02 });
     var petalSheen = filmMat(pal.glow, 0.12); petalSheen.side = THREE.DoubleSide;
     var sepalMat = new THREE.MeshStandardMaterial({ map: sepalTex(), side: THREE.DoubleSide, roughness: 0.7 });
-    for (var ip = 0; ip < 8; ip++) wrapLeaf(ip / 8 * Math.PI * 2, Math.PI / 8 * 1.5, 2.05, 0.7, 0.0014, 0.0032, 0.011, innerPetal, petalSheen, true);   // (the inner ring, rising to the garden's rim)
-    for (var op = 0; op < 8; op++) wrapLeaf((op + 0.5) / 8 * Math.PI * 2, Math.PI / 8 * 1.5, 2.15, 1.0, 0.0042, 0.004, 0.014, outerPetal, petalSheen, true);   // (the outer ring, overlapping them)
-    for (var sp = 0; sp < 6; sp++) {
-      var sm3 = wrapLeaf((sp + 0.25) / 6 * Math.PI * 2, Math.PI / 6 * 0.95, 2.4, 1.6, 0.0085, 0.004, 0.02, sepalMat);   // (green sepals clasping its base, growing out of its fur)
-      var sg3 = sm3.geometry, sc3 = [], suv = sg3.attributes.uv; for (var ci = 0; ci < suv.count; ci++) sc3.push(skinCol.r, skinCol.g, skinCol.b); sg3.setAttribute('color', new THREE.Float32BufferAttribute(sc3, 3));
-      var sf = zFurShell(sg3, 12, 0.0055, [1, 1, 1], [0, 1, 0], 1.4), sfp = sf.attributes.position, sfr = sf.attributes.furRoot, nv = suv.count;
-      for (var k = 0; k < sfp.count; k++) { var f = Math.pow(Math.max(0, 1 - suv.getY(k % nv) / 0.5), 1.5); sfp.setXYZ(k, sfr.getX(k) + (sfp.getX(k) - sfr.getX(k)) * f, sfr.getY(k) + (sfp.getY(k) - sfr.getY(k)) * f, sfr.getZ(k) + (sfp.getZ(k) - sfr.getZ(k)) * f); }   // (its fur growing up over the base of each sepal and thinning away)
-      var sfm = new THREE.Mesh(sf, coatFur); sfm.castShadow = false; shell.add(sfm);
-    }
+    for (var ip = 0; ip < 9; ip++) wrapLeaf(ip / 9 * Math.PI * 2, Math.PI / 9 * 1.55, 1.75, 0.62, 0.0012, 0.0028, 0.009, innerPetal, petalSheen, true);   // (the inner ring, rising to cup the garden)
+    for (var mp = 0; mp < 9; mp++) wrapLeaf((mp + 0.5) / 9 * Math.PI * 2, Math.PI / 9 * 1.55, 2.25, 1.0, 0.0034, 0.0034, 0.012, outerPetal, petalSheen, true);   // (a ring round its middle, overlapping them)
+    for (var op = 0; op < 8; op++) wrapLeaf(op / 8 * Math.PI * 2, Math.PI / 8 * 1.5, 2.85, 1.55, 0.0056, 0.0034, 0.01, outerPetal, petalSheen, true);   // (and the broad outer petals wrapping round its sides and underneath)
+    for (var sp = 0; sp < 6; sp++) wrapLeaf((sp + 0.25) / 6 * Math.PI * 2, Math.PI / 6 * 0.9, 3.05, 2.2, 0.0078, 0.003, 0.012, sepalMat);   // (green sepals clasping it from beneath)
     // its little garden: soft mounds of moss
     var mossCol = new THREE.Color(pal.moss).lerp(new THREE.Color(0.38, 0.55, 0.22), 0.6), mossFur = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 6400, 0.12, true, 0.62, 0.04);   // (dense, fine and springy, shaded dark at the roots like real moss)
     [[0.0, 0.1, 0.034], [-0.5, -0.3, 0.028], [0.45, -0.4, 0.026], [0.55, 0.45, 0.022], [-0.5, 0.5, 0.024], [0.0, -0.75, 0.022], [-0.2, 0.9, 0.018], [0.25, 0.2, 0.02]].forEach(function (mm, k) {
@@ -6703,7 +6687,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[0, 0, 0.026, 0], [0.008, 0.003, 0.018, 0.35], [-0.007, 0.004, 0.016, -0.4], [0.003, -0.007, 0.013, 0.25]].forEach(function (cr) { var cm = new THREE.Mesh(new THREE.CylinderGeometry(0, 0.0045, cr[2], 6).translate(0, cr[2] / 2, 0), crystalMat); cm.position.set(cr[0], 0, cr[1]); cm.rotation.set(cr[1] * 30, 0, cr[3]); crysGrp.add(cm); });
     var crysGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.crystal, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })); crysGlow.scale.set(0.07, 0.07, 1); crysGlow.position.y = 0.014; crysGrp.add(crysGlow);
     // a tiny tree, its trunk gently twisting, with soft leafy crowns hung with glowing fruit
-    var tree = plant(0.15, -0.25, 0.003); tree.scale.setScalar(2.1); var trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a34, roughness: 0.95 });   // (dark, rough bark)
+    var tree = plant(0.15, -0.25, 0.003); tree.scale.setScalar(1.72); var trunkMat = new THREE.MeshStandardMaterial({ color: 0x6a4a34, roughness: 0.95 });   // (dark, rough bark)
     var tc = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0.003, 0.014, 0.001), V3(-0.002, 0.028, 0.0), V3(0.002, 0.04, -0.002)]), ttg = new THREE.TubeGeometry(tc, 20, 1, 7, false), ttp = ttg.attributes.position;
     for (var ti = 0; ti <= 20; ti++) { var tcp = tc.getPointAt(ti / 20), tr = 0.0032 * (1 - ti / 20 * 0.55); for (var tj = 0; tj <= 7; tj++) { var tq = ti * 8 + tj; ttp.setXYZ(tq, tcp.x + (ttp.getX(tq) - tcp.x) * tr, tcp.y + (ttp.getY(tq) - tcp.y) * tr, tcp.z + (ttp.getZ(tq) - tcp.z) * tr); } }
     ttg.computeVertexNormals(); tree.add(new THREE.Mesh(ttg, trunkMat));
@@ -6787,7 +6771,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     var legGeoOld = limb([[0.0005, 0.016], [0.022, 0.008], [0.019, -0.03], [0.012, -0.07], [0.0095, -0.095], [0.011, -0.104], [0.016, -0.114], [0.017, -0.12], [0.0005, -0.126]]), nailMat = new THREE.MeshPhysicalMaterial({ color: pal.toe, roughness: 0.15, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.15 }), legs = [];
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp) {
-      var hip = new THREE.Group(); hip.position.set(lp[0] * 0.055, BY - 0.046, lp[1] > 0 ? 0.062 : -0.064); body.add(hip);
+      var hip = new THREE.Group(); hip.position.set(lp[0] * 0.04, BY - 0.026, lp[1] > 0 ? 0.052 : -0.054); body.add(hip);   // (its legs growing from beneath its petals)
       var back = lp[1] < 0, tw = back ? 0.031 : 0.025;
       var lgeo = sdfShape(function (x, y, z) { y -= 0.065;   // (one soft, shapely leg: a rounded thigh, a slender shin, a neat ankle and a round paw with three toes)
         var d = ell(x, y, z, 0, -0.005, back ? -0.004 : 0, tw, 0.036, tw * 1.05);
