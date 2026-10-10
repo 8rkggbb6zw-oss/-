@@ -6550,7 +6550,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var coatTop = skinCol.clone().multiplyScalar(0.9);
     var shell = new THREE.Group(); shell.position.set(0, 0.03, -0.012); shell.scale.setScalar(0.82); torso.add(shell);   // (sitting up on its back, its soft body showing beneath)
     var shellGeo = sdfShape(function (x, y, z) {
-      var d = ell(x, y, z, 0, 0.01, 0, 0.11, 0.13, 0.128);   // (a round bud, swelling out and curving in at its base)
+      var w = 0.52 + 0.48 * ss(-0.085, 0.035, y), d = ell(x / w, y, z / w, 0, 0.01, 0, 0.11, 0.13, 0.128);   // (a round bud, swelling out and narrowing at its base into its body, like a flower on its stem)
       return sm(d, ell(x, y, z, 0, 0.09, 0, 0.06, 0.06, 0.07), 0.04);   // (rising toward the garden at its top)
     }, [150, 110], 0.22, function (n, q, c) {
       var px = q.x / 0.115, pz = q.z / 0.135, d1 = 9, d2 = 9, ci = 0;
