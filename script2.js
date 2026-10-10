@@ -6193,8 +6193,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       var vs = new THREE.Mesh(vg, sheen); vs.renderOrder = 4; vm.add(vs);
       var rec = { m: vm, base: vg.attributes.position.array.slice(), L: L, ph: ph }; membranes.push(rec); return rec;
     }
-    var frillMat = new THREE.MeshStandardMaterial({ map: lizFrillTex(pal), transparent: true, opacity: 0.97, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.42 }); frillMat.emissiveMap = frillMat.map;
-    var glideMat = new THREE.MeshStandardMaterial({ map: lizWingTex(pal), transparent: true, opacity: 0.97, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
+    var frillMat = new THREE.MeshStandardMaterial({ map: lizFrillTex(pal), transparent: true, opacity: 0.72,   // (a little see-through)
+      side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.42 }); frillMat.emissiveMap = frillMat.map;
+    var glideMat = new THREE.MeshStandardMaterial({ map: lizWingTex(pal), transparent: true, opacity: 0.7,   // (a little see-through)
+      side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
     var frill = [];
     for (var fk = 0; fk < 13; fk++) { var fa = -2.0 + fk * 0.333, fl = 0.06 + Math.cos(fa * 0.75) * 0.035; frill.push(membrane(head, frillMat, V3(Math.sin(fa) * 0.03, 0.004 + Math.cos(fa) * 0.026, -0.03), V3(Math.sin(fa), Math.cos(fa), -0.3), fl, 0.036, 0, fk * 0.7)); }   // (fanned round the back of its head like the rays of a rising sun)
     for (var fk2 = 0; fk2 < 12; fk2++) { var fa2 = -1.83 + fk2 * 0.333, fl2 = (0.06 + Math.cos(fa2 * 0.75) * 0.035) * 0.62; frill.push(membrane(head, frillMat, V3(Math.sin(fa2) * 0.026, 0.004 + Math.cos(fa2) * 0.022, -0.026), V3(Math.sin(fa2), Math.cos(fa2), -0.15), fl2, 0.03, 0, fk2 * 0.7 + 0.35)); }   // (a second, shorter layer of petals between them)
