@@ -4162,11 +4162,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (k = 1; k < 32; k++) { var b = (Math.PI * 2 - b0) - (Math.PI * 2 - 2 * b0) * k / 32; sh.lineTo(d + Math.cos(b) * r, Math.sin(b) * r); }   // (...and back round the inside)
       sh.closePath(); return sh;
     }
-    var moonMat = new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffe8a0, emissiveIntensity: 0.9, roughness: 0.35, metalness: 0.1 });   // a glowing crescent moon on its brow
-    var moonMark = new THREE.Mesh(new THREE.ExtrudeGeometry(crescent(0.0085, 0.007, 0.0042), { depth: 0.0012, bevelEnabled: true, bevelThickness: 0.0006, bevelSize: 0.0005, bevelSegments: 3, curveSegments: 24 }), moonMat);
+    var moonMat = new THREE.MeshStandardMaterial({ color: 0xffd860, emissive: 0xffc030, emissiveIntensity: 0.75, roughness: 0.3, metalness: 0.25 });   // (warm gold, so it stands out against its pale fur)   // a glowing crescent moon on its brow
+    var moonMark = new THREE.Mesh(new THREE.ExtrudeGeometry(crescent(0.0115, 0.0092, 0.0058), { depth: 0.0012, bevelEnabled: true, bevelThickness: 0.0006, bevelSize: 0.0005, bevelSegments: 3, curveSegments: 24 }), moonMat);
     moonMark.geometry.center(); moonMark.position.set(0, 0.036, 0.0535);   // (resting on the fur of its brow, just above its eyes, facing forward)
     moonMark.lookAt(moonMark.position.clone().add(V3(0, 0.55, 0.84))); moonMark.rotateZ(Math.PI / 2 + 0.35); head.add(moonMark);
-    var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0b8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); moonGlow.scale.set(0.032, 0.032, 1); moonGlow.position.set(0, 0.036, 0.056); head.add(moonGlow);
+    var moonBack = new THREE.Mesh(new THREE.CircleGeometry(0.0145, 40), new THREE.MeshBasicMaterial({ map: dawnGlowTex, color: pal.mask, transparent: true, opacity: 0.9, depthWrite: false }));   // (a soft patch of night sky behind it, so it shines out)
+    moonBack.position.copy(moonMark.position).addScaledVector(V3(0, 0.55, 0.84).normalize(), -0.0012); moonBack.lookAt(moonBack.position.clone().add(V3(0, 0.55, 0.84))); moonBack.renderOrder = 1; head.add(moonBack);
+    [[0.012, 0.007, 0.0016], [0.014, -0.004, 0.0012], [-0.004, 0.012, 0.001]].forEach(function (p) { var ms = new THREE.Mesh(new THREE.OctahedronGeometry(p[2], 0), new THREE.MeshBasicMaterial({ color: 0xfff4c8 })); ms.position.copy(moonMark.position).add(V3(p[0], p[1] * 0.84, -p[1] * 0.55 + 0.001)); head.add(ms); });   // (and a few tiny stars beside it)
+    var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc860, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); moonGlow.scale.set(0.045, 0.045, 1); moonGlow.position.set(0, 0.036, 0.056); head.add(moonGlow);
     // big shining eyes
     var eyeMat = new THREE.MeshStandardMaterial({ color: 0x05040a, roughness: 0.05, metalness: 0.2 });
     var irisMat = new THREE.MeshStandardMaterial({ map: lunaEyeTex(pal), roughness: 0.1, emissive: 0xffffff, emissiveIntensity: 0.25 }); irisMat.emissiveMap = irisMat.map;
@@ -4336,7 +4339,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
     var pulse = 0.5 + Math.sin(t * 1.2 + g.stall) * 0.5;
     m.ringGlows.forEach(function (r, k) { r.material.opacity = 0.14 + (0.5 + Math.sin(t * 1.5 + k * 0.9) * 0.5) * 0.14; });
-    m.moonGlow.material.opacity = 0.18 + pulse * 0.17;
+    m.moonGlow.material.opacity = 0.3 + pulse * 0.25;
     m.orbit2.rotation.y = -t * (happy ? 3 : 1.1);
     m.pend.rotation.z = Math.sin(t * 1.6 + g.stall) * 0.12 + (moving ? Math.sin(g.hop) * 0.25 : 0);   // (its moonstone swinging)
     m.stoneGlow.material.opacity = 0.35 + pulse * 0.3;
