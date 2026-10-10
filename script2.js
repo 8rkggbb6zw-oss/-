@@ -4866,10 +4866,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     var woolFur = zFurMat(new THREE.Color(1.07, 1.07, 1.07), 3600, 0.08, true, 0.95, 0.38);   // (very fine and dense, barely shaded at the roots, so it looks as soft as down)   // (a dense, soft, plush coat)
     var sheen = filmMat(0xffffff, 0.3);                              // (and a rainbow sheen sliding over it, like light through a prism)
-    function woolly(geo, parent, len, x, y, z) {
+    function woolly(geo, parent, len, x, y, z, flow) {
       var g2 = new THREE.Group(); g2.position.set(x || 0, y || 0, z || 0); parent.add(g2);
       var sk = new THREE.Mesh(geo, skinV); sk.castShadow = true; g2.add(sk);
-      g2.add(new THREE.Mesh(zFurShell(geo, 24, len * 1.7, [1, 1, 1], [0, -0.35, -1], 1.3), woolFur));   // (lying back softly along its body)
+      g2.add(new THREE.Mesh(zFurShell(geo, 24, len * 1.7, [1, 1, 1], flow || [0, -0.35, -1], 1.3), woolFur));   // (lying back softly along its body)
       return g2;
     }
     // the body: round and plump, all in curly fleece
@@ -4887,6 +4887,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     coat(headGeo, faceFur, head, 0.0035, [0, 0.3, -1]);
     var neckWool = woolly(fleece([0.042, 0.055, 0.042], 16, 0.02, 400, [64, 44]), body, 0.007, 0, BY + 0.055, 0.1);   // (a woolly ruff where its neck meets its head)
     var top = woolly(fleece([0.026, 0.016, 0.028], 12, 0.012, 700, [56, 40]), head, 0.004, 0, 0.042, -0.004);   // its curly topknot
+    woolly(fleece([0.016, 0.01, 0.014], 6, 0.008, 720, [40, 28]), head, 0.006, 0, 0.034, 0.028, [0, -0.6, 1]);   // (a soft forelock falling over its brow)
+    [-1, 1].forEach(function (s) { woolly(fleece([0.012, 0.016, 0.012], 6, 0.007, 760 + s * 9, [36, 26]), head, 0.006, s * 0.041, -0.016, 0.004, [s, -0.8, -0.3]); });   // (fluffy tufts on its cheeks)
+    woolly(fleece([0.05, 0.04, 0.03], 14, 0.016, 800, [72, 50]), body, 0.012, 0, BY + 0.012, 0.118, [0, -1, 0.2]);   // a long, silky bib of fur on its chest
+    // a little circlet of tiny crystals nestled in its topknot
+    var circ = new THREE.Group(); circ.position.set(0, 0.052, 0.002); head.add(circ);
+    var cMat = new THREE.MeshPhysicalMaterial({ color: pal.horn, roughness: 0.03, clearcoat: 1, transparent: true, opacity: 0.88, emissive: pal.glow, emissiveIntensity: 0.5, flatShading: true });
+    for (var ci = 0; ci < 7; ci++) { var ca = (ci / 6 - 0.5) * 2.4, cr = new THREE.Mesh(new THREE.OctahedronGeometry(0.0034 + (ci === 3 ? 0.0022 : 0), 0), cMat); cr.scale.set(0.7, 1.4, 0.7); cr.position.set(Math.sin(ca) * 0.022, Math.cos(ca) * 0.004, Math.cos(ca) * 0.016); cr.rotation.z = -Math.sin(ca) * 0.5; circ.add(cr); var cf = new THREE.Mesh(cr.geometry, filmMat(0xffffff, 1)); cf.position.copy(cr.position); cf.rotation.copy(cr.rotation); cf.scale.set(0.72, 1.42, 0.72); cf.renderOrder = 3; circ.add(cf); }
     // big, gentle eyes
     var eyeMat = new THREE.MeshStandardMaterial({ color: 0x05040a, roughness: 0.05, metalness: 0.2 });
     var irisMat = new THREE.MeshStandardMaterial({ map: prismEyeTex(pal), roughness: 0.1, emissive: 0xffffff, emissiveIntensity: 0.25 }); irisMat.emissiveMap = irisMat.map;
@@ -4972,7 +4979,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var ls = 0; ls < 3; ls++) { var lm = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.05), new THREE.MeshBasicMaterial({ map: prismBandTex, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); lm.rotation.set(-Math.PI / 2, 0, ls * 1.3 + 0.4); lm.position.set(Math.cos(ls * 2.2) * 0.2, 0.013, Math.sin(ls * 2.2) * 0.22); root.add(lm); lightSpots.push(lm); }
     // a little puff of a tail
     var tail = new THREE.Group(); tail.position.set(0, BY + 0.035, -0.135); body.add(tail);
-    woolly(fleece([0.018, 0.02, 0.016], 8, 0.01, 1200, [40, 28]), tail, 0.005, 0, 0, 0);
+    woolly(fleece([0.022, 0.03, 0.02], 10, 0.012, 1200, [48, 32]), tail, 0.008, 0, 0.004, -0.004, [0, -0.6, -1]);   // (a soft, fluffy plume)
     // rainbow sparkles drifting off it, a little rainbow when it's happy, and a soft glow round it
     var sparks = [];
     for (var sk = 0; sk < 14; sk++) { var spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color().setHSL(sk / 14, 0.85, 0.75), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); spr.scale.set(0.03, 0.03, 1); root.add(spr); sparks.push({ s: spr, t: glimR(sk + 60) * 2, x: 0, y: 0, z: 0 }); }
@@ -4982,7 +4989,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.72, 0); tag.renderOrder = 6; root.add(tag);
-    return { shards: shards, lightSpots: lightSpots, root: root, body: body, head: head, ears: ears, legs: legs, tail: tail, lids: lids, fleece: fleeceG, hornMat: hornMat, hornGlows: hornGlows, sparks: sparks, rainbow: rainbow, glow: glow, tagCv: tagCv, tagTex: tagTex, hum: 0, wool: 0.92 };
+    var glitter = (function () {                                     // tiny rainbow glints caught in its fur, twinkling
+      var fg = fleeceG.children[0].geometry, p = fg.attributes.position, nrm = fg.attributes.normal, N = 160, im = new THREE.InstancedMesh(new THREE.OctahedronGeometry(1, 0), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }), N), o = new THREE.Object3D(), c = new THREE.Color();
+      for (var i = 0; i < N; i++) { var k = Math.floor(glimR(i * 7.7 + 3) * p.count), nn = V3(nrm.getX(k), nrm.getY(k), nrm.getZ(k)); if (nn.y < -0.3) { o.scale.setScalar(0); } else { o.position.set(p.getX(k), p.getY(k), p.getZ(k)).addScaledVector(nn, 0.008); o.scale.setScalar(0.0012 + glimR(i) * 0.0012); o.rotation.set(i, i * 2, 0); } o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.setHSL(glimR(i * 3.1), 0.9, 0.8)); }
+      fleeceG.add(im); return im;
+    })();
+    var hoofFilm = filmMat(0xffffff, 0.9); legs.forEach(function (l) { l.hip.traverse(function (o) { if (o.isMesh && o.material === hoofMat) { var f = new THREE.Mesh(o.geometry, hoofFilm); f.position.copy(o.position); f.rotation.copy(o.rotation); f.scale.copy(o.scale).multiplyScalar(1.03); f.renderOrder = 3; o.parent.add(f); } }); });   // (a rainbow shimmer on its crystal hooves)
+    return { glitter: glitter, circ: circ, shards: shards, lightSpots: lightSpots, root: root, body: body, head: head, ears: ears, legs: legs, tail: tail, lids: lids, fleece: fleeceG, hornMat: hornMat, hornGlows: hornGlows, sparks: sparks, rainbow: rainbow, glow: glow, tagCv: tagCv, tagTex: tagTex, hum: 0, wool: 0.92 };
   }
   // when its fleece is full and ready to shear, a little rainbow puff of wool floats over it
   function prismBuildExtras(g) {
@@ -5025,6 +5038,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       sp.s.position.set(sp.x, sp.y + Math.max(0, sp.t) * 0.3, sp.z);
     });
     m.rainbow.material.opacity += ((happy ? 0.85 : 0) - m.rainbow.material.opacity) * Math.min(1, dt * 3);
+    m.glitter.material.opacity = 0.55 + Math.sin(t * 3.1) * 0.35; m.glitter.rotation.y = Math.sin(t * 0.7) * 0.01;   // (the glints twinkling)
+    m.circ.rotation.y = Math.sin(t * 0.8 + g.stall) * 0.05;
     m.shards.forEach(function (sg, k) { sg.material.opacity = 0.3 + Math.pow(Math.max(0, Math.sin(t * 1.7 + k * 1.9)), 4) * 0.7; sg.material.rotation = t * 0.4 + k; });
     m.lightSpots.forEach(function (lsp, k) { lsp.material.opacity = 0.22 + Math.sin(t * 0.9 + k * 2) * 0.12; lsp.rotation.z += dt * 0.05; });
     m.glow.material.opacity = 0.1 + pulse * 0.05;
