@@ -6015,6 +6015,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = gr; g.beginPath(); g.moveTo(w * 0.3, 0); g.lineTo(w * 0.7, 0); g.bezierCurveTo(w, h * 0.3, w, h * 0.8, w * 0.55, h); g.bezierCurveTo(w * 0.45, h * 0.98, 0, h * 0.8, 0, h * 0.4); g.bezierCurveTo(0, h * 0.2, w * 0.2, h * 0.08, w * 0.3, 0); g.fill();
       g.strokeStyle = 'rgba(255,250,230,0.6)'; g.lineWidth = 1.6; for (var r = -3; r <= 3; r++) { g.beginPath(); g.moveTo(w / 2 + r * 2, 0); g.quadraticCurveTo(w / 2 + r * 9, h * 0.5, w / 2 + r * 14, h * 0.95); g.stroke(); }   // (ribs)
       g.strokeStyle = 'rgba(255,250,230,0.25)'; g.lineWidth = 0.7; for (var r2 = -9; r2 <= 9; r2++) { g.beginPath(); g.moveTo(w / 2 + r2, h * 0.05); g.quadraticCurveTo(w / 2 + r2 * 4, h * 0.5, w / 2 + r2 * 5.5, h * 0.92); g.stroke(); }
+      g.strokeStyle = 'rgba(255,214,120,0.75)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(w * 0.3, 0); g.bezierCurveTo(w * 0.2, h * 0.08, 0, h * 0.2, 0, h * 0.4); g.bezierCurveTo(0, h * 0.8, w * 0.45, h * 0.98, w * 0.55, h); g.bezierCurveTo(w, h * 0.8, w, h * 0.3, w * 0.7, 0); g.stroke();   // (a fine golden rim)
       if (eyeDots) { var es = g.createRadialGradient(w / 2, h * 0.7, 2, w / 2, h * 0.7, 14); es.addColorStop(0, 'rgba(255,255,240,0.9)'); es.addColorStop(0.5, lizCss(c1, 0.7)); es.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = es; g.beginPath(); g.arc(w / 2, h * 0.7, 14, 0, Math.PI * 2); g.fill(); }
       g.fillStyle = 'rgba(255,255,255,0.85)'; for (var sd = 0; sd < 16; sd++) { var sy = h * (0.25 + glimR(sd * 3.7) * 0.7), sx = w / 2 + (glimR(sd * 5.3) - 0.5) * w * 0.7 * (sy / h); g.beginPath(); g.arc(sx, sy, 0.7 + glimR(sd) * 1, 0, Math.PI * 2); g.fill(); }
     }));
@@ -6079,6 +6080,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(mpts), 60, 0.0008, 5, false), mouthMat));
     var nostMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.band).multiplyScalar(0.4), roughness: 0.8 });
     [-1, 1].forEach(function (s) { var np = onHead(V3(s * 0.008, 0.0, 0.05), V3(s * 0.3, 0.3, 1)), nm = new THREE.Mesh(seg, nostMat); nm.scale.set(0.0018, 0.0011, 0.0009); nm.position.copy(np.p).addScaledVector(np.n, 0.0004); nm.lookAt(nm.position.clone().add(np.n)); head.add(nm); });
+    var whiskM = new THREE.MeshBasicMaterial({ color: 0xfffaf0, transparent: true, opacity: 0.5 });
+    [-1, 1].forEach(function (s) { for (var wk = 0; wk < 4; wk++) { var wb = onHead(V3(s * 0.012, -0.006 - (wk % 2) * 0.004, 0.035), V3(s * 0.5, 0, 0.85)), wp = []; for (var wi = 0; wi <= 8; wi++) { var wt = wi / 8; wp.push(wb.p.clone().add(V3(s * wt * (0.03 + wk * 0.004), -wt * wt * 0.008 + (wk - 1.5) * wt * 0.005, -wt * 0.01))); } head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(wp), 10, 0.0003, 3, false), whiskM)); } });   // (fine, pale whiskers on its muzzle)
     var tongue = new THREE.Group(), tpTip = onHead(V3(0, -0.014, 0.05), V3(0, -0.2, 1)); tongue.position.copy(tpTip.p).add(V3(0, 0, -0.004)); head.add(tongue);
     var tongueMat = new THREE.MeshStandardMaterial({ color: 0xff7a9a, roughness: 0.35 });
     part(seg, tongueMat, 0, 0, 0.012, 0.0028, 0.0012, 0.013, tongue);
@@ -6108,7 +6111,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var bs = onHead(V3(s * 0.03, -0.012, 0.02), V3(s * 0.85, -0.15, 0.5)); bl.position.copy(bs.p).addScaledVector(bs.n, 0.002); bl.lookAt(bl.position.clone().add(bs.n)); head.add(bl);
     });
     // two horns of clear citrine sweeping back from its crown, ridged, a glint of light at each tip
-    var crystalMat = new THREE.MeshPhysicalMaterial({ color: pal.crystal, roughness: 0.08, clearcoat: 1, transparent: true, opacity: 0.9, emissive: pal.crystal, emissiveIntensity: 0.2 }), glints = [];
+    var hornGold = new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.28, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 }), crystalMat = new THREE.MeshPhysicalMaterial({ color: pal.crystal, roughness: 0.08, clearcoat: 1, transparent: true, opacity: 0.9, emissive: pal.crystal, emissiveIntensity: 0.2 }), glints = [];
     [-1, 1].forEach(function (s) {
       var hb = onHead(V3(s * 0.02, 0.03, -0.012), V3(s * 0.4, 1, -0.3)).p, hpts = [];
       for (var i = 0; i <= 8; i++) { var t = i / 8; hpts.push(hb.clone().add(V3(s * t * 0.02, t * 0.036 - t * t * 0.01, -t * 0.06))); }
@@ -6116,6 +6119,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var k = 0; k <= 24; k++) { var c = hc.getPointAt(k / 24), r = 0.0062 * (1 - k / 24 * 0.92) * (1 + 0.08 * Math.sin(k * 2.4)); for (var j = 0; j <= 6; j++) { var q = k * 7 + j; hp.setXYZ(q, c.x + (hp.getX(q) - c.x) * r, c.y + (hp.getY(q) - c.y) * r, c.z + (hp.getZ(q) - c.z) * r); } }   // (faceted and gently ridged)
       hg.computeVertexNormals(); head.add(new THREE.Mesh(hg, crystalMat));
       var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.set(0.016, 0.016, 1); gl.position.copy(hc.getPointAt(1)); head.add(gl); glints.push(gl);
+      [0.08, 0.3, 0.5].forEach(function (u, k) { var bp = hc.getPointAt(u), band = new THREE.Mesh(new THREE.TorusGeometry(0.0062 * (1 - u * 0.92) * 1.08, 0.0008 - k * 0.0002, 6, 20), hornGold); band.position.copy(bp); band.quaternion.setFromUnitVectors(V3(0, 0, 1), hc.getTangentAt(u)); head.add(band); });   // (fine gold bands round each horn)
     });
     // a little sun-mark on its brow, faintly glowing
     var smP = onHead(V3(0, 0.03, 0.02), V3(0, 1, 0.5)), smk = new THREE.Group(); smk.position.copy(smP.p).addScaledVector(smP.n, 0.0006); smk.lookAt(smk.position.clone().add(smP.n)); head.add(smk);
@@ -6222,6 +6226,38 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gemGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); gemGlow.scale.set(0.07, 0.07, 1); sunGem.add(gemGlow);
     tailRiders.push({ o: sunGem, rest: gemPos.clone(), u: 0.9 });
     var plume = fluff(tail, tCrv.getPointAt(0.8), 0.0075, 0.008, 0.016, 0.012, [0, 0.4, 1], maneCol); plume.lookAt(plume.position.clone().add(tCrv.getTangentAt(0.8))); tailRiders.push({ o: plume, rest: plume.position.clone(), u: 0.8 });   // (a fluffy plume round the curl of its tail)
+    // swirls of golden filigree in its coat over its shoulders and haunches, like sunlight caught in its fur
+    var filMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe08a).lerp(new THREE.Color(pal.spot), 0.3), transparent: true, opacity: 0.55, depthWrite: false }), filigree = [];
+    function swirl(dir0, turns, r0, thick) {
+      var pts = [], base = dir0.clone().normalize(), u = V3(0, 1, 0).cross(base).normalize(), w = base.clone().cross(u).normalize();
+      for (var i = 0; i <= 44; i++) { var t2 = i / 44, ang = t2 * Math.PI * 2 * turns, r = r0 * (1 - t2 * 0.88), dir = base.clone().addScaledVector(u, Math.cos(ang) * r).addScaledVector(w, Math.sin(ang) * r).normalize(); ray.set(V3(0, 0, 0), dir); var hh = ray.intersectObject(bodyMesh)[0]; if (hh) pts.push(hh.point.clone().addScaledVector(hh.face.normal.clone().normalize(), 0.0068)); }
+      if (pts.length < 8) return;
+      var vc = new THREE.CatmullRomCurve3(pts), tg = new THREE.TubeGeometry(vc, 90, 1, 5, false), p = tg.attributes.position;
+      for (var k = 0; k <= 90; k++) { var t3 = k / 90, c = vc.getPointAt(t3), rr = thick * (0.3 + 0.7 * Math.sin(Math.min(1, t3 * 1.15 + 0.08) * Math.PI)); for (var j = 0; j <= 5; j++) { var q = k * 6 + j; p.setXYZ(q, c.x + (p.getX(q) - c.x) * rr, c.y + (p.getY(q) - c.y) * rr, c.z + (p.getZ(q) - c.z) * rr); } }
+      var sm2 = new THREE.Mesh(tg, filMat); torso.add(sm2); filigree.push(sm2);
+      for (var bd = 1; bd < 6; bd++) { var bp = vc.getPointAt(bd / 6), bn = bp.clone().normalize(), bs = vc.getTangentAt(bd / 6).clone().cross(bn).normalize().multiplyScalar(bd % 2 ? 1 : -1), pb = new THREE.Mesh(new THREE.SphereGeometry(thick * 1.2, 8, 6), filMat); pb.position.copy(bp).addScaledVector(bs, thick * 3.5); torso.add(pb); }   // (tiny golden beads beside it)
+    }
+    [-1, 1].forEach(function (s) { [[V3(s, 0.2, 0.55), 1.5, 0.36, 0.0011], [V3(s, 0.2, -0.55), 1.7, 0.38, 0.0012], [V3(s, -0.1, 0.0), 1.2, 0.28, 0.001]].forEach(function (v) { swirl(v[0], v[1], v[2], v[3]); }); });
+    // longer guard hairs standing out of its coat, so its outline is soft and real
+    function guardHairs(geo, parent, count, lenA, lenB, flow, seed) {
+      var gp = geo.attributes.position, gn = geo.attributes.normal, gc = geo.attributes.color, im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 1, 1, 3, 1).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.75 }), count), o = new THREE.Object3D(), col = new THREE.Color(), fl = V3(flow[0], flow[1], flow[2]).normalize();
+      for (var i = 0; i < count; i++) {
+        var vi = Math.floor(glimR(i * 5.7 + seed) * gp.count), nn2 = V3(gn.getX(vi), gn.getY(vi), gn.getZ(vi)), dir = nn2.clone().multiplyScalar(0.55).addScaledVector(fl, 0.75).add(V3(glimR(i * 2.3) - 0.5, glimR(i * 3.9) - 0.5, glimR(i * 1.7) - 0.5).multiplyScalar(0.5)).normalize();
+        o.position.set(gp.getX(vi), gp.getY(vi), gp.getZ(vi)); o.quaternion.setFromUnitVectors(V3(0, 1, 0), dir); o.scale.set(0.00018, lenA + glimR(i * 4.3 + seed) * (lenB - lenA), 0.00018); o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+        im.setColorAt(i, col.setRGB(gc.getX(vi), gc.getY(vi), gc.getZ(vi)).multiplyScalar(1.08));
+      }
+      im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; im.castShadow = false; parent.add(im);
+    }
+    guardHairs(bodyGeo, torso, 650, 0.008, 0.015, [0, -0.2, -1], 5);
+    guardHairs(headGeo, head, 220, 0.004, 0.009, [0, 0.2, -1], 9);
+    // a gold cuff round its tail, just before the curl
+    var cuff = new THREE.Group(), cuffU = 0.66, cuffP = tCrv.getPointAt(cuffU); cuff.position.copy(cuffP); cuff.quaternion.setFromUnitVectors(V3(0, 0, 1), tCrv.getTangentAt(cuffU)); tail.add(cuff);
+    var cuffR = tailR(cuffU) + 0.008; [-0.003, 0, 0.003].forEach(function (z, k) { var cr = new THREE.Mesh(new THREE.TorusGeometry(cuffR, k === 1 ? 0.0016 : 0.0009, 8, 32), hornGold); cr.position.z = z; cuff.add(cr); });
+    for (var cg2 = 0; cg2 < 8; cg2++) { var cga = cg2 / 8 * Math.PI * 2, cgem = new THREE.Mesh(new THREE.OctahedronGeometry(0.0016, 0), crystalMat); cgem.position.set(Math.cos(cga) * (cuffR + 0.0012), Math.sin(cga) * (cuffR + 0.0012), 0); cuff.add(cgem); }   // (set with tiny crystals)
+    tailRiders.push({ o: cuff, rest: cuffP.clone(), u: cuffU });
+    // tiny suns circling it, each a glowing gold bead with a crown of rays
+    var suns = [], sunMat = new THREE.MeshBasicMaterial({ color: 0xffe08a });
+    for (var sn = 0; sn < 3; sn++) { var sg = new THREE.Group(); root.add(sg); sg.add(new THREE.Mesh(new THREE.SphereGeometry(0.006, 14, 10), sunMat)); var sgl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); sgl.scale.set(0.05, 0.05, 1); sg.add(sgl); var srs = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffe8a0, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); srs.scale.set(0.03, 0.03, 1); sg.add(srs); suns.push({ g: sg, a: sn / 3 * Math.PI * 2, r: 0.2 + sn * 0.02, h: 0.3 + sn * 0.05, rays: srs }); }
     // warm motes of sunlight drifting up off it, a few sparkles, and a soft warm glow
     var motes = [];
     for (var mo = 0; mo < 12; mo++) { var msp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mo % 3 ? dawnGlowTex : glimSparkTex, color: mo % 2 ? pal.glow : pal.spot, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); msp.scale.set(0.02, 0.02, 1); root.add(msp); motes.push({ s: msp, t: glimR(mo * 3.7), a: glimR(mo * 5.3) * Math.PI * 2, r: 0.05 + glimR(mo * 7.9) * 0.15 }); }
@@ -6230,7 +6266,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.55, 0); tag.renderOrder = 6; root.add(tag);
-    return { barbels: barbels, membranes: membranes, frill: frill, glides: glides, tongue: tongue, glints: glints, tailGeo: tailGeo, tailRest: tailRest, tailU: tU, tailFurGeo: tailFurGeo, tailFurRest: tailFurRest, tailFurU: tailFurU, tailRiders: tailRiders, gemGlow: gemGlow, motes: motes, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { filigree: filigree, suns: suns, barbels: barbels, membranes: membranes, frill: frill, glides: glides, tongue: tongue, glints: glints, tailGeo: tailGeo, tailRest: tailRest, tailU: tU, tailFurGeo: tailFurGeo, tailFurRest: tailFurRest, tailFurU: tailFurU, tailRiders: tailRiders, gemGlow: gemGlow, motes: motes, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready, the Sunscale it has shed floats softly over it, turning in the light
   function lizBuildExtras(g) {
@@ -6269,6 +6305,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glides.forEach(function (gl) { gl.m.scale.set(happy ? 1.15 : 0.9 + (moving ? 0.1 : 0), 1, 1); });
     var tf = (t * 0.29 + g.stall * 0.37) % 1, flick = happy ? Math.max(0, Math.sin(m.wig * 9)) : (tf < 0.05 ? Math.sin(tf / 0.05 * Math.PI) : 0);   // (a flick of its forked tongue now and then)
     m.tongue.scale.set(1, 1, Math.max(0.001, flick));
+    m.filigree.forEach(function (f, k) { f.material.opacity = 0.4 + (0.5 + 0.5 * Math.sin(t * 1.2 - k * 0.8)) * 0.25; });   // (the filigree softly shimmering)
+    m.suns.forEach(function (o, k) { var aa = o.a + t * 0.3; o.g.position.set(Math.cos(aa) * o.r, o.h + Math.sin(t * 1.1 + k * 2) * 0.02, Math.sin(aa) * o.r * 1.25); o.rays.material.rotation = t * 0.6 + k; });
     m.barbels.forEach(function (d, k) { d.g.rotation.set(Math.sin(t * 1.4 + k) * 0.25, d.s * Math.sin(t * 1.1 + k * 2) * 0.2, 0); });
     m.glints.forEach(function (gl, k) { gl.material.opacity = 0.3 + Math.pow(0.5 + 0.5 * Math.sin(t * 1.7 + k * 2.1), 4) * 0.6; });
     m.gemGlow.material.opacity = 0.3 + (0.5 + 0.5 * Math.sin(t * 1.3 + g.stall)) * 0.2 + (happy ? 0.2 : 0);
