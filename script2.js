@@ -6020,6 +6020,38 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = 'rgba(255,255,255,0.85)'; for (var sd = 0; sd < 16; sd++) { var sy = h * (0.25 + glimR(sd * 3.7) * 0.7), sx = w / 2 + (glimR(sd * 5.3) - 0.5) * w * 0.7 * (sy / h); g.beginPath(); g.arc(sx, sy, 0.7 + glimR(sd) * 1, 0, Math.PI * 2); g.fill(); }
     }));
   }
+  function lizWingTex(pal) {                                          // a wing of light in fine detail: iridescent bands, branching veins with cross-veins forming little cells like a dragonfly's, a jewelled eye-spot, a scalloped golden edge beaded with pearls, and glittering dust
+    return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
+      function shape() { g.beginPath(); g.moveTo(w * 0.32, 0); g.lineTo(w * 0.68, 0); g.bezierCurveTo(w * 1.02, h * 0.28, w * 1.0, h * 0.7, w * 0.62, h * 0.97); for (var k = 0; k < 6; k++) { var x0 = w * (0.62 - k * 0.075), x1 = x0 - w * 0.075; g.quadraticCurveTo((x0 + x1) / 2, h * (0.995 - Math.abs(k - 2.5) * 0.012) + 10, x1, h * (0.965 - Math.abs(k - 2.5) * 0.02)); } g.bezierCurveTo(w * 0.02, h * 0.75, -w * 0.02, h * 0.3, w * 0.32, 0); g.closePath(); }   // (a scalloped trailing edge)
+      var c0 = new THREE.Color(pal.frill[0]), c1 = new THREE.Color(pal.frill[1]), cg = new THREE.Color(pal.glow), cm = c0.clone().lerp(cg, 0.5);
+      g.save(); shape(); g.clip();
+      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, lizCss(c0, 1)); gr.addColorStop(0.3, lizCss(cm, 0.9)); gr.addColorStop(0.55, lizCss(c1, 0.86)); gr.addColorStop(0.78, lizCss(cg, 0.86)); gr.addColorStop(1, lizCss(c0, 0.95));
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      [[0.35, 'rgba(255,190,240,0.18)'], [0.5, 'rgba(170,230,255,0.16)'], [0.66, 'rgba(255,240,170,0.18)']].forEach(function (b) { var bg = g.createLinearGradient(0, h * (b[0] - 0.07), 0, h * (b[0] + 0.07)); bg.addColorStop(0, 'rgba(255,255,255,0)'); bg.addColorStop(0.5, b[1]); bg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = bg; g.fillRect(0, h * (b[0] - 0.07), w, h * 0.14); });   // (soft iridescent bands, like a soap film)
+      var veins = [];                                                   // (main veins fanning from the root, each forking twice)
+      function vein(x, y, a, len, wid, depth) {
+        var pts = [[x, y]]; for (var i = 1; i <= 12; i++) { var t = i / 12; pts.push([x + Math.sin(a + t * 0.25 * (depth % 2 ? -1 : 1)) * len * t, y + Math.cos(a + t * 0.25 * (depth % 2 ? -1 : 1)) * len * t]); }
+        veins.push(pts); g.strokeStyle = 'rgba(90,40,20,' + (0.35 - depth * 0.08) + ')'; g.lineWidth = wid + 2; g.lineCap = 'round'; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.forEach(function (p) { g.lineTo(p[0], p[1]); }); g.stroke();   // (a soft dark outline, so each vein stands out)
+        g.strokeStyle = 'rgba(255,246,220,' + (0.9 - depth * 0.15) + ')'; g.lineWidth = wid; g.lineCap = 'round'; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); pts.forEach(function (p) { g.lineTo(p[0], p[1]); }); g.stroke();
+        if (depth < 2) { var e = pts[12]; vein(e[0], e[1], a - 0.18, len * 0.62, wid * 0.65, depth + 1); vein(e[0], e[1], a + 0.18, len * 0.62, wid * 0.65, depth + 1); }
+      }
+      for (var v = -3; v <= 3; v++) vein(w / 2 + v * 3, 2, v * 0.17, h * 0.4, 3, 0);
+      var roots = veins.filter(function (p, i) { return true; });
+      g.lineWidth = 0.8;                                                // (cross-veins between neighbouring veins, making little cells)
+      for (var i = 0; i < roots.length - 1; i++) { var A = roots[i], B = roots[i + 1]; for (var k = 2; k < 12; k += 2) { var pa = A[k], pb = B[k]; if (Math.hypot(pa[0] - pb[0], pa[1] - pb[1]) > 40) continue; g.strokeStyle = 'rgba(255,246,220,' + (0.4 + glimR(i * 7 + k) * 0.25) + ')'; g.beginPath(); g.moveTo(pa[0], pa[1]); g.quadraticCurveTo((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 + 3, pb[0], pb[1]); g.stroke(); if (glimR(i * 3.1 + k) > 0.6) { g.fillStyle = 'rgba(255,255,255,0.07)'; g.beginPath(); g.moveTo(pa[0], pa[1]); g.lineTo(pb[0], pb[1]); g.lineTo(B[Math.min(11, k + 2)][0], B[Math.min(11, k + 2)][1]); g.lineTo(A[Math.min(11, k + 2)][0], A[Math.min(11, k + 2)][1]); g.fill(); } } }   // (a few cells catching the light)
+      var ex = w / 2, ey = h * 0.66;                                    // (a jewelled eye-spot)
+      var es = g.createRadialGradient(ex, ey, 1, ex, ey, 30); es.addColorStop(0, 'rgba(255,255,255,1)'); es.addColorStop(0.25, lizCss(pal.crystal, 0.95)); es.addColorStop(0.5, lizCss(c0, 0.8)); es.addColorStop(0.75, 'rgba(255,220,140,0.6)'); es.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = es; g.beginPath(); g.arc(ex, ey, 30, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(255,214,120,0.9)'; g.lineWidth = 2; g.beginPath(); g.arc(ex, ey, 20, 0, Math.PI * 2); g.stroke(); g.lineWidth = 1; g.beginPath(); g.arc(ex, ey, 25, 0, Math.PI * 2); g.stroke();
+      for (var r = 0; r < 12; r++) { var ra = r / 12 * Math.PI * 2; g.beginPath(); g.moveTo(ex + Math.cos(ra) * 26, ey + Math.sin(ra) * 26); g.lineTo(ex + Math.cos(ra) * 33, ey + Math.sin(ra) * 33); g.stroke(); }   // (a sunburst round it)
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - 4, ey - 5, 3.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.9)'; for (var sd = 0; sd < 70; sd++) { var sy = h * (0.08 + glimR(sd * 3.7) * 0.88), sx = w / 2 + (glimR(sd * 5.3) - 0.5) * w * (0.4 + 0.5 * sy / h); g.globalAlpha = 0.3 + glimR(sd * 1.9) * 0.6; g.beginPath(); g.arc(sx, sy, 0.6 + glimR(sd) * 1.3, 0, Math.PI * 2); g.fill(); }   // (glittering dust)
+      g.globalAlpha = 1; g.restore();
+      g.strokeStyle = 'rgba(255,214,120,0.95)'; g.lineWidth = 4; shape(); g.stroke();   // (a golden edge)
+      g.strokeStyle = 'rgba(255,250,230,0.6)'; g.lineWidth = 1.2; g.save(); g.translate(w / 2, h / 2); g.scale(0.94, 0.97); g.translate(-w / 2, -h / 2); shape(); g.restore(); g.stroke();   // (and a fine inner line)
+      g.fillStyle = 'rgba(255,250,235,0.95)'; for (var pd = 0; pd < 6; pd++) { var px = w * (0.6 - pd * 0.075 - 0.037), py = h * (0.985 - Math.abs(pd - 2.5) * 0.016); g.beginPath(); g.arc(px, py, 3, 0, Math.PI * 2); g.fill(); }   // (a pearl at each scallop)
+    }));
+  }
   // building one: a sleek, scaled body and a round head; big gecko eyes; citrine horns and a sun-mark; a sunrise frill;
   // crystal spines; gliding membranes; splayed legs with padded toes; a curling tail with a sun-gem; motes of sunlight
   function lizBuild(pal) {
@@ -6135,11 +6167,16 @@ EVERDAWN_PARTS.push(function (THREE) {
       var rec = { m: vm, base: vg.attributes.position.array.slice(), L: L, ph: ph }; membranes.push(rec); return rec;
     }
     var frillMat = new THREE.MeshStandardMaterial({ map: lizMembraneTex(pal.frill[0], pal.frill[1], true), transparent: true, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.22 }); frillMat.emissiveMap = frillMat.map;
-    var glideMat = new THREE.MeshStandardMaterial({ map: lizMembraneTex(pal.frill[0], pal.frill[1], true), transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
+    var glideMat = new THREE.MeshStandardMaterial({ map: lizWingTex(pal), transparent: true, opacity: 0.97, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
     var frill = [];
     for (var fk = 0; fk < 13; fk++) { var fa = -2.0 + fk * 0.333, fl = 0.06 + Math.cos(fa * 0.75) * 0.035; frill.push(membrane(head, frillMat, V3(Math.sin(fa) * 0.03, 0.004 + Math.cos(fa) * 0.026, -0.03), V3(Math.sin(fa), Math.cos(fa), -0.3), fl, 0.036, 0, fk * 0.7)); }   // (fanned round the back of its head like the rays of a rising sun)
     var glides = [];
-    [-1, 1].forEach(function (s) { glides.push(membrane(torso, glideMat, V3(s * 0.04, 0.035, 0.04), V3(s * 0.7, 0.5, -0.55), 0.17, 0.1, Math.PI / 2 - s * 0.45, s)); glides.push(membrane(torso, glideMat, V3(s * 0.044, 0.025, 0.0), V3(s * 0.8, 0.22, -0.65), 0.13, 0.075, Math.PI / 2 - s * 0.35, s + 2)); });   // (two pairs of wings of light, rising and swept back)
+    [-1, 1].forEach(function (s) { glides.push(membrane(torso, glideMat, V3(s * 0.04, 0.035, 0.04), V3(s * 0.7, 0.5, -0.55), 0.2, 0.12, Math.PI / 2 - s * 0.45, s)); glides.push(membrane(torso, glideMat, V3(s * 0.044, 0.025, 0.0), V3(s * 0.8, 0.22, -0.65), 0.15, 0.09, Math.PI / 2 - s * 0.35, s + 2)); });   // (two pairs of wings of light, rising and swept back)
+    glides.forEach(function (gw, k) {                                // (a crystal jewel set at each wing's root, and a soft light at its tip)
+      var jw = new THREE.Mesh(new THREE.OctahedronGeometry(0.0042, 0), crystalMat); jw.scale.set(1, 1.4, 0.7); jw.position.set(0, -0.004, 0.002); gw.m.add(jw);
+      var jr = new THREE.Mesh(new THREE.TorusGeometry(0.0055, 0.0009, 6, 20), hornGold); jr.position.copy(jw.position); gw.m.add(jr);
+      var tg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); tg.scale.set(0.035, 0.035, 1); tg.position.set(0, -gw.L * 0.66, 0); gw.m.add(tg); gw.tipGlow = tg;
+    });
     // long finned ears sweeping back from the sides of its head
     [-1, 1].forEach(function (s) { membrane(head, frillMat, onHead(V3(s * 0.035, 0.016, -0.012), V3(s, 0.45, -0.35)).p, V3(s * 0.8, 0.45, -0.5), 0.05, 0.026, s * 0.5, s * 3); });
     // two glowing whiskers drifting from its chin, like a little dragon's
@@ -6299,7 +6336,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var flare = happy ? 1.2 + Math.sin(m.wig * 6) * 0.05 : 0.95 + Math.sin(t * 0.6 + g.stall) * 0.05;   // (its frill flaring open when it's happy)
     m.frill.forEach(function (f) { f.m.scale.set(1, flare, 1); });
     m.membranes.forEach(function (v) { var p = v.m.geometry.attributes.position, b = v.base; for (var i2 = 0; i2 < p.count; i2++) { var f = -b[i2 * 3 + 1] / v.L; p.setZ(i2, Math.sin(t * (happy ? 4 : 2) - f * 4 + v.ph) * 0.007 * f + Math.sin(t * 1.4 + b[i2 * 3] * 80 + v.ph) * 0.002 * f); } p.needsUpdate = true; });   // (rippling softly)
-    m.glides.forEach(function (gl) { gl.m.scale.set(happy ? 1.15 : 0.9 + (moving ? 0.1 : 0), 1, 1); });
+    m.glides.forEach(function (gl, k) { if (gl.tipGlow) gl.tipGlow.material.opacity = 0.2 + (0.5 + 0.5 * Math.sin(t * 1.6 + k * 1.3)) * 0.25; gl.m.scale.set(happy ? 1.15 : 0.9 + (moving ? 0.1 : 0), 1, 1); });
     var tf = (t * 0.29 + g.stall * 0.37) % 1, flick = happy ? Math.max(0, Math.sin(m.wig * 9)) : (tf < 0.05 ? Math.sin(tf / 0.05 * Math.PI) : 0);   // (a flick of its forked tongue now and then)
     m.tongue.scale.set(1, 1, Math.max(0.001, flick));
     m.filigree.forEach(function (f, k) { f.material.opacity = 0.4 + (0.5 + 0.5 * Math.sin(t * 1.2 - k * 0.8)) * 0.25; });   // (the filigree softly shimmering)
