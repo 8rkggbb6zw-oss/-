@@ -2808,20 +2808,27 @@ EVERDAWN_PARTS.push(function (THREE) {
     tag.scale.set(0.36, 0.135, 1); tag.position.set(0, 0.7, 0); tag.renderOrder = 6; root.add(tag);
     return { root: root, body: body, head: head, plume: plume, gem: gem, gemMat: gemMat, gemGlow: gemGlow, gemSpark: gemSpark, tail: tail, wings: wings, legs: legs, lids: lids, glints: glints, sparks: sparks, glow: glow, tagCv: tagCv, tagTex: tagTex, dash: 0, peck: 0, peckWait: 2 + Math.random() * 4 };
   }
+  // a Geode Egg: a speckled shell (its base at the origin) with a crack in its side, dark within, and crystals
+  // crowding out through it. Used in the nest and in your hand
+  function gemEggModel(pal) {
+    var egg = new THREE.Group();
+    var shell = abPart(new THREE.SphereGeometry(0.045, 24, 16), new THREE.MeshStandardMaterial({ map: gemEggTex(pal), roughness: 0.4 }), 0, 0.055, 0, 0.2, 0, 0.15, egg); shell.scale.set(1, 1.25, 1);
+    var crystalMat = new THREE.MeshPhysicalMaterial({ color: pal.gem, roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: pal.gem, emissiveIntensity: 0.5, flatShading: true });
+    var cg = new THREE.OctahedronGeometry(1, 0); cg.scale(0.5, 1, 0.5);
+    var hole = abPart(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshStandardMaterial({ color: 0x2a1838, roughness: 0.6 }), 0.037, 0.06, 0.004, 0, 0, 0, egg);
+    hole.scale.set(0.01, 0.024, 0.018);
+    for (var c = 0; c < 12; c++) {
+      var a = -0.5 + (c % 6) * 0.2, cr = abPart(cg, crystalMat, Math.cos(a) * 0.041, 0.044 + Math.floor(c / 6) * 0.014 + glimR(c * 7) * 0.006, Math.sin(a) * 0.028, 0, -a, -Math.PI / 2 + 0.5 - glimR(c * 3) * 1.0, egg);
+      cr.scale.setScalar(0.005 + glimR(c * 5) * 0.004);
+    }
+    return egg;
+  }
   // its Geode Egg, nestled in a little nest in the straw, and a bundle of hay in the manger when it's been fed
   function gemBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall], pal = GEM_PALS[g.pal % GEM_PALS.length];
     var egg = new THREE.Group(); egg.position.set(-3.3, 0.1, sz - 0.6); abRoom.add(egg);
     var nest = abPart(new THREE.TorusGeometry(0.07, 0.03, 8, 20), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 0.013, 0, Math.PI / 2, 0, 0, egg); nest.scale.set(1, 1, 0.6);
-    var shell = abPart(new THREE.SphereGeometry(0.045, 24, 16), new THREE.MeshStandardMaterial({ map: gemEggTex(pal), roughness: 0.4 }), 0, 0.055, 0, 0.2, 0, 0.15, egg); shell.scale.set(1, 1.25, 1);
-    var crystalMat = new THREE.MeshPhysicalMaterial({ color: pal.gem, roughness: 0.05, metalness: 0.2, clearcoat: 1, emissive: pal.gem, emissiveIntensity: 0.5, flatShading: true });
-    var cg = new THREE.OctahedronGeometry(1, 0); cg.scale(0.5, 1, 0.5);
-    var hole = abPart(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshStandardMaterial({ color: 0x1a1024, roughness: 0.6 }), 0.036, 0.06, 0.004, 0, 0, 0, egg);   // a crack in its side, dark within,
-    hole.scale.set(0.012, 0.03, 0.022);
-    for (var c = 0; c < 9; c++) {                                     // and crystals crowding out through it
-      var a = -0.55 + c * 0.14, cr = abPart(cg, crystalMat, Math.cos(a) * 0.041, 0.042 + (c % 3) * 0.012 + glimR(c * 7) * 0.006, Math.sin(a) * 0.03, 0, -a, -Math.PI / 2 + 0.5 - glimR(c * 3) * 1.0, egg);
-      cr.scale.setScalar(0.006 + glimR(c * 5) * 0.005);
-    }
+    egg.add(gemEggModel(pal));
     var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
     eg.scale.set(0.38, 0.38, 1); eg.position.y = 0.06; egg.add(eg);
     g.eggMesh = egg; g.eggGlow = eg;
@@ -2892,6 +2899,55 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.2; glimHeartBurst(g.x, 0.45, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= GEM_DAYS ? ' A Geode Egg tomorrow morning!' : ' Day ' + day + ' of ' + GEM_DAYS + ' done. Come back tomorrow!'), 2400);
   }
+  // ---------- Holding what your animals give you ----------
+  // Select one of their products in your hotbar and you hold it up in your hand, like the seeds and the hay: a
+  // glowing egg resting in your palm, a bottle of milk by its middle, a quill by its shaft
+  function holdGlow(col, size, y) {
+    var s2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: col, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    s2.scale.set(size, size, 1); s2.position.y = y; return s2;
+  }
+  function holdEgg(mat, glow) {                                     // an egg standing in your palm
+    var g = new THREE.Group(), e = new THREE.Mesh(new THREE.SphereGeometry(0.05, 24, 16), mat);
+    e.scale.set(1, 1.28, 1); e.position.y = 0.064; e.castShadow = true; g.add(e);
+    g.add(holdGlow(glow, 0.32, 0.064));
+    return g;
+  }
+  function holdBottle(milk, glow, cork, ribbon) {                   // a glass bottle of milk, with a cork and a ribbon round its neck
+    var g = new THREE.Group(), pts = [], mpts = [];
+    [[0.001, 0], [0.042, 0], [0.047, 0.008], [0.048, 0.1], [0.04, 0.125], [0.02, 0.148], [0.017, 0.17], [0.021, 0.176], [0.02, 0.182]].forEach(function (q) { pts.push(new THREE.Vector2(q[0], q[1])); });
+    [[0.001, 0.004], [0.042, 0.004], [0.044, 0.012], [0.044, 0.098], [0.001, 0.098]].forEach(function (q) { mpts.push(new THREE.Vector2(q[0], q[1])); });
+    var m = new THREE.Mesh(new THREE.LatheGeometry(mpts, 24), new THREE.MeshStandardMaterial({ color: milk, roughness: 0.25, emissive: milk, emissiveIntensity: 0.35 }));
+    g.add(m);
+    var glass = new THREE.Mesh(new THREE.LatheGeometry(pts, 28), new THREE.MeshPhysicalMaterial({ color: 0xeef4ff, roughness: 0.04, metalness: 0.05, clearcoat: 1, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }));
+    glass.renderOrder = 2; g.add(glass);
+    var c = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.016, 0.026, 14), new THREE.MeshStandardMaterial({ color: cork, roughness: 0.85 })); c.position.y = 0.188; g.add(c);
+    var r = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.0045, 6, 18), new THREE.MeshStandardMaterial({ color: ribbon, roughness: 0.5 })); r.rotation.x = Math.PI / 2; r.position.y = 0.156; g.add(r);
+    var bow = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 8), r.material); bow.position.set(0, 0.156, 0.022); bow.scale.set(1.6, 0.9, 0.7); g.add(bow);
+    var shine = new THREE.Mesh(new THREE.PlaneGeometry(0.012, 0.07), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false })); shine.position.set(-0.026, 0.06, 0.04); shine.rotation.y = -0.5; g.add(shine);
+    g.add(holdGlow(glow, 0.36, 0.08));
+    g.traverse(function (o) { if (o.isMesh && o !== glass && o !== shine) o.castShadow = true; });
+    return g;
+  }
+  var HOLD_PRODUCTS = {
+    glimmerEgg: function () { return holdEgg(glimEggMat, 0xd8b8ff); },
+    dewdropEgg: function () { return holdEgg(duckEggMat, 0xa8c8ff); },
+    geodeEgg: function () { var g = gemEggModel(GEM_PALS[0]); g.scale.setScalar(1.15); g.add(holdGlow(GEM_PALS[0].glow, 0.3, 0.06)); return g; },
+    moonmilk: function () { return holdBottle(0xf2f0ff, 0xdce4ff, 0xb8a0e8, 0x8a6ad8); },
+    cinderQuill: function () {                                       // held by its shaft, the flame end up
+      var g = new THREE.Group(), q = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.33).translate(0, 0.165, 0), emberFeatherMat(EMBER_PALS[0]));
+      q.rotation.set(0, 1.1, -0.12);   // (turned so its face shows) q.castShadow = true; g.add(q);
+      g.add(holdGlow(EMBER_PALS[0].glow, 0.4, 0.26));
+      return g;
+    }
+  };
+  var basePickupModel = pickupModel;
+  pickupModel = function (item) {
+    var make = HOLD_PRODUCTS[item];
+    if (!make) return basePickupModel(item);
+    var up = new THREE.Group(); up.rotation.x = 1.05; up.position.y = 0.04;   // (undoes the arm's angle, so it stands up in your palm)
+    var m = make(); m.scale.multiplyScalar(0.9); up.add(m);
+    return up;
+  };
   function glimDrawTag(g) {
     var c = g.m.tagCv.getContext('2d'), w = 256, h = 96;
     c.clearRect(0, 0, w, h);
