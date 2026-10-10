@@ -6193,7 +6193,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var vs = new THREE.Mesh(vg, sheen); vs.renderOrder = 4; vm.add(vs);
       var rec = { m: vm, base: vg.attributes.position.array.slice(), L: L, ph: ph }; membranes.push(rec); return rec;
     }
-    var frillMat = new THREE.MeshStandardMaterial({ map: lizFrillTex(pal), transparent: true, opacity: 0.72,   // (a little see-through)
+    var frillMat = new THREE.MeshStandardMaterial({ map: lizFrillTex(pal), transparent: true, opacity: 0.45,   // (a little see-through)
       side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.42 }); frillMat.emissiveMap = frillMat.map;
     var glideMat = new THREE.MeshStandardMaterial({ map: lizWingTex(pal), transparent: true, opacity: 0.7,   // (a little see-through)
       side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
