@@ -4532,9 +4532,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       var geo = new THREE.PlaneGeometry(0.17, 0.05, 32, 6).translate(0, 0.025, 0), p = geo.attributes.position, uv = geo.attributes.uv;
       for (var i = 0; i < p.count; i++) { var x = p.getX(i), f = x / 0.085, hgt = Math.max(0.15, Math.cos(f * 1.35) * (0.75 + 0.25 * Math.sin(f * 2 + 1)) * (1 + Math.cos(f * 22) * 0.12)); p.setY(i, p.getY(i) * hgt); p.setZ(i, Math.sin(f * 9) * 0.0015); uv.setXY(i, 0.5 + p.getY(i) / 0.06 * Math.sin(f * 1.2), p.getY(i) / 0.03); }
       geo.computeVertexNormals();
-      var df = new THREE.Mesh(geo, finMat); df.position.set(0, 0.07, -0.01); df.rotation.set(0.05, Math.PI / 2, 0); torso.add(df);
-      var dfs = new THREE.Mesh(geo, finIri); dfs.position.copy(df.position); dfs.rotation.copy(df.rotation); dfs.scale.setScalar(1.005); dfs.renderOrder = 3; torso.add(dfs);   // (with a rainbow shimmer over it)
-      crest = df;
       var froth = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.15, clearcoat: 1, transparent: true, opacity: 0.85, emissive: pal.glow, emissiveIntensity: 0.15 }), 46), fo = new THREE.Object3D();
       for (var fi = 0; fi < 46; fi++) { var fz = -0.075 + (fi / 45) * 0.15, fy = 0.071 - Math.pow(fz / 0.11, 2) * 0.02; fo.position.set((glimR(fi * 3.1) - 0.5) * 0.016, fy + glimR(fi * 5.7) * 0.004, fz - 0.01); fo.scale.setScalar(0.0018 + glimR(fi * 7.3) * 0.0024); fo.updateMatrix(); froth.setMatrixAt(fi, fo.matrix); }
       torso.add(froth);   // (a froth of tiny sea-foam bubbles along the base of its crest)
@@ -4635,25 +4632,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }), 0.004, -0.0005, 0.0128, 0.0035, 0.002, 0.001, hoof);
       legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front });
     });
-    // shimmering pearly scales over its haunches, in neat overlapping rows, like a mermaid's tail
-    (function () {
-      var scGeo = new THREE.CircleGeometry(1, 16, 0, Math.PI).rotateZ(Math.PI), scMat = new THREE.MeshPhysicalMaterial({ emissiveIntensity: 0.35, color: 0xffffff, vertexColors: false, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, sheen: new THREE.Color(pal.fin[1]), emissive: pal.fin[0], transparent: true, opacity: 0.9, side: THREE.DoubleSide });
-      var ray = new THREE.Raycaster(), bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bodyMesh.updateMatrixWorld(true);
-      var list = [], c0 = new THREE.Color(pal.fin[0]), c1 = new THREE.Color(pal.fin[1]), cc = new THREE.Color();
-      [-1, 1].forEach(function (s) {
-        for (var r = 0; r < 5; r++) for (var k = 0; k < 7 - r; k++) {
-          var a = -0.55 + (k + (r % 2) * 0.5) * 0.16, el = 0.45 - r * 0.15, dir = V3(s * Math.cos(el) * Math.cos(a) * 0.9, Math.sin(el), -0.55 + Math.sin(a) * 0.6).normalize();
-          ray.set(V3(0, 0, -0.03), dir); var hit = ray.intersectObject(bodyMesh)[0]; if (!hit) continue;
-          list.push([hit.point, hit.face.normal.clone().normalize(), 0.014 - r * 0.001, (r + k) / 10]);
-        }
-      });
-      var im = new THREE.InstancedMesh(scGeo, scMat, list.length), mx = new THREE.Matrix4(), o = new THREE.Object3D();
-      list.forEach(function (sc2, i) {
-        o.position.copy(sc2[0]).addScaledVector(sc2[1], 0.0095); o.lookAt(o.position.clone().add(sc2[1])); o.rotateZ(Math.atan2(sc2[1].x, sc2[1].y) * 0.0); o.scale.setScalar(sc2[2]); o.updateMatrix();
-        im.setMatrixAt(i, o.matrix); cc.copy(c0).lerp(c1, sc2[3]).lerp(new THREE.Color(0xffffff), 0.45); im.setColorAt(i, cc);
-      });
-      torso.add(im);
-    })();
     // light rippling over it, as if it were underwater with the sun shining down through the waves (caustics)
     var causticTex = new THREE.CanvasTexture(glimCanvas(256, 256, function (g, w, h) {
       g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineCap = 'round';
