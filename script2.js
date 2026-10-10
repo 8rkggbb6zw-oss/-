@@ -4615,9 +4615,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.052, BY - 0.035, front ? 0.06 : -0.065); body.add(hip);
       var lg = limb([[0.0005, 0.02], [0.016, 0.018], [0.025, 0.005], [0.026, -0.02], [0.022, -0.05], [0.021, -0.07], [0.0005, -0.073]], function (y2, c) { c.copy(furCol).lerp(bellyCol, 0.25); });
       coat(lg, furV, hip, 0.007, [0, -1, 0]);
-      var hoof = new THREE.Group(); hoof.position.set(0, -0.072, 0.002); hip.add(hoof);
-      [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0095, -0.012, 0.002, 0.0105, 0.016, 0.013, hoof, Math.PI, 0, 0); hm.castShadow = true; });   // (two pearly toes)
-      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }), 0.004, -0.004, 0.014, 0.0035, 0.002, 0.001, hoof);
+      var hoof = new THREE.Group(); hoof.position.set(0, -0.072, 0.002); hip.add(hoof);   // (its hooves tucked up into the fur of its leg, so there's no gap)
+      [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0095, 0.004, 0.002, 0.0105, 0.016, 0.013, hoof, Math.PI, 0, 0); hm.castShadow = true; });   // (two pearly toes)
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }), 0.004, -0.0005, 0.0128, 0.0035, 0.002, 0.001, hoof);
       var af = new THREE.Mesh(earFinGeo, finMat); af.scale.set(0.022, 0.026, 0.022); af.position.set(lp[0] * 0.016, -0.05, -0.012); af.rotation.set(-2.3, lp[0] * 0.5, lp[0] * 0.4); hip.add(af);   // (a frilly little fin flowing back from each ankle, like a mermaid's)
       legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front, fin: af });
     });
@@ -4717,7 +4717,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (happy) { g.pet -= dt; m.wig += dt; } else m.wig = 0;
     m.legs.forEach(function (l) { l.hip.rotation.x = l.hip.rotation.x * 0.8 + (moving ? Math.sin(g.hop + l.ph) * 0.55 : 0) * 0.2; });
     var hop = happy ? Math.abs(Math.sin(m.wig * 7)) * 0.03 : 0;
-    m.body.position.y = 0.06 + hop + (moving ? Math.abs(Math.sin(g.hop)) * 0.01 : 0);
+    m.body.position.y = 0.044 + hop + (moving ? Math.abs(Math.sin(g.hop)) * 0.01 : 0);   // (its hooves resting on the straw)
     m.torso.rotation.z = happy ? Math.sin(m.wig * 14) * 0.08 : (moving ? Math.sin(g.hop) * 0.04 : 0);   // (a happy wiggle)
     var look = Math.sin(t * 0.31 + g.stall * 1.6), sniff = Math.max(0, Math.sin(t * 0.45 + g.stall) - 0.55);
     m.head.rotation.set(0.05 + sniff * 0.45 + (happy ? -0.2 : 0), look * 0.5 * (happy ? 0.3 : 1), Math.sin(t * 0.4 + g.stall) * 0.06);
