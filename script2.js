@@ -3441,8 +3441,8 @@ EVERDAWN_PARTS.push(function (THREE) {
         '    vec3 fc = fb + vec3(float(i), float(j), float(k)), rr = zHash(fc); float fd = length(fq - fc - 0.2 - rr * 0.6);',
         '    if (fd < fBest) { fBest = fd; fR = rr; } }',
         '  float fLen = 0.55 + 0.45 * fR.x;',
-        '  if (vShellT > 0.1 && (vShellT > fLen || fBest > 0.76 * (1.0 - vShellT / fLen * 0.7))) discard;',   // (the hairs close together, so the coat looks smooth and soft)
-        '  diffuseColor.rgb *= mix(uRoot, 1.04, smoothstep(0.0, 1.0, vShellT / fLen)) * (0.97 + 0.05 * fR.y);'].join('\n')).replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uGlow * (0.18 + 0.45 * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.2)) * (0.5 + vShellT);');
+        '  if (vShellT > 0.1 && (vShellT > fLen || fBest > 0.86 * (1.0 - vShellT / fLen * 0.65))) discard;',   // (the hairs close together, so the coat looks smooth and soft)
+        '  diffuseColor.rgb *= mix(uRoot, 1.03, smoothstep(0.0, 1.0, vShellT / fLen)) * (0.985 + 0.03 * fR.y);'].join('\n')).replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uGlow * (0.18 + 0.45 * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.2)) * (0.5 + vShellT);');
     };
     m.customProgramCacheKey = function () { return 'zephyrafur' + (vcol ? 'v' : ''); };
     return m;
@@ -3510,7 +3510,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var zWoolMat = null;
   function zCloudMesh(puffs, pal, len) {                              // a cloud of fleece: its soft body, and the fine wool over it
     var geo = zCloud(puffs, pal), g = new THREE.Group(), m = new THREE.Mesh(geo, zSoftMat({ vertexColors: true, roughness: 1, color: 0xf2eeea }, 0.3, 0.5, 0.15)); m.castShadow = true; g.add(m);
-    if (!zWoolMat) zWoolMat = zFurMat(new THREE.Color(1.14, 1.14, 1.14), 1150, 0, true, 0.9, 0.7);   // (a coat of soft, silky fur, smooth and fine)
+    if (!zWoolMat) zWoolMat = zFurMat(new THREE.Color(1.12, 1.12, 1.12), 1500, 0, true, 0.95, 0.75);   // (a coat of soft, silky fur, smooth and fine)
     g.add(new THREE.Mesh(zFurShell(geo, 16, (len || 0.02) * 0.55, [1, 1, 1], [0, -0.45, -1], 2.2), zWoolMat));   // (combed back along its body, lying smooth)
     return g;
   }
@@ -3672,46 +3672,62 @@ EVERDAWN_PARTS.push(function (THREE) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
     var seg = new THREE.SphereGeometry(1, 40, 28);
     var plush = zSoftMat({ color: new THREE.Color(pal.plush).multiplyScalar(0.92), roughness: 0.95 }, 0.22, 0.5, 0.12);   // (the skin under its fur)
-    var furCol = new THREE.Color(pal.plush).multiplyScalar(1.12), fur = zFurMat(furCol, ZFUR_D * 1.7, 0, false, 0.9, 0.6), headFur = zFurMat(furCol, ZFUR_D * 2.8, 0, false, 0.92, 0.6);   // (fine, short and silky)
+    var furCol = new THREE.Color(pal.plush).multiplyScalar(1.12), fur = zFurMat(furCol, ZFUR_D * 2.1, 0, false, 0.95, 0.65), headFur = zFurMat(furCol, ZFUR_D * 3.2, 0, false, 0.95, 0.65);   // (fine, short and silky)
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
     function furred(geo, fmat, x, y, z, sc, parent, len, flow, rx, ry, rz) { var m = abPart(zFurShell(geo, 14, len, sc, flow), fmat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.castShadow = false; return m; }
     function ball(x, y, z, sx, sy, sz, parent, len, flow, rx, fmat) { part(seg, plush, x, y, z, sx, sy, sz, parent, rx); return furred(seg, fmat || headFur, x, y, z, [sx, sy, sz], parent, len, flow, rx); }
     function cloud(puffs, parent, x, y, z, len) { var g2 = new THREE.Group(); g2.position.set(x || 0, y || 0, z || 0); (parent || body).add(g2); g2.add(zCloudMesh(puffs, pal, len)); return g2; }
-    // the body: a cumulus cloud, all one soft shape: big billows swelling over its back, smaller ones down its sides,
-    // all melted smoothly into each other (so the hollows between them are soft dips, never creases) over a gently
-    // flattened base, like the bottom of a summer cloud; white on top, blushed with sunrise underneath, in soft fur
+    // the body: a cumulus cloud, all one soft shape: big billows, each covered in smaller billows, and those in smaller
+    // ones still, all melted smoothly together (soft dips between them, never creases), billowing up over its back and
+    // flatter underneath, like a real summer cloud; warm cream on top where the light catches it, softly shadowed in
+    // the hollows between the billows, blushed with sunrise underneath; and all in a short, dense, plush coat
     var BY = 0.37;
     var fleece = new THREE.Group(); fleece.position.set(0, BY, 0); body.add(fleece);
     (function () {
-      var blobs = [[0, -0.005, 0, 0.15, 0.12, 0.2]];                 // [x, y, z, rx, ry, rz]: a core, then the billows
-      [[0, 0.085, 0.1, 0.085], [0, 0.1, -0.01, 0.095], [0, 0.085, -0.12, 0.085], [0.06, 0.07, 0.04, 0.07], [-0.06, 0.07, 0.04, 0.07], [0.06, 0.065, -0.08, 0.072], [-0.06, 0.065, -0.08, 0.072],
-       [0.115, 0.015, 0.1, 0.06], [-0.115, 0.015, 0.1, 0.06], [0.125, 0.02, -0.02, 0.065], [-0.125, 0.02, -0.02, 0.065], [0.11, 0.01, -0.13, 0.06], [-0.11, 0.01, -0.13, 0.06],
-       [0, 0.03, 0.17, 0.07], [0, 0.03, -0.19, 0.07], [0.08, -0.04, 0.14, 0.05], [-0.08, -0.04, 0.14, 0.05], [0.09, -0.04, -0.15, 0.05], [-0.09, -0.04, -0.15, 0.05]
-      ].forEach(function (q) { blobs.push([q[0], q[1], q[2], q[3], q[3], q[3]]); });
-      function sdf(x, y, z) {                                        // how far a point is outside the cloud (each billow melted into the rest)
-        var d = 1e9, K = 0.045;
-        blobs.forEach(function (b) {
-          var ex = (x - b[0]) / b[3], ey = (y - b[1]) / b[4], ez = (z - b[2]) / b[5], db = (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * Math.min(b[3], b[4], b[5]);
-          var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (db - d) / K)); d = db + (d - db) * h - K * h * (1 - h);   // (a smooth union)
+      var core = [0, -0.012, 0, 0.13, 0.105, 0.16], big = [], med = [], small = [];
+      [[0, 0.075, 0.075, 0.08], [0, 0.1, -0.02, 0.09], [0, 0.078, -0.115, 0.075], [0.08, 0.04, 0.065, 0.068], [-0.08, 0.04, 0.065, 0.068], [0.085, 0.045, -0.075, 0.068], [-0.085, 0.045, -0.075, 0.068],
+       [0.105, -0.025, -0.005, 0.06], [-0.105, -0.025, -0.005, 0.06], [0, 0.012, 0.14, 0.07], [0, 0.015, -0.152, 0.07]].forEach(function (q) { big.push(q); });
+      var dir = new THREE.Vector3(), jit = new THREE.Vector3();
+      function sprout(src, out, n, rs, seed) {                        // smaller billows swelling out over each billow (more on top, few underneath)
+        src.forEach(function (b, k) {
+          dir.set(b[0] - core[0], b[1] - core[1] + 0.05, b[2] - core[2]).normalize();
+          for (var i = 0; i < n; i++) {
+            jit.set(glimR(seed + k * 7.3 + i * 2.1) - 0.5, glimR(seed + k * 3.9 + i * 5.7) - 0.3, glimR(seed + k * 1.7 + i * 8.3) - 0.5).multiplyScalar(2.2).add(dir).normalize();
+            if (jit.y < -0.45) continue;
+            out.push([b[0] + jit.x * b[3] * 0.86, b[1] + jit.y * b[3] * 0.86, b[2] + jit.z * b[3] * 0.86, b[3] * rs * (0.8 + glimR(seed + k * 9.1 + i) * 0.4)]);
+          }
         });
-        return Math.max(d, -(y + 0.1) * 0.6);                        // (and its base softly flattened)
       }
-      var geo = new THREE.SphereGeometry(1, 144, 96), p = geo.attributes.position, cols = [], n = new THREE.Vector3();
-      var top = new THREE.Color(pal.top), low = new THREE.Color(pal.low), gold = new THREE.Color(pal.gold), c = new THREE.Color();
+      sprout(big, med, 9, 0.5, 100); sprout(med, small, 3, 0.5, 400);
+      function smin(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }
+      function cone(list) { list.forEach(function (b) { var l = Math.hypot(b[0], b[1], b[2]); b.push(b[0] / l, b[1] / l, b[2] / l, Math.cos(Math.min(Math.PI, Math.asin(Math.min(1, (b[3] + 0.03) / l)) + 0.05))); }); }   // (which way each billow lies from the middle, and how wide it looks from there)
+      cone(med); cone(small);
+      function near(list, n) { return list.filter(function (b) { return n.x * b[4] + n.y * b[5] + n.z * b[6] > b[7]; }); }   // (just the billows this way out from the middle)
+      var medN = med, smallN = small;
+      function grp(list, x, y, z, k) { var d = 1e9; for (var i = 0; i < list.length; i++) { var b = list[i], db = Math.sqrt((x - b[0]) * (x - b[0]) + (y - b[1]) * (y - b[1]) + (z - b[2]) * (z - b[2])) - b[3]; d = d > 1e8 ? db : smin(d, db, k); } return d; }
+      function sdfBig(x, y, z) {
+        var ex = (x - core[0]) / core[3], ey = (y - core[1]) / core[4], ez = (z - core[2]) / core[5];
+        var d = (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * core[4];
+        return Math.max(smin(d, grp(big, x, y, z, 0.05), 0.05), -(y + 0.095) * 0.6);   // (its base softly flattened)
+      }
+      function sdf(x, y, z) { return Math.max(smin(smin(sdfBig(x, y, z), grp(medN, x, y, z, 0.012), 0.016), grp(smallN, x, y, z, 0.006), 0.008), -(y + 0.095) * 0.6); }
+      function reach(f, n) { var lo = 0.04, hi = 0.36; for (var it = 0; it < 20; it++) { var mid = (lo + hi) / 2; if (f(n.x * mid, n.y * mid, n.z * mid) < 0) lo = mid; else hi = mid; } return lo; }
+      var geo = new THREE.SphereGeometry(1, 220, 140), p = geo.attributes.position, cols = [], n = new THREE.Vector3();
+      var cream = new THREE.Color(pal.top).lerp(new THREE.Color(0xfff0d8), 0.35), low = new THREE.Color(pal.low), c = new THREE.Color();
       for (var i = 0; i < p.count; i++) {
         n.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
-        var lo = 0, hi = 0.45;
-        for (var it = 0; it < 26; it++) { var mid = (lo + hi) / 2; if (sdf(n.x * mid, n.y * mid, n.z * mid) < 0) lo = mid; else hi = mid; }   // (out from the middle to where the cloud ends)
-        p.setXYZ(i, n.x * lo, n.y * lo, n.z * lo);
-        c.copy(top).lerp(low, Math.max(0, Math.min(1, 0.45 - n.y * 0.9))); cols.push(c.r, c.g, c.b);
+        medN = near(med, n); smallN = near(small, n);
+        var r = reach(sdf, n), rb = reach(sdfBig, n), h = Math.max(0, r - rb);   // (how far this spot swells out of the big shape: the hollows between billows stay shadowed)
+        p.setXYZ(i, n.x * r, n.y * r, n.z * r);
+        c.copy(cream).lerp(low, Math.max(0, Math.min(1, 0.4 - n.y * 0.85)));
+        var lit = 0.7 + 0.34 * Math.pow(Math.min(1, h / 0.028), 0.7);   // (deeper in the hollows, brightest on the rounded tops)
+        cols.push(c.r * lit, c.g * lit, c.b * (lit * 0.97 + 0.03));
       }
       geo.computeVertexNormals();
-      var nr = geo.attributes.normal;
-      for (var j = 0; j < p.count; j++) { var tip = Math.max(0, nr.getY(j)) * Math.max(0, p.getY(j) / 0.2); cols[j * 3] = Math.min(1, cols[j * 3] + tip * 0.03); cols[j * 3 + 1] += (gold.g - cols[j * 3 + 1]) * tip * 0.0; }   // (the tops of the billows a touch brighter)
       geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-      var skin = new THREE.Mesh(geo, zSoftMat({ vertexColors: true, roughness: 1, color: 0xf2eeea }, 0.3, 0.5, 0.08)); skin.castShadow = true; fleece.add(skin);
-      if (!zWoolMat) zWoolMat = zFurMat(new THREE.Color(1.14, 1.14, 1.14), 1150, 0, true, 0.9, 0.7);
-      fleece.add(new THREE.Mesh(zFurShell(geo, 18, 0.013, [1, 1, 1], [0, -0.45, -1], 2.2), zWoolMat));   // (its coat, combed back along it)
+      var skin = new THREE.Mesh(geo, zSoftMat({ vertexColors: true, roughness: 1, color: 0xf2eeea }, 0.34, 0.55, 0.06)); skin.castShadow = true; fleece.add(skin);
+      var plushMat = zFurMat(new THREE.Color(1.1, 1.1, 1.1), 2000, 0, true, 0.96, 0.8);   // (a short, dense, soft pile, like plush)
+      fleece.add(new THREE.Mesh(zFurShell(geo, 14, 0.0075, [1, 1, 1], [0, -0.3, -1], 0.5), plushMat));
     })();
     // the neck: short and plush, rising from a ruff of cloud
     var neck = new THREE.CatmullRomCurve3([V3(0, BY + 0.02, 0.12), V3(0, BY + 0.14, 0.165), V3(0, BY + 0.24, 0.18)]);
