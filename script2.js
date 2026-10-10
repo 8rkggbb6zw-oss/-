@@ -6156,9 +6156,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     fluff(torso, V3(0, 0.083, 0.098), 0.017, 0.013, 0.052, 0.018, [0, 0.2, -1], maneCol, [0.75, 0, 0]);   // (a mane down the back of its neck)
     fluff(torso, V3(0, 0.052, 0.035), 0.014, 0.01, 0.045, 0.015, [0, 0.1, -1], maneCol, [0.2, 0, 0]);
-    fluff(torso, V3(0, 0.0, 0.1), 0.036, 0.034, 0.028, 0.016, [0, -1, 0.4], bellyCol.clone().lerp(maneCol, 0.3), [-0.2, 0, 0]);   // (a soft ruff on its chest)
-    fluff(head, onHead(V3(0, 0.03, -0.005), V3(0, 1, -0.2)).p.add(V3(0, -0.004, 0)), 0.012, 0.009, 0.022, 0.014, [0, 0.5, -1], maneCol, [0.4, 0, 0]);   // (a soft crest of fur on its crown)
-    [-1, 1].forEach(function (s) { var ck = onHead(V3(s * 0.035, -0.014, 0.0), V3(s, -0.3, -0.1)); fluff(head, ck.p.clone().addScaledVector(ck.n, -0.004), 0.011, 0.012, 0.014, 0.011, [s, -0.5, -0.7], sideCol.clone().lerp(bellyCol, 0.5)); });   // (fluffy cheeks)
     // a collar of tiny gold beads round its neck, with a little sun pendant hanging at its chest
     var goldMat = new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.28, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 }), collar = new THREE.Group(); collar.position.set(0, 0.05, 0.118); collar.rotation.x = -0.6; torso.add(collar);
     for (var cb = 0; cb < 30; cb++) { var ca = cb / 30 * Math.PI * 2, bead = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 8, 6), goldMat); bead.position.set(Math.cos(ca) * 0.043, Math.sin(ca) * 0.046, 0); collar.add(bead); }
