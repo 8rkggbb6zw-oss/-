@@ -6528,9 +6528,21 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     function coatCol(n, c) { c.copy(bellyCol).lerp(skinCol, ss(-0.5, 0.1, n.y)); c.multiplyScalar(0.95 + 0.05 * Math.sin(n.x * 23 + n.z * 17) * Math.sin(n.y * 19)); }
     // the body: a soft, round plush body beneath its shell
-    var BY = 0.15, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
-    var bodyGeo = sdfShape(function (x, y, z) { return sm(ell(x, y, z, 0, 0, 0, 0.088, 0.062, 0.115), ell(x, y, z, 0, -0.01, 0.06, 0.07, 0.055, 0.06), 0.03); }, [70, 46], 0.2, function (n, q, c) { coatCol(n, c); });
-    plush(bodyGeo, torso, 0.0035, [0, 0, -1]);
+    var BY = 0.178, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
+    var dapples = []; for (var dp = 0; dp < 22; dp++) { var da = glimR(dp * 3.7 + 1) * Math.PI * 2, dv = 0.05 + glimR(dp * 5.3 + 1) * 0.55; dapples.push([V3(Math.cos(da) * Math.cos(dv), Math.sin(dv), Math.sin(da) * Math.cos(dv)).normalize(), 0.06 + glimR(dp * 2.1) * 0.05]); }
+    var bodyGeo = sdfShape(function (x, y, z) {
+      var d = ell(x, y, z, 0, 0.004, 0, 0.078, 0.06, 0.1);                         // (a soft, rounded barrel)
+      d = sm(d, ell(x, y, z, 0, -0.006, 0.058, 0.07, 0.06, 0.05), 0.03);         // (a full, round chest)
+      [-1, 1].forEach(function (s) { d = sm(d, ell(x, y, z, s * 0.05, -0.006, 0.055, 0.03, 0.04, 0.034), 0.025); d = sm(d, ell(x, y, z, s * 0.05, -0.004, -0.06, 0.036, 0.048, 0.042), 0.028); });   // (rounded shoulders and plump haunches)
+      d = sm(d, ell(x, y, z, 0, -0.02, 0, 0.062, 0.045, 0.085), 0.03);           // (a soft round tummy)
+      return d;
+    }, [130, 90], 0.2, function (n, q, c) {
+      c.copy(bellyCol).lerp(skinCol, ss(-0.55, -0.05, n.y)).multiplyScalar(1).lerp(skinCol.clone().multiplyScalar(0.84), ss(0.45, 0.95, n.y) * 0.6);   // (a cream tummy, its coat deepening along its back)
+      dapples.forEach(function (d2) { var a2 = n.angleTo(d2[0]); if (a2 < d2[1]) c.lerp(bellyCol, ss(d2[1], d2[1] * 0.45, a2) * 0.55); });   // (soft pale dapples, like a fawn's)
+      c.lerp(bellyCol, ss(0.45, 0.85, n.z) * ss(0.25, -0.2, n.y) * 0.6);   // (a pale bib on its chest)
+      c.multiplyScalar(0.95 + 0.05 * Math.sin(n.x * 23 + n.z * 17) * Math.sin(n.y * 19) + 0.03 * Math.sin(n.x * 71 + n.z * 53) * Math.sin(n.y * 61));   // (gentle mottling and fur grain)
+    });
+    plush(bodyGeo, torso, 0.0045, [0, -0.2, -1]);
     // the shell: high and rounded like polished opal, its scutes rimmed in fine gold, flaring into a soft rim round its edge
     var mossCol0 = new THREE.Color(pal.moss);
     var seeds = [[0, 0]]; for (var s6 = 0; s6 < 6; s6++) { var a6 = s6 / 6 * Math.PI * 2 + Math.PI / 6; seeds.push([Math.cos(a6) * 0.5, Math.sin(a6) * 0.5]); } for (var s12 = 0; s12 < 12; s12++) { var a12 = s12 / 12 * Math.PI * 2; seeds.push([Math.cos(a12) * 0.92, Math.sin(a12) * 0.92]); }
@@ -6721,11 +6733,20 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var i = 0; i < p.count; i++) cols.push(skinCol.r, skinCol.g, skinCol.b);
       geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals(); return geo;
     }
-    var legGeo = limb([[0.0005, 0.016], [0.022, 0.008], [0.019, -0.03], [0.012, -0.07], [0.0095, -0.095], [0.011, -0.104], [0.016, -0.114], [0.017, -0.12], [0.0005, -0.126]]), nailMat = new THREE.MeshPhysicalMaterial({ color: pal.toe, roughness: 0.15, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.15 }), legs = [];
+    var legGeoOld = limb([[0.0005, 0.016], [0.022, 0.008], [0.019, -0.03], [0.012, -0.07], [0.0095, -0.095], [0.011, -0.104], [0.016, -0.114], [0.017, -0.12], [0.0005, -0.126]]), nailMat = new THREE.MeshPhysicalMaterial({ color: pal.toe, roughness: 0.15, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.15 }), legs = [];
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp) {
-      var hip = new THREE.Group(); hip.position.set(lp[0] * 0.072, BY - 0.02, lp[1] > 0 ? 0.065 : -0.065); hip.rotation.z = -lp[0] * 0.15; body.add(hip);
-      plush(legGeo, hip, 0.003, [0, -1, 0]);
-      for (var tn = 0; tn < 3; tn++) { var ta = (tn - 1) * 0.45, nm = part(new THREE.SphereGeometry(1, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), nailMat, Math.sin(ta) * 0.018, -0.118, Math.cos(ta) * 0.018, 0.0055, 0.005, 0.0045, hip, -1.2, ta, 0); nm.castShadow = true; }
+      var hip = new THREE.Group(); hip.position.set(lp[0] * 0.055, BY - 0.046, lp[1] > 0 ? 0.062 : -0.064); body.add(hip);
+      var back = lp[1] < 0, tw = back ? 0.031 : 0.025;
+      var lgeo = sdfShape(function (x, y, z) { y -= 0.065;   // (one soft, shapely leg: a rounded thigh, a slender shin, a neat ankle and a round paw with three toes)
+        var d = ell(x, y, z, 0, -0.005, back ? -0.004 : 0, tw, 0.036, tw * 1.05);
+        d = sm(d, ell(x, y, z, 0, -0.064, back ? 0.004 : 0, 0.0125, 0.036, 0.0135), 0.018);
+        d = sm(d, ell(x, y, z, 0, -0.103, 0.002, 0.0115, 0.014, 0.0125), 0.01);
+        d = sm(d, ell(x, y, z, 0, -0.121, 0.007, 0.018, 0.0095, 0.021), 0.01);
+        [-1, 0, 1].forEach(function (tt) { d = sm(d, ell(x, y, z, tt * 0.0085, -0.122, 0.022 - Math.abs(tt) * 0.003, 0.0068, 0.0075, 0.0078), 0.004); });   // (three plump toes)
+        return d; }, [70, 80], 0.1, function (n, q, c) { var yy = q.y - 0.065; c.copy(skinCol).lerp(bellyCol, ss(-0.09, -0.115, yy) * 0.75 + Math.max(0, -n.x * lp[0]) * 0.15); c.multiplyScalar(0.94 + 0.06 * Math.max(0, n.y) - (yy > -0.03 ? 0 : 0.02)); });   // (pale little socks on its paws)
+      var lm2 = new THREE.Group(); lm2.position.y = -0.065; hip.add(lm2); plush(lgeo, lm2, 0.0038, [0, -1, 0.15]);
+      var padMat = padMat || null;
+      for (var tn = 0; tn < 3; tn++) { var ta = (tn - 1) * 0.45, nm = part(new THREE.SphereGeometry(1, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), nailMat, (tn - 1) * 0.0085, -0.124, 0.03 - Math.abs(tn - 1) * 0.003, 0.0035, 0.003, 0.003, hip, -1.25, 0, 0); nm.castShadow = true; }
       legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI });
     });
     // a tiny tail, tipped with a leaf
@@ -6742,7 +6763,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     glow.scale.set(0.9, 0.9, 1); glow.position.set(0, 0.2, 0); root.add(glow);
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
-    tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.72, 0); tag.renderOrder = 6; root.add(tag);
+    tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.76, 0); tag.renderOrder = 6; root.add(tag);
     return { ears: ears, calyx: calyx, gemGlows: gemGlows, butterflies: butterflies, bloom: bloom, bloomFlower: bf, bloomGlow: bloomGlow, bloomStar: bloomStar, mushGlows: mushGlows, sways: sways, tree: tree, fruits: fruits, crysGlow: crysGlow, sprouts: sprouts, fireflies: fireflies, root: root, body: body, torso: torso, shell: shell, neck: neck, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready, the Starbloom is the big glowing flower open in its garden
