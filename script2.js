@@ -5293,6 +5293,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     var dHead = new THREE.Mesh(new THREE.SphereGeometry(0.0028, 10, 8), dBody.material); dHead.position.z = 0.016; dfly.add(dHead);
     var dWings = [], dWingMat = filmMat(0xffffff, 1.3);
     [[-1, 0.004], [1, 0.004], [-1, -0.003], [1, -0.003]].forEach(function (w3) { var wm3 = new THREE.Mesh(new THREE.CircleGeometry(1, 16), dWingMat); wm3.scale.set(0.016, 0.0045, 1); wm3.position.set(w3[0] * 0.016, 0.001, w3[1]); wm3.rotation.x = -Math.PI / 2; dfly.add(wm3); dWings.push({ m: wm3, s: w3[0] }); });
+    // swirling vine markings glowing on its sides, like water-lily tendrils painted in light, with tiny leaves along them
+    var vineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(0xffffff), 0.35), transparent: true, opacity: 0.75, depthWrite: false }), vines = [];
+    [-1, 1].forEach(function (s) {
+      for (var vv = 0; vv < 2; vv++) {
+        var pts = [];
+        for (var i = 0; i <= 26; i++) { var t2 = i / 26, a = t2 * Math.PI * (2.2 + vv * 0.6), r = 0.025 + t2 * 0.04; var dir = V3(s, 0.15 + Math.sin(a) * r * 6 - vv * 0.4, (vv ? -0.35 : 0.3) + Math.cos(a) * r * 6 - t2 * 0.2).normalize(); ray.set(V3(0, 0, 0), dir); var hh = ray.intersectObject(bodyMesh)[0]; if (hh) pts.push(hh.point.clone().addScaledVector(hh.face.normal.clone().normalize(), 0.0075)); }
+        if (pts.length < 4) continue;
+        var vc = new THREE.CatmullRomCurve3(pts), vmsh = new THREE.Mesh(new THREE.TubeGeometry(vc, 60, 0.0012, 5, false), vineMat); torso.add(vmsh); vines.push(vmsh);
+        for (var lf = 1; lf < 6; lf++) { var lp3 = vc.getPointAt(lf / 6), leaf = new THREE.Mesh(new THREE.CircleGeometry(0.0045, 10), vineMat); leaf.position.copy(lp3); leaf.lookAt(lp3.clone().multiplyScalar(2)); leaf.scale.set(0.6, 1, 1); leaf.rotateZ(lf * 1.3); torso.add(leaf); }
+        var vtip = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.spot, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); vtip.scale.set(0.018, 0.018, 1); vtip.position.copy(vc.getPointAt(1)); torso.add(vtip); vines.push(vtip);
+      }
+    });
+    // a sheen of shimmering pond-light over its whole coat, like light through ripples
+    var shimmer = new THREE.Mesh(bodyGeo, filmMat(pal.spot, 0.35)); shimmer.scale.setScalar(1.06); shimmer.renderOrder = 3; torso.add(shimmer);
+    // little glowing pearls set in its fur in a curving line down each shoulder
+    var pearlM = new THREE.MeshPhysicalMaterial({ color: 0xfaf6ff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.35 });
+    [-1, 1].forEach(function (s) { for (var pp = 0; pp < 6; pp++) { ray.set(V3(0, 0, 0), V3(s, 0.55 - pp * 0.13, 0.55 - pp * 0.05).normalize()); var ph = ray.intersectObject(bodyMesh)[0]; if (!ph) continue; var pm4 = new THREE.Mesh(new THREE.SphereGeometry(0.0035 - pp * 0.0003, 12, 10), pearlM); pm4.position.copy(ph.point).addScaledVector(ph.face.normal.clone().normalize(), 0.008); torso.add(pm4); } });
     // a halo of floating lotus petals circling slowly above its head
     var halo = new THREE.Group(); halo.position.set(0, 0.2, -0.01); head.add(halo);
     for (var hp = 0; hp < 10; hp++) { var ha = hp / 10 * Math.PI * 2, hpm = new THREE.Mesh(petalGeo, petalMat); hpm.scale.set(0.014, 0.026, 0.026); hpm.position.set(Math.cos(ha) * 0.07, Math.sin(hp * 1.7) * 0.004, Math.sin(ha) * 0.07); hpm.rotation.set(-1.2, -ha, 0); halo.add(hpm); }
@@ -5355,7 +5372,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.72, 0); tag.renderOrder = 6; root.add(tag);
-    return { halo: halo, ribbons: ribbons, markGlow: markGlow, spineBuds: spineBuds, dfly: dfly, dWings: dWings, fireflies: fireflies, veils: veils, whiskers: whiskers, budGlows: budGlows, root: root, body: body, torso: torso, head: head, ears: ears, legs: legs, tail: tail, lids: lids, lotuses: lotuses, dew: dew, petals: petals, ripples: ripples, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { vines: vines, halo: halo, ribbons: ribbons, markGlow: markGlow, spineBuds: spineBuds, dfly: dfly, dWings: dWings, fireflies: fireflies, veils: veils, whiskers: whiskers, budGlows: budGlows, root: root, body: body, torso: torso, head: head, ears: ears, legs: legs, tail: tail, lids: lids, lotuses: lotuses, dew: dew, petals: petals, ripples: ripples, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready to milk, a pale drop of Lotus Milk floats over it
   function lotusBuildExtras(g) {
@@ -5387,6 +5404,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.veils.forEach(function (v) { var p = v.m.geometry.attributes.position, b = v.base; for (var i = 0; i < p.count; i++) { var f = -b[i * 3 + 1] / 0.26; p.setXYZ(i, b[i * 3], b[i * 3 + 1] * (1 - f * 0.05), Math.sin(t * 2.4 - f * 5 + v.ph) * 0.02 * f + f * f * -0.04); } p.needsUpdate = true; });   // (its veils of fin rippling as if underwater)
     m.whiskers.forEach(function (w, k) { w.g.rotation.set(Math.sin(t * 1.6 + k) * 0.25, w.s * Math.sin(t * 1.2 + k * 2) * 0.2, 0); });
     m.fireflies.forEach(function (f, k) { var a = f.a + t * f.sp * (k % 2 ? 1 : -1); f.s.position.set(Math.cos(a) * f.r, f.h + Math.sin(t * 1.3 + k) * 0.04, Math.sin(a) * f.r * 1.3); f.s.material.opacity = 0.25 + Math.pow(0.5 + 0.5 * Math.sin(t * 2.2 + k * 2.4), 3) * 0.75; });   // (blinking softly as they drift)
+    m.vines.forEach(function (v, k) { v.material.opacity = (v.isSprite ? 0.5 : 0.45) + (0.5 + 0.5 * Math.sin(t * 1.2 + k * 0.9)) * 0.4; });   // (the vine markings softly pulsing with light)
     m.halo.rotation.y = t * (happy ? 1.2 : 0.35); m.halo.position.y = 0.2 + Math.sin(t * 1.3 + g.stall) * 0.008;
     m.ribbons.forEach(function (r, k) { var p = r.m.geometry.attributes.position, b = r.base; for (var i = 0; i < p.count; i++) { var f = -b[i * 3] / 0.22; p.setXYZ(i, b[i * 3], b[i * 3 + 1] + Math.sin(t * 2.2 - f * 6 + k) * 0.012 * f, Math.sin(t * 1.7 - f * 5 + k * 2) * 0.015 * f); } p.needsUpdate = true; });   // (rippling in an unseen breeze)
     m.markGlow.material.opacity = 0.25 + (0.5 + 0.5 * Math.sin(t * 1.2 + g.stall)) * 0.3;
