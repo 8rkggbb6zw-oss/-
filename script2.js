@@ -6020,6 +6020,29 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = 'rgba(255,255,255,0.85)'; for (var sd = 0; sd < 16; sd++) { var sy = h * (0.25 + glimR(sd * 3.7) * 0.7), sx = w / 2 + (glimR(sd * 5.3) - 0.5) * w * 0.7 * (sy / h); g.beginPath(); g.arc(sx, sy, 0.7 + glimR(sd) * 1, 0, Math.PI * 2); g.fill(); }
     }));
   }
+  function lizFrillTex(pal) {                                         // one petal of its sunrise frill in fine detail: a pearled central rib with feathered side-veins, rays of colour, a jewelled eye near the tip, a finely serrated golden edge, and glitter
+    return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
+      function shape() { g.beginPath(); g.moveTo(w * 0.42, 0); g.lineTo(w * 0.58, 0); g.bezierCurveTo(w * 0.98, h * 0.25, w * 0.98, h * 0.7, w * 0.5, h); g.bezierCurveTo(w * 0.02, h * 0.7, w * 0.02, h * 0.25, w * 0.42, 0); g.closePath(); }
+      var c0 = new THREE.Color(pal.frill[0]), c1 = new THREE.Color(pal.frill[1]), cg = new THREE.Color(pal.glow);
+      g.save(); shape(); g.clip();
+      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, lizCss(c0.clone().multiplyScalar(0.85), 1)); gr.addColorStop(0.35, lizCss(c0, 0.95)); gr.addColorStop(0.7, lizCss(c1, 0.92)); gr.addColorStop(0.92, lizCss(cg, 0.9)); gr.addColorStop(1, lizCss(c1, 0.8));
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var r = 0; r < 9; r++) { var rx = w * (0.15 + r * 0.0875); g.fillStyle = r % 2 ? 'rgba(255,255,255,0.08)' : 'rgba(120,40,10,0.06)'; g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(rx - 10, h); g.lineTo(rx + 10, h); g.closePath(); g.fill(); }   // (rays of light and shade fanning along it)
+      var band = g.createLinearGradient(0, h * 0.55, 0, h * 0.7); band.addColorStop(0, 'rgba(255,255,255,0)'); band.addColorStop(0.5, 'rgba(255,240,200,0.25)'); band.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = band; g.fillRect(0, h * 0.55, w, h * 0.15);   // (a pale band of light across it)
+      for (var v = 1; v < 26; v++) { var vy = v / 26 * h * 0.92, vw = Math.sin(Math.min(1, vy / h * 1.3) * Math.PI) * w * 0.44; [-1, 1].forEach(function (s) { g.strokeStyle = 'rgba(90,30,10,0.25)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + s * vw * 0.5, vy + 10, w / 2 + s * vw, vy + 30); g.stroke(); g.strokeStyle = 'rgba(255,246,220,0.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + s * vw * 0.5, vy + 10, w / 2 + s * vw, vy + 30); g.stroke(); }); }   // (feathered side-veins, like the barbs of a feather)
+      g.strokeStyle = 'rgba(90,30,10,0.35)'; g.lineWidth = 6; g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h * 0.94); g.stroke();
+      g.strokeStyle = 'rgba(255,236,180,0.95)'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w / 2, h * 0.94); g.stroke();   // (a golden central rib)
+      for (var pr = 0; pr < 9; pr++) { var py = h * (0.08 + pr * 0.075); g.fillStyle = 'rgba(255,252,240,0.95)'; g.beginPath(); g.arc(w / 2, py, 3.4 - pr * 0.18, 0, Math.PI * 2); g.fill(); }   // (pearls along the rib)
+      var ex = w / 2, ey = h * 0.8, es = g.createRadialGradient(ex, ey, 1, ex, ey, 28); es.addColorStop(0, '#ffffff'); es.addColorStop(0.3, lizCss(pal.crystal, 1)); es.addColorStop(0.6, lizCss(c0, 0.85)); es.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = es; g.beginPath(); g.arc(ex, ey, 28, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(255,214,120,0.95)'; g.lineWidth = 2; g.beginPath(); g.arc(ex, ey, 18, 0, Math.PI * 2); g.stroke(); g.lineWidth = 1; g.beginPath(); g.arc(ex, ey, 23, 0, Math.PI * 2); g.stroke();   // (a jewelled eye near the tip)
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex - 4, ey - 5, 3, 0, Math.PI * 2); g.fill();
+      for (var sd = 0; sd < 50; sd++) { g.globalAlpha = 0.3 + glimR(sd * 1.3) * 0.6; g.fillStyle = '#fff'; g.beginPath(); g.arc(w * (0.2 + glimR(sd * 4.1) * 0.6), h * (0.1 + glimR(sd * 2.9) * 0.85), 0.6 + glimR(sd) * 1.2, 0, Math.PI * 2); g.fill(); }   // (glitter)
+      g.globalAlpha = 1; g.restore();
+      g.strokeStyle = 'rgba(255,214,120,0.95)'; g.lineWidth = 4; shape(); g.stroke();   // (a golden edge)
+      g.strokeStyle = 'rgba(255,240,200,0.8)'; g.lineWidth = 1.5; for (var sr = 0; sr < 40; sr++) { var t = sr / 40, side = sr % 2 ? 1 : -1, tt = (sr >> 1) / 20, ang = tt * Math.PI * 0.95, ex2 = w / 2 + side * Math.sin(ang) * w * 0.45, ey2 = h * tt * 0.98; g.beginPath(); g.moveTo(ex2, ey2); g.lineTo(ex2 + side * 6, ey2 + 8); g.stroke(); }   // (fine serrations round its edge)
+    }));
+  }
   function lizWingTex(pal) {                                          // a wing of light in fine detail: iridescent bands, branching veins with cross-veins forming little cells like a dragonfly's, a jewelled eye-spot, a scalloped golden edge beaded with pearls, and glittering dust
     return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
       function shape() { g.beginPath(); g.moveTo(w * 0.32, 0); g.lineTo(w * 0.68, 0); g.bezierCurveTo(w * 1.02, h * 0.28, w * 1.0, h * 0.7, w * 0.62, h * 0.97); for (var k = 0; k < 6; k++) { var x0 = w * (0.62 - k * 0.075), x1 = x0 - w * 0.075; g.quadraticCurveTo((x0 + x1) / 2, h * (0.995 - Math.abs(k - 2.5) * 0.012) + 10, x1, h * (0.965 - Math.abs(k - 2.5) * 0.02)); } g.bezierCurveTo(w * 0.02, h * 0.75, -w * 0.02, h * 0.3, w * 0.32, 0); g.closePath(); }   // (a scalloped trailing edge)
@@ -6166,10 +6189,15 @@ EVERDAWN_PARTS.push(function (THREE) {
       var vs = new THREE.Mesh(vg, sheen); vs.renderOrder = 4; vm.add(vs);
       var rec = { m: vm, base: vg.attributes.position.array.slice(), L: L, ph: ph }; membranes.push(rec); return rec;
     }
-    var frillMat = new THREE.MeshStandardMaterial({ map: lizMembraneTex(pal.frill[0], pal.frill[1], true), transparent: true, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.22 }); frillMat.emissiveMap = frillMat.map;
+    var frillMat = new THREE.MeshStandardMaterial({ map: lizFrillTex(pal), transparent: true, opacity: 0.97, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.22 }); frillMat.emissiveMap = frillMat.map;
     var glideMat = new THREE.MeshStandardMaterial({ map: lizWingTex(pal), transparent: true, opacity: 0.97, side: THREE.DoubleSide, depthWrite: false, roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.15 }); glideMat.emissiveMap = glideMat.map;
     var frill = [];
     for (var fk = 0; fk < 13; fk++) { var fa = -2.0 + fk * 0.333, fl = 0.06 + Math.cos(fa * 0.75) * 0.035; frill.push(membrane(head, frillMat, V3(Math.sin(fa) * 0.03, 0.004 + Math.cos(fa) * 0.026, -0.03), V3(Math.sin(fa), Math.cos(fa), -0.3), fl, 0.036, 0, fk * 0.7)); }   // (fanned round the back of its head like the rays of a rising sun)
+    for (var fk2 = 0; fk2 < 12; fk2++) { var fa2 = -1.83 + fk2 * 0.333, fl2 = (0.06 + Math.cos(fa2 * 0.75) * 0.035) * 0.62; frill.push(membrane(head, frillMat, V3(Math.sin(fa2) * 0.026, 0.004 + Math.cos(fa2) * 0.022, -0.026), V3(Math.sin(fa2), Math.cos(fa2), -0.15), fl2, 0.03, 0, fk2 * 0.7 + 0.35)); }   // (a second, shorter layer of petals between them)
+    var tipBeads = [];
+    frill.forEach(function (f, k) { var tb = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 10, 8), crystalMat); tb.position.set(0, -f.L * 0.99, 0); f.m.add(tb); var ts = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.glow, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); ts.scale.set(0.012, 0.012, 1); tb.add(ts); tipBeads.push(ts); });   // (a crystal bead at every petal tip)
+    var frillBand = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0018, 8, 48, 4.0), hornGold); frillBand.position.set(0, 0.004, -0.031); frillBand.rotation.set(0, 0, -0.43); head.add(frillBand);   // (a gold band round its base)
+    for (var fb = 0; fb < 13; fb++) { var fba = -2.0 + fb * 0.333, fbd = new THREE.Mesh(new THREE.SphereGeometry(0.0021, 8, 6), hornGold); fbd.position.set(Math.sin(fba) * 0.03, 0.004 + Math.cos(fba) * 0.03, -0.029); head.add(fbd); }   // (studded with gold beads)
     var glides = [];
     [-1, 1].forEach(function (s) { glides.push(membrane(torso, glideMat, V3(s * 0.04, 0.035, 0.04), V3(s * 0.7, 0.5, -0.55), 0.2, 0.12, Math.PI / 2 - s * 0.45, s)); glides.push(membrane(torso, glideMat, V3(s * 0.044, 0.025, 0.0), V3(s * 0.8, 0.22, -0.65), 0.15, 0.09, Math.PI / 2 - s * 0.35, s + 2)); });   // (two pairs of wings of light, rising and swept back)
     glides.forEach(function (gw, k) {                                // (a crystal jewel set at each wing's root, and a soft light at its tip)
