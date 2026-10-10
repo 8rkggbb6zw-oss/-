@@ -4156,10 +4156,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       var ln = new THREE.LineSegments(lg2, new THREE.LineBasicMaterial({ color: pal.star, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false })); parent.add(ln); return ln;
     }
     var constLines = [constellate(maskPts, head, 0.0048, 0.022, 40), constellate(backPts, tb, 0.009, 0.04, 35)];
-    var moonMat = new THREE.MeshBasicMaterial({ color: 0xfff0b8, side: THREE.DoubleSide });   // a glowing crescent moon on its brow
-    var cres = new THREE.Shape(); cres.absarc(0, 0, 0.011, 0.5, Math.PI * 2 - 0.5, false); cres.absarc(0.0055, 0.0014, 0.0088, Math.PI * 2 - 0.95, 0.95, true);
-    var moonMark = new THREE.Mesh(new THREE.ShapeGeometry(cres, 16), moonMat); moonMark.position.set(0, 0.047, 0.044); moonMark.rotation.set(-0.75, 0, Math.PI / 2 + 0.4); head.add(moonMark);
-    var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0b8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); moonGlow.scale.set(0.05, 0.05, 1); moonGlow.position.set(0, 0.045, 0.045); head.add(moonGlow);
+    function crescent(R, r, d) {                                      // a crescent: a circle of radius R with a circle of radius r (its middle d to the right) taken out of it
+      var ix = (R * R - r * r + d * d) / (2 * d), iy = Math.sqrt(Math.max(0, R * R - ix * ix)), a0 = Math.atan2(iy, ix), b0 = Math.atan2(iy, ix - d), sh = new THREE.Shape(), k;
+      for (k = 0; k <= 32; k++) { var a = a0 + (Math.PI * 2 - 2 * a0) * k / 32; sh[k ? 'lineTo' : 'moveTo'](Math.cos(a) * R, Math.sin(a) * R); }   // (round the outside...)
+      for (k = 1; k < 32; k++) { var b = (Math.PI * 2 - b0) - (Math.PI * 2 - 2 * b0) * k / 32; sh.lineTo(d + Math.cos(b) * r, Math.sin(b) * r); }   // (...and back round the inside)
+      sh.closePath(); return sh;
+    }
+    var moonMat = new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffe8a0, emissiveIntensity: 0.9, roughness: 0.35, metalness: 0.1 });   // a glowing crescent moon on its brow
+    var moonMark = new THREE.Mesh(new THREE.ExtrudeGeometry(crescent(0.0085, 0.007, 0.0042), { depth: 0.0012, bevelEnabled: true, bevelThickness: 0.0006, bevelSize: 0.0005, bevelSegments: 3, curveSegments: 24 }), moonMat);
+    moonMark.geometry.center(); moonMark.position.set(0, 0.036, 0.0535);   // (resting on the fur of its brow, just above its eyes, facing forward)
+    moonMark.lookAt(moonMark.position.clone().add(V3(0, 0.55, 0.84))); moonMark.rotateZ(Math.PI / 2 + 0.35); head.add(moonMark);
+    var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0b8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); moonGlow.scale.set(0.032, 0.032, 1); moonGlow.position.set(0, 0.036, 0.056); head.add(moonGlow);
     // big shining eyes
     var eyeMat = new THREE.MeshStandardMaterial({ color: 0x05040a, roughness: 0.05, metalness: 0.2 });
     var irisMat = new THREE.MeshStandardMaterial({ map: lunaEyeTex(pal), roughness: 0.1, emissive: 0xffffff, emissiveIntensity: 0.25 }); irisMat.emissiveMap = irisMat.map;
@@ -4251,11 +4258,6 @@ EVERDAWN_PARTS.push(function (THREE) {
         gs.scale.set(0.11, 0.11, 1); gs.position.copy(tCurve.getPointAt(rt)); tail.add(gs); ringGlows.push(gs);
         for (var rs = 0; rs < 5; rs++) { var ra = glimR(rg * 7.1 + rs) * Math.PI * 2, rp = tCurve.getPointAt(Math.min(0.98, rt + (glimR(rs * 3.3 + rg) - 0.5) * 0.04)), rr = 0.045; var ts = new THREE.Mesh(starGeo, starMat); ts.position.set(rp.x + Math.cos(ra) * rr, rp.y + Math.sin(ra) * rr * 0.8, rp.z + Math.sin(ra) * rr * 0.6); tail.add(ts); }
       }
-      var cs2 = new THREE.Shape(); cs2.absarc(0, 0, 0.02, 0.45, Math.PI * 2 - 0.45, false); cs2.absarc(0.0095, 0.002, 0.0165, Math.PI * 2 - 0.95, 0.95, true);   // a little crescent moon shining at its tip
-      var tipP = tCurve.getPointAt(1), tipMoon = new THREE.Mesh(new THREE.ExtrudeGeometry(cs2, { depth: 0.005, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.0018, bevelSegments: 3, curveSegments: 24 }), new THREE.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xfff0c0, emissiveIntensity: 0.85, roughness: 0.4 }));
-      tipMoon.geometry.center(); tipMoon.position.copy(tipP).add(V3(0, 0.022, 0.012)); tipMoon.rotation.set(0, Math.PI / 2, -0.6); tail.add(tipMoon);
-      for (var tw2 = 0; tw2 < 7; tw2++) { var tws = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false })); var twa = tw2 / 7 * Math.PI * 2; tws.scale.setScalar(0.012 + glimR(tw2) * 0.01); tws.position.copy(tipMoon.position).add(V3(Math.cos(twa) * 0.03, Math.sin(twa) * 0.03, 0)); tail.add(tws); ringGlows.push(tws); }   // (and a ring of tiny stars round it)
-      var tmg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0c0, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); tmg.scale.set(0.1, 0.1, 1); tmg.position.copy(tipMoon.position); tail.add(tmg); ringGlows.push(tmg);
     })();
     // a satin ribbon round its neck, with a crescent moonstone hanging from it
     var collar = new THREE.Group(); collar.position.set(0, 0.012, 0.082); collar.rotation.x = -1.05; tb.add(collar);   // (low round its neck, under its chin)
@@ -4263,7 +4265,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var band = new THREE.Mesh(new THREE.TorusGeometry(0.056, 0.0042, 10, 48), satin); band.scale.set(1, 1, 1.6); band.castShadow = true; collar.add(band);
     var pend = new THREE.Group(); pend.position.set(0, -0.06, 0.003); pend.rotation.x = 0.9; collar.add(pend);
     var ringM = new THREE.Mesh(new THREE.TorusGeometry(0.0035, 0.0009, 6, 14), new THREE.MeshStandardMaterial({ color: 0xffe4a0, metalness: 0.85, roughness: 0.25 })); pend.add(ringM);
-    var cs3 = new THREE.Shape(); cs3.absarc(0, 0, 0.011, 0.5, Math.PI * 2 - 0.5, false); cs3.absarc(0.0052, 0.0012, 0.009, Math.PI * 2 - 1.0, 1.0, true);
+    var cs3 = crescent(0.011, 0.009, 0.0052);
     var stone = new THREE.Mesh(new THREE.ExtrudeGeometry(cs3, { depth: 0.002, bevelEnabled: true, bevelThickness: 0.0012, bevelSize: 0.001, bevelSegments: 3, curveSegments: 20 }), new THREE.MeshPhysicalMaterial({ color: 0xf4f0ff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.45 }));
     stone.geometry.center(); stone.position.set(0, -0.013, 0); stone.rotation.z = Math.PI / 2 + 0.3; pend.add(stone);
     var stoneGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); stoneGlow.scale.set(0.05, 0.05, 1); stoneGlow.position.copy(stone.position); pend.add(stoneGlow);
@@ -4334,7 +4336,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
     var pulse = 0.5 + Math.sin(t * 1.2 + g.stall) * 0.5;
     m.ringGlows.forEach(function (r, k) { r.material.opacity = 0.14 + (0.5 + Math.sin(t * 1.5 + k * 0.9) * 0.5) * 0.14; });
-    m.moonGlow.material.opacity = 0.35 + pulse * 0.3;
+    m.moonGlow.material.opacity = 0.18 + pulse * 0.17;
     m.orbit2.rotation.y = -t * (happy ? 3 : 1.1);
     m.pend.rotation.z = Math.sin(t * 1.6 + g.stall) * 0.12 + (moving ? Math.sin(g.hop) * 0.25 : 0);   // (its moonstone swinging)
     m.stoneGlow.material.opacity = 0.35 + pulse * 0.3;
