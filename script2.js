@@ -6547,6 +6547,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mossCol0 = new THREE.Color(pal.moss);
     var seeds = [[0, 0]]; for (var s6 = 0; s6 < 6; s6++) { var a6 = s6 / 6 * Math.PI * 2 + Math.PI / 6; seeds.push([Math.cos(a6) * 0.5, Math.sin(a6) * 0.5]); } for (var s12 = 0; s12 < 12; s12++) { var a12 = s12 / 12 * Math.PI * 2; seeds.push([Math.cos(a12) * 0.92, Math.sin(a12) * 0.92]); }
     var shA = new THREE.Color(pal.shell[0]), shB = new THREE.Color(pal.shell[1]), seamCol = new THREE.Color(pal.seam), rimCol = new THREE.Color(pal.rim);
+    var coatTop = skinCol.clone().multiplyScalar(0.9);
     var shell = new THREE.Group(); shell.position.set(0, 0.03, -0.012); shell.scale.setScalar(0.82); torso.add(shell);   // (sitting up on its back, its soft body showing beneath)
     var shellGeo = sdfShape(function (x, y, z) {
       var d = ell(x, y, z, 0, 0.01, 0, 0.11, 0.13, 0.128);   // (a round bud, swelling out and curving in at its base)
@@ -6561,10 +6562,19 @@ EVERDAWN_PARTS.push(function (THREE) {
       c.lerp(seamCol, ss(0.02, 0.0, Math.abs(ux)) * 0.55);   // (a fine golden vein down its middle)
       c.lerp(seamCol, ss(0.42, 0.49, Math.abs(ux)) * 0.85);   // (golden edges)
       if (tier === 0 && n.y > 0.32) c.lerp(seamCol, ss(0.36, 0.45, n.y) * 0.8);   // (where the tiers overlap)
+      var ccl = c.clone(); c.copy(coatTop).lerp(ccl, ss(0.03, 0.1, q.y));   // (its coat colour flowing up onto the base of the bud)
       
     });
     var shellMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15, emissive: pal.glow, emissiveIntensity: 0.06 });
     abPart(shellGeo, shellMat, 0, 0, 0, 0, 0, 0, shell).castShadow = true;
+    (function () {                                                    // its plush coat growing up over the base of the bud and thinning away, so body and bud are one
+      var sp = shellGeo.attributes.position, si = shellGeo.index.array, band = [];
+      for (var i = 0; i < si.length; i += 3) { if (sp.getY(si[i]) < 0.085 && sp.getY(si[i + 1]) < 0.085 && sp.getY(si[i + 2]) < 0.085) band.push(si[i], si[i + 1], si[i + 2]); }
+      var bg = new THREE.BufferGeometry(); bg.setAttribute('position', sp); bg.setAttribute('normal', shellGeo.attributes.normal); bg.setAttribute('color', shellGeo.attributes.color); bg.setIndex(band);
+      var fg = zFurShell(bg, 14, 0.0058, [1, 1, 1], [0, 1, 0], 1.6), fp = fg.attributes.position, fr = fg.attributes.furRoot;
+      for (var k = 0; k < fp.count; k++) { var f = ss(0.085, 0.025, fr.getY(k)); fp.setXYZ(k, fr.getX(k) + (fp.getX(k) - fr.getX(k)) * f, fr.getY(k) + (fp.getY(k) - fr.getY(k)) * f, fr.getZ(k) + (fp.getZ(k) - fr.getZ(k)) * f); }   // (long where it meets the body, tapering to nothing up the bud)
+      abPart(fg, coatFur, 0, 0, 0, 0, 0, 0, shell).castShadow = false;
+    })();
     var shellSheen = new THREE.Mesh(shellGeo, filmMat(pal.glow, 0.5)); shellSheen.scale.setScalar(1.003); shellSheen.renderOrder = 4; shell.add(shellSheen);   // (an opal shimmer over it)
     var goldM = new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.28, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 });
     var ray = new THREE.Raycaster(), shellMesh = new THREE.Mesh(shellGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); shellMesh.updateMatrixWorld(true);
