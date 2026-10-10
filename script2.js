@@ -4618,8 +4618,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var hoof = new THREE.Group(); hoof.position.set(0, -0.072, 0.002); hip.add(hoof);   // (its hooves tucked up into the fur of its leg, so there's no gap)
       [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0095, 0.004, 0.002, 0.0105, 0.016, 0.013, hoof, Math.PI, 0, 0); hm.castShadow = true; });   // (two pearly toes)
       part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }), 0.004, -0.0005, 0.0128, 0.0035, 0.002, 0.001, hoof);
-      var af = new THREE.Mesh(earFinGeo, finMat); af.scale.set(0.022, 0.026, 0.022); af.position.set(lp[0] * 0.016, -0.05, -0.012); af.rotation.set(-2.3, lp[0] * 0.5, lp[0] * 0.4); hip.add(af);   // (a frilly little fin flowing back from each ankle, like a mermaid's)
-      legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front, fin: af });
+      legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front });
     });
     // shimmering pearly scales over its haunches, in neat overlapping rows, like a mermaid's tail
     (function () {
@@ -4650,7 +4649,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
     }));
     causticTex.wrapS = causticTex.wrapT = THREE.RepeatWrapping; causticTex.repeat.set(5, 3);
-    var causticMat = new THREE.MeshBasicMaterial({ map: causticTex, color: new THREE.Color(pal.glow).lerp(new THREE.Color(0xffffff), 0.4), transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
+    var causticMat = new THREE.MeshBasicMaterial({ alphaMap: causticTex, color: new THREE.Color(pal.fin[0]), transparent: true, opacity: 0.6, depthWrite: false });   // (painted in the colours of its fin ears, so they show against its pale fur)
     var cBody = new THREE.Mesh(bodyGeo, causticMat); cBody.scale.setScalar(1.1); cBody.renderOrder = 2; torso.add(cBody);
     var cHead = new THREE.Mesh(headGeo, causticMat); cHead.scale.setScalar(1.08); cHead.renderOrder = 2; head.add(cHead);
     // ripples spreading out over the ground beneath it, as if it were standing in shallow water
@@ -4681,7 +4680,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.6, 0); tag.renderOrder = 6; root.add(tag);
-    return { causticTex: causticTex, ripples: ripples, crest: crest, glints: glints, orbitB: orbitB, root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { causticMat: causticMat, fin0: new THREE.Color(pal.fin[0]).offsetHSL(0, 0.25, -0.08), fin1: new THREE.Color(pal.fin[1]).offsetHSL(0, 0.25, -0.08), causticTex: causticTex, ripples: ripples, crest: crest, glints: glints, orbitB: orbitB, root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's blown its Wishbubble, the bubble floats beside it, bobbing
   function bubbleBuildExtras(g) {
@@ -4729,11 +4728,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       b.m.material.opacity = 1; b.m.visible = f < 0.97;
     });
     m.glints.forEach(function (gs, k) { gs.material.opacity = Math.pow(Math.max(0, Math.sin(t * 1.3 + k * 2.7)), 8) * 0.9; gs.material.rotation = t * 0.5 + k; });
+    m.causticMat.color.copy(m.fin0).lerp(m.fin1, 0.5 + 0.5 * Math.sin(t * 0.6 + g.stall));   // (shimmering from one of its fin colours to the other)
     m.causticTex.offset.set(Math.sin(t * 0.13) * 0.4 + t * 0.02, Math.cos(t * 0.11) * 0.3 + t * 0.015);   // (the light rippling over it)
     m.ripples.forEach(function (r) { r.t += dt * 0.35; if (r.t > 1) r.t -= 1; var sc = 0.12 + r.t * 0.4; r.m.scale.set(sc, sc, 1); r.m.material.opacity = Math.sin(r.t * Math.PI) * 0.35 * (1 - r.t); });
     if (m.crest) m.crest.rotation.x = 0.05 + Math.sin(t * 2.4 + g.stall) * 0.05 + (moving ? Math.sin(g.hop) * 0.08 : 0);   // (its crest rippling)
     m.orbitB.rotation.y = t * (happy ? 1.2 : 0.35); m.orbitB.children.forEach(function (ob, k) { ob.position.y = Math.sin(t * 0.8 + k * 2.1) * 0.05; });
-    m.legs.forEach(function (l, k) { l.fin.rotation.y = (k % 2 ? 1 : -1) * 0.5 + Math.sin(t * 3 + k) * 0.15; });
     var pulse = 0.5 + Math.sin(t * 1.2 + g.stall) * 0.5;
     m.glow.material.opacity = 0.1 + pulse * 0.05;
     if (g.egg) { g.eggMesh.position.y = 0.2 + Math.sin(t * 1.6 + g.stall) * 0.025; g.eggMesh.rotation.y = t * 0.4; g.pearlIn.position.set(Math.sin(t * 1.3) * 0.006, Math.sin(t * 1.7) * 0.006, 0); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
