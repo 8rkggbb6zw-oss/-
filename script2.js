@@ -4765,9 +4765,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Prism Wool. Miss a day and the count starts over. When petted it springs into the air on all four legs
   var PRISM_COST = 540, PRISM_DAYS = 2;
   var PRISM_PALS = [                                                  // a rainbow one, an opal one and a twilight one
-    { name: 'Rainbow', hue: 0.0, hueSpan: 1.0, sat: 0.85, light: 0.76, face: 0xfaf4ff, inner: 0xffc0d8, nose: 0xe89ab8, horn: 0xf4f8ff, iris: ['#8a6aff', '#1a1060'], glow: 0xfff0ff },
-    { name: 'Opal', hue: 0.42, hueSpan: 0.5, sat: 0.6, light: 0.82, face: 0xf6fbff, inner: 0xffcce0, nose: 0xe0a0b8, horn: 0xeefcff, iris: ['#3ac8b0', '#0a3040'], glow: 0xe8fff8 },
-    { name: 'Twilight', hue: 0.72, hueSpan: 0.42, sat: 0.75, light: 0.76, face: 0xfaf0fa, inner: 0xffb8cc, nose: 0xd890b0, horn: 0xfff2fa, iris: ['#d86ab0', '#3a0a30'], glow: 0xffe8f4 }
+    { name: 'Rainbow', hue: 0.0, hueSpan: 1.0, sat: 0.9, light: 0.82, face: 0xfaf4ff, inner: 0xffc0d8, nose: 0xe89ab8, horn: 0xf4f8ff, iris: ['#8a6aff', '#1a1060'], glow: 0xfff0ff },
+    { name: 'Opal', hue: 0.42, hueSpan: 0.5, sat: 0.8, light: 0.84, face: 0xf6fbff, inner: 0xffcce0, nose: 0xe0a0b8, horn: 0xeefcff, iris: ['#3ac8b0', '#0a3040'], glow: 0xe8fff8 },
+    { name: 'Twilight', hue: 0.72, hueSpan: 0.42, sat: 0.85, light: 0.82, face: 0xfaf0fa, inner: 0xffb8cc, nose: 0xd890b0, horn: 0xfff2fa, iris: ['#d86ab0', '#3a0a30'], glow: 0xffe8f4 }
   ];
   function prismHue(pal, f) { return new THREE.Color().setHSL(((pal.hue + f * pal.hueSpan) % 1 + 1) % 1, pal.sat, pal.light); }   // (a colour from its rainbow, f from 0 to 1)
   // Prism Wool: a soft skein of curly fleece in every colour of the rainbow
@@ -4819,8 +4819,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   function prismBuild(pal) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
     var seg = new THREE.SphereGeometry(1, 40, 28), faceCol = new THREE.Color(pal.face);
-    var skinV = zSoftMat({ vertexColors: true, roughness: 0.95, color: 0xeeeef2 }, 0.22, 0.35, 0);
-    var faceFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 3000, 0, true, 0.95, 0.6), legFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 2400, 0, true, 0.95, 0.6);
+    var skinV = zSoftMat({ vertexColors: true, roughness: 0.95, color: 0xe4e4e8 }, 0.1, 0.25, 0);
+    var faceFur = zFurMat(new THREE.Color(1.03, 1.03, 1.03), 3000, 0, true, 0.88, 0.22), legFur = zFurMat(new THREE.Color(1.03, 1.03, 1.03), 2400, 0, true, 0.88, 0.22);
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
     function coat(geo, fmat, parent, len, flow, comb, x, y, z) {
       var sk = abPart(geo, skinV, x || 0, y || 0, z || 0, 0, 0, 0, parent); sk.castShadow = true;
@@ -4846,7 +4846,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       function sdf(x, y, z, list) {
         var ex = x / core[0], ey = y / core[1], ez = z / core[2], d = (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * Math.min(core[0], core[1], core[2]) - rC * 0.35;
-        for (var k = 0; k < list.length; k++) { var c = list[k], db = Math.sqrt((x - c.p.x) * (x - c.p.x) + (y - c.p.y) * (y - c.p.y) + (z - c.p.z) * (z - c.p.z)) - c.r; d = smin(d, db, rC * 0.4); }
+        for (var k = 0; k < list.length; k++) { var c = list[k], db = Math.sqrt((x - c.p.x) * (x - c.p.x) + (y - c.p.y) * (y - c.p.y) + (z - c.p.z) * (z - c.p.z)) - c.r * 0.55; d = smin(d, db, rC * 1.6); }   // (melted smoothly together into soft, flowing swells, not separate curls)
         return d;
       }
       var geo = new THREE.SphereGeometry(1, res[0], res[1]), p2 = geo.attributes.position, cols = [], n = new THREE.Vector3(), c = new THREE.Color();
@@ -4856,32 +4856,27 @@ EVERDAWN_PARTS.push(function (THREE) {
         for (var it = 0; it < 18; it++) { var mid = (lo + hi) / 2; if (sdf(n.x * mid, n.y * mid, n.z * mid, near) < 0) lo = mid; else hi = mid; }
         p2.setXYZ(j, n.x * lo, n.y * lo, n.z * lo);
         var best = null, bd = 9; near.forEach(function (cc) { var dd = cc.p.distanceTo(V3(n.x * lo, n.y * lo, n.z * lo)) / cc.r; if (dd < bd) { bd = dd; best = cc; } });
-        var f = (Math.atan2(n.x, n.z) / (Math.PI * 2) + 0.5 + n.y * 0.25 + (best ? (best.f - 0.5) * 0.12 : 0));   // (the rainbow flowing round its body, each curl a little different)
-        c.copy(prismHue(pal, f)).lerp(new THREE.Color(1, 1, 1), 0.06 + Math.max(0, n.y) * 0.1);
-        var hollow = best ? ss(0.75, 1.15, bd) : 1; c.multiplyScalar(1 - hollow * 0.14);
-        if (best && bd < 1.05) {                                        // (each curl a little ringlet: a spiral of light and shade winding into its middle)
-          var lp = V3(n.x * lo, n.y * lo, n.z * lo).sub(best.p), ax = best.d, ux = V3(0, 1, 0).cross(ax).normalize(), vx = ax.clone().cross(ux), ang = Math.atan2(lp.dot(vx), lp.dot(ux)), rr = Math.sqrt(Math.pow(lp.dot(ux), 2) + Math.pow(lp.dot(vx), 2)) / best.r;
-          var sw = Math.sin(ang * 1 + rr * 13 + best.f * 6); c.multiplyScalar(0.93 + 0.12 * sw * ss(1.05, 0.5, bd)); c.lerp(new THREE.Color(1, 1, 1), Math.max(0, sw) * 0.12 * ss(1.0, 0.4, bd));
-        }   // (softly shadowed between the curls)
+        var f = 0.5 - n.z * 0.42 + n.y * 0.18 + Math.sin(n.y * 4 + n.x * 3 + n.z * 2) * 0.06;   // (the rainbow flowing back along its body in soft bands, like light through a prism)
+        c.copy(prismHue(pal, f)).lerp(new THREE.Color(1, 1, 1), 0.08 + Math.max(0, n.y) * 0.08);   // (soft pastels)
+        c.multiplyScalar(0.97 + 0.04 * Math.sin(n.x * 21 + n.y * 17) * Math.sin(n.z * 19 - n.y * 9));   // (gently mottled, like real fur)
         cols.push(c.r, c.g, c.b);
       }
       geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
       return geo;
     }
-    var woolFur = zFurMat(new THREE.Color(1.1, 1.1, 1.1), 1500, 0.9, true, 0.9, 0.55);   // (fine, crimped wool)
-    var sheen = filmMat(0xffffff, 0.45);                              // (and a rainbow sheen sliding over it, like light through a prism)
+    var woolFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 2600, 0, true, 0.88, 0.32);   // (a dense, soft, plush coat)
+    var sheen = filmMat(0xffffff, 0.3);                              // (and a rainbow sheen sliding over it, like light through a prism)
     function woolly(geo, parent, len, x, y, z) {
       var g2 = new THREE.Group(); g2.position.set(x || 0, y || 0, z || 0); parent.add(g2);
       var sk = new THREE.Mesh(geo, skinV); sk.castShadow = true; g2.add(sk);
-      g2.add(new THREE.Mesh(zFurShell(geo, 16, len, [1, 1, 1], [0, -0.3, -1], 0.4), woolFur));
-      var sh = new THREE.Mesh(geo, sheen); sh.scale.setScalar(1 + len * 9); sh.renderOrder = 4; g2.add(sh);
+      g2.add(new THREE.Mesh(zFurShell(geo, 16, len * 1.25, [1, 1, 1], [0, -0.35, -1], 1.0), woolFur));   // (lying back softly along its body)
       return g2;
     }
     // the body: round and plump, all in curly fleece
     var BY = 0.25;
-    var fleeceG = woolly(fleece([0.11, 0.092, 0.14], 120, 0.027, 100, [170, 115]), body, 0.007, 0, BY, 0);
+    var fleeceG = woolly(fleece([0.085, 0.078, 0.125], 80, 0.026, 100, [150, 100]), body, 0.007, 0, BY, 0);
     // the head: a soft, gently rounded face, longer toward the nose like a lamb's, pale and velvety
-    var head = new THREE.Group(); head.position.set(0, BY + 0.085, 0.14); head.rotation.x = 0.25; head.scale.setScalar(1.2); body.add(head);
+    var head = new THREE.Group(); head.position.set(0, BY + 0.09, 0.135); head.rotation.x = 0.2; head.scale.setScalar(1.25); body.add(head);
     var headGeo = shaped([96, 72], function (n, q, c) {
       var fwd = Math.max(0, n.z);
       q.set(n.x * 0.044 * (1 - Math.pow(fwd, 2) * 0.28), n.y * 0.046 * (1 - Math.pow(fwd, 2) * 0.22), n.z * 0.05 + Math.pow(fwd, 3) * 0.02);
@@ -4890,7 +4885,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       c.multiplyScalar(0.97 + 0.045 * (0.5 + 0.5 * Math.sin(n.x * 29 + n.y * 21) * Math.sin(n.z * 23 - n.x * 11)));
     });
     coat(headGeo, faceFur, head, 0.0035, [0, 0.3, -1]);
-    var neckWool = woolly(fleece([0.045, 0.05, 0.04], 16, 0.02, 400, [64, 44]), body, 0.007, 0, BY + 0.055, 0.105);   // (a woolly ruff where its neck meets its head)
+    var neckWool = woolly(fleece([0.042, 0.055, 0.042], 16, 0.02, 400, [64, 44]), body, 0.007, 0, BY + 0.055, 0.1);   // (a woolly ruff where its neck meets its head)
     var top = woolly(fleece([0.026, 0.016, 0.028], 12, 0.012, 700, [56, 40]), head, 0.004, 0, 0.042, -0.004);   // its curly topknot
     // big, gentle eyes
     var eyeMat = new THREE.MeshStandardMaterial({ color: 0x05040a, roughness: 0.05, metalness: 0.2 });
@@ -4957,18 +4952,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hoofMat = new THREE.MeshPhysicalMaterial({ color: pal.horn, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.85, emissive: pal.glow, emissiveIntensity: 0.25, flatShading: true });
     var legs = [];
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp, li) {
-      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.058, BY - 0.05, front ? 0.075 : -0.08); body.add(hip);
-      var lg = limb([[0.0005, 0.02], [0.012, 0.016], [0.0145, -0.02], [0.012, -0.08], [0.0105, -0.13], [0.0115, -0.15], [0.0005, -0.152]], function (y2, c) { c.copy(faceCol).multiplyScalar(0.97); });
-      coat(lg, legFur, hip, 0.003, [0, -1, 0]);
-      woolly(fleece([0.026, 0.03, 0.026], 10, 0.014, 900 + li * 37, [48, 32]), hip, 0.006, 0, -0.012, 0);   // (woolly at the top)
+      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.048, BY - 0.045, front ? 0.07 : -0.075); body.add(hip);
+      var lg = limb([[0.0005, 0.02], [0.016, 0.017], [0.021, -0.02], [0.016, -0.07], [0.0125, -0.1], [0.0145, -0.112], [0.011, -0.135], [0.0115, -0.15], [0.0005, -0.153]], function (y2, c) { c.copy(prismHue(pal, 0.5 - (front ? 0.35 : -0.35))).lerp(faceCol, ss(-0.06, -0.12, y2) * 0.8); });   // (soft and plush, the rainbow of its coat fading to pale at its feet)
+      coat(lg, woolFur, hip, 0.006, [0, -1, 0], 1.6);
       var hoof = new THREE.Group(); hoof.position.set(0, -0.15, 0.002); hip.add(hoof);
-      [-1, 1].forEach(function (s) { part(new THREE.CylinderGeometry(0.0055, 0.0072, 0.016, 6), hoofMat, s * 0.0055, -0.006, 0.001, 1, 1, 1.25, hoof, 0, 0, 0).castShadow = true; });   // (two crystal toes)
+      [-1, 1].forEach(function (s) { part(new THREE.CylinderGeometry(0.0075, 0.0095, 0.016, 6), hoofMat, s * 0.0075, -0.006, 0.001, 1, 1, 1.25, hoof, 0, 0, 0).castShadow = true; });   // (two crystal toes)
       legs.push({ hip: hip, ph: lp[0] * lp[1] > 0 ? 0 : Math.PI, front: front });
     });
     // little prism crystals growing among the curls along its back, each splitting the light into a tiny rainbow
     var shardMat = new THREE.MeshPhysicalMaterial({ color: pal.horn, roughness: 0.03, clearcoat: 1, transparent: true, opacity: 0.85, emissive: pal.glow, emissiveIntensity: 0.4, flatShading: true }), shards = [];
     [[0, 0.1, 0.05, 0.0, 1.0], [0.03, 0.098, -0.01, 0.4, 0.8], [-0.032, 0.096, -0.03, -0.5, 0.9], [0.0, 0.094, -0.08, 0.1, 0.7], [0.05, 0.08, 0.06, 0.7, 0.6], [-0.05, 0.082, 0.04, -0.7, 0.65]].forEach(function (c, k) {
-      var cl = new THREE.Group(); cl.position.set(c[0], BY + c[1], c[2]); cl.rotation.set(c[3] * 0.3, k, c[3]); body.add(cl);
+      var cl = new THREE.Group(); cl.position.set(c[0] * 0.78, BY + c[1] * 0.84, c[2] * 0.9); cl.rotation.set(c[3] * 0.3, k, c[3]); body.add(cl);
       for (var j = 0; j < 3; j++) { var h = (0.016 + glimR(k * 3 + j) * 0.012) * c[4], sh = new THREE.Mesh(new THREE.CylinderGeometry(0, 0.0045, h, 6).translate(0, h / 2, 0), shardMat); sh.rotation.set((j - 1) * 0.45, j * 2.1, (j - 1) * 0.3); cl.add(sh);
         var sf = new THREE.Mesh(new THREE.CylinderGeometry(0, 0.0045, h, 6).translate(0, h / 2, 0), filmMat(0xffffff, 1)); sf.rotation.copy(sh.rotation); sf.scale.setScalar(1.02); sf.renderOrder = 3; cl.add(sf); }
       var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: new THREE.Color().setHSL(k / 6, 0.8, 0.8), transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.set(0.03, 0.03, 1); gl.position.y = 0.022 * c[4]; cl.add(gl); shards.push(gl);
@@ -4977,7 +4971,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var lightSpots = [];                                              // (patches of rainbow light on the ground beside it, cast through its crystal horns)
     for (var ls = 0; ls < 3; ls++) { var lm = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.05), new THREE.MeshBasicMaterial({ map: prismBandTex, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); lm.rotation.set(-Math.PI / 2, 0, ls * 1.3 + 0.4); lm.position.set(Math.cos(ls * 2.2) * 0.2, 0.013, Math.sin(ls * 2.2) * 0.22); root.add(lm); lightSpots.push(lm); }
     // a little puff of a tail
-    var tail = new THREE.Group(); tail.position.set(0, BY + 0.04, -0.15); body.add(tail);
+    var tail = new THREE.Group(); tail.position.set(0, BY + 0.035, -0.135); body.add(tail);
     woolly(fleece([0.018, 0.02, 0.016], 8, 0.01, 1200, [40, 28]), tail, 0.005, 0, 0, 0);
     // rainbow sparkles drifting off it, a little rainbow when it's happy, and a soft glow round it
     var sparks = [];
