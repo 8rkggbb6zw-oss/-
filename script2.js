@@ -3397,6 +3397,412 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.4; glimHeartBurst(g.x, 0.85, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= AURORA_DAYS ? ' Aurora Milk tomorrow morning!' : ' Day ' + day + ' of ' + AURORA_DAYS + ' done. Come back tomorrow!'), 2400);
   }
+  // ---------- Zephyra ----------
+  // Gentle, long-necked creatures shaped a little like a llama (but not a llama): a fleece of soft cloud wool in
+  // billowing puffs, white on top and blushed underneath with the pinks and golds of sunrise; tall curved ears with
+  // rainbow yarn tassels; a fluffy cloud topknot; big dark eyes with long lashes; a soft, split muzzle; slender legs
+  // in woolly britches on two-toed padded feet with little gold nails; and wisps of cloud drifting off it as it
+  // walks. Feed one hay and pet it every day for four days in a row, and the next morning its fleece is ready: shear
+  // it (with Shears from the counter) for a bundle of Cloud Wool. Miss a day and the count starts over
+  var ZEPHYRA_COST = 560, ZEPHYRA_DAYS = 4, SHEARS_COST = 120;
+  var ZEPHYRA_PALS = [                                                // a sunrise one, a cotton-candy one and a silver-lining one
+    { name: 'Sunrise', woolTop: 0xfffcf6, woolLow: 0xffb090, woolGold: 0xffd98a, face: 0xfff2e4, muzzle: 0xffe0cc, inner: 0xffb8c4, nose: 0x8a5a5a, iris: ['#b0602a', '#3a1a08'], tassels: [0xff6a8a, 0xffb03a, 0xffe05a, 0x6ad89a, 0x6ab0ff, 0xb08aff], nail: 0xffd56a, glow: 0xffd8a0 },
+    { name: 'Cotton Candy', woolTop: 0xfff6fb, woolLow: 0xffb8dc, woolGold: 0xb8dcff, face: 0xffeef6, muzzle: 0xffdcea, inner: 0xff9ec4, nose: 0x8a5a70, iris: ['#a04a8a', '#2a0a20'], tassels: [0xff8ac8, 0x8ad0ff, 0xfff08a, 0xc8a0ff, 0x8affd0, 0xffb0a0], nail: 0xffe2f0, glow: 0xffc8e8 },
+    { name: 'Silver Lining', woolTop: 0xf4f8ff, woolLow: 0xb8c4dc, woolGold: 0xffe4a0, face: 0xe8eef8, muzzle: 0xdce4f2, inner: 0xe8b8c8, nose: 0x5a6070, iris: ['#4a6aa0', '#0a1430'], tassels: [0xffd25a, 0xc8d4ff, 0xffffff, 0xa8c8ff, 0xffe8b0, 0x8aa0d8], nail: 0xfff0c0, glow: 0xdce8ff }
+  ];
+  var ZFUR_D = 620;                                                   // (hairs per metre along the skin)
+  // its fur and its wool: layers of shells, and in every layer a hair drawn wherever one grows from the skin below,
+  // each its own length, thinner toward the tip and darker at the root; the wool's hairs are finer, longer and
+  // crimped, so the fleece looks soft and springy
+  function zFurMat(col, dens, crimp, vcol, rootShade, soft, halo) {
+    var m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.95, vertexColors: !!vcol });
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.uFurD = { value: dens || ZFUR_D }; sh.uniforms.uCrimp = { value: crimp || 0 }; sh.uniforms.uRoot = { value: rootShade || 0.7 }; sh.uniforms.uSoft = { value: soft || 0 }; sh.uniforms.uHalo = { value: halo || 0 };
+      sh.vertexShader = 'attribute float shellT;\nattribute vec3 furRoot;\nvarying float vShellT;\nvarying vec3 vFurRoot;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vShellT = shellT; vFurRoot = furRoot;');
+      sh.fragmentShader = 'uniform float uFurD, uCrimp, uRoot, uSoft, uHalo;\nvarying float vShellT;\nvarying vec3 vFurRoot;\nvec3 zHash(vec3 p) { p = fract(p * vec3(0.1031, 0.1030, 0.0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx) * p.zyx); }\n' + sh.fragmentShader.replace('#include <alphatest_fragment>', [
+        '  vec3 fq = vFurRoot * uFurD + vec3(sin(vShellT * 11.0), cos(vShellT * 9.0), sin(vShellT * 7.0 + 1.0)) * uCrimp, fb = floor(fq - 0.5), fR = vec3(0.0); float fBest = 9.0;',   // (crimped: each hair waves as it grows)
+        '  for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) for (int k = 0; k < 2; k++) {',
+        '    vec3 fc = fb + vec3(float(i), float(j), float(k)), rr = zHash(fc); float fd = length(fq - fc - 0.2 - rr * 0.6);',
+        '    if (fd < fBest) { fBest = fd; fR = rr; } }',
+        '  float fLen = 0.5 + 0.5 * fR.x;',
+        '  if (uHalo > 0.0 && (fR.z > 0.3 || vShellT < 0.25)) discard;',   // (the halo: just a few long, fine fibres straying out past the fleece)
+        '  if (vShellT > 0.1 && (vShellT > fLen || fBest > (0.58 + uSoft * 0.14 - uHalo * 0.38) * (1.0 - vShellT / fLen * 0.78))) discard;',
+        '  if (uSoft > 0.0 && vShellT > 0.45 && zHash(vec3(floor(gl_FragCoord.xy), vShellT * 37.0)).x < (vShellT - 0.45) * 1.5 * uSoft) discard;',   // (the wool thinning out softly at its tips, like the edge of a cloud)
+        '  diffuseColor.rgb *= mix(uRoot, 1.1, smoothstep(0.0, 1.0, vShellT / fLen)) * (0.9 + 0.18 * fR.y);'].join('\n')).replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uSoft * (0.12 + 0.4 * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.0)) * (0.4 + vShellT);');   // (and glowing softly at its edges, like sunlight through a cloud)
+    };
+    m.customProgramCacheKey = function () { return 'zephyrafur' + (vcol ? 'v' : '') + (soft ? 's' : '') + (halo ? 'h' : ''); };
+    return m;
+  }
+  // the shells over a shape: sc is how the shape is stretched, len how long its hair, flow which way it lies
+  function zFurShell(geo, n, len, sc, flow, comb) {
+    var pa = geo.attributes.position.array, na = geo.attributes.normal.array, ca = geo.attributes.color ? geo.attributes.color.array : null, cnt = geo.attributes.position.count;
+    var ia = geo.index ? geo.index.array : null, ic = ia ? ia.length : cnt, fl = V3(flow[0], flow[1], flow[2]).normalize(), cb = comb === undefined ? 1.4 : comb;
+    var P2 = new Float32Array(cnt * n * 3), N2 = new Float32Array(cnt * n * 3), R2 = new Float32Array(cnt * n * 3), T2 = new Float32Array(cnt * n), I2 = new Uint32Array(ic * n), C2 = ca ? new Float32Array(cnt * n * 3) : null;
+    var p = new THREE.Vector3(), nn = new THREE.Vector3(), tg = new THREE.Vector3();
+    for (var v = 0; v < cnt; v++) {
+      p.set(pa[v * 3] * sc[0], pa[v * 3 + 1] * sc[1], pa[v * 3 + 2] * sc[2]);
+      nn.set(na[v * 3] / sc[0], na[v * 3 + 1] / sc[1], na[v * 3 + 2] / sc[2]).normalize();
+      tg.copy(fl).addScaledVector(nn, -fl.dot(nn));
+      for (var k = 0; k < n; k++) {
+        var f = (k + 1) / n, o = (k * cnt + v) * 3, out = len * f, lean = len * f * f * cb;
+        P2[o] = p.x + nn.x * out + tg.x * lean; P2[o + 1] = p.y + nn.y * out + tg.y * lean; P2[o + 2] = p.z + nn.z * out + tg.z * lean;
+        N2[o] = nn.x; N2[o + 1] = nn.y; N2[o + 2] = nn.z; R2[o] = p.x; R2[o + 1] = p.y; R2[o + 2] = p.z;
+        if (C2) { C2[o] = ca[v * 3]; C2[o + 1] = ca[v * 3 + 1]; C2[o + 2] = ca[v * 3 + 2]; }
+        T2[k * cnt + v] = 0.04 + (k / (n - 1)) * 0.96;
+      }
+    }
+    for (var k2 = 0; k2 < n; k2++) for (var q = 0; q < ic; q++) I2[k2 * ic + q] = (ia ? ia[q] : q) + k2 * cnt;
+    var g2 = new THREE.BufferGeometry();
+    g2.setAttribute('position', new THREE.BufferAttribute(P2, 3)); g2.setAttribute('normal', new THREE.BufferAttribute(N2, 3));
+    g2.setAttribute('furRoot', new THREE.BufferAttribute(R2, 3)); g2.setAttribute('shellT', new THREE.BufferAttribute(T2, 1)); g2.setIndex(new THREE.BufferAttribute(I2, 1));
+    if (C2) g2.setAttribute('color', new THREE.BufferAttribute(C2, 3));
+    return g2;
+  }
+  var zPuffGeo = new THREE.SphereGeometry(1, 14, 10), zPuffLo = new THREE.SphereGeometry(1, 10, 7);   // (the tiniest puffs need fewer faces)
+  // a fleece: dozens of billowing puffs of wool merged into one cloud, each puff coloured by where it sits (white on
+  // top, blushed with sunrise underneath, a few touched with gold); returns its skin and its wool
+  function zCloud(puffs, pal, woolLen, layers, halo) {
+    var P = [], N = [], C = [], I = [], base = 0, top = new THREE.Color(pal.woolTop), low = new THREE.Color(pal.woolLow), gold = new THREE.Color(pal.woolGold), c = new THREE.Color();
+    puffs.forEach(function (pf, k) {                                 // pf: [x, y, z, r, shade (0 = top, 1 = underneath), tiny]
+      var sg = pf[5] ? zPuffLo : zPuffGeo, pa = sg.attributes.position.array, na = sg.attributes.normal.array, ia = sg.index.array, cnt = sg.attributes.position.count;
+      c.copy(top).lerp(low, Math.min(1, pf[4])); if (glimR(k * 3.7 + 40) < 0.12) c.lerp(gold, 0.45);
+      c.multiplyScalar(0.94 + glimR(k * 5.1) * 0.08);
+      for (var v = 0; v < cnt; v++) {
+        var sq = 1 + (glimR(k * 7 + v * 0.13) - 0.5) * 0.06;          // (each puff a little lumpy)
+        P.push(pf[0] + pa[v * 3] * pf[3] * sq, pf[1] + pa[v * 3 + 1] * pf[3] * 0.92 * sq, pf[2] + pa[v * 3 + 2] * pf[3] * sq);
+        N.push(na[v * 3], na[v * 3 + 1], na[v * 3 + 2]);
+        var under = Math.max(0, -na[v * 3 + 1]) * 0.25;               // (a little shadowed underneath each puff)
+        C.push(c.r * (1 - under), c.g * (1 - under), c.b * (1 - under));
+      }
+      for (var q = 0; q < ia.length; q++) I.push(ia[q] + base);
+      base += cnt;
+    });
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(P.length / 3 * 2).fill(0), 2)); geo.setIndex(I);
+    return { skin: geo, wool: zFurShell(geo, layers || 16, woolLen, [1, 1, 1], [0, -1, 0], 0.5), halo: halo ? zFurShell(geo, 10, woolLen * 2.1, [1, 1, 1], [0, -0.6, -1], 0.35) : null };
+  }
+  // a cumulus: over each big puff, a few smaller puffs billow out, and smaller ones again on those, so the fleece has
+  // all the lumpy detail of a real cloud. c is the middle of the cloud (the smaller puffs grow outward from it)
+  function zBillow(puffs, c, n, seed) {
+    var out = puffs.slice(), d = new THREE.Vector3(), j = new THREE.Vector3();
+    var from = 0;
+    [0, 1, 2].forEach(function (lvl) {
+      var src = lvl ? out.slice(from) : puffs, kids = lvl === 0 ? n : lvl === 1 ? 1 : 2; from = out.length;
+      src.forEach(function (p, k) {
+        d.set(p[0] - c[0], p[1] - c[1], p[2] - c[2]); if (d.lengthSq() < 1e-6) return; d.normalize();
+        for (var i = 0; i < kids; i++) {
+          var r1 = glimR(seed + k * 7.3 + i * 2.1 + lvl * 50), r2 = glimR(seed + k * 3.9 + i * 5.7 + lvl * 90), r3 = glimR(seed + k * 1.7 + i * 8.3 + lvl * 30);
+          j.set(r1 - 0.5, r2 - 0.5, r3 - 0.5).multiplyScalar(1.7).add(d).normalize();
+          var rr = p[3] * (lvl === 0 ? 0.5 : lvl === 1 ? 0.45 : 0.4) * (0.8 + r1 * 0.4);
+          out.push([p[0] + j.x * p[3] * 0.82, p[1] + j.y * p[3] * 0.82, p[2] + j.z * p[3] * 0.82, rr, Math.max(0, Math.min(1, p[4] + (-j.y) * 0.15)), lvl === 2]);
+        }
+      });
+    });
+    return out;
+  }
+  // a bundle of Cloud Wool: a soft, billowing skein, blushed with sunrise
+  var cloudWoolIcon = glimCanvas(96, 96, function (g, w, h) {
+    var glow = g.createRadialGradient(48, 52, 4, 48, 52, 46); glow.addColorStop(0, 'rgba(255,220,170,0.7)'); glow.addColorStop(1, 'rgba(255,200,220,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    [[30, 58, 18], [48, 46, 22], [66, 56, 18], [40, 66, 16], [58, 68, 16]].forEach(function (p, k) {
+      var pg = g.createRadialGradient(p[0] - 5, p[1] - 7, 2, p[0], p[1], p[2]); pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.6, '#fff4ec'); pg.addColorStop(1, k > 2 ? '#ffc4b0' : '#ffe0d0');
+      g.fillStyle = pg; g.beginPath(); g.arc(p[0], p[1], p[2], 0, Math.PI * 2); g.fill();
+    });
+    g.strokeStyle = 'rgba(230,170,160,0.55)'; g.lineWidth = 1.2;
+    for (var i = 0; i < 26; i++) { var x = 24 + glimR(i * 3.1) * 48, y = 40 + glimR(i * 4.3) * 34; g.beginPath(); g.arc(x, y, 3 + glimR(i) * 3, 0.3, 2.6); g.stroke(); }   // the crimp of the wool
+    g.strokeStyle = '#ffb03a'; g.lineWidth = 3; g.beginPath(); g.moveTo(46, 30); g.bezierCurveTo(52, 50, 44, 70, 50, 84); g.stroke();   // a golden ribbon tying it
+    g.fillStyle = '#ff6a8a'; g.beginPath(); g.ellipse(42, 32, 6, 3.5, 0.4, 0, Math.PI * 2); g.ellipse(52, 31, 6, 3.5, -0.4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff'; [[16, 28], [80, 36], [80, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  ITEMS.cloudWool = { name: 'Cloud Wool', price: 380, icon: '☁️', img: cloudWoolIcon, fill: 88, info: 'A bundle of soft, springy wool as light as a cloud, blushed with the colours of sunrise, from a happy Zephyra. Feed and pet yours every day for four days in a row, then shear it the next morning with Shears. Sells for a very good price at the shipping bin.' };
+  var shearsIcon = glimCanvas(96, 96, function (g, w, h) {           // a pair of little shears: bright steel blades, rosy loop handles
+    g.save(); g.translate(48, 50);
+    [-1, 1].forEach(function (s) {
+      g.save(); g.rotate(s * 0.22);
+      var bg = g.createLinearGradient(-6, -40, 6, -40); bg.addColorStop(0, '#9aa4b0'); bg.addColorStop(0.5, '#f4f8fc'); bg.addColorStop(1, '#a8b0bc');
+      g.fillStyle = bg; g.beginPath(); g.moveTo(0, 2); g.lineTo(s * 7, -6); g.quadraticCurveTo(s * 5, -30, 0, -42); g.quadraticCurveTo(-s * 2, -24, -s * 1, 2); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(60,70,80,0.6)'; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = '#ff7a9a'; g.lineWidth = 6; g.beginPath(); g.ellipse(s * 10, 18, 8, 11, s * 0.3, 0, Math.PI * 2); g.stroke();
+      g.restore();
+    });
+    g.fillStyle = '#ffd56a'; g.beginPath(); g.arc(0, 2, 4, 0, Math.PI * 2); g.fill();   // the pivot
+    g.restore();
+  }).toDataURL();
+  ITEMS.shears = { name: 'Shears', icon: '✂️', img: shearsIcon, fill: 86, info: 'For shearing your Zephyras when their fleece is ready. Keep them in your bag; they never wear out.' };
+  var zephyraShopIcon = glimCanvas(128, 128, function (g, w, h) {    // a little portrait of one, for the shop
+    var sky = g.createRadialGradient(64, 64, 4, 64, 64, 64); sky.addColorStop(0, 'rgba(255,220,180,0.75)'); sky.addColorStop(1, 'rgba(255,190,220,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#fff2e4'; [[40, 96], [54, 98], [72, 98], [86, 96]].forEach(function (p) { g.fillRect(p[0] - 4, p[1], 8, 20); });   // legs
+    g.fillStyle = '#e8b0a0'; [[40, 116], [54, 118], [72, 118], [86, 116]].forEach(function (p) { g.beginPath(); g.ellipse(p[0], p[1] + 1, 6, 3, 0, 0, Math.PI * 2); g.fill(); });
+    function puff(x, y, r, col) { var pg = g.createRadialGradient(x - r * 0.3, y - r * 0.4, 1, x, y, r); pg.addColorStop(0, '#ffffff'); pg.addColorStop(1, col); g.fillStyle = pg; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    [[38, 86, 14, '#ffc8a8'], [58, 90, 15, '#ffc8a8'], [78, 88, 14, '#ffc8a8'], [30, 72, 15, '#ffe8d8'], [48, 70, 17, '#fff4ea'], [68, 72, 17, '#fff4ea'], [86, 76, 14, '#ffe8d8'], [24, 66, 9, '#fff4ea']].forEach(function (p) { puff(p[0], p[1], p[2], p[3]); });   // the cloud of a body
+    [[90, 58, 9], [92, 46, 9], [94, 36, 9]].forEach(function (p) { puff(p[0], p[1], p[2], '#ffe8d8'); });   // the woolly neck
+    g.fillStyle = '#fff2e4'; g.beginPath(); g.ellipse(98, 26, 13, 12, 0, 0, Math.PI * 2); g.fill();   // the head
+    g.fillStyle = '#ffe0cc'; g.beginPath(); g.ellipse(108, 31, 8, 7, 0, 0, Math.PI * 2); g.fill();
+    [-1, 1].forEach(function (s) { g.fillStyle = '#fff2e4'; g.beginPath(); g.ellipse(96 + s * 7, 9, 3.5, 9, s * 0.25, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffb8c4'; g.beginPath(); g.ellipse(96 + s * 7, 10, 1.8, 6, s * 0.25, 0, Math.PI * 2); g.fill(); });
+    puff(96, 16, 6, '#fff4ea');                                         // the topknot
+    ['#ff6a8a', '#ffb03a', '#6ab0ff'].forEach(function (c, k) { g.strokeStyle = c; g.lineWidth = 2; g.beginPath(); g.moveTo(89, 14); g.lineTo(84 - k * 2, 24 + k); g.stroke(); });   // a tassel
+    g.fillStyle = '#1a0e08'; g.beginPath(); g.arc(101, 24, 4.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(99.5, 22.5, 1.6, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,140,170,0.55)'; g.beginPath(); g.ellipse(103, 31, 4, 2.5, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#8a5a5a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(113, 31); g.lineTo(113, 34); g.stroke();
+    g.fillStyle = '#fff'; [[14, 30], [40, 18], [116, 100]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  function zephyraEyeTex(pal) {                                       // a big, dark, gentle eye: a warm iris round a large round pupil, rays of light in it
+    return new THREE.CanvasTexture(glimCanvas(256, 256, function (g, w, h) {
+      g.fillStyle = '#06040a'; g.fillRect(0, 0, w, h);
+      var ig = g.createRadialGradient(128, 140, 10, 128, 128, 100); ig.addColorStop(0, pal.iris[0]); ig.addColorStop(0.7, pal.iris[0]); ig.addColorStop(0.92, pal.iris[1]); ig.addColorStop(1, '#030206');
+      g.fillStyle = ig; g.beginPath(); g.arc(128, 128, 100, 0, Math.PI * 2); g.fill();
+      for (var r = 0; r < 90; r++) { var a = r / 90 * Math.PI * 2; g.strokeStyle = 'rgba(255,230,180,' + (0.06 + glimR(r * 3.1 + 7) * 0.14) + ')'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(128 + Math.cos(a) * 52, 128 + Math.sin(a) * 52); g.lineTo(128 + Math.cos(a) * (80 + glimR(r) * 14), 128 + Math.sin(a) * (80 + glimR(r) * 14)); g.stroke(); }
+      var lg = g.createRadialGradient(128, 196, 4, 128, 196, 70); lg.addColorStop(0, 'rgba(255,220,150,0.55)'); lg.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = lg; g.beginPath(); g.arc(128, 128, 98, 0, Math.PI * 2); g.fill();   // (lit warmly from below)
+      g.fillStyle = '#040208'; g.beginPath(); g.arc(128, 128, 50, 0, Math.PI * 2); g.fill();   // the big round pupil
+      g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 6; g.beginPath(); g.arc(128, 128, 98, 0, Math.PI * 2); g.stroke();
+    }));
+  }
+  // building one: a long neck rising from a billowing cloud of a body; a neat head with a soft split muzzle, big
+  // eyes and a fluffy topknot; tall ears curving in at the tips with rainbow tassels; slender legs in woolly britches
+  // on padded two-toed feet with gold nails; a tufty tail; and little clouds drifting off it
+  function zephyraBuild(pal) {
+    var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
+    var faceCol = new THREE.Color(pal.face), muzzleCol = new THREE.Color(pal.muzzle);
+    var seg = new THREE.SphereGeometry(1, 40, 28);
+    var skin = new THREE.MeshStandardMaterial({ color: faceCol.clone().multiplyScalar(0.95), roughness: 0.85 }), bright = faceCol.clone().multiplyScalar(1.2);
+    var fur = zFurMat(bright, ZFUR_D * 1.2, 0, false, 0.78), headFur = zFurMat(bright, ZFUR_D * 1.7, 0, false, 0.78), muzzleFur = zFurMat(muzzleCol.clone().multiplyScalar(1.15), ZFUR_D * 1.7, 0, false, 0.8);
+    var woolSkin = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, color: 0xf4f0ec, emissive: pal.woolLow, emissiveIntensity: 0.08 });
+    var woolMat = zFurMat(new THREE.Color(1.22, 1.22, 1.22), 1050, 0.7, true, 0.84, 1);   // (fine, crimped and bright as a cloud in sunshine)
+    var haloMat = zFurMat(new THREE.Color(1.3, 1.3, 1.3), 700, 1.1, true, 0.95, 1, 1);   // (and a haze of fine fibres straying out from it, so it looks soft at the edges)
+    function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
+    function furry(geo, mat, x, y, z, sc, parent, len, flow, rx, ry, rz) { var m = abPart(zFurShell(geo, 16, len, sc, flow), mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.castShadow = false; return m; }
+    function ball(mat, fmat, x, y, z, sx, sy, sz, parent, len, flow, rx) { part(seg, mat, x, y, z, sx, sy, sz, parent, rx); return furry(seg, fmat, x, y, z, [sx, sy, sz], parent, len, flow, rx); }
+    function cloud(puffs, parent, len, x, y, z) {                    // a fleece of puffs, centred on (x, y, z) so it can grow
+      var cl = zCloud(puffs, pal, len, 20, true), g2 = new THREE.Group(); g2.position.set(x, y, z); (parent || body).add(g2);
+      var sk = new THREE.Mesh(cl.skin, woolSkin); sk.castShadow = true; g2.add(sk);
+      var wl = new THREE.Mesh(cl.wool, woolMat); g2.add(wl);
+      g2.add(new THREE.Mesh(cl.halo, haloMat));
+      return g2;
+    }
+    // the body: a billowing cloud of fleece, puffs packed over a round barrel
+    var BY = 0.47, BR = [0.13, 0.135, 0.22], bodyPuffs = [];
+    for (var bi = 0; bi < 900 && bodyPuffs.length < 40; bi++) {
+      var u = glimR(bi * 1.37 + 70) * Math.PI * 2, v = Math.asin(glimR(bi * 2.11 + 70) * 2 - 1), cv = Math.cos(v);
+      var px = Math.sin(u) * cv * BR[0], py = Math.sin(v) * BR[1], pz = Math.cos(u) * cv * BR[2];
+      if (bodyPuffs.some(function (q) { return Math.hypot(q[0] - px, q[1] - py, q[2] - pz) < 0.065; })) continue;   // (spread out evenly)
+      bodyPuffs.push([px * 0.86, py * 0.86, pz * 0.88, 0.07 + glimR(bi * 3.3) * 0.022, Math.max(0, 0.35 - py / BR[1] * 0.65)]);
+    }
+    bodyPuffs = zBillow(bodyPuffs, [0, 0, 0], 3, 300);                // (billowing over with smaller puffs)
+    bodyPuffs.push([0, 0, 0, 0.12, 0.3]);                              // (and filled in the middle)
+    part(seg, woolSkin, 0, BY, 0, BR[0] * 0.9, BR[1] * 0.9, BR[2] * 0.9);
+    var fleece = cloud(bodyPuffs, body, 0.03, 0, BY, 0);
+    // the long neck, rising up and a little forward, woolly all the way up
+    var neck = new THREE.CatmullRomCurve3([V3(0, BY + 0.04, 0.16), V3(0, BY + 0.2, 0.2), V3(0, BY + 0.38, 0.215), V3(0, BY + 0.47, 0.225)]);
+    var neckGeo = (function () {
+      var TS = 30, RS = 18, geo = new THREE.TubeGeometry(neck, TS, 1, RS, false), p = geo.attributes.position;
+      for (var i = 0; i <= TS; i++) { var t = i / TS, c = neck.getPointAt(t), r = 0.062 - t * 0.022; for (var j = 0; j <= RS; j++) { var k = i * (RS + 1) + j; p.setXYZ(k, c.x + (p.getX(k) - c.x) * r * 0.9, c.y + (p.getY(k) - c.y) * r, c.z + (p.getZ(k) - c.z) * r); } }
+      geo.computeVertexNormals(); return geo;
+    })();
+    abPart(neckGeo, skin, 0, 0, 0, 0, 0, 0, body);
+    abPart(zFurShell(neckGeo, 16, 0.008, [1, 1, 1], [0, -1, 0]), fur, 0, 0, 0, 0, 0, 0, body).castShadow = false;   // (soft fur under the wool)
+    var neckPuffs = [];
+    for (var ni = 0; ni < 30; ni++) {
+      var nt = 0.03 + glimR(ni * 1.13 + 5) * 0.88, na2 = glimR(ni * 2.9 + 11) * Math.PI * 2, nc = neck.getPointAt(nt), nr = (0.062 - nt * 0.022) * 0.75;
+      neckPuffs.push([nc.x + Math.sin(na2) * nr * 0.9, nc.y + (glimR(ni * 4.1) - 0.5) * 0.02, nc.z + Math.cos(na2) * nr, 0.036 + (1 - nt) * 0.018 + glimR(ni * 1.7) * 0.01, 0.15 + Math.max(0, -Math.cos(na2)) * 0.1]);
+    }
+    var nb = [];
+    neckPuffs.forEach(function (p, k) { var c2 = neck.getPointAt(Math.max(0, Math.min(1, (p[1] - BY - 0.04) / 0.43))); nb = nb.concat(zBillow([p], [c2.x, c2.y, c2.z], 2, 700 + k * 13).slice(1)); });
+    for (var ch = 0; ch < 7; ch++) { var ca2 = (ch / 6 - 0.5) * 2.2, cc = neck.getPointAt(0.12); nb.push([cc.x + Math.sin(ca2) * 0.05, cc.y - 0.01 + Math.abs(ca2) * 0.012, cc.z + Math.cos(ca2) * 0.055, 0.04, 0.35]); }   // (a big fluffy bib where its neck meets its chest)
+    cloud(zBillow(neckPuffs.concat(nb).slice(neckPuffs.length + nb.length - 7), [0, BY + 0.06, 0.15], 2, 777).concat(neckPuffs, nb.slice(0, nb.length - 7)), body, 0.024, 0, 0, 0);
+    // the head: neat and rounded, a soft muzzle with a split upper lip, big dark eyes, a fluffy topknot
+    var head = new THREE.Group(); head.position.copy(neck.getPointAt(1)).add(V3(0, 0.035, 0.02)); head.rotation.x = 0.15; head.scale.setScalar(1.4); body.add(head);
+    ball(skin, headFur, 0, 0, 0, 0.042, 0.046, 0.05, head, 0.005, [0, 0.3, -1]);                     // the skull
+    ball(skin, headFur, 0, -0.016, 0.045, 0.031, 0.033, 0.05, head, 0.0045, [0, 0.4, -1], 0.2);    // the face, long and gentle
+    var muzzleSkin = new THREE.MeshStandardMaterial({ color: muzzleCol.clone().multiplyScalar(0.9), roughness: 0.8 });
+    ball(muzzleSkin, muzzleFur, 0, -0.03, 0.086, 0.025, 0.021, 0.024, head, 0.0018, [0, 0.3, -1]);   // the soft, rounded muzzle
+    [-1, 1].forEach(function (s) { ball(muzzleSkin, muzzleFur, s * 0.0085, -0.036, 0.1, 0.011, 0.01, 0.009, head, 0.0012, [0, 0.3, -1]); });   // and the two plump halves of its upper lip
+    ball(muzzleSkin, muzzleFur, 0, -0.046, 0.08, 0.018, 0.01, 0.019, head, 0.0018, [0, -0.5, -1]);     // the chin
+    var noseMat = new THREE.MeshStandardMaterial({ color: pal.nose, roughness: 0.6 });
+    abPart(new THREE.BoxGeometry(0.0008, 0.008, 0.003), noseMat, 0, -0.037, 0.1085, 0.15, 0, 0, head);   // the little split in its lip
+    [-1, 1].forEach(function (s) { part(seg, noseMat, s * 0.009, -0.024, 0.106, 0.0042, 0.0011, 0.0022, head, 0.35, s * 0.4, s * 0.75); });   // the slit nostrils, slanting up
+    abPart(new THREE.TorusGeometry(0.013, 0.0012, 5, 16, Math.PI * 0.7), noseMat, 0, -0.04, 0.094, 0.5, 0, Math.PI * 1.15, head);   // a little smile
+    // big, dark, gentle eyes with long lashes
+    var eyeMat = new THREE.MeshStandardMaterial({ color: 0x06040a, roughness: 0.05, metalness: 0.2 });
+    var irisMat = new THREE.MeshStandardMaterial({ map: zephyraEyeTex(pal), roughness: 0.12, emissive: 0xffffff, emissiveIntensity: 0.25 }); irisMat.emissiveMap = irisMat.map;
+    var corneaMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, roughness: 0.02, metalness: 0.1, depthWrite: false });
+    var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.05); irisGeo.rotateX(Math.PI / 2);
+    (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.46 / Math.sin(1.05); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
+    var lidMat = new THREE.MeshStandardMaterial({ color: faceCol, roughness: 0.85, side: THREE.DoubleSide }), lashMat = new THREE.MeshStandardMaterial({ color: 0x1a1010, roughness: 0.6 }), lids = [];
+    var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
+    [-1, 1].forEach(function (s) {
+      var ey = new THREE.Group(); ey.position.set(s * 0.032, 0.008, 0.03); ey.rotation.set(0.05, s * 0.75, 0); head.add(ey);
+      var RX = 0.019, RY = 0.019, RZ = 0.012;
+      part(seg, eyeMat, 0, 0, 0, RX, RY, RZ, ey);
+      abPart(irisGeo, irisMat, 0, 0, 0, 0, 0, 0, ey).scale.set(RX * 1.01, RY * 1.01, RZ * 1.01);
+      var co = abPart(irisGeo, corneaMat, 0, 0, 0, 0, 0, 0, ey); co.scale.set(RX * 1.06, RY * 1.06, RZ * 1.18); co.castShadow = false;
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.0065, 0.0075, RZ * 1.02, 0.0055, 0.0055, 0.0015, ey);   // catchlights
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff }), -0.001, 0.0105, RZ, 0.002, 0.002, 0.001, ey);
+      part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 }), 0.0065, -0.0065, RZ * 0.98, 0.0028, 0.0024, 0.001, ey);
+      var lg = new THREE.Group(); ey.add(lg); lids.push(lg); lg.visible = false;
+      abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg).scale.set(RX * 1.15, RY * 1.15, RZ * 1.3);
+      [0.15, 0.36, 0.58, 0.8, 1.02, 1.24].forEach(function (a, n) {   // long, sweeping lashes
+        var len = 0.012 - n * 0.0011, lash = abPart(new THREE.ConeGeometry(0.0008, len, 5).translate(0, len / 2, 0), lashMat, s * Math.cos(a) * RX * 1.08, Math.sin(a) * RY * 1.1, RZ * 0.35, 0.55, 0, -Math.atan2(s * Math.cos(a) * 1.3, Math.sin(a) + 0.6), ey);
+        lash.castShadow = false;
+      });
+      var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.034, 0.022), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      bl.position.set(s * 0.03, -0.024, 0.058); bl.rotation.set(0, s * 0.75, 0); head.add(bl);
+    });
+    // tall ears, curving in toward each other at the tips (like bananas), pink inside, with rainbow yarn tassels
+    var innerMat = new THREE.MeshStandardMaterial({ color: pal.inner, roughness: 0.75, emissive: pal.inner, emissiveIntensity: 0.06 });
+    function earGeo(sx, sy, sz, s) {
+      var geo = new THREE.SphereGeometry(1, 20, 16), p = geo.attributes.position;
+      for (var i = 0; i < p.count; i++) { var y = p.getY(i), x = p.getX(i) * sx * (1 - Math.max(0, y) * 0.35), z = p.getZ(i) * sz; var yy = (y + 1) * sy; p.setXYZ(i, x - s * Math.pow(Math.max(0, y), 2) * sy * 0.3, yy, z + (z > 0 ? -Math.abs(x) * 0.5 : 0)); }   // (bent in at the tip, cupped in front)
+      geo.computeVertexNormals(); return geo;
+    }
+    var ears = [];
+    [-1, 1].forEach(function (s) {
+      var ep = new THREE.Group(); ep.position.set(s * 0.026, 0.034, -0.012); head.add(ep); ears.push({ g: ep, s: s });
+      var tilt = new THREE.Group(); tilt.rotation.set(-0.15, 0, -s * 0.22); ep.add(tilt);
+      var eg = earGeo(0.013, 0.034, 0.007, s);
+      abPart(eg, skin, 0, 0, 0, 0, 0, 0, tilt);
+      abPart(zFurShell(eg, 14, 0.0035, [1, 1, 1], [0, 1, 0]), headFur, 0, 0, 0, 0, 0, 0, tilt).castShadow = false;
+      var ig = earGeo(0.0085, 0.028, 0.003, s); abPart(ig, innerMat, 0, 0.006, 0.0055, 0, 0, 0, tilt);
+      var tas = new THREE.Group(); tas.position.set(s * 0.004, 0.012, 0.006); tilt.add(tas);   // a tassel of bright yarn, tied on near the base
+      var pom = pal.tassels;
+      for (var tk = 0; tk < 7; tk++) {
+        var tc = pom[tk % pom.length], ym = new THREE.MeshStandardMaterial({ color: tc, roughness: 0.9, emissive: tc, emissiveIntensity: 0.1 });
+        part(seg, ym, s * 0.01 + (glimR(tk * 2.1 + s) - 0.5) * 0.008, -0.004 + (glimR(tk * 3.3 + s) - 0.5) * 0.008, (glimR(tk * 4.1 + s) - 0.5) * 0.008, 0.005, 0.005, 0.005, tas);   // the pompom
+        abPart(new THREE.CylinderGeometry(0.0009, 0.0009, 0.026, 5).translate(0, -0.013, 0), ym, s * 0.01 + (tk - 3) * 0.0012, -0.006, (glimR(tk) - 0.5) * 0.004, 0, 0, s * 0.15 + (tk - 3) * 0.04, tas);   // and its dangling strands
+      }
+      ears[ears.length - 1].tassel = tas;
+    });
+    [-1, 1].forEach(function (s) { cloud(zBillow([[s * 0.036, -0.018, 0.022, 0.014, 0.1], [s * 0.034, -0.03, 0.012, 0.012, 0.2], [s * 0.038, -0.006, 0.01, 0.011, 0.05]], [0, -0.01, 0.01], 2, 950 + s * 11), head, 0.006, 0, 0, 0); });   // fluffy cheeks
+    cloud(zBillow([[0, 0.05, 0.006, 0.02, 0], [-0.016, 0.045, 0.018, 0.016, 0.05], [0.016, 0.045, 0.018, 0.016, 0.05], [0, 0.041, 0.032, 0.017, 0.1], [-0.012, 0.055, -0.01, 0.015, 0], [0.012, 0.055, -0.01, 0.015, 0], [0, 0.034, 0.044, 0.013, 0.1], [-0.02, 0.03, 0.03, 0.011, 0.1], [0.02, 0.03, 0.03, 0.011, 0.1]], [0, 0.03, 0.006], 2, 900), head, 0.01, 0, 0, 0);   // its fluffy topknot, spilling over its forehead
+    // slender legs: woolly britches at the top, then fine short fur down to soft two-toed feet with little gold nails
+    var padMat = new THREE.MeshStandardMaterial({ color: 0x6a5054, roughness: 0.9 }), nailMat = new THREE.MeshPhysicalMaterial({ color: pal.nail, roughness: 0.2, clearcoat: 1, emissive: pal.nail, emissiveIntensity: 0.25 });
+    var legs = [];
+    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (lp) {
+      var front = lp[1] > 0, hip = new THREE.Group(); hip.position.set(lp[0] * 0.07, BY - 0.07, front ? 0.14 : -0.15); body.add(hip);
+      var upper = new THREE.CylinderGeometry(0.019, 0.026, 0.2, 14, 6);
+      part(upper, skin, 0, -0.1, 0, 1, 1, 1, hip); furry(upper, fur, 0, -0.1, 0, [1, 1, 1], hip, 0.006, [0, -1, 0]);
+      var bp = [];
+      for (var b3 = 0; b3 < 14; b3++) { var ba = glimR(b3 * 2.3 + lp[0] * 5 + lp[1] * 3) * Math.PI * 2, by = -glimR(b3 * 3.1 + lp[0] + lp[1] * 7) * 0.12; bp.push([Math.sin(ba) * 0.024, by, Math.cos(ba) * 0.024, 0.024 + (0.12 + by) * 0.08, 0.4 + (-by / 0.12) * 0.5]); }
+      cloud(zBillow(bp, [0, -0.06, 0], 1, 1100 + lp[0] * 7 + lp[1] * 13), hip, 0.016, 0, 0, 0);   // its woolly britches
+      var knee = new THREE.Group(); knee.position.set(0, -0.2, front ? 0 : -0.012); hip.add(knee);
+      ball(skin, fur, 0, 0, 0, 0.018, 0.02, 0.018, knee, 0.004, [0, -1, 0]);
+      var lower = new THREE.CylinderGeometry(0.013, 0.016, 0.17, 12, 6);
+      part(lower, skin, 0, -0.085, 0, 1, 1, 1, knee); furry(lower, fur, 0, -0.085, 0, [1, 1, 1], knee, 0.004, [0, -1, 0]);
+      var foot = new THREE.Group(); foot.position.set(0, -0.18, 0.004); knee.add(foot);
+      ball(skin, fur, 0, 0.004, 0, 0.016, 0.014, 0.017, foot, 0.004, [0, -1, 0.3]);   // the pastern
+      var ank = [];
+      for (var a3 = 0; a3 < 7; a3++) { var aa = a3 / 7 * Math.PI * 2; ank.push([Math.sin(aa) * 0.015, 0.03 + (a3 % 2) * 0.006, Math.cos(aa) * 0.015, 0.012, 0.3]); }
+      cloud(zBillow(ank, [0, 0.03, 0], 1, 1200 + lp[0] * 5 + lp[1] * 9), foot, 0.008, 0, 0, 0);   // little fluffy tufts round its ankles
+      [-1, 1].forEach(function (s) {
+        part(seg, padMat, s * 0.0085, -0.013, 0.011, 0.009, 0.0055, 0.016, foot);    // two soft toe pads, splayed a little
+        var nail = part(new THREE.SphereGeometry(1, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), nailMat, s * 0.0092, -0.011, 0.024, 0.0068, 0.009, 0.0062, foot, 1.35, s * 0.12, 0);   // and a curved little nail on each
+        nail.castShadow = false;
+      });
+      legs.push({ hip: hip, knee: knee, ph: lp[0] > 0 ? 0 : Math.PI, front: front });   // (it paces: both legs on one side move together)
+    });
+    // a short, fluffy tail held up, a puff of cloud
+    var tail = new THREE.Group(); tail.position.set(0, BY + 0.06, -0.225); tail.rotation.x = -0.9; body.add(tail);
+    cloud(zBillow([[0, 0.02, 0, 0.026, 0.1], [0, 0.045, 0.006, 0.022, 0.2], [0.012, 0.03, -0.006, 0.018, 0.3], [-0.012, 0.03, -0.006, 0.018, 0.3]], [0, 0.0, 0], 2, 1300), tail, 0.014, 0, 0, 0);
+    // little clouds drifting off its fleece, and a soft warm glow round it
+    var wisps = [];
+    for (var wk = 0; wk < 8; wk++) { var ws = new THREE.Sprite(new THREE.SpriteMaterial({ map: zCloudTex, color: wk % 3 ? 0xffffff : pal.woolLow, transparent: true, opacity: 0, depthWrite: false })); ws.scale.set(0.09, 0.06, 1); root.add(ws); wisps.push({ s: ws, t: glimR(wk + 50) * 2, x: 0, y: 0, z: 0 }); }
+    var rainbow = new THREE.Sprite(new THREE.SpriteMaterial({ map: zRainbowTex, transparent: true, opacity: 0, depthWrite: false })); rainbow.scale.set(0.6, 0.3, 1); rainbow.position.set(0, 1.36, 0); root.add(rainbow);   // (a little rainbow, when it's happy)
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.set(1.5, 1.5, 1); glow.position.set(0, 0.6, 0); root.add(glow);
+    var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
+    var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
+    tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 1.5, 0); tag.renderOrder = 6; root.add(tag);
+    return { root: root, body: body, head: head, ears: ears, legs: legs, tail: tail, lids: lids, fleece: fleece, wisps: wisps, rainbow: rainbow, nailMat: nailMat, glow: glow, tagCv: tagCv, tagTex: tagTex, hum: 0, wool: 0.9 };
+  }
+  var zCloudTex = new THREE.CanvasTexture(glimCanvas(96, 64, function (g, w, h) {   // a soft little cloud
+    [[30, 38, 16], [48, 30, 20], [66, 38, 15], [44, 42, 14]].forEach(function (p) { var cg = g.createRadialGradient(p[0], p[1], 2, p[0], p[1], p[2]); cg.addColorStop(0, 'rgba(255,255,255,0.95)'); cg.addColorStop(0.7, 'rgba(255,255,255,0.7)'); cg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = cg; g.fillRect(0, 0, w, h); });
+  }));
+  var zRainbowTex = new THREE.CanvasTexture(glimCanvas(256, 128, function (g, w, h) {   // a little rainbow arc with cloud puffs at its feet
+    ['#ff7a8a', '#ffb05a', '#ffe46a', '#7ae0a0', '#7ab8ff', '#b890ff'].forEach(function (c, k) { g.strokeStyle = c; g.globalAlpha = 0.85; g.lineWidth = 9; g.beginPath(); g.arc(128, 124, 100 - k * 9, Math.PI, 0); g.stroke(); });
+    g.globalAlpha = 1;
+    [[36, 116], [220, 116]].forEach(function (p) { [[0, 0, 16], [-14, 4, 11], [14, 4, 11]].forEach(function (q) { var cg = g.createRadialGradient(p[0] + q[0], p[1] + q[1], 2, p[0] + q[0], p[1] + q[1], q[2]); cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.75, 'rgba(255,255,255,0.9)'); cg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = cg; g.fillRect(0, 0, w, h); }); });
+  }));
+  // when its fleece is ready, a little golden cloud of wool floats over it
+  function zephyraBuildExtras(g) {
+    var sz = GLIM_STALLS[g.stall], pal = ZEPHYRA_PALS[g.pal % ZEPHYRA_PALS.length];
+    var puff = new THREE.Group(); abRoom.add(puff);
+    var cs = new THREE.Sprite(new THREE.SpriteMaterial({ map: zCloudTex, color: 0xfff2e0, transparent: true, depthWrite: false })); cs.scale.set(0.2, 0.135, 1); puff.add(cs);
+    var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    eg.scale.set(0.45, 0.45, 1); puff.add(eg);
+    g.eggMesh = puff; g.eggGlow = eg;
+    var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
+    hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
+    g.slate.map = glimSlateTex(g.name, 'Zephyra'); g.slate.needsUpdate = true;
+  }
+  // every frame, for a Zephyra: a gentle, pacing walk, its long neck bobbing; it looks about, swivels its ears and
+  // blinks; its fleece grows a little fuller each day it's cared for; little clouds drift off it; and when petted
+  // it hums happily, nuzzling toward you, ears back, under a little rainbow
+  function zephyraAnimate(g, dt, t, moving) {
+    var m = g.m;
+    if (moving) g.hop += dt * 5.5;
+    var happy = g.pet > 0;
+    if (happy) { g.pet -= dt; m.hum += dt; } else m.hum = 0;
+    m.legs.forEach(function (l) {
+      var sw = moving ? Math.sin(g.hop + l.ph) : 0;
+      l.hip.rotation.x = l.hip.rotation.x * 0.8 + sw * 0.32 * 0.2;
+      l.knee.rotation.x = l.knee.rotation.x * 0.8 + (moving ? Math.max(0, Math.sin(g.hop + l.ph + 1.3)) * (l.front ? 0.6 : -0.45) : 0) * 0.2;
+    });
+    var bob = moving ? Math.sin(g.hop * 2) : 0;
+    m.body.position.y = moving ? Math.abs(Math.sin(g.hop)) * 0.01 : Math.sin(t * 1.6 + g.stall) * 0.003;
+    m.body.rotation.z = moving ? Math.sin(g.hop) * 0.035 : 0;          // (a gentle side-to-side rock as it paces)
+    var look = Math.sin(t * 0.27 + g.stall * 1.9);
+    m.head.rotation.set(0.15 + (happy ? 0.25 + Math.sin(m.hum * 3) * 0.06 : Math.max(0, Math.sin(t * 0.17 + g.stall) - 0.75) * 1.2 + bob * 0.05), look * 0.5 * (happy ? 0.2 : 1), happy ? Math.sin(m.hum * 2) * 0.15 : Math.sin(t * 0.37 + g.stall) * 0.05);
+    m.ears.forEach(function (e, k) {
+      var swivel = Math.max(0, Math.sin(t * 0.6 + k * 2.4 + g.stall) - 0.9) * 10;
+      e.g.rotation.x = happy ? -0.5 : Math.sin(t * 0.7 + k) * 0.06 - swivel * 0.15;   // (laid back softly when it's happy)
+      e.g.rotation.y = e.s * (Math.sin(t * 0.5 + k * 1.3) * 0.15 + swivel * 0.2);
+      e.tassel.rotation.z = Math.sin(t * 2.3 + k) * 0.12 + (moving ? Math.sin(g.hop * 2) * 0.3 : 0);
+    });
+    m.tail.rotation.z = Math.sin(t * (happy ? 9 : 1.6) + g.stall) * (happy ? 0.35 : 0.1);
+    var bt = (t * 0.19 + g.stall * 0.41) % 1, blink = happy ? 0.7 : (bt < 0.035 ? Math.sin(bt / 0.035 * Math.PI) : 0);
+    m.lids.forEach(function (l) { l.visible = blink > 0.03; l.rotation.x = -0.62 + blink * 1.55; });
+    var full = g.egg ? 1.06 : 0.9 + Math.min(ZEPHYRA_DAYS, g.days) * 0.03;   // (its fleece grows fuller day by day, and is clipped short when sheared)
+    m.wool += (full - m.wool) * Math.min(1, dt * 2);
+    m.fleece.scale.set(m.wool, 0.94 + m.wool * 0.06, m.wool);
+    var pulse = 0.5 + Math.sin(t * 1.1 + g.stall) * 0.5;
+    m.nailMat.emissiveIntensity = 0.18 + pulse * 0.15;
+    m.wisps.forEach(function (w) {                                    // little clouds drifting up and back off its fleece
+      w.t += dt * (happy ? 0.6 : 0.25);
+      if (w.t > 1) { w.t -= 1 + Math.random() * 2; w.x = (Math.random() - 0.5) * 0.3; w.y = 0.6 + Math.random() * 0.12; w.z = -0.1 - Math.random() * 0.15; }
+      w.s.material.opacity = w.t > 0 ? Math.sin(w.t * Math.PI) * 0.6 : 0;
+      w.s.position.set(w.x, w.y + Math.max(0, w.t) * 0.3, w.z - Math.max(0, w.t) * 0.15);
+      w.s.scale.set(0.07 + w.t * 0.06, 0.047 + w.t * 0.04, 1);
+    });
+    m.rainbow.material.opacity += ((happy ? 0.85 : 0) - m.rainbow.material.opacity) * Math.min(1, dt * 3);
+    m.glow.material.opacity = 0.11 + pulse * 0.05;
+    if (g.egg) { g.eggMesh.position.set(g.x, 1.3 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.4 + Math.sin(t * 2 + g.stall) * 0.12; }
+  }
+  function zephyraAction(g, wx, wz) {                                // shearing, feeding and petting a Zephyra
+    if (g.egg) {
+      if (!bag.some(function (b) { return b && b.id === 'shears'; })) { showToast(g.name + '\'s fleece is ready to shear! You need Shears: buy them at the counter ✂️', 2800); return; }
+      if (!roomFor(['cloudWool'])) { bagFull(); return; }
+      addItem('cloudWool', 1); g.egg = false; g.days = 0; glimRefresh(g); popSound(); g.pet = 1.4;
+      showToast('You sheared ' + g.name + ' and got a soft bundle of Cloud Wool! ☁️✨', 2400);
+      return;
+    }
+    var day = Math.min(ZEPHYRA_DAYS, g.days + 1);
+    var news = day >= ZEPHYRA_DAYS ? ' Its fleece will be ready to shear tomorrow morning!' : ' Day ' + day + ' of ' + ZEPHYRA_DAYS + ' toward Cloud Wool.';
+    if (!g.fed) {
+      if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
+      g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
+      showToast(g.name + ' munches the hay thoughtfully 🌾' + (g.petted ? news : ' Now give them a pet!'), 2600);
+      return;
+    }
+    if (!g.petted) {
+      g.petted = true; glimRefresh(g); g.pet = 2.2;
+      g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
+      glimHeartBurst(g.x, 1.1, g.z); popSound();
+      showToast(g.name + ' hums happily and nuzzles you, a little rainbow over them 💜' + news, 2800);
+      return;
+    }
+    g.pet = 1.4; glimHeartBurst(g.x, 1.1, g.z);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= ZEPHYRA_DAYS ? ' Fleece ready tomorrow morning!' : ' Day ' + day + ' of ' + ZEPHYRA_DAYS + ' done. Come back tomorrow!'), 2400);
+  }
   // ---------- Holding what your animals give you ----------
   // Select one of their products in your hotbar and you hold it up in your hand, like the seeds and the hay: a
   // glowing egg resting in your palm, a bottle of milk by its middle, a quill by its shaft
@@ -3434,8 +3840,28 @@ EVERDAWN_PARTS.push(function (THREE) {
     auroraMilk: function () { return holdBottle(0xe8fff6, 0x8affd8, 0x7ad8c8, 0x5a8aff); },
     cinderQuill: function () {                                       // held by its shaft, the flame end up
       var g = new THREE.Group(), q = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.33).translate(0, 0.165, 0), emberFeatherMat(EMBER_PALS[0]));
-      q.rotation.set(0, 1.1, -0.12);   // (turned so its face shows) q.castShadow = true; g.add(q);
+      q.rotation.set(0, 1.1, -0.12); q.castShadow = true; g.add(q);   // (turned so its face shows)
       g.add(holdGlow(EMBER_PALS[0].glow, 0.4, 0.26));
+      return g;
+    },
+    cloudWool: function () {                                         // a soft bundle of wool, tied with a ribbon
+      var pal = ZEPHYRA_PALS[0], g = new THREE.Group(), cl = zCloud([[0, 0.05, 0, 0.042, 0.1], [-0.035, 0.035, 0.01, 0.03, 0.5], [0.035, 0.035, -0.008, 0.03, 0.5], [0.004, 0.03, 0.034, 0.03, 0.7], [-0.006, 0.032, -0.034, 0.028, 0.7], [0.01, 0.082, 0.006, 0.026, 0], [0, 0.018, 0, 0.034, 1]], pal, 0.01, 14);
+      var sk = new THREE.Mesh(cl.skin, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, color: 0xf4f0ec })); sk.castShadow = true; g.add(sk);
+      g.add(new THREE.Mesh(cl.wool, zFurMat(new THREE.Color(1.22, 1.22, 1.22), 980, 0.7, true, 0.84, 1)));
+      var rb = new THREE.Mesh(new THREE.TorusGeometry(0.046, 0.005, 6, 28), new THREE.MeshStandardMaterial({ color: 0xffb03a, roughness: 0.5, emissive: 0xffb03a, emissiveIntensity: 0.15 })); rb.rotation.x = Math.PI / 2 - 0.25; rb.position.y = 0.05; g.add(rb);
+      g.add(holdGlow(pal.glow, 0.36, 0.05));
+      return g;
+    },
+    shears: function () {                                            // a pair of shears held by their rosy handles, blades up
+      var g = new THREE.Group(), steel = new THREE.MeshStandardMaterial({ color: 0xe8eef4, roughness: 0.22, metalness: 0.85 }), grip = new THREE.MeshStandardMaterial({ color: 0xff7a9a, roughness: 0.55 });
+      [-1, 1].forEach(function (s) {
+        var half = new THREE.Group(); half.rotation.z = s * 0.14; g.add(half);
+        var bl = new THREE.Shape(); bl.moveTo(0, 0); bl.lineTo(s * 0.016, 0.02); bl.quadraticCurveTo(s * 0.012, 0.11, 0, 0.15); bl.quadraticCurveTo(-s * 0.003, 0.08, -s * 0.002, 0); bl.closePath();
+        var bm = new THREE.Mesh(new THREE.ExtrudeGeometry(bl, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.001, bevelSegments: 1 }), steel); bm.position.set(0, 0.06, s * 0.002); bm.castShadow = true; half.add(bm);
+        var ring = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.0055, 8, 20), grip); ring.position.set(s * 0.02, 0.025, 0); ring.scale.set(0.9, 1.2, 1); ring.castShadow = true; half.add(ring);
+        var shank = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 6), steel); shank.position.set(s * 0.01, 0.05, 0); shank.rotation.z = s * 0.4; half.add(shank);
+      });
+      var pivot = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.012, 10), new THREE.MeshStandardMaterial({ color: 0xffd56a, metalness: 0.8, roughness: 0.3 })); pivot.rotation.x = Math.PI / 2; pivot.position.y = 0.064; g.add(pivot);
       return g;
     }
   };
@@ -3452,12 +3878,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     c.clearRect(0, 0, w, h);
     c.fillStyle = 'rgba(255,255,255,0.88)'; c.beginPath(); c.moveTo(24, 6); c.lineTo(w - 24, 6); c.quadraticCurveTo(w - 4, 6, w - 4, 26); c.lineTo(w - 4, h - 26); c.quadraticCurveTo(w - 4, h - 6, w - 24, h - 6); c.lineTo(24, h - 6); c.quadraticCurveTo(4, h - 6, 4, h - 26); c.lineTo(4, 26); c.quadraticCurveTo(4, 6, 24, 6); c.fill();
     c.strokeStyle = '#c8a8f0'; c.lineWidth = 3; c.stroke();
-    var ember = g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora';   // (the ones that count days in a row)
+    var ember = g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra';   // (the ones that count days in a row)
     c.fillStyle = '#5a3d9a'; c.font = 'bold ' + (ember ? 26 : 30) + 'px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(g.name, w / 2, ember ? 26 : 34);
     if (ember) {                                                       // its four days toward a quill or an egg: a little flame (or gem) lit for each day it's been looked after
-      var need = g.kind === 'aurora' ? AURORA_DAYS : 4, done = Math.min(need, g.days + (g.fed && g.petted ? 1 : 0));
+      var need = g.kind === 'aurora' ? AURORA_DAYS : g.kind === 'zephyra' ? ZEPHYRA_DAYS : 4, done = Math.min(need, g.days + (g.fed && g.petted ? 1 : 0));
       for (var p = 0; p < need; p++) {
         if (g.kind === 'aurora') { c.fillStyle = g.egg || p < done ? ['#3ad8a0', '#7a6aff'][p % 2] : '#d8d0e0'; c.beginPath(); c.moveTo(w / 2 + (p - 0.5) * 22, 41); c.bezierCurveTo(w / 2 + (p - 0.5) * 22 + 8, 50, w / 2 + (p - 0.5) * 22 + 6, 57, w / 2 + (p - 0.5) * 22, 57); c.bezierCurveTo(w / 2 + (p - 0.5) * 22 - 6, 57, w / 2 + (p - 0.5) * 22 - 8, 50, w / 2 + (p - 0.5) * 22, 41); }   // (a drop of milk for each day)
+        else if (g.kind === 'zephyra') { var zx = w / 2 + (p - 1.5) * 20; c.fillStyle = g.egg || p < done ? ['#ffb8a0', '#ffd56a'][p % 2] : '#d8d0e0'; c.beginPath(); [[-5, 52, 5], [1, 47, 6.5], [6, 52, 5], [0, 53, 5]].forEach(function (q) { c.moveTo(zx + q[0] + q[2], q[1]); c.arc(zx + q[0], q[1], q[2], 0, Math.PI * 2); }); }   // (a little cloud for each day)
         else if (g.kind === 'gem') { c.fillStyle = g.egg || p < done ? '#a86aff' : '#d8d0e0'; gemDiamond(c, w / 2 + (p - 1.5) * 18, 49, 13, 12); }
         else { c.fillStyle = g.egg || p < done ? '#ff7a2a' : '#d8d0e0'; emberFlame(c, w / 2 + (p - 1.5) * 18, 49, 11, 15); }
         c.fill();
@@ -3485,12 +3912,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function glimRefresh(g) { g.eggMesh.visible = !!g.egg; g.hayMesh.visible = !!g.fed; glimDrawTag(g); }
   function glimAdd(d) {                                              // d: { kind ('glim', 'moon', 'duck', 'ember' or 'gem'), name, stall, pal, fed, petted, egg, days (an Emberwing's or Gemwren's days in a row) }
-    var g = { kind: d.kind === 'moon' || d.kind === 'duck' || d.kind === 'ember' || d.kind === 'gem' || d.kind === 'aurora' ? d.kind : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg, days: d.days || 0 };
-    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : g.kind === 'duck' ? duckBuild(DUCK_PALS[g.pal % DUCK_PALS.length]) : g.kind === 'ember' ? emberBuild(EMBER_PALS[g.pal % EMBER_PALS.length]) : g.kind === 'gem' ? gemBuild(GEM_PALS[g.pal % GEM_PALS.length]) : g.kind === 'aurora' ? auroraBuild(AURORA_PALS[g.pal % AURORA_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
+    var g = { kind: d.kind === 'moon' || d.kind === 'duck' || d.kind === 'ember' || d.kind === 'gem' || d.kind === 'aurora' || d.kind === 'zephyra' ? d.kind : 'glim', name: d.name, stall: d.stall, pal: d.pal, fed: !!d.fed, petted: !!d.petted, egg: !!d.egg, days: d.days || 0 };
+    g.m = g.kind === 'moon' ? moonBuild(MOON_PALS[g.pal % MOON_PALS.length]) : g.kind === 'duck' ? duckBuild(DUCK_PALS[g.pal % DUCK_PALS.length]) : g.kind === 'ember' ? emberBuild(EMBER_PALS[g.pal % EMBER_PALS.length]) : g.kind === 'gem' ? gemBuild(GEM_PALS[g.pal % GEM_PALS.length]) : g.kind === 'aurora' ? auroraBuild(AURORA_PALS[g.pal % AURORA_PALS.length]) : g.kind === 'zephyra' ? zephyraBuild(ZEPHYRA_PALS[g.pal % ZEPHYRA_PALS.length]) : glimBuild(GLIM_PALS[g.pal % GLIM_PALS.length]);
     g.slate = abStallSlates[g.stall];
     var sz = GLIM_STALLS[g.stall];
-    g.x = g.kind === 'moon' || g.kind === 'aurora' ? -3.1 : -3.0; g.z = sz - 0.2; g.tx = g.x; g.tz = g.z; g.face = Math.PI / 2; g.wait = 1 + glimR(g.stall) * 2; g.hop = 0; g.pet = 0; g.flut = glimR(g.stall * 7) * 6;
-    if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else if (g.kind === 'ember') emberBuildExtras(g); else if (g.kind === 'gem') gemBuildExtras(g); else if (g.kind === 'aurora') auroraBuildExtras(g); else glimBuildExtras(g);
+    g.x = g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' ? -3.1 : -3.0; g.z = sz - 0.2; g.tx = g.x; g.tz = g.z; g.face = Math.PI / 2; g.wait = 1 + glimR(g.stall) * 2; g.hop = 0; g.pet = 0; g.flut = glimR(g.stall * 7) * 6;
+    if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else if (g.kind === 'ember') emberBuildExtras(g); else if (g.kind === 'gem') gemBuildExtras(g); else if (g.kind === 'aurora') auroraBuildExtras(g); else if (g.kind === 'zephyra') zephyraBuildExtras(g); else glimBuildExtras(g);
     glimmers.push(g); glimRefresh(g);
     return g;
   }
@@ -3508,13 +3935,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateGlimmers(dt) {
     if (glimDay === null) glimDay = state.day;
     if (state.day !== glimDay) {
-      var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], gap = state.day - glimDay;
+      var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora') {   // an Emberwing, Gemwren or Auroraram counts the days in a row it's been fed and petted
-          var gem = g.kind === 'gem', aur = g.kind === 'aurora', need = gem ? GEM_DAYS : aur ? AURORA_DAYS : EMBER_DAYS;
+        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra') {   // an Emberwing, Gemwren, Auroraram or Zephyra counts the days in a row it's been fed and petted
+          var gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', need = gem ? GEM_DAYS : aur ? AURORA_DAYS : zep ? ZEPHYRA_DAYS : EMBER_DAYS;
           if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
-          else { if (g.days) (gem ? missedGem : aur ? missedMilk : missed).push(g.name); g.days = 0; }
-          if (g.days >= need && !g.egg) { g.egg = true; g.days = 0; (gem ? geode : aur ? milk : quill).push(g.name); }
+          else { if (g.days) (gem ? missedGem : aur ? missedMilk : zep ? missedWool : missed).push(g.name); g.days = 0; }
+          if (g.days >= need && !g.egg) { g.egg = true; g.days = 0; (gem ? geode : aur ? milk : zep ? wool : quill).push(g.name); }
         } else if (g.fed && g.petted && !g.egg) { g.egg = true; (g.kind === 'moon' ? milk : g.kind === 'duck' ? dew : laid).push(g.name); }
         g.fed = false; g.petted = false; glimRefresh(g);
       });
@@ -3524,9 +3951,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (dew.length) news.push(dew.join(' and ') + (dew.length > 1 ? ' each laid' : ' laid') + ' a Dewdrop Egg');
       if (milk.length) news.push(milk.join(' and ') + (milk.length > 1 ? ' are' : ' is') + ' ready to milk');
       if (quill.length) news.push(quill.join(' and ') + (quill.length > 1 ? ' each left' : ' left') + ' a Cinder Quill');
+      if (wool.length) news.push(wool.join(' and ') + (wool.length > 1 ? ' have fleeces' : ' has a fleece') + ' ready to shear');
       if (geode.length) news.push(geode.join(' and ') + (geode.length > 1 ? ' each laid' : ' laid') + ' a Geode Egg');
       if (missedGem.length) news.push(missedGem.join(' and ') + ' missed a day of care, so ' + (missedGem.length > 1 ? 'their egg counts start' : 'their egg count starts') + ' over');
       if (missedMilk.length) news.push(missedMilk.join(' and ') + ' missed a day of care, so ' + (missedMilk.length > 1 ? 'their milk counts start' : 'their milk count starts') + ' over');
+      if (missedWool.length) news.push(missedWool.join(' and ') + ' missed a day of care, so ' + (missedWool.length > 1 ? 'their wool counts start' : 'their wool count starts') + ' over');
       if (missed.length) news.push(missed.join(' and ') + ' missed a day of care, so ' + (missed.length > 1 ? 'their quill counts start' : 'their quill count starts') + ' over');
       if (news.length) setTimeout(function () { showToast('✧ ' + news.join(', and ') + '! Visit them at Fluff & Feather.', 3600); }, 4200);
     }
@@ -3535,9 +3964,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     glimmers.forEach(function (g) {
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
-      var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember', gem = g.kind === 'gem', aur = g.kind === 'aurora';
+      var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember', gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra';
       if (g.wait <= 0 && g.pet <= 0) {
-        if (aur) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }
+        if (zep) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.6 + Math.random() * 0.8; g.wait = 5 + Math.random() * 6; }
+        else if (aur) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.55 + Math.random() * 0.75; g.wait = 4 + Math.random() * 6; }
         else if (gem) { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 1.5 + Math.random() * 4; }   // (quick little dashes, then a pause)
         else if (ember) { g.tx = -3.3 + Math.random() * 0.45; g.tz = sz - 0.6 + Math.random() * 0.9; g.wait = (m.show > 0 ? 6 : 4) + Math.random() * 6; }
         else if (duck) { g.tx = -3.45 + Math.random() * 0.65; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 3 + Math.random() * 5; }
@@ -3545,10 +3975,11 @@ EVERDAWN_PARTS.push(function (THREE) {
         else { g.tx = -3.5 + Math.random() * 0.85; g.tz = sz - 0.9 + Math.random() * 1.3; g.wait = 2.5 + Math.random() * 4; }
       }
       var dx = g.tx - g.x, dz = g.tz - g.z, d = Math.hypot(dx, dz), moving = d > 0.03 && g.pet <= 0 && !(ember && m.show > 0);   // (an Emberwing stands still to show off its fan)
-      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : duck ? 0.22 : ember ? 0.18 : gem ? 0.5 : aur ? 0.2 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon && !duck && !ember && !gem && !aur) g.hop += dt * 9; }
-      else if (!moon && !duck && !ember && !gem && !aur) g.hop = 0;
+      if (moving) { var stp = Math.min(d, dt * (moon ? 0.16 : duck ? 0.22 : ember ? 0.18 : gem ? 0.5 : aur ? 0.2 : zep ? 0.2 : 0.35)); g.x += dx / d * stp; g.z += dz / d * stp; g.face = Math.atan2(dx, dz); if (!moon && !duck && !ember && !gem && !aur && !zep) g.hop += dt * 9; }
+      else if (!moon && !duck && !ember && !gem && !aur && !zep) g.hop = 0;
       var cur = m.root.rotation.y, diff = Math.atan2(Math.sin(g.face - cur), Math.cos(g.face - cur));
-      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : duck ? 4 : ember ? 2.5 : gem ? 8 : aur ? 2.5 : 5));
+      m.root.rotation.y = cur + diff * Math.min(1, dt * (moon ? 2 : duck ? 4 : ember ? 2.5 : gem ? 8 : aur ? 2.5 : zep ? 2 : 5));
+      if (zep) { m.root.position.set(g.x, 0, g.z); zephyraAnimate(g, dt, t, moving); return; }
       if (aur) { m.root.position.set(g.x, 0, g.z); auroraAnimate(g, dt, t, moving); return; }
       if (gem) { m.root.position.set(g.x, 0, g.z); gemAnimate(g, dt, t, moving); return; }
       if (ember) { m.root.position.set(g.x, 0, g.z); emberAnimate(g, dt, t, moving); return; }
@@ -3597,6 +4028,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'ember') { emberwingAction(g, wx, wz); return; }
     if (g.kind === 'gem') { gemwrenAction(g, wx, wz); return; }
     if (g.kind === 'aurora') { auroraramAction(g, wx, wz); return; }
+    if (g.kind === 'zephyra') { zephyraAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
       addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
@@ -3679,7 +4111,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var glimBtnText = '';
   function updateGlimButton() {
     var g = glimmerInReach(), txt = '';
-    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' ? '🥛 Milk ' + g.name : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
+    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' ? '✂️ Shear ' + g.name : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
     if (txt !== glimBtnText) { glimBtnText = txt; if (txt) glimBtn.innerHTML = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <kbd>E</kbd>'; }
     var show = !!txt;
     if (glimBtn.classList.contains('show') !== show) glimBtn.classList.toggle('show', show);
@@ -3702,7 +4134,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -3713,11 +4145,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
-    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : kind === 'gem' ? GEM_COST : kind === 'aurora' ? AURORA_COST : GLIM_COST;
+    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : kind === 'gem' ? GEM_COST : kind === 'aurora' ? AURORA_COST : kind === 'zephyra' ? ZEPHYRA_COST : GLIM_COST;
     if (stall < 0) { showToast('All three stalls are full!', 2000); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= cost; showCoins(true); coinSound(5);
@@ -3738,9 +4170,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
-      chalk(an[0], w / 2 + 80, 114 + k * 47, 25, an[2], false);
-      chalk(an[1], w / 2 + 80, 135 + k * 47, 15, 'rgba(240,240,230,A)', true);
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
+      chalk(an[0], w / 2 + 80, 112 + k * 41, 23, an[2], false);
+      chalk(an[1], w / 2 + 80, 131 + k * 41, 14, 'rgba(240,240,230,A)', true);
     });
     chalk('feed with hay & pet every day!', w / 2 + 80, 408, 21, 'rgba(255,214,120,A)', true);
     // a chalk doodle of one: a round fluffy body with moth wings and antennae
@@ -4260,12 +4692,18 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic aurora-pic"></div><div class="shop-text"><b>Auroraram</b><span>A graceful creature with a long, silky night-blue coat that ripples with the colours of the northern lights, spiralling horns of clear ice, a silky beard and glowing hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Aurora Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + AURORA_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="aurora-adopt">Adopt</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic zephyra-pic"></div><div class="shop-text"><b>Zephyra</b><span>A gentle, long-necked creature with a fleece of soft cloud wool in billowing puffs, blushed with the pinks and golds of sunrise, tall curved ears with rainbow tassels, a fluffy topknot and big dark eyes. Feed it hay and pet it every day for four days in a row, and the next morning you can shear it for Cloud Wool (you\'ll need Shears). It lives in a stall here.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + ZEPHYRA_COST + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="zephyra-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="moon-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic pail-pic"></div><div class="shop-text"><b>Milk Pail</b><span>You need one to milk your Mooncalves and Auroraram. It never wears out.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + PAIL_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="pail-buy">Buy</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic shears-pic"></div><div class="shop-text"><b>Shears</b><span>You need them to shear your Zephyras when their fleece is ready. They never wear out.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + SHEARS_COST + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="shears-buy">Buy</button></div>' +
     '<p class="ship-hint glim-stalls" style="margin:8px 2px 0"></p>' +
     '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(barnShopBox);
@@ -4288,6 +4726,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   barnShopBox.querySelector('.aurora-pic').appendChild(auroraPic);
   var auroraAdoptBtn = barnShopBox.querySelector('.aurora-adopt');
   auroraAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('aurora'); });
+  var zephyraPic = document.createElement('img'); zephyraPic.src = zephyraShopIcon; zephyraPic.alt = ''; zephyraPic.style.width = '96%'; zephyraPic.style.pointerEvents = 'none';
+  barnShopBox.querySelector('.zephyra-pic').appendChild(zephyraPic);
+  var zephyraAdoptBtn = barnShopBox.querySelector('.zephyra-adopt');
+  zephyraAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('zephyra'); });
   gemAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('gem'); });
   emberAdoptBtn.addEventListener('click', function () { adoptGlimmerwing('ember'); });
   var moonPic = document.createElement('img'); moonPic.src = moonShopIcon; moonPic.alt = ''; moonPic.style.width = '96%'; moonPic.style.pointerEvents = 'none';
@@ -4302,6 +4744,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!roomFor(['milkPail'])) { bagFull(); return; }
     addItem('milkPail', 1); state.coins -= PAIL_COST; showCoins(true); coinSound(3);
     showToast('Bought a Milk Pail 🪣', 1800); renderBarnShop();
+  });
+  barnShopBox.querySelector('.shears-pic').appendChild(itemPicture('shears'));
+  var shearsBtn = barnShopBox.querySelector('.shears-buy');
+  function hasShears() { return bag.some(function (b) { return b && b.id === 'shears'; }); }
+  shearsBtn.addEventListener('click', function () {
+    if (hasShears()) { showToast('You already have Shears', 1800); return; }
+    if (state.coins < SHEARS_COST) { showToast('Not enough Star Coins', 1800); return; }
+    if (!roomFor(['shears'])) { bagFull(); return; }
+    addItem('shears', 1); state.coins -= SHEARS_COST; showCoins(true); coinSound(3);
+    showToast('Bought a pair of Shears ✂️', 1800); renderBarnShop();
   });
   paintCoinIcons(barnShopBox);
   var barnShopCoins = barnShopBox.querySelector('.ship-total b'), barnBuyBtns = barnShopBox.querySelectorAll('.shop-buy button[data-n]');   // (just the hay buttons)
@@ -4323,12 +4775,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     gemAdoptBtn.disabled = full || state.coins < GEM_COST;
     auroraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + AURORA_COST;
     auroraAdoptBtn.disabled = full || state.coins < AURORA_COST;
+    zephyraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + ZEPHYRA_COST;
+    zephyraAdoptBtn.disabled = full || state.coins < ZEPHYRA_COST;
     moonAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + MOON_COST;
     moonAdoptBtn.disabled = full || state.coins < MOON_COST;
     var gotPail = hasPail();
     pailBtn.innerHTML = gotPail ? 'You have one ✓' : 'Buy · <img class="coin-icon" alt=""> ' + PAIL_COST;
     pailBtn.disabled = gotPail || state.coins < PAIL_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    var gotShears = hasShears();
+    shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
+    shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
@@ -4364,7 +4821,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     slot.setAttribute('data-slot', i);
     if (bag[i]) {
       slot.appendChild(itemPicture(bag[i].id));
-      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail'; // tools don't show a count
+      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail' || bag[i].id === 'shears'; // tools don't show a count
       slot.setAttribute('aria-label', ITEMS[bag[i].id].name + (isTool ? '' : ', ' + bag[i].count));
       if (!isTool) {
         var count = document.createElement('span');
