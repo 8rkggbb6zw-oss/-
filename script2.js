@@ -4762,7 +4762,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // floppy ears; a curly topknot; small spiralling horns of clear crystal that split the light into rainbows; slim
   // legs on little crystal hooves; and rainbow sparkles drifting off it. Feed one hay and pet it every day for two
   // days in a row, and the next morning its fleece is full: shear it (with Shears from the counter) for a bundle of
-  // Spectrafleece. Miss a day and the count starts over. When petted it springs into the air on all four legs
+  // Prismsilk. Miss a day and the count starts over. When petted it springs into the air on all four legs
   var PRISM_COST = 540, PRISM_DAYS = 2;
   var PRISM_PALS = [                                                  // a rainbow one, an opal one and a twilight one
     { name: 'Rainbow', hue: 0.0, hueSpan: 1.0, sat: 0.9, light: 0.82, face: 0xfaf4ff, inner: 0xffc0d8, nose: 0xe89ab8, horn: 0xf4f8ff, iris: ['#8a6aff', '#1a1060'], glow: 0xfff0ff },
@@ -4770,8 +4770,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     { name: 'Twilight', hue: 0.72, hueSpan: 0.42, sat: 0.85, light: 0.82, face: 0xfaf0fa, inner: 0xffb8cc, nose: 0xd890b0, horn: 0xfff2fa, iris: ['#d86ab0', '#3a0a30'], glow: 0xffe8f4 }
   ];
   function prismHue(pal, f) { return new THREE.Color().setHSL(((pal.hue + f * pal.hueSpan) % 1 + 1) % 1, pal.sat, pal.light); }   // (a colour from its rainbow, f from 0 to 1)
-  // Spectrafleece: a soft skein of curly fleece in every colour of the rainbow
-  var spectrafleeceIcon = glimCanvas(96, 96, function (g, w, h) {
+  // Prismsilk: a soft skein of curly fleece in every colour of the rainbow
+  var prismsilkIcon = glimCanvas(96, 96, function (g, w, h) {
     var glow = g.createRadialGradient(48, 50, 4, 48, 50, 46); glow.addColorStop(0, 'rgba(255,240,255,0.7)'); glow.addColorStop(1, 'rgba(220,220,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
     for (var k = 0; k < 26; k++) {                                    // (little curls, each a different colour)
       var a = glimR(k * 3.1) * Math.PI * 2, r = glimR(k * 5.3) * 22, x = 48 + Math.cos(a) * r * 1.2, y = 52 + Math.sin(a) * r * 0.8, c = 'hsl(' + Math.round(((x - 20) / 56) * 330) + ',75%,80%)';
@@ -4781,7 +4781,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.moveTo(46, 28); g.bezierCurveTo(52, 48, 44, 66, 50, 82); g.stroke();   // (tied with a silver ribbon)
     g.fillStyle = '#fff'; [[14, 24], [82, 30], [80, 80]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.spectrafleece = { name: 'Spectrafleece', price: 260, icon: '🌈', img: spectrafleeceIcon, fill: 88, info: 'Soft, curly wool that shimmers through every colour of the rainbow, from a happy Prismara. Feed and pet yours every day for two days in a row, then shear it the next morning with Shears. Sells for a very good price at the shipping bin.' };
+  ITEMS.prismsilk = { name: 'Prismsilk', price: 260, icon: '🌈', img: prismsilkIcon, fill: 88, info: 'Soft, curly wool that shimmers through every colour of the rainbow, from a happy Prismara. Feed and pet yours every day for two days in a row, then shear it the next morning with Shears. Sells for a very good price at the shipping bin.' };
   var prismShopIcon = glimCanvas(128, 128, function (g, w, h) {      // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 64, 4, 64, 64, 64); sky.addColorStop(0, 'rgba(255,230,255,0.75)'); sky.addColorStop(1, 'rgba(220,220,255,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#e8e0f0'; [[40, 98], [54, 100], [72, 100], [86, 98]].forEach(function (p) { g.fillRect(p[0] - 3, p[1], 6, 16); });
@@ -5033,13 +5033,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   function prismaraAction(g, wx, wz) {                               // shearing, feeding and petting a Prismara
     if (g.egg) {
       if (!bag.some(function (b) { return b && b.id === 'shears'; })) { showToast(g.name + '\'s fleece is full and ready to shear! You need Shears: buy them at the counter ✂️', 2800); return; }
-      if (!roomFor(['spectrafleece'])) { bagFull(); return; }
-      addItem('spectrafleece', 1); g.egg = false; g.days = 0; glimRefresh(g); popSound(); g.pet = 1.4;
-      showToast('You sheared ' + g.name + ' and got a bundle of shimmering Spectrafleece! 🌈✨', 2400);
+      if (!roomFor(['prismsilk'])) { bagFull(); return; }
+      addItem('prismsilk', 1); g.egg = false; g.days = 0; glimRefresh(g); popSound(); g.pet = 1.4;
+      showToast('You sheared ' + g.name + ' and got a bundle of shimmering Prismsilk! 🌈✨', 2400);
       return;
     }
     var day = Math.min(PRISM_DAYS, g.days + 1);
-    var news = day >= PRISM_DAYS ? ' Its fleece will be ready to shear tomorrow morning!' : ' Day ' + day + ' of ' + PRISM_DAYS + ' toward Spectrafleece.';
+    var news = day >= PRISM_DAYS ? ' Its fleece will be ready to shear tomorrow morning!' : ' Day ' + day + ' of ' + PRISM_DAYS + ' toward Prismsilk.';
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
       g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
@@ -5104,7 +5104,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.add(holdGlow(pal.glow, 0.36, 0.05));
       return g;
     },
-    spectrafleece: function () {                                         // a soft skein of rainbow wool, tied with a ribbon
+    prismsilk: function () {                                         // a soft skein of rainbow wool, tied with a ribbon
       var g = new THREE.Group();
       g.add(zCloudMesh(zBillow([[0, 0.05, 0, 0.042, 0.1], [-0.035, 0.035, 0.01, 0.03, 0.5], [0.035, 0.035, -0.008, 0.03, 0.5], [0.004, 0.03, 0.034, 0.03, 0.7], [-0.006, 0.032, -0.034, 0.028, 0.7], [0.01, 0.082, 0.006, 0.026, 0], [0, 0.018, 0, 0.034, 1]], [0, 0.045, 0], 1, 1600), { top: 0xffd8f0, low: 0xb8d8ff, gold: 0xfff0a0 }, 0.012));
       var rb = new THREE.Mesh(new THREE.TorusGeometry(0.046, 0.005, 6, 28), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.4 })); rb.rotation.x = Math.PI / 2 - 0.25; rb.position.y = 0.05; g.add(rb);
@@ -5433,7 +5433,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Spectrafleece (with Shears).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -5457,7 +5457,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
-      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Spectrafleece every 2 days', 'rgba(255,200,240,A)'],
+      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'],
       ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 106 + k * 29, 18, an[2], false);
       chalk(an[1], w / 2 + 80, 120 + k * 29, 11, 'rgba(240,240,230,A)', true);
@@ -5986,7 +5986,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic aurora-pic"></div><div class="shop-text"><b>Auroraram</b><span>A graceful creature with a long, silky night-blue coat that ripples with the colours of the northern lights, spiralling horns of clear ice, a silky beard and glowing hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Aurora Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + AURORA_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="aurora-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic prism-pic"></div><div class="shop-text"><b>Prismara</b><span>A gentle creature of rainbow light, with a round body of curly fleece that shimmers through every colour of the rainbow, a soft pale face with big gentle eyes, floppy ears, a curly topknot, little spiralling horns of clear crystal and crystal hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can shear it for Spectrafleece (you\'ll need Shears). It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic prism-pic"></div><div class="shop-text"><b>Prismara</b><span>A gentle creature of rainbow light, with a round body of curly fleece that shimmers through every colour of the rainbow, a soft pale face with big gentle eyes, floppy ears, a curly topknot, little spiralling horns of clear crystal and crystal hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can shear it for Prismsilk (you\'ll need Shears). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + PRISM_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="prism-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic zephyra-pic"></div><div class="shop-text"><b>Zephyra</b><span>A little spirit of the gentle west wind, made of soft, billowing cloud blushed with the pinks and golds of sunrise, with tall ears, huge sparkly eyes, a glowing sun-gem, little feathered wings and a silk scarf streaming in the breeze. It floats just above the ground on cloud-puff feet. Feed it hay and pet it every day for four days in a row, and the next morning you can shear its cloud for Cloud Wool (you\'ll need Shears). It lives in a stall here.</span>' +
