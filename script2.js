@@ -5133,8 +5133,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
     var seg = new THREE.SphereGeometry(1, 40, 28);
     var backCol = new THREE.Color(pal.back), sideCol = new THREE.Color(pal.side), bellyCol = new THREE.Color(pal.belly), spotCol = new THREE.Color(pal.spot), muzCol = new THREE.Color(pal.muzzle);
-    var skinV = zSoftMat({ vertexColors: true, roughness: 0.9, color: 0xeeeef2 }, 0.16, 0.3, 0);
-    var furV = zFurMat(new THREE.Color(1.05, 1.05, 1.05), 3800, 0, true, 0.94, 0.4), fineV = zFurMat(new THREE.Color(1.05, 1.05, 1.05), 4600, 0, true, 0.95, 0.4);   // (a short, velvety plush)
+    var skinV = zSoftMat({ vertexColors: true, roughness: 0.9, color: 0xe4e4e8 }, 0.06, 0.2, 0);
+    var furV = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 3800, 0.05, true, 0.8, 0.12), fineV = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 4600, 0, true, 0.82, 0.12);   // (natural shading down to the roots, only a faint glow)   // (a short, velvety plush)
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
     function coat(geo, fmat, parent, len, flow, x, y, z) {
       var sk = abPart(geo, skinV, x || 0, y || 0, z || 0, 0, 0, 0, parent); sk.castShadow = true;
@@ -5157,10 +5157,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     function pondCol(n, c) {                                          // lilac over its back, fading through soft lavender to pale mint underneath, dappled with glowing pond-light spots
       c.copy(bellyCol).lerp(sideCol, ss(-0.55, 0.0, n.y)).lerp(backCol, ss(0.1, 0.7, n.y + Math.sin(n.z * 4 + n.x * 3) * 0.06));
       spots.forEach(function (s2) {
-        var a = n.angleTo(s2[0]); if (a < s2[1]) c.lerp(spotCol, ss(s2[1], s2[1] * 0.55, a) * 0.6);
-        else if (a < s2[1] * 2.1) { var ring = Math.pow(Math.max(0, Math.cos((a - s2[1]) / s2[1] * Math.PI * 2.5)), 6) * (1 - (a - s2[1]) / (s2[1] * 1.1)); c.lerp(spotCol, ring * 0.32); }   // (rings of ripples spreading out from each spot, like rain on a pond)
+        var a = n.angleTo(s2[0]); if (a < s2[1]) c.lerp(spotCol, ss(s2[1], s2[1] * 0.55, a) * 0.35);
+        else if (a < s2[1] * 2.1) { var ring = Math.pow(Math.max(0, Math.cos((a - s2[1]) / s2[1] * Math.PI * 2.5)), 6) * (1 - (a - s2[1]) / (s2[1] * 1.1)); c.lerp(spotCol, ring * 0.15); }   // (rings of ripples spreading out from each spot, like rain on a pond)
       });
-      c.multiplyScalar(0.97 + 0.04 * Math.sin(n.x * 23 + n.y * 17) * Math.sin(n.z * 19 - n.y * 13));
+      c.multiplyScalar(0.93 + 0.08 * (0.5 + 0.5 * Math.sin(n.x * 23 + n.y * 17) * Math.sin(n.z * 19 - n.y * 13)) - Math.max(0, -n.y) * 0.08);   // (natural mottling, darker underneath)
     }
     // the body: a big round barrel, heavy and low, a full chest and a broad rump
     var BY = 0.25, torso = new THREE.Group(); torso.position.set(0, BY, 0); body.add(torso);
@@ -5197,7 +5197,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
     [-1, 1].forEach(function (s) {
       var es = onHead(V3(s * 0.02, 0.045, 0.0), V3(s * 0.55, 0.25, 0.8)), ey = new THREE.Group(); ey.position.copy(es.p).addScaledVector(es.n, -0.004); ey.lookAt(ey.position.clone().add(es.n)); head.add(ey);   // (set into the skin of its brow, looking out)
-      var RX = 0.025, RY = 0.026, RZ = 0.015;   // (big and sweet)
+      var RX = 0.018, RY = 0.019, RZ = 0.012;   // (gentle, natural-sized eyes)
       part(seg, eyeMat, 0, 0, 0, RX, RY, RZ, ey);
       abPart(irisGeo, irisMat, 0, 0, 0, 0, 0, 0, ey).scale.set(RX * 1.01, RY * 1.01, RZ * 1.01);
       var co = abPart(irisGeo, corneaMat, 0, 0, 0, 0, 0, 0, ey); co.scale.set(RX * 1.06, RY * 1.06, RZ * 1.18); co.castShadow = false;
@@ -5207,7 +5207,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       [0.3, 0.55, 0.82, 1.05].forEach(function (a, nl) { var len = 0.008 - nl * 0.001, lash = abPart(new THREE.ConeGeometry(0.0007, len, 5).translate(0, len / 2, 0), lashMat, s * Math.cos(a) * RX * 1.05, Math.sin(a) * RY * 1.05, RZ * 0.4, 0.35, 0, -s * (1.2 - a), ey); lash.castShadow = false; });
       var lg = new THREE.Group(); ey.add(lg); lids.push(lg); lg.visible = false;
       abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg).scale.set(RX * 1.15, RY * 1.15, RZ * 1.3);
-      var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.034, 0.02), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, opacity: 0.75, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.034, 0.02), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, opacity: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
       var bs = onHead(V3(s * 0.03, 0.0, 0.05), V3(s * 0.8, 0.1, 0.6)); bl.position.copy(bs.p).addScaledVector(bs.n, 0.004); bl.lookAt(bl.position.clone().add(bs.n)); head.add(bl);
     });
     var ears = [];
@@ -5294,7 +5294,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var dWings = [], dWingMat = filmMat(0xffffff, 1.3);
     [[-1, 0.004], [1, 0.004], [-1, -0.003], [1, -0.003]].forEach(function (w3) { var wm3 = new THREE.Mesh(new THREE.CircleGeometry(1, 16), dWingMat); wm3.scale.set(0.016, 0.0045, 1); wm3.position.set(w3[0] * 0.016, 0.001, w3[1]); wm3.rotation.x = -Math.PI / 2; dfly.add(wm3); dWings.push({ m: wm3, s: w3[0] }); });
     // swirling vine markings glowing on its sides, like water-lily tendrils painted in light, with tiny leaves along them
-    var vineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(0xffffff), 0.35), transparent: true, opacity: 0.75, depthWrite: false }), vines = [];
+    var vineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.spot).lerp(new THREE.Color(pal.side), 0.3), transparent: true, opacity: 0.45, depthWrite: false }), vines = [];
     [-1, 1].forEach(function (s) {
       for (var vv = 0; vv < 2; vv++) {
         var pts = [];
@@ -5306,7 +5306,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
     });
     // a sheen of shimmering pond-light over its whole coat, like light through ripples
-    var shimmer = new THREE.Mesh(bodyGeo, filmMat(pal.spot, 0.35)); shimmer.scale.setScalar(1.06); shimmer.renderOrder = 3; torso.add(shimmer);
+    
     // little glowing pearls set in its fur in a curving line down each shoulder
     var pearlM = new THREE.MeshPhysicalMaterial({ color: 0xfaf6ff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.35 });
     [-1, 1].forEach(function (s) { for (var pp = 0; pp < 6; pp++) { ray.set(V3(0, 0, 0), V3(s, 0.55 - pp * 0.13, 0.55 - pp * 0.05).normalize()); var ph = ray.intersectObject(bodyMesh)[0]; if (!ph) continue; var pm4 = new THREE.Mesh(new THREE.SphereGeometry(0.0035 - pp * 0.0003, 12, 10), pearlM); pm4.position.copy(ph.point).addScaledVector(ph.face.normal.clone().normalize(), 0.008); torso.add(pm4); } });
@@ -5367,7 +5367,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var pt = 0; pt < 6; pt++) { var pf = new THREE.Mesh(petalGeo, petalMat); pf.scale.set(0.012, 0.022, 0.022); root.add(pf); petals.push({ m: pf, t: glimR(pt * 4.7), a: glimR(pt * 6.1) * Math.PI * 2 }); }
     var ripTex = new THREE.CanvasTexture(glimCanvas(128, 128, function (g, w, h) { g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.stroke(); }));
     var ripples = []; for (var rp = 0; rp < 3; rp++) { var rm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ripTex, color: pal.spot, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); rm.rotation.x = -Math.PI / 2; rm.position.y = 0.012; root.add(rm); ripples.push({ m: rm, t: rp / 3 }); }
-    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.14, blending: THREE.AdditiveBlending, depthWrite: false }));
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.scale.set(1.1, 1.1, 1); glow.position.set(0, 0.25, 0); root.add(glow);
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
@@ -5404,7 +5404,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.veils.forEach(function (v) { var p = v.m.geometry.attributes.position, b = v.base; for (var i = 0; i < p.count; i++) { var f = -b[i * 3 + 1] / 0.26; p.setXYZ(i, b[i * 3], b[i * 3 + 1] * (1 - f * 0.05), Math.sin(t * 2.4 - f * 5 + v.ph) * 0.02 * f + f * f * -0.04); } p.needsUpdate = true; });   // (its veils of fin rippling as if underwater)
     m.whiskers.forEach(function (w, k) { w.g.rotation.set(Math.sin(t * 1.6 + k) * 0.25, w.s * Math.sin(t * 1.2 + k * 2) * 0.2, 0); });
     m.fireflies.forEach(function (f, k) { var a = f.a + t * f.sp * (k % 2 ? 1 : -1); f.s.position.set(Math.cos(a) * f.r, f.h + Math.sin(t * 1.3 + k) * 0.04, Math.sin(a) * f.r * 1.3); f.s.material.opacity = 0.25 + Math.pow(0.5 + 0.5 * Math.sin(t * 2.2 + k * 2.4), 3) * 0.75; });   // (blinking softly as they drift)
-    m.vines.forEach(function (v, k) { v.material.opacity = (v.isSprite ? 0.5 : 0.45) + (0.5 + 0.5 * Math.sin(t * 1.2 + k * 0.9)) * 0.4; });   // (the vine markings softly pulsing with light)
+    m.vines.forEach(function (v, k) { v.material.opacity = (v.isSprite ? 0.35 : 0.3) + (0.5 + 0.5 * Math.sin(t * 1.2 + k * 0.9)) * 0.2; });   // (the vine markings softly pulsing with light)
     m.halo.rotation.y = t * (happy ? 1.2 : 0.35); m.halo.position.y = 0.2 + Math.sin(t * 1.3 + g.stall) * 0.008;
     m.ribbons.forEach(function (r, k) { var p = r.m.geometry.attributes.position, b = r.base; for (var i = 0; i < p.count; i++) { var f = -b[i * 3] / 0.22; p.setXYZ(i, b[i * 3], b[i * 3 + 1] + Math.sin(t * 2.2 - f * 6 + k) * 0.012 * f, Math.sin(t * 1.7 - f * 5 + k * 2) * 0.015 * f); } p.needsUpdate = true; });   // (rippling in an unseen breeze)
     m.markGlow.material.opacity = 0.25 + (0.5 + 0.5 * Math.sin(t * 1.2 + g.stall)) * 0.3;
@@ -5428,7 +5428,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     m.ripples.forEach(function (r) { r.t += dt * 0.3; if (r.t > 1) r.t -= 1; var sc = 0.2 + r.t * 0.5; r.m.scale.set(sc, sc * 1.3, 1); r.m.material.opacity = Math.sin(r.t * Math.PI) * 0.3 * (1 - r.t); });
     var pulse = 0.5 + Math.sin(t * 1.1 + g.stall) * 0.5;
-    m.glow.material.opacity = 0.1 + pulse * 0.05;
+    m.glow.material.opacity = 0.04 + pulse * 0.03;
     if (g.egg) { g.eggMesh.position.set(g.x, 0.8 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
   function lotaraAction(g, wx, wz) {                                 // milking, feeding and petting a Lotara
