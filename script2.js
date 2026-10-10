@@ -6568,7 +6568,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // its little garden: soft mounds of moss
     var mossCol = new THREE.Color(pal.moss), mossFur = zFurMat(new THREE.Color(1.04, 1.04, 1.04), 3000, 0.04, true, 0.92, 0.35);
     [[0.0, 0.1, 0.034], [-0.5, -0.3, 0.028], [0.45, -0.4, 0.026], [0.55, 0.45, 0.022], [-0.5, 0.5, 0.024], [0.0, -0.75, 0.022], [-0.2, 0.9, 0.018], [0.25, 0.2, 0.02]].forEach(function (mm, k) {
-      var mg = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, mm[2], mm[2] * 0.45, mm[2] * 0.9); }, [32, 22], mm[2] * 1.4, function (n, q, c) { c.copy(mossCol).multiplyScalar(0.88 + 0.2 * Math.max(0, n.y)).lerp(new THREE.Color(pal.glow), Math.max(0, n.y) * 0.12 * glimR(k)); });
+      var mr = mm[2] * 0.6, mg = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, mr, mr * 0.4, mr * 0.9); }, [32, 22], mr * 1.4, function (n, q, c) { c.copy(mossCol).multiplyScalar(0.88 + 0.2 * Math.max(0, n.y)).lerp(new THREE.Color(pal.glow), Math.max(0, n.y) * 0.12 * glimR(k)); });
       var grp = plant(mm[0], mm[1], mm[2] * 0.15); abPart(mg, softSkin, 0, 0, 0, 0, 0, 0, grp); abPart(zFurShell(mg, 12, 0.006, [1, 1, 1], [0, 1, 0], 0.6), mossFur, 0, 0, 0, 0, 0, 0, grp).castShadow = false;
     });
     // glowing mushrooms, their caps dotted with white
@@ -6599,6 +6599,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     // a few smooth pebbles, and a tiny ring of glowing pebbles round the tree like fairy lights
     var pebMat = new THREE.MeshStandardMaterial({ color: 0xe8e2da, roughness: 0.55 });
     [[0.5, -0.65, 0.006], [-0.3, 0.7, 0.005], [0.7, 0.4, 0.004], [-0.75, 0.3, 0.005]].forEach(function (pb) { var grp = plant(pb[0], pb[1], 0.001), pm = new THREE.Mesh(seg, pebMat); pm.scale.set(pb[2], pb[2] * 0.55, pb[2] * 0.8); grp.add(pm); });
+    // patches of tiny three-leaf clover tucked about its garden
+    var cloverMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.moss).lerp(new THREE.Color(0xffffff), 0.15), roughness: 0.55, side: THREE.DoubleSide }), heartLeaf = new THREE.ShapeGeometry((function () { var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.bezierCurveTo(0.0022, 0.001, 0.0024, 0.0036, 0.0011, 0.0036); sh.bezierCurveTo(0.0004, 0.0036, 0, 0.003, 0, 0.0026); sh.bezierCurveTo(0, 0.003, -0.0004, 0.0036, -0.0011, 0.0036); sh.bezierCurveTo(-0.0024, 0.0036, -0.0022, 0.001, 0, 0); return sh; })(), 6);
+    for (var cv = 0; cv < 18; cv++) { var cx = (glimR(cv * 7.1 + 3) - 0.5) * 1.5, cz = (glimR(cv * 4.3 + 3) - 0.5) * 1.5; if (cx * cx + cz * cz > 0.6) continue; var grp = plant(cx, cz, 0.0005); grp.add(new THREE.Mesh(new THREE.CylinderGeometry(0.00025, 0.00025, 0.004, 3).translate(0, 0.002, 0), cloverMat)); for (var lf3 = 0; lf3 < 3; lf3++) { var lm3 = new THREE.Mesh(heartLeaf, cloverMat); lm3.position.y = 0.004; lm3.rotation.set(-1.25, lf3 / 3 * Math.PI * 2, 0, 'YXZ'); grp.add(lm3); } }
+    // dewdrops beaded on the moss, and fallen petals scattered about
+    var dewMat = filmMat(pal.glow, 1.2), petMat = new THREE.MeshStandardMaterial({ map: tortPetalTex(pal.flower[0], pal.flower[1]), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5 });
+    for (var dw = 0; dw < 24; dw++) { var dsp = onShell((glimR(dw * 3.9 + 5) - 0.5) * 1.6, (glimR(dw * 6.1 + 5) - 0.5) * 1.6), dm2 = new THREE.Mesh(new THREE.SphereGeometry(0.0014 + glimR(dw) * 0.001, 10, 8), dewMat); dm2.position.copy(dsp.p).addScaledVector(dsp.n, 0.012 + glimR(dw * 2.2) * 0.008); dm2.renderOrder = 4; shell.add(dm2); }
+    for (var fp3 = 0; fp3 < 10; fp3++) { var grp2 = plant((glimR(fp3 * 5.7 + 9) - 0.5) * 1.7, (glimR(fp3 * 3.1 + 9) - 0.5) * 1.7, -0.0008), pm5 = new THREE.Mesh(tortPetalGeo, petMat); pm5.scale.set(0.0035, 0.006, 0.006); pm5.rotation.set(-Math.PI / 2 + 0.15, glimR(fp3) * 6, 0, 'YXZ'); grp2.add(pm5); }
+    // a tiny fairy ring of baby mushrooms
+    var ringG = plant(-0.55, -0.55, 0.001);
+    for (var fr2 = 0; fr2 < 7; fr2++) { var fra = fr2 / 7 * Math.PI * 2, bm = new THREE.Group(); bm.position.set(Math.cos(fra) * 0.007, 0, Math.sin(fra) * 0.007); ringG.add(bm); bm.add(new THREE.Mesh(new THREE.CylinderGeometry(0.0006, 0.0008, 0.004, 6).translate(0, 0.002, 0), stemMat2)); var bc = new THREE.Mesh(capGeo, mushMat); bc.scale.set(0.0022, 0.0016, 0.0022); bc.position.y = 0.004; bm.add(bc); }
+    var ringGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.mush, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); ringGlow.scale.set(0.03, 0.03, 1); ringGlow.position.y = 0.004; ringG.add(ringGlow); mushGlows.push(ringGlow);
+    // a little snail with a spiral shell, creeping over the edge of its shell
+    var snail = new THREE.Group(), snp = onShell(0.95, 0.25); snail.position.copy(snp.p); snail.quaternion.setFromUnitVectors(V3(0, 1, 0), snp.n); snail.rotateY(1.2); shell.add(snail);
+    var snBody = new THREE.Mesh(seg, new THREE.MeshStandardMaterial({ color: 0xf0e0d0, roughness: 0.4, emissive: 0xfff0e0, emissiveIntensity: 0.1 })); snBody.scale.set(0.0022, 0.0016, 0.007); snBody.position.y = 0.0012; snail.add(snBody);
+    [-1, 1].forEach(function (sx) { var st3 = new THREE.Mesh(new THREE.CylinderGeometry(0.0002, 0.0002, 0.003, 4).translate(0, 0.0015, 0), snBody.material); st3.position.set(sx * 0.0008, 0.0016, 0.0058); st3.rotation.set(0.5, 0, sx * 0.3); snail.add(st3); var eb = new THREE.Mesh(new THREE.SphereGeometry(0.0004, 6, 5), new THREE.MeshBasicMaterial({ color: 0x2a2020 })); eb.position.set(sx * 0.0015, 0.0042, 0.0072); snail.add(eb); });
+    var spPts = []; for (var sp3 = 0; sp3 <= 40; sp3++) { var sa3 = sp3 / 40 * Math.PI * 5, sr3 = 0.0042 * (1 - sp3 / 46); spPts.push(V3(sp3 / 40 * 0.0018, 0.0048 + Math.sin(sa3) * sr3, -0.001 + Math.cos(sa3) * sr3)); }
+    var spCrv = new THREE.CatmullRomCurve3(spPts), spg = new THREE.TubeGeometry(spCrv, 80, 1, 8, false), spa = spg.attributes.position; for (var k3 = 0; k3 <= 80; k3++) { var c3 = spCrv.getPointAt(k3 / 80), r3 = 0.0016 * (1 - k3 / 80 * 0.75); for (var j3 = 0; j3 <= 8; j3++) { var q3 = k3 * 9 + j3; spa.setXYZ(q3, c3.x + (spa.getX(q3) - c3.x) * r3, c3.y + (spa.getY(q3) - c3.y) * r3, c3.z + (spa.getZ(q3) - c3.z) * r3); } } spg.computeVertexNormals();
+    snail.add(new THREE.Mesh(spg, new THREE.MeshPhysicalMaterial({ color: pal.mush, roughness: 0.25, clearcoat: 1, emissive: pal.mush, emissiveIntensity: 0.2 })));   // (its spiral shell)
     // vines draping over the edge of its shell, with little leaves and tiny blossoms
     var vineMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.moss).multiplyScalar(0.75), roughness: 0.7 }), blossomMat = new THREE.MeshStandardMaterial({ color: pal.flower[1], roughness: 0.5, emissive: pal.flower[1], emissiveIntensity: 0.25 });
     for (var vn = 0; vn < 7; vn++) { var va = vn / 7 * Math.PI * 2 + 0.3, vs = onShell(Math.cos(va) * 0.85, Math.sin(va) * 0.85), vd = V3(Math.cos(va), 0, Math.sin(va)), vp = [];
@@ -6620,6 +6638,15 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cgp = new THREE.Group(); cgp.position.set(cw[0], cw[1], cw[2]); tree.add(cgp); abPart(cg, softSkin, 0, 0, 0, 0, 0, 0, cgp); abPart(zFurShell(cg, 12, 0.005, [1, 1, 1], [0, -1, 0], 0.8), mossFur, 0, 0, 0, 0, 0, 0, cgp).castShadow = false;
     });
     [[0.012, 0.03, 0.006], [-0.012, 0.028, -0.004], [0.004, 0.034, 0.014], [-0.003, 0.04, -0.013]].forEach(function (fp) { var fr = new THREE.Mesh(new THREE.SphereGeometry(0.0026, 10, 8), new THREE.MeshStandardMaterial({ color: 0xfff0a0, roughness: 0.4, emissive: 0xffe080, emissiveIntensity: 0.6 })); fr.position.set(fp[0], fp[1], fp[2]); tree.add(fr); var fg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0a0, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); fg.scale.set(0.022, 0.022, 1); fr.add(fg); fruits.push(fg); });   // (glowing fruit, like little lanterns)
+    // a little glowing lantern hanging from its tree, and a tiny swing
+    var lan = new THREE.Group(); lan.position.set(0.016, 0.027, 0.004); tree.add(lan);
+    lan.add(new THREE.Mesh(new THREE.CylinderGeometry(0.00015, 0.00015, 0.006, 4).translate(0, -0.003, 0), goldM));
+    var lb = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfff0b0, roughness: 0.3, emissive: 0xffd070, emissiveIntensity: 0.9, transparent: true, opacity: 0.9 })); lb.scale.y = 1.25; lb.position.y = -0.0085; lan.add(lb);
+    [-1, 1].forEach(function (cy) { var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.0013, 0.0016, 0.0008, 10), goldM); cap.position.y = -0.0085 + cy * 0.0028; lan.add(cap); });
+    var lglow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe0a0, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); lglow.scale.set(0.025, 0.025, 1); lglow.position.y = -0.0085; lan.add(lglow); fruits.push(lglow);
+    var swing = new THREE.Group(); swing.position.set(-0.012, 0.028, -0.002); tree.add(swing); var ropeM = new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.9 });
+    [-1, 1].forEach(function (sx) { var rope = new THREE.Mesh(new THREE.CylinderGeometry(0.00012, 0.00012, 0.016, 4).translate(0, -0.008, 0), ropeM); rope.position.x = sx * 0.0025; swing.add(rope); });
+    var seat = new THREE.Mesh(new THREE.BoxGeometry(0.0062, 0.0006, 0.0022), trunkMat); seat.position.y = -0.016; swing.add(seat);
     // the Starbloom: when it's ready, a big glowing flower opens in the heart of its garden
     var bloom = plant(0.0, 0.25, 0.003), bloomStem = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0024, 0.02, 8).translate(0, 0.01, 0), new THREE.MeshStandardMaterial({ color: 0x5ab070, roughness: 0.6 })); bloom.add(bloomStem);
     var bf = tortFlower(pal, 0.03, [[8, 1.15, 1.0], [8, 0.8, 0.55], [6, 0.5, 0.25]], 0.3); bf.position.y = 0.02; bloom.add(bf);
