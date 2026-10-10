@@ -4653,17 +4653,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     var causticMat = new THREE.MeshBasicMaterial({ map: causticTex, color: new THREE.Color(pal.glow).lerp(new THREE.Color(0xffffff), 0.4), transparent: true, opacity: 0.13, blending: THREE.AdditiveBlending, depthWrite: false });
     var cBody = new THREE.Mesh(bodyGeo, causticMat); cBody.scale.setScalar(1.1); cBody.renderOrder = 2; torso.add(cBody);
     var cHead = new THREE.Mesh(headGeo, causticMat); cHead.scale.setScalar(1.08); cHead.renderOrder = 2; head.add(cHead);
-    // glowing spots along its sides, like the lights of a deep-sea creature, pulsing one after another
-    var glowDots = (function () {
-      var ray = new THREE.Raycaster(), bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bodyMesh.updateMatrixWorld(true);
-      var list = [];
-      [-1, 1].forEach(function (s) { [0.0, -0.32].forEach(function (el, row) { for (var k = 0; k < 9; k++) { var a = 0.85 - k * 0.2, dir = V3(s * Math.cos(el) * Math.cos(a), Math.sin(el), Math.cos(el) * Math.sin(a) * 1.2).normalize(); ray.set(V3(0, 0, 0), dir); var hit = ray.intersectObject(bodyMesh)[0]; if (hit) list.push([hit.point, hit.face.normal.clone().normalize(), k + row * 0.5, row]); } }); });
-      var ringTex = new THREE.CanvasTexture(glimCanvas(64, 64, function (g, w, h) { var gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.35)'); gr.addColorStop(0.75, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }));   // (a bright core in a soft ring)
-      var mat = new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff });
-      var im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, list.length), o = new THREE.Object3D(), c = new THREE.Color(pal.glow);
-      list.forEach(function (d, i) { o.position.copy(d[0]).addScaledVector(d[1], 0.011); o.lookAt(o.position.clone().add(d[1])); o.scale.setScalar(d[3] ? 0.012 : 0.016); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c); });
-      im.renderOrder = 3; torso.add(im); return { im: im, list: list, col: new THREE.Color(pal.fin[0]), col2: new THREE.Color(pal.fin[1]) };   // (each spot its own colour, shading from one fin colour to the other)
-    })();
     // ripples spreading out over the ground beneath it, as if it were standing in shallow water
     var ripples = [], ripTex = new THREE.CanvasTexture(glimCanvas(128, 128, function (g, w, h) { g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.beginPath(); g.arc(64, 64, 50, 0, Math.PI * 2); g.stroke(); }));
     for (var rp = 0; rp < 3; rp++) { var rm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: ripTex, color: pal.glow, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); rm.rotation.x = -Math.PI / 2; rm.position.y = 0.012; root.add(rm); ripples.push({ m: rm, t: rp / 3 }); }
@@ -4692,7 +4681,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.6, 0); tag.renderOrder = 6; root.add(tag);
-    return { causticTex: causticTex, glowDots: glowDots, ripples: ripples, crest: crest, glints: glints, orbitB: orbitB, root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { causticTex: causticTex, ripples: ripples, crest: crest, glints: glints, orbitB: orbitB, root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's blown its Wishbubble, the bubble floats beside it, bobbing
   function bubbleBuildExtras(g) {
@@ -4741,9 +4730,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     m.glints.forEach(function (gs, k) { gs.material.opacity = Math.pow(Math.max(0, Math.sin(t * 1.3 + k * 2.7)), 8) * 0.9; gs.material.rotation = t * 0.5 + k; });
     m.causticTex.offset.set(Math.sin(t * 0.13) * 0.4 + t * 0.02, Math.cos(t * 0.11) * 0.3 + t * 0.015);   // (the light rippling over it)
-    var gd = m.glowDots, gc = new THREE.Color();
-    gd.list.forEach(function (d, i) { var w = Math.pow(0.5 + 0.5 * Math.sin(t * (happy ? 6 : 2.2) - d[2] * 0.7), 3); gc.copy(gd.col).lerp(gd.col2, d[2] / 9).multiplyScalar(0.35 + w * 1.1); gd.im.setColorAt(i, gc); });   // (a wave of light running along its sides)
-    gd.im.instanceColor.needsUpdate = true;
     m.ripples.forEach(function (r) { r.t += dt * 0.35; if (r.t > 1) r.t -= 1; var sc = 0.12 + r.t * 0.4; r.m.scale.set(sc, sc, 1); r.m.material.opacity = Math.sin(r.t * Math.PI) * 0.35 * (1 - r.t); });
     if (m.crest) m.crest.rotation.x = 0.05 + Math.sin(t * 2.4 + g.stall) * 0.05 + (moving ? Math.sin(g.hop) * 0.08 : 0);   // (its crest rippling)
     m.orbitB.rotation.y = t * (happy ? 1.2 : 0.35); m.orbitB.children.forEach(function (ob, k) { ob.position.y = Math.sin(t * 0.8 + k * 2.1) * 0.05; });
