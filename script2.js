@@ -6924,12 +6924,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     var root = new THREE.Group(), body = new THREE.Group(); root.add(body); abRoom.add(root);
     var seg = new THREE.SphereGeometry(1, 40, 28);
     var coatCol0 = new THREE.Color(pal.coat), maneCol = new THREE.Color(pal.mane), bellyCol = new THREE.Color(pal.belly), muzCol = new THREE.Color(pal.muzzle);
-    var skin = zSoftMat({ vertexColors: true, roughness: 0.95, color: 0xeeeae8 }, 0.04, 0.14, 0.25);   // (skin beneath its fur, naturally shaded)
-    var coatFur = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 5200, 0.03, true, 0.78, 0.08);   // (a dense, velvety coat, shaded down to its roots)
-    var maneFur = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 3800, 0.12, true, 0.55, 0.08);   // (thick, wavy and shaggy)
-    var faceFur = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 6400, 0.02, true, 0.8, 0.08);
+    var skin = zSoftMat({ vertexColors: true, roughness: 1.0, color: 0xf6f2f2 }, 0.1, 0.4, 0);   // (soft skin with a velvety glow toward its edges, like minky plush)
+    var coatFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 2400, 0, true, 0.93, 0.55);   // (a deep, dense, soft pile all over, like a plush toy)
+    var maneFur = zFurMat(new THREE.Color(1.05, 1.05, 1.05), 2800, 0.04, true, 0.86, 0.45);   // (long, thick and silky soft)
+    var faceFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 3000, 0, true, 0.94, 0.55);
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
-    function furred(geo, parent, len, flow, fur, comb) { abPart(geo, skin, 0, 0, 0, 0, 0, 0, parent).castShadow = true; abPart(zFurShell(geo, 16, len, [1, 1, 1], flow, comb === undefined ? 1.2 : comb), fur || coatFur, 0, 0, 0, 0, 0, 0, parent).castShadow = false; }
+    function furred(geo, parent, len, flow, fur, comb) { abPart(geo, skin, 0, 0, 0, 0, 0, 0, parent).castShadow = true; abPart(zFurShell(geo, 18, len, [1, 1, 1], flow, comb === undefined ? 1.3 : comb), fur || coatFur, 0, 0, 0, 0, 0, 0, parent).castShadow = false; }
+    function withUv(shell, geo, n) { var u0 = geo.attributes.uv.array, u2 = new Float32Array(u0.length * n); for (var k = 0; k < n; k++) u2.set(u0, k * u0.length); shell.setAttribute('uv', new THREE.BufferAttribute(u2, 2)); return shell; }   // (so a map painted over a shape reaches every hair)
     function ss(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
     function sm(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }
     function ell(x, y, z, cx, cy, cz, rx, ry, rz) { var ex = (x - cx) / rx, ey = (y - cy) / ry, ez = (z - cz) / rz; return (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * Math.min(rx, ry, rz); }
@@ -6962,14 +6963,39 @@ EVERDAWN_PARTS.push(function (THREE) {
       c.lerp(dapCol, dap * 0.7); grain(n, c);
       c.lerp(nebCol(q, n, nc), maneF(q));
     });
-    furred(bodyGeo, torso, 0.007, [0, -0.2, -1]);
+    // its constellations, woven right into its fur: drawn onto a map of its body, so the hairs where they fall glow
+    // with starlight from root to tip, among a dusting of tiny star freckles over its hindquarters
+    var CW = 2048, CH = 1024, conCv = document.createElement('canvas'); conCv.width = CW; conCv.height = CH; var cx2 = conCv.getContext('2d');
+    cx2.fillStyle = '#000'; cx2.fillRect(0, 0, CW, CH);
+    function surfR(d) { var lo = 0.002, hi = 0.32; for (var it = 0; it < 24; it++) { var mid = (lo + hi) / 2; if (bodySdf(d.x * mid, d.y * mid, d.z * mid) < 0) lo = mid; else hi = mid; } return lo; }
+    function dirUv(d) { var u = Math.atan2(d.z, -d.x) / (Math.PI * 2); if (u < 0) u += 1; return [u * CW, Math.acos(Math.max(-1, Math.min(1, d.y))) / Math.PI * CH]; }   // (where a direction lands on the map)
+    function conDraw(stars, lines, d0, s) {
+      var d = d0.clone().normalize(), r = surfR(d), rh = Math.hypot(d.x * r, d.z * r), kx = CW / (Math.PI * 2 * rh), ky = CH / (Math.PI * r), c0 = dirUv(d);
+      var pts = stars.map(function (st) { return [c0[0] + s * st[0] * kx, c0[1] - st[1] * ky]; });
+      [-CW, 0, CW].forEach(function (ox) {
+        cx2.save(); cx2.translate(ox, 0); cx2.lineCap = 'round';
+        lines.forEach(function (ln) { var a = pts[ln[0]], b = pts[ln[1]]; [[22, 0.1], [11, 0.3], [5.5, 0.85]].forEach(function (w) { cx2.strokeStyle = 'rgba(255,255,255,' + w[1] + ')'; cx2.lineWidth = w[0]; cx2.beginPath(); cx2.moveTo(a[0], a[1]); cx2.lineTo(b[0], b[1]); cx2.stroke(); }); });   // (fine threads of light, softly haloed)
+        pts.forEach(function (p, k) { var R = k % 3 ? 22 : 32, gr = cx2.createRadialGradient(p[0], p[1], 0, p[0], p[1], R); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); cx2.fillStyle = gr; cx2.beginPath(); cx2.arc(p[0], p[1], R, 0, Math.PI * 2); cx2.fill(); cx2.fillStyle = 'rgba(255,255,255,0.85)'; cx2.fillRect(p[0] - R * 1.4, p[1] - 1.5, R * 2.8, 3); cx2.fillRect(p[0] - 1.5, p[1] - R * 1.4, 3, R * 2.8); });   // (a bright star at each joint, with a little sparkle)
+        cx2.restore();
+      });
+    }
+    for (var fk = 0; fk < 900; fk++) { var fu = glimR(fk * 3.17), fv = glimR(fk * 5.31), fth = fv * Math.PI, fph = fu * Math.PI * 2, fdz = Math.sin(fph) * Math.sin(fth), fdy = Math.cos(fth); var fw = ss(-0.2, -0.55, fdz) * ss(-0.65, -0.2, fdy); if (glimR(fk * 7.7) > fw) continue; var fR = 2 + Math.pow(glimR(fk * 2.3), 3) * 6; cx2.fillStyle = 'rgba(255,255,255,' + (0.35 + glimR(fk * 9.1) * 0.5).toFixed(2) + ')'; cx2.beginPath(); cx2.arc(fu * CW, fv * CH, fR, 0, Math.PI * 2); cx2.fill(); }   // (tiny star freckles dusted over its rump)
+    [-1, 1].forEach(function (s) {
+      conDraw([[-0.036, 0.014], [-0.019, 0.022], [-0.002, 0.016], [0.011, 0.001], [0.03, -0.003], [0.036, -0.024], [0.016, -0.029]], [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]], V3(s, 0.22, -0.62), s);   // (a great dipper across each flank)
+      conDraw([[-0.013, 0.011], [0.0, -0.003], [0.015, 0.007], [0.006, -0.019]], [[0, 1], [1, 2], [1, 3]], V3(s, -0.35, -0.95), s);   // (and a little one low on each haunch)
+    });
+    conDraw([[-0.014, 0.0], [0.0, 0.012], [0.014, 0.0]], [[0, 1], [1, 2]], V3(0.0, 0.75, -0.66), 1);   // (a small arc of three over the top of its rump)
+    var conTex = new THREE.CanvasTexture(conCv); conTex.anisotropy = 4;
+    var conCol = new THREE.Color(pal.star).lerp(new THREE.Color(pal.glow), 0.35);
+    var bodySkin = zSoftMat({ vertexColors: true, roughness: 1.0, color: 0xf6f2f2, emissive: conCol, emissiveMap: conTex, emissiveIntensity: 0.5 }, 0.1, 0.4, 0);
+    var bodyFur = zFurMat(new THREE.Color(1.05, 1.05, 1.05), 2800, 0.04, true, 0.86, 0.45); bodyFur.emissive = conCol.clone(); bodyFur.emissiveMap = conTex; bodyFur.emissiveIntensity = 0.7;
+    abPart(bodyGeo, bodySkin, 0, 0, 0, 0, 0, 0, torso).castShadow = true;
+    bodyFur.isZFur = true; var conMats = [bodySkin, bodyFur];
     // its great shaggy mane: long, thick and wavy over its hump, shoulders, neck and chest, fading softly into the
     // short velvet of its back, the twilight colour of the night sky, flecked with tiny stars
-    var maneShell = zFurShell(bodyGeo, 24, 0.044, [1, 1, 1], [0, -1, -0.3], 0.9), msp = maneShell.attributes.position, mfr = maneShell.attributes.furRoot, mfv = new Float32Array(msp.count), mq = new THREE.Vector3();
-    for (var mk = 0; mk < msp.count; mk++) { mq.set(mfr.getX(mk), mfr.getY(mk), mfr.getZ(mk)); var f = maneF(mq) * (0.6 + 0.5 * ss(-0.08, 0.1, mq.y)) * (0.85 + 0.3 * glimR(Math.floor(mq.x * 300) * 5.1 + Math.floor(mq.y * 300) * 2.7 + Math.floor(mq.z * 300) * 1.3)); mfv[mk] = f; msp.setXYZ(mk, mq.x + (msp.getX(mk) - mq.x) * f, mq.y + (msp.getY(mk) - mq.y) * f, mq.z + (msp.getZ(mk) - mq.z) * f); }   // (longest over its hump and chest, in shaggy locks, thinning away toward its back)
-    var mi0 = maneShell.index.array, mkeep = []; for (var mt = 0; mt < mi0.length; mt += 3) if (Math.max(mfv[mi0[mt]], mfv[mi0[mt + 1]], mfv[mi0[mt + 2]]) > 0.06) mkeep.push(mi0[mt], mi0[mt + 1], mi0[mt + 2]);   // (no mane at all where it has faded away)
-    maneShell.setIndex(mkeep);
-    abPart(maneShell, maneFur, 0, 0, 0, 0, 0, 0, torso).castShadow = false;
+    var maneShell = withUv(zFurShell(bodyGeo, 26, 0.044, [1, 1, 1], [0, -0.75, -0.65], 0.95), bodyGeo, 26), msp = maneShell.attributes.position, mfr = maneShell.attributes.furRoot, mq = new THREE.Vector3();
+    for (var mk = 0; mk < msp.count; mk++) { mq.set(mfr.getX(mk), mfr.getY(mk), mfr.getZ(mk)); var mf = maneF(mq), f = (0.58 + 0.42 * mf) * (0.6 + 0.5 * ss(-0.08, 0.1, mq.y) * mf + 0.4 * (1 - mf)) * (0.85 + 0.3 * glimR(Math.floor(mq.x * 300) * 5.1 + Math.floor(mq.y * 300) * 2.7 + Math.floor(mq.z * 300) * 1.3)); msp.setXYZ(mk, mq.x + (msp.getX(mk) - mq.x) * f, mq.y + (msp.getY(mk) - mq.y) * f, mq.z + (msp.getZ(mk) - mq.z) * f); }   // (long, soft fur over all of it: longest and shaggiest in its mane, a little shorter and smoother over its back and rump)
+    abPart(maneShell, bodyFur, 0, 0, 0, 0, 0, 0, torso).castShadow = false;
     var ray = new THREE.Raycaster(), bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bodyMesh.updateMatrixWorld(true);
     // a long, soft fringe hanging beneath its chest and throat
     tuft(torso, V3(0, -0.058, 0.12), 0.048, 0.024, 0.06, 0.04, [0, -1, 0.15], null, 1.6);
@@ -6977,15 +7003,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var si = 0; si < 900 && sn < 220; si++) { var sd = V3(glimR(si * 3.1) - 0.5, glimR(si * 5.7) * 0.9, glimR(si * 2.3) * 1.2 - 0.1).normalize(); ray.set(V3(0, 0.03, 0.03), sd); var sh = ray.intersectObject(bodyMesh)[0]; if (!sh || maneF(sh.point) < 0.6) continue; so.position.copy(sh.point).addScaledVector(sh.face.normal.clone().normalize(), 0.012 + glimR(si) * 0.026); so.scale.setScalar(0.0011 + Math.pow(glimR(si * 1.9), 3) * 0.0022); so.updateMatrix(); mstars.setMatrixAt(sn++, so.matrix); }   // (tiny stars caught in its mane)
     mstars.count = sn; mstars.instanceMatrix.needsUpdate = true; torso.add(mstars);
     var maneTwinkle = []; for (var tw = 0; tw < 18; tw++) { var tsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); tsp.scale.set(0.02, 0.02, 1); var td = V3(glimR(tw * 4.3) - 0.5, 0.4 + glimR(tw * 6.1) * 0.6, glimR(tw * 2.9) * 0.9).normalize(); ray.set(V3(0, 0.03, 0.03), td); var th = ray.intersectObject(bodyMesh)[0]; if (th) tsp.position.copy(th.point).addScaledVector(th.face.normal.clone().normalize(), 0.03); torso.add(tsp); maneTwinkle.push(tsp); }
-    // glowing constellations traced across its flanks: stars joined by fine lines of light
-    var conMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.glow).lerp(new THREE.Color(0xffffff), 0.4), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }), conStars = [];
-    [-1, 1].forEach(function (s) {
-      var pts = [[-0.02, 0.4], [-0.07, 0.15], [-0.12, 0.3], [-0.15, 0.05], [-0.1, -0.1], [-0.05, -0.02]].map(function (u) { ray.set(V3(0, 0, u[0]), V3(s, u[1], 0).normalize()); var h = ray.intersectObject(bodyMesh)[0]; return h ? h.point.clone().addScaledVector(h.face.normal.clone().normalize(), 0.0075) : null; }).filter(Boolean);
-      pts.forEach(function (p, k) { var cs = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); cs.scale.setScalar(k % 2 ? 0.012 : 0.017); cs.position.copy(p); torso.add(cs); conStars.push(cs); if (k) torso.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.LineCurve3(pts[k - 1], p), 4, 0.0007, 4, false), conMat)); });
-    });
-    var frk = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 5), new THREE.MeshBasicMaterial({ color: new THREE.Color(pal.star).lerp(new THREE.Color(pal.glow), 0.3) }), 70), fo = new THREE.Object3D(), fn2 = 0;
-    for (var fi = 0; fi < 500 && fn2 < 70; fi++) { var fd = V3((glimR(fi * 2.9) - 0.5) * 2, (glimR(fi * 4.1) - 0.3) * 1.2, -0.3 - glimR(fi * 6.7) * 1.4).normalize(); ray.set(V3(0, 0.01, -0.04), fd); var fh = ray.intersectObject(bodyMesh)[0]; if (!fh || maneF(fh.point) > 0.1) continue; fo.position.copy(fh.point).addScaledVector(fh.face.normal.clone().normalize(), 0.0075); fo.scale.setScalar(0.0006 + Math.pow(glimR(fi * 3.3), 2) * 0.0009); fo.updateMatrix(); frk.setMatrixAt(fn2++, fo.matrix); }   // (tiny glowing star freckles scattered over its rump)
-    frk.count = fn2; frk.instanceMatrix.needsUpdate = true; torso.add(frk);
+    var conStars = [];
     // the head: broad and gentle, carried low, with a wide velvety muzzle
     var head = new THREE.Group(); head.position.set(0, 0.004, 0.195); head.rotation.x = 0.3; head.scale.setScalar(1.3); torso.add(head);
     var headGeo = sdfShape(function (x, y, z) {
@@ -6995,7 +7013,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-1, 1].forEach(function (s) { d = sm(d, ell(x, y, z, s * 0.032, 0.022, -0.005, 0.02, 0.02, 0.022), 0.015); });   // (the bosses where its horns grow)
       return d;
     }, [110, 80], 0.15, function (n, q, c) { c.copy(coatCol0).lerp(muzCol.clone().lerp(coatCol0, 0.35), ss(0.04, 0.075, q.z) * ss(0.0, -0.02, q.y)); grain(n, c); });
-    furred(headGeo, head, 0.004, [0, 0.3, -1], faceFur);
+    furred(headGeo, head, 0.006, [0, 0.3, -1], faceFur);
     var hRay = new THREE.Raycaster(), hMesh = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); hMesh.updateMatrixWorld(true);
     function onHead(from, dir) { hRay.set(from, dir.clone().normalize()); var h = hRay.intersectObject(hMesh); h = h[h.length - 1] || h[0]; return h ? { p: h.point.clone(), n: h.face.normal.clone().normalize() } : { p: from.clone(), n: dir.clone().normalize() }; }
     // a wide, velvety nose with big soft nostrils, and a gentle mouth
@@ -7031,7 +7049,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     // small, soft ears sticking out sideways below its horns
     var ears = [], earGeo = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0.016, 0.0105, 0.004, 0.019); }, [32, 22], 0.05, function (n, q, c) { c.copy(coatCol0).lerp(new THREE.Color(0xc89a8a), n.y > 0.3 ? 0.4 : 0); grain(n, c); });
-    [-1, 1].forEach(function (s) { var ep = new THREE.Group(); ep.position.set(s * 0.046, 0.008, -0.012); ep.rotation.set(-0.2, s * 1.35, s * 0.25); head.add(ep); furred(earGeo, ep, 0.003, [0, 0, 1], faceFur); ears.push({ g: ep, s: s }); });
+    [-1, 1].forEach(function (s) { var ep = new THREE.Group(); ep.position.set(s * 0.046, 0.008, -0.012); ep.rotation.set(-0.2, s * 1.35, s * 0.25); head.add(ep); furred(earGeo, ep, 0.006, [0, 0, 1], faceFur); ears.push({ g: ep, s: s }); });
     // sweeping horns of moonstone: out to the sides, curving up and in at their tips, banded in gold, glinting
     var hornMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.1, emissive: pal.glow, emissiveIntensity: 0.1 }), gold = new THREE.MeshStandardMaterial({ color: 0xffd27a, roughness: 0.3, metalness: 0.6, emissive: 0x8a5a10, emissiveIntensity: 0.25 }), hornSheen = filmMat(pal.glow, 0.4), glints = [];
     [-1, 1].forEach(function (s) {
@@ -7045,7 +7063,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       [0.1, 0.24, 0.36].forEach(function (u, b) { var band = new THREE.Mesh(new THREE.TorusGeometry((0.0105 * Math.pow(1 - u, 0.8) + 0.0006) * 1.08, 0.0012 - b * 0.0003, 6, 24), gold); band.position.copy(hc.getPointAt(u)); band.quaternion.setFromUnitVectors(V3(0, 0, 1), hc.getTangentAt(u)); head.add(band); });
       var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: 0xffffff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.set(0.02, 0.02, 1); gl.position.copy(hc.getPointAt(1)); head.add(gl); glints.push(gl);
     });
-    var brow = onHead(V3(0, 0.0, 0.02), V3(0, 0.3, 1)), cres = new THREE.Group(); cres.position.copy(brow.p).addScaledVector(brow.n, 0.003); cres.lookAt(cres.position.clone().add(brow.n)); head.add(cres);   // a little glowing crescent moon on its brow
+    var brow = onHead(V3(0, 0.0, 0.02), V3(0, 0.3, 1)), cres = new THREE.Group(); cres.position.copy(brow.p).addScaledVector(brow.n, 0.0065); cres.lookAt(cres.position.clone().add(brow.n)); head.add(cres);   // a little glowing crescent moon on its brow
     var cresMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffe0a0).lerp(new THREE.Color(pal.star), 0.3) });
     var cg = new THREE.TorusGeometry(0.0105, 0.0028, 8, 30, Math.PI * 1.15), cp = cg.attributes.position;
     for (var ci = 0; ci < cp.count; ci++) { var ca = Math.atan2(cp.getY(ci), cp.getX(ci)), cu = Math.max(0, Math.min(1, ca / (Math.PI * 1.15))), cr = Math.sin(cu * Math.PI) * 0.9 + 0.1, cc = 0.0105 * Math.cos(ca), cs2 = 0.0105 * Math.sin(ca); cp.setXYZ(ci, cc + (cp.getX(ci) - cc) * cr, cs2 + (cp.getY(ci) - cs2) * cr, cp.getZ(ci) * cr * 0.4); }   // (fine at its tips)
@@ -7069,7 +7087,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var lcv = new THREE.CatmullRomCurve3(front ? [V3(0, 0.012, 0), V3(0, -0.06, 0.006), V3(0, -0.125, -0.002), V3(0, -0.175, 0.002), V3(0, -0.208, 0.006)] : [V3(0, 0.012, 0), V3(0, -0.055, -0.01), V3(0, -0.11, -0.024), V3(0, -0.165, -0.008), V3(0, -0.208, -0.006)]);
       var lgeo = new THREE.TubeGeometry(lcv, 56, 1, 18, false), lpa = lgeo.attributes.position, lcol = [], lc = new THREE.Color(), lowCol = coatCol0.clone().lerp(maneCol, 0.3);
       for (var lk = 0; lk <= 56; lk++) { var lt = lk / 56, lcp = lcv.getPointAt(lt), lr = 0.0135 + (front ? 0.022 : 0.027) * (1 - ss(0.04, 0.52, lt)) + 0.0035 * Math.exp(-Math.pow((lt - (front ? 0.6 : 0.52)) / 0.07, 2)) + 0.0035 * ss(0.84, 1, lt); for (var lj = 0; lj <= 18; lj++) { var lq = lk * 19 + lj, dz = 1 + 0.18 * (1 - ss(0.0, 0.5, lt)); lpa.setXYZ(lq, lcp.x + (lpa.getX(lq) - lcp.x) * lr, lcp.y + (lpa.getY(lq) - lcp.y) * lr, lcp.z + (lpa.getZ(lq) - lcp.z) * lr * dz); lc.copy(coatCol0).lerp(lowCol, ss(0.55, 1, lt)); lc.multiplyScalar(0.94 + 0.06 * Math.sin(lj * 1.7 + lk * 0.9)); lcol.push(lc.r, lc.g, lc.b); } }   // (a strong, rounded thigh, a neat knee or hock, a slender cannon and a rounded fetlock)
-      lgeo.setAttribute('color', new THREE.Float32BufferAttribute(lcol, 3)); lgeo.computeVertexNormals(); furred(lgeo, hip, 0.005, [0, -1, 0]);
+      lgeo.setAttribute('color', new THREE.Float32BufferAttribute(lcol, 3)); lgeo.computeVertexNormals(); furred(lgeo, hip, 0.017, [0, -1, 0], maneFur, 1.0);
       var fet = tuft(hip, V3(0, -0.203, front ? 0.007 : -0.005), 0.0165, 0.016, 0.0175, 0.017, [0, -1, 0.1], null, 1.5); fet.scale.set(1, 1.05, 1);   // (long, silky feathering round its fetlock, falling over its hoof)
       [-1, 1].forEach(function (s) { var hm = part(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), hoofMat, s * 0.0072, -0.24, front ? 0.01 : -0.006, 0.009, 0.028, 0.0145, hip, Math.PI, 0, 0); hm.castShadow = true; });   // (a pearly cloven hoof)
       var hglow = new THREE.Mesh(new THREE.TorusGeometry(0.017, 0.0012, 6, 30), gold); hglow.rotation.x = Math.PI / 2; hglow.position.set(0, -0.236, front ? 0.01 : -0.006); hip.add(hglow);   // (a fine gold ring above each hoof)
@@ -7078,7 +7096,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // a long, thin tail ending in a shaggy, starry tuft
     var tail = new THREE.Group(); tail.position.set(0, 0.05, -0.165); tail.rotation.x = -2.8; torso.add(tail);
     var tc = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0, 0.04, -0.01), V3(0, 0.09, -0.006), V3(0, 0.14, 0.01)]), tgm = new THREE.TubeGeometry(tc, 28, 0.0045, 10, false);
-    var tcols = []; for (var ti = 0; ti < tgm.attributes.position.count; ti++) tcols.push(coatCol0.r, coatCol0.g, coatCol0.b); tgm.setAttribute('color', new THREE.Float32BufferAttribute(tcols, 3)); furred(tgm, tail, 0.003, [0, 1, 0]);
+    var tcols = []; for (var ti = 0; ti < tgm.attributes.position.count; ti++) tcols.push(coatCol0.r, coatCol0.g, coatCol0.b); tgm.setAttribute('color', new THREE.Float32BufferAttribute(tcols, 3)); furred(tgm, tail, 0.012, [0, 1, 0], maneFur, 1.0);
     var tt = tuft(tail, V3(0, 0.162, 0.014), 0.0135, 0.034, 0.0135, 0.026, [0, 1, 0], null, 1.5);
     var tailStar = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); tailStar.scale.set(0.026, 0.026, 1); tailStar.position.set(0, 0.2, 0); tail.add(tailStar);
     // tiny stars drifting slowly up off its mane, and a soft night-sky glow
@@ -7090,7 +7108,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.78, 0); tag.renderOrder = 6; root.add(tag);
-    return { maneTwinkle: maneTwinkle, conStars: conStars, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { maneTwinkle: maneTwinkle, conStars: conStars, conMats: conMats, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready to milk, a shimmering drop of Nebula Milk floats softly over it
   function bisBuildExtras(g) {
@@ -7121,7 +7139,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.ears.forEach(function (e, k) { var fl = Math.max(0, Math.sin(t * 0.9 + k * 2.7 + g.stall) - 0.9) * 10; e.g.rotation.x = -0.2 + Math.sin(t * 20) * 0.15 * fl + (happy ? Math.sin(m.wig * 10 + k) * 0.25 : 0); });
     m.tail.rotation.z = Math.sin(t * (happy ? 6 : 1.4) + g.stall) * (happy ? 0.45 : 0.18) + Math.max(0, Math.sin(t * 0.7 + g.stall) - 0.85) * Math.sin(t * 14) * 1.2;   // (a lazy swish, and a flick now and then)
     m.maneTwinkle.forEach(function (s, k) { s.material.opacity = 0.15 + Math.pow(0.5 + 0.5 * Math.sin(t * 1.9 + k * 1.7), 4) * 0.6; });
-    m.conStars.forEach(function (s, k) { s.material.opacity = 0.3 + (0.5 + 0.5 * Math.sin(t * 1.1 - k * 0.6)) * 0.25 + (happy ? 0.3 : 0); });
+    m.conMats.forEach(function (mt) { mt.emissiveIntensity = (mt.isZFur ? 0.7 : 0.5) + Math.sin(t * 1.1 + g.stall) * 0.18 + (happy ? 0.45 : 0); });   // (its constellations breathe softly with light, and shine brighter when it's petted)
     m.glints.forEach(function (gl, k) { gl.material.opacity = 0.2 + Math.pow(0.5 + 0.5 * Math.sin(t * 1.5 + k * 2.1), 4) * 0.6; });
     m.tailStar.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.2;
     var bt = (t * 0.15 + g.stall * 0.41) % 1, blink = happy ? 0.6 : (bt < 0.05 ? Math.sin(bt / 0.05 * Math.PI) : 0);
