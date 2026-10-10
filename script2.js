@@ -4385,13 +4385,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.6; glimHeartBurst(g.x, 0.45, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= LUNA_DAYS ? ' A Moonpearl tomorrow morning!' : ' Day ' + day + ' of ' + LUNA_DAYS + ' done. Come back tomorrow!'), 2400);
   }
-  // ---------- Bubbletrot ----------
+  // ---------- Snorkling ----------
   // Round little sea spirits shaped a bit like a piglet (but not a pig): a chubby body in soft seafoam fur, deepening
   // to ocean teal over its back and dappled with pale bubble spots; a big round head with a soft coral snout; huge
   // ocean eyes with ripples in them; floppy ears of translucent fin, ribbed like a fish's, shimmering with rainbow;
   // frilly little fins on its cheeks; a scallop shell tucked behind one ear; little legs on pearly cloven hooves; a
   // springy corkscrew tail with a sprig of coral at its tip; and iridescent bubbles always drifting up off it. Feed
-  // one hay and pet it every day for three days in a row, and the next morning it blows you a Tidepearl: a
+  // one hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble: a
   // shimmering bubble with a pearl inside. Miss a day and the count starts over
   var BUBBLE_COST = 500, BUBBLE_DAYS = 3;
   var BUBBLE_PALS = [                                                 // a seafoam one, a lagoon one and a sunset-reef one
@@ -4414,7 +4414,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.customProgramCacheKey = function () { return 'bubblefilm'; };
     return m;
   }
-  // a Tidepearl: a shimmering bubble with a little pearl floating inside it
+  // a Wishbubble: a shimmering bubble with a little pearl floating inside it
   var pearlBubbleIcon = glimCanvas(96, 96, function (g, w, h) {
     var glow = g.createRadialGradient(48, 50, 4, 48, 50, 46); glow.addColorStop(0, 'rgba(150,240,230,0.55)'); glow.addColorStop(1, 'rgba(150,200,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
     var bg = g.createRadialGradient(48, 50, 18, 48, 50, 32); bg.addColorStop(0, 'rgba(220,250,255,0.15)'); bg.addColorStop(0.8, 'rgba(180,230,255,0.35)'); bg.addColorStop(1, 'rgba(255,255,255,0.8)');
@@ -4425,7 +4425,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(36, 34, 7, 4, -0.7, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#fff'; [[14, 24], [82, 30], [80, 80]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.pearlBubble = { name: 'Tidepearl', price: 300, icon: '🫧', img: pearlBubbleIcon, fill: 88, info: 'A shimmering bubble that never pops, with a little pearl floating inside it, blown by a happy Bubbletrot. Feed and pet yours every day for three days in a row, and it blows you one the next morning. Sells for a very good price at the shipping bin.' };
+  ITEMS.pearlBubble = { name: 'Wishbubble', price: 300, icon: '🫧', img: pearlBubbleIcon, fill: 88, info: 'A shimmering bubble that never pops, with a little pearl floating inside it, blown by a happy Snorkling. Feed and pet yours every day for three days in a row, and it blows you one the next morning. Sells for a very good price at the shipping bin.' };
   var bubbleShopIcon = glimCanvas(128, 128, function (g, w, h) {     // a little portrait of one, for the shop
     var sea = g.createRadialGradient(64, 64, 4, 64, 64, 64); sea.addColorStop(0, 'rgba(150,240,230,0.7)'); sea.addColorStop(1, 'rgba(150,200,255,0)'); g.fillStyle = sea; g.fillRect(0, 0, w, h);
     g.strokeStyle = '#d8fbf2'; g.lineWidth = 5; g.beginPath(); for (var a = 0; a < 12; a += 0.3) g.lineTo(16 + a * 0.6 + Math.cos(a) * 5, 74 - a * 1.4 + Math.sin(a) * 5); g.stroke();   // the corkscrew tail
@@ -4638,7 +4638,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.6, 0); tag.renderOrder = 6; root.add(tag);
     return { root: root, body: body, torso: torso, head: head, snout: snout, ears: ears, legs: legs, tail: tail, lids: lids, bubbles: bubbles, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
-  // when it's blown its Tidepearl, the bubble floats beside it, bobbing
+  // when it's blown its Wishbubble, the bubble floats beside it, bobbing
   function bubbleBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall], pal = BUBBLE_PALS[g.pal % BUBBLE_PALS.length];
     var pb = new THREE.Group(); abRoom.add(pb);
@@ -4649,9 +4649,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = pb; g.eggGlow = eg; g.pearlIn = pearl;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Bubbletrot'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Snorkling'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Bubbletrot: a bouncy little trot, ears flopping and tail springing; it snuffles about (its
+  // every frame, for a Snorkling: a bouncy little trot, ears flopping and tail springing; it snuffles about (its
   // snout wiggling), looks around and blinks; bubbles drift up off it; and when petted it wiggles happily, hopping,
   // blowing a stream of bubbles from its snout
   function bubbleAnimate(g, dt, t, moving) {
@@ -4687,15 +4687,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glow.material.opacity = 0.1 + pulse * 0.05;
     if (g.egg) { g.eggMesh.position.y = 0.2 + Math.sin(t * 1.6 + g.stall) * 0.025; g.eggMesh.rotation.y = t * 0.4; g.pearlIn.position.set(Math.sin(t * 1.3) * 0.006, Math.sin(t * 1.7) * 0.006, 0); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
-  function bubbletrotAction(g, wx, wz) {                             // taking its Tidepearl, feeding and petting a Bubbletrot
+  function snorklingAction(g, wx, wz) {                             // taking its Wishbubble, feeding and petting a Snorkling
     if (g.egg) {
       if (!roomFor(['pearlBubble'])) { bagFull(); return; }
       addItem('pearlBubble', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.4;
-      showToast(g.name + ' blows the Tidepearl gently into your hands! 🫧✨', 2400);
+      showToast(g.name + ' blows the Wishbubble gently into your hands! 🫧✨', 2400);
       return;
     }
     var day = Math.min(BUBBLE_DAYS, g.days + 1);
-    var news = day >= BUBBLE_DAYS ? ' A Tidepearl tomorrow morning!' : ' Day ' + day + ' of ' + BUBBLE_DAYS + ' toward a Tidepearl.';
+    var news = day >= BUBBLE_DAYS ? ' A Wishbubble tomorrow morning!' : ' Day ' + day + ' of ' + BUBBLE_DAYS + ' toward a Wishbubble.';
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
       g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
@@ -4710,7 +4710,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return;
     }
     g.pet = 1.6; glimHeartBurst(g.x, 0.45, g.z);
-    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BUBBLE_DAYS ? ' A Tidepearl tomorrow morning!' : ' Day ' + day + ' of ' + BUBBLE_DAYS + ' done. Come back tomorrow!'), 2400);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BUBBLE_DAYS ? ' A Wishbubble tomorrow morning!' : ' Day ' + day + ' of ' + BUBBLE_DAYS + ' done. Come back tomorrow!'), 2400);
   }
   // ---------- Holding what your animals give you ----------
   // Select one of their products in your hotbar and you hold it up in your hand, like the seeds and the hay: a
@@ -4858,7 +4858,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.day !== glimDay) {
       var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], pearl = [], missedPearl = [], pbub = [], missedBub = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra or Bubbletrot counts the days in a row it's been fed and petted
+        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra or Snorkling counts the days in a row it's been fed and petted
           var gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', need = gem ? GEM_DAYS : aur ? AURORA_DAYS : zep ? ZEPHYRA_DAYS : lun ? LUNA_DAYS : bub ? BUBBLE_DAYS : EMBER_DAYS;
           if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
           else { if (g.days) (gem ? missedGem : aur ? missedMilk : zep ? missedWool : lun ? missedPearl : bub ? missedBub : missed).push(g.name); g.days = 0; }
@@ -4874,7 +4874,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (quill.length) news.push(quill.join(' and ') + (quill.length > 1 ? ' each left' : ' left') + ' a Cinder Quill');
       if (wool.length) news.push(wool.join(' and ') + (wool.length > 1 ? ' have clouds' : ' has a cloud') + ' ready to shear');
       if (pearl.length) news.push(pearl.join(' and ') + (pearl.length > 1 ? ' each found' : ' found') + ' a Moonpearl');
-      if (pbub.length) news.push(pbub.join(' and ') + (pbub.length > 1 ? ' each blew' : ' blew') + ' a Tidepearl');
+      if (pbub.length) news.push(pbub.join(' and ') + (pbub.length > 1 ? ' each blew' : ' blew') + ' a Wishbubble');
       if (geode.length) news.push(geode.join(' and ') + (geode.length > 1 ? ' each laid' : ' laid') + ' a Geode Egg');
       if (missedGem.length) news.push(missedGem.join(' and ') + ' missed a day of care, so ' + (missedGem.length > 1 ? 'their egg counts start' : 'their egg count starts') + ' over');
       if (missedMilk.length) news.push(missedMilk.join(' and ') + ' missed a day of care, so ' + (missedMilk.length > 1 ? 'their milk counts start' : 'their milk count starts') + ' over');
@@ -4959,7 +4959,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'aurora') { auroraramAction(g, wx, wz); return; }
     if (g.kind === 'zephyra') { zephyraAction(g, wx, wz); return; }
     if (g.kind === 'luna') { lunastraAction(g, wx, wz); return; }
-    if (g.kind === 'bubble') { bubbletrotAction(g, wx, wz); return; }
+    if (g.kind === 'bubble') { snorklingAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
       addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
@@ -5042,7 +5042,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var glimBtnText = '';
   function updateGlimButton() {
     var g = glimmerInReach(), txt = '';
-    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Tidepearl' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
+    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Wishbubble' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
     if (txt !== glimBtnText) { glimBtnText = txt; if (txt) glimBtn.innerHTML = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <kbd>E</kbd>'; }
     var show = !!txt;
     if (glimBtn.classList.contains('show') !== show) glimBtn.classList.toggle('show', show);
@@ -5065,7 +5065,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Bubbletrot' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Snorkling' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -5076,7 +5076,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Tidepearl.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -5100,7 +5100,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
-      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Bubbletrots \u00b7 500 \u2605', 'blow a Tidepearl every 3 days', 'rgba(150,240,230,A)'],
+      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Snorklings \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'],
       ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 108 + k * 32, 19, an[2], false);
       chalk(an[1], w / 2 + 80, 123 + k * 32, 12, 'rgba(240,240,230,A)', true);
@@ -5623,7 +5623,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic luna-pic"></div><div class="shop-text"><b>Lunastra</b><span>A little plush spirit of the moonlit night, in soft moon-white fur that deepens into a starry sky over its back, with a night-sky mask full of glowing stars, huge galaxy eyes, tall ears tipped with starlight, a crescent moon on its brow, a big curling tail banded with stars and a tiny moon of its own orbiting round it. Feed it hay and pet it every day for two days in a row, and the next morning it leaves you a Moonpearl it found in the night. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + LUNA_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="luna-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bubble-pic"></div><div class="shop-text"><b>Bubbletrot</b><span>A chubby little sea spirit in soft seafoam fur dappled with bubble spots, with a coral snout, huge ocean eyes, floppy ears of shimmering fin, a scallop shell tucked behind one ear, pearly hooves and a corkscrew tail tipped with coral. Bubbles always drift up off it. Feed it hay and pet it every day for three days in a row, and the next morning it blows you a Tidepearl. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bubble-pic"></div><div class="shop-text"><b>Snorkling</b><span>A chubby little sea spirit in soft seafoam fur dappled with bubble spots, with a coral snout, huge ocean eyes, floppy ears of shimmering fin, a scallop shell tucked behind one ear, pearly hooves and a corkscrew tail tipped with coral. Bubbles always drift up off it. Feed it hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BUBBLE_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bubble-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic aurora-pic"></div><div class="shop-text"><b>Auroraram</b><span>A graceful creature with a long, silky night-blue coat that ripples with the colours of the northern lights, spiralling horns of clear ice, a silky beard and glowing hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Aurora Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
@@ -5734,7 +5734,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Bubbletrot)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Snorkling)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
