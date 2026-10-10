@@ -5604,7 +5604,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mouthMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back).multiplyScalar(0.45), roughness: 0.8 }), mpts = [];
     for (var mi = 0; mi <= 16; mi++) { var mt = mi / 16 * 2 - 1, mh = onHead(V3(mt * 0.012, -0.03 + mt * mt * 0.004, 0), V3(mt * 0.3, -0.3, 1)); mpts.push(mh.p.clone().addScaledVector(mh.n, 0.0016)); }
     head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(mpts), 40, 0.0007, 5, false), mouthMat));   // (a soft, natural mouth line)
-    var whiskMat2 = new THREE.MeshBasicMaterial({ color: 0xfffafc, transparent: true, opacity: 0.55 });
+    var whiskMat2 = new THREE.MeshBasicMaterial({ color: 0xfffafc, transparent: true, opacity: 0.55 }), phPts = [];
+    for (var ph = 0; ph <= 6; ph++) { var phh = onHead(V3(0, -0.017 - ph * 0.0018, 0), V3(0, -0.15, 1)); phPts.push(phh.p.clone().addScaledVector(phh.n, 0.0008)); }
+    head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(phPts), 10, 0.00045, 4, false), mouthMat));   // (a fine groove from nose to lip)
+    var padDot = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back).multiplyScalar(0.55), roughness: 0.8 });
+    [-1, 1].forEach(function (s) {
+      for (var wr = 0; wr < 3; wr++) for (var wc = 0; wc < 4; wc++) { var wd = onHead(V3(s * (0.008 + wc * 0.0042 + wr * 0.001), -0.015 - wr * 0.0032, 0.03), V3(s * 0.45, -0.05, 1)), dm = new THREE.Mesh(seg, padDot); dm.scale.setScalar(0.0006); dm.position.copy(wd.p).addScaledVector(wd.n, 0.0004); head.add(dm); }   // (whisker pads, the little dotted rows they grow from)
+      for (var bw = 0; bw < 2; bw++) { var bb = onHead(V3(s * (0.022 + bw * 0.008), 0.03, 0.02), V3(s * 0.45, 0.7, 0.55)), bpts = []; for (var bi = 0; bi <= 8; bi++) { var bt = bi / 8; bpts.push(bb.p.clone().add(V3(s * bt * 0.02, bt * 0.022 - bt * bt * 0.008, bt * 0.006 - bt * bt * 0.01))); } head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bpts), 10, 0.0003, 3, false), whiskMat2)); }   // (long brow whiskers above each eye)
+    });
     [-1, 1].forEach(function (s) { for (var wk = 0; wk < 5; wk++) { var wb = onHead(V3(s * 0.016, -0.018 + (wk % 3) * 0.003, 0.03), V3(s * 0.55, 0.02, 0.85)), wpts = []; for (var wi = 0; wi <= 8; wi++) { var wt = wi / 8; wpts.push(wb.p.clone().add(V3(s * wt * (0.045 + wk * 0.004), -wt * wt * 0.012 + (wk - 2) * wt * 0.006, -wt * 0.012))); } head.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(wpts), 12, 0.00035, 3, false), whiskMat2)); } });   // (fine, pale whiskers)
     // a small, soft nose with two tiny nostrils
     var noseP = onHead(V3(0, -0.012, 0.05), V3(0, 0.2, 1)), nose = new THREE.Group(); nose.position.copy(noseP.p).addScaledVector(noseP.n, 0.001); nose.lookAt(nose.position.clone().add(noseP.n)); head.add(nose);
@@ -5619,7 +5626,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var irisGeo = new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.05); irisGeo.rotateX(Math.PI / 2);
     (function () { var ps = irisGeo.attributes.position, uv = irisGeo.attributes.uv, k = 0.46 / Math.sin(1.05); for (var i = 0; i < ps.count; i++) uv.setXY(i, 0.5 + ps.getX(i) * k, 0.5 + ps.getY(i) * k); uv.needsUpdate = true; })();
     var lidMat = new THREE.MeshStandardMaterial({ color: pal.side, roughness: 0.85, side: THREE.DoubleSide }), lashMat = new THREE.MeshStandardMaterial({ color: 0x4a2a40, roughness: 0.6 }), lids = [];
-    var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42);
+    var lidGeo = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), rimMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.back).multiplyScalar(0.5), roughness: 0.7 }), caruncleMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(pal.gill[0]).lerp(new THREE.Color(0xffffff), 0.35), roughness: 0.4 });
     [-1, 1].forEach(function (s) {
       var es = onHead(V3(s * 0.028, 0.012, 0.02), V3(s * 0.55, 0.3, 0.78)), ey = new THREE.Group(); ey.position.copy(es.p).addScaledVector(es.n, -0.003); ey.lookAt(ey.position.clone().add(es.n)); head.add(ey);   // (set into the skin, looking out)
       var RX = 0.0135, RY = 0.0138, RZ = 0.0095;   // (gentle, natural-sized eyes)
@@ -5630,6 +5637,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }), 0.0004, 0.0075, RZ, 0.0011, 0.0011, 0.0008, ey);
       part(seg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }), 0.004, -0.0048, RZ * 0.98, 0.0016, 0.0012, 0.0008, ey);
       [0.35, 0.65, 0.95].forEach(function (a, nl) { var len = 0.006 - nl * 0.0008, lash = abPart(new THREE.ConeGeometry(0.0006, len, 5).translate(0, len / 2, 0), lashMat, s * Math.cos(a) * RX * 1.05, Math.sin(a) * RY * 1.05, RZ * 0.4, 0.35, 0, -s * (1.2 - a), ey); lash.castShadow = false; });
+      var rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.09, 6, 40), rimMat); rim.scale.set(RX * 1.05, RY * 1.05, RZ * 0.7); rim.position.z = RZ * 0.3; ey.add(rim);   // (a soft rim of darker skin round the eye)
+      var ic = new THREE.Mesh(seg, caruncleMat); ic.position.copy(ey.position).add(V3(-s * RX * 0.95, -RY * 0.25, -0.001)); ic.scale.set(0.0022, 0.0016, 0.0016); head.add(ic);   // (the pink inner corner)
       var lg = new THREE.Group(); ey.add(lg); lids.push(lg); lg.visible = false;
       abPart(lidGeo, lidMat, 0, 0, 0, 0, 0, 0, lg).scale.set(RX * 1.15, RY * 1.15, RZ * 1.3);
       var bl = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.018), new THREE.MeshBasicMaterial({ map: moonBlushTex, transparent: true, opacity: 0.14, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
@@ -5654,6 +5663,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cb0 = onHead(V3(s * 0.025, 0.045, 0.012), V3(s * 0.35, 1, 0.15)).p;
       var main = coralBranch([cb0.clone().add(V3(0, -0.004, 0)), cb0.clone().add(V3(s * 0.012, 0.03, -0.008)), cb0.clone().add(V3(s * 0.032, 0.058, -0.024)), cb0.clone().add(V3(s * 0.04, 0.082, -0.048))], 0.005);
       coralTip(main.getPointAt(1), 0.05);
+      for (var vr = 1; vr < 10; vr++) { var vu = vr / 10, vp = main.getPointAt(vu), vt = main.getTangentAt(vu), ring = new THREE.Mesh(new THREE.TorusGeometry(0.005 * (1 - vu * 0.55) * 1.04, 0.00055, 5, 18), coralMat); ring.position.copy(vp); ring.quaternion.setFromUnitVectors(V3(0, 0, 1), vt); head.add(ring); }   // (fine rings of velvet, like a young antler's)
       [0.18, 0.45, 0.68, 0.9].forEach(function (u, k) { var np = main.getPointAt(u), nb = new THREE.Mesh(new THREE.OctahedronGeometry(1, 1), coralMat); nb.scale.setScalar(0.0022 - k * 0.0003); nb.position.copy(np).add(V3(-s * 0.0035, 0.001, 0.002)); head.add(nb); });   // (little crystal buds along it)
       [[0.3, V3(s * 0.026, 0.016, 0.012)], [0.55, V3(-s * 0.006, 0.026, 0.008)], [0.78, V3(s * 0.022, 0.012, -0.004)]].forEach(function (b) { var bp = main.getPointAt(b[0]); coralBranch([bp, bp.clone().addScaledVector(b[1], 0.5).add(V3(0, 0.004, 0)), bp.clone().add(b[1])], 0.003); coralTip(bp.clone().add(b[1]), 0.03); });   // (branching like a little tree of light)
     });
@@ -5758,6 +5768,21 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ruffGeo = sdfShape(function (x, y, z) { var d = ell(x, y, z, 0, 0.0, 0, 0.055, 0.045, 0.034); return sm(d, ell(x, y, z, 0, -0.03, 0.01, 0.045, 0.035, 0.03), 0.02); }, [70, 46], 0.15, function (n, q, c) { c.copy(bellyCol).lerp(sideCol, ss(-0.2, 0.6, n.y) * 0.6); });
     var ruff = new THREE.Group(); ruff.position.set(0, 0.035, 0.085); ruff.rotation.x = -0.35; torso.add(ruff);
     abPart(ruffGeo, skinV, 0, 0, 0, 0, 0, 0, ruff); abPart(zFurShell(ruffGeo, 14, 0.011, [1, 1, 1], [0, -1, 0.5], 1.4), ruffFur, 0, 0, 0, 0, 0, 0, ruff).castShadow = false;
+    function tuft(parent, pos, rx, ry, rz, len, flow, col) {          // a soft tuft of longer fur
+      var tg = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, rx, ry, rz); }, [30, 20], Math.max(rx, ry, rz) * 1.5, function (n, q, c) { c.copy(col).multiplyScalar(0.96 + 0.06 * Math.sin(n.x * 20 + n.y * 13)); });
+      var tgp = new THREE.Group(); tgp.position.copy(pos); parent.add(tgp);
+      abPart(tg, skinV, 0, 0, 0, 0, 0, 0, tgp); abPart(zFurShell(tg, 14, len, [1, 1, 1], flow, 1.6), ruffFur, 0, 0, 0, 0, 0, 0, tgp).castShadow = false;
+    }
+    [-1, 1].forEach(function (s) {
+      var ch = onHead(V3(s * 0.045, -0.02, 0.005), V3(s, -0.3, 0.1)); tuft(head, ch.p.clone().addScaledVector(ch.n, -0.006), 0.014, 0.013, 0.016, 0.009, [s, -0.6, -0.5], sideCol.clone().lerp(bellyCol, 0.5));   // (fluffy cheeks)
+      var eb = onHead(V3(s * 0.045, 0.022, -0.015), V3(s, 0.35, -0.3)); tuft(head, eb.p.clone().addScaledVector(eb.n, -0.004), 0.01, 0.009, 0.01, 0.007, [s, 0.4, -0.6], sideCol);   // (soft fur where its ears grow)
+    });
+    var clawMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.nail).lerp(new THREE.Color(0xfff4f0), 0.6), roughness: 0.3, clearcoat: 0.6 });
+    legs.forEach(function (l) {
+      tuft(l.hip, V3(0, -0.04, -0.012), 0.01, 0.03, 0.008, 0.009, [0, -1, -0.7], sideCol.clone().lerp(bellyCol, 0.4));   // (soft feathering down the back of each leg)
+      [[-0.0095, 0.014], [-0.0033, 0.02], [0.0033, 0.02], [0.0095, 0.014]].forEach(function (b) { var cl = new THREE.Mesh(new THREE.ConeGeometry(0.0012, 0.0042, 6), clawMat); cl.position.set(b[0], -0.1535, b[1] + 0.0062); cl.rotation.x = Math.PI / 2 + 0.5; l.hip.add(cl); });   // (a tiny pale claw on each toe)
+    });
+    tuft(tail2, V3(0, 0, -0.1), 0.012, 0.013, 0.028, 0.012, [0, 0, -1], sideCol.clone().lerp(bellyCol, 0.3));   // (a fluffy tuft where its tail-veils begin)
     // pearly scales over the fronts of its lower legs, a pearl anklet round each, with a little moonstone charm
     var scaleMat = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.side).lerp(new THREE.Color(0xffffff), 0.12), roughness: 0.4, clearcoat: 0.5, emissive: pal.glow, emissiveIntensity: 0.04 }), pearl2 = new THREE.MeshPhysicalMaterial({ color: 0xfffaff, roughness: 0.1, clearcoat: 1, emissive: pal.glow, emissiveIntensity: 0.1 });
     legs.forEach(function (l) {
