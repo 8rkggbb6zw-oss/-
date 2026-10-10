@@ -6607,19 +6607,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     function budPetalTex(c0, c1, gold) {                              // a petal in fine detail: pale at its base flushing to colour, fine veins fanning from its base, soft streaks, a translucent edge rimmed in gold, and a shimmer
       return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
         var A = new THREE.Color(c0), B = new THREE.Color(c1), gr = g.createLinearGradient(0, h, 0, 0);
-        gr.addColorStop(0, tortCss(A.clone().lerp(new THREE.Color(1, 1, 1), 0.35))); gr.addColorStop(0.45, tortCss(A)); gr.addColorStop(0.85, tortCss(B)); gr.addColorStop(1, tortCss(B.clone().lerp(new THREE.Color(1, 1, 1), 0.25)));
+        gr.addColorStop(0, tortCss(skinCol.clone().multiplyScalar(1.04))); gr.addColorStop(0.22, tortCss(skinCol.clone().lerp(A, 0.45))); gr.addColorStop(0.5, tortCss(A)); gr.addColorStop(0.85, tortCss(B)); gr.addColorStop(1, tortCss(B.clone().lerp(new THREE.Color(1, 1, 1), 0.25)));   // (its coat colour at the base, flowing into the petal's own colour)
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
         for (var st = 0; st < 40; st++) { var sx = glimR(st * 3.3) * w; g.fillStyle = st % 2 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; g.fillRect(sx, 0, 2 + glimR(st) * 6, h); }   // (soft streaks along it)
         for (var vn = 0; vn < 34; vn++) { var tx = (vn + 0.5) / 34 * w; g.strokeStyle = 'rgba(255,255,255,' + (0.1 + glimR(vn * 2.7) * 0.12) + ')'; g.lineWidth = vn % 5 === 0 ? 1.4 : 0.7; g.beginPath(); g.moveTo(w / 2 + (tx - w / 2) * 0.15, h); g.bezierCurveTo(w / 2 + (tx - w / 2) * 0.5, h * 0.7, tx, h * 0.45, tx + (tx - w / 2) * 0.05, 0); g.stroke(); }   // (fine veins fanning up from its base)
         var mid = g.createLinearGradient(w / 2 - 10, 0, w / 2 + 10, 0); mid.addColorStop(0, 'rgba(255,255,255,0)'); mid.addColorStop(0.5, 'rgba(255,255,255,0.22)'); mid.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = mid; g.fillRect(w / 2 - 10, 0, 20, h);   // (a soft midrib)
         var eg = g.createLinearGradient(0, 0, w, 0); eg.addColorStop(0, gold ? 'rgba(255,220,150,0.45)' : 'rgba(255,255,255,0.3)'); eg.addColorStop(0.04, 'rgba(255,255,255,0.18)'); eg.addColorStop(0.12, 'rgba(255,255,255,0)'); eg.addColorStop(0.88, 'rgba(255,255,255,0)'); eg.addColorStop(0.96, 'rgba(255,255,255,0.18)'); eg.addColorStop(1, gold ? 'rgba(255,220,150,0.45)' : 'rgba(255,255,255,0.3)'); g.fillStyle = eg; g.fillRect(0, 0, w, h);   // (a translucent edge, rimmed in gold)
-        for (var bl = 0; bl < 30; bl++) { var bx = glimR(bl * 6.1) * w, by = glimR(bl * 3.9) * h, br = 20 + glimR(bl) * 50, bgr = g.createRadialGradient(bx, by, 0, bx, by, br); bgr.addColorStop(0, bl % 2 ? 'rgba(255,255,255,0.07)' : 'rgba(90,40,60,0.06)'); bgr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bgr; g.fillRect(bx - br, by - br, br * 2, br * 2); }   // (soft, uneven blotches of colour, as in a real petal)
-        var vg = g.createLinearGradient(0, 0, w, 0); vg.addColorStop(0, 'rgba(60,30,40,0.18)'); vg.addColorStop(0.2, 'rgba(0,0,0,0)'); vg.addColorStop(0.8, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,30,40,0.18)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);   // (a little deeper toward its edges)
+        for (var bl = 0; bl < 30; bl++) { var bx = glimR(bl * 6.1) * w, by = glimR(bl * 3.9) * h, br = 20 + glimR(bl) * 50, bgr = g.createRadialGradient(bx, by, 0, bx, by, br); bgr.addColorStop(0, bl % 2 ? 'rgba(255,255,255,0.06)' : 'rgba(90,40,60,0.03)'); bgr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bgr; g.fillRect(bx - br, by - br, br * 2, br * 2); }   // (soft, uneven blotches of colour, as in a real petal)
+        var vg = g.createLinearGradient(0, 0, w, 0); vg.addColorStop(0, 'rgba(60,30,40,0.08)'); vg.addColorStop(0.2, 'rgba(0,0,0,0)'); vg.addColorStop(0.8, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(60,30,40,0.08)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);   // (a little deeper toward its edges)
       }));
     }
     function sepalTex() {                                             // a sepal: deep green at its base, paler toward its tip, with a midrib, branching veins and fine hairs along its edges
       return new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
-        var G = new THREE.Color(pal.moss).lerp(new THREE.Color(0.3, 0.5, 0.22), 0.4), gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, tortCss(G.clone().multiplyScalar(0.62))); gr.addColorStop(0.6, tortCss(G)); gr.addColorStop(1, tortCss(G.clone().lerp(new THREE.Color(1, 1, 0.85), 0.3)));
+        var G = new THREE.Color(pal.moss).lerp(new THREE.Color(0.3, 0.5, 0.22), 0.4), gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, tortCss(skinCol)); gr.addColorStop(0.28, tortCss(skinCol.clone().lerp(G, 0.5))); gr.addColorStop(0.6, tortCss(G));   // (its coat colour at the base, turning green) gr.addColorStop(1, tortCss(G.clone().lerp(new THREE.Color(1, 1, 0.85), 0.3)));
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
         g.strokeStyle = 'rgba(230,255,200,0.45)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 0); g.stroke();
         g.lineWidth = 1.1; for (var vb = 1; vb < 14; vb++) { var vy = h - vb / 14 * h * 0.95; [-1, 1].forEach(function (s) { g.strokeStyle = 'rgba(230,255,200,0.3)'; g.beginPath(); g.moveTo(w / 2, vy); g.quadraticCurveTo(w / 2 + s * w * 0.2, vy - 14, w / 2 + s * w * 0.45, vy - 40); g.stroke(); }); }
@@ -6633,7 +6633,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     var sepalMat = new THREE.MeshStandardMaterial({ map: sepalTex(), side: THREE.DoubleSide, roughness: 0.7 });
     for (var ip = 0; ip < 8; ip++) wrapLeaf(ip / 8 * Math.PI * 2, Math.PI / 8 * 1.5, 2.05, 0.7, 0.0014, 0.0032, 0.011, innerPetal, petalSheen, true);   // (the inner ring, rising to the garden's rim)
     for (var op = 0; op < 8; op++) wrapLeaf((op + 0.5) / 8 * Math.PI * 2, Math.PI / 8 * 1.5, 2.15, 1.0, 0.0042, 0.004, 0.014, outerPetal, petalSheen, true);   // (the outer ring, overlapping them)
-    for (var sp = 0; sp < 6; sp++) wrapLeaf((sp + 0.25) / 6 * Math.PI * 2, Math.PI / 6 * 0.95, 2.4, 1.6, 0.0085, 0.004, 0.02, sepalMat);   // (green sepals clasping its base, growing out of its fur)
+    for (var sp = 0; sp < 6; sp++) {
+      var sm3 = wrapLeaf((sp + 0.25) / 6 * Math.PI * 2, Math.PI / 6 * 0.95, 2.4, 1.6, 0.0085, 0.004, 0.02, sepalMat);   // (green sepals clasping its base, growing out of its fur)
+      var sg3 = sm3.geometry, sc3 = [], suv = sg3.attributes.uv; for (var ci = 0; ci < suv.count; ci++) sc3.push(skinCol.r, skinCol.g, skinCol.b); sg3.setAttribute('color', new THREE.Float32BufferAttribute(sc3, 3));
+      var sf = zFurShell(sg3, 12, 0.0055, [1, 1, 1], [0, 1, 0], 1.4), sfp = sf.attributes.position, sfr = sf.attributes.furRoot, nv = suv.count;
+      for (var k = 0; k < sfp.count; k++) { var f = Math.pow(Math.max(0, 1 - suv.getY(k % nv) / 0.5), 1.5); sfp.setXYZ(k, sfr.getX(k) + (sfp.getX(k) - sfr.getX(k)) * f, sfr.getY(k) + (sfp.getY(k) - sfr.getY(k)) * f, sfr.getZ(k) + (sfp.getZ(k) - sfr.getZ(k)) * f); }   // (its fur growing up over the base of each sepal and thinning away)
+      var sfm = new THREE.Mesh(sf, coatFur); sfm.castShadow = false; shell.add(sfm);
+    }
     // its little garden: soft mounds of moss
     var mossCol = new THREE.Color(pal.moss).lerp(new THREE.Color(0.38, 0.55, 0.22), 0.6), mossFur = zFurMat(new THREE.Color(1.0, 1.0, 1.0), 6400, 0.12, true, 0.62, 0.04);   // (dense, fine and springy, shaded dark at the roots like real moss)
     [[0.0, 0.1, 0.034], [-0.5, -0.3, 0.028], [0.45, -0.4, 0.026], [0.55, 0.45, 0.022], [-0.5, 0.5, 0.024], [0.0, -0.75, 0.022], [-0.2, 0.9, 0.018], [0.25, 0.2, 0.02]].forEach(function (mm, k) {
