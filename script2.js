@@ -2978,7 +2978,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#fff'; [[16, 30], [80, 40], [78, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
   ITEMS.auroraMilk = { name: 'Aurora Milk', price: 260, icon: '🥛', img: auroraMilkIcon, fill: 88, info: 'Silky milk with the northern lights shimmering in it, from a happy Auroraram. Feed and pet yours every day for two days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
-  ITEMS.milkPail.info = 'For milking your Mooncalves, Auroraram and Nymphaelas. Keep it in your bag; it never wears out.';
+  ITEMS.milkPail.info = 'For milking your Mooncalves, Auroraram and Nymphelles. Keep it in your bag; it never wears out.';
   var auroraShopIcon = glimCanvas(128, 128, function (g, w, h) {      // a little portrait of one, for the shop
     var pal = AURORA_PALS[0];
     var sky = g.createRadialGradient(64, 60, 4, 64, 64, 64); sky.addColorStop(0, 'rgba(120,255,210,0.55)'); sky.addColorStop(1, 'rgba(120,180,255,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
@@ -5071,7 +5071,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.6; glimHeartBurst(g.x, 0.6, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= PRISM_DAYS ? ' Fleece ready tomorrow morning!' : ' Day ' + day + ' of ' + PRISM_DAYS + ' done. Come back tomorrow!'), 2400);
   }
-  // ---------- Nymphaela ----------
+  // ---------- Nymphelle ----------
   // Big, gentle creatures of the lily pond, shaped a little like a hippo (but not a hippo): a round, heavy barrel of a
   // body in soft, velvety plush, lilac over its back fading to pale mint underneath, dappled with softly glowing spots
   // like moonlight on pond water; lotus flowers blooming along its back on a bed of lily pads; a broad, gentle head
@@ -5098,7 +5098,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#5ac890'; g.fillRect(38, 6, 20, 9);                // the stopper, lily-pad green
     g.fillStyle = '#fff'; [[16, 30], [80, 40], [78, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.lotusMilk = { name: 'Moonlily Milk', price: 270, icon: '🥛', img: lotusMilkIcon, fill: 88, info: 'Pale, sweet milk with a blush of lotus pink in it, from a happy Nymphaela. Feed and pet yours every day for two days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
+  ITEMS.lotusMilk = { name: 'Moonlily Milk', price: 270, icon: '🥛', img: lotusMilkIcon, fill: 88, info: 'Pale, sweet milk with a blush of lotus pink in it, from a happy Nymphelle. Feed and pet yours every day for two days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
   var lotusShopIcon = glimCanvas(128, 128, function (g, w, h) {      // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 64, 4, 64, 64, 64); sky.addColorStop(0, 'rgba(200,255,230,0.7)'); sky.addColorStop(1, 'rgba(220,200,255,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#b8a0e8'; [[36, 104], [54, 106], [74, 106], [90, 104]].forEach(function (p) { g.fillRect(p[0] - 7, p[1] - 12, 14, 16); });   // short legs
@@ -5399,9 +5399,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = drop; g.eggGlow = eg;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Nymphaela'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Nymphelle'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Nymphaela: a slow, contented waddle; it looks about, wiggles its little ears and blinks slowly;
+  // every frame, for a Nymphelle: a slow, contented waddle; it looks about, wiggles its little ears and blinks slowly;
   // its lotuses sway; dewdrops rise and petals drift down round it; ripples spread beneath it; and when petted it
   // wiggles its whole round body happily, ears flapping, its lotuses opening wide
   function lotusAnimate(g, dt, t, moving) {
@@ -5446,7 +5446,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glow.material.opacity = 0.04 + pulse * 0.03;
     if (g.egg) { g.eggMesh.position.set(g.x, 0.8 + Math.sin(t * 2) * 0.04, g.z); g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
-  function lotaraAction(g, wx, wz) {                                 // milking, feeding and petting a Nymphaela
+  function lotaraAction(g, wx, wz) {                                 // milking, feeding and petting a Nymphelle
     if (g.egg) {
       if (!bag.some(function (b) { return b && b.id === 'milkPail'; })) { showToast(g.name + ' is ready to milk! You need a Milk Pail: buy one at the counter 🪣', 2800); return; }
       if (!roomFor(['lotusMilk'])) { bagFull(); return; }
@@ -5628,7 +5628,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.day !== glimDay) {
       var laid = [], milk = [], dew = [], quill = [], geode = [], missed = [], missedGem = [], missedMilk = [], wool = [], missedWool = [], pearl = [], missedPearl = [], pbub = [], missedBub = [], pwool = [], missedPw = [], gap = state.day - glimDay;
       if (state.day > glimDay) glimmers.forEach(function (g) {
-        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra, Sirenna, Prismara or Nymphaela counts the days in a row it's been fed and petted
+        if (g.kind === 'ember' || g.kind === 'gem' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus') {   // an Emberwing, Gemwren, Auroraram, Zephyra, Lunastra, Sirenna, Prismara or Nymphelle counts the days in a row it's been fed and petted
           var gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', pri = g.kind === 'prism', lot = g.kind === 'lotus', need = gem ? GEM_DAYS : aur ? AURORA_DAYS : zep ? ZEPHYRA_DAYS : lun ? LUNA_DAYS : bub ? BUBBLE_DAYS : pri ? PRISM_DAYS : lot ? LOTUS_DAYS : EMBER_DAYS;
           if (g.fed && g.petted && gap === 1) g.days = Math.min(need, g.days + 1);
           else { if (g.days) (gem ? missedGem : aur || lot ? missedMilk : zep ? missedWool : lun ? missedPearl : bub ? missedBub : pri ? missedPw : missed).push(g.name); g.days = 0; }
@@ -5843,7 +5843,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphaela' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphelle' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -5878,7 +5878,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
-      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphaelas \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
+      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphelles \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
       ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 104 + k * 26.5, 17, an[2], false);
       chalk(an[1], w / 2 + 80, 117 + k * 26.5, 10.5, 'rgba(240,240,230,A)', true);
@@ -6413,13 +6413,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic zephyra-pic"></div><div class="shop-text"><b>Zephyra</b><span>A little spirit of the gentle west wind, made of soft, billowing cloud blushed with the pinks and golds of sunrise, with tall ears, huge sparkly eyes, a glowing sun-gem, little feathered wings and a silk scarf streaming in the breeze. It floats just above the ground on cloud-puff feet. Feed it hay and pet it every day for four days in a row, and the next morning you can shear its cloud for Cloud Wool (you\'ll need Shears). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + ZEPHYRA_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="zephyra-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic lotus-pic"></div><div class="shop-text"><b>Nymphaela</b><span>A big, gentle creature of the lily pond, with a round body of soft lilac plush dappled with glowing pond-light spots, lotus flowers blooming on lily pads along its back, a wide soft muzzle, big sweet eyes and tiny wiggly ears. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Moonlily Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic lotus-pic"></div><div class="shop-text"><b>Nymphelle</b><span>A big, gentle creature of the lily pond, with a round body of soft lilac plush dappled with glowing pond-light spots, lotus flowers blooming on lily pads along its back, a wide soft muzzle, big sweet eyes and tiny wiggly ears. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Moonlily Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + LOTUS_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="lotus-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="moon-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic pail-pic"></div><div class="shop-text"><b>Milk Pail</b><span>You need one to milk your Mooncalves, Auroraram and Nymphaelas. It never wears out.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic pail-pic"></div><div class="shop-text"><b>Milk Pail</b><span>You need one to milk your Mooncalves, Auroraram and Nymphelles. It never wears out.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + PAIL_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="pail-buy">Buy</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic shears-pic"></div><div class="shop-text"><b>Shears</b><span>You need them to shear your Zephyras and Prismaras when their wool is ready. They never wear out.</span>' +
@@ -6530,7 +6530,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphaela)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphelle)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
