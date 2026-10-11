@@ -3449,24 +3449,46 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   // fur where two coats meet and mingle hair by hair, the way a real animal's do: every hair is either one of the
   // long hairs (its own colour, from the shape's colours) or one of the short ones (colour colB), chosen at random,
-  // more often long the more furMix.x is; furMix.y is how long the short hairs are, as a share of the long ones
-  function zFurMixMat(col, dens, crimp, rootShade, glow) {
+  // more often long the more furMix.x is; furMix.y is how long the short hairs are, as a share of the long ones.
+  // To look like real, soft fur, the hairs lie along the way it's combed (furDir), so from above they're fine soft
+  // strokes rather than dots; they gather into gentle locks toward their tips; their edges are soft, not cut out
+  // hard; and light catches along each hair in a silky sheen, as it does on a real coat
+  function zFurMixMat(col, dens, crimp, rootShade, glow, opt) {
+    opt = opt || {};
     var m = new THREE.MeshStandardMaterial({ color: col, roughness: 0.95, vertexColors: true });
+    m.alphaToCoverage = true; m.extensions = { derivatives: true };   // (soft hair edges, with the renderer's antialiasing)
     m.onBeforeCompile = function (sh) {
       sh.uniforms.uFurD = { value: dens }; sh.uniforms.uCrimp = { value: crimp || 0 }; sh.uniforms.uRoot = { value: rootShade || 0.82 }; sh.uniforms.uGlow = { value: glow || 0 };
-      sh.vertexShader = 'attribute float shellT;\nattribute vec3 furRoot;\nattribute vec3 colB;\nattribute vec2 furMix;\nvarying float vShellT;\nvarying vec3 vFurRoot;\nvarying vec3 vColB;\nvarying vec2 vFurMix;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vShellT = shellT; vFurRoot = furRoot; vColB = colB; vFurMix = furMix;');
-      sh.fragmentShader = 'uniform float uFurD, uCrimp, uRoot, uGlow;\nvarying float vShellT;\nvarying vec3 vFurRoot;\nvarying vec3 vColB;\nvarying vec2 vFurMix;\nvec3 zHash(vec3 p) { p = fract(p * vec3(0.1031, 0.1030, 0.0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx) * p.zyx); }\n' + sh.fragmentShader.replace('#include <alphatest_fragment>', [
-        '  vec3 fq = vFurRoot * uFurD + vec3(sin(vShellT * 11.0), cos(vShellT * 9.0), sin(vShellT * 7.0 + 1.0)) * uCrimp, fb = floor(fq - 0.5), fR = vec3(0.0); float fBest = 9.0;',
+      sh.uniforms.uClump = { value: opt.clump === undefined ? 0.4 : opt.clump }; sh.uniforms.uAniso = { value: opt.aniso || 2.4 }; sh.uniforms.uSheen = { value: opt.sheen === undefined ? 1 : opt.sheen };
+      sh.vertexShader = 'attribute float shellT;\nattribute vec3 furRoot;\nattribute vec3 colB;\nattribute vec2 furMix;\nattribute vec3 furDir;\nvarying float vShellT;\nvarying vec3 vFurRoot;\nvarying vec3 vColB;\nvarying vec2 vFurMix;\nvarying vec3 vFurD;\nvarying vec3 vFurT;\nvarying vec3 vObjN;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vShellT = shellT; vFurRoot = furRoot; vColB = colB; vFurMix = furMix; vFurD = furDir; vObjN = normal; vFurT = normalize((modelViewMatrix * vec4(furDir, 0.0)).xyz);');
+      sh.fragmentShader = 'uniform float uFurD, uCrimp, uRoot, uGlow, uClump, uAniso, uSheen;\nvarying float vShellT;\nvarying vec3 vFurRoot;\nvarying vec3 vColB;\nvarying vec2 vFurMix;\nvarying vec3 vFurD;\nvarying vec3 vFurT;\nvarying vec3 vObjN;\nvec3 zHash(vec3 p) { p = fract(p * vec3(0.1031, 0.1030, 0.0973)); p += dot(p, p.yxz + 33.33); return fract((p.xxy + p.yxx) * p.zyx); }\n' + sh.fragmentShader.replace('#include <alphatest_fragment>', [
+        '  vec3 fN = normalize(vObjN), fF = vFurD - fN * dot(vFurD, fN); float fFl = length(fF); fF = fFl > 1e-4 ? fF / fFl : vec3(0.0);',
+        '  vec3 q0 = vFurRoot * uFurD; q0 += fF * dot(q0, fF) * (1.0 / uAniso - 1.0);',   // (stretched along the way the fur lies, so each hair is a fine stroke)
+        '  vec3 cq = q0 / 6.0, cbs = floor(cq - 0.5), cC = vec3(0.0); float cBest = 9.0;',
+        '  for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) for (int k = 0; k < 2; k++) {',
+        '    vec3 fc = cbs + vec3(float(i), float(j), float(k)), cp = fc + 0.2 + zHash(fc + 17.0) * 0.6; float cd = length(cq - cp);',
+        '    if (cd < cBest) { cBest = cd; cC = cp; } }',
+        '  vec3 fq = q0 + (q0 - cC * 6.0) * uClump * vShellT + vec3(sin(vShellT * 11.0), cos(vShellT * 9.0), sin(vShellT * 7.0 + 1.0)) * uCrimp, fb = floor(fq - 0.5), fR = vec3(0.0); float fBest = 9.0;',   // (the hairs gathering into soft locks toward their tips)
         '  for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) for (int k = 0; k < 2; k++) {',
         '    vec3 fc = fb + vec3(float(i), float(j), float(k)), rr = zHash(fc); float fd = length(fq - fc - 0.2 - rr * 0.6);',
         '    if (fd < fBest) { fBest = fd; fR = rr; } }',
         '  float fPick = step(fR.z, vFurMix.x);',   // (is this one of the long hairs, or a short one?)
-        '  float fLen = (0.55 + 0.45 * fR.x) * mix(vFurMix.y, 1.0, fPick);',
-        '  if (vShellT > 0.1 && (vShellT > fLen || fBest > 0.86 * (1.0 - vShellT / fLen * 0.65))) discard;',
+        '  float fLod = smoothstep(0.3, 1.1, length(fwidth(fq)));',   // (how small the hairs are on screen: once they're finer than a pixel they fill in to a soft, smooth coat, as real fur does from a distance)
+        '  float fLen = mix(0.55 + 0.45 * fR.x, 0.62 + 0.3 * fR.x, fLod) * mix(vFurMix.y, 1.0, fPick);',
+        '  float fRad = mix(0.88 * (1.0 - vShellT / fLen * 0.7), 1.05 - vShellT / fLen * 0.35, fLod);',
+        '  float fA = vShellT > 0.1 ? (1.0 - smoothstep(fRad - 0.16, fRad + 0.05, fBest)) * (1.0 - smoothstep(fLen - 0.08, fLen, vShellT)) : 1.0;',   // (soft-edged, fine-tipped hairs)
+        '  if (fA < 0.04) discard;',
+        '  diffuseColor.a = fA;',
         '  diffuseColor.rgb = diffuse * mix(vColB, vColor, fPick);',
-        '  diffuseColor.rgb *= mix(uRoot, 1.03, smoothstep(0.0, 1.0, vShellT / fLen)) * (0.985 + 0.03 * fR.y);'].join('\n')).replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uGlow * (0.18 + 0.45 * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.2)) * (0.5 + vShellT);');
+        '  diffuseColor.rgb *= mix(uRoot, 1.06, smoothstep(0.0, 1.0, vShellT / fLen)) * (0.95 + 0.1 * fR.y);'].join('\n')).replace('#include <emissivemap_fragment>', [
+        '#include <emissivemap_fragment>',
+        '  totalEmissiveRadiance += diffuseColor.rgb * uGlow * (0.18 + 0.45 * pow(1.0 - abs(dot(normalize(vViewPosition), normal)), 2.2)) * (0.5 + vShellT);',
+        '  #if NUM_DIR_LIGHTS > 0',
+        '    vec3 kT = normalize(vFurT), kH = normalize(directionalLights[0].direction + normalize(vViewPosition)); float kA = dot(kT, kH), kB = dot(normalize(kT + normal * 0.3), kH);',
+        '    totalEmissiveRadiance += directionalLights[0].color * (pow(max(0.0, 1.0 - kA * kA), 40.0) * 0.12 + pow(max(0.0, 1.0 - kB * kB), 10.0) * 0.22 * diffuseColor.rgb) * smoothstep(0.1, 1.0, vShellT / fLen) * uSheen;',   // (a silky sheen along the hairs, and a softer one in their own colour)
+        '  #endif'].join('\n'));
     };
-    m.customProgramCacheKey = function () { return 'zfurmix'; };
+    m.customProgramCacheKey = function () { return 'zfurmix2'; };
     return m;
   }
   // set the two coats on a fur shell made by zFurShell: per point of the shape, the long hairs' colour, the short
@@ -3484,7 +3506,13 @@ EVERDAWN_PARTS.push(function (THREE) {
         C[i * 3] = o.a.r; C[i * 3 + 1] = o.a.g; C[i * 3 + 2] = o.a.b; B[i * 3] = o.b.r; B[i * 3 + 1] = o.b.g; B[i * 3 + 2] = o.b.b; M[i * 2] = o.mix; M[i * 2 + 1] = ratio;
       }
     }
-    shell.setAttribute('color', new THREE.BufferAttribute(C, 3)); shell.setAttribute('colB', new THREE.BufferAttribute(B, 3)); shell.setAttribute('furMix', new THREE.BufferAttribute(M, 2));
+    var D = new Float32Array(cnt * n * 3), na = geo.attributes.normal.array, d = new THREE.Vector3();
+    for (var v2 = 0; v2 < cnt; v2++) {
+      var t1 = ((n - 1) * cnt + v2) * 3, t0 = ((n - 2) * cnt + v2) * 3; d.set(P[t1] - P[t0], P[t1 + 1] - P[t0 + 1], P[t1 + 2] - P[t0 + 2]);   // (which way each hair runs, out at its tip)
+      if (d.lengthSq() < 1e-14) d.set(na[v2 * 3], na[v2 * 3 + 1], na[v2 * 3 + 2]); d.normalize();
+      for (var k2 = 0; k2 < n; k2++) { var j3 = (k2 * cnt + v2) * 3; D[j3] = d.x; D[j3 + 1] = d.y; D[j3 + 2] = d.z; }
+    }
+    shell.setAttribute('color', new THREE.BufferAttribute(C, 3)); shell.setAttribute('colB', new THREE.BufferAttribute(B, 3)); shell.setAttribute('furMix', new THREE.BufferAttribute(M, 2)); shell.setAttribute('furDir', new THREE.BufferAttribute(D, 3));
     shell.attributes.position.needsUpdate = true; return shell;
   }
   function zFurShell(geo, n, len, sc, flow, comb) {                   // the shells over a shape: sc is how it's stretched, len how long its hair, flow which way it lies
@@ -6965,13 +6993,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     var seg = new THREE.SphereGeometry(1, 40, 28);
     var coatCol0 = new THREE.Color(pal.coat), maneCol = new THREE.Color(pal.mane), bellyCol = new THREE.Color(pal.belly), muzCol = new THREE.Color(pal.muzzle);
     var skin = zSoftMat({ vertexColors: true, roughness: 1.0, color: 0xf6f2f2 }, 0.1, 0.4, 0);   // (soft skin with a velvety glow toward its edges, like minky plush)
-    var coatFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 2400, 0, true, 0.93, 0.55);   // (a deep, dense, soft pile all over, like a plush toy)
-    var maneFur = zFurMat(new THREE.Color(1.05, 1.05, 1.05), 2800, 0.04, true, 0.86, 0.45);   // (long, thick and silky soft)
-    var faceFur = zFurMat(new THREE.Color(1.06, 1.06, 1.06), 3000, 0, true, 0.94, 0.55);
+    var coatFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2600, 0.02, 0.8, 0.4);   // (a deep, dense, soft coat)
+    var maneFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2600, 0.04, 0.78, 0.4, { clump: 0.5 });   // (long, thick and silky soft, in gentle locks)
+    var faceFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 3200, 0.0, 0.84, 0.45, { clump: 0.25, aniso: 2.0 });
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
-    function furred(geo, parent, len, flow, fur, comb) { abPart(geo, skin, 0, 0, 0, 0, 0, 0, parent).castShadow = true; abPart(zFurShell(geo, 18, len, [1, 1, 1], flow, comb === undefined ? 1.3 : comb), fur || coatFur, 0, 0, 0, 0, 0, 0, parent).castShadow = false; }
+    function plushShell(geo, n, len, flow, comb) { var ca = geo.attributes.color.array; return zFurMix(zFurShell(geo, n, len, [1, 1, 1], flow, comb), geo, n, function (q, o, v) { o.a.setRGB(ca[v * 3], ca[v * 3 + 1], ca[v * 3 + 2]); o.b.copy(o.a); o.mix = 1; o.longLen = 1; o.shortLen = 1; }); }   // (a shell of soft fur, all one length, in the shape's own colours)
+    function furred(geo, parent, len, flow, fur, comb) { abPart(geo, skin, 0, 0, 0, 0, 0, 0, parent).castShadow = true; abPart(plushShell(geo, 18, len, flow, comb === undefined ? 1.3 : comb), fur || coatFur, 0, 0, 0, 0, 0, 0, parent).castShadow = false; }
     function tubeSeam(geo, segs, rad) { var nm = geo.attributes.normal, t = new THREE.Vector3(); for (var k = 0; k <= segs; k++) { var a = k * (rad + 1), b = a + rad; t.set(nm.getX(a) + nm.getX(b), nm.getY(a) + nm.getY(b), nm.getZ(a) + nm.getZ(b)).normalize(); nm.setXYZ(a, t.x, t.y, t.z); nm.setXYZ(b, t.x, t.y, t.z); } nm.needsUpdate = true; }   // (so a tube's fur has no line down its side where it closes)
-    var legFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2800, 0.04, 0.86, 0.45);
+    var legFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2600, 0.03, 0.8, 0.4);
     function withUv(shell, geo, n) { var u0 = geo.attributes.uv.array, u2 = new Float32Array(u0.length * n); for (var k = 0; k < n; k++) u2.set(u0, k * u0.length); shell.setAttribute('uv', new THREE.BufferAttribute(u2, 2)); return shell; }   // (so a map painted over a shape reaches every hair)
     function ss(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
     function sm(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }
@@ -7035,7 +7064,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var conTex = new THREE.CanvasTexture(conCv); conTex.anisotropy = 4;
     var conCol = new THREE.Color(pal.star).lerp(new THREE.Color(pal.glow), 0.35);
     var bodySkin = zSoftMat({ vertexColors: true, roughness: 1.0, color: 0xf6f2f2, emissive: conCol, emissiveMap: conTex, emissiveIntensity: 0.5 }, 0.1, 0.4, 0);
-    var bodyFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2800, 0.04, 0.86, 0.45); bodyFur.emissive = conCol.clone(); bodyFur.emissiveMap = conTex; bodyFur.emissiveIntensity = 0.7;
+    var bodyFur = zFurMixMat(new THREE.Color(1.05, 1.05, 1.05), 2600, 0.04, 0.78, 0.4, { clump: 0.45 }); bodyFur.emissive = conCol.clone(); bodyFur.emissiveMap = conTex; bodyFur.emissiveIntensity = 0.7;
     abPart(bodyGeo, bodySkin, 0, 0, 0, 0, 0, 0, torso).castShadow = true;
     bodyFur.isZFur = true; var conMats = [bodySkin, bodyFur];
     // its great shaggy mane: long, thick and wavy over its hump, shoulders, neck and chest, fading softly into the
@@ -7066,7 +7095,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function faceAt(q, n, c) { c.copy(coatCol0).lerp(muzCol.clone().lerp(coatCol0, 0.35), ss(0.04, 0.075, q.z) * ss(0.0, -0.02, q.y)); grain(n, c); return c; }
     function headP(q) { return Math.min(1, ss(0.012, -0.05, q.z + 0.007 * Math.sin(q.y * 300 + q.x * 120)) + ss(0.022, 0.052, q.y) * ss(0.024, -0.012, q.z)) * 0.95; }   // (its mane growing up over the back and crown of its head, so its face sits softly in its mane)
     abPart(headGeo, skin, 0, 0, 0, 0, 0, 0, head).castShadow = true;
-    var hdn = new THREE.Vector3(); abPart(zFurMix(zFurShell(headGeo, 22, 0.022, [1, 1, 1], [0, 0.25, -1], 1.2), headGeo, 22, function (q, o) { hdn.copy(q).normalize(); nebCol(q, hdn, o.a); faceAt(q, hdn, o.b); o.mix = headP(q); o.longLen = 1; o.shortLen = 0.27; }), zFurMixMat(new THREE.Color(1.06, 1.06, 1.06), 3000, 0.02, 0.92, 0.5), 0, 0, 0, 0, 0, 0, head).castShadow = false;   // (short, soft plush over its face, with long mane hairs mingling in toward the back of its head)
+    var hdn = new THREE.Vector3(); abPart(zFurMix(zFurShell(headGeo, 22, 0.022, [1, 1, 1], [0, 0.25, -1], 1.2), headGeo, 22, function (q, o) { hdn.copy(q).normalize(); nebCol(q, hdn, o.a); faceAt(q, hdn, o.b); o.mix = headP(q); o.longLen = 1; o.shortLen = 0.27; }), faceFur, 0, 0, 0, 0, 0, 0, head).castShadow = false;   // (short, soft plush over its face, with long mane hairs mingling in toward the back of its head)
     var hRay = new THREE.Raycaster(), hMesh = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); hMesh.updateMatrixWorld(true);
     function onHead(from, dir) { hRay.set(from, dir.clone().normalize()); var h = hRay.intersectObject(hMesh); h = h[h.length - 1] || h[0]; return h ? { p: h.point.clone(), n: h.face.normal.clone().normalize() } : { p: from.clone(), n: dir.clone().normalize() }; }
     // a wide, velvety nose with big soft nostrils, and a gentle mouth
@@ -7126,7 +7155,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function tuft(parent, pos, rx, ry, rz, len, flow, col, comb, fur) {   // a soft tuft of long fur: nebula-coloured unless given a colour
       var tg = sdfShape(function (x, y, z) { return ell(x, y, z, 0, 0, 0, rx, ry, rz); }, [44, 32], Math.max(rx, ry, rz) * 1.5, function (n, q, c) { if (col) c.copy(col).multiplyScalar(0.92 + 0.14 * glimR(Math.floor(q.x * 900) * 3.1 + Math.floor(q.y * 900) * 7.3)); else nebCol(V3(q.x + pos.x, q.y + pos.y, q.z + pos.z), n, c); });
       var grp = new THREE.Group(); grp.position.copy(pos); parent.add(grp);
-      abPart(tg, skin, 0, 0, 0, 0, 0, 0, grp); abPart(zFurShell(tg, 20, len, [1, 1, 1], flow, comb || 0.8), fur || maneFur, 0, 0, 0, 0, 0, 0, grp).castShadow = false; return grp;
+      abPart(tg, skin, 0, 0, 0, 0, 0, 0, grp); abPart(plushShell(tg, 20, len, flow, comb || 0.8), fur || maneFur, 0, 0, 0, 0, 0, 0, grp).castShadow = false; return grp;
     }
     tuft(head, onHead(V3(0, 0.03, 0.0), V3(0, 1, 0.3)).p.add(V3(0, -0.004, -0.004)), 0.027, 0.013, 0.028, 0.022, [0, -0.2, 1], null, 1.3);   // (a shaggy forelock, tumbling forward)
     [-1, 1].forEach(function (s) { tuft(head, onHead(V3(s * 0.035, -0.014, -0.004), V3(s, -0.25, -0.3)).p.add(V3(-s * 0.004, 0, 0)), 0.016, 0.022, 0.022, 0.015, [s * 0.3, -0.4, -1], coatCol0.clone().lerp(maneCol.clone().lerp(new THREE.Color(pal.neb), 0.4), 0.22), 0.9, faceFur); });   // (soft fluffy cheeks, brushed back)
