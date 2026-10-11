@@ -2419,8 +2419,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (her bangs, as in your picture: one big, smooth, rounded fringe in a soft muted brown, its edge a single gentle
       // curve that just covers the top of one eye and rounds up at the other end into a gap, beyond which a separate lock
       // falls past her eye to her cheek; marked only by a few fine strands that follow its roundness)
-      var bg = g.createLinearGradient(0, Y(42), 0, Y(-12)); bg.addColorStop(0, 'rgba(110,70,58,0)'); bg.addColorStop(0.2, '#7a4c40'); bg.addColorStop(0.7, '#6c4236'); bg.addColorStop(1, '#58342a');
-      g.fillStyle = bg; g.fillRect(X(-62), Y(42), X(62) - X(-62), Y(-62) - Y(42));
+      var bg = g.createLinearGradient(0, Y(52), 0, Y(-12)); bg.addColorStop(0, 'rgba(90,58,40,0)'); bg.addColorStop(0.35, 'rgba(98,64,44,0.7)'); bg.addColorStop(0.6, 'rgba(92,60,40,0.85)'); bg.addColorStop(1, 'rgba(74,46,30,0.9)');   // (the same warm brown as the rest of her hair, fading in softly from her crown)
+      g.fillStyle = bg; g.fillRect(X(-62), Y(52), X(62) - X(-62), Y(-62) - Y(52));
+      for (var fs = 0; fs < 500; fs++) { var fx = -62 + ((fs * 0.618034) % 1) * 124, fc = ((fs * 13) % 17) - 8; g.strokeStyle = TN[(fs * 5) % TN.length]; g.globalAlpha = 0.12 + ((fs * 11) % 9) / 50; g.lineWidth = 0.8 + ((fs * 3) % 4) * 0.5;   // (and the same fine strands running through it)
+        g.beginPath(); g.moveTo(X(fx + 4), Y(50)); g.quadraticCurveTo(X(fx + fc * 0.2), Y(10), X(fx - 1), Y(-62)); g.stroke(); }
+      g.globalAlpha = 1;
       g.lineCap = 'round';
       [[-33, 30, -6, 1], [-25, 34, -3, 0], [-19, 26, 2, 1], [-12, 33, -2, 0], [-4, 28, 3, 1], [3, 34, -1, 0], [9, 27, 4, 1], [14, 31, 3, 0]].forEach(function (s) {   // (a few fine strands, curving with its roundness: some dark, some faintly warm)
         var bx = s[0], top = s[1], end = s[2], dk = s[3] === 0, sx = bx * 0.8 + 4;
