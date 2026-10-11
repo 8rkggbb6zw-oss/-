@@ -7020,7 +7020,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function bodySdf(x, y, z) {
       var d = ell(x, y, z, 0, 0.006, -0.02, 0.066, 0.064, 0.13);              // (its barrel, tucked up under the waist)
       d = sm(d, ell(x, y, z, 0, 0.02, 0.058, 0.084, 0.096, 0.086), 0.045);    // (a deep chest)
-      d = sm(d, ell(x, y, z, 0, 0.09, 0.036, 0.058, 0.066, 0.09), 0.05);      // (the high hump)
+      d = sm(d, ell(x, y, z, 0, 0.068, 0.04, 0.054, 0.05, 0.082), 0.05);     // (a gentle rise over its shoulders)
       d = sm(d, ell(x, y, z, 0, 0.014, -0.1, 0.07, 0.074, 0.07), 0.04);       // (a full, round rump)
       d = sm(d, ell(x, y, z, 0, 0.02, 0.145, 0.056, 0.068, 0.062), 0.04);     // (its neck)
       return d;
@@ -7072,7 +7072,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mdn = new THREE.Vector3(), maneShell = zFurMix(withUv(zFurShell(bodyGeo, 34, 0.044, [1, 1, 1], [0, -0.75, -0.65], 0.95), bodyGeo, 34), bodyGeo, 34, function (q, o) {
       mdn.copy(q).normalize(); var rnd = 0.85 + 0.3 * glimR(Math.floor(q.x * 300) * 5.1 + Math.floor(q.y * 300) * 2.7 + Math.floor(q.z * 300) * 1.3);
       nebCol(q, mdn, o.a); coatAt(q, mdn, o.b); o.mix = maneP(q);
-      o.longLen = (0.6 + 0.5 * ss(-0.08, 0.1, q.y)) * rnd * (0.7 + 0.3 * ss(-0.1, 0.03, maneB(q))); o.shortLen = 0.58 * rnd;   // (long, soft fur over all of it: its mane hairs longest and shaggiest over its hump and chest, its coat a little shorter and smoother)
+      o.longLen = (0.62 + 0.3 * ss(-0.08, 0.1, q.y)) * rnd * (0.7 + 0.3 * ss(-0.1, 0.03, maneB(q))); o.shortLen = 0.58 * rnd;   // (long, soft fur over all of it: its mane hairs longest and shaggiest over its hump and chest, its coat a little shorter and smoother)
     });
     abPart(maneShell, bodyFur, 0, 0, 0, 0, 0, 0, torso).castShadow = false;
     var ray = new THREE.Raycaster(), bodyMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bodyMesh.updateMatrixWorld(true);
@@ -7189,6 +7189,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tcols = []; for (var ti = 0; ti < tgm.attributes.position.count; ti++) tcols.push(coatCol0.r, coatCol0.g, coatCol0.b); tgm.setAttribute('color', new THREE.Float32BufferAttribute(tcols, 3)); tubeSeam(tgm, 28, 10); furred(tgm, tail, 0.012, [0, 1, 0], maneFur, 1.0);
     var tt = tuft(tail, V3(0, 0.162, 0.014), 0.0135, 0.034, 0.0135, 0.026, [0, 1, 0], null, 1.5);
     var tailStar = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: pal.star, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); tailStar.scale.set(0.026, 0.026, 1); tailStar.position.set(0, 0.2, 0); tail.add(tailStar);
+    // a little crescent moon floating over its back, glowing softly, with a ring of tiny stars circling it
+    var moonGrp = new THREE.Group(); moonGrp.position.set(0, 0.25, 0.0); torso.add(moonGrp);
+    var mcg = new THREE.TorusGeometry(0.026, 0.0075, 12, 48, Math.PI * 1.2), mcp = mcg.attributes.position;
+    for (var mci = 0; mci < mcp.count; mci++) { var mca = Math.atan2(mcp.getY(mci), mcp.getX(mci)); if (mca < -0.2) mca += Math.PI * 2; var mcu = Math.max(0, Math.min(1, mca / (Math.PI * 1.2))), mcr = Math.pow(Math.sin(mcu * Math.PI), 0.8) * 0.92 + 0.08, mcx = 0.026 * Math.cos(mca), mcy = 0.026 * Math.sin(mca); mcp.setXYZ(mci, mcx + (mcp.getX(mci) - mcx) * mcr, mcy + (mcp.getY(mci) - mcy) * mcr, mcp.getZ(mci) * mcr); }   // (fine at its tips, full in the middle)
+    mcg.computeVertexNormals();
+    var moonMesh = new THREE.Mesh(mcg, new THREE.MeshStandardMaterial({ color: 0xfff6dc, emissive: new THREE.Color(0xffe6a8).lerp(new THREE.Color(pal.star), 0.3), emissiveIntensity: 0.85, roughness: 0.4, metalness: 0.1 })); moonMesh.rotation.z = Math.PI * 0.4; var moonFace = new THREE.Group(); moonFace.add(moonMesh); moonGrp.add(moonFace);   // (it always turns its face to you)
+    var moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffe8b0, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); moonGlow.scale.set(0.16, 0.16, 1); moonGrp.add(moonGlow);
+    var orbit = []; for (var ok = 0; ok < 7; ok++) { var osp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: ok % 2 ? pal.star : pal.glow, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); osp.scale.setScalar(ok % 3 ? 0.016 : 0.024); moonGrp.add(osp); orbit.push({ s: osp, a: ok / 7 * Math.PI * 2, r: 0.05 + (ok % 2) * 0.008 }); }
+    // glowing ribbons of nebula streaming softly up and back from its mane, like little auroras
+    var ribTex = new THREE.CanvasTexture(glimCanvas(64, 256, function (g, w, h) {
+      var cols = [bisCss(pal.neb, 1), bisCss(pal.glow, 1), bisCss(pal.neb2, 1)], lg = g.createLinearGradient(0, 0, 0, h); lg.addColorStop(0, cols[0]); lg.addColorStop(0.5, cols[1]); lg.addColorStop(1, cols[2]); g.fillStyle = lg; g.fillRect(0, 0, w, h);
+      g.globalCompositeOperation = 'destination-in'; var fx = g.createLinearGradient(0, 0, w, 0); fx.addColorStop(0, 'rgba(0,0,0,0)'); fx.addColorStop(0.5, 'rgba(0,0,0,1)'); fx.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = fx; g.fillRect(0, 0, w, h);
+      var fy = g.createLinearGradient(0, 0, 0, h); fy.addColorStop(0, 'rgba(0,0,0,0)'); fy.addColorStop(0.2, 'rgba(0,0,0,1)'); fy.addColorStop(0.75, 'rgba(0,0,0,0.8)'); fy.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = fy; g.fillRect(0, 0, w, h);
+    }));
+    var ribbons = [];
+    [[-0.03, 0.04, -0.4, 0.0], [0.03, 0.01, -0.55, 2.1], [0.0, -0.035, -0.7, 4.2]].forEach(function (rb) {
+      var rg = new THREE.PlaneGeometry(0.07, 0.3, 1, 30); rg.translate(0, 0.15, 0);
+      var rm = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: ribTex, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }));
+      rm.position.set(rb[0], 0.095, rb[1]); rm.rotation.set(rb[2], rb[0] * 6, 0); rm.renderOrder = 3; torso.add(rm);
+      ribbons.push({ m: rm, base: Float32Array.from(rg.attributes.position.array), ph: rb[3] });
+    });
+    // tiny lights circling the tips of its horns
+    var hornLights = []; [glints[0], glints[1]].forEach(function (gl, k) { for (var hl = 0; hl < 3; hl++) { var hsp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: hl % 2 ? pal.star : pal.glow, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); hsp.scale.setScalar(0.011); head.add(hsp); hornLights.push({ s: hsp, c: gl.position.clone(), a: hl / 3 * Math.PI * 2 + k, sp: k ? -1.6 : 1.6 }); } });
     // tiny stars drifting slowly up off its mane, and a soft night-sky glow
     var motes = [];
     for (var mo = 0; mo < 12; mo++) { var msp2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: mo % 3 ? glimSparkTex : dawnGlowTex, color: mo % 2 ? pal.star : pal.glow, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); msp2.scale.set(0.016, 0.016, 1); root.add(msp2); motes.push({ s: msp2, t: glimR(mo * 3.7), a: glimR(mo * 5.3) * Math.PI * 2, r: 0.04 + glimR(mo * 7.9) * 0.1 }); }
@@ -7198,7 +7221,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tagCv = glimCanvas(256, 96, function () {}), tagTex = new THREE.CanvasTexture(tagCv);
     var tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthWrite: false }));
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.78, 0); tag.renderOrder = 6; root.add(tag);
-    return { maneTwinkle: maneTwinkle, conStars: conStars, conMats: conMats, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
+    return { moonFace: moonFace, moonGrp: moonGrp, moonGlow: moonGlow, orbit: orbit, ribbons: ribbons, hornLights: hornLights, maneTwinkle: maneTwinkle, conStars: conStars, conMats: conMats, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
   // when it's ready to milk, a shimmering drop of Nebula Milk floats softly over it
   function bisBuildExtras(g) {
@@ -7239,6 +7262,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       o.s.position.set(Math.cos(o.a + o.t) * o.r, 0.46 + o.t * 0.35, 0.04 + Math.sin(o.a + o.t) * o.r); o.s.material.opacity = Math.sin(o.t * Math.PI) * 0.6;
     });
     m.glow.material.opacity = 0.02 + (0.5 + Math.sin(t * 1.0 + g.stall) * 0.5) * 0.015;
+    m.moonGrp.position.y = 0.25 + Math.sin(t * 1.2 + g.stall) * 0.012 + (happy ? Math.abs(Math.sin(m.wig * 5)) * 0.02 : 0); m.moonFace.lookAt(camera.position); m.moonFace.children[0].rotation.z = Math.PI * 0.4 + Math.sin(t * 0.7 + g.stall) * 0.15;   // (its little moon bobs gently, rocking a little, and bounces when it's happy)
+    m.moonGlow.material.opacity = 0.45 + Math.sin(t * 1.6 + g.stall) * 0.12 + (happy ? 0.2 : 0);
+    m.orbit.forEach(function (o, k) { var a = o.a + t * (happy ? 1.6 : 0.7); o.s.position.set(Math.cos(a) * o.r, Math.sin(a * 2 + k) * 0.008, Math.sin(a) * o.r); o.s.material.opacity = 0.45 + Math.pow(0.5 + 0.5 * Math.sin(t * 3 + k * 1.9), 3) * 0.5; });
+    m.ribbons.forEach(function (rb) { var pa = rb.m.geometry.attributes.position, b = rb.base; for (var i = 0; i < pa.count; i++) { var y = b[i * 3 + 1], f = y / 0.3; pa.setXYZ(i, b[i * 3] + Math.sin(t * 1.3 + y * 18 + rb.ph) * 0.03 * f, y, b[i * 3 + 2] + Math.cos(t * 0.9 + y * 14 + rb.ph) * 0.03 * f * f); } pa.needsUpdate = true; rb.m.material.opacity = 0.55 + Math.sin(t * 0.8 + rb.ph) * 0.12 + (happy ? 0.15 : 0); });   // (its ribbons of nebula drift and ripple like slow auroras)
+    m.hornLights.forEach(function (h) { var a = h.a + t * h.sp; h.s.position.set(h.c.x + Math.cos(a) * 0.014, h.c.y + Math.sin(a * 1.5) * 0.006, h.c.z + Math.sin(a) * 0.014); h.s.material.opacity = 0.4 + Math.pow(0.5 + 0.5 * Math.sin(t * 4 + h.a * 3), 2) * 0.5; });
     if (g.egg) { g.eggMesh.position.set(g.x, 0.85 + Math.sin(t * 2) * 0.03, g.z); g.eggMesh.rotation.y = t * 0.8; g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
   function nocturraAction(g, wx, wz) {                               // milking, feeding and petting a Nocturra
