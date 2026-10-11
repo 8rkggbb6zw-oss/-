@@ -2414,27 +2414,31 @@ EVERDAWN_PARTS.push(function (THREE) {
       function X(l) { return 256 + l * 1024 / 360; } function Y(p) { return 256 - p * 512 / 180; }
       g.fillStyle = '#5a3a28'; g.fillRect(0, 0, 1024, 512);
       var TN = ['#3a2216', '#4a2c1c', '#5e3a28', '#6e4630', '#8a5c3e', '#a2704e']; for (var sk = 0; sk < 900; sk++) { var x = (sk * 7.31) % 1024, cv = ((sk * 13) % 17) - 8; g.strokeStyle = TN[(sk * 5) % TN.length]; g.globalAlpha = 0.3 + ((sk * 11) % 9) / 20; g.lineWidth = 0.8 + ((sk * 3) % 4) * 0.5; [-1024, 0, 1024].forEach(function (o) { g.beginPath(); g.moveTo(x + o, 0); g.quadraticCurveTo(x + o + cv, 256, x + o - cv * 0.6, 512); g.stroke(); }); } g.globalAlpha = 1;   // (fine natural strands, wrapping round without a seam)
-      var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.7)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
+      var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.3)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
       // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
       // (her bangs, as in your picture: one big, smooth, rounded fringe in a soft muted brown, its edge a single gentle
       // curve that just covers the top of one eye and rounds up at the other end into a gap, beyond which a separate lock
       // falls past her eye to her cheek; marked only by a few fine strands that follow its roundness)
       var bg = g.createLinearGradient(0, Y(52), 0, Y(-12)); bg.addColorStop(0, 'rgba(90,58,40,0)'); bg.addColorStop(0.35, 'rgba(98,64,44,0.7)'); bg.addColorStop(0.6, 'rgba(92,60,40,0.85)'); bg.addColorStop(1, 'rgba(74,46,30,0.9)');   // (the same warm brown as the rest of her hair, fading in softly from her crown)
       g.fillStyle = bg; g.fillRect(X(-62), Y(52), X(62) - X(-62), Y(-62) - Y(52));
-      for (var fs = 0; fs < 500; fs++) { var fx = -62 + ((fs * 0.618034) % 1) * 124, fc = ((fs * 13) % 17) - 8; g.strokeStyle = TN[(fs * 5) % TN.length]; g.globalAlpha = 0.12 + ((fs * 11) % 9) / 50; g.lineWidth = 0.8 + ((fs * 3) % 4) * 0.5;   // (and the same fine strands running through it)
+      for (var fs = 0; fs < 500; fs++) { var fx = -62 + ((fs * 0.618034) % 1) * 124, fc = ((fs * 13) % 17) - 8; g.strokeStyle = TN[(fs * 5) % 4]; g.globalAlpha = 0.12 + ((fs * 11) % 9) / 50; g.lineWidth = 0.8 + ((fs * 3) % 4) * 0.5;   // (and the same fine strands running through it)
         g.beginPath(); g.moveTo(X(fx + 4), Y(50)); g.quadraticCurveTo(X(fx + fc * 0.2), Y(10), X(fx - 1), Y(-62)); g.stroke(); }
       g.globalAlpha = 1;
       g.lineCap = 'round';
       [[-33, 30, -6, 1], [-25, 34, -3, 0], [-19, 26, 2, 1], [-12, 33, -2, 0], [-4, 28, 3, 1], [3, 34, -1, 0], [9, 27, 4, 1], [14, 31, 3, 0]].forEach(function (s) {   // (a few fine strands, curving with its roundness: some dark, some faintly warm)
         var bx = s[0], top = s[1], end = s[2], dk = s[3] === 0, sx = bx * 0.8 + 4;
-        g.strokeStyle = dk ? 'rgba(52,26,20,0.38)' : 'rgba(214,150,108,0.28)'; g.lineWidth = dk ? 1.8 : 1.5;
+        g.strokeStyle = dk ? 'rgba(52,26,20,0.3)' : 'rgba(200,140,100,0.12)'; g.lineWidth = dk ? 1.8 : 1.5;
         var ey = end + (dk ? 0 : 5); g.beginPath(); g.moveTo(X(sx), Y(top)); g.quadraticCurveTo(X(bx - 2.5 + (bx < 0 ? -1 : 0)), Y((top + ey) / 2 + 3), X(bx), Y(ey)); g.stroke();
       });
+      // (the edge of her fringe isn't cut straight: it falls in small soft points of slightly different lengths)
+      var TIPS = [[-35, 1.3], [-30.5, 0.7], [-26, 1.9], [-21, 1.0], [-16.5, 1.6], [-11.5, 0.8], [-6.5, 2.0], [-1.5, 1.1], [3.5, 1.7], [8.5, 0.8], [13, 1.4]];
+      function tipDrop(x) { var d = 0; TIPS.forEach(function (t) { var k = 1 - Math.abs(x - t[0]) / 3.4; if (k > 0) d = Math.max(d, t[1] * Math.pow(k, 1.7)); }); return d; }
+      function fringeCurve(x0, y0, s) { for (var k = 1; k <= 60; k++) { var t = k / 60, u = 1 - t, x = u * u * u * x0 + 3 * u * u * t * s[0] + 3 * u * t * t * s[2] + t * t * t * s[4], y = u * u * u * y0 + 3 * u * u * t * s[1] + 3 * u * t * t * s[3] + t * t * t * s[5]; g.lineTo(X(x), Y(y - tipDrop(x) * Math.min(1, Math.max(0, (17 - x) / 3)))); } }
       function fringe() {
         g.moveTo(X(-62), 512); g.lineTo(X(-62), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the hair falling beside her face...)
         g.bezierCurveTo(X(-41), Y(-40), X(-39), Y(-24), X(-38), Y(-12));   // (...up its inner edge)
-        g.bezierCurveTo(X(-30), Y(-7), X(-14), Y(-3.5), X(2), Y(-1.5));    // (her fringe: one smooth curve, just covering the top of one eye...)
-        g.bezierCurveTo(X(11), Y(-0.5), X(16.5), Y(1), X(18), Y(6));       // (...rounding up at its end...)
+        fringeCurve(-38, -12, [-30, -7, -14, -3.5, 2, -1.5]);              // (her fringe: one gentle curve, just covering the top of one eye, its edge in small soft points...)
+        fringeCurve(2, -1.5, [11, -0.5, 16.5, 1, 18, 6]);                  // (...rounding up at its end...)
         g.bezierCurveTo(X(18.6), Y(10), X(19.5), Y(14), X(21.5), Y(15));   // (...into the gap)
         g.bezierCurveTo(X(24), Y(14), X(26), Y(10), X(28), Y(2));          // (the separate lock, starting at the gap...)
         g.bezierCurveTo(X(30.5), Y(-10), X(33), Y(-22), X(35.5), Y(-33));  // (...falling past her eye to a point at her cheek...)
