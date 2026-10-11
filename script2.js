@@ -6,7 +6,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // wings, feathery antennae, big shiny eyes and a glowing gem on its brow. You name one when you adopt it, and it
   // moves into a stall in the barn (there are three). Feed it a bundle of hay AND pet it every day, and the next morning
   // there's a softly glowing Glimmer Egg waiting in its straw. Miss either one and it doesn't lay that night
-  var GLIM_COST = 250, GLIM_STALLS = [-2.6, 0, 2.6];
+  var GLIM_COST = 600, GLIM_STALLS = [-2.6, 0, 2.6];
   var glimmers = [], glimDay = null, glimNaming = false;
   var GLIM_PALS = [                                                    // a pink fuzzball with rosy-maple wings, a mint one with luna wings, and a cream one with ivory wings
     { name: 'Rosy', fur: 0xf59cc4, fur2: 0xffc4de, feet: 0xf59ab4, ant: 0xe8a0b8, glow: 0xffa8d0, iris: ['#6a3050', '#2a1020'], w: ['#ef9ab8', '#f8dc84', '#fff2dc', '#b04a70', '#d07090'] },
@@ -260,7 +260,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // gold coat whose spots are patches of starry night sky, crescent-moon horns, star-bright hooves and a starlight tuft
   // on its tail. Feed it hay and pet it every day, and the next morning it can be milked (you'll need a Milk Pail) for
   // a bottle of shimmering Moonmilk
-  var MOON_COST = 600, PAIL_COST = 80;
+  var MOON_COST = 2000, PAIL_COST = 80;
   var MOON_PALS = [                                                   // moonlight whites: pearly white, silver and pale gold
     { name: 'Pearl', ribbon: 0x8a6ad8, coat: 0xf6f2ea, belly: 0xffffff, nose: 0xe8b8c0, hoof: 0xe0c890, glow: 0xfff2d0, iris: ['#6a5a8a', '#1a1428'] },
     { name: 'Silver', ribbon: 0x4a6ac8, coat: 0xc8ccd6, belly: 0xf0f2f6, nose: 0xc8a8b4, hoof: 0xd8dce8, glow: 0xdce8ff, iris: ['#3a5a8a', '#0e1828'] },
@@ -724,7 +724,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // moonlit ring round them, a soft pearly bill, a curl of plume feathers tipped with stars, glowing webbed feet, and
   // little ripples of light spread out round them wherever they stand. Feed one hay and pet it every day, and the next
   // morning there's a Dewdrop Egg in its straw
-  var DUCK_COST = 300;
+  var DUCK_COST = 1000;
   var DUCK_PALS = [                                                   // midnight blue, twilight violet and deep lagoon teal
     { name: 'Midnight', back: '#1c2c64', mid: '#3c62b4', breast: '#c4d8fa', ripple: '#d8ecff', glow: 0xa8c8ff, bill: 0xf4d68c, feet: 0xc4d4ff, spec: [0x4ad8ff, 0x9a6aff], iris: ['#3a5a9a', '#0e1830'] },
     { name: 'Twilight', back: '#2e2062', mid: '#6a4cb8', breast: '#dccaf8', ripple: '#f2e2ff', glow: 0xd4b4ff, bill: 0xf6cc9c, feet: 0xdcc8ff, spec: [0xff7ad8, 0x7a8aff], iris: ['#5a3a8a', '#1a0e2a'] },
@@ -1068,7 +1068,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // petted, they raise the train into a great blazing fan that flickers like a bonfire, with embers drifting up off it.
   // They don't lay eggs: feed one hay and pet it every day for four days in a row, and the next morning it leaves a
   // warm Cinder Quill in its straw. Miss a day and the count starts over
-  var EMBER_COST = 450, EMBER_DAYS = 4;
+  var EMBER_COST = 15000, EMBER_DAYS = 4;
   var EMBER_PALS = [                                                  // sunset orange, deep crimson and white-hot gold
     { name: 'Sunset', back: '#5a1410', mid: '#d0461a', breast: '#ffc46a', base: '#7a1408', vane: '#ff6a1a', tip: '#fff0a0', ring: '#ffb22a', glow: 0xff9a3a, beak: 0xf0c070, leg: 0x8a5a2a, iris: ['#d0701a', '#2a0c04'] },
     { name: 'Crimson', back: '#3a0814', mid: '#b01a2a', breast: '#ff9a62', base: '#4a0610', vane: '#e8282a', tip: '#ffd27a', ring: '#ff7a1a', glow: 0xff5a3a, beak: 0xf4d090, leg: 0x6a3a2a, iris: ['#c0302a', '#280406'] },
@@ -1640,7 +1640,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // of a geode, glittering here and there with tiny crystals, and the plume curling forward over their brow is tipped
   // with a faceted gem that glows. Feed one hay and pet it every day for four days in a row, and the next morning
   // there's a speckled Geode Egg in its straw, sparkling with crystals inside. Miss a day and the count starts over
-  var GEM_COST = 380, GEM_DAYS = 4, GEM_BUMP = 0.012;
+  var GEM_COST = 5000, GEM_DAYS = 4, GEM_BUMP = 0.012;
   var GEM_PALS = [                                                    // amethyst, rose quartz and citrine
     { name: 'Amethyst', back: '#4a3a66', mid: '#8a6ab8', breast: '#dccdf2', scale: '#2e2048', bib: '#3a2266', white: '#f4eeff', gem: 0xb07aff, glow: 0xc8a0ff, crystal: '#e8d8ff', beak: 0x3a3040, leg: 0xb8a8c8, iris: ['#7a4ab0', '#1a0a2a'] },
     { name: 'Rose Quartz', back: '#6a4050', mid: '#c4809a', breast: '#f8dde4', scale: '#4a2232', bib: '#7a2a4a', white: '#fff2f6', gem: 0xff8ab8, glow: 0xffb4d4, crystal: '#ffe2ee', beak: 0x4a3036, leg: 0xd8b0b8, iris: ['#b04a70', '#2a0a14'] },
@@ -2169,7 +2169,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // bib, a snowflake charm on a ribbon collar, and glowing hooves. Feed one hay and pet it every day for two days in
   // a row, and the next morning you can milk it (with a Milk Pail) for a bottle of Aurora Milk. Miss a day and the
   // count starts over
-  var AURORA_COST = 520, AURORA_DAYS = 2;
+  var AURORA_COST = 8000, AURORA_DAYS = 2;
   var AURORA_PALS = [                                                 // a night-blue coat, a violet one and a frost-silver one, each with its own lights
     { name: 'Borealis', coat: '#141e46', coat2: '#22346c', belly: '#2e3e7a', nose: 0x7a80b8, lights: [0x3affa8, 0x3ac8ff, 0xa86aff], glow: 0x7affd0, horn: 0xd8f6ff, hornGlow: 0x6ae8ff, hoof: 0xcfe8ff, iris: ['#2ae0a0', '#0a2a40'] },
     { name: 'Twilight', coat: '#22163e', coat2: '#3a2866', belly: '#4a3478', nose: 0x9a80b8, lights: [0xff6ad8, 0xa86aff, 0x5ab0ff], glow: 0xe0a0ff, horn: 0xf0e2ff, hornGlow: 0xc89aff, hoof: 0xe8d8ff, iris: ['#c06aff', '#200a3a'] },
@@ -2668,7 +2668,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // the ground; a curling cloud of a tail; and breezes swirling round it. Feed one hay and pet it every day for four
   // days in a row, and the next morning its cloud is full: shear it (with Shears from the counter) for a bundle of
   // Cloud Wool. Miss a day and the count starts over
-  var ZEPHYRA_COST = 560, ZEPHYRA_DAYS = 4, SHEARS_COST = 120;
+  var ZEPHYRA_COST = 25000, ZEPHYRA_DAYS = 4, SHEARS_COST = 120;
   var ZEPHYRA_PALS = [                                                // a sunrise one, a cotton-candy one and a silver-lining one
     { name: 'Sunrise', top: 0xfffaf2, low: 0xffb898, gold: 0xffd27a, plush: 0xfff3e6, inner: [0xffb0c0, 0xffd890], nose: 0xff8aa0, iris: ['#ff9a5a', '#7a2a10'], scarf: ['#ff8aa8', '#ffd27a'], gem: 0xffc040, glow: 0xffd8a0 },
     { name: 'Cotton Candy', top: 0xfff6fb, low: 0xffb0d8, gold: 0xb0d8ff, plush: 0xffeef7, inner: [0xff9ec8, 0xb8dcff], nose: 0xff7ab0, iris: ['#c86ad8', '#3a0a40'], scarf: ['#8ac8ff', '#ffb0d8'], gem: 0xff8ad0, glow: 0xffc8e8 },
@@ -3353,7 +3353,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // banded with glowing stars, a little moon shining at its tip; and a tiny moon of its own, orbiting round it. Feed
   // one hay and pet it every day for two days in a row, and the next morning it leaves you a Moonpearl it found in
   // the night. Miss a day and the count starts over. When petted it sits up and rubs its little paws together
-  var LUNA_COST = 480, LUNA_DAYS = 2;
+  var LUNA_COST = 30000, LUNA_DAYS = 2;
   var LUNA_PALS = [                                                   // a moonbeam one, a starlight one and an eclipse one
     { name: 'Moonbeam', fur: 0xeceeff, belly: 0xffffff, night: 0x2c2c78, mask: 0x23235e, nebula: 0x8a5ad8, ring: 0x2c2c78, paw: 0x34347a, rim: 0xffffff, inner: 0xd8b8ff, nose: 0xffa8c8, star: 0xfff4c8, glow: 0xb8b0ff, iris: ['#7a6aff', '#1a1060'] },
     { name: 'Starlight', fur: 0xe4f2ff, belly: 0xffffff, night: 0x1a2a5e, mask: 0x14204e, nebula: 0x3aa8d8, ring: 0x1a2a5e, paw: 0x22346a, rim: 0xffffff, inner: 0xa8d8ff, nose: 0xffb8c8, star: 0xffe08a, glow: 0x9ad8ff, iris: ['#3ab0ff', '#0a2050'] },
@@ -3724,7 +3724,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // springy corkscrew tail with a sprig of coral at its tip; and iridescent bubbles always drifting up off it. Feed
   // one hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble: a
   // shimmering bubble with a pearl inside. Miss a day and the count starts over
-  var BUBBLE_COST = 500, BUBBLE_DAYS = 3;
+  var BUBBLE_COST = 10000, BUBBLE_DAYS = 3;
   var BUBBLE_PALS = [                                                 // a seafoam one, a lagoon one and a sunset-reef one
     { name: 'Seafoam', fur: 0xd8fbf2, belly: 0xf6fffc, back: 0x4ab8b0, spot: 0xe8fff8, snout: 0xffb8b0, fin: [0x8ae8f0, 0xc8a8ff], hoof: 0xfff4f8, coral: 0xff8aa0, glow: 0x9af0e8, iris: ['#2ab8c8', '#05304a'] },
     { name: 'Lagoon', fur: 0xc8e8ff, belly: 0xf0f8ff, back: 0x3a78d8, spot: 0xe0f0ff, snout: 0xffbcc8, fin: [0x7ab8ff, 0x9af0d8], hoof: 0xf4f8ff, coral: 0xffa070, glow: 0x9ac8ff, iris: ['#3a8aff', '#06184a'] },
@@ -4094,7 +4094,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // legs on little crystal hooves; and rainbow sparkles drifting off it. Feed one hay and pet it every day for two
   // days in a row, and the next morning its fleece is full: shear it (with Shears from the counter) for a bundle of
   // Prismsilk. Miss a day and the count starts over. When petted it springs into the air on all four legs
-  var PRISM_COST = 540, PRISM_DAYS = 2;
+  var PRISM_COST = 2500, PRISM_DAYS = 2;
   var PRISM_PALS = [                                                  // a rainbow one, an opal one and a twilight one
     { name: 'Rainbow', hue: 0.0, hueSpan: 1.0, sat: 0.9, light: 0.82, face: 0xfaf4ff, inner: 0xffc0d8, nose: 0xe89ab8, horn: 0xf4f8ff, iris: ['#8a6aff', '#1a1060'], glow: 0xfff0ff },
     { name: 'Opal', hue: 0.42, hueSpan: 0.5, sat: 0.8, light: 0.84, face: 0xf6fbff, inner: 0xffcce0, nose: 0xe0a0b8, horn: 0xeefcff, iris: ['#3ac8b0', '#0a3040'], glow: 0xe8fff8 },
@@ -4410,7 +4410,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // short sturdy legs on wide feet with pearly toenails; a little tufted tail; and dewdrops and lotus petals drifting
   // round it. Feed one hay and pet it every day for two days in a row, and the next morning you can milk it (with a
   // Milk Pail) for a bottle of Moonlily Milk. Miss a day and the count starts over
-  var LOTUS_COST = 580, LOTUS_DAYS = 2;
+  var LOTUS_COST = 13000, LOTUS_DAYS = 2;
   var LOTUS_PALS = [                                                  // a lilac one, a rosy one and a moonlit one
     { name: 'Lilac', back: 0xb8a0e8, side: 0xd8c8f4, belly: 0xe8fff4, spot: 0x9af0e0, muzzle: 0xf4d8ec, inner: 0xf0a8c8, petal: [0xffffff, 0xffa8d0], pad: 0x5ac890, nail: 0xfff4fa, iris: ['#7a5ad8', '#1a1050'], glow: 0xb8fff0 },
     { name: 'Rose', back: 0xf0a0c0, side: 0xf8c8dc, belly: 0xfff4f0, spot: 0xffe0a0, muzzle: 0xffe0ea, inner: 0xff98b8, petal: [0xfffaf0, 0xff8ab0], pad: 0x6ad09a, nail: 0xfff8f4, iris: ['#d0608a', '#3a0a20'], glow: 0xffe0ec },
@@ -4813,7 +4813,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // trailing veils of light; and bubbles and motes of light drifting round it. Feed one hay and pet it every day for
   // three days in a row, and the next morning soft, glowing Glimmerkelp has grown on its back: shear it (with Shears
   // from the counter) to take it. Miss a day and the count starts over
-  var AXO_COST = 620, AXO_DAYS = 3;
+  var AXO_COST = 18000, AXO_DAYS = 3;
   var AXO_PALS = [                                                    // a rosy one, a lilac one and a seafoam one
     { name: 'Rosy', back: 0xffb4d0, side: 0xffd2e4, belly: 0xfff4f0, spot: 0xfff0a8, gill: [0xff6a9a, 0xffd0ec], fin: 0xffc0dc, glow: 0xffd8f0, nail: 0xff8ab4, kelp: [0x2ac8a0, 0xb0ffe4], iris: ['#ff7aa8', '#3a0a24'] },
     { name: 'Lilac', back: 0xb0a4ff, side: 0xd0c8ff, belly: 0xf2f2ff, spot: 0xc8fff4, gill: [0x8a6aff, 0x9ae8ff], fin: 0xc8c0ff, glow: 0xd0e4ff, nail: 0x9a8aff, kelp: [0x3aa8d8, 0xb8f4ff], iris: ['#7a6aff', '#120a40'] },
@@ -5260,7 +5260,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // tail curling at the tip round a glowing sun-gem; and warm motes of sunlight drifting up off it. Feed one hay and pet
   // it every day for two days in a row, and the next morning it has shed a Sunscale for you. Miss a day and the count
   // starts over
-  var LIZ_COST = 650, LIZ_DAYS = 2;
+  var LIZ_COST = 8000, LIZ_DAYS = 2;
   var LIZ_PALS = [                                                    // a sunrise one, a jade one and a twilight one
     { name: 'Sunrise', back: 0xf08a5a, side: 0xf8b890, belly: 0xfff0dc, band: 0xc0603a, spot: 0xffd870, crystal: 0xffc848, frill: [0xff9a6a, 0xffe08a], glow: 0xffe0a0, iris: ['#ffcc3a', '#c06a10'], pad: 0xffc0a0 },
     { name: 'Jade', back: 0x4ab89a, side: 0x8ad8be, belly: 0xf4fff0, band: 0x2a8a72, spot: 0xc8fff0, crystal: 0x7affe0, frill: [0x3ac8b0, 0xd0ff9a], glow: 0xc8ffe8, iris: ['#e8e04a', '#5a8a1a'], pad: 0xb8f0d8 },
@@ -5769,7 +5769,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // sprouts; stubby legs on round feet; a tiny tail tipped with a leaf. Feed one hay and pet it every day for three days
   // in a row, and the next morning a Starbloom has opened in its garden for you to pick. Miss a day and the count starts
   // over
-  var TORT_COST = 680, TORT_DAYS = 3;
+  var TORT_COST = 10000, TORT_DAYS = 3;
   var TORT_PALS = [                                                   // a spring one, a twilight one and an autumn one
     { name: 'Spring', skin: 0x9ad8b0, belly: 0xf4fff0, shell: [0xb8f0e0, 0x6ac8b8], seam: 0xffe08a, rim: 0x5ab0a0, moss: 0x7ad070, mush: 0xff9ac0, flower: [0xffffff, 0xffd0e8], crystal: 0xb8f0ff, glow: 0xd8fff0, bloom: [0xfff6ff, 0xffa8e0], iris: ['#3aa880', '#0a2a20'], toe: 0xfff4e8 },
     { name: 'Twilight', skin: 0xb0a0e8, belly: 0xf6f2ff, shell: [0xe0d0ff, 0x8a7ad8], seam: 0xffe0a0, rim: 0x6a5ab8, moss: 0x6ab8a0, mush: 0x9ae0ff, flower: [0xfff8ff, 0xc8b0ff], crystal: 0xffc0f0, glow: 0xe8dcff, bloom: [0xffffff, 0x9ad8ff], iris: ['#7a5ad8', '#140a40'], toe: 0xf8f0ff },
@@ -6211,7 +6211,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // feathered fetlocks over pearly cloven hooves; and a long tail ending in a starry tuft. Feed one hay and pet it
   // every day for three days in a row, and the next morning you can milk it (with a Milk Pail) for Opaline Milk, pale
   // milk swirled with the colours of its mane and glittering with tiny stars. Miss a day and the count starts over
-  var BIS_COST = 720, BIS_DAYS = 3;
+  var BIS_COST = 32000, BIS_DAYS = 3;
   var BIS_PALS = [                                                    // a dusk one, a frost one and an ember one
     { name: 'Dusk', coat: 0xb8a0cc, mane: 0x4a3c8e, neb: 0xe08ac8, neb2: 0x6aa8ff, belly: 0xeadcf0, muzzle: 0x7a5e88, horn: 0xf4f0ff, glow: 0xc8b8ff, star: 0xfff4c8, hoof: 0xf6eefa, iris: ['#8a6ad0', '#1a0e30'] },
     { name: 'Frost', coat: 0xc8d6ea, mane: 0x3e5aa0, neb: 0x8ae0f0, neb2: 0xb090ff, belly: 0xf2f6fc, muzzle: 0x6a7a96, horn: 0xf4faff, glow: 0xc8e8ff, star: 0xe8f8ff, hoof: 0xf8fbff, iris: ['#4a8ad0', '#08142a'] },
@@ -6569,7 +6569,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // aurora; feathered legs on slender three-toed feet with golden claws; and little crystals drifting round it. Feed
   // one hay and pet it every day for three days in a row, and the next morning it has laid a Dawnshell Egg in its
   // nest for you to collect. Miss a day and the count starts over
-  var OST_COST = 700, OST_DAYS = 3, ostScaleTex = null;
+  var OST_COST = 28000, OST_DAYS = 3, ostScaleTex = null;
   var OST_PALS = [                                                    // a dawn one, an opal one and a sunset one
     { name: 'Dawn', body: 0xffc2da, deep: 0xd684bc, plume: 0xffa2c8, tip: 0xffd890, down: 0xfff0f6, skin: 0xf6dcd8, beak: 0xfff0e0, glow: 0xffc8e0, mark: 0xffd27a, eye: 0x8a3a6a, aur: [0xff9ad0, 0xffd27a, 0x9ab8ff], iris: ['#d0709e', '#2a0818'] },
     { name: 'Opal', body: 0xc0d2ff, deep: 0x8a90f0, plume: 0x9cbcff, tip: 0xe0b0ff, down: 0xf4f8ff, skin: 0xe6e6f4, beak: 0xf6f4ff, glow: 0xd0dcff, mark: 0xe8f0ff, eye: 0x4a5a9a, aur: [0x9ad8ff, 0xd8a8ff, 0x9affe0], iris: ['#6a8ad8', '#0a1030'] },

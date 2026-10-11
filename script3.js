@@ -858,9 +858,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     chalk('Animals for Sale', w / 2, 58, 52, 'rgba(250,248,240,A)', true);
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
-    [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
-      ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Iridelles \u00b7 740 \u2605', 'leave a Tidelight Pearl every 6 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
+    [['Glimmerwings \u00b7 600 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 1,000 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
+      ['Gemwrens \u00b7 5,000 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 15,000 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 30,000 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 10,000 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 2,500 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 13,000 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
+      ['Auroraram \u00b7 8,000 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 25,000 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 2,000 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 18,000 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 8,000 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 10,000 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 32,000 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 28,000 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Iridelles \u00b7 740 \u2605', 'leave a Tidelight Pearl every 6 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 98 + k * 17.6, 12, an[2], false);
       chalk(an[1], w / 2 + 80, 107 + k * 17.6, 7.5, 'rgba(240,240,230,A)', true);
     });
@@ -1368,55 +1368,55 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + HAY_COST + ' each</span></div></div>' +
     '<div class="shop-buy"><button type="button" data-n="1">Buy 1</button><button type="button" data-n="5">Buy 5</button><button type="button" data-n="10">Buy 10</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic glim-pic"></div><div class="shop-text"><b>Glimmerwing</b><span>A gentle, glowing little creature with shimmering moth wings. Feed it hay and pet it every day, and it lays a Glimmer Egg each morning. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + GLIM_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + GLIM_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="glim-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic duck-pic"></div><div class="shop-text"><b>Puddlewisp</b><span>A plump little pond creature with night-blue feathers that ripple like moonlight on water, big shining eyes, star-tipped plumes and glowing webbed feet. Feed it hay and pet it every day, and it lays a Dewdrop Egg each morning. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + DUCK_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + DUCK_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="duck-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic gem-pic"></div><div class="shop-text"><b>Gemwren</b><span>A plump little ground bird with feathers speckled like the inside of a geode, glittering crystal feathers, a dark bib edged in white and a nodding plume tipped with a glowing gem. Feed it hay and pet it every day for four days in a row, and the next morning it lays a Geode Egg that sparkles with crystals inside. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + GEM_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + GEM_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="gem-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ember-pic"></div><div class="shop-text"><b>Emberwing</b><span>A proud, fiery bird with sunset-coloured feathers, a crown of little flickering flames and a long train of flame-shaped feathers that it raises into a blazing fan. Feed it hay and pet it every day for four days in a row, and the next morning it leaves a warm Cinder Quill in its straw. Miss a day and the count starts over. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + EMBER_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + EMBER_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ember-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic luna-pic"></div><div class="shop-text"><b>Lunastra</b><span>A little plush spirit of the moonlit night, in soft moon-white fur that deepens into a starry sky over its back, with a night-sky mask full of glowing stars, huge galaxy eyes, tall ears tipped with starlight, a crescent moon on its brow, a big curling tail banded with stars and a tiny moon of its own orbiting round it. Feed it hay and pet it every day for two days in a row, and the next morning it leaves you a Moonpearl it found in the night. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LUNA_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LUNA_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="luna-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bubble-pic"></div><div class="shop-text"><b>Sirenna</b><span>A chubby little sea spirit in soft seafoam fur dappled with bubble spots, with a coral snout, huge ocean eyes, floppy ears of shimmering fin, a scallop shell tucked behind one ear, pearly hooves and a corkscrew tail tipped with coral. Bubbles always drift up off it. Feed it hay and pet it every day for three days in a row, and the next morning it blows you a Wishbubble. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + BUBBLE_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + BUBBLE_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bubble-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic aurora-pic"></div><div class="shop-text"><b>Auroraram</b><span>A graceful creature with a long, silky night-blue coat that ripples with the colours of the northern lights, spiralling horns of clear ice, a silky beard and glowing hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Aurora Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + AURORA_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + AURORA_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="aurora-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic prism-pic"></div><div class="shop-text"><b>Prismara</b><span>A gentle creature of rainbow light, with a round body of curly fleece that shimmers through every colour of the rainbow, a soft pale face with big gentle eyes, floppy ears, a curly topknot, little spiralling horns of clear crystal and crystal hooves. Feed it hay and pet it every day for two days in a row, and the next morning you can shear it for Prismsilk (you\'ll need Shears). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + PRISM_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + PRISM_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="prism-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic zephyra-pic"></div><div class="shop-text"><b>Zephyra</b><span>A little spirit of the gentle west wind, made of soft, billowing cloud blushed with the pinks and golds of sunrise, with tall ears, huge sparkly eyes, a glowing sun-gem, little feathered wings and a silk scarf streaming in the breeze. It floats just above the ground on cloud-puff feet. Feed it hay and pet it every day for four days in a row, and the next morning you can shear its cloud for Cloud Wool (you\'ll need Shears). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + ZEPHYRA_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + ZEPHYRA_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="zephyra-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic lotus-pic"></div><div class="shop-text"><b>Nymphalia</b><span>A big, gentle creature of the lily pond, with a round body of soft lilac plush dappled with glowing pond-light spots, lotus flowers blooming on lily pads along its back, a wide soft muzzle, big sweet eyes and tiny wiggly ears. Feed it hay and pet it every day for two days in a row, and the next morning you can milk it for Moonlily Milk (you\'ll need a Milk Pail). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LOTUS_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LOTUS_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="lotus-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic axo-pic"></div><div class="shop-text"><b>Veilaris</b><span>A little water spirit of the moonlit spring, with a soft round body of rosy plush held up on slender legs, glowing star-freckles and a constellation over its back, big shining eyes, a moonstone on its brow, long finned ears, branching antlers of glowing coral, a mane of flowing ribbons of light, two pairs of wings of light and a long tail trailing veils of light. Feed it hay and pet it every day for three days in a row, and the next morning you can shear the glowing Glimmerkelp that has grown on its back (you\'ll need Shears). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + AXO_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + AXO_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="axo-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic liz-pic"></div><div class="shop-text"><b>Lumora</b><span>A little sun-drake that loves to bask, in soft, velvety scales banded with chevrons and glowing sun-spots, with big golden gecko eyes, swept-back horns of clear citrine, a sunrise frill of glowing petals round its neck, crystal spines down its back, gliding membranes of light along its sides and a long tail curled round a glowing sun-gem. Feed it hay and pet it every day for two days in a row, and the next morning it sheds a Sunscale for you. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LIZ_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LIZ_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="liz-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic tort-pic"></div><div class="shop-text"><b>Amarys</b><span>A gentle, slow little wanderer in soft plush, carrying a whole tiny garden on its back: a high shell like polished opal rimmed in gold, topped with soft moss, glowing mushrooms, tiny flowers, a cluster of crystals and a little tree hung with glowing fruit, with fireflies drifting over it. It has big shining eyes and two leafy sprouts on its head. Feed it hay and pet it every day for three days in a row, and the next morning a Starbloom opens in its garden for you to pick. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + TORT_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + TORT_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="tort-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nyxalia</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Opaline Milk (bring a Milk Pail). It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bis-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ost-pic"></div><div class="shop-text"><b>Celestara</b><span>A graceful dawn-bird in soft plumage blushing with the colours of sunrise, traced with glowing golden filigree. It has a long, swan-like neck, big gentle eyes lined in gold, a slender pearly beak, a crest of glassy plumes tipped with little lights and a halo of turning runes floating behind its head. Its wings are layered with feathers edged in light, and its long, sweeping train shines with eye-spots and crystals and trails ribbons of aurora, while little crystals drift round it. Feed it hay and pet it every day for three days in a row, and the next morning it lays a Dawnshell Egg for you. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + OST_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + OST_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ost-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic crb-pic"></div><div class="shop-text"><b>Iridelle</b><span>A little tide-spirit from the moonlit shallows, with a wide, domed shell of living opal set with tiny pearls and traced with glowing runes, and a garden of crystals, coral and swaying anemones growing on its back. It has big shining eyes on slender stalks, delicate crystal pincers that each cradle a glowing orb, six slender legs of pearl on which it scuttles sideways, and veils of iridescent light trailing behind it. Bubbles drift up from it, a pearl circles over it, and tidepool ripples spread wherever it stands. Feed it hay and pet it every day for six days in a row, and the next morning it leaves you a shimmering Tidelight Pearl. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + CRB_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + CRB_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="crb-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
-    '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST + '</span></div></div>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + MOON_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="moon-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic pail-pic"></div><div class="shop-text"><b>Milk Pail</b><span>You need one to milk your Mooncalves, Auroraram and Nymphalias. It never wears out.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + PAIL_COST + '</span></div></div>' +
@@ -1525,39 +1525,39 @@ EVERDAWN_PARTS.push(function (THREE) {
       barnBuyBtns[i].disabled = state.coins < n * HAY_COST;
     }
     var full = glimFreeStall() < 0;                                    // the Glimmerwing: one for each empty stall
-    glimAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GLIM_COST;
+    glimAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GLIM_COST.toLocaleString('en-US');
     glimAdoptBtn.disabled = full || state.coins < GLIM_COST;
-    duckAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + DUCK_COST;
+    duckAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + DUCK_COST.toLocaleString('en-US');
     duckAdoptBtn.disabled = full || state.coins < DUCK_COST;
-    emberAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + EMBER_COST;
+    emberAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + EMBER_COST.toLocaleString('en-US');
     emberAdoptBtn.disabled = full || state.coins < EMBER_COST;
-    gemAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GEM_COST;
+    gemAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + GEM_COST.toLocaleString('en-US');
     gemAdoptBtn.disabled = full || state.coins < GEM_COST;
-    auroraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + AURORA_COST;
+    auroraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + AURORA_COST.toLocaleString('en-US');
     auroraAdoptBtn.disabled = full || state.coins < AURORA_COST;
-    zephyraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + ZEPHYRA_COST;
+    zephyraAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + ZEPHYRA_COST.toLocaleString('en-US');
     zephyraAdoptBtn.disabled = full || state.coins < ZEPHYRA_COST;
-    lunaAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LUNA_COST;
+    lunaAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LUNA_COST.toLocaleString('en-US');
     lunaAdoptBtn.disabled = full || state.coins < LUNA_COST;
-    bubbleAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + BUBBLE_COST;
+    bubbleAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + BUBBLE_COST.toLocaleString('en-US');
     bubbleAdoptBtn.disabled = full || state.coins < BUBBLE_COST;
-    prismAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + PRISM_COST;
+    prismAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + PRISM_COST.toLocaleString('en-US');
     prismAdoptBtn.disabled = full || state.coins < PRISM_COST;
-    lotusAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LOTUS_COST;
+    lotusAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LOTUS_COST.toLocaleString('en-US');
     lotusAdoptBtn.disabled = full || state.coins < LOTUS_COST;
-    axoAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + AXO_COST;
+    axoAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + AXO_COST.toLocaleString('en-US');
     axoAdoptBtn.disabled = full || state.coins < AXO_COST;
-    lizAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LIZ_COST;
+    lizAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + LIZ_COST.toLocaleString('en-US');
     lizAdoptBtn.disabled = full || state.coins < LIZ_COST;
-    tortAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + TORT_COST;
+    tortAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + TORT_COST.toLocaleString('en-US');
     tortAdoptBtn.disabled = full || state.coins < TORT_COST;
-    bisAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + BIS_COST;
+    bisAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + BIS_COST.toLocaleString('en-US');
     bisAdoptBtn.disabled = full || state.coins < BIS_COST;
-    ostAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + OST_COST;
+    ostAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + OST_COST.toLocaleString('en-US');
     ostAdoptBtn.disabled = full || state.coins < OST_COST;
-    crbAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + CRB_COST;
+    crbAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + CRB_COST.toLocaleString('en-US');
     crbAdoptBtn.disabled = full || state.coins < CRB_COST;
-    moonAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + MOON_COST;
+    moonAdoptBtn.innerHTML = full ? 'All stalls are full' : 'Adopt · <img class="coin-icon" alt=""> ' + MOON_COST.toLocaleString('en-US');
     moonAdoptBtn.disabled = full || state.coins < MOON_COST;
     var gotPail = hasPail();
     pailBtn.innerHTML = gotPail ? 'You have one ✓' : 'Buy · <img class="coin-icon" alt=""> ' + PAIL_COST;
