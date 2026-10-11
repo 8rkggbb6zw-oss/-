@@ -2413,7 +2413,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hairTex = canvas(1024, 512, function (g) {
       function X(l) { return 256 + l * 1024 / 360; } function Y(p) { return 256 - p * 512 / 180; }
       g.fillStyle = '#5a3a28'; g.fillRect(0, 0, 1024, 512);
-      for (var x = 0; x < 1024; x += 9) { g.strokeStyle = (x / 9) % 3 ? 'rgba(70,40,26,0.35)' : 'rgba(130,88,62,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + 8, 256, x - 6, 512); g.stroke(); }   // (soft strands)
+      var TN = ['#3a2216', '#4a2c1c', '#5e3a28', '#6e4630', '#8a5c3e', '#a2704e']; for (var sk = 0; sk < 900; sk++) { var x = (sk * 7.31) % 1024, cv = ((sk * 13) % 17) - 8; g.strokeStyle = TN[(sk * 5) % TN.length]; g.globalAlpha = 0.3 + ((sk * 11) % 9) / 20; g.lineWidth = 0.8 + ((sk * 3) % 4) * 0.5; g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + cv, 256, x - cv * 0.6, 512); g.stroke(); } g.globalAlpha = 1;   // (fine natural strands)
       var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.7)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
       // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
       var BANG = [[-50, 1], [-37, -3], [-23, -4.5], [-10, -5], [3, -4], [16, -5.5], [29, -3.5], [41, -1.5], [50, 1]];
@@ -2430,37 +2430,57 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       g.lineTo(X(58), Y(-10)); g.lineTo(X(58), 512); g.closePath(); g.fill();
     });
-    var cap = new THREE.SphereGeometry(0.233, 48, 36); cap.scale(1, 0.95, 0.97); cap.translate(0, 0.004, -0.004); mesh(cap, toon(0xffffff, { map: hairTex, alphaTest: 0.5, side: THREE.DoubleSide }), head, true);
-    var mLock = toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide });
-    function lockPaint(g) { return paint(g, 0x4e3222, 0xa4724e); }
-    var strandTex = canvas(512, 256, function (g, w, h) {                // (fine soft strands running down its length)
-      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-      for (var k = 0; k < 140; k++) { var x = (k * 37.7) % w, d = 0.08 + ((k * 13) % 7) / 60; g.strokeStyle = k % 3 ? 'rgba(60,30,10,' + d + ')' : 'rgba(255,240,220,' + d + ')'; g.lineWidth = 2 + (k % 4); g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 6, h * 0.3, x - 6, h * 0.7, x + 3, h); g.stroke(); }
+    var cap = new THREE.SphereGeometry(0.233, 48, 36); cap.scale(1, 0.95, 0.97); cap.translate(0, 0.004, -0.004); var capM = mesh(cap, toon(0xffffff, { map: hairTex, alphaTest: 0.5, side: THREE.DoubleSide }), head, true);
+    var SOFT = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 185, 185, 185, 255, 215, 215, 215, 255, 240, 240, 240, 255, 255, 255, 255, 255]), 5, 1, THREE.RGBAFormat); SOFT.needsUpdate = true;   // (softer, more natural shading for her hair)
+    function hairMat(o) { var m = toon(0xffffff, o); m.gradientMap = SOFT; return m; }
+    capM.material.gradientMap = SOFT;
+    var TONES = ['#3a2216', '#4a2c1c', '#5a3826', '#6a4430', '#7e5438', '#966646', '#b07c58'];
+    var strandTex = canvas(512, 256, function (g, w, h) {                // (fine natural strands, in slightly varied browns)
+      g.fillStyle = '#5a3a28'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 520; k++) { var x = Math.random() * w; g.strokeStyle = TONES[Math.floor(Math.random() * TONES.length)]; g.globalAlpha = 0.35 + Math.random() * 0.45; g.lineWidth = 0.8 + Math.random() * 1.8; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 5, h * 0.3, x - 5, h * 0.7, x + 2, h); g.stroke(); }
+      g.globalAlpha = 1;
     });
+    strandTex.wrapS = THREE.RepeatWrapping; strandTex.repeat.set(2, 1);
+    // (a lock of hair as a soft strip of many fine strands, thinning into wispy, uneven ends)
+    var lockTex = canvas(256, 1024, function (g, w, h) {
+      g.clearRect(0, 0, w, h);
+      var body = g.createLinearGradient(0, 0, 0, h); body.addColorStop(0, 'rgba(88,58,40,1)'); body.addColorStop(0.62, 'rgba(88,58,40,1)'); body.addColorStop(0.72, 'rgba(88,58,40,0)');
+      g.fillStyle = body; g.beginPath(); g.moveTo(10, 0); g.lineTo(w - 10, 0); g.quadraticCurveTo(w - 30, h * 0.6, w / 2, h * 0.78); g.quadraticCurveTo(30, h * 0.6, 10, 0); g.fill();
+      for (var k = 0; k < 260; k++) {
+        var x0 = 10 + Math.random() * (w - 20), edge = 1 - Math.abs(x0 - w / 2) / (w / 2), end = h * (0.55 + Math.random() * 0.25 + edge * 0.18), xe = w / 2 + (x0 - w / 2) * (0.25 + Math.random() * 0.3);
+        var gr = g.createLinearGradient(0, end * 0.7, 0, end); gr.addColorStop(0, TONES[k % TONES.length]); gr.addColorStop(1, 'rgba(60,36,22,0)');
+        g.strokeStyle = gr; g.lineWidth = 1.2 + Math.random() * 2.2; g.beginPath(); g.moveTo(x0, 0); g.bezierCurveTo(x0 + (Math.random() - 0.5) * 16, end * 0.4, xe + (Math.random() - 0.5) * 20, end * 0.8, xe + (Math.random() - 0.5) * 10, end); g.stroke();
+      }
+    });
+    var mStrands = hairMat({ map: lockTex, alphaTest: 0.35, side: THREE.DoubleSide, vertexColors: true });
+    function card(pts, w0, w1, side) {                                  // (a flat strip along a curve, for a lock of strands)
+      var curve = new THREE.CatmullRomCurve3(pts), N = 24, pos = [], uv = [], idx = [], c = new THREE.Vector3(), T = new THREE.Vector3(), S = new THREE.Vector3();
+      for (var i = 0; i <= N; i++) { var t = i / N, w = w0 + (w1 - w0) * t; curve.getPointAt(t, c); curve.getTangentAt(t, T); S.copy(side).addScaledVector(T, -side.dot(T)).normalize();
+        pos.push(c.x - S.x * w, c.y - S.y * w, c.z - S.z * w, c.x + S.x * w, c.y + S.y * w, c.z + S.z * w); uv.push(0, 1 - t, 1, 1 - t); }
+      for (i = 0; i < N; i++) { var a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return paint(g, 0x9c9c9c, 0xffffff);
+    }
     var hairBack = new THREE.Group(); head.add(hairBack);
-    // (a full, smooth mass of hair falling from her crown, flaring a little toward its ends, which part into soft pointed
-    // clumps; shadowed underneath and shining on top)
-    var shell = lathe([[0.36, -0.72], [0.33, -0.58], [0.29, -0.42], [0.258, -0.24], [0.24, -0.08], [0.232, 0.04], [0.214, 0.12], [0.18, 0.18]], 72, function (v, a, j) {
+    // (a full mass of hair falling from her crown, flaring a little toward its ends...)
+    var shell = lathe([[0.35, -0.74], [0.33, -0.62], [0.31, -0.5], [0.28, -0.38], [0.255, -0.22], [0.24, -0.08], [0.232, 0.04], [0.214, 0.12], [0.18, 0.18]], 72, function (v, a, j) {
       if (Math.cos(a) < 0) { var b = 1 + 0.18 * -Math.cos(a) * Math.sin(Math.min(1, (0.2 - v.y) / 0.6) * Math.PI * 0.9); v.z *= b; }   // (fuller at the back, so she has volume from the side)
-      if (j === 0) { var t = Math.abs(((a / (Math.PI * 2) * 7) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.17 * (1 - Math.pow(1 - t, 2.4)); var r = 1 + 0.04 * (1 - t); v.x *= r; v.z *= r; }   // (soft pointed clumps, curling out a little at their tips)
+      if (j === 0) { var t = Math.abs(((a / (Math.PI * 2) * 9) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.07 * (1 - Math.pow(1 - t, 2)); }
     }, Math.PI - 1.8, 3.6);
-    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x3a2418), c1 = new THREE.Color(0x8e6040), cc = new THREE.Color(), nv = new THREE.Vector3();
+    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x3a2418), c1 = new THREE.Color(0x9a6c4a), cc = new THREE.Color(), nv = new THREE.Vector3();
     for (var si = 0; si < sn.count; si++) { nv.fromBufferAttribute(sn, si); var lit = Math.pow(Math.max(0, nv.dot(LIGHT)), 1.5) * 0.8 + Math.max(0, sp.getY(si) + 0.1) * 0.6; cc.copy(c0).lerp(c1, Math.min(1, lit)); sc.push(cc.r, cc.g, cc.b); }
     shell.setAttribute('color', new THREE.Float32BufferAttribute(sc, 3));
-    mesh(shell, toon(0xffffff, { map: strandTex, vertexColors: true, side: THREE.DoubleSide }), hairBack);
-    // (wide, gently waving locks layered over it, their tips curling outward)
-    for (var k = 0; k < 9; k++) {
-      var a = Math.PI * (0.62 + k / 8 * 0.76), dx = Math.sin(a), dz = Math.cos(a), len = 0.56 + ((k * 7) % 3) * 0.035, wv = (k % 2 ? 1 : -1) * 0.018;
-      function at(r, y, back) { return V(dx * r, y, dz * r * back); }
-      mesh(lockPaint(ribbon([at(0.205, 0.1, 1.05), at(0.25, -0.08, 1.12), at(0.27, -0.26, 1.2), at(0.29 + wv, -0.44, 1.18), at(0.325, -0.54, 1.12), at(0.36, -len, 1.06)], 0.09, 0.08, 0.012, V(Math.cos(a), 0, -Math.sin(a)))), mLock, hairBack);
+    var sh2 = strandTex.clone(); sh2.needsUpdate = true; sh2.wrapS = THREE.RepeatWrapping; sh2.repeat.set(3, 1);
+    mesh(shell, hairMat({ map: sh2, vertexColors: true, side: THREE.DoubleSide }), hairBack);
+    // (...and over it, many soft locks of fine strands, waving gently and thinning into wispy ends below it)
+    for (var layer = 0; layer < 2; layer++) for (var k = 0; k < 13; k++) {
+      var a = Math.PI * (0.55 + (k + layer * 0.5) / 12 * 0.9), dx = Math.sin(a), dz = Math.cos(a), len = 0.86 + ((k * 7 + layer * 3) % 5) * 0.04, wv = ((k + layer) % 2 ? 1 : -1) * 0.015, r0 = 0.2 + layer * 0.012, bk = Math.max(1, 1 - dz * 0.14);
+      function at(r, y) { return V(dx * r, y, dz * r * bk); }
+      mesh(card([at(r0, 0.13), at(r0 + 0.045, -0.06), at(r0 + 0.07, -0.26), at(r0 + 0.09 + wv, -0.46), at(r0 + 0.13, -len * 0.85), at(r0 + 0.17 - wv, -len)], 0.075, 0.09, V(Math.cos(a), 0, -Math.sin(a))), mStrands, hairBack);
     }
-    [[-1, 0.0], [1, 0.0], [-1, 0.5], [1, 0.5]].forEach(function (w) {   // (a few thin wisps flicking out at the bottom)
-      var s = w[0], z = -0.06 - w[1] * 0.12;
-      mesh(lockPaint(ribbon([V(s * 0.27, -0.3, z), V(s * 0.31, -0.48, z - 0.01), V(s * 0.36, -0.62, z - 0.02), V(s * 0.44, -0.7, z - 0.02)], 0.016, 0.012, 0.006, V(0, 0, 1))), mLock, hairBack);
-    });
-    [-1, 1].forEach(function (s) {                                       // (long locks framing her face, over her shoulders, waving a little)
-      mesh(lockPaint(ribbon([V(s * 0.175, 0.04, 0.11), V(s * 0.205, -0.1, 0.115), V(s * 0.225, -0.26, 0.1), V(s * 0.225, -0.42, 0.085), V(s * 0.27, -0.56, 0.07), V(s * 0.32, -0.62, 0.065)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
-      mesh(lockPaint(ribbon([V(s * 0.195, 0.04, 0.06), V(s * 0.23, -0.12, 0.07), V(s * 0.255, -0.3, 0.05), V(s * 0.27, -0.48, 0.03), V(s * 0.33, -0.62, 0.01)], 0.065, 0.055, 0.013, V(0, 0, 1))), mLock, head);
+    [-1, 1].forEach(function (s) {                                       // (long locks framing her face, over her shoulders)
+      [[0.175, 0.112, 0.06], [0.198, 0.075, 0.065], [0.215, 0.035, 0.06]].forEach(function (l) {
+        mesh(card([V(s * l[0], 0.05, l[1]), V(s * (l[0] + 0.03), -0.1, l[1] + 0.005), V(s * (l[0] + 0.05), -0.28, l[1] - 0.01), V(s * (l[0] + 0.06), -0.46, l[1] - 0.03), V(s * (l[0] + 0.1), -0.66, l[1] - 0.04)], l[2], l[2] * 1.15, V(0, 0, 1)), mStrands, head);
+      });
     });
 
     // ---- her hat: huge, soft and floppy, with a thick rolled brim lined in purple, a crumpled crown that bends over
