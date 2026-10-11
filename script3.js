@@ -2464,22 +2464,27 @@ EVERDAWN_PARTS.push(function (THREE) {
       return paint(g, 0x9c9c9c, 0xffffff);
     }
     var hairBack = new THREE.Group(); head.add(hairBack);
-    // (a full mass of hair falling from her crown, flaring a little toward its ends...)
-    var shell = lathe([[0.35, -0.74], [0.33, -0.62], [0.31, -0.5], [0.28, -0.38], [0.255, -0.22], [0.24, -0.08], [0.232, 0.04], [0.214, 0.12], [0.18, 0.18]], 72, function (v, a, j) {
+    // (a full mass of hair falling from her crown, flaring a little toward its ends)
+    var shell = lathe([[0.37, -0.86], [0.35, -0.74], [0.33, -0.62], [0.31, -0.5], [0.28, -0.38], [0.255, -0.22], [0.24, -0.08], [0.232, 0.04], [0.214, 0.12], [0.18, 0.18]], 72, function (v, a, j) {
       if (Math.cos(a) < 0) { var b = 1 + 0.18 * -Math.cos(a) * Math.sin(Math.min(1, (0.2 - v.y) / 0.6) * Math.PI * 0.9); v.z *= b; }   // (fuller at the back, so she has volume from the side)
-      if (j === 0) { var t = Math.abs(((a / (Math.PI * 2) * 9) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.07 * (1 - Math.pow(1 - t, 2)); }
     }, Math.PI - 1.8, 3.6);
-    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x4e3222), c1 = new THREE.Color(0x9a6c4a), cc = new THREE.Color(), nv = new THREE.Vector3();
+    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x9a8478), c1 = new THREE.Color(0xffffff), cc = new THREE.Color(), nv = new THREE.Vector3();
     for (var si = 0; si < sn.count; si++) { nv.fromBufferAttribute(sn, si); var lit = Math.pow(Math.max(0, nv.dot(LIGHT)), 1.5) * 0.8 + Math.max(0, sp.getY(si) + 0.1) * 0.6; cc.copy(c0).lerp(c1, Math.min(1, lit)); sc.push(cc.r, cc.g, cc.b); }
     shell.setAttribute('color', new THREE.Float32BufferAttribute(sc, 3));
-    var sh2 = strandTex.clone(); sh2.needsUpdate = true; sh2.wrapS = THREE.RepeatWrapping; sh2.repeat.set(3, 1);
-    mesh(shell, hairMat({ map: sh2, vertexColors: true, side: THREE.DoubleSide }), hairBack);
-    // (...and over it, many soft locks of fine strands, waving gently and thinning into wispy ends below it)
-    for (var layer = 0; layer < 2; layer++) for (var k = 0; k < 13; k++) {
-      var a = Math.PI * (0.55 + (k + layer * 0.5) / 12 * 0.9), dx = Math.sin(a), dz = Math.cos(a), len = 0.86 + ((k * 7 + layer * 3) % 5) * 0.04, wv = ((k + layer) % 2 ? 1 : -1) * 0.015, r0 = 0.2 + layer * 0.012, bk = Math.max(1, 1 - dz * 0.14);
-      function at(r, y) { return V(dx * r, y, dz * r * bk); }
-      mesh(card([at(r0, 0.13), at(r0 + 0.045, -0.06), at(r0 + 0.07, -0.26), at(r0 + 0.09 + wv, -0.46), at(r0 + 0.13, -len * 0.85), at(r0 + 0.17 - wv, -len)], 0.075, 0.09, V(Math.cos(a), 0, -Math.sin(a))), mStrands, hairBack);
-    }
+    // (all one piece, so there are no seams: fine strands drawn right round it, thinning into soft, uneven, wispy ends)
+    var sh2 = canvas(1024, 1024, function (g, w, h) {
+      var body = g.createLinearGradient(0, 0, 0, h); body.addColorStop(0, 'rgba(90,58,40,1)'); body.addColorStop(0.74, 'rgba(90,58,40,1)'); body.addColorStop(0.8, 'rgba(90,58,40,0)');
+      g.fillStyle = body; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 1400; k++) {
+        var x = Math.random() * w, clump = 0.5 + 0.5 * Math.sin(x / w * Math.PI * 2 * 9 + Math.sin(x / w * Math.PI * 2 * 4) * 1.5), end = h * (0.74 + clump * 0.2 + Math.random() * 0.06), sway = (Math.random() - 0.5) * 14;
+        var gr = g.createLinearGradient(0, end * 0.82, 0, end); gr.addColorStop(0, TONES[Math.floor(Math.random() * TONES.length)]); gr.addColorStop(1, 'rgba(70,44,28,0)');
+        g.strokeStyle = gr; g.globalAlpha = 0.45 + Math.random() * 0.5; g.lineWidth = 1 + Math.random() * 2.4;
+        [-w, 0, w].forEach(function (o) { g.beginPath(); g.moveTo(x + o, 0); g.bezierCurveTo(x + o + 4, end * 0.35, x + o - 4, end * 0.7, x + o + sway, end); g.stroke(); });   // (drawn wrapping round, so it repeats without a seam)
+      }
+      g.globalAlpha = 1;
+    });
+    sh2.wrapS = THREE.RepeatWrapping; sh2.repeat.set(3, 1);
+    mesh(shell, hairMat({ map: sh2, alphaTest: 0.4, vertexColors: true, side: THREE.DoubleSide }), hairBack);
     [-1, 1].forEach(function (s) {                                       // (long locks framing her face, over her shoulders)
       [[0.175, 0.112, 0.06], [0.198, 0.075, 0.065], [0.215, 0.035, 0.06]].forEach(function (l) {
         mesh(card([V(s * l[0], 0.05, l[1]), V(s * (l[0] + 0.03), -0.1, l[1] + 0.005), V(s * (l[0] + 0.05), -0.28, l[1] - 0.01), V(s * (l[0] + 0.06), -0.46, l[1] - 0.03), V(s * (l[0] + 0.1), -0.66, l[1] - 0.04)], l[2], l[2] * 1.15, V(0, 0, 1)), mStrands, head);
