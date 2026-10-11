@@ -1662,6 +1662,47 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   shopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Seeds'), shopBox.querySelector('.shop-card'));
 
+  // ---------- The shops, laid out like the shipping bin ----------
+  // Two panels side by side: on the left, everything for sale as a grid of little tiles (its picture, name and price,
+  // greyed out when you can't buy it), grouped under headings; on the right, a warm crate-coloured panel showing the
+  // tile you've picked, with its full description and its buy buttons. On a narrow screen the panels stack
+  function shopCatalogue(box) {
+    var cards = Array.prototype.slice.call(box.querySelectorAll('.shop-card')); if (!cards.length) return function () {};
+    var first = box.querySelector('.shop-section') || cards[0];
+    var cols = document.createElement('div'); cols.className = 'ship-cols shop-cols';
+    var left = document.createElement('div'), right = document.createElement('div'); left.className = 'shop-list'; right.className = 'shop-detail';
+    left.innerHTML = '<h4>For sale</h4>'; right.innerHTML = '<h4>Take a look</h4>';
+    var grid = document.createElement('div'); grid.className = 'shop-tiles'; left.appendChild(grid);
+    first.parentNode.insertBefore(cols, first); cols.appendChild(left); cols.appendChild(right);
+    var tiles = [];
+    function pick(k, scroll) {
+      tiles.forEach(function (t, j) { t.el.classList.toggle('sel', j === k); t.card.classList.toggle('on', j === k); });
+      right.scrollTop = 0;
+      if (scroll && window.innerWidth <= 560) right.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    Array.prototype.slice.call(box.querySelectorAll('.shop-section, .shop-card')).forEach(function (el) {
+      if (el.classList.contains('shop-section')) { grid.appendChild(el); return; }   // (the headings sit across the grid)
+      right.appendChild(el);
+      var t = document.createElement('button'); t.type = 'button'; t.className = 'shop-tile';
+      var pic = el.querySelector('.shop-pic').firstElementChild, name = el.querySelector('.shop-text b'), price = el.querySelector('.shop-price');
+      var tp = document.createElement('span'); tp.className = 'shop-tile-pic'; if (pic) tp.appendChild(pic.cloneNode(true)); t.appendChild(tp);
+      var tn = document.createElement('span'); tn.className = 'shop-tile-name'; tn.textContent = name ? name.textContent : ''; t.appendChild(tn);
+      var tc = document.createElement('span'); tc.className = 'shop-tile-price'; tc.innerHTML = price ? price.innerHTML : ''; t.appendChild(tc);
+      var k = tiles.length; t.addEventListener('click', function (e) { e.stopPropagation(); pick(k, true); });
+      grid.appendChild(t); tiles.push({ el: t, card: el });
+    });
+    pick(0);
+    return function () {                                              // (after each re-render: grey out what you can't buy)
+      tiles.forEach(function (t) { var bs = t.card.querySelectorAll('.shop-buy button'), can = false; for (var i = 0; i < bs.length; i++) if (!bs[i].disabled) can = true; t.el.classList.toggle('cant', !can); });
+      paintCoinIcons(box);
+    };
+  }
+  var shopTilesSync = shopCatalogue(shopBox), barnTilesSync = shopCatalogue(barnShopBox);
+  var shopBaseRender = renderShop, barnBaseRender = renderBarnShop;
+  renderShop = function () { shopBaseRender(); shopTilesSync(); };
+  renderBarnShop = function () { barnBaseRender(); barnTilesSync(); };
+  shopBox.classList.add('shop-wide'); barnShopBox.classList.add('shop-wide');
+
   // ---------- Dragging items between slots ----------
   var slotDrag = null; // { from, startX, startY, ghost }
   function startDrag(i, e) {

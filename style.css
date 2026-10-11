@@ -473,3 +473,55 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
   .shop .shop-pic { width: 60px; }
   .shop-section { margin: 8px 4px 6px; }
 }
+
+/* ---------- The shops, laid out like the shipping bin ---------- */
+.inventory.shop-wide { width: min(620px, 95%); }
+.shop-cols { grid-template-columns: 1.15fr 1fr; align-items: start; }
+.shop-list, .shop-detail { min-width: 0; }
+.shop-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; max-height: 330px; overflow-y: auto; align-content: start; padding: 2px; scrollbar-width: thin; }
+.shop-tiles .shop-section { grid-column: 1 / -1; margin: 8px 2px 2px; }
+.shop-tiles .shop-section:first-child { margin-top: 0; }
+.shop-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px 6px;
+  border-radius: 14px; background: linear-gradient(160deg, #f6eeff, #ffe9f6); color: #4a3b6b;
+  box-shadow: inset 0 0 0 2px #e6d6ff; font-size: .74rem; font-weight: 500;
+}
+.shop-tile:active { transform: none; box-shadow: inset 0 0 0 2px #c08bff; }
+.shop-tile.sel { background: #fff; box-shadow: inset 0 0 0 3px #a86bff, 0 0 12px rgba(192, 139, 255, 0.55); }
+.shop-tile-pic { width: 52px; height: 52px; display: grid; place-items: center; font-size: 1.8rem; }
+.shop-tile-pic img { width: 92% !important; }
+.shop-tile-name { line-height: 1.15; text-align: center; color: #5a35b0; font-weight: 600; overflow-wrap: anywhere; }
+.shop-tile-price { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 4px; border-radius: 999px; background: linear-gradient(135deg, #fff6d8, #ffe7b0); color: #8a5a10; box-shadow: inset 0 0 0 1px #f3d28a; font-size: .7rem; font-weight: 600; white-space: nowrap; }
+.shop-tile-price .coin-icon { width: 12px; height: 12px; }
+.shop-tile.cant { opacity: .5; }
+.shop-tile.cant.sel { opacity: .8; }
+
+/* the panel on the right: the crate, holding just the one you picked */
+.shop-detail { max-height: 360px; overflow-y: auto; scrollbar-width: thin; }
+.shop-detail .shop-card { display: none; margin: 0; }
+.shop-detail .shop-card.on { display: block; }
+.shop-detail .shop-item { flex-direction: column; align-items: center; text-align: center; }
+.shop-detail .shop-pic { width: 104px; }
+.shop-detail .shop-text { align-items: center; }
+.shop-detail .shop-price { align-self: center; }
+.shop-detail .shop-card.clamp .shop-desc { display: block; overflow: visible; -webkit-line-clamp: unset; }
+.shop-detail .shop-more { display: none; }
+.shop-detail .shop-buy { flex-wrap: wrap; }
+.shop-detail .shop-buy button { flex: 1 1 30%; }
+@media (max-width: 560px) {
+  .shop-tiles { grid-template-columns: repeat(4, 1fr); max-height: 190px; }
+  .shop-tile-pic { width: 40px; height: 40px; }
+  .shop-detail { max-height: none; }
+  .shop-detail .shop-pic { width: 80px; }
+}
+.shop-detail .shop-pic { width: 84px; }
+.shop-detail .shop-desc { max-height: 118px; overflow-y: auto; padding: 0 4px; scrollbar-width: thin; }
+.shop-detail .shop-card.clamp .shop-desc { overflow-y: auto; }
+@media (max-width: 560px) {
+  .shop-cols { grid-template-columns: 1fr; }
+  .shop-tiles { grid-template-columns: repeat(4, 1fr); }
+  .shop-tile { font-size: .66rem; padding: 5px 2px; }
+  .shop-tile-price { font-size: .62rem; padding: 1px 5px 1px 3px; }
+  .shop-detail .shop-pic { width: 64px; }
+  .shop-detail .shop-desc { max-height: 90px; }
+}
