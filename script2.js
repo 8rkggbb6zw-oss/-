@@ -6940,7 +6940,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.pet = 1.4; glimHeartBurst(g.x, 0.4, g.z);
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= TORT_DAYS ? ' A Starbloom will open tomorrow morning!' : ' Day ' + day + ' of ' + TORT_DAYS + ' done. Come back tomorrow!'), 2400);
   }
-  // ---------- Nocturra ----------
+  // ---------- Nyxalia ----------
   // Great, gentle beasts of the night meadows, shaped a little like a buffalo (but not a buffalo): a high, broad hump
   // and deep chest under a huge shaggy mane the colour of the twilight sky, flecked with tiny stars; soft velvet fur
   // over its hindquarters, traced with glowing constellations; a broad, gentle head carried low, with a shaggy
@@ -6970,7 +6970,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#7a6aff'; g.fillRect(40, 25, 16, 4);                // (a ribbon round its neck)
     g.fillStyle = '#fff'; [[16, 30], [80, 40], [78, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.nebulaMilk = { name: 'Nebula Milk', price: 330, icon: '🥛', img: nebulaMilkIcon, fill: 88, info: 'Pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars, from a happy Nocturra. Feed and pet yours every day for three days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
+  ITEMS.nebulaMilk = { name: 'Nebula Milk', price: 330, icon: '🥛', img: nebulaMilkIcon, fill: 88, info: 'Pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars, from a happy Nyxalia. Feed and pet yours every day for three days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
   var bisShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 60, 4, 64, 60, 64); sky.addColorStop(0, 'rgba(210,200,255,0.7)'); sky.addColorStop(1, 'rgba(150,140,220,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#b8a0cc'; [[36, 100], [50, 102], [80, 102], [94, 100]].forEach(function (p) { g.fillRect(p[0] - 4, p[1] - 20, 8, 20); g.fillStyle = '#f0e8f4'; g.fillRect(p[0] - 5, p[1] - 2, 10, 5); g.fillStyle = '#b8a0cc'; });
@@ -7234,9 +7234,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = drop; g.eggGlow = eg;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Nocturra'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Nyxalia'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Nocturra: a slow, heavy, rolling walk; it breathes, swings its head low and looks about, flicks
+  // every frame, for a Nyxalia: a slow, heavy, rolling walk; it breathes, swings its head low and looks about, flicks
   // its ears and swishes its tail; stars twinkle in its mane and drift up off it; and when petted it tosses its head
   // happily and its constellations shine brighter
   function bisAnimate(g, dt, t, moving) {
@@ -7269,7 +7269,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.hornLights.forEach(function (h) { var a = h.a + t * h.sp; h.s.position.set(h.c.x + Math.cos(a) * 0.014, h.c.y + Math.sin(a * 1.5) * 0.006, h.c.z + Math.sin(a) * 0.014); h.s.material.opacity = 0.4 + Math.pow(0.5 + 0.5 * Math.sin(t * 4 + h.a * 3), 2) * 0.5; });
     if (g.egg) { g.eggMesh.position.set(g.x, 0.85 + Math.sin(t * 2) * 0.03, g.z); g.eggMesh.rotation.y = t * 0.8; g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; }
   }
-  function nocturraAction(g, wx, wz) {                               // milking, feeding and petting a Nocturra
+  function nocturraAction(g, wx, wz) {                               // milking, feeding and petting a Nyxalia
     if (g.egg) {
       if (!bag.some(function (b) { return b && b.id === 'milkPail'; })) { showToast(g.name + ' is ready to milk! You need a Milk Pail: buy one at the counter 🪣', 2800); return; }
       if (!roomFor(['nebulaMilk'])) { bagFull(); return; }
@@ -7693,7 +7693,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nocturra' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -7729,7 +7729,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nocturras \u00b7 720 \u2605', 'give Nebula Milk every 3 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Nebula Milk every 3 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 100 + k * 19.8, 13, an[2], false);
       chalk(an[1], w / 2 + 80, 110 + k * 19.8, 8.5, 'rgba(240,240,230,A)', true);
     });
@@ -8275,7 +8275,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic tort-pic"></div><div class="shop-text"><b>Amarys</b><span>A gentle, slow little wanderer in soft plush, carrying a whole tiny garden on its back: a high shell like polished opal rimmed in gold, topped with soft moss, glowing mushrooms, tiny flowers, a cluster of crystals and a little tree hung with glowing fruit, with fireflies drifting over it. It has big shining eyes and two leafy sprouts on its head. Feed it hay and pet it every day for three days in a row, and the next morning a Starbloom opens in its garden for you to pick. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + TORT_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="tort-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nocturra</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Nebula Milk (bring a Milk Pail). It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nyxalia</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Nebula Milk (bring a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bis-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
@@ -8416,7 +8416,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nocturra)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
