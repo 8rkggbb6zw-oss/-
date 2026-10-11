@@ -6723,10 +6723,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var seg = new THREE.SphereGeometry(1, 40, 28);
     var bodyCol = new THREE.Color(pal.body), deepCol = new THREE.Color(pal.deep), downCol = new THREE.Color(pal.down), plumeCol = new THREE.Color(pal.plume), skinCol = new THREE.Color(pal.skin), markCol = new THREE.Color(pal.mark);
     var skin = zSoftMat({ vertexColors: true, roughness: 0.95, color: 0xeeeae8 }, 0.05, 0.16, 0.2);
-    var plumage = zFurMat(new THREE.Color(1, 1, 1), 5200, 0.1, true, 0.88, 0.2);   // (soft down beneath its feathers)
-    var downFur = zFurMat(new THREE.Color(1, 1, 1), 6400, 0.05, true, 0.88, 0.12);  // (fine, velvety down on its neck and head)
     function part(geo, mat, x, y, z, sx, sy, sz, parent, rx, ry, rz) { var m = abPart(geo, mat, x, y, z, rx || 0, ry || 0, rz || 0, parent || body); m.scale.set(sx, sy, sz); return m; }
-    function furred(geo, parent, len, flow, fur, comb, n) { abPart(geo, skin, 0, 0, 0, 0, 0, 0, parent).castShadow = true; abPart(zFurShell(geo, n || 16, len, [1, 1, 1], flow, comb === undefined ? 1.2 : comb), fur, 0, 0, 0, 0, 0, 0, parent).castShadow = false; }
     function ss(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
     function sm(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }
     function ell(x, y, z, cx, cy, cz, rx, ry, rz) { var ex = (x - cx) / rx, ey = (y - cy) / ry, ez = (z - cz) / rz; return (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * Math.min(rx, ry, rz); }
@@ -6758,7 +6755,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         rc.set(V3(0, 0, 0), dir); var hits = rc.intersectObject(cm); var hh = hits[hits.length - 1]; if (!hh) continue;
         if (skip && skip(hh.point)) continue;
         var nn = hh.face.normal.clone().normalize(), fy = flow.clone().addScaledVector(nn, -flow.dot(nn)); if (fy.lengthSq() < 1e-4) continue; fy.normalize();
-        o.position.copy(hh.point).addScaledVector(nn, 0.0015 + glimR(i * 3.3) * 0.0025).addScaledVector(fy, -len * 0.45);   // (rooted a little upstream, so it lies over the next one down)
+        o.position.copy(hh.point).addScaledVector(nn, 0.0024 + glimR(i * 3.3) * 0.0022).addScaledVector(fy, -len * 0.45);   // (rooted a little upstream, so it lies over the next one down)
         ostAim(o, fy, nn.clone().cross(fy), (glimR(i * 5.1) - 0.5) * 0.3); var sc = (0.85 + glimR(i * 7.7) * 0.3) * (sizeFn ? sizeFn(hh.point, nn) : 1); o.scale.set(sc, sc, sc); o.updateMatrix();
         list[Math.floor(glimR(i * 9.1) * 3)].push({ m: o.matrix.clone(), c: colFn(nn, hh.point, c).clone().offsetHSL((glimR(i * 4.3) - 0.5) * 0.02, 0, 0).multiplyScalar(1.22 + glimR(i * 2.9) * 0.12) });   // (each a hair different in hue, then brightened, since the feathers are painted in greys)
       }
@@ -6773,7 +6770,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return d;
     }
     var bodyGeo = sdfShape(bodySdf, [130, 96], 0.25, function (n, q, c) { c.copy(bodyCol).lerp(deepCol, ss(0.1, 0.9, n.y) * 0.4 + ss(0.0, -0.9, n.z) * 0.2).lerp(downCol, ss(-0.1, -0.8, n.y) * 0.55 + ss(0.4, 0.95, n.z) * ss(0.3, -0.3, n.y) * 0.4); grain(n, c); });
-    furred(bodyGeo, torso, 0.006, [0, -0.15, -1], plumage, 1.8, 12);
+    abPart(bodyGeo, skin, 0, 0, 0, 0, 0, 0, torso).castShadow = true;   // (no fur beneath: its feathers cover it completely, as on a real bird)
     var bodyColAt = function (n, c) { c.copy(bodyCol).lerp(deepCol, ss(0.1, 0.9, n.y) * 0.4 + ss(0.0, -0.9, n.z) * 0.2).lerp(downCol, ss(-0.1, -0.8, n.y) * 0.55 + ss(0.4, 0.95, n.z) * ss(0.3, -0.3, n.y) * 0.4); return c; };
     coat(bodyGeo, torso, 2600, 0.02, 0.027, V3(0, -0.12, -1), function (n, p, c) { return bodyColAt(n, c); });   // (its close, overlapping body feathers)
     var bRay = new THREE.Raycaster(), bMesh = new THREE.Mesh(bodyGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); bMesh.updateMatrixWorld(true);
@@ -6808,7 +6805,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [-1, 1].forEach(function (s) {
       var hip = new THREE.Group(); hip.position.set(s * 0.045, BY - 0.035, -0.005); body.add(hip);
       var thigh = sdfShape(function (x, y, z) { var d = ell(x, y, z, 0, -0.03, 0.005, 0.027, 0.045, 0.029); return sm(d, ell(x, y, z, 0, -0.09, 0.006, 0.014, 0.04, 0.015), 0.02); }, [50, 40], 0.16, function (n, q, c) { c.copy(bodyCol).lerp(downCol, 0.35 + ss(-0.05, -0.12, q.y) * 0.3); grain(n, c); });
-      furred(thigh, hip, 0.005, [0, -1, -0.15], plumage, 1.6, 10); coat(thigh, hip, 320, 0.016, 0.022, V3(0, -1, -0.1), function (n, p, c) { return c.copy(bodyCol).lerp(downCol, 0.35 + ss(-0.05, -0.12, p.y) * 0.3); });   // (feathered down to the ankle)
+      abPart(thigh, skin, 0, 0, 0, 0, 0, 0, hip).castShadow = true; coat(thigh, hip, 320, 0.016, 0.022, V3(0, -1, -0.1), function (n, p, c) { return c.copy(bodyCol).lerp(downCol, 0.35 + ss(-0.05, -0.12, p.y) * 0.3); });   // (feathered down to the ankle)
       var lc = new THREE.CatmullRomCurve3([V3(0, -0.11, 0.006), V3(0, -0.15, 0.0), V3(0, -0.2, -0.004), V3(0, -0.245, 0.0)]), lg = new THREE.TubeGeometry(lc, 30, 1, 12, false), lp = lg.attributes.position, lcols = [], lcc = new THREE.Color();
       lg.attributes.uv.array.forEach(function (v, ui, arr) { if (ui % 2 === 0) arr[ui] = v * 2.2; });   // (the scales repeating down its leg)
       for (var k = 0; k <= 30; k++) {
@@ -6838,10 +6835,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       var wp = new THREE.Group(); wg.add(wp);
       for (var pk = 0; pk < 7; pk++) { var pt = pk / 6; feather(wp, wingMat, 0.046, 0.25 - pt * 0.06, 0.25, 0.1, V3(s * (0.008 + pt * 0.004), -0.012 - pt * 0.012, -0.05 - pt * 0.03), V3(s * (0.06 + pt * 0.05), -0.1 - pt * 0.15, -1), V3(0, -1, 0.1), s * 0.06); }   // (primaries)
       for (var sk = 0; sk < 8; sk++) { var st = sk / 7; feather(wp, wingMat, 0.05, 0.165 - st * 0.025, 0.35, 0.1, V3(s * (0.014 + st * 0.004), -0.006 - st * 0.006, 0.005 - st * 0.06), V3(s * (0.1 + st * 0.05), -0.3 - st * 0.1, -1), V3(0, -1, 0.1), s * 0.08); }   // (secondaries)
-      var cg2 = new THREE.Group(); cg2.position.set(s * 0.01, -0.004, -0.018); wp.add(cg2);   // (the coverts over its folded wing, from tiny ones at its shoulder to long ones over its flight feathers)
+      var cg2 = new THREE.Group(); cg2.position.set(s * 0.004, -0.004, -0.04); cg2.rotation.y = -s * 0.28; wp.add(cg2);   // (turned in at the front to follow the curve of its body)   // (the coverts over its folded wing, from tiny ones at its shoulder to long ones over its flight feathers)
       var covGeo = sdfShape(function (x, y, z) { var d = ell(x, y, z, 0, 0, 0, 0.007, 0.04, 0.08); return sm(d, ell(x, y, z, 0, -0.012, -0.042, 0.006, 0.032, 0.055), 0.015); }, [60, 50], 0.12, function (n, q, c) { c.copy(deepCol).lerp(plumeCol, ss(0.06, -0.08, q.z) * 0.6).lerp(bodyCol, ss(0.03, 0.08, q.z) * 0.5); });
       abPart(covGeo, skin, 0, 0, 0, 0, 0, 0, cg2);
-      coat(covGeo, cg2, 900, 0.017, 0.022, V3(0, -0.3, -1), function (n, p, c) { return c.copy(deepCol).lerp(plumeCol, ss(0.06, -0.08, p.z) * 0.6).lerp(bodyCol, ss(0.03, 0.08, p.z) * 0.5).lerp(new THREE.Color(pal.tip), ss(-0.03, -0.08, p.z) * ss(0.0, -0.03, p.y) * 0.25); }, function (p) { return p.x * s < -0.002; }, function (p) { return 0.6 + ss(0.07, -0.07, p.z) * 1.3; });
+      coat(covGeo, cg2, 1100, 0.017, 0.022, V3(0, -0.3, -1), function (n, p, c) { return c.copy(deepCol).lerp(plumeCol, ss(0.06, -0.08, p.z) * 0.6).lerp(bodyCol, ss(0.03, 0.08, p.z) * 0.5).lerp(new THREE.Color(pal.tip), ss(-0.03, -0.08, p.z) * ss(0.0, -0.03, p.y) * 0.25); }, function (p) { return p.x * s < -0.006 && p.y < 0.02; }, function (p) { return 0.6 + ss(0.07, -0.07, p.z) * 1.3; });   // (all over its outer face and over its top edge)
       wings.push({ g: wg, p: wp, s: s });
     });
     for (var sc = 0; sc < 10; sc++) { var sct = sc / 9; feather(torso, covMat, 0.04, 0.07, 0.3, 0, V3((sc % 2 ? 1 : -1) * (0.012 + (sc % 3) * 0.008), 0.07 - sct * 0.02, 0.04 - sct * 0.11), V3((sc % 2 ? 1 : -1) * 0.15, -0.08, -1), V3(0, -1, 0), 0); }   // (soft scapular feathers lying down its back between its wings)
@@ -6853,14 +6850,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var nj = 0; nj <= 18; nj++) { var nq = nk * 19 + nj; np.setXYZ(nq, ncp.x + (np.getX(nq) - ncp.x) * nr, ncp.y + (np.getY(nq) - ncp.y) * nr, ncp.z + (np.getZ(nq) - ncp.z) * nr); ncc.copy(bodyCol).lerp(plumeCol, ss(0.1, 0.6, nt) * 0.5).lerp(downCol, ss(0.6, 1, nt) * 0.35); ncols.push(ncc.r, ncc.g, ncc.b); }
     }
     ng.setAttribute('color', new THREE.Float32BufferAttribute(ncols, 3)); ng.computeVertexNormals();
-    furred(ng, neckPivot, 0.004, [0, -1, 0], downFur, 1.0, 10);
+    abPart(ng, skin, 0, 0, 0, 0, 0, 0, neckPivot).castShadow = true;
     (function () {                                                    // (small, neat feathers all down its neck, lying back toward its body)
       var cm2 = { list: [[], [], []] }, o = new THREE.Object3D(), c = new THREE.Color(), fg = ostPlumeGeo(0.014, 0.019, 0.35, 0.1, 2, 4), uv = fg.attributes.uv; for (var ui = 0; ui < uv.count; ui++) uv.setY(ui, 1 - uv.getY(ui));
       var fr = nc.computeFrenetFrames(60, false);
       for (var i = 0; i < 1000; i++) {
         var t = 0.03 + (i / 1000) * 0.88, k = Math.round(t * 60), ph = i * 2.39996, cp = nc.getPointAt(t), r = 0.034 - ss(0, 0.45, t) * 0.017 - ss(0.75, 1, t) * 0.002;
         var nn = fr.normals[k].clone().multiplyScalar(Math.cos(ph)).addScaledVector(fr.binormals[k], Math.sin(ph)).normalize(), fy = fr.tangents[k].clone().negate();
-        o.position.copy(cp).addScaledVector(nn, r + 0.0015).addScaledVector(fy, -0.006); ostAim(o, fy, nn.clone().cross(fy), (glimR(i * 5.1) - 0.5) * 0.3); var sc = 0.8 + glimR(i * 7.7) * 0.3; o.scale.set(sc, sc, sc); o.updateMatrix();
+        o.position.copy(cp).addScaledVector(nn, r + 0.0024).addScaledVector(fy, -0.006); ostAim(o, fy, nn.clone().cross(fy), (glimR(i * 5.1) - 0.5) * 0.3); var sc = 0.8 + glimR(i * 7.7) * 0.3; o.scale.set(sc, sc, sc); o.updateMatrix();
         c.copy(bodyCol).lerp(plumeCol, ss(0.1, 0.6, t) * 0.5).lerp(downCol, ss(0.6, 1, t) * 0.35).multiplyScalar(1.25 + glimR(i * 2.9) * 0.12);
         cm2.list[Math.floor(glimR(i * 9.1) * 3)].push({ m: o.matrix.clone(), c: c.clone() });
       }
@@ -6874,7 +6871,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       d = sm(d, ell(x, y, z, 0, -0.004, 0.018, 0.015, 0.014, 0.018), 0.012);   // (a soft brow, sloping to its beak)
       return d;
     }, [80, 60], 0.08, function (n, q, c) { c.copy(bodyCol).lerp(downCol, 0.4 + ss(0.2, -0.6, n.y) * 0.3).lerp(plumeCol, ss(0.3, 1, n.y) * 0.3); grain(n, c); });
-    furred(headGeo, head, 0.002, [0, 0.2, -1], downFur, 1.0, 8);
+    abPart(headGeo, skin, 0, 0, 0, 0, 0, 0, head).castShadow = true;
     var hRay = new THREE.Raycaster(), hMesh = new THREE.Mesh(headGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); hMesh.updateMatrixWorld(true);
     function onHead(from, dir) { hRay.set(from, dir.clone().normalize()); var h = hRay.intersectObject(hMesh); h = h[h.length - 1] || h[0]; return h ? { p: h.point.clone(), n: h.face.normal.clone().normalize() } : { p: from.clone(), n: dir.clone().normalize() }; }
     var BL = 0.05, beakGeo = sdfShape(function (x, y, z) {
