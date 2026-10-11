@@ -2,7 +2,7 @@
 // CodePen's 1 MB limit, so it now carries on here, and this file joins all three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ---------- Nacrelle ----------
+  // ---------- Iridelle ----------
   // Little tide-spirits from the moonlit shallows, with just a whisper of the crab about them: a wide, domed shell of
   // living opal, scalloped at its rim, set with tiny pearls and traced with glowing runes; a garden of crystals, coral
   // and swaying anemones growing on its back; big, shining eyes on slender stalks; two delicate pincers of crystal,
@@ -19,7 +19,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   ];
   function crbCss(hex, a) { var c = new THREE.Color(hex); return 'rgba(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ',' + (a === undefined ? 1 : a) + ')'; }
   // a Seaglass Heart: a heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core.
-  // (Nacrelles used to leave these; they leave Tidelight Pearls now, but any hearts you already have still keep and sell)
+  // (Iridelles used to leave these; they leave Tidelight Pearls now, but any hearts you already have still keep and sell)
   function crbHeartShape(s) {
     var sh = new THREE.Shape(); sh.moveTo(0, -0.03 * s);
     sh.bezierCurveTo(0.012 * s, -0.018 * s, 0.032 * s, -0.004 * s, 0.03 * s, 0.012 * s); sh.bezierCurveTo(0.028 * s, 0.028 * s, 0.006 * s, 0.03 * s, 0, 0.016 * s);
@@ -44,7 +44,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(120,140,220,0.6)'; g.lineWidth = 1.5; heart(1); g.stroke();
     g.fillStyle = '#fff'; [[14, 22], [82, 20], [80, 82]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.seaglassHeart = { name: 'Seaglass Heart', price: 350, icon: '💎', img: crbHeartIcon, fill: 88, info: 'A heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core, left by a happy Nacrelle. Sells for a very good price at the shipping bin.' };
+  ITEMS.seaglassHeart = { name: 'Seaglass Heart', price: 350, icon: '💎', img: crbHeartIcon, fill: 88, info: 'A heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core, left by a happy Iridelle. Sells for a very good price at the shipping bin.' };
   // a Tidelight Pearl: big, round and lustrous, shimmering with every colour of the sea as it turns, with a soft
   // light glowing deep inside it like the moon seen through water
   function crbPearlModel(pal) {
@@ -67,7 +67,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(130,130,190,0.5)'; g.lineWidth = 1.2; g.beginPath(); g.arc(48, 50, 26, 0, Math.PI * 2); g.stroke();
     g.fillStyle = '#fff'; [[14, 22], [82, 20], [80, 82]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.tidelightPearl = { name: 'Tidelight Pearl', price: 720, icon: '⚪', img: crbPearlIcon, fill: 88, info: 'A big, flawless pearl, shimmering with every colour of the sea as it turns, with a soft light glowing deep inside it like the moon seen through water, left by a happy Nacrelle. Feed and pet yours every day for six days in a row for one. Sells for an excellent price at the shipping bin.' };
+  ITEMS.tidelightPearl = { name: 'Tidelight Pearl', price: 720, icon: '⚪', img: crbPearlIcon, fill: 88, info: 'A big, flawless pearl, shimmering with every colour of the sea as it turns, with a soft light glowing deep inside it like the moon seen through water, left by a happy Iridelle. Feed and pet yours every day for six days in a row for one. Sells for an excellent price at the shipping bin.' };
   var crbShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 70, 4, 64, 70, 64); sky.addColorStop(0, 'rgba(170,230,255,0.75)'); sky.addColorStop(1, 'rgba(200,170,255,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(160,220,255,0.6)'; g.lineWidth = 1.5; [0, 1].forEach(function (k) { g.beginPath(); g.ellipse(64, 108, 40 + k * 14, 7 + k * 3, 0, 0, Math.PI * 2); g.stroke(); });   // (tidepool ripples)
@@ -349,9 +349,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = egg; g.eggGlow = eg; g.eggHeart = heart;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Nacrelle'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Iridelle'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Nacrelle: it scuttles sideways on its six slender legs, then turns to face you; its eye stalks
+  // every frame, for a Iridelle: it scuttles sideways on its six slender legs, then turns to face you; its eye stalks
   // sway and look about and its eyes blink; it opens and closes its crystal pincers, its orbs and crystals pulse with
   // light, its anemones sway and its veils ripple; bubbles drift up, its pearl circles, and ripples spread round it.
   // When petted it raises its pincers and waves them happily, bobbing up and down, and everything shines brighter
@@ -386,7 +386,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glow.material.opacity = 0.03 + Math.sin(t + g.stall) * 0.01 + shine * 0.02;
     if (g.egg) { g.eggGlow.material.opacity = 0.16 + Math.sin(t * 2 + g.stall) * 0.06; g.eggHeart.userData.pearl.rotation.y = t * 0.5; g.eggHeart.userData.sparks.forEach(function (sp, k) { var a = t * 0.9 + k * Math.PI / 2; sp.position.set(Math.cos(a) * 0.04, Math.sin(t * 1.3 + k) * 0.015, Math.sin(a) * 0.04); sp.material.opacity = 0.3 + Math.pow(0.5 + 0.5 * Math.sin(t * 3 + k * 1.7), 3) * 0.6; }); }   // (little sparkles circling it)
   }
-  function nacrelleAction(g, wx, wz) {                               // taking its Tidelight Pearl, feeding and petting a Nacrelle
+  function iridelleAction(g, wx, wz) {                               // taking its Tidelight Pearl, feeding and petting a Iridelle
     if (g.egg) {
       if (!roomFor(['tidelightPearl'])) { bagFull(); return; }
       addItem('tidelightPearl', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.2;
@@ -717,7 +717,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'liz') { solarithAction(g, wx, wz); return; }
     if (g.kind === 'bison') { nocturraAction(g, wx, wz); return; }
     if (g.kind === 'ostrich') { celestaraAction(g, wx, wz); return; }
-    if (g.kind === 'crab') { nacrelleAction(g, wx, wz); return; }
+    if (g.kind === 'crab') { iridelleAction(g, wx, wz); return; }
     if (g.kind === 'tort') { grovellaAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
@@ -824,7 +824,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : kind === 'ostrich' ? 'Celestara' : kind === 'crab' ? 'Nacrelle' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : kind === 'ostrich' ? 'Celestara' : kind === 'crab' ? 'Iridelle' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -860,7 +860,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Nacrelles \u00b7 740 \u2605', 'leave a Tidelight Pearl every 6 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Iridelles \u00b7 740 \u2605', 'leave a Tidelight Pearl every 6 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 98 + k * 17.6, 12, an[2], false);
       chalk(an[1], w / 2 + 80, 107 + k * 17.6, 7.5, 'rgba(240,240,230,A)', true);
     });
@@ -1412,7 +1412,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ost-pic"></div><div class="shop-text"><b>Celestara</b><span>A graceful dawn-bird in soft plumage blushing with the colours of sunrise, traced with glowing golden filigree. It has a long, swan-like neck, big gentle eyes lined in gold, a slender pearly beak, a crest of glassy plumes tipped with little lights and a halo of turning runes floating behind its head. Its wings are layered with feathers edged in light, and its long, sweeping train shines with eye-spots and crystals and trails ribbons of aurora, while little crystals drift round it. Feed it hay and pet it every day for three days in a row, and the next morning it lays a Dawnshell Egg for you. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + OST_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ost-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic crb-pic"></div><div class="shop-text"><b>Nacrelle</b><span>A little tide-spirit from the moonlit shallows, with a wide, domed shell of living opal set with tiny pearls and traced with glowing runes, and a garden of crystals, coral and swaying anemones growing on its back. It has big shining eyes on slender stalks, delicate crystal pincers that each cradle a glowing orb, six slender legs of pearl on which it scuttles sideways, and veils of iridescent light trailing behind it. Bubbles drift up from it, a pearl circles over it, and tidepool ripples spread wherever it stands. Feed it hay and pet it every day for six days in a row, and the next morning it leaves you a shimmering Tidelight Pearl. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic crb-pic"></div><div class="shop-text"><b>Iridelle</b><span>A little tide-spirit from the moonlit shallows, with a wide, domed shell of living opal set with tiny pearls and traced with glowing runes, and a garden of crystals, coral and swaying anemones growing on its back. It has big shining eyes on slender stalks, delicate crystal pincers that each cradle a glowing orb, six slender legs of pearl on which it scuttles sideways, and veils of iridescent light trailing behind it. Bubbles drift up from it, a pearl circles over it, and tidepool ripples spread wherever it stands. Feed it hay and pet it every day for six days in a row, and the next morning it leaves you a shimmering Tidelight Pearl. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + CRB_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="crb-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
@@ -1565,7 +1565,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Celestara)' : g.kind === 'crab' ? ' (Nacrelle)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Celestara)' : g.kind === 'crab' ? ' (Iridelle)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
