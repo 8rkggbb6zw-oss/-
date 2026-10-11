@@ -6946,7 +6946,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // over its hindquarters, traced with glowing constellations; a broad, gentle head carried low, with a shaggy
   // forelock, a soft beard, kind dark eyes and a wide velvety nose; sweeping horns of moonstone banded in gold;
   // feathered fetlocks over pearly cloven hooves; and a long tail ending in a starry tuft. Feed one hay and pet it
-  // every day for three days in a row, and the next morning you can milk it (with a Milk Pail) for Nebula Milk, pale
+  // every day for three days in a row, and the next morning you can milk it (with a Milk Pail) for Opaline Milk, pale
   // milk swirled with the colours of its mane and glittering with tiny stars. Miss a day and the count starts over
   var BIS_COST = 720, BIS_DAYS = 3;
   var BIS_PALS = [                                                    // a dusk one, a frost one and an ember one
@@ -6955,7 +6955,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     { name: 'Ember', coat: 0xe0b098, mane: 0x6a2e6a, neb: 0xffa070, neb2: 0xff6aa8, belly: 0xfaead8, muzzle: 0x9a6a5a, horn: 0xfff4e4, glow: 0xffd8a8, star: 0xfff0b8, hoof: 0xfff8ee, iris: ['#c87a2a', '#2a0e04'] }
   ];
   function bisCss(hex, a) { var c = new THREE.Color(hex); return 'rgba(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ',' + (a === undefined ? 1 : a) + ')'; }
-  // Nebula Milk: a bottle of pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars
+  // Opaline Milk: a bottle of pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars
   var nebulaMilkIcon = glimCanvas(96, 96, function (g, w, h) {
     var glow = g.createRadialGradient(48, 56, 4, 48, 56, 46); glow.addColorStop(0, 'rgba(200,190,255,0.65)'); glow.addColorStop(1, 'rgba(140,130,220,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
     function bottle() { g.beginPath(); g.moveTo(40, 12); g.lineTo(56, 12); g.lineTo(56, 28); g.quadraticCurveTo(70, 34, 70, 48); g.lineTo(70, 82); g.quadraticCurveTo(70, 88, 64, 88); g.lineTo(32, 88); g.quadraticCurveTo(26, 88, 26, 82); g.lineTo(26, 48); g.quadraticCurveTo(26, 34, 40, 28); g.closePath(); }
@@ -6970,7 +6970,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#7a6aff'; g.fillRect(40, 25, 16, 4);                // (a ribbon round its neck)
     g.fillStyle = '#fff'; [[16, 30], [80, 40], [78, 78]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.nebulaMilk = { name: 'Nebula Milk', price: 330, icon: '🥛', img: nebulaMilkIcon, fill: 88, info: 'Pale milk swirled with lavender, pink and blue like the night sky, glittering with tiny stars, from a happy Nyxalia. Feed and pet yours every day for three days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
+  ITEMS.nebulaMilk = { name: 'Opaline Milk', price: 330, icon: '🥛', img: nebulaMilkIcon, fill: 88, info: 'Pearly milk with an opal shimmer, swirled with lavender, pink and blue like the night sky and glittering with tiny stars, from a happy Nyxalia. Feed and pet yours every day for three days in a row, then milk it the next morning with a Milk Pail. Sells for a very good price at the shipping bin.' };
   var bisShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 60, 4, 64, 60, 64); sky.addColorStop(0, 'rgba(210,200,255,0.7)'); sky.addColorStop(1, 'rgba(150,140,220,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.fillStyle = '#b8a0cc'; [[36, 100], [50, 102], [80, 102], [94, 100]].forEach(function (p) { g.fillRect(p[0] - 4, p[1] - 20, 8, 20); g.fillStyle = '#f0e8f4'; g.fillRect(p[0] - 5, p[1] - 2, 10, 5); g.fillStyle = '#b8a0cc'; });
@@ -7223,7 +7223,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.78, 0); tag.renderOrder = 6; root.add(tag);
     return { moonFace: moonFace, moonGrp: moonGrp, moonGlow: moonGlow, orbit: orbit, ribbons: ribbons, hornLights: hornLights, maneTwinkle: maneTwinkle, conStars: conStars, conMats: conMats, glints: glints, tailStar: tailStar, motes: motes, ears: ears, root: root, body: body, torso: torso, head: head, legs: legs, tail: tail, lids: lids, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0 };
   }
-  // when it's ready to milk, a shimmering drop of Nebula Milk floats softly over it
+  // when it's ready to milk, a shimmering drop of Opaline Milk floats softly over it
   function bisBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall], pal = BIS_PALS[g.pal % BIS_PALS.length];
     var drop = new THREE.Group(); abRoom.add(drop);
@@ -7274,11 +7274,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (!bag.some(function (b) { return b && b.id === 'milkPail'; })) { showToast(g.name + ' is ready to milk! You need a Milk Pail: buy one at the counter 🪣', 2800); return; }
       if (!roomFor(['nebulaMilk'])) { bagFull(); return; }
       addItem('nebulaMilk', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.4;
-      showToast('You milked ' + g.name + ' and got a bottle of glittering Nebula Milk! 🥛✨', 2400);
+      showToast('You milked ' + g.name + ' and got a bottle of glittering Opaline Milk! 🥛✨', 2400);
       return;
     }
     var day = Math.min(BIS_DAYS, g.days + 1);
-    var news = day >= BIS_DAYS ? ' Nebula Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' toward Nebula Milk.';
+    var news = day >= BIS_DAYS ? ' Opaline Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' toward Opaline Milk.';
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
       g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
@@ -7293,7 +7293,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return;
     }
     g.pet = 1.4; glimHeartBurst(g.x, 0.55, g.z);
-    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BIS_DAYS ? ' Nebula Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' done. Come back tomorrow!'), 2400);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= BIS_DAYS ? ' Opaline Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' done. Come back tomorrow!'), 2400);
   }
 
   // ---------- Holding what your animals give you ----------
@@ -7704,7 +7704,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Nebula Milk (with a Milk Pail).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -7729,7 +7729,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Nebula Milk every 3 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 100 + k * 19.8, 13, an[2], false);
       chalk(an[1], w / 2 + 80, 110 + k * 19.8, 8.5, 'rgba(240,240,230,A)', true);
     });
@@ -8275,7 +8275,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic tort-pic"></div><div class="shop-text"><b>Amarys</b><span>A gentle, slow little wanderer in soft plush, carrying a whole tiny garden on its back: a high shell like polished opal rimmed in gold, topped with soft moss, glowing mushrooms, tiny flowers, a cluster of crystals and a little tree hung with glowing fruit, with fireflies drifting over it. It has big shining eyes and two leafy sprouts on its head. Feed it hay and pet it every day for three days in a row, and the next morning a Starbloom opens in its garden for you to pick. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + TORT_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="tort-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nyxalia</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Nebula Milk (bring a Milk Pail). It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nyxalia</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Opaline Milk (bring a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bis-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
