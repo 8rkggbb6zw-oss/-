@@ -2420,7 +2420,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var b = 0; b < BANG.length - 1; b++) {
         var x0 = X(BANG[b][0]), x1 = X(BANG[b + 1][0]), xm = (x0 + x1) / 2;
         var cl = g.createLinearGradient(x0, 0, x1, 0); cl.addColorStop(0, 'rgba(50,28,18,0.5)'); cl.addColorStop(0.45, 'rgba(150,104,74,0.45)'); cl.addColorStop(1, 'rgba(50,28,18,0.5)');
-        g.fillStyle = cl; g.fillRect(x0, Y(28), x1 - x0, Y(-8) - Y(28));
+        g.save(); var fade = g.createLinearGradient(0, Y(30), 0, Y(12)); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)'); g.fillStyle = cl; g.beginPath(); g.rect(x0, Y(30), x1 - x0, Y(-8) - Y(30)); g.clip(); var tmp = document.createElement('canvas'); tmp.width = Math.ceil(x1 - x0) + 2; tmp.height = Math.ceil(Y(-8) - Y(30)) + 2; var tg = tmp.getContext('2d'); var cl2 = tg.createLinearGradient(0, 0, x1 - x0, 0); cl2.addColorStop(0, 'rgba(50,28,18,0.5)'); cl2.addColorStop(0.45, 'rgba(150,104,74,0.45)'); cl2.addColorStop(1, 'rgba(50,28,18,0.5)'); tg.fillStyle = cl2; tg.fillRect(0, 0, tmp.width, tmp.height); tg.globalCompositeOperation = 'destination-in'; var fd = tg.createLinearGradient(0, 0, 0, Y(12) - Y(30)); fd.addColorStop(0, 'rgba(0,0,0,0)'); fd.addColorStop(1, 'rgba(0,0,0,1)'); tg.fillStyle = fd; tg.fillRect(0, 0, tmp.width, tmp.height); g.drawImage(tmp, x0, Y(30)); g.restore();   // (fading in softly at the top, so there's no line across her bangs)
       }
       g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath();   // (her face, open below her bangs)
       g.moveTo(X(-58), 512); g.lineTo(X(-58), Y(-10)); g.lineTo(X(-50), Y(2));
