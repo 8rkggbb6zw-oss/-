@@ -2413,7 +2413,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hairTex = canvas(1024, 512, function (g) {
       function X(l) { return 256 + l * 1024 / 360; } function Y(p) { return 256 - p * 512 / 180; }
       g.fillStyle = '#5a3a28'; g.fillRect(0, 0, 1024, 512);
-      var TN = ['#3a2216', '#4a2c1c', '#5e3a28', '#6e4630', '#8a5c3e', '#a2704e']; for (var sk = 0; sk < 900; sk++) { var x = (sk * 7.31) % 1024, cv = ((sk * 13) % 17) - 8; g.strokeStyle = TN[(sk * 5) % TN.length]; g.globalAlpha = 0.3 + ((sk * 11) % 9) / 20; g.lineWidth = 0.8 + ((sk * 3) % 4) * 0.5; g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + cv, 256, x - cv * 0.6, 512); g.stroke(); } g.globalAlpha = 1;   // (fine natural strands)
+      var TN = ['#3a2216', '#4a2c1c', '#5e3a28', '#6e4630', '#8a5c3e', '#a2704e']; for (var sk = 0; sk < 900; sk++) { var x = (sk * 7.31) % 1024, cv = ((sk * 13) % 17) - 8; g.strokeStyle = TN[(sk * 5) % TN.length]; g.globalAlpha = 0.3 + ((sk * 11) % 9) / 20; g.lineWidth = 0.8 + ((sk * 3) % 4) * 0.5; [-1024, 0, 1024].forEach(function (o) { g.beginPath(); g.moveTo(x + o, 0); g.quadraticCurveTo(x + o + cv, 256, x + o - cv * 0.6, 512); g.stroke(); }); } g.globalAlpha = 1;   // (fine natural strands, wrapping round without a seam)
       var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.7)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
       // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
       var BANG = [[-50, 1], [-37, -3], [-23, -4.5], [-10, -5], [3, -4], [16, -5.5], [29, -3.5], [41, -1.5], [50, 1]];
@@ -2437,7 +2437,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var TONES = ['#3a2216', '#4a2c1c', '#5a3826', '#6a4430', '#7e5438', '#966646', '#b07c58'];
     var strandTex = canvas(512, 256, function (g, w, h) {                // (fine natural strands, in slightly varied browns)
       g.fillStyle = '#5a3a28'; g.fillRect(0, 0, w, h);
-      for (var k = 0; k < 520; k++) { var x = Math.random() * w; g.strokeStyle = TONES[Math.floor(Math.random() * TONES.length)]; g.globalAlpha = 0.35 + Math.random() * 0.45; g.lineWidth = 0.8 + Math.random() * 1.8; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 5, h * 0.3, x - 5, h * 0.7, x + 2, h); g.stroke(); }
+      for (var k = 0; k < 520; k++) { var x = Math.random() * w; g.strokeStyle = TONES[Math.floor(Math.random() * TONES.length)]; g.globalAlpha = 0.35 + Math.random() * 0.45; g.lineWidth = 0.8 + Math.random() * 1.8; [-w, 0, w].forEach(function (o) { g.beginPath(); g.moveTo(x + o, 0); g.bezierCurveTo(x + o + 5, h * 0.3, x + o - 5, h * 0.7, x + o + 2, h); g.stroke(); }); }   // (drawn wrapping round, so it repeats without a seam)
       g.globalAlpha = 1;
     });
     strandTex.wrapS = THREE.RepeatWrapping; strandTex.repeat.set(2, 1);
@@ -2445,9 +2445,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     var lockTex = canvas(256, 1024, function (g, w, h) {
       g.clearRect(0, 0, w, h);
       var body = g.createLinearGradient(0, 0, 0, h); body.addColorStop(0, 'rgba(88,58,40,1)'); body.addColorStop(0.62, 'rgba(88,58,40,1)'); body.addColorStop(0.72, 'rgba(88,58,40,0)');
-      g.fillStyle = body; g.beginPath(); g.moveTo(10, 0); g.lineTo(w - 10, 0); g.quadraticCurveTo(w - 30, h * 0.6, w / 2, h * 0.78); g.quadraticCurveTo(30, h * 0.6, 10, 0); g.fill();
+      g.fillStyle = body; g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0); g.lineTo(w, h * 0.5); g.quadraticCurveTo(w - 20, h * 0.66, w / 2, h * 0.78); g.quadraticCurveTo(20, h * 0.66, 0, h * 0.5); g.closePath(); g.fill();
       for (var k = 0; k < 260; k++) {
-        var x0 = 10 + Math.random() * (w - 20), edge = 1 - Math.abs(x0 - w / 2) / (w / 2), end = h * (0.55 + Math.random() * 0.25 + edge * 0.18), xe = w / 2 + (x0 - w / 2) * (0.25 + Math.random() * 0.3);
+        var x0 = Math.random() * w, edge = 1 - Math.abs(x0 - w / 2) / (w / 2), end = h * (0.55 + Math.random() * 0.25 + edge * 0.18), xe = w / 2 + (x0 - w / 2) * (0.25 + Math.random() * 0.3);
         var gr = g.createLinearGradient(0, end * 0.7, 0, end); gr.addColorStop(0, TONES[k % TONES.length]); gr.addColorStop(1, 'rgba(60,36,22,0)');
         g.strokeStyle = gr; g.lineWidth = 1.2 + Math.random() * 2.2; g.beginPath(); g.moveTo(x0, 0); g.bezierCurveTo(x0 + (Math.random() - 0.5) * 16, end * 0.4, xe + (Math.random() - 0.5) * 20, end * 0.8, xe + (Math.random() - 0.5) * 10, end); g.stroke();
       }
@@ -2458,7 +2458,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var i = 0; i <= N; i++) { var t = i / N, w = w0 + (w1 - w0) * t; curve.getPointAt(t, c); curve.getTangentAt(t, T); S.copy(side).addScaledVector(T, -side.dot(T)).normalize();
         pos.push(c.x - S.x * w, c.y - S.y * w, c.z - S.z * w, c.x + S.x * w, c.y + S.y * w, c.z + S.z * w); uv.push(0, 1 - t, 1, 1 - t); }
       for (i = 0; i < N; i++) { var a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
-      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return paint(g, 0x9c9c9c, 0xffffff);
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      var nr = g.attributes.normal, ps = g.attributes.position, rn = new THREE.Vector3();   // (shaded by the rounded shape of her hair, so neighbouring locks match each other)
+      for (i = 0; i < nr.count; i++) { rn.set(ps.getX(i), 0.35, ps.getZ(i)).normalize(); nr.setXYZ(i, rn.x, rn.y, rn.z); }
+      return paint(g, 0x9c9c9c, 0xffffff);
     }
     var hairBack = new THREE.Group(); head.add(hairBack);
     // (a full mass of hair falling from her crown, flaring a little toward its ends...)
@@ -2466,7 +2469,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (Math.cos(a) < 0) { var b = 1 + 0.18 * -Math.cos(a) * Math.sin(Math.min(1, (0.2 - v.y) / 0.6) * Math.PI * 0.9); v.z *= b; }   // (fuller at the back, so she has volume from the side)
       if (j === 0) { var t = Math.abs(((a / (Math.PI * 2) * 9) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.07 * (1 - Math.pow(1 - t, 2)); }
     }, Math.PI - 1.8, 3.6);
-    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x3a2418), c1 = new THREE.Color(0x9a6c4a), cc = new THREE.Color(), nv = new THREE.Vector3();
+    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x4e3222), c1 = new THREE.Color(0x9a6c4a), cc = new THREE.Color(), nv = new THREE.Vector3();
     for (var si = 0; si < sn.count; si++) { nv.fromBufferAttribute(sn, si); var lit = Math.pow(Math.max(0, nv.dot(LIGHT)), 1.5) * 0.8 + Math.max(0, sp.getY(si) + 0.1) * 0.6; cc.copy(c0).lerp(c1, Math.min(1, lit)); sc.push(cc.r, cc.g, cc.b); }
     shell.setAttribute('color', new THREE.Float32BufferAttribute(sc, 3));
     var sh2 = strandTex.clone(); sh2.needsUpdate = true; sh2.wrapS = THREE.RepeatWrapping; sh2.repeat.set(3, 1);
