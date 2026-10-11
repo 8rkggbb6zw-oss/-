@@ -2255,7 +2255,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- You: a little chibi witch ----------
   // A cute 3D witch, in an anime style with soft cel shading and dark outlines: a big round head with large glossy
-  // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, floppy witch's hat
+  // green eyes, rosy cheeks and a little cat smile; long brown hair with soft pointed bangs; a huge, floppy witch's hat
   // with a thick rolled brim lined in purple, a striped band, a buckle and orange roses, its crumpled crown bending over
   // and curling at the tip; a plain charcoal coat-dress with two rows of buttons, purple-lined
   // bell sleeves, a black ruffled petticoat and long tattered tails behind; torn dark stockings and boots;
@@ -2408,28 +2408,44 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hp = hg.attributes.position; for (var q = 0; q < hp.count; q++) { var y = hp.getY(q) / 0.207, z = hp.getZ(q); if (y < 0 && z > 0) { var k = 1 + 0.06 * Math.sin(-y * Math.PI) * (z / 0.209); hp.setX(q, hp.getX(q) * k); } }   // (slightly fuller cheeks)
     hg.computeVertexNormals(); mesh(hg, mFace, head);
     [-1, 1].forEach(function (s) { var e = ell(0.03, 0.045, 0.02); e.translate(s * 0.212, -0.02, -0.005); mesh(e, mSkin, head); });   // (ears)
-    // (her hair: a cap of brown hair with straight-cut bangs, leaving her face open)
+    // (her hair: warm brown with a soft shine, soft pointed bangs sweeping over her forehead, long smooth locks flowing
+    // down her back and flaring at their tips, and two long locks framing her face)
     var hairTex = canvas(1024, 512, function (g) {
       function X(l) { return 256 + l * 1024 / 360; } function Y(p) { return 256 - p * 512 / 180; }
-      g.fillStyle = '#3e2820'; g.fillRect(0, 0, 1024, 512);
-      g.strokeStyle = 'rgba(40,22,16,0.7)'; g.lineWidth = 3; for (var x = 0; x < 1024; x += 18) { g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + 6, 256, x - 4, 512); g.stroke(); }   // (strands)
-      var hl = g.createLinearGradient(0, Y(48), 0, Y(26)); hl.addColorStop(0, 'rgba(170,110,80,0)'); hl.addColorStop(0.5, 'rgba(130,86,64,0.75)'); hl.addColorStop(1, 'rgba(170,110,80,0)'); g.fillStyle = hl; g.fillRect(0, Y(48), 1024, Y(26) - Y(48));   // (a shine round her crown)
-      g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath();   // (her face, open below the bangs)
-      g.moveTo(X(-50), 512); g.lineTo(X(-50), Y(-4)); g.lineTo(X(-44), Y(8));
-      for (var l = -44; l <= 44; l += 4) g.lineTo(X(l + 2), Y(1 + ((l * 7) % 5 + 5) % 5 * 0.5));   // (blunt, straight-cut bangs)
-      g.lineTo(X(50), Y(-4)); g.lineTo(X(50), 512); g.closePath(); g.fill();
+      g.fillStyle = '#5a3a28'; g.fillRect(0, 0, 1024, 512);
+      for (var x = 0; x < 1024; x += 9) { g.strokeStyle = (x / 9) % 3 ? 'rgba(70,40,26,0.35)' : 'rgba(130,88,62,0.35)'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + 8, 256, x - 6, 512); g.stroke(); }   // (soft strands)
+      var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.7)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
+      // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
+      var BANG = [[-50, 1], [-37, -3], [-23, -4.5], [-10, -5], [3, -4], [16, -5.5], [29, -3.5], [41, -1.5], [50, 1]];
+      for (var b = 0; b < BANG.length - 1; b++) {
+        var x0 = X(BANG[b][0]), x1 = X(BANG[b + 1][0]), xm = (x0 + x1) / 2;
+        var cl = g.createLinearGradient(x0, 0, x1, 0); cl.addColorStop(0, 'rgba(50,28,18,0.5)'); cl.addColorStop(0.45, 'rgba(150,104,74,0.45)'); cl.addColorStop(1, 'rgba(50,28,18,0.5)');
+        g.fillStyle = cl; g.fillRect(x0, Y(28), x1 - x0, Y(-8) - Y(28));
+      }
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath();   // (her face, open below her bangs)
+      g.moveTo(X(-58), 512); g.lineTo(X(-58), Y(-10)); g.lineTo(X(-50), Y(2));
+      for (var b2 = 0; b2 < BANG.length - 1; b2++) {
+        var p0 = BANG[b2], p1 = BANG[b2 + 1], nx = (p0[0] + p1[0]) / 2 + 1.5, ny = 3 + (b2 % 2) * 1;   // (a shallow notch between each soft clump)
+        g.bezierCurveTo(X(p0[0] + 3), Y(p0[1] + 0.5), X(nx - 2), Y(ny - 2), X(nx), Y(ny)); g.bezierCurveTo(X(nx + 1), Y(ny - 3), X(p1[0] - 4), Y(p1[1] + 0.5), X(p1[0]), Y(p1[1]));
+      }
+      g.lineTo(X(58), Y(-10)); g.lineTo(X(58), 512); g.closePath(); g.fill();
     });
     var cap = new THREE.SphereGeometry(0.233, 48, 36); cap.scale(1, 0.95, 0.97); cap.translate(0, 0.004, -0.004); mesh(cap, toon(0xffffff, { map: hairTex, alphaTest: 0.5, side: THREE.DoubleSide }), head, true);
-    var hairBack = new THREE.Group(); head.add(hairBack);   // (long locks falling down her back, and two framing her face)
-    var sheet = lathe([[0.31, -0.74], [0.28, -0.52], [0.25, -0.32], [0.232, -0.14], [0.222, 0.0], [0.2, 0.08]], 40, function (v, a, j) {   // (a full fall of hair behind her...)
-      if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 16) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.08 * tri; }
+    var mLock = toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide });
+    function lockPaint(g) { return paint(g, 0x4e3222, 0x9a6a4a); }
+    var hairBack = new THREE.Group(); head.add(hairBack);
+    var sheet = lathe([[0.3, -0.7], [0.275, -0.5], [0.25, -0.32], [0.232, -0.14], [0.222, 0.0], [0.2, 0.08]], 48, function (v, a, j) {   // (a full fall of hair behind her...)
+      if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 12) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.1 * tri; }
     }, Math.PI - 1.75, 3.5);
-    mesh(sheet, toon(HAIR, { side: THREE.DoubleSide }), hairBack);
-    for (var k = 0; k < 15; k++) {   // (...in long flowing locks)
-      var a = Math.PI * (0.52 + k / 14 * 0.96), dx = Math.sin(a), dz = Math.cos(a), sp = 1.2 + Math.abs(dx) * 0.5 + (k % 2) * 0.1, len = 0.62 + (k % 3) * 0.05;
-      mesh(ribbon([V(dx * 0.19, 0.06, dz * 0.19), V(dx * 0.245, -0.14, dz * 0.24), V(dx * 0.28 * sp, -0.36, dz * 0.25), V(dx * 0.31 * sp + Math.sin(k) * 0.02, -0.56, dz * 0.25), V(dx * 0.35 * sp, -len - 0.1, dz * 0.23)], 0.075, 0.055, 0.018, V(Math.cos(a), 0, -Math.sin(a))), mHair, hairBack);
+    mesh(lockPaint(sheet), mLock, hairBack);
+    for (var k = 0; k < 12; k++) {   // (...in wide, smooth locks, each flaring out a little at its pointed tip)
+      var a = Math.PI * (0.5 + k / 11 * 1.0), dx = Math.sin(a), dz = Math.cos(a), out = 1 + Math.abs(dx) * 0.6, len = 0.66 + ((k * 5) % 3) * 0.05, flick = (k % 2 ? 1 : -1) * 0.03;
+      mesh(lockPaint(ribbon([V(dx * 0.2, 0.06, dz * 0.2), V(dx * 0.245, -0.14, dz * 0.24), V(dx * 0.27 * out, -0.36, dz * 0.25), V(dx * 0.3 * out + flick, -0.54, dz * 0.25), V(dx * 0.36 * out + flick * 2, -len - 0.06, dz * 0.22)], 0.1, 0.085, 0.016, V(Math.cos(a), 0, -Math.sin(a)))), mLock, hairBack);
     }
-    [-1, 1].forEach(function (s) { mesh(ribbon([V(s * 0.18, 0.02, 0.11), V(s * 0.21, -0.12, 0.11), V(s * 0.23, -0.28, 0.08), V(s * 0.26, -0.46, 0.05), V(s * 0.3, -0.58, 0.03)], 0.055, 0.04, 0.014, V(0, 0, 1)), mHair, head); });
+    [-1, 1].forEach(function (s) {                                       // (two long locks framing her face, over her shoulders)
+      mesh(lockPaint(ribbon([V(s * 0.175, 0.04, 0.11), V(s * 0.205, -0.1, 0.115), V(s * 0.22, -0.26, 0.1), V(s * 0.235, -0.42, 0.08), V(s * 0.28, -0.58, 0.06)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
+      mesh(lockPaint(ribbon([V(s * 0.19, 0.04, 0.06), V(s * 0.225, -0.12, 0.07), V(s * 0.25, -0.3, 0.05), V(s * 0.28, -0.48, 0.03), V(s * 0.33, -0.62, 0.0)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
+    });
 
     // ---- her hat: huge, soft and floppy, with a thick rolled brim lined in purple, a crumpled crown that bends over
     // and curls at its tip, a raised striped band with a buckle, and a cluster of orange roses ----
