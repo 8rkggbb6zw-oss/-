@@ -2321,27 +2321,24 @@ EVERDAWN_PARTS.push(function (THREE) {
       var g = lathe([[l[0], l[2]], [l[0] - 0.008, l[2] + 0.028], [l[1], l[2] + 0.1]], 96, function (v, a, j) { var f = 1 + 0.055 * Math.sin(a * 38) * (j < 2 ? 1 : 0.25); v.x *= f; v.z *= f; if (j === 0) v.y += 0.012 * Math.abs(Math.sin(a * 19)); });
       mesh(paint(g, l[3], 0x3a3440), toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
     });
-    // (her coat-dress: plain charcoal, falling in soft, uneven folds, parting at the front over her petticoat, with a
-    // jagged tattered hem and a purple lining)
+    // (her coat-dress: plain charcoal, falling in soft, uneven folds, with a jagged tattered hem
+    // and a purple lining)
     var plain = canvas(1024, 256, function (g, w, h) {
       g.fillStyle = '#35302e'; g.fillRect(0, 0, w, h);
       for (var x = 0; x < w; x += 37) { var gr = g.createLinearGradient(x - 18, 0, x + 18, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - 18, 0, 36, h); }   // (shade in its folds)
-      g.fillStyle = '#4a4440'; g.fillRect(0, 0, 14, h); g.fillRect(w - 14, 0, 14, h);   // (the front edges)
     });
     var skirt = lathe([[0.29, 0.32], [0.28, 0.35], [0.235, 0.44], [0.178, 0.53], [0.138, 0.6], [0.122, 0.63]], 96, function (v, a, j) {
       var up = 1 - j / 5, f = 1 + (0.045 * Math.sin(a * 7 + 0.4) + 0.025 * Math.sin(a * 13 + 1.1)) * up; v.x *= f; v.z *= f;   // (soft, uneven folds)
       if (j === 0) v.y -= 0.065 * (1 - tri(a, 11)) * jag(a);                // (a jagged, tattered hem)
-      v.y += 0.12 * Math.max(0, 1 - Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) / 0.4) * up;   // (parting at the front)
-    });
+          });
     paint(skirt, 0xc4c4c4, 0xffffff);
     mesh(skirt, toon(0xffffff, { map: plain, vertexColors: true })).add(new THREE.Mesh(skirt, mPurple));
     // (long tattered tails behind, reaching nearly to the ground)
     var tails = lathe([[0.4, 0.03], [0.35, 0.2], [0.27, 0.42], [0.18, 0.56], [0.135, 0.63]], 64, function (v, a, j) { if (j === 0) v.y += 0.13 * tri(a, 12) * jag(a + 1); }, Math.PI - 1.45, 2.9);
     mesh(paint(tails, 0x2a2430, 0x3c3a4a), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(tails, toon(0x1c181e, { side: THREE.BackSide })));
-    // (her bodice: fitted, with a front placket and two rows of buttons)
+    // (her bodice: fitted, with two rows of buttons)
     var bod = lathe([[0.122, 0.6, 0.8], [0.108, 0.64, 0.78], [0.112, 0.7, 0.8], [0.118, 0.75, 0.82], [0.098, 0.8, 0.8], [0.05, 0.84, 0.9]], 48);
     mesh(paint(bod, 0x302b29, 0x4c4642), toon(0xffffff, { vertexColors: true }));
-    mesh(lathe([[0.112, 0.6, 0.83], [0.113, 0.7, 0.83], [0.12, 0.75, 0.85], [0.1, 0.8, 0.83]], 6, null, -0.2, 0.4), toon(0x423c38));   // (the placket)
     for (var b = 0; b < 8; b++) { var bx = (b % 2 ? 1 : -1) * 0.018, by = 0.66 + Math.floor(b / 2) * 0.03, bt = new THREE.SphereGeometry(0.0085, 8, 6); bt.translate(bx, by, 0.1 + (by > 0.74 ? -0.004 : 0)); mesh(bt, toon(0x1a1414), chibi, true); }
     // ---- her arms: bell sleeves, little hands; a broom in her left ----
     function sleeveGeo() { return paint(lathe([[0.118, -0.285], [0.088, -0.215], [0.056, -0.11], [0.045, 0]], 32, function (v, a, j) { if (j === 0) v.y -= 0.055 * (1 - tri(a, 6)) * jag(a); var f = 1 + 0.06 * Math.sin(a * 5) * (j < 2 ? 1 : 0); v.x *= f; v.z *= f; }), 0x302b29, 0x4c4642); }   // (full bell sleeves with tattered points)
