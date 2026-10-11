@@ -2312,41 +2312,61 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-0.29, -0.24, -0.19, -0.14, -0.1].forEach(function (y, k) { var st = new THREE.TorusGeometry(0.066 + (y + 0.29) * 0.05, 0.005, 6, 18); st.rotateX(Math.PI / 2); st.rotateZ(k % 2 ? 0.3 : -0.3); st.translate(0, y, 0); mesh(st, toon(0x4a3a30), leg, true); });   // (straps)
     });
 
-    // ---- her petticoat, dress, tattered tails and capelet ----
-    mesh(lathe([[0.27, 0.31], [0.262, 0.335], [0.22, 0.4]], 64, function (v, a, j) { var f = 1 + 0.045 * Math.sin(a * 30) * (j < 2 ? 1 : 0.3); v.x *= f; v.z *= f; }), toon(CREAM, { side: THREE.DoubleSide }));   // (cream ruffles)
-    var stars = canvas(512, 256, function (g, w, h) {
-      g.fillStyle = '#3a2f2a'; g.fillRect(0, 0, w, h);
-      g.strokeStyle = 'rgba(20,14,14,0.5)'; g.lineWidth = 3; for (var x = 20; x < w; x += 46) { g.beginPath(); g.moveTo(x, 0); g.quadraticCurveTo(x + 8, h * 0.5, x - 4, h); g.stroke(); }   // (soft folds)
-      function star(x, y, r, rot) { g.save(); g.translate(x, y); g.rotate(rot); g.beginPath(); for (var k = 0; k < 10; k++) { var rr = k % 2 ? r * 0.45 : r, a = k / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fillStyle = '#d99a48'; g.fill(); g.restore(); }
-      for (var k = 0; k < 11; k++) star((k * 151) % w, 40 + ((k * 67) % (h - 80)), 16 + (k % 3) * 5, k);   // (gold stars)
+    // ---- her outfit ----
+    var LIGHT = new THREE.Vector3(-0.6, 0.8, 0.45).normalize();
+    function tri(a, n) { return Math.abs(((a / (Math.PI * 2) * n) % 1 + 1) % 1 - 0.5) * 2; }   // (0 at each point of a jagged edge, 1 between)
+    function jag(a) { return 0.6 + 0.4 * Math.abs(Math.sin(a * 37.1) * Math.cos(a * 11.3)); }   // (so the points aren't all the same length)
+    // (a cream petticoat: two layers of frilly ruffles)
+    [[0.3, 0.255, 0.27, 0xf2e4c6], [0.284, 0.24, 0.305, 0xe4d0aa]].forEach(function (l) {
+      var g = lathe([[l[0], l[2]], [l[0] - 0.008, l[2] + 0.028], [l[1], l[2] + 0.1]], 96, function (v, a, j) { var f = 1 + 0.055 * Math.sin(a * 38) * (j < 2 ? 1 : 0.25); v.x *= f; v.z *= f; if (j === 0) v.y += 0.012 * Math.abs(Math.sin(a * 19)); });
+      mesh(paint(g, l[3], 0xffffff), toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
     });
-    var skirt = lathe([[0.275, 0.33], [0.265, 0.36], [0.215, 0.45], [0.15, 0.55], [0.118, 0.62]], 56, function (v, a, j) {
-      if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 9) % 1 + 1) % 1 - 0.5) * 2; v.y -= 0.045 * (1 - tri); }   // (a pointed, tattered hem)
-      var f = 1 + 0.03 * Math.sin(a * 9) * (1 - j / 4); v.x *= f; v.z *= f;
+    // (her coat-dress: charcoal, scattered with gold stars, falling in soft, uneven folds, parting at the front over her
+    // petticoat, with a jagged tattered hem and a purple lining)
+    var stars = canvas(1024, 256, function (g, w, h) {
+      g.fillStyle = '#35302e'; g.fillRect(0, 0, w, h);
+      for (var x = 0; x < w; x += 37) { var gr = g.createLinearGradient(x - 18, 0, x + 18, 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - 18, 0, 36, h); }   // (shade in its folds)
+      g.fillStyle = '#4a4440'; g.fillRect(0, 0, 14, h); g.fillRect(w - 14, 0, 14, h);   // (the front edges)
+      function star(x, y, r, rot) { g.save(); g.translate(x, y); g.rotate(rot); g.beginPath(); for (var k = 0; k < 10; k++) { var rr = k % 2 ? r * 0.42 : r, a = k / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath();
+        var sg = g.createLinearGradient(-r, -r, r, r); sg.addColorStop(0, '#f4c068'); sg.addColorStop(1, '#c47e32'); g.fillStyle = sg; g.fill(); g.strokeStyle = '#7a4a1c'; g.lineWidth = 2; g.stroke(); g.restore(); }
+      [[90, 70, 22], [160, 170, 15], [250, 95, 18], [330, 200, 12], [420, 60, 14], [560, 150, 17], [690, 80, 12], [780, 190, 20], [880, 110, 16], [960, 210, 13], [40, 200, 11], [610, 230, 10]].forEach(function (s, k) { star(s[0], s[1], s[2], k * 0.7); });
     });
-    mesh(skirt, toon(0xffffff, { map: stars, side: THREE.DoubleSide }));
-    var tails = lathe([[0.37, 0.07], [0.33, 0.22], [0.26, 0.42], [0.17, 0.56], [0.13, 0.63]], 40, function (v, a, j) {   // (long tattered tails behind, lined in purple)
-      if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 14) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.09 * tri; }
-    }, Math.PI - 1.35, 2.7);
-    mesh(tails, toon(DARK)).add(new THREE.Mesh(tails, mPurple));
-    var torso = ell(0.112, 0.105, 0.085); torso.translate(0, 0.7, 0); mesh(torso, toon(DRESS));
-    for (var b = 0; b < 8; b++) { var bx = (b % 2 ? 1 : -1) * 0.032, by = 0.635 + Math.floor(b / 2) * 0.036, bz = 0.085 * Math.sqrt(Math.max(0.1, 1 - Math.pow(bx / 0.112, 2) - Math.pow((by - 0.7) / 0.105, 2))) + 0.004; var bt = new THREE.SphereGeometry(0.01, 8, 6); bt.translate(bx, by, bz); mesh(bt, toon(0x1e1818), chibi, true); }   // (two rows of buttons)
-    mesh(lathe([[0.18, 0.7], [0.165, 0.73], [0.12, 0.79], [0.055, 0.83]], 40, function (v, a, j) { if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 8) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.03 * tri; } }), toon(DARK, { side: THREE.DoubleSide }));   // (her capelet)
-    [-1, 1].forEach(function (s) {                                       // (big pointed collar flaps)
-      var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0.11, -0.01); sh.quadraticCurveTo(0.08, -0.05, 0.03, -0.1); sh.closePath();
-      var cg = new THREE.ShapeGeometry(sh); if (s < 0) cg.scale(-1, 1, 1); var cf = mesh(cg, toon(DARK, { side: THREE.DoubleSide })); cf.position.set(s * 0.012, 0.825, 0.07); cf.rotation.set(-0.55, s * 0.35, 0);
+    var skirt = lathe([[0.29, 0.32], [0.28, 0.35], [0.235, 0.44], [0.178, 0.53], [0.138, 0.6], [0.122, 0.63]], 96, function (v, a, j) {
+      var up = 1 - j / 5, f = 1 + (0.045 * Math.sin(a * 7 + 0.4) + 0.025 * Math.sin(a * 13 + 1.1)) * up; v.x *= f; v.z *= f;   // (soft, uneven folds)
+      if (j === 0) v.y -= 0.065 * (1 - tri(a, 11)) * jag(a);                // (a jagged, tattered hem)
+      v.y += 0.12 * Math.max(0, 1 - Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) / 0.4) * up;   // (parting at the front)
     });
-    // (a big orange bow at her collar)
-    var bow = new THREE.Group(); bow.position.set(0, 0.79, 0.11); chibi.add(bow);
+    paint(skirt, 0xc4c4c4, 0xffffff);
+    mesh(skirt, toon(0xffffff, { map: stars, vertexColors: true })).add(new THREE.Mesh(skirt, mPurple));
+    // (long tattered tails behind, reaching nearly to the ground, lined in purple, and two long ribbon tails at her sides)
+    var tails = lathe([[0.4, 0.03], [0.35, 0.2], [0.27, 0.42], [0.18, 0.56], [0.135, 0.63]], 64, function (v, a, j) { if (j === 0) v.y += 0.13 * tri(a, 12) * jag(a + 1); }, Math.PI - 1.45, 2.9);
+    mesh(paint(tails, 0x2a2430, 0x3c3a4a), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(tails, mPurple));
+    [-1, 1].forEach(function (s) { mesh(ribbon([V(s * 0.12, 0.6, -0.05), V(s * 0.24, 0.42, -0.06), V(s * 0.34, 0.22, -0.02), V(s * 0.42, 0.06, 0.02)], 0.045, 0.03, 0.006, V(0, 0, 1)), toon(0x2c2434), chibi); });
+    // (her bodice: fitted, with a front placket and two rows of buttons, and a belt at her waist)
+    var bod = lathe([[0.122, 0.6, 0.8], [0.108, 0.64, 0.78], [0.112, 0.7, 0.8], [0.118, 0.75, 0.82], [0.098, 0.8, 0.8], [0.05, 0.84, 0.9]], 48);
+    mesh(paint(bod, 0x302b29, 0x4c4642), toon(0xffffff, { vertexColors: true }));
+    mesh(lathe([[0.112, 0.6, 0.83], [0.113, 0.7, 0.83], [0.12, 0.75, 0.85], [0.1, 0.8, 0.83]], 6, null, -0.2, 0.4), toon(0x423c38));   // (the placket)
+    for (var b = 0; b < 8; b++) { var bx = (b % 2 ? 1 : -1) * 0.018, by = 0.66 + Math.floor(b / 2) * 0.03, bt = new THREE.SphereGeometry(0.0085, 8, 6); bt.translate(bx, by, 0.1 + (by > 0.74 ? -0.004 : 0)); mesh(bt, toon(0x1a1414), chibi, true); }
+    mesh(lathe([[0.126, 0.612, 0.82], [0.128, 0.63, 0.82], [0.124, 0.648, 0.82]], 48), toon(0x3a2418));   // (her belt...)
+    var bk = new THREE.TorusGeometry(0.014, 0.004, 4, 4); bk.rotateZ(Math.PI / 4); bk.translate(-0.045, 0.63, 0.098); mesh(bk, toon(0xc28a3e), chibi, true);   // (...and its buckle)
+    // (her capelet: pointed and tattered at its edge, lined in purple, with big pointed collar wings)
+    var cape = lathe([[0.205, 0.685], [0.19, 0.715], [0.145, 0.775], [0.085, 0.825], [0.055, 0.845]], 64, function (v, a, j) { if (j === 0) v.y += 0.05 * tri(a, 9) * jag(a + 2); var f = 1 + 0.03 * Math.sin(a * 9) * (1 - j / 4); v.x *= f; v.z *= f * 0.85; });
+    mesh(paint(cape, 0x2a2430, 0x463e54), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(cape, mPurple));
     [-1, 1].forEach(function (s) {
-      var lp = ell(0.055, 0.032, 0.018); lp.rotateZ(s * 0.35); lp.translate(s * 0.05, 0.005, 0); mesh(lp, mOrange, bow);
-      mesh(ribbon([V(s * 0.01, -0.01, 0), V(s * 0.03, -0.05, 0.01), V(s * 0.05, -0.1, 0.0)], 0.02, 0.018, 0.005, V(1, 0, 0)), mOrange, bow);
+      var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(0.08, 0.01, 0.15, -0.02); sh.quadraticCurveTo(0.1, -0.06, 0.04, -0.14); sh.quadraticCurveTo(0.03, -0.06, 0, 0);
+      var cg = new THREE.ExtrudeGeometry(sh, { depth: 0.006, bevelEnabled: false }); if (s < 0) cg.scale(-1, 1, 1); var cf = mesh(cg, toon(0x2e2836)); cf.position.set(s * 0.01, 0.84, 0.068); cf.rotation.set(-0.6, s * 0.38, 0);
     });
-    mesh(new THREE.SphereGeometry(0.02, 10, 8), mOrange, bow);
+    // (a big satin bow at her collar, with long tails)
+    var bow = new THREE.Group(); bow.position.set(0, 0.795, 0.115); chibi.add(bow);
+    [-1, 1].forEach(function (s) {
+      var lp = ell(0.068, 0.038, 0.02); lp.rotateZ(s * 0.32); lp.translate(s * 0.06, 0.006, 0); mesh(paint(lp, 0xd47e30, 0xffc070), toon(0xffffff, { vertexColors: true }), bow);
+      mesh(paint(ribbon([V(s * 0.01, -0.012, 0.005), V(s * 0.03, -0.06, 0.016), V(s * 0.055, -0.13, 0.01)], 0.022, 0.02, 0.005, V(1, 0, 0)), 0xd47e30, 0xffc070), toon(0xffffff, { vertexColors: true }), bow);
+    });
+    mesh(paint(ell(0.024, 0.02, 0.018), 0xc8722a, 0xffb060), toon(0xffffff, { vertexColors: true }), bow);
 
     // ---- her arms: bell sleeves, little hands; a broom in her left ----
-    function sleeveGeo() { return lathe([[0.1, -0.27], [0.076, -0.2], [0.05, -0.1], [0.044, 0]], 20, function (v, a, j) { if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 5) % 1 + 1) % 1 - 0.5) * 2; v.y -= 0.03 * (1 - tri); } }); }
-    var mSleeve = toon(DRESS, { side: THREE.DoubleSide });
+    function sleeveGeo() { return paint(lathe([[0.118, -0.285], [0.088, -0.215], [0.056, -0.11], [0.045, 0]], 32, function (v, a, j) { if (j === 0) v.y -= 0.055 * (1 - tri(a, 6)) * jag(a); var f = 1 + 0.06 * Math.sin(a * 5) * (j < 2 ? 1 : 0); v.x *= f; v.z *= f; }), 0x302b29, 0x4c4642); }   // (full bell sleeves with tattered points)
+    var mSleeve = toon(0xffffff, { vertexColors: true });
     function arm(s) { var g = new THREE.Group(); g.position.set(s * 0.14, 0.77, 0); chibi.add(g); var sg = sleeveGeo(); mesh(sg, mSleeve, g); g.add(new THREE.Mesh(sg, mPurple)); var h = new THREE.SphereGeometry(0.04, 14, 10); h.translate(0, -0.29, 0.005); mesh(h, mSkin, g); g.rotation.z = s * 0.18; return g; }
     var armL = arm(1), armR = arm(-1);
     var broom = new THREE.Group(); broom.position.set(0, -0.29, 0.01); broom.rotation.set(0.55, 0, -0.3); armL.add(broom);
@@ -2413,7 +2433,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ---- her hat: huge, soft and floppy, with a thick rolled brim lined in purple, a crumpled crown that bends over
     // and curls at its tip, a raised striped band with a buckle, and a cluster of orange roses ----
     var hat = new THREE.Group(); hat.position.set(0, 0.125, -0.01); hat.rotation.set(-0.16, 0, 0.08); head.add(hat);
-    var LIGHT = new THREE.Vector3(-0.6, 0.8, 0.45).normalize();
     function paint(g, base, lit, k) {                                    // (colour it, with a soft painted sheen where the light falls)
       var n = g.attributes.normal, col = [], c0 = new THREE.Color(base), c1 = new THREE.Color(lit), c = new THREE.Color(), v = new THREE.Vector3();
       for (var i = 0; i < n.count; i++) { v.fromBufferAttribute(n, i); var f = Math.pow(Math.max(0, v.dot(LIGHT)), 2) * (k ? k(i) : 1); c.copy(c0).lerp(c1, f); col.push(c.r, c.g, c.b); }
