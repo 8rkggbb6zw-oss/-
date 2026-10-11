@@ -2439,13 +2439,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       function fringe() {
         g.moveTo(X(-60), 512); g.lineTo(X(-60), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the curtain of hair curving in along her cheek...)
-        g.bezierCurveTo(X(-40), Y(-40), X(-37), Y(-20), X(-36), Y(-5));   // (...up its inner edge)
-        g.bezierCurveTo(X(-33), Y(-12), X(-28), Y(-12), X(-24), Y(-5));   // (a soft point of her fringe, down beside one eye)
-        g.bezierCurveTo(X(-18), Y(0), X(-14), Y(0.6), X(-11), Y(0.2));   // (then sweeping across, just above her eyes...)
-        g.bezierCurveTo(X(-9), Y(1), X(-7.8), Y(5), X(-7.2), Y(9.5)); g.bezierCurveTo(X(-6.8), Y(5), X(-5.6), Y(1.2), X(-3.4), Y(0.6));   // (...parting in a small gap...)
-        g.bezierCurveTo(X(4), Y(1.6), X(13), Y(1.6), X(19), Y(0.4));      // (...and on across...)
-        g.bezierCurveTo(X(21.4), Y(1.6), X(22.8), Y(8), X(23.6), Y(13.5)); g.bezierCurveTo(X(24.2), Y(8), X(25.6), Y(1.6), X(28.4), Y(-0.6));   // (...to a wider gap, where the lock beside her face parts from her bangs)
-        g.bezierCurveTo(X(32), Y(-1.2), X(35.5), Y(-2.5), X(38), Y(-7));
+        g.bezierCurveTo(X(-40), Y(-40), X(-38), Y(-20), X(-37), Y(-4));   // (...up its inner edge)
+        g.bezierCurveTo(X(-35), Y(-8), X(-32), Y(-10.5), X(-29), Y(-10.5)); g.bezierCurveTo(X(-26), Y(-8), X(-23), Y(-2.5), X(-20), Y(-0.5));   // (a lock curving down to a soft point beside one eye)
+        g.bezierCurveTo(X(-18), Y(-2.5), X(-14.5), Y(-3.2), X(-11.5), Y(-1.8)); g.bezierCurveTo(X(-9.5), Y(0), X(-8), Y(5), X(-7.2), Y(9.5));   // (a lock rounding into the small gap...)
+        g.bezierCurveTo(X(-6.6), Y(5), X(-5.5), Y(-0.5), X(-3), Y(-2.2));   // (...and the next starting from it in a point)
+        g.bezierCurveTo(X(2), Y(-3.8), X(10), Y(-3.8), X(15), Y(-2.2)); g.bezierCurveTo(X(18), Y(-1), X(21.5), Y(3), X(23.6), Y(13.5));   // (the wide middle lock, curving up into the bigger gap)
+        g.bezierCurveTo(X(24.4), Y(7), X(26), Y(-0.5), X(28.5), Y(-4.5)); g.bezierCurveTo(X(31), Y(-8.5), X(33.5), Y(-10.5), X(35.5), Y(-11));   // (the lock beside her face, sweeping down to a point)
+        g.bezierCurveTo(X(37), Y(-9), X(38), Y(-7.5), X(38.5), Y(-7));
         g.bezierCurveTo(X(39), Y(-22), X(41), Y(-40), X(46), Y(-52));     // (down the curtain on the other side)
         g.lineTo(X(60), Y(-56)); g.lineTo(X(60), 512); g.closePath();
       }
