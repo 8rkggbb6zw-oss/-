@@ -9,16 +9,17 @@ EVERDAWN_PARTS.push(function (THREE) {
   // each cradling a glowing orb like a lantern; six slender, jointed legs of pearl with lights at their joints, on
   // which it scuttles sideways; and veils of iridescent light trailing behind it. Bubbles drift up from its crystals,
   // a pearl circles over it, and wherever it stands, tidepool ripples spread softly round it. Feed one hay and pet it
-  // every day for three days in a row, and the next morning it has left you a Seaglass Heart in its shell. Miss a day
+  // every day for six days in a row, and the next morning it has left you a Tidelight Pearl in its shell. Miss a day
   // and the count starts over
-  var CRB_COST = 740, CRB_DAYS = 3;
+  var CRB_COST = 740, CRB_DAYS = 6;
   var CRB_PALS = [                                                    // a moonpearl one, a coral one and a deep-sea one
     { name: 'Moonpearl', shell: 0xe6deff, rim: 0xa898ec, under: 0xfff6fc, leg: 0xf2e8ff, crystal: 0xc0ecff, glow: 0x9ae0ff, glow2: 0xd8a8ff, veil: [0x9ae0ff, 0xd8a8ff, 0xffb8e0], iris: ['#5aa8e0', '#081830'] },
     { name: 'Coral Dawn', shell: 0xffdcd4, rim: 0xff90aa, under: 0xfff6f0, leg: 0xffeae2, crystal: 0xffd0ec, glow: 0xffa8c4, glow2: 0xffd890, veil: [0xffa0c0, 0xffd890, 0xff8ab0], iris: ['#e07a8a', '#2a0810'] },
     { name: 'Abyss', shell: 0xb0ccff, rim: 0x5868dc, under: 0xeaf2ff, leg: 0xd4e0ff, crystal: 0xa8fff0, glow: 0x7affe0, glow2: 0xa08aff, veil: [0x7affe0, 0xa08aff, 0x8ab8ff], iris: ['#3ad0c0', '#04201c'] }
   ];
   function crbCss(hex, a) { var c = new THREE.Color(hex); return 'rgba(' + Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255) + ',' + (a === undefined ? 1 : a) + ')'; }
-  // a Seaglass Heart: a heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core
+  // a Seaglass Heart: a heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core.
+  // (Nacrelles used to leave these; they leave Tidelight Pearls now, but any hearts you already have still keep and sell)
   function crbHeartShape(s) {
     var sh = new THREE.Shape(); sh.moveTo(0, -0.03 * s);
     sh.bezierCurveTo(0.012 * s, -0.018 * s, 0.032 * s, -0.004 * s, 0.03 * s, 0.012 * s); sh.bezierCurveTo(0.028 * s, 0.028 * s, 0.006 * s, 0.03 * s, 0, 0.016 * s);
@@ -43,7 +44,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(120,140,220,0.6)'; g.lineWidth = 1.5; heart(1); g.stroke();
     g.fillStyle = '#fff'; [[14, 22], [82, 20], [80, 82]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.seaglassHeart = { name: 'Seaglass Heart', price: 350, icon: '💎', img: crbHeartIcon, fill: 88, info: 'A heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core, left by a happy Nacrelle. Feed and pet yours every day for three days in a row for one. Sells for a very good price at the shipping bin.' };
+  ITEMS.seaglassHeart = { name: 'Seaglass Heart', price: 350, icon: '💎', img: crbHeartIcon, fill: 88, info: 'A heart of frosted sea glass, worn smooth by the tide, with a soft light glowing at its core, left by a happy Nacrelle. Sells for a very good price at the shipping bin.' };
+  // a Tidelight Pearl: big, round and lustrous, shimmering with every colour of the sea as it turns, with a soft
+  // light glowing deep inside it like the moon seen through water
+  function crbPearlModel(pal) {
+    var g = new THREE.Group();
+    var pearl = new THREE.Mesh(new THREE.SphereGeometry(0.026, 40, 30), ostIri(new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.shell).lerp(new THREE.Color(0xffffff), 0.45), roughness: 0.12, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05, sheen: new THREE.Color(pal.glow), emissive: new THREE.Color(pal.glow).lerp(new THREE.Color(0xffffff), 0.5), emissiveIntensity: 0.08 }), 0.9));   // (its lustre: every colour shifting over it as it turns)
+    pearl.castShadow = true; g.add(pearl);
+    var inner = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: new THREE.Color(pal.glow).lerp(new THREE.Color(0xffffff), 0.4), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); inner.scale.set(0.045, 0.045, 1); inner.material.opacity = 0.3; g.add(inner);   // (the light inside it)
+    var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.set(0.14, 0.14, 1); g.add(gl);
+    var sparks = []; for (var k = 0; k < 4; k++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimSparkTex, color: k % 2 ? pal.glow : pal.glow2, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false })); sp.scale.set(0.018, 0.018, 1); g.add(sp); sparks.push(sp); }
+    g.userData.sparks = sparks; g.userData.pearl = pearl;
+    return g;
+  }
+  var crbPearlIcon = glimCanvas(96, 96, function (g, w, h) {
+    var glow = g.createRadialGradient(48, 50, 4, 48, 50, 46); glow.addColorStop(0, 'rgba(170,230,255,0.7)'); glow.addColorStop(1, 'rgba(210,170,255,0)'); g.fillStyle = glow; g.fillRect(0, 0, w, h);
+    var pg = g.createRadialGradient(40, 40, 2, 48, 50, 28); pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.45, '#f2ecff'); pg.addColorStop(0.8, '#d4dcf4'); pg.addColorStop(1, '#a8b0d8'); g.fillStyle = pg; g.beginPath(); g.arc(48, 50, 26, 0, Math.PI * 2); g.fill();
+    g.save(); g.beginPath(); g.arc(48, 50, 26, 0, Math.PI * 2); g.clip();
+    [['rgba(255,170,220,0.35)', 34, 64, 16], ['rgba(140,230,255,0.35)', 64, 40, 16], ['rgba(200,170,255,0.3)', 62, 66, 14]].forEach(function (b) { var r = g.createRadialGradient(b[1], b[2], 1, b[1], b[2], b[3]); r.addColorStop(0, b[0]); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });   // (its shifting lustre)
+    g.restore();
+    g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.ellipse(38, 38, 7, 4.5, -0.7, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(130,130,190,0.5)'; g.lineWidth = 1.2; g.beginPath(); g.arc(48, 50, 26, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#fff'; [[14, 22], [82, 20], [80, 82]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
+  }).toDataURL();
+  ITEMS.tidelightPearl = { name: 'Tidelight Pearl', price: 720, icon: '⚪', img: crbPearlIcon, fill: 88, info: 'A big, flawless pearl, shimmering with every colour of the sea as it turns, with a soft light glowing deep inside it like the moon seen through water, left by a happy Nacrelle. Feed and pet yours every day for six days in a row for one. Sells for an excellent price at the shipping bin.' };
   var crbShopIcon = glimCanvas(128, 128, function (g, w, h) {         // a little portrait of one, for the shop
     var sky = g.createRadialGradient(64, 70, 4, 64, 70, 64); sky.addColorStop(0, 'rgba(170,230,255,0.75)'); sky.addColorStop(1, 'rgba(200,170,255,0)'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
     g.strokeStyle = 'rgba(160,220,255,0.6)'; g.lineWidth = 1.5; [0, 1].forEach(function (k) { g.beginPath(); g.ellipse(64, 108, 40 + k * 14, 7 + k * 3, 0, 0, Math.PI * 2); g.stroke(); });   // (tidepool ripples)
@@ -311,15 +335,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     tag.scale.set(0.42, 0.1575, 1); tag.position.set(0, 0.56, 0); tag.renderOrder = 6; root.add(tag);
     return { root: root, yaw: yawG, body: body, torso: torso, garden: garden, crystals: crystals, crystalMat: crystalMat, coralTips: coralTips, anemones: anemones, runeLights: runeLights, lightMat: lightMat, stalks: stalks, lids: lids, arms: arms, legs: legs, veils: veils, bubbles: bubbles, orbit: orbit, mpGlow: mpGlow, ripples: ripples, motes: motes, glow: glow, tagCv: tagCv, tagTex: tagTex, wig: 0, yawNow: 0 };
   }
-  // its Seaglass Heart, resting in an open scallop shell in the straw, and a bundle of hay in the manger when it's been fed
+  // its Tidelight Pearl, resting in an open scallop shell in the straw, and a bundle of hay in the manger when it's been fed
   function crbBuildExtras(g) {
     var sz = GLIM_STALLS[g.stall], pal = CRB_PALS[g.pal % CRB_PALS.length];
     var egg = new THREE.Group(); egg.position.set(-3.3, 0.1, sz - 0.62); abRoom.add(egg);
     var sg = new THREE.SphereGeometry(0.06, 36, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), sp = sg.attributes.position;
     for (var i = 0; i < sp.count; i++) { var x = sp.getX(i), z = sp.getZ(i), a = Math.atan2(z, x), k = 1 + 0.06 * Math.abs(Math.sin(a * 7)); sp.setXYZ(i, x * k, sp.getY(i) * 0.45, z * k); }   // (a fluted scallop shell)
     sg.computeVertexNormals();
-    var shell = new THREE.Mesh(sg, ostIri(new THREE.MeshPhysicalMaterial({ color: pal.shell, roughness: 0.25, clearcoat: 1, side: THREE.DoubleSide }), 0.6)); shell.position.y = 0.03; shell.castShadow = true; egg.add(shell);
-    var heart = crbHeartModel(pal); heart.position.y = 0.05; heart.rotation.x = -0.25; egg.add(heart);
+    var shell = new THREE.Mesh(sg, ostIri(new THREE.MeshPhysicalMaterial({ color: new THREE.Color(pal.shell).lerp(new THREE.Color(pal.rim), 0.35), map: crbShellTex, roughness: 0.3, clearcoat: 1, side: THREE.DoubleSide }), 0.4)); shell.position.y = 0.03; shell.castShadow = true; egg.add(shell);   // (an open shell, finely ridged)
+    var heart = crbPearlModel(pal); heart.position.y = 0.056; egg.add(heart);
     var eg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: pal.glow, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
     eg.scale.set(0.4, 0.4, 1); eg.position.y = 0.06; egg.add(eg);
     g.eggMesh = egg; g.eggGlow = eg; g.eggHeart = heart;
@@ -360,17 +384,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.ripples.forEach(function (r) { r.t += dt * 0.25; if (r.t > 1) r.t -= 1; var s = 0.08 + r.t * 0.3; r.m.scale.set(s, s, 1); r.m.material.opacity = Math.sin(r.t * Math.PI) * (0.09 + shine * 0.08); });   // (tidepool ripples spreading out round it)
     m.motes.forEach(function (o) { o.t += dt * (happy ? 0.35 : 0.13); if (o.t > 1) { o.t = 0; o.a = Math.random() * Math.PI * 2; } o.s.position.set(Math.cos(o.a + o.t * 2) * o.r, 0.15 + o.t * 0.45, Math.sin(o.a + o.t * 2) * o.r); o.s.material.opacity = Math.sin(o.t * Math.PI) * 0.6; });
     m.glow.material.opacity = 0.03 + Math.sin(t + g.stall) * 0.01 + shine * 0.02;
-    if (g.egg) { g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12; g.eggHeart.rotation.y = Math.sin(t * 0.8) * 0.4; }
+    if (g.egg) { g.eggGlow.material.opacity = 0.16 + Math.sin(t * 2 + g.stall) * 0.06; g.eggHeart.userData.pearl.rotation.y = t * 0.5; g.eggHeart.userData.sparks.forEach(function (sp, k) { var a = t * 0.9 + k * Math.PI / 2; sp.position.set(Math.cos(a) * 0.04, Math.sin(t * 1.3 + k) * 0.015, Math.sin(a) * 0.04); sp.material.opacity = 0.3 + Math.pow(0.5 + 0.5 * Math.sin(t * 3 + k * 1.7), 3) * 0.6; }); }   // (little sparkles circling it)
   }
-  function nacrelleAction(g, wx, wz) {                               // taking its Seaglass Heart, feeding and petting a Nacrelle
+  function nacrelleAction(g, wx, wz) {                               // taking its Tidelight Pearl, feeding and petting a Nacrelle
     if (g.egg) {
-      if (!roomFor(['seaglassHeart'])) { bagFull(); return; }
-      addItem('seaglassHeart', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.2;
-      showToast('You took a glowing Seaglass Heart from ' + g.name + '\'s shell! 💎🌊', 2400);
+      if (!roomFor(['tidelightPearl'])) { bagFull(); return; }
+      addItem('tidelightPearl', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.2;
+      showToast('You took a shimmering Tidelight Pearl from ' + g.name + '\'s shell! ⚪🌊', 2400);
       return;
     }
     var day = Math.min(CRB_DAYS, g.days + 1);                        // (counting today, once it's fed and petted)
-    var news = day >= CRB_DAYS ? ' A Seaglass Heart tomorrow morning!' : ' Day ' + day + ' of ' + CRB_DAYS + ' toward a Seaglass Heart.';
+    var news = day >= CRB_DAYS ? ' A Tidelight Pearl tomorrow morning!' : ' Day ' + day + ' of ' + CRB_DAYS + ' toward a Tidelight Pearl.';
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
       g.fed = true; glimRefresh(g); popSound(); g.pet = 0.8; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
@@ -385,7 +409,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return;
     }
     g.pet = 1.4; glimHeartBurst(g.x, 0.4, g.z);
-    showToast(g.name + ' is fed, petted and happy ✧' + (day >= CRB_DAYS ? ' A Seaglass Heart tomorrow morning!' : ' Day ' + day + ' of ' + CRB_DAYS + ' done. Come back tomorrow!'), 2400);
+    showToast(g.name + ' is fed, petted and happy ✧' + (day >= CRB_DAYS ? ' A Tidelight Pearl tomorrow morning!' : ' Day ' + day + ' of ' + CRB_DAYS + ' done. Come back tomorrow!'), 2400);
   }
 
   // ---------- Holding what your animals give you ----------
@@ -428,6 +452,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     starbloom: function () { return tortBloomModel(TORT_PALS[0]); },   // (a Starbloom held by its stem)
     nebulaMilk: function () { return holdBottle(0xf2ecff, 0xc8b8ff, 0xffd27a, 0x7a6aff); },
     seaglassHeart: function () { var g = crbHeartModel(CRB_PALS[0]); g.position.y = 0.05; return g; },   // (a Seaglass Heart, glowing in your palm)
+    tidelightPearl: function () { var g = crbPearlModel(CRB_PALS[0]); g.position.y = 0.03; return g; },   // (a Tidelight Pearl, resting in your palm)
     dawnshellEgg: function () { var g = ostEggModel(); g.scale.setScalar(0.85); g.add(holdGlow(OST_PALS[0].glow, 0.34, 0.07)); return g; },
     sunscale: function () { var g = lizScaleModel(LIZ_PALS[0]); g.position.y = 0.05; g.rotation.set(0.3, 0.4, -0.2); return g; },   // (a Sunscale resting on your palm)
     cinderQuill: function () {                                       // held by its shaft, the flame end up
@@ -497,7 +522,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         else if (g.kind === 'axo') { var ax = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#ff7aa8', '#b0a4ff', '#ffc8e4'][p % 3] : '#d8d0e0'; c.beginPath(); [-0.6, 0, 0.6].forEach(function (fa) { c.ellipse(ax + Math.sin(fa) * 5, 51 - Math.cos(fa) * 5, 2.4, 6.5, fa, 0, Math.PI * 2); }); }   // (a little sprig of kelp for each day)
         else if (g.kind === 'liz') { var lzx = w / 2 + (p - 0.5) * 22; c.fillStyle = g.egg || p < done ? ['#ffb040', '#ff7a4a'][p % 2] : '#d8d0e0'; c.beginPath(); c.moveTo(lzx, 41); c.bezierCurveTo(lzx + 8, 43, lzx + 8, 53, lzx, 58); c.bezierCurveTo(lzx - 8, 53, lzx - 8, 43, lzx, 41); }   // (a little Sunscale for each day)
         else if (g.kind === 'bison') { var bx2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#c8b8ff', '#9ad0ff', '#ffb0e0'][p % 3] : '#d8d0e0'; c.beginPath(); for (var bk2 = 0; bk2 < 10; bk2++) { var ba2 = bk2 / 10 * Math.PI * 2, br2 = bk2 % 2 ? 2.6 : 6.4; c[bk2 ? 'lineTo' : 'moveTo'](bx2 + Math.sin(ba2) * br2, 50 - Math.cos(ba2) * br2); } c.closePath(); }   // (a little star for each day)
-        else if (g.kind === 'crab') { var cx2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#9ae0ff', '#d8a8ff', '#ffa8c8'][p % 3] : '#d8d0e0'; c.beginPath(); c.moveTo(cx2, 57); c.bezierCurveTo(cx2 - 9, 50, cx2 - 7, 41, cx2, 46); c.bezierCurveTo(cx2 + 7, 41, cx2 + 9, 50, cx2, 57); }   // (a little heart for each day)
+        else if (g.kind === 'crab') { var cx2 = w / 2 + (p - 2.5) * 19; c.fillStyle = g.egg || p < done ? ['#9ae0ff', '#d8a8ff', '#ffa8c8'][p % 3] : '#d8d0e0'; c.beginPath(); c.arc(cx2, 50, 7, 0, Math.PI * 2); c.fill(); c.fillStyle = 'rgba(255,255,255,0.75)'; c.beginPath(); c.arc(cx2 - 2.2, 47.8, 2.2, 0, Math.PI * 2); }   // (a little pearl for each of its six days)
         else if (g.kind === 'ostrich') { var ox2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#ffb0c8', '#ffd27a', '#f2a8c4'][p % 3] : '#d8d0e0'; c.beginPath(); c.ellipse(ox2, 50, 6, 8, 0, 0, Math.PI * 2); }   // (a little egg for each day)
         else if (g.kind === 'tort') { var tx2 = w / 2 + (p - 1) * 22; c.fillStyle = g.egg || p < done ? ['#ff9ac8', '#9ae0b0', '#c8b0ff'][p % 3] : '#d8d0e0'; c.beginPath(); for (var tk2 = 0; tk2 < 5; tk2++) { var ta2 = tk2 / 5 * Math.PI * 2; c.moveTo(tx2 + Math.sin(ta2) * 4 + 3, 50 - Math.cos(ta2) * 4); c.arc(tx2 + Math.sin(ta2) * 4, 50 - Math.cos(ta2) * 4, 3.2, 0, Math.PI * 2); } }   // (a little flower for each day)
         else if (g.kind === 'prism') { var px = w / 2 + (p - 0.5) * 22; c.fillStyle = g.egg || p < done ? ['#ff8ab8', '#8ab8ff'][p % 2] : '#d8d0e0'; c.beginPath(); c.moveTo(px, 41); c.lineTo(px + 7, 49); c.lineTo(px, 57); c.lineTo(px - 7, 49); c.closePath(); }   // (a little prism for each day)
@@ -577,10 +602,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (sbloom.length) news.push(sbloom.join(' and ') + (sbloom.length > 1 ? ' each have' : ' has') + ' a Starbloom in bloom');
       if (sscale.length) news.push(sscale.join(' and ') + (sscale.length > 1 ? ' each shed' : ' shed') + ' a Sunscale');
       if (frond.length) news.push(frond.join(' and ') + (frond.length > 1 ? ' have Glimmerkelp' : ' has Glimmerkelp') + ' ready to shear');
-      if (hearts.length) news.push(hearts.join(' and ') + (hearts.length > 1 ? ' each left' : ' left') + ' a Seaglass Heart');
+      if (hearts.length) news.push(hearts.join(' and ') + (hearts.length > 1 ? ' each left' : ' left') + ' a Tidelight Pearl');
       if (dawn.length) news.push(dawn.join(' and ') + (dawn.length > 1 ? ' each laid' : ' laid') + ' a Dawnshell Egg');
       if (geode.length) news.push(geode.join(' and ') + (geode.length > 1 ? ' each laid' : ' laid') + ' a Geode Egg');
-      if (missedHeart.length) news.push(missedHeart.join(' and ') + ' missed a day of care, so ' + (missedHeart.length > 1 ? 'their heart counts start' : 'their heart count starts') + ' over');
+      if (missedHeart.length) news.push(missedHeart.join(' and ') + ' missed a day of care, so ' + (missedHeart.length > 1 ? 'their pearl counts start' : 'their pearl count starts') + ' over');
       if (missedDawn.length) news.push(missedDawn.join(' and ') + ' missed a day of care, so ' + (missedDawn.length > 1 ? 'their egg counts start' : 'their egg count starts') + ' over');
       if (missedGem.length) news.push(missedGem.join(' and ') + ' missed a day of care, so ' + (missedGem.length > 1 ? 'their egg counts start' : 'their egg count starts') + ' over');
       if (missedMilk.length) news.push(missedMilk.join(' and ') + ' missed a day of care, so ' + (missedMilk.length > 1 ? 'their milk counts start' : 'their milk count starts') + ' over');
@@ -776,7 +801,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var glimBtnText = '';
   function updateGlimButton() {
     var g = glimmerInReach(), txt = '';
-    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'lotus' || g.kind === 'bison' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' || g.kind === 'prism' || g.kind === 'axo' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Wishbubble' : g.kind === 'liz' ? '☀️ Take the Sunscale' : g.kind === 'tort' ? '🌸 Pick the Starbloom' : g.kind === 'crab' ? '💎 Take the Seaglass Heart' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
+    if (g && !barnShopOpen) txt = g.egg ? (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'lotus' || g.kind === 'bison' ? '🥛 Milk ' + g.name : g.kind === 'zephyra' || g.kind === 'prism' || g.kind === 'axo' ? '✂️ Shear ' + g.name : g.kind === 'luna' ? '⚪ Take the Moonpearl' : g.kind === 'bubble' ? '🫧 Take the Wishbubble' : g.kind === 'liz' ? '☀️ Take the Sunscale' : g.kind === 'tort' ? '🌸 Pick the Starbloom' : g.kind === 'crab' ? '⚪ Take the Tidelight Pearl' : g.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !g.fed ? '🌾 Feed ' + g.name : !g.petted ? '💜 Pet ' + g.name : '✧ ' + g.name;
     if (txt !== glimBtnText) { glimBtnText = txt; if (txt) glimBtn.innerHTML = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <kbd>E</kbd>'; }
     var show = !!txt;
     if (glimBtn.classList.contains('show') !== show) glimBtn.classList.toggle('show', show);
@@ -810,7 +835,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
     glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : g.kind === 'ostrich' ? 'after every three days in a row they\'ll lay a Dawnshell Egg.' : g.kind === 'crab' ? 'after every three days in a row they\'ll leave you a Seaglass Heart.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : g.kind === 'ostrich' ? 'after every three days in a row they\'ll lay a Dawnshell Egg.' : g.kind === 'crab' ? 'after every six days in a row they\'ll leave you a Tidelight Pearl.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -835,7 +860,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Nacrelles \u00b7 740 \u2605', 'leave a Seaglass Heart every 3 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)'], ['Nacrelles \u00b7 740 \u2605', 'leave a Tidelight Pearl every 6 days', 'rgba(160,230,255,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 98 + k * 17.6, 12, an[2], false);
       chalk(an[1], w / 2 + 80, 107 + k * 17.6, 7.5, 'rgba(240,240,230,A)', true);
     });
@@ -1387,7 +1412,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ost-pic"></div><div class="shop-text"><b>Celestara</b><span>A graceful dawn-bird in soft plumage blushing with the colours of sunrise, traced with glowing golden filigree. It has a long, swan-like neck, big gentle eyes lined in gold, a slender pearly beak, a crest of glassy plumes tipped with little lights and a halo of turning runes floating behind its head. Its wings are layered with feathers edged in light, and its long, sweeping train shines with eye-spots and crystals and trails ribbons of aurora, while little crystals drift round it. Feed it hay and pet it every day for three days in a row, and the next morning it lays a Dawnshell Egg for you. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + OST_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ost-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic crb-pic"></div><div class="shop-text"><b>Nacrelle</b><span>A little tide-spirit from the moonlit shallows, with a wide, domed shell of living opal set with tiny pearls and traced with glowing runes, and a garden of crystals, coral and swaying anemones growing on its back. It has big shining eyes on slender stalks, delicate crystal pincers that each cradle a glowing orb, six slender legs of pearl on which it scuttles sideways, and veils of iridescent light trailing behind it. Bubbles drift up from it, a pearl circles over it, and tidepool ripples spread wherever it stands. Feed it hay and pet it every day for three days in a row, and the next morning it leaves you a Seaglass Heart. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic crb-pic"></div><div class="shop-text"><b>Nacrelle</b><span>A little tide-spirit from the moonlit shallows, with a wide, domed shell of living opal set with tiny pearls and traced with glowing runes, and a garden of crystals, coral and swaying anemones growing on its back. It has big shining eyes on slender stalks, delicate crystal pincers that each cradle a glowing orb, six slender legs of pearl on which it scuttles sideways, and veils of iridescent light trailing behind it. Bubbles drift up from it, a pearl circles over it, and tidepool ripples spread wherever it stands. Feed it hay and pet it every day for six days in a row, and the next morning it leaves you a shimmering Tidelight Pearl. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + CRB_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="crb-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
