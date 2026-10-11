@@ -2358,26 +2358,44 @@ EVERDAWN_PARTS.push(function (THREE) {
     var head = new THREE.Group(); head.position.set(0, 1.02, 0); chibi.add(head);
     mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.09, 10).translate(0, -0.21, 0), mSkin, head, true);   // (her neck)
     function face(closed) {
-      return canvas(1024, 512, function (g) {
-        g.fillStyle = '#f9dccb'; g.fillRect(0, 0, 1024, 512);
-        function X(l) { return 256 + l * 1024 / 360; } function Y(p) { return 256 - p * 512 / 180; }
+      return canvas(2048, 1024, function (g) {
+        g.fillStyle = '#f8d9c6'; g.fillRect(0, 0, 2048, 1024);
+        function X(l) { return 512 + l * 2048 / 360; } function Y(p) { return 512 - p * 1024 / 180; }
+        var sh = g.createLinearGradient(0, Y(6), 0, Y(-6)); sh.addColorStop(0, 'rgba(150,86,70,0.45)'); sh.addColorStop(1, 'rgba(150,86,70,0)'); g.fillStyle = sh; g.fillRect(0, Y(6), 2048, Y(-6) - Y(6));   // (soft shade beneath her bangs)
         [-1, 1].forEach(function (s) {
-          var gr = g.createRadialGradient(X(s * 33), Y(-23), 2, X(s * 33), Y(-23), 40); gr.addColorStop(0, 'rgba(236,116,110,0.7)'); gr.addColorStop(1, 'rgba(240,120,120,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(X(s * 33), Y(-23), 40, 24, 0, 0, Math.PI * 2); g.fill();   // (rosy cheeks)
-          var cx = X(s * 20), cy = Y(-9);
-          if (closed) { g.strokeStyle = '#2a1616'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 30, cy + 4); g.quadraticCurveTo(cx, cy - 22, cx + 30, cy + 4); g.stroke(); return; }   // (happily closed)
-          g.save(); g.beginPath(); g.ellipse(cx, cy, 36, 44, 0, 0, Math.PI * 2); g.fillStyle = '#fffaf4'; g.fill(); g.clip();
-          var ir = g.createLinearGradient(0, cy - 40, 0, cy + 40); ir.addColorStop(0, '#1c3412'); ir.addColorStop(0.45, '#4e8a26'); ir.addColorStop(0.8, '#a8d44a'); ir.addColorStop(1, '#e6f88c');
-          g.fillStyle = ir; g.beginPath(); g.ellipse(cx + s * 2, cy + 3, 32, 40, 0, 0, Math.PI * 2); g.fill();   // (a big green iris, bright at the bottom)
-          g.fillStyle = 'rgba(14,30,8,0.85)'; g.beginPath(); g.ellipse(cx + s * 2, cy, 14, 19, 0, 0, Math.PI * 2); g.fill();
-          g.strokeStyle = '#142808'; g.lineWidth = 3; g.beginPath(); g.ellipse(cx + s * 2, cy + 3, 31, 39, 0, 0, Math.PI * 2); g.stroke();
-          g.fillStyle = '#fff'; g.beginPath(); g.ellipse(cx - 11, cy - 14, 13, 15, -0.3, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(cx + 12, cy + 18, 6, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(cx + 4, cy - 22, 3, 0, Math.PI * 2); g.fill();   // (glossy highlights)
+          var bx = X(s * 33), by = Y(-29), bl = g.createRadialGradient(bx, by, 4, bx, by, 64);   // (round pink blush beneath her eyes)
+          bl.addColorStop(0, 'rgba(240,112,112,0.75)'); bl.addColorStop(0.55, 'rgba(240,120,120,0.4)'); bl.addColorStop(1, 'rgba(240,120,120,0)');
+          g.fillStyle = bl; g.beginPath(); g.ellipse(bx, by, 70, 46, 0, 0, Math.PI * 2); g.fill();
+          var cx = X(s * 20.5), cy = Y(-13), rx = 66, ry = 94;
+          if (closed) {                                                    // (happily closed, with her lashes still flicking out)
+            g.strokeStyle = '#1a0e0e'; g.lineWidth = 13; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 70, cy + 6); g.quadraticCurveTo(cx, cy - 34, cx + 70, cy + 6); g.stroke();
+            g.fillStyle = '#1a0e0e'; g.beginPath(); g.moveTo(cx + s * 60, cy - 4); g.lineTo(cx + s * 100, cy - 22); g.lineTo(cx + s * 72, cy + 10); g.closePath(); g.fill();
+            return;
+          }
+          function eyeShape() { g.beginPath(); g.moveTo(cx - rx, cy - 10); g.bezierCurveTo(cx - rx, cy - ry * 0.95, cx + rx, cy - ry * 0.95, cx + rx, cy - 10); g.bezierCurveTo(cx + rx, cy + ry * 1.05, cx - rx, cy + ry * 1.05, cx - rx, cy - 10); g.closePath(); }
+          eyeShape(); g.fillStyle = '#fbf6f0'; g.fill();
+          g.save(); eyeShape(); g.clip();
+          var ix = cx + s * 3, iy = cy + 6, ir = g.createLinearGradient(0, iy - ry, 0, iy + ry * 0.9);   // (a huge iris: dark at the top, glowing yellow-green at the bottom)
+          ir.addColorStop(0, '#142608'); ir.addColorStop(0.3, '#2e5214'); ir.addColorStop(0.6, '#6a9a2a'); ir.addColorStop(0.85, '#b8dc52'); ir.addColorStop(1, '#e8fa98');
+          g.fillStyle = ir; g.beginPath(); g.ellipse(ix, iy, rx * 0.86, ry * 0.95, 0, 0, Math.PI * 2); g.fill();
+          var gl = g.createRadialGradient(ix, iy + ry * 0.55, 4, ix, iy + ry * 0.55, rx * 0.7); gl.addColorStop(0, 'rgba(240,255,170,0.75)'); gl.addColorStop(1, 'rgba(240,255,170,0)'); g.fillStyle = gl; g.fillRect(ix - rx, iy, rx * 2, ry);   // (the glow in its lower half)
+          var pp = g.createRadialGradient(ix, iy - 6, 4, ix, iy - 6, 40); pp.addColorStop(0, 'rgba(10,20,4,0.95)'); pp.addColorStop(0.7, 'rgba(10,20,4,0.85)'); pp.addColorStop(1, 'rgba(10,20,4,0)'); g.fillStyle = pp; g.beginPath(); g.ellipse(ix, iy - 6, 36, 46, 0, 0, Math.PI * 2); g.fill();   // (a big, soft pupil)
+          var tp = g.createLinearGradient(0, cy - ry, 0, cy - ry * 0.2); tp.addColorStop(0, 'rgba(12,8,6,0.85)'); tp.addColorStop(1, 'rgba(12,8,6,0)'); g.fillStyle = tp; g.fillRect(cx - rx, cy - ry, rx * 2, ry * 0.8);   // (the shadow of her lashes)
+          g.strokeStyle = '#0e1a06'; g.lineWidth = 5; g.beginPath(); g.ellipse(ix, iy, rx * 0.86, ry * 0.95, 0, 0, Math.PI * 2); g.stroke();
+          g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(cx - 20, cy - 28, 24, 30, -0.3, 0, Math.PI * 2); g.fill();   // (glossy highlights)
+          g.beginPath(); g.ellipse(cx + 26, cy + 38, 12, 10, 0, 0, Math.PI * 2); g.fill();
+          g.globalAlpha = 0.7; g.beginPath(); g.arc(cx + 10, cy - 50, 7, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
           g.restore();
-          g.fillStyle = '#1e1010'; g.beginPath(); g.moveTo(cx - 40, cy - 22); g.quadraticCurveTo(cx, cy - 64, cx + 40, cy - 22); g.lineTo(cx + 38, cy - 10); g.quadraticCurveTo(cx, cy - 50, cx - 38, cy - 10); g.closePath(); g.fill();   // (thick upper lashes...)
-          g.beginPath(); g.moveTo(cx + s * 32, cy - 30); g.lineTo(cx + s * 54, cy - 40); g.lineTo(cx + s * 40, cy - 18); g.closePath(); g.fill(); g.beginPath(); g.moveTo(cx + s * 38, cy - 20); g.lineTo(cx + s * 52, cy - 22); g.lineTo(cx + s * 40, cy - 12); g.closePath(); g.fill();   // (...flicking out at the corner)
-          g.strokeStyle = '#2a1616'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx - 22, cy + 42); g.quadraticCurveTo(cx, cy + 48, cx + 22, cy + 42); g.stroke();
+          g.strokeStyle = '#3a1e18'; g.lineWidth = 5; g.beginPath(); g.ellipse(cx, cy - 6, rx, ry * 0.98, 0, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();   // (a thin line round its bottom)
+          g.fillStyle = '#140a0a'; g.beginPath();                          // (a heavy black upper lash line...)
+          g.moveTo(cx - rx - 6, cy - 4); g.bezierCurveTo(cx - rx, cy - ry * 1.1, cx + rx, cy - ry * 1.1, cx + rx + 6, cy - 4);
+          g.bezierCurveTo(cx + rx - 10, cy - ry * 0.78, cx - rx + 10, cy - ry * 0.78, cx - rx - 6, cy - 4); g.closePath(); g.fill();
+          var ox = cx + s * (rx - 4);                                     // (...flicking out at the corner in a few thick lashes)
+          [[-50, 36, -72], [-30, 40, -44]].forEach(function (l) { g.beginPath(); g.moveTo(ox, cy + l[0] - 2); g.quadraticCurveTo(ox + s * l[1] * 0.6, cy + l[0] - 6, ox + s * l[1], cy + l[2]); g.lineTo(ox, cy + l[0] + 12); g.closePath(); g.fill(); });
         });
-        g.fillStyle = '#c98a78'; g.beginPath(); g.ellipse(X(0), Y(-18), 3, 2, 0, 0, Math.PI * 2); g.fill();   // (a tiny nose)
-        g.strokeStyle = '#4a2420'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(X(-5), Y(-25)); g.quadraticCurveTo(X(-2.5), Y(-29), X(0), Y(-25.5)); g.quadraticCurveTo(X(2.5), Y(-29), X(5), Y(-25)); g.stroke();   // (a little cat smile)
+        g.fillStyle = '#d0907c'; g.beginPath(); g.ellipse(X(0), Y(-24), 5, 3.5, 0, 0, Math.PI * 2); g.fill();   // (a tiny nose)
+        g.strokeStyle = '#5a2a22'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';   // (a little "ω" cat mouth)
+        g.beginPath(); g.moveTo(X(-5.5), Y(-30.5)); g.quadraticCurveTo(X(-2.8), Y(-34.5), X(0), Y(-31)); g.quadraticCurveTo(X(2.8), Y(-34.5), X(5.5), Y(-30.5)); g.stroke();
       });
     }
     var faceOpen = face(false), faceShut = face(true), mFace = toon(0xffffff, { map: faceOpen });
