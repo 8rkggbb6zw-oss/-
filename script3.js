@@ -2257,10 +2257,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   // A cute 3D witch, in an anime style with soft cel shading and dark outlines: a big round head with large glossy
   // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, floppy witch's hat
   // with a thick rolled brim lined in purple, a striped band, a buckle and orange roses, its crumpled crown bending over
-  // and curling at the tip; a plain charcoal coat-dress with two rows of buttons, pointed collar flaps and a big
-  // orange bow, purple-lined bell sleeves, a cream ruffled petticoat and long purple-lined tattered tails behind; torn
-  // dark stockings and boots; and a broom in her left hand (your tools are held in her right). She walks, swings her
-  // arms, sways her hair, blinks, and a little bat flutters round her
+  // and curling at the tip; a plain charcoal coat-dress with two rows of buttons and pointed collar flaps, purple-lined
+  // bell sleeves, a black ruffled petticoat and long purple-lined tattered tails behind; torn dark stockings and boots;
+  // and a broom in her left hand (your tools are held in her right). She walks, swings her arms, sways her hair and
+  // blinks
   var wl = (function () {
     for (var i = 0; i < 7; i++) body.children[i].visible = false;     // (the old simple robe, head, hat and eyes)
     var chibi = new THREE.Group(); body.add(chibi);
@@ -2316,10 +2316,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var LIGHT = new THREE.Vector3(-0.6, 0.8, 0.45).normalize();
     function tri(a, n) { return Math.abs(((a / (Math.PI * 2) * n) % 1 + 1) % 1 - 0.5) * 2; }   // (0 at each point of a jagged edge, 1 between)
     function jag(a) { return 0.6 + 0.4 * Math.abs(Math.sin(a * 37.1) * Math.cos(a * 11.3)); }   // (so the points aren't all the same length)
-    // (a cream petticoat, with frilly ruffles)
-    [[0.3, 0.255, 0.27, 0xf2e4c6]].forEach(function (l) {
+    // (a black petticoat, with frilly ruffles)
+    [[0.3, 0.255, 0.27, 0x1c181c]].forEach(function (l) {
       var g = lathe([[l[0], l[2]], [l[0] - 0.008, l[2] + 0.028], [l[1], l[2] + 0.1]], 96, function (v, a, j) { var f = 1 + 0.055 * Math.sin(a * 38) * (j < 2 ? 1 : 0.25); v.x *= f; v.z *= f; if (j === 0) v.y += 0.012 * Math.abs(Math.sin(a * 19)); });
-      mesh(paint(g, l[3], 0xffffff), toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
+      mesh(paint(g, l[3], 0x3a3440), toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide }));
     });
     // (her coat-dress: plain charcoal, falling in soft, uneven folds, parting at the front over her petticoat, with a
     // jagged tattered hem and a purple lining)
@@ -2350,14 +2350,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(0.08, 0.01, 0.15, -0.02); sh.quadraticCurveTo(0.1, -0.06, 0.04, -0.14); sh.quadraticCurveTo(0.03, -0.06, 0, 0);
       var cg = new THREE.ExtrudeGeometry(sh, { depth: 0.006, bevelEnabled: false }); if (s < 0) cg.scale(-1, 1, 1); var cf = mesh(cg, toon(0x2e2836)); cf.position.set(s * 0.01, 0.84, 0.068); cf.rotation.set(-0.6, s * 0.38, 0);
     });
-    // (a big satin bow at her collar, with long tails)
-    var bow = new THREE.Group(); bow.position.set(0, 0.795, 0.115); chibi.add(bow);
-    [-1, 1].forEach(function (s) {
-      var lp = ell(0.068, 0.038, 0.02); lp.rotateZ(s * 0.32); lp.translate(s * 0.06, 0.006, 0); mesh(paint(lp, 0xd47e30, 0xffc070), toon(0xffffff, { vertexColors: true }), bow);
-      mesh(paint(ribbon([V(s * 0.01, -0.012, 0.005), V(s * 0.03, -0.06, 0.016), V(s * 0.055, -0.13, 0.01)], 0.022, 0.02, 0.005, V(1, 0, 0)), 0xd47e30, 0xffc070), toon(0xffffff, { vertexColors: true }), bow);
-    });
-    mesh(paint(ell(0.024, 0.02, 0.018), 0xc8722a, 0xffb060), toon(0xffffff, { vertexColors: true }), bow);
-
     // ---- her arms: bell sleeves, little hands; a broom in her left ----
     function sleeveGeo() { return paint(lathe([[0.118, -0.285], [0.088, -0.215], [0.056, -0.11], [0.045, 0]], 32, function (v, a, j) { if (j === 0) v.y -= 0.055 * (1 - tri(a, 6)) * jag(a); var f = 1 + 0.06 * Math.sin(a * 5) * (j < 2 ? 1 : 0); v.x *= f; v.z *= f; }), 0x302b29, 0x4c4642); }   // (full bell sleeves with tattered points)
     var mSleeve = toon(0xffffff, { vertexColors: true });
@@ -2474,20 +2466,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     rose(0.218, 0.055, 0.08, 1.7, 0.2); rose(0.232, 0.095, 0.0, 1.35, 1.2); rose(0.196, 0.02, 0.14, 1.2, 2.4);
 
-    // ---- a little bat friend, fluttering round her ----
-    var bat = new THREE.Group(), wings = []; body.add(bat);
-    mesh(ell(0.035, 0.035, 0.03), toon(0x2a2236), bat);
-    [-1, 1].forEach(function (s) {
-      var e = new THREE.ConeGeometry(0.012, 0.03, 4); e.translate(s * 0.018, 0.04, 0); mesh(e, toon(0x2a2236), bat, true);
-      var sh = new THREE.Shape(); sh.moveTo(0, 0.01); sh.quadraticCurveTo(0.06, 0.05, 0.12, 0.03); sh.lineTo(0.1, 0); sh.quadraticCurveTo(0.08, -0.01, 0.07, -0.03); sh.quadraticCurveTo(0.05, -0.01, 0.035, -0.035); sh.quadraticCurveTo(0.02, -0.01, 0, -0.02); sh.closePath();
-      var wg = new THREE.ShapeGeometry(sh); if (s < 0) wg.scale(-1, 1, 1); var piv = new THREE.Group(); piv.position.x = s * 0.02; bat.add(piv); mesh(wg, toon(0x3a2e4a, { side: THREE.DoubleSide }), piv, true); wings.push(piv);
-    });
-    var batEyes = new THREE.MeshBasicMaterial({ color: 0xffd060 }); [-1, 1].forEach(function (s) { var e = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 4), batEyes); e.position.set(s * 0.012, 0.008, 0.028); bat.add(e); });
-
-    return { chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut], bat: bat, wings: wings, phase: 0, blink: false };
+    return { chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut], phase: 0, blink: false };
   })();
-  // every frame: she walks with little steps and swinging arms, her hair and hat swaying, blinks now and then, and her
-  // bat flutters round her
+  // every frame: she walks with little steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
     var t = state.time, w = wl;
     w.phase += dt * (moving ? 10 : 0);
@@ -2499,8 +2480,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     w.hairBack.rotation.x = moving ? 0.12 + Math.sin(w.phase * 2) * 0.03 : Math.sin(t * 1.3) * 0.03;
     w.tip.rotation.z = Math.sin(t * 1.7) * 0.04 + (moving ? Math.sin(w.phase) * 0.05 : 0);
     var shut = (t * 0.23) % 1 < 0.025; if (shut !== w.blink) { w.blink = shut; w.mFace.map = w.faces[shut ? 1 : 0]; w.mFace.needsUpdate = true; }
-    var ba = t * 0.9; w.bat.position.set(Math.cos(ba) * 0.6, 1.25 + Math.sin(t * 2.3) * 0.08, Math.sin(ba) * 0.6); w.bat.rotation.y = -ba;
-    w.wings.forEach(function (p, i) { p.rotation.y = (i ? -1 : 1) * Math.sin(t * 18) * 0.9; });
   }
 
   // ---------- Every frame ----------
