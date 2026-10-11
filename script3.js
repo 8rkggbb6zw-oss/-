@@ -2257,7 +2257,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // A cute 3D witch, in an anime style with soft cel shading and dark outlines: a big round head with large glossy
   // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, floppy witch's hat
   // with a thick rolled brim lined in purple, a striped band, a buckle and orange roses, its crumpled crown bending over
-  // and curling at the tip; a plain charcoal coat-dress with two rows of buttons and pointed collar flaps, purple-lined
+  // and curling at the tip; a plain charcoal coat-dress with two rows of buttons, purple-lined
   // bell sleeves, a black ruffled petticoat and long purple-lined tattered tails behind; torn dark stockings and boots;
   // and a broom in her left hand (your tools are held in her right). She walks, swings her arms, sways her hair and
   // blinks
@@ -2343,13 +2343,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     mesh(paint(bod, 0x302b29, 0x4c4642), toon(0xffffff, { vertexColors: true }));
     mesh(lathe([[0.112, 0.6, 0.83], [0.113, 0.7, 0.83], [0.12, 0.75, 0.85], [0.1, 0.8, 0.83]], 6, null, -0.2, 0.4), toon(0x423c38));   // (the placket)
     for (var b = 0; b < 8; b++) { var bx = (b % 2 ? 1 : -1) * 0.018, by = 0.66 + Math.floor(b / 2) * 0.03, bt = new THREE.SphereGeometry(0.0085, 8, 6); bt.translate(bx, by, 0.1 + (by > 0.74 ? -0.004 : 0)); mesh(bt, toon(0x1a1414), chibi, true); }
-    // (her capelet: pointed and tattered at its edge, lined in purple, with big pointed collar wings)
-    var cape = lathe([[0.205, 0.685], [0.19, 0.715], [0.145, 0.775], [0.085, 0.825], [0.055, 0.845]], 64, function (v, a, j) { if (j === 0) v.y += 0.05 * tri(a, 9) * jag(a + 2); var f = 1 + 0.03 * Math.sin(a * 9) * (1 - j / 4); v.x *= f; v.z *= f * 0.85; });
-    mesh(paint(cape, 0x2a2430, 0x463e54), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(cape, mPurple));
-    [-1, 1].forEach(function (s) {
-      var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(0.08, 0.01, 0.15, -0.02); sh.quadraticCurveTo(0.1, -0.06, 0.04, -0.14); sh.quadraticCurveTo(0.03, -0.06, 0, 0);
-      var cg = new THREE.ExtrudeGeometry(sh, { depth: 0.006, bevelEnabled: false }); if (s < 0) cg.scale(-1, 1, 1); var cf = mesh(cg, toon(0x2e2836)); cf.position.set(s * 0.01, 0.84, 0.068); cf.rotation.set(-0.6, s * 0.38, 0);
-    });
     // ---- her arms: bell sleeves, little hands; a broom in her left ----
     function sleeveGeo() { return paint(lathe([[0.118, -0.285], [0.088, -0.215], [0.056, -0.11], [0.045, 0]], 32, function (v, a, j) { if (j === 0) v.y -= 0.055 * (1 - tri(a, 6)) * jag(a); var f = 1 + 0.06 * Math.sin(a * 5) * (j < 2 ? 1 : 0); v.x *= f; v.z *= f; }), 0x302b29, 0x4c4642); }   // (full bell sleeves with tattered points)
     var mSleeve = toon(0xffffff, { vertexColors: true });
