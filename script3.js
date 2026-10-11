@@ -2418,24 +2418,23 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
       // (her bangs: one smooth, rounded sweep of soft colour, lighter above and deepening toward its edge, with a soft
       // band of shine across it and a few wide locks marked by fine curved lines that follow the sweep)
-      var bg = g.createLinearGradient(0, Y(40), 0, Y(-10)); bg.addColorStop(0, 'rgba(110,72,50,0)'); bg.addColorStop(0.25, '#7a4e34'); bg.addColorStop(0.7, '#6a4230'); bg.addColorStop(1, '#4a2c1e');
+      var bg = g.createLinearGradient(0, Y(40), 0, Y(-10)); bg.addColorStop(0, 'rgba(96,60,42,0)'); bg.addColorStop(0.25, '#664030'); bg.addColorStop(0.65, '#563424'); bg.addColorStop(1, '#3a2216');
       g.fillStyle = bg; g.fillRect(X(-60), Y(40), X(60) - X(-60), Y(-60) - Y(40));
       g.save(); g.translate(X(0), Y(20)); g.scale(1, 0.32); var sh = g.createRadialGradient(0, 0, 40, 0, 0, 300); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(0.55, 'rgba(206,146,100,0.0)'); sh.addColorStop(0.72, 'rgba(206,146,100,0.55)'); sh.addColorStop(0.86, 'rgba(206,146,100,0)');
       g.fillStyle = sh; g.beginPath(); g.arc(0, 0, 300, Math.PI, 2 * Math.PI); g.fill(); g.restore();   // (the soft band of shine)
       g.lineCap = 'round';
-      [[-34, 0.5], [-21, 0.4], [-8, 0.5], [6, 0.45], [19, 0.5], [31, 0.4]].forEach(function (s, k) {   // (the partings between her locks: fine dark curves...)
-        var bx = s[0]; g.strokeStyle = 'rgba(46,24,14,' + s[1] + ')'; g.lineWidth = 2.5;
-        g.beginPath(); g.moveTo(X(bx + 9), Y(30)); g.bezierCurveTo(X(bx + 5), Y(22), X(bx + 1), Y(12), X(bx - 2), Y(-3)); g.stroke();
-        g.strokeStyle = 'rgba(232,170,116,0.6)'; g.lineWidth = 2;   // (...each with a bright strand of light beside it, catching the shine)
-        g.beginPath(); g.moveTo(X(bx + 12), Y(28)); g.bezierCurveTo(X(bx + 9), Y(22), X(bx + 7), Y(18), X(bx + 5), Y(12)); g.stroke();
-        if (k % 2) { g.strokeStyle = 'rgba(232,170,116,0.4)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(bx + 15), Y(27)); g.bezierCurveTo(X(bx + 13), Y(22), X(bx + 12), Y(19), X(bx + 11), Y(15)); g.stroke(); }
-      });
+      for (var sl = 0; sl < 11; sl++) {                                  // (long strands curving round the dome of her head: fine dark partings and warm orange strands of light)
+        var bx = -40 + sl * 8, dark = sl % 2 === 0, top = 36 - (sl % 3) * 3;
+        g.strokeStyle = dark ? 'rgba(36,18,10,0.6)' : 'rgba(214,138,74,0.8)'; g.lineWidth = dark ? 2.6 : 2.4;
+        g.beginPath(); g.moveTo(X(bx + 20), Y(top)); g.bezierCurveTo(X(bx + 18), Y(top - 14), X(bx + 8), Y(top - 26), X(bx + (dark ? 0 : 3)), Y(dark ? -3 : 6)); g.stroke();
+        if (!dark) { g.strokeStyle = 'rgba(240,176,112,0.45)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(bx + 23), Y(top - 2)); g.bezierCurveTo(X(bx + 21), Y(top - 14), X(bx + 13), Y(top - 22), X(bx + 9), Y(10)); g.stroke(); }
+      }
       function fringe() {
         g.moveTo(X(-60), 512); g.lineTo(X(-60), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the curtain of hair curving in along her cheek...)
         g.bezierCurveTo(X(-40), Y(-40), X(-37), Y(-20), X(-36), Y(-5));   // (...up its inner edge)
         g.bezierCurveTo(X(-33), Y(-12), X(-28), Y(-12), X(-24), Y(-5));   // (a soft point of her fringe, down beside one eye)
         g.bezierCurveTo(X(-16), Y(0.5), X(0), Y(1.5), X(14), Y(1.5));     // (then sweeping smoothly across, just above her eyes)
-        g.bezierCurveTo(X(26), Y(1.5), X(35), Y(1), X(38), Y(-7));
+        g.bezierCurveTo(X(20), Y(1.5), X(25), Y(0), X(28), Y(-4)); g.bezierCurveTo(X(30), Y(-9), X(31), Y(-11), X(32), Y(-12)); g.bezierCurveTo(X(33), Y(-8), X(35), Y(-4), X(38), Y(-7));   // (and a pointed lock dipping down beside her other eye)
         g.bezierCurveTo(X(39), Y(-22), X(41), Y(-40), X(46), Y(-52));     // (down the curtain on the other side)
         g.lineTo(X(60), Y(-56)); g.lineTo(X(60), 512); g.closePath();
       }
