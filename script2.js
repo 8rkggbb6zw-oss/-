@@ -6559,7 +6559,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     showToast(g.name + ' is fed, petted and happy ✧' + (day >= BIS_DAYS ? ' Opaline Milk tomorrow morning!' : ' Day ' + day + ' of ' + BIS_DAYS + ' done. Come back tomorrow!'), 2400);
   }
 
-  // ---------- Plumessa ----------
+  // ---------- Celestara ----------
   // Graceful dawn-birds of the high meadows, with a little of the ostrich about them (but not much): a sleek body
   // in soft, close plumage blushing with the colours of sunrise and traced with glowing golden filigree; a long,
   // swan-like neck in an elegant S; a fine head with big, gentle, long-lashed eyes lined in gold, a slender pearly
@@ -6610,7 +6610,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(200,140,120,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(48, 14); g.bezierCurveTo(72, 14, 78, 56, 76, 66); g.bezierCurveTo(74, 82, 62, 90, 48, 90); g.bezierCurveTo(34, 90, 22, 82, 20, 66); g.bezierCurveTo(18, 56, 24, 14, 48, 14); g.stroke();
     g.fillStyle = '#fff'; [[16, 24], [82, 20], [84, 80]].forEach(function (p) { g.fillRect(p[0] - 1, p[1] - 5, 2, 10); g.fillRect(p[0] - 5, p[1] - 1, 10, 2); });
   }).toDataURL();
-  ITEMS.dawnshellEgg = { name: 'Dawnshell Egg', price: 340, icon: '🥚', img: ostEggIcon, fill: 86, info: 'A big, smooth egg, pearly cream blushing to rose-gold and traced with fine golden swirls like the first light of morning, laid by a happy Plumessa. Feed and pet yours every day for three days in a row for one. Sells for a very good price at the shipping bin.' };
+  ITEMS.dawnshellEgg = { name: 'Dawnshell Egg', price: 340, icon: '🥚', img: ostEggIcon, fill: 86, info: 'A big, smooth egg, pearly cream blushing to rose-gold and traced with fine golden swirls like the first light of morning, laid by a happy Celestara. Feed and pet yours every day for three days in a row for one. Sells for a very good price at the shipping bin.' };
   // its feathers, painted barb by barb like a real bird's (see emberPaintFeather), in its own colours: flight feathers
   // for its wings, with a narrow outer vane and a broad inner one; small, rounded coverts; long train feathers, wispy
   // low down and broad at the tip around a shining eye-spot; and fine, glassy crest plumes. Each has a glow map too,
@@ -6987,9 +6987,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eggMesh = egg; g.eggGlow = eg;
     var hay = abPart(wbLumpGeo(300 + g.stall, 0.25), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), -AB_W / 2 + 0.3, 0.94, sz + 1.0);
     hay.scale.set(0.16, 0.07, 0.16); g.hayMesh = hay;
-    g.slate.map = glimSlateTex(g.name, 'Plumessa'); g.slate.needsUpdate = true;
+    g.slate.map = glimSlateTex(g.name, 'Celestara'); g.slate.needsUpdate = true;
   }
-  // every frame, for a Plumessa: a graceful, high-stepping walk with its head bobbing on its long neck, its train
+  // every frame, for a Celestara: a graceful, high-stepping walk with its head bobbing on its long neck, its train
   // sweeping behind; when it stops it looks about and pecks at the straw now and then, and blinks its long lashes.
   // Its halo turns slowly, its runes and filigree breathe with light, its crystals drift and glint and its aurora
   // ripples; and when petted it spreads its wings and does a happy little dance, shining brighter all over
@@ -7033,7 +7033,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.glow.material.opacity = 0.025 + breathe * 0.015 + shine * 0.02;
     if (g.egg) g.eggGlow.material.opacity = 0.35 + Math.sin(t * 2 + g.stall) * 0.12;
   }
-  function plumessaAction(g, wx, wz) {                               // collecting its egg, feeding and petting a Plumessa
+  function celestaraAction(g, wx, wz) {                               // collecting its egg, feeding and petting a Celestara
     if (g.egg) {
       if (!roomFor(['dawnshellEgg'])) { bagFull(); return; }
       addItem('dawnshellEgg', 1); g.egg = false; glimRefresh(g); popSound(); g.pet = 1.2;
@@ -7356,7 +7356,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'axo') { axoriaAction(g, wx, wz); return; }
     if (g.kind === 'liz') { solarithAction(g, wx, wz); return; }
     if (g.kind === 'bison') { nocturraAction(g, wx, wz); return; }
-    if (g.kind === 'ostrich') { plumessaAction(g, wx, wz); return; }
+    if (g.kind === 'ostrich') { celestaraAction(g, wx, wz); return; }
     if (g.kind === 'tort') { grovellaAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
@@ -7463,7 +7463,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.querySelector('.glim-done').addEventListener('click', function () { glimFinishNaming(); });
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
-    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : kind === 'ostrich' ? 'Plumessa' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : kind === 'ostrich' ? 'Celestara' : 'Glimmerwing');
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -7499,7 +7499,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.strokeStyle = 'rgba(250,248,240,0.55)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w / 2 - 210, 96); g.bezierCurveTo(w / 2 - 80, 88, w / 2 + 80, 104, w / 2 + 210, 94); g.stroke();
     [['Glimmerwings \u00b7 250 \u2605', 'lay glowing Glimmer Eggs', 'rgba(214,190,255,A)'], ['Puddlewisps \u00b7 300 \u2605', 'lay glassy Dewdrop Eggs', 'rgba(170,215,255,A)'],
       ['Gemwrens \u00b7 380 \u2605', 'lay a Geode Egg every 4 days', 'rgba(220,180,255,A)'], ['Emberwings \u00b7 450 \u2605', 'leave a Cinder Quill every 4 days', 'rgba(255,170,110,A)'], ['Lunastras \u00b7 480 \u2605', 'find a Moonpearl every 2 days', 'rgba(190,210,255,A)'], ['Sirennas \u00b7 500 \u2605', 'blow a Wishbubble every 3 days', 'rgba(150,240,230,A)'], ['Prismaras \u00b7 540 \u2605', 'give Prismsilk every 2 days', 'rgba(255,200,240,A)'], ['Nymphalias \u00b7 580 \u2605', 'give Moonlily Milk every 2 days', 'rgba(220,190,255,A)'],
-      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Plumessas \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)']].forEach(function (an, k) {
+      ['Auroraram \u00b7 520 \u2605', 'give Aurora Milk every 2 days', 'rgba(140,255,210,A)'], ['Zephyras \u00b7 560 \u2605', 'give Cloud Wool every 4 days', 'rgba(255,200,170,A)'], ['Mooncalves \u00b7 600 \u2605', 'give shimmering Moonmilk', 'rgba(190,215,255,A)'], ['Veilaris \u00b7 620 \u2605', 'give Glimmerkelp every 3 days', 'rgba(255,190,220,A)'], ['Lumoras \u00b7 650 \u2605', 'shed a Sunscale every 2 days', 'rgba(255,200,130,A)'], ['Amarys \u00b7 680 \u2605', 'grow a Starbloom every 3 days', 'rgba(170,240,200,A)'], ['Nyxalias \u00b7 720 \u2605', 'give Opaline Milk every 3 days', 'rgba(200,190,255,A)'], ['Celestaras \u00b7 700 \u2605', 'lay a Dawnshell Egg every 3 days', 'rgba(255,190,210,A)']].forEach(function (an, k) {
       chalk(an[0], w / 2 + 80, 99 + k * 18.6, 12.5, an[2], false);
       chalk(an[1], w / 2 + 80, 108.5 + k * 18.6, 8, 'rgba(240,240,230,A)', true);
     });
@@ -8048,7 +8048,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic bis-pic"></div><div class="shop-text"><b>Nyxalia</b><span>A big, gentle grazer made of the night sky, in deep soft plush. A shaggy starry mane drifts over its hump like a slow cloud, twinkling with tiny stars, and faint constellations shimmer along its flanks. It has a pair of moonstone horns banded in gold, feathered fetlocks and pearly cloven hooves. Feed it hay and pet it every day for three days in a row, and the next morning you can milk it for glittering Opaline Milk (bring a Milk Pail). It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + BIS_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="bis-adopt">Adopt</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ost-pic"></div><div class="shop-text"><b>Plumessa</b><span>A graceful dawn-bird in soft plumage blushing with the colours of sunrise, traced with glowing golden filigree. It has a long, swan-like neck, big gentle eyes lined in gold, a slender pearly beak, a crest of glassy plumes tipped with little lights and a halo of turning runes floating behind its head. Its wings are layered with feathers edged in light, and its long, sweeping train shines with eye-spots and crystals and trails ribbons of aurora, while little crystals drift round it. Feed it hay and pet it every day for three days in a row, and the next morning it lays a Dawnshell Egg for you. It lives in a stall here.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic ost-pic"></div><div class="shop-text"><b>Celestara</b><span>A graceful dawn-bird in soft plumage blushing with the colours of sunrise, traced with glowing golden filigree. It has a long, swan-like neck, big gentle eyes lined in gold, a slender pearly beak, a crest of glassy plumes tipped with little lights and a halo of turning runes floating behind its head. Its wings are layered with feathers edged in light, and its long, sweeping train shines with eye-spots and crystals and trails ribbons of aurora, while little crystals drift round it. Feed it hay and pet it every day for three days in a row, and the next morning it lays a Dawnshell Egg for you. It lives in a stall here.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + OST_COST + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="ost-adopt">Adopt</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic moon-pic"></div><div class="shop-text"><b>Mooncalf</b><span>A gentle creature with a pearly coat whose spots are patches of starry night sky, crescent-moon horns and star-bright hooves. Feed it hay and pet it every day, and the next morning you can milk it for Moonmilk. It lives in a stall here.</span>' +
@@ -8195,7 +8195,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Plumessa)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Celestara)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
     paintCoinIcons(barnShopBox);
   }
   function buyHay(n) {
