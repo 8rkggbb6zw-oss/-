@@ -2255,12 +2255,12 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- You: a little chibi witch ----------
   // A cute 3D witch, in an anime style with soft cel shading and dark outlines: a big round head with large glossy
-  // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, drooping witch's
-  // hat lined in purple, with an orange striped band, a buckle and orange roses, its crumpled tip curling over; a
-  // charcoal coat-dress with gold stars, two rows of buttons, pointed collar flaps and a big orange bow, purple-lined
-  // bell sleeves, a cream ruffled petticoat and long purple-lined tattered tails behind; torn dark
-  // stockings and boots; and a broom in her left hand (your tools are held in her right). She walks, swings her arms,
-  // sways her hair, blinks, and a little bat flutters round her
+  // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, floppy witch's hat
+  // with a thick rolled brim lined in purple, a striped band, a buckle and orange roses, its crumpled crown bending over
+  // and curling at the tip; a charcoal coat-dress with gold stars, two rows of buttons, pointed collar flaps and a big
+  // orange bow, purple-lined bell sleeves, a cream ruffled petticoat and long purple-lined tattered tails behind; torn
+  // dark stockings and boots; and a broom in her left hand (your tools are held in her right). She walks, swings her
+  // arms, sways her hair, blinks, and a little bat flutters round her
   var wl = (function () {
     for (var i = 0; i < 7; i++) body.children[i].visible = false;     // (the old simple robe, head, hat and eyes)
     var chibi = new THREE.Group(); body.add(chibi);
@@ -2410,23 +2410,56 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     [-1, 1].forEach(function (s) { mesh(ribbon([V(s * 0.18, 0.02, 0.11), V(s * 0.21, -0.12, 0.11), V(s * 0.23, -0.28, 0.08), V(s * 0.26, -0.46, 0.05), V(s * 0.3, -0.58, 0.03)], 0.055, 0.04, 0.014, V(0, 0, 1)), mHair, head); });
 
-    // ---- her hat: huge and floppy, with a striped band, a buckle, orange flowers, and its tip bent over ----
+    // ---- her hat: huge, soft and floppy, with a thick rolled brim lined in purple, a crumpled crown that bends over
+    // and curls at its tip, a raised striped band with a buckle, and a cluster of orange roses ----
     var hat = new THREE.Group(); hat.position.set(0, 0.125, -0.01); hat.rotation.set(-0.16, 0, 0.08); head.add(hat);
-    var brim = lathe([[0.2, 0], [0.38, -0.025], [0.58, -0.13]], 72, function (v, a, j) { if (j === 2) v.y += 0.06 * Math.sin(a * 3 + 0.5) - 0.05 * Math.cos(a) - 0.03 * Math.abs(Math.sin(a)); if (j === 1) v.y += 0.02 * Math.sin(a * 3 + 0.5); });
-    mesh(brim, toon(0x2a2530, { side: THREE.BackSide }), hat).add(new THREE.Mesh(brim, toon(0x4a3466)));   // (the huge, drooping, wavy brim, purple underneath)
+    var LIGHT = new THREE.Vector3(-0.6, 0.8, 0.45).normalize();
+    function paint(g, base, lit, k) {                                    // (colour it, with a soft painted sheen where the light falls)
+      var n = g.attributes.normal, col = [], c0 = new THREE.Color(base), c1 = new THREE.Color(lit), c = new THREE.Color(), v = new THREE.Vector3();
+      for (var i = 0; i < n.count; i++) { v.fromBufferAttribute(n, i); var f = Math.pow(Math.max(0, v.dot(LIGHT)), 2) * (k ? k(i) : 1); c.copy(c0).lerp(c1, f); col.push(c.r, c.g, c.b); }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); return g;
+    }
+    // (the brim: a thick, rounded ring, drooping and waving unevenly like soft felt)
+    var BR = [[0.2, 0.012], [0.3, -0.004], [0.42, -0.04], [0.52, -0.09], [0.575, -0.118], [0.592, -0.132], [0.588, -0.148], [0.565, -0.15], [0.5, -0.118], [0.4, -0.07], [0.3, -0.035], [0.2, -0.016]];
+    var brim = lathe(BR.slice().reverse(), 96, function (v, a) {
+      var r = Math.hypot(v.x, v.z), k = Math.max(0, (r - 0.2) / 0.39);
+      v.y += k * k * (0.07 * Math.sin(a * 3 + 0.5) - 0.06 * Math.cos(a) + 0.035 * Math.sin(a * 5 + 1.3)) + k * k * k * 0.05 * Math.max(0, Math.sin(a + 2.4));
+    });
+    var bcol = [], bn = brim.attributes.normal, bc = new THREE.Color(), bv = new THREE.Vector3();
+    for (var bi = 0; bi < bn.count; bi++) { bv.fromBufferAttribute(bn, bi); var under = bv.y < -0.2, f = Math.pow(Math.max(0, bv.dot(LIGHT)), 2); bc.set(under ? 0x40305a : 0x26222c).lerp(new THREE.Color(under ? 0x5a4478 : 0x3a4a4c), f); bcol.push(bc.r, bc.g, bc.b); }   // (dark on top, purple beneath)
+    brim.setAttribute('color', new THREE.Float32BufferAttribute(bcol, 3));
+    mesh(brim, toon(0xffffff, { vertexColors: true }), hat);
+    // (the crown: a soft cone that bends over to one side and curls down at its tip, crumpled into creases)
     var tip = new THREE.Group(); hat.add(tip);
-    var cone = lathe([[0.215, 0], [0.198, 0.09], [0.165, 0.19], [0.125, 0.29], [0.085, 0.38], [0.048, 0.46], [0.02, 0.52], [0.002, 0.56]], 36, function (v, a, j) {
-      var h = v.y / 0.56, f = 1 + 0.08 * Math.sin(a * 5 + h * 11) * h; v.x *= f; v.z *= f; v.x += Math.pow(Math.max(0, h - 0.25), 2) * 1.25 - Math.pow(Math.max(0, h - 0.85), 2) * 1.2; v.y -= Math.pow(Math.max(0, h - 0.45), 2) * 1.0; v.z -= Math.pow(Math.max(0, h - 0.6), 2) * 0.25;   // (crumpled, its tip flopping over)
-    });
-    mesh(cone, toon(0x2c2a33), hat);
-    var band = canvas(256, 128, function (g) { g.fillStyle = '#d98b40'; g.fillRect(0, 0, 256, 128); g.fillStyle = '#4a2e1e'; g.fillRect(0, 0, 256, 10); g.fillRect(0, 56, 256, 16); g.fillRect(0, 118, 256, 10); });   // (orange and dark stripes)
-    mesh(new THREE.CylinderGeometry(0.2, 0.225, 0.11, 44, 1, true).translate(0, 0.055, 0), toon(0xffffff, { map: band, side: THREE.DoubleSide }), hat);
-    var buckle = new THREE.TorusGeometry(0.045, 0.009, 4, 4); buckle.rotateZ(Math.PI / 4); buckle.scale(0.8, 1.1, 1); var bm = mesh(buckle, toon(0x5a3a22), hat); bm.position.set(0.13, 0.055, 0.175); bm.rotation.y = 0.65;
-    [[0.2, 0.045, 0.1], [0.215, 0.075, 0.045], [0.18, 0.025, 0.135]].forEach(function (f) {   // (little orange roses)
-      var fl = new THREE.Group(); fl.position.set(f[0], f[1], f[2]); fl.lookAt(V(f[0] * 3, f[1], f[2] * 3)); hat.add(fl);
-      for (var p = 0; p < 7; p++) { var pt = ell(0.018, 0.012, 0.007); pt.translate(p < 4 ? 0.016 : 0.008, 0, p < 4 ? 0 : 0.006); pt.rotateZ(p / (p < 4 ? 4 : 3) * Math.PI * 2 + p); mesh(pt, toon(p < 4 ? 0xe39a4e : 0xf0b064), fl, true); }
-      mesh(new THREE.SphereGeometry(0.008, 8, 6), toon(0x8a4a1a), fl, true);
-    });
+    var spine = new THREE.CatmullRomCurve3([V(0, -0.01, 0), V(0, 0.16, -0.01), V(0.02, 0.31, -0.02), V(0.09, 0.43, -0.01), V(0.2, 0.49, 0.01), V(0.31, 0.46, 0.03), V(0.37, 0.39, 0.04), V(0.375, 0.33, 0.035)]);
+    var RS = 40, TS = 70, crown = new THREE.TubeGeometry(spine, TS, 1, RS, false), cp = crown.attributes.position, cc = new THREE.Vector3();
+    var RAD = [0.215, 0.19, 0.155, 0.118, 0.085, 0.06, 0.04, 0.024, 0.012, 0.003];
+    for (var ci = 0; ci < cp.count; ci++) {
+      var t = Math.floor(ci / (RS + 1)) / TS, ang = (ci % (RS + 1)) / RS * Math.PI * 2, f2 = t * (RAD.length - 1), j2 = Math.min(RAD.length - 2, Math.floor(f2)), r = RAD[j2] + (RAD[j2 + 1] - RAD[j2]) * (f2 - j2);
+      r *= 1 + (0.07 * Math.sin(ang * 5 + t * 14) + 0.04 * Math.sin(ang * 3 - t * 9)) * Math.min(1, t * 2.5) * (1 - t * 0.6);   // (its creases)
+      spine.getPointAt(t, cc); cp.setXYZ(ci, cc.x + (cp.getX(ci) - cc.x) * r, cc.y + (cp.getY(ci) - cc.y) * r, cc.z + (cp.getZ(ci) - cc.z) * r);
+    }
+    crown.computeVertexNormals(); paint(crown, 0x2a2530, 0x3c5a56);
+    mesh(crown, toon(0xffffff, { vertexColors: true }), tip);
+    // (a raised band of orange and dark stripes round its base)
+    var bandTex = canvas(64, 256, function (g) { g.fillStyle = '#e09040'; g.fillRect(0, 0, 64, 256); g.fillStyle = '#3e2618'; g.fillRect(0, 0, 64, 18); g.fillRect(0, 108, 64, 40); g.fillRect(0, 238, 64, 18); g.fillStyle = 'rgba(255,220,160,0.35)'; g.fillRect(0, 40, 64, 10); g.fillRect(0, 170, 64, 10); });
+    mesh(lathe([[0.222, 0.0], [0.226, 0.02], [0.22, 0.06], [0.208, 0.1], [0.198, 0.118]], 64), toon(0xffffff, { map: bandTex }), tip);
+    // (a buckle on its side)
+    var buckle = new THREE.Group(); buckle.position.set(0.17, 0.06, 0.15); buckle.rotation.y = 0.85; buckle.rotation.x = -0.06; tip.add(buckle);
+    var mBuckle = toon(0x6a4a2a);
+    [[0, 0.04, 0.07, 0.012], [0, -0.04, 0.07, 0.012], [0.03, 0, 0.012, 0.09], [-0.03, 0, 0.012, 0.09]].forEach(function (p) { var bx = new THREE.BoxGeometry(p[2], p[3], 0.012); bx.translate(p[0], p[1], 0.006); mesh(bx, mBuckle, buckle); });
+    var prong = new THREE.BoxGeometry(0.008, 0.07, 0.008); prong.translate(0, 0, 0.012); mesh(prong, toon(0x8a6a40), buckle);
+    // (a cluster of orange roses with dark leaves)
+    var mPetal = toon(0xe8963e, { side: THREE.DoubleSide }), mPetal2 = toon(0xf4b264, { side: THREE.DoubleSide }), mLeaf = toon(0x2a2a24, { side: THREE.DoubleSide });
+    function rose(px, py, pz, size, rot) {
+      var g = new THREE.Group(); g.position.set(px, py, pz); g.lookAt(V(px * 3, py + 0.05, pz * 3)); g.rotateZ(rot); g.scale.setScalar(size); tip.add(g);
+      for (var p = 0; p < 11; p++) {                                     // (petals, curling round in a spiral)
+        var a = p * 2.4, rr = 0.004 + p * 0.0032, pg = new THREE.SphereGeometry(1, 10, 6, 0, Math.PI, 0, Math.PI); pg.scale(0.012 + p * 0.0012, 0.011 + p * 0.0009, 0.006);
+        pg.rotateX(-0.5 - p * 0.05); pg.rotateZ(a); pg.translate(Math.cos(a) * rr, Math.sin(a) * rr, 0.012 - p * 0.0011); mesh(pg, p < 4 ? mPetal2 : mPetal, g, true);
+      }
+      [0.8, 2.9].forEach(function (a) { var lf = new THREE.SphereGeometry(1, 10, 6); lf.scale(0.026, 0.011, 0.003); lf.translate(0.032, 0, -0.004); lf.rotateZ(a); mesh(lf, mLeaf, g, true); });
+    }
+    rose(0.218, 0.055, 0.08, 1.7, 0.2); rose(0.232, 0.095, 0.0, 1.35, 1.2); rose(0.196, 0.02, 0.14, 1.2, 2.4);
 
     // ---- a little bat friend, fluttering round her ----
     var bat = new THREE.Group(), wings = []; body.add(bat);
