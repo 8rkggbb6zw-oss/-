@@ -2427,7 +2427,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var sl = 0; sl < 420; sl++) {
         var f = ((sl * 0.618034) % 1), bx = -46 + f * 92, top = 40 - ((sl * 7) % 9), endy = -4 - ((sl * 3) % 5) * 0.6;
         g.strokeStyle = SB[(sl * 5) % SB.length]; g.globalAlpha = 0.25 + ((sl * 11) % 7) / 18; g.lineWidth = 1 + ((sl * 13) % 4) * 0.4;
-        g.beginPath(); g.moveTo(X(bx + 13), Y(top)); g.bezierCurveTo(X(bx + 11), Y(top - 14), X(bx + 4), Y(top - 28), X(bx), Y(endy)); g.stroke();
+        g.beginPath(); g.moveTo(X(bx + 24), Y(top)); g.bezierCurveTo(X(bx + 23), Y(top - 12), X(bx + 9), Y(top - 26), X(bx), Y(endy)); g.stroke();
       }
       g.globalAlpha = 1;
       g.save(); g.translate(X(4), Y(22)); g.scale(1, 0.3); var gl = g.createRadialGradient(0, 0, 60, 0, 0, 320); gl.addColorStop(0, 'rgba(214,160,116,0)'); gl.addColorStop(0.62, 'rgba(214,160,116,0)'); gl.addColorStop(0.74, 'rgba(214,160,116,0.32)'); gl.addColorStop(0.86, 'rgba(214,160,116,0)');
@@ -2435,15 +2435,15 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var hs = 0; hs < 70; hs++) {                                  // (a few brighter strands catching it)
         var hf = ((hs * 0.381966) % 1), hx = -40 + hf * 80, ht = 30 - (hs % 4);
         g.strokeStyle = 'rgba(226,172,124,' + (0.25 + (hs % 3) * 0.12) + ')'; g.lineWidth = 1 + (hs % 2) * 0.5;
-        g.beginPath(); g.moveTo(X(hx + 10), Y(ht)); g.bezierCurveTo(X(hx + 9), Y(ht - 5), X(hx + 7), Y(ht - 9), X(hx + 5.5), Y(ht - 13)); g.stroke();
+        g.beginPath(); g.moveTo(X(hx + 17), Y(ht)); g.bezierCurveTo(X(hx + 16.5), Y(ht - 5), X(hx + 13), Y(ht - 10), X(hx + 9.5), Y(ht - 13)); g.stroke();
       }
       function fringe() {
         g.moveTo(X(-60), 512); g.lineTo(X(-60), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the curtain of hair curving in along her cheek...)
         g.bezierCurveTo(X(-40), Y(-40), X(-38), Y(-20), X(-37), Y(-4));   // (...up its inner edge)
-        g.bezierCurveTo(X(-35), Y(-8), X(-32), Y(-10.5), X(-29), Y(-10.5)); g.bezierCurveTo(X(-26), Y(-8), X(-23), Y(-2.5), X(-20), Y(-0.5));   // (a lock curving down to a soft point beside one eye)
-        g.bezierCurveTo(X(-18), Y(-2.5), X(-14.5), Y(-3.2), X(-11.5), Y(-1.8)); g.bezierCurveTo(X(-9.5), Y(0), X(-8), Y(5), X(-7.2), Y(9.5));   // (a lock rounding into the small gap...)
-        g.bezierCurveTo(X(-6.6), Y(5), X(-5.5), Y(-0.5), X(-3), Y(-2.2));   // (...and the next starting from it in a point)
-        g.bezierCurveTo(X(2), Y(-3.8), X(10), Y(-3.8), X(15), Y(-2.2)); g.bezierCurveTo(X(18), Y(-1), X(21.5), Y(3), X(23.6), Y(13.5));   // (the wide middle lock, curving up into the bigger gap)
+        g.bezierCurveTo(X(-36), Y(-9), X(-34), Y(-12.5), X(-31.5), Y(-13)); g.bezierCurveTo(X(-27), Y(-10), X(-23), Y(-4), X(-19.5), Y(-1.5));   // (a lock curving down to a soft point beside one eye)
+        g.bezierCurveTo(X(-17.5), Y(-4.5), X(-15), Y(-6), X(-13), Y(-5.5)); g.bezierCurveTo(X(-10), Y(-3), X(-8), Y(4), X(-7.2), Y(9.5));   // (a lock rounding into the small gap...)
+        g.bezierCurveTo(X(-6.4), Y(4), X(-5), Y(-2.5), X(-2), Y(-4));   // (...and the next starting from it in a point)
+        g.bezierCurveTo(X(3), Y(-5.5), X(10), Y(-3), X(15.5), Y(0)); g.bezierCurveTo(X(18.5), Y(2), X(21.5), Y(5), X(23.6), Y(13.5));   // (the wide middle lock, curving up into the bigger gap)
         g.bezierCurveTo(X(24.4), Y(7), X(26), Y(-0.5), X(28.5), Y(-4.5)); g.bezierCurveTo(X(31), Y(-8.5), X(33.5), Y(-10.5), X(35.5), Y(-11));   // (the lock beside her face, sweeping down to a point)
         g.bezierCurveTo(X(37), Y(-9), X(38), Y(-7.5), X(38.5), Y(-7));
         g.bezierCurveTo(X(39), Y(-22), X(41), Y(-40), X(46), Y(-52));     // (down the curtain on the other side)
