@@ -2253,6 +2253,299 @@ EVERDAWN_PARTS.push(function (THREE) {
     cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), indoors ? 5 : 6, indoors ? 10 : 26);
   }, { passive: false });
 
+  // ---------- You: a witch in black, drawn like an illustration ----------
+  // Shaded like a hand-drawn picture: flat, soft tones with crisp dark outlines. Pale skin with a soft blush; a face
+  // painted like an illustration, with big green eyes under smoky lids and winged liner, arched brows, a small nose and
+  // dark lips; long, wavy black hair with a side part, sweeping across her brow and falling past her waist; a black
+  // dress with a high collar, a scalloped bat-wing neckline and a pointed waist, under sheer dark sleeves; black nails;
+  // a hand resting on her hip; dark mist curling round her; and a tall black witch's hat with a star at its tip
+  var wl = (function () {
+    for (var i = 0; i < 7; i++) body.children[i].visible = false;     // (the old simple robe, head, hat and eyes)
+    var SKIN = 0xedd3bd;
+    M.skin.color.set(SKIN); M.robe.color.set(SKIN);
+    var grad = new THREE.DataTexture(new Uint8Array([90, 170, 255]), 3, 1, THREE.LuminanceFormat);   // (three soft tones, like an illustration's shading)
+    grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.generateMipmaps = false; grad.needsUpdate = true;
+    var softGrad = new THREE.DataTexture(new Uint8Array([175, 245, 255, 255]), 4, 1, THREE.LuminanceFormat);   // (skin: only a soft shade where it turns away from the light)
+    softGrad.minFilter = softGrad.magFilter = THREE.NearestFilter; softGrad.generateMipmaps = false; softGrad.needsUpdate = true;
+    function toon(col, o) { var m = new THREE.MeshToonMaterial(Object.assign({ color: col, gradientMap: grad }, o || {})); return m; }
+    var skinM = zSoftMat({ color: SKIN, roughness: 0.58 }, 0.06, 0.2, 0.06), dressM = toon(0x24212a), collarM = toon(0x1c1a22), hatM = toon(0x1e1b26), bandM = toon(0x4a2e6a), nailM = toon(0x141216);
+    var sheerM = new THREE.MeshToonMaterial({ color: 0x2a2228, gradientMap: grad, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
+    var inkM = new THREE.MeshBasicMaterial({ color: 0x15111c, side: THREE.BackSide });
+    var seg = new THREE.SphereGeometry(1, 24, 18);
+    function V(x, y, z) { return new THREE.Vector3(x, y, z); }
+    function add(geo, mat, x, y, z, sx, sy, sz, parent) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (sx !== undefined) m.scale.set(sx, sy, sz); m.castShadow = true; m.receiveShadow = true; (parent || look).add(m); return m; }
+    function ink(m, t) {                                               // a crisp dark outline round a piece: a copy of it pushed out a touch and drawn inside out
+      var g = m.geometry.clone(); if (!g.attributes.normal) g.computeVertexNormals();
+      var p = g.attributes.position, n = g.attributes.normal, sc = (m.scale.x + m.scale.y + m.scale.z) / 3;
+      for (var i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * t / sc, p.getY(i) + n.getY(i) * t / sc, p.getZ(i) + n.getZ(i) * t / sc);
+      var o = new THREE.Mesh(g, inkM); o.position.copy(m.position); o.quaternion.copy(m.quaternion); o.scale.copy(m.scale); m.parent.add(o); return o;
+    }
+    function taper(curve, segs, radial, rFn) {
+      var g = new THREE.TubeGeometry(curve, segs, 1, radial, false), p = g.attributes.position;
+      for (var k = 0; k <= segs; k++) { var t = k / segs, c = curve.getPointAt(t), r = rFn(t); for (var j = 0; j <= radial; j++) { var q = k * (radial + 1) + j; p.setXYZ(q, c.x + (p.getX(q) - c.x) * r, c.y + (p.getY(q) - c.y) * r, c.z + (p.getZ(q) - c.z) * r); } }
+      g.computeVertexNormals(); return g;
+    }
+    function ss(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
+    function sm(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }
+    function ell(x, y, z, cx, cy, cz, rx, ry, rz) { var ex = (x - cx) / rx, ey = (y - cy) / ry, ez = (z - cz) / rz; return (Math.sqrt(ex * ex + ey * ey + ez * ez) - 1) * Math.min(rx, ry, rz); }
+    function cap(x, y, z, ax, ay, az, bx, by, bz, r) { var px = x - ax, py = y - ay, pz = z - az, vx = bx - ax, vy = by - ay, vz = bz - az, h = Math.max(0, Math.min(1, (px * vx + py * vy + pz * vz) / (vx * vx + vy * vy + vz * vz))); px -= vx * h; py -= vy * h; pz -= vz * h; return Math.sqrt(px * px + py * py + pz * pz) - r; }
+    function sdfShape(fn, c0, seg2, rMax) {
+      var geo = new THREE.SphereGeometry(1, seg2[0], seg2[1]), p = geo.attributes.position, n = new THREE.Vector3();
+      for (var i = 0; i < p.count; i++) {
+        n.set(p.getX(i), p.getY(i), p.getZ(i)).normalize(); var lo = 0.0005, hi = rMax;
+        for (var it = 0; it < 26; it++) { var mid = (lo + hi) / 2; if (fn(c0.x + n.x * mid, c0.y + n.y * mid, c0.z + n.z * mid) < 0) lo = mid; else hi = mid; }
+        p.setXYZ(i, c0.x + n.x * lo, c0.y + n.y * lo, c0.z + n.z * lo);
+      }
+      geo.computeVertexNormals(); return geo;
+    }
+    var look = new THREE.Group(); body.add(look);
+
+    // her body, and the dress over it
+    function torsoSdf(x, y, z) {
+      var d = ell(x, y, z, 0, 0.8, 0, 0.086, 0.075, 0.064);
+      d = sm(d, ell(x, y, z, 0, 0.9, -0.006, 0.104, 0.1, 0.076), 0.06);
+      [-1, 1].forEach(function (s) { d = sm(d, ell(x, y, z, s * 0.043, 0.94, 0.04, 0.047, 0.045, 0.045), 0.025); });
+      d = sm(d, cap(x, y, z, -0.12, 1.045, -0.014, 0.12, 1.045, -0.014, 0.033), 0.07);
+      [-1, 1].forEach(function (s) { d = sm(d, ell(x, y, z, s * 0.128, 1.02, -0.012, 0.035, 0.04, 0.037), 0.03); });
+      d = sm(d, cap(x, y, z, 0, 1.04, -0.012, 0, 1.17, 0.004, 0.036), 0.045);
+      return d;
+    }
+    var skinBody = add(sdfShape(torsoSdf, V(0, 0.95, 0), [96, 80], 0.3), skinM, 0, 0, 0);
+    function neckY(x) { var u = Math.min(1, Math.abs(x) / 0.085); return 0.94 + 0.034 * Math.sin(u * Math.PI) - 0.01 * u; }   // (a sweetheart neckline: two curves dipping to a point between them)
+    function waistY(x, z) { return 0.775 - (z > 0 ? 0.03 * Math.max(0, 1 - Math.abs(x) / 0.07) : 0); }   // (and a pointed waist at the front)
+    var bodice = add(sdfShape(function (x, y, z) { var d = torsoSdf(x, y, z) - 0.005; return Math.max(d, Math.max(waistY(x, z) - y, y - (z > -0.02 ? neckY(x) : 1.0))); }, V(0, 0.88, 0), [96, 80], 0.3), dressM, 0, 0, 0);
+    ink(bodice, 0.0025);
+    var yoke = add(sdfShape(function (x, y, z) { var d = torsoSdf(x, y, z) - 0.007; return Math.max(d, Math.max(neckY(x) - 0.006 - y, y - 1.1)); }, V(0, 1.02, 0), [80, 60], 0.25), sheerM, 0, 0, 0); yoke.renderOrder = 2;   // (sheer dark fabric over her shoulders)
+    function surfZ(x, y, off) { var lo = 0, hi = 0.2; for (var k = 0; k < 24; k++) { var mid = (lo + hi) / 2; if (torsoSdf(x, y, mid) - off < 0) lo = mid; else hi = mid; } return lo; }
+    var trim = [], scal = [];
+    for (var k = 0; k <= 40; k++) { var x = -0.085 + k / 40 * 0.17, y = neckY(x); trim.push(V(x, y, surfZ(x, y, 0.008))); var y2 = y - 0.007 - 0.006 * Math.abs(Math.sin(x * 75)); scal.push(V(x, y2, surfZ(x, y2, 0.008))); }   // (the neckline's edge, and a band of bat-wing scallops just below it)
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(trim), 80, 0.0022, 6, false), collarM, 0, 0, 0);
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(scal), 120, 0.0012, 5, false), toon(0x0e0c12), 0, 0, 0);
+    var seamPts = []; for (var k2 = 0; k2 <= 12; k2++) { var y3 = waistY(0, 1) + k2 / 12 * (neckY(0) - waistY(0, 1)); seamPts.push(V(0, y3, surfZ(0, y3, 0.0065))); }
+    add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seamPts), 24, 0.0009, 5, false), toon(0x0e0c12), 0, 0, 0);   // (a seam down the front of the bodice)
+    var collar = add(new THREE.CylinderGeometry(0.041, 0.046, 0.055, 32), collarM, 0, 1.12, 0.0); ink(collar, 0.002);   // (a high collar)
+    add(new THREE.BoxGeometry(0.0015, 0.05, 0.002), toon(0x0a080e), 0, 1.12, 0.045);
+    var skirtPts = [[0.088, 0.79], [0.112, 0.74], [0.135, 0.66], [0.15, 0.56], [0.172, 0.38], [0.205, 0.2], [0.235, 0.06], [0.245, 0.012], [0.225, 0.0]].map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+    var skirtGeo = new THREE.LatheGeometry(skirtPts, 72);
+    (function () { var p = skirtGeo.attributes.position; for (var i = 0; i < p.count; i++) { var y = p.getY(i), a = Math.atan2(p.getZ(i), p.getX(i)), f = ss(0.66, 0.1, y), kk = 1 + f * (0.05 * Math.sin(a * 8) + 0.02 * Math.sin(a * 15 + 1)); p.setX(i, p.getX(i) * kk); p.setZ(i, p.getZ(i) * kk); } skirtGeo.computeVertexNormals(); })();   // (falling in soft folds)
+    var skirt = add(skirtGeo, toon(0x24212a, { side: THREE.DoubleSide }), 0, 0, 0); var skirtInk = ink(skirt, 0.003);
+    var skirtBase = Float32Array.from(skirtGeo.attributes.position.array), skirtInkBase = Float32Array.from(skirtInk.geometry.attributes.position.array);
+
+    // her face, painted like an illustration onto a smooth head
+    var head = new THREE.Group(); head.position.set(0, 1.235, 0.005); look.add(head);
+    var headGeo = sdfShape(function (x, y, z) {
+      var d = ell(x, y, z, 0, 0.016, -0.012, 0.08, 0.093, 0.093);
+      d = sm(d, ell(x, y, z, 0, -0.027, 0.02, 0.067, 0.076, 0.078), 0.04);
+      d = sm(d, ell(x, y, z, 0, -0.084, 0.044, 0.022, 0.022, 0.026), 0.035);   // (a small, softly pointed chin)
+      d = sm(d, cap(x, y, z, 0, -0.002, 0.092, 0, -0.027, 0.104, 0.0045), 0.008);   // (the bridge of her nose,)
+      d = sm(d, ell(x, y, z, 0, -0.031, 0.101, 0.0085, 0.007, 0.0075), 0.007);   // (its rounded tip)
+      d = sm(d, ell(x, y, z, 0, -0.058, 0.092, 0.016, 0.0075, 0.0065), 0.006);   // (and the fullness of her lips)
+      return d;
+    }, V(0, -0.01, 0.01), [96, 80], 0.2);
+    (function () { var p = headGeo.attributes.position, uv = headGeo.attributes.uv; for (var i = 0; i < p.count; i++) uv.setXY(i, 0.5 + p.getX(i) / 0.18, 0.5 + p.getY(i) / 0.22); })();   // (the face painted straight on from the front)
+    function paintFace(g, closed) {
+      g.fillStyle = '#e8cbb4'; g.fillRect(0, 0, 1024, 1024);
+      for (var pn = 0; pn < 26000; pn++) { var px = glimR(pn * 1.37) * 1024, py = glimR(pn * 2.71 + 5) * 1024, pv = glimR(pn * 3.9); g.fillStyle = pv > 0.6 ? 'rgba(255,236,222,0.10)' : pv > 0.2 ? 'rgba(170,110,90,0.07)' : 'rgba(200,120,110,0.09)'; g.fillRect(px, py, 1 + pv * 1.5, 1 + pv * 1.5); }   // (fine, uneven skin texture, so it doesn't look like plastic)
+      g.setTransform(1024 / 0.18, 0, 0, -1024 / 0.22, 512, 512);          // (from here on, drawing in the head's own size: metres from its middle)
+      function blob(x, y, rx, ry, col, a) { g.save(); g.translate(x, y); g.scale(rx, ry); var gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, 'rgba(' + col + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + col + ',0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); g.restore(); }   // (a soft patch of light or shade)
+      // the shape of her face in light and shade, as a painter would put it in
+      blob(0, 0.045, 0.05, 0.03, '255,240,228', 0.4);                     // (light on her forehead)
+      blob(0, -0.03, 0.016, 0.012, '214,130,118', 0.3);                   // (a natural warmth round her nose)
+      blob(0, -0.068, 0.022, 0.012, '200,128,116', 0.18);                 // (and round her mouth and chin)
+      [-1, 1].forEach(function (s) {
+        blob(s * 0.068, 0.02, 0.022, 0.05, '170,120,100', 0.35);         // (shade at her temples)
+        blob(s * 0.044, -0.012, 0.022, 0.012, '255,238,226', 0.55);      // (light on her cheekbones)
+        blob(s * 0.052, -0.04, 0.02, 0.026, '178,118,100', 0.3);         // (the soft hollow below them)
+        blob(s * 0.04, -0.028, 0.022, 0.016, '220,136,124', 0.16);      // (a faint flush of colour)
+        blob(s * 0.026, -0.009, 0.012, 0.004, '160,110,104', 0.22);      // (the soft hollow under each eye)
+        blob(s * 0.016, -0.046, 0.003, 0.01, '150,100,90', 0.18);        // (faint smile lines beside her mouth)
+        blob(s * 0.05, -0.075, 0.026, 0.02, '170,118,100', 0.32);        // (shade along her jaw)
+        blob(s * 0.011, -0.002, 0.007, 0.022, '170,120,104', 0.32);      // (the shadowed sides of her nose)
+        blob(s * 0.021, 0.004, 0.009, 0.012, '150,104,92', 0.28);        // (where her nose meets her eyes)
+      });
+      blob(0, -0.009, 0.004, 0.024, '255,244,236', 0.55);                 // (light down the bridge of her nose)
+      blob(0, -0.037, 0.016, 0.006, '150,98,84', 0.4);                    // (shade under her nose)
+      blob(0, -0.066, 0.016, 0.005, '150,100,88', 0.35);                  // (shade under her lower lip)
+      blob(0, -0.078, 0.012, 0.008, '255,242,232', 0.4);                  // (light on her chin)
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      [-1, 1].forEach(function (s) {
+        g.save(); g.translate(s * 0.032, 0.003); g.scale(1.08, 1.08); g.translate(-s * 0.031, -0.004);
+        var cx = s * 0.031, cy = 0.004, ix = cx - s * 0.0155, ox = cx + s * 0.0165;
+        blob(cx + s * 0.002, cy + 0.009, 0.02, 0.011, '96,74,66', 0.55);   // (smoky shadow on her lids, deepest at the crease)
+        blob(cx + s * 0.009, cy + 0.006, 0.012, 0.008, '60,46,44', 0.45);  // (darker toward the outer corner)
+        blob(cx, cy - 0.011, 0.016, 0.005, '150,108,100', 0.28);          // (a little shade beneath)
+        g.strokeStyle = 'rgba(110,74,62,0.55)'; g.lineWidth = 0.0006; g.beginPath(); g.moveTo(ix + s * 0.001, cy + 0.007); g.quadraticCurveTo(cx, cy + 0.0175, ox + s * 0.002, cy + 0.009); g.stroke();   // (the fold of her lid)
+        if (closed) {
+          g.fillStyle = 'rgba(150,110,96,0.35)'; g.beginPath(); g.moveTo(ix, cy); g.quadraticCurveTo(cx, cy + 0.008, ox, cy + 0.003); g.quadraticCurveTo(cx, cy - 0.006, ix, cy); g.fill();
+          g.strokeStyle = '#120d0c'; g.lineWidth = 0.0013; g.beginPath(); g.moveTo(ix, cy - 0.0003); g.quadraticCurveTo(cx, cy - 0.0062, ox, cy + 0.0015); g.lineTo(ox + s * 0.0055, cy + 0.0052); g.stroke();
+          g.lineWidth = 0.0004; for (var lk = 0; lk < 18; lk++) { var lt = 0.12 + lk / 17 * 0.85, lx = ix + (ox - ix) * lt, ly = cy - 0.0062 * 4 * lt * (1 - lt) + 0.0015 * lt; g.beginPath(); g.moveTo(lx, ly); g.quadraticCurveTo(lx + s * 0.0008, ly - 0.002, lx + s * 0.002 * lt, ly - 0.0032); g.stroke(); }   // (her lashes resting down)
+        } else {
+          function almond() { g.beginPath(); g.moveTo(ix, cy - 0.0003); g.bezierCurveTo(cx - s * 0.009, cy + 0.0095, cx + s * 0.006, cy + 0.0105, ox, cy + 0.0028); g.bezierCurveTo(cx + s * 0.008, cy - 0.0065, cx - s * 0.006, cy - 0.0072, ix, cy - 0.0003); g.closePath(); }
+          var wh = g.createLinearGradient(ix, 0, ox, 0); wh.addColorStop(0, s > 0 ? '#e8c8c0' : '#ece4dc'); wh.addColorStop(0.25, '#f4efe8'); wh.addColorStop(0.75, '#f0eae2'); wh.addColorStop(1, s > 0 ? '#ece4dc' : '#e8c8c0');
+          g.fillStyle = wh; almond(); g.fill();                           // (the whites of her eyes, warmer at the corners)
+          g.save(); almond(); g.clip();
+          var ir = g.createRadialGradient(cx, cy + 0.0006, 0.0006, cx, cy + 0.0006, 0.0068); ir.addColorStop(0, '#a6b85a'); ir.addColorStop(0.35, '#6e9440'); ir.addColorStop(0.8, '#3e6a2a'); ir.addColorStop(1, '#1e3216');
+          g.fillStyle = ir; g.beginPath(); g.arc(cx, cy + 0.0006, 0.0068, 0, Math.PI * 2); g.fill();   // (a green iris, golden round the pupil)
+          for (var f = 0; f < 70; f++) { var fa = f / 70 * Math.PI * 2, fr = glimR(f * 3.7); g.strokeStyle = fr > 0.5 ? 'rgba(200,214,130,0.35)' : 'rgba(24,46,16,0.4)'; g.lineWidth = 0.00022; g.beginPath(); g.moveTo(cx + Math.cos(fa) * 0.0026, cy + 0.0006 + Math.sin(fa) * 0.0026); g.lineTo(cx + Math.cos(fa + 0.08) * (0.0055 + fr * 0.0011), cy + 0.0006 + Math.sin(fa + 0.08) * (0.0055 + fr * 0.0011)); g.stroke(); }   // (fine fibres radiating through it)
+          g.strokeStyle = 'rgba(14,26,10,0.85)'; g.lineWidth = 0.0007; g.beginPath(); g.arc(cx, cy + 0.0006, 0.0065, 0, Math.PI * 2); g.stroke();   // (a dark ring round its edge)
+          g.fillStyle = '#060504'; g.beginPath(); g.arc(cx, cy + 0.0006, 0.0025, 0, Math.PI * 2); g.fill();
+          var lidSh = g.createLinearGradient(0, cy + 0.0095, 0, cy + 0.0015); lidSh.addColorStop(0, 'rgba(30,20,18,0.7)'); lidSh.addColorStop(1, 'rgba(30,20,18,0)'); g.fillStyle = lidSh; g.fillRect(cx - 0.02, cy, 0.04, 0.011);   // (the shadow her lid and lashes cast over it)
+          g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(cx - s * 0.0019, cy + 0.0029, 0.0013, 0.0011, 0, 0, Math.PI * 2); g.fill();   // (a bright catch-light)
+          g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.arc(cx + s * 0.0024, cy - 0.0019, 0.0005, 0, Math.PI * 2); g.fill();
+          g.restore();
+          g.fillStyle = 'rgba(220,150,150,0.85)'; g.beginPath(); g.ellipse(ix + s * 0.0012, cy - 0.0002, 0.0012, 0.0009, 0, 0, Math.PI * 2); g.fill();   // (the pink inner corner)
+          g.strokeStyle = 'rgba(200,140,130,0.6)'; g.lineWidth = 0.0005; g.beginPath(); g.moveTo(ix + s * 0.002, cy - 0.0012); g.bezierCurveTo(cx - s * 0.006, cy - 0.0078, cx + s * 0.008, cy - 0.0071, ox - s * 0.001, cy + 0.002); g.stroke();   // (her lower lid's rim)
+          g.strokeStyle = 'rgba(54,38,36,0.75)'; g.lineWidth = 0.0005; g.beginPath(); g.moveTo(ix + s * 0.004, cy - 0.0028); g.bezierCurveTo(cx - s * 0.005, cy - 0.0088, cx + s * 0.008, cy - 0.008, ox, cy + 0.0022); g.stroke();   // (and its soft dark lash line)
+          g.strokeStyle = '#0e0a0a'; g.lineWidth = 0.0014; g.beginPath(); g.moveTo(ix, cy - 0.0003); g.bezierCurveTo(cx - s * 0.009, cy + 0.0095, cx + s * 0.006, cy + 0.0105, ox, cy + 0.0028); g.stroke();   // (her upper lid, lined in black...)
+          g.fillStyle = '#0e0a0a'; g.beginPath(); g.moveTo(ox - s * 0.003, cy + 0.0058); g.quadraticCurveTo(ox + s * 0.004, cy + 0.006, ox + s * 0.0072, cy + 0.0078); g.quadraticCurveTo(ox + s * 0.002, cy + 0.0032, ox, cy + 0.0022); g.closePath(); g.fill();   // (...in a fine wing)
+          g.lineWidth = 0.00035;                                            // (her lashes, one by one, longer and curling more toward the outer corner)
+          for (var lk2 = 0; lk2 < 30; lk2++) {
+            var u = 0.05 + lk2 / 29 * 0.93, bx = (1 - u) * (1 - u) * (1 - u) * ix + 3 * (1 - u) * (1 - u) * u * (cx - s * 0.009) + 3 * (1 - u) * u * u * (cx + s * 0.006) + u * u * u * ox, by = (1 - u) * (1 - u) * (1 - u) * (cy - 0.0003) + 3 * (1 - u) * (1 - u) * u * (cy + 0.0095) + 3 * (1 - u) * u * u * (cy + 0.0105) + u * u * u * (cy + 0.0028);
+            var L = 0.0018 + u * u * 0.0032 + glimR(lk2) * 0.0005, ang = Math.PI / 2 - s * (u - 0.35) * 1.4;
+            g.strokeStyle = 'rgba(10,8,8,' + (0.6 + glimR(lk2 * 2) * 0.4) + ')'; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + Math.cos(ang) * L * 0.6, by + Math.sin(ang) * L * 0.6 - 0.0004, bx + Math.cos(ang - s * 0.4) * L, by + Math.sin(ang - s * 0.4) * L); g.stroke();
+          }
+          g.strokeStyle = 'rgba(30,22,20,0.55)'; g.lineWidth = 0.0002; for (var lk3 = 0; lk3 < 12; lk3++) { var u3 = 0.3 + lk3 / 11 * 0.65, bx3 = ix + (ox - ix) * u3, by3 = cy - 0.0075 * 4 * u3 * (1 - u3) + 0.0028 * u3 * u3 - 0.0004; g.beginPath(); g.moveTo(bx3, by3); g.lineTo(bx3 + s * 0.0005, by3 - 0.0012 - u3 * 0.0006); g.stroke(); }   // (fine lower lashes)
+        }
+        g.fillStyle = 'rgba(30,20,20,0.62)'; g.beginPath(); g.moveTo(cx - s * 0.016, cy + 0.0155); g.quadraticCurveTo(cx + s * 0.002, cy + 0.0265, cx + s * 0.021, cy + 0.0195); g.quadraticCurveTo(cx + s * 0.003, cy + 0.023, cx - s * 0.0155, cy + 0.0125); g.closePath(); g.fill();   // (her brow: a soft base...)
+        g.lineWidth = 0.00045;
+        for (var bh = 0; bh < 90; bh++) {                                 // (...and fine hairs, angled up at its start and sweeping along its arch)
+          var u4 = Math.min(1, bh / 89 + (glimR(bh * 2.3 + s * 7) - 0.5) * 0.03), bx4 = cx - s * 0.0155 + s * u4 * 0.036, by4 = cy + 0.0135 + 4 * u4 * (1 - u4) * 0.0082 - u4 * 0.0035 + (glimR(bh * 5.1) - 0.5) * 0.0032 * (1 - u4 * 0.6), ang4 = u4 < 0.25 ? Math.PI / 2 - s * 0.4 : s > 0 ? -0.15 - u4 * 0.4 : Math.PI + 0.15 + u4 * 0.4, L4 = 0.0035 * (1 - u4 * 0.4);
+          g.strokeStyle = 'rgba(18,12,12,' + (0.6 + glimR(bh) * 0.4) + ')'; g.beginPath(); g.moveTo(bx4, by4); g.lineTo(bx4 + Math.cos(ang4) * L4, by4 + Math.sin(ang4) * L4); g.stroke();
+        }
+        g.restore();
+      });
+      // her nose: a soft bridge, a rounded tip and gently curved nostrils
+      g.strokeStyle = 'rgba(140,92,78,0.45)'; g.lineWidth = 0.0006; g.beginPath(); g.moveTo(-0.0052, -0.004); g.bezierCurveTo(-0.0062, -0.016, -0.0066, -0.024, -0.0078, -0.029); g.stroke();
+      blob(0, -0.03, 0.006, 0.004, '255,244,236', 0.6);                   // (light on its tip)
+      g.strokeStyle = 'rgba(120,76,64,0.55)'; g.lineWidth = 0.0007; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 0.0085, -0.0285); g.bezierCurveTo(s * 0.0112, -0.031, s * 0.0105, -0.0352, s * 0.0062, -0.0355); g.stroke(); });   // (the curve of each nostril's wing)
+      g.fillStyle = 'rgba(86,50,42,0.8)'; [-1, 1].forEach(function (s) { g.beginPath(); g.ellipse(s * 0.0042, -0.0352, 0.0021, 0.0009, s * 0.35, 0, Math.PI * 2); g.fill(); });
+      g.strokeStyle = 'rgba(150,100,88,0.35)'; g.lineWidth = 0.0005; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 0.0032, -0.0385); g.lineTo(s * 0.0038, -0.0485); g.stroke(); });   // (the little groove above her lip)
+      // her lips: full and dark, the upper lip shaded deeper, the lower catching the light, with fine lines across them
+      var ly0 = -0.055;
+      function upperLip() { g.beginPath(); g.moveTo(-0.0158, ly0 + 0.0002); g.bezierCurveTo(-0.011, ly0 + 0.003, -0.0065, ly0 + 0.0072, -0.0028, ly0 + 0.0062); g.quadraticCurveTo(0, ly0 + 0.0048, 0.0028, ly0 + 0.0062); g.bezierCurveTo(0.0065, ly0 + 0.0072, 0.011, ly0 + 0.003, 0.0158, ly0 + 0.0006); g.bezierCurveTo(0.008, ly0 - 0.0002, -0.008, ly0 - 0.0006, -0.0158, ly0 + 0.0002); g.closePath(); }
+      function lowerLip() { g.beginPath(); g.moveTo(-0.0148, ly0 - 0.0002); g.bezierCurveTo(-0.009, ly0 - 0.0115, 0.009, ly0 - 0.0118, 0.0148, ly0 + 0.0004); g.bezierCurveTo(0.008, ly0 - 0.0012, -0.008, ly0 - 0.0014, -0.0148, ly0 - 0.0002); g.closePath(); }
+      var ug = g.createLinearGradient(0, ly0 + 0.007, 0, ly0); ug.addColorStop(0, '#3e3a44'); ug.addColorStop(1, '#1e1c22'); g.fillStyle = ug; upperLip(); g.fill();
+      var lg2 = g.createLinearGradient(0, ly0, 0, ly0 - 0.011); lg2.addColorStop(0, '#26242c'); lg2.addColorStop(0.45, '#4a4652'); lg2.addColorStop(1, '#2c2a32'); g.fillStyle = lg2; lowerLip(); g.fill();
+      g.save(); lowerLip(); g.clip(); blob(0.002, ly0 - 0.0055, 0.006, 0.0018, '196,192,210', 0.6); g.strokeStyle = 'rgba(16,14,18,0.35)'; g.lineWidth = 0.0002; for (var ll = 0; ll < 16; ll++) { var lx = -0.012 + ll * 0.0016; g.beginPath(); g.moveTo(lx, ly0 - 0.001); g.lineTo(lx + (lx * 0.1), ly0 - 0.009); g.stroke(); } g.restore();   // (a soft shine, and the fine lines of her lips)
+      g.save(); upperLip(); g.clip(); blob(-0.004, ly0 + 0.0045, 0.004, 0.0012, '160,156,176', 0.4); blob(0.004, ly0 + 0.0045, 0.004, 0.0012, '160,156,176', 0.4); g.restore();
+      g.strokeStyle = '#0c0a0e'; g.lineWidth = 0.0007; g.beginPath(); g.moveTo(-0.0168, ly0 + 0.0012); g.bezierCurveTo(-0.008, ly0 - 0.0004, 0.008, ly0 - 0.0006, 0.0168, ly0 + 0.0016); g.stroke();   // (the line between them, lifting a little at the corners)
+      [-1, 1].forEach(function (s) { blob(s * 0.0175, ly0 + 0.0008, 0.0022, 0.0022, '120,80,70', 0.35); });   // (soft shade at the corners of her mouth)
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    var faceOpen = new THREE.CanvasTexture(glimCanvas(1024, 1024, function (g) { paintFace(g, false); })), faceShut = new THREE.CanvasTexture(glimCanvas(1024, 1024, function (g) { paintFace(g, true); }));
+    [faceOpen, faceShut].forEach(function (t) { t.anisotropy = renderer.capabilities.getMaxAnisotropy(); });
+    var faceM = zSoftMat({ map: faceOpen, color: 0xffffff, roughness: 0.58 }, 0.06, 0.2, 0.06);   // (lit softly and naturally, with a warm glow at its edges like real skin)
+    var headMesh = add(headGeo, faceM, 0, 0, 0, 1, 1, 1, head); headMesh.receiveShadow = false;   // (no hat-brim shadow across her face: in a drawing there wouldn't be one)
+    var ear = add(seg, skinM, -0.077, -0.01, -0.012, 0.007, 0.019, 0.012, head); ink(ear, 0.0012);   // (one ear, tucked behind her hair on her right)
+    add(new THREE.TorusGeometry(0.004, 0.0011, 6, 12), toon(0xb8b4c0), -0.08, -0.03, -0.008, 1, 1, 1, head);   // (a small silver earring)
+
+    // her hair: long, black and wavy, parted on one side, sweeping across her brow and falling past her waist
+    var hairTex = new THREE.CanvasTexture(glimCanvas(256, 512, function (g, w, h) {
+      g.fillStyle = '#16161e'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 9; k++) {                                    // (flowing lines and soft blue-grey lights, as in a drawing of black hair)
+        var x0 = (k + 0.5) / 9 * w, ph = glimR(k * 3.1) * 6;
+        g.strokeStyle = k % 3 ? 'rgba(6,6,10,0.9)' : 'rgba(88,98,128,0.55)'; g.lineWidth = k % 3 ? 2 : 6;
+        g.beginPath(); for (var y = 0; y <= h; y += 8) { var x = x0 + Math.sin(y / h * Math.PI * 6 + ph) * 10; y ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+      }
+    }));
+    hairTex.wrapS = hairTex.wrapT = THREE.RepeatWrapping;
+    var hairM = toon(0xffffff, { map: hairTex, side: THREE.DoubleSide });
+    var capGeo = sdfShape(function (x, y, z) {
+      var d = ell(x, y, z, 0, 0.022, -0.016, 0.087, 0.104, 0.102), xx = x + 0.02;
+      var a = y - (0.055 + xx * xx * 5 - Math.max(0, -z) * 2), b = 0.025 - z, k = 0.012, h = Math.max(0, Math.min(1, 0.5 + 0.5 * (a - b) / k)), keep = b + (a - b) * h + k * h * (1 - h);   // (a hairline curving back from a side part)
+      return -sm(-d, keep, 0.006);
+    }, V(0, 0.02, -0.01), [96, 80], 0.2);
+    (function () { var p = capGeo.attributes.position, uv = capGeo.attributes.uv; for (var i = 0; i < p.count; i++) uv.setXY(i, (Math.atan2(p.getX(i) + 0.02, p.getZ(i) + 0.02) / Math.PI + 1) * 1.5, 0.6 - p.getY(i) * 3); })();
+    var hairCap = add(capGeo, hairM, 0, 0, 0, 1, 1, 1, head); ink(hairCap, 0.002);
+    var swoopC = new THREE.CatmullRomCurve3([V(-0.022, 0.104, 0.05), V(0.02, 0.098, 0.082), V(0.06, 0.068, 0.082), V(0.085, 0.02, 0.06), V(0.094, -0.04, 0.04), V(0.1, -0.1, 0.02)]);
+    var swoop = add(taper(swoopC, 40, 12, function (t) { return 0.022 * (1 - t * 0.35); }), hairM, 0, 0, 0, 1, 1, 1, head); ink(swoop, 0.0018);   // (a soft wave sweeping across her brow to one side)
+    var hairBack = new THREE.Group(); look.add(hairBack);
+    function ribbon(pts, w0, w1) {
+      var c = new THREE.CatmullRomCurve3(pts), n = 60, g = new THREE.BufferGeometry(), P = [], U = [], I = [], tg = new THREE.Vector3(), sd = new THREE.Vector3(), p = new THREE.Vector3();
+      for (var k = 0; k <= n; k++) { var t = k / n; c.getPointAt(t, p); c.getTangentAt(t, tg); sd.crossVectors(tg, V(p.x, 0, p.z + 0.02).normalize()).normalize(); var w = w0 + (w1 - w0) * t; P.push(p.x + sd.x * w, p.y + sd.y * w, p.z + sd.z * w, p.x - sd.x * w, p.y - sd.y * w, p.z - sd.z * w); U.push(0, t * 3, 1, t * 3); if (k < n) { var a = k * 2; I.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+      g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals(); return g;
+    }
+    for (var hs = 0; hs < 44; hs++) {
+      var a = 1.15 + hs / 43 * (2 * Math.PI - 2.3), sideL = Math.sin(a) > 0;   // (all round, except over her face)
+      var len = 0.5 + glimR(hs * 3.3) * 0.08 + (sideL ? 0.04 : 0), top = V(Math.sin(a) * 0.088, 1.29 - Math.abs(Math.cos(a)) * 0.01 - (Math.cos(a) > 0 ? 0.04 : 0), Math.cos(a) * 0.088 - 0.01);
+      var pts = [top];
+      for (var k3 = 1; k3 <= 14; k3++) {
+        var t3 = k3 / 14, y4 = top.y - t3 * len, r4 = 0.095 + 0.06 * ss(1.24, 1.06, y4) + t3 * 0.05 + Math.sin(t3 * 14 + hs * 0.9) * 0.012 * ss(0, 0.3, t3), wave = Math.sin(t3 * 14 + hs * 1.7) * 0.03 * ss(0, 0.25, t3);   // (in loose waves)   // (fuller over her shoulders, and waving more toward its ends)
+        var aa = a + wave * 4; pts.push(V(Math.sin(aa) * r4, y4, Math.cos(aa) * r4 * (Math.cos(aa) > 0 ? 1.05 : 0.9) - 0.01));
+      }
+      var m = new THREE.Mesh(ribbon(pts, 0.03, 0.02), hairM); m.castShadow = true; hairBack.add(m);
+    }
+
+    // her arms, in sheer dark sleeves with black cuffs, and pale hands with black nails. Built in the same space as
+    // your tool arm, so the arm that holds your tools matches
+    function armMesh(parent, s) {
+      var up = new THREE.CatmullRomCurve3([V(0, 0.01, 0), V(0, -0.06, 0.002), V(0, -0.12, 0.0), V(0, -0.175, -0.002)]);
+      var ua = add(taper(up, 24, 14, function (t) { return 0.026 * (1 - t * 0.25); }), skinM, 0, 0, 0, 1, 1, 1, parent);
+      add(taper(up, 24, 14, function (t) { return 0.034 * (1 - t * 0.15); }), sheerM, 0, 0, 0, 1, 1, 1, parent).renderOrder = 2;   // (a sheer, billowing sleeve)
+      var el = new THREE.Group(); el.position.set(0, -0.175, -0.002); parent.add(el);
+      add(seg, skinM, 0, 0, 0, 0.021, 0.021, 0.021, el);
+      var fo = new THREE.CatmullRomCurve3([V(0, 0, 0), V(0, -0.065, 0.008), V(0, -0.125, 0.01), V(0, -0.155, 0.008)]);
+      add(taper(fo, 24, 14, function (t) { return 0.02 * (1 - t * 0.38); }), skinM, 0, 0, 0, 1, 1, 1, el);
+      add(taper(fo, 24, 14, function (t) { return 0.03 * (1 - t * 0.3) * (1 + 0.2 * ss(0.6, 0.85, t)); }), sheerM, 0, 0, 0, 1, 1, 1, el).renderOrder = 2;
+      var cuff = add(new THREE.CylinderGeometry(0.0155, 0.015, 0.022, 20), collarM, 0, -0.142, 0.009, 1, 1, 0.85, el); ink(cuff, 0.0012);   // (a black cuff at the wrist)
+      var hand = new THREE.Group(); hand.position.set(0, -0.16, 0.008); el.add(hand);
+      ink(add(seg, skinM, 0, -0.02, 0, 0.016, 0.023, 0.0075, hand), 0.0012);
+      [[-0.0105, 0.034], [-0.0036, 0.039], [0.0036, 0.037], [0.0105, 0.03]].forEach(function (f) {
+        var fc = new THREE.CatmullRomCurve3([V(f[0] * s, -0.036, 0), V(f[0] * s * 1.05, -0.036 - f[1] * 0.5, 0.003), V(f[0] * s * 1.05, -0.036 - f[1] * 0.85, 0.009), V(f[0] * s, -0.036 - f[1], 0.014)]);
+        add(taper(fc, 12, 8, function (t) { return 0.0042 * (1 - t * 0.3); }), skinM, 0, 0, 0, 1, 1, 1, hand);
+        var tip = fc.getPointAt(0.97); add(seg, nailM, tip.x, tip.y, tip.z + 0.0012, 0.0033, 0.0042, 0.0022, hand);   // (a black nail)
+      });
+      var th = new THREE.CatmullRomCurve3([V(-0.013 * s, -0.012, 0.006), V(-0.019 * s, -0.024, 0.013), V(-0.017 * s, -0.035, 0.02)]);
+      add(taper(th, 10, 8, function (t) { return 0.005 * (1 - t * 0.25); }), skinM, 0, 0, 0, 1, 1, 1, hand);
+      var tt = th.getPointAt(0.97); add(seg, nailM, tt.x, tt.y, tt.z + 0.0012, 0.0036, 0.0044, 0.0022, hand);
+      return { el: el, hand: hand };
+    }
+    var ARM_S = 1.06, arms = [];
+    [-1, 1].forEach(function (s) {                                    // (her left hand rests on her hip; her right hangs softly)
+      var sh = new THREE.Group(); sh.position.set(s * 0.13, 1.03, -0.014); look.add(sh);
+      var am = armMesh(sh, s); arms.push({ g: sh, s: s, el: am.el, hand: am.hand, pose: s > 0 ? [0.05, 0.55, [-0.15, 0, -1.35], [0, 0.6, 0.3]] : [0.05, 0.06, [-0.25, 0, 0], [0, 0, 0]] });
+    });
+    arms.forEach(function (a) { a.el.rotation.set(a.pose[2][0], a.pose[2][1], a.pose[2][2] * a.s); a.hand.rotation.set(a.pose[3][0], a.pose[3][1], a.pose[3][2] * a.s); });
+    axeArm.children[0].visible = false; axeArm.children[1].visible = false;   // (the tool arm's old sleeve and hand)
+    var toolArm = new THREE.Group(); toolArm.scale.setScalar(1 / ARM_S); axeArm.add(toolArm); armMesh(toolArm, -1);
+    axeArm.position.set(-0.13, 1.03, -0.014); axeArm.scale.setScalar(ARM_S);
+
+    // her witch's hat: tall and black, bent over at its tip with your star on it, with a deep violet band
+    var hat = new THREE.Group(); hat.position.set(0, 1.335, -0.015); hat.rotation.set(-0.14, 0, -0.08); hat.scale.setScalar(0.5); look.add(hat);
+    var brimPts = [[0.0, 0.0], [0.2, 0.0], [0.33, -0.012], [0.42, -0.04], [0.45, -0.056], [0.43, -0.05], [0.32, -0.004], [0.2, 0.012], [0.0, 0.012]].map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+    ink(add(new THREE.LatheGeometry(brimPts, 64), hatM, 0, 0, 0, 1, 1, 1, hat), 0.004);
+    var cone = new THREE.CatmullRomCurve3([V(0, 0, 0), V(0, 0.24, -0.02), V(0.01, 0.48, -0.08), V(0.09, 0.64, -0.18), V(0.2, 0.66, -0.27)]);
+    ink(add(taper(cone, 48, 32, function (t) { return 0.205 * Math.pow(1 - t, 0.85) + 0.006; }), hatM, 0, 0, 0, 1, 1, 1, hat), 0.004);
+    add(new THREE.CylinderGeometry(0.202, 0.207, 0.06, 48, 1, true), bandM, 0, 0.035, 0, 1, 1, 1, hat);
+    hatStar.visible = true; body.remove(hatStar); hat.add(hatStar); hatStar.position.set(0.215, 0.655, -0.28); hatStar.scale.setScalar(0.8);
+
+    // dark mist curling round her, as in your picture
+    var mistTex = radialAlphaTex([[0, 0.7], [0.4, 0.35], [1, 0]]), mist = [];
+    for (var mk = 0; mk < 16; mk++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: mk % 3 ? 0x6a7088 : 0x9aa0b8, transparent: true, opacity: 0, depthWrite: false })); look.add(sp); mist.push({ s: sp, t: glimR(mk * 3.1), a: glimR(mk * 5.7) * Math.PI * 2, r: 0.16 + glimR(mk * 2.3) * 0.12, size: 0.16 + glimR(mk * 4.1) * 0.14 }); }
+
+    // everything gets a soft shadow and her hair's ribbons a dark edge
+    return { look: look, faceM: faceM, faceOpen: faceOpen, faceShut: faceShut, hairBack: hairBack, arms: arms, skirt: skirt, skirtBase: skirtBase, skirtInk: skirtInk, skirtInkBase: skirtInkBase, mist: mist };
+  })();
+  // every frame: her hair swings as she walks, her right arm swings (stepping aside when you hold a tool, which your
+  // tool arm then is) while her left hand stays on her hip, her skirt sways, mist curls round her, and she blinks
+  function witchLook(dt, moving) {
+    var t = state.time, sw = moving ? Math.sin(t * 11) : 0;
+    wl.hairBack.rotation.x = wl.hairBack.rotation.x * 0.9 + (moving ? -0.08 : 0) * 0.1; wl.hairBack.rotation.z = wl.hairBack.rotation.z * 0.9 + (sw * 0.03 + Math.sin(t * 0.8) * 0.01) * 0.1;
+    wl.arms.forEach(function (a, k) {
+      a.g.visible = !(a.s < 0 && axeArm.visible);
+      a.g.rotation.x = a.g.rotation.x * 0.85 + (a.pose[0] + (a.s < 0 && moving ? Math.sin(t * 11) * 0.3 : Math.sin(t * 0.9 + k) * 0.02)) * 0.15;
+      a.g.rotation.z = a.pose[1] * a.s;
+    });
+    [[wl.skirt, wl.skirtBase], [wl.skirtInk, wl.skirtInkBase]].forEach(function (pr) {
+      var sk = pr[0].geometry.attributes.position, sb = pr[1];
+      for (var i = 0; i < sk.count; i++) { var y = sb[i * 3 + 1], f = Math.max(0, 0.78 - y) / 0.78, a = Math.atan2(sb[i * 3 + 2], sb[i * 3]); sk.setXYZ(i, sb[i * 3] + f * f * (moving ? Math.sin(t * 11 + a) * 0.012 : 0), y, sb[i * 3 + 2] + f * f * (moving ? -0.02 + Math.sin(t * 11 + a * 2) * 0.008 : Math.sin(t * 0.8) * 0.003)); }
+      sk.needsUpdate = true;
+    });
+    wl.mist.forEach(function (m) { m.t += dt * 0.06; if (m.t > 1) m.t -= 1; var a = m.a + t * 0.15; m.s.position.set(Math.cos(a) * m.r, 0.06 + m.t * 0.7, Math.sin(a) * m.r * 0.8); var sz = m.size * (0.7 + m.t * 0.8); m.s.scale.set(sz, sz, 1); m.s.material.opacity = Math.sin(m.t * Math.PI) * 0.22; });   // (rising slowly and fading as it curls round her)
+    var bt = (t * 0.23) % 1, shut = bt < 0.02;
+    var want = shut ? wl.faceShut : wl.faceOpen; if (wl.faceM.map !== want) { wl.faceM.map = want; wl.faceM.needsUpdate = true; }
+  }
+
   // ---------- Every frame ----------
   function updatePlayer(dt) {
     var forward = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
@@ -2323,6 +2616,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
     body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
     hatStar.rotation.y += dt * 2;
+    witchLook(dt, moving);
   }
 
   function updateCrops(dt, night) {
