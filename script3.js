@@ -2432,19 +2432,35 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     var cap = new THREE.SphereGeometry(0.233, 48, 36); cap.scale(1, 0.95, 0.97); cap.translate(0, 0.004, -0.004); mesh(cap, toon(0xffffff, { map: hairTex, alphaTest: 0.5, side: THREE.DoubleSide }), head, true);
     var mLock = toon(0xffffff, { vertexColors: true, side: THREE.DoubleSide });
-    function lockPaint(g) { return paint(g, 0x4e3222, 0x9a6a4a); }
+    function lockPaint(g) { return paint(g, 0x4e3222, 0xa4724e); }
+    var strandTex = canvas(512, 256, function (g, w, h) {                // (fine soft strands running down its length)
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 140; k++) { var x = (k * 37.7) % w, d = 0.08 + ((k * 13) % 7) / 60; g.strokeStyle = k % 3 ? 'rgba(60,30,10,' + d + ')' : 'rgba(255,240,220,' + d + ')'; g.lineWidth = 2 + (k % 4); g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 6, h * 0.3, x - 6, h * 0.7, x + 3, h); g.stroke(); }
+    });
     var hairBack = new THREE.Group(); head.add(hairBack);
-    var sheet = lathe([[0.3, -0.7], [0.275, -0.5], [0.25, -0.32], [0.232, -0.14], [0.222, 0.0], [0.2, 0.08]], 48, function (v, a, j) {   // (a full fall of hair behind her...)
-      if (j === 0) { var tri = Math.abs(((a / (Math.PI * 2) * 12) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.1 * tri; }
-    }, Math.PI - 1.75, 3.5);
-    mesh(lockPaint(sheet), mLock, hairBack);
-    for (var k = 0; k < 12; k++) {   // (...in wide, smooth locks, each flaring out a little at its pointed tip)
-      var a = Math.PI * (0.5 + k / 11 * 1.0), dx = Math.sin(a), dz = Math.cos(a), out = 1 + Math.abs(dx) * 0.6, len = 0.66 + ((k * 5) % 3) * 0.05, flick = (k % 2 ? 1 : -1) * 0.03;
-      mesh(lockPaint(ribbon([V(dx * 0.2, 0.06, dz * 0.2), V(dx * 0.245, -0.14, dz * 0.24), V(dx * 0.27 * out, -0.36, dz * 0.25), V(dx * 0.3 * out + flick, -0.54, dz * 0.25), V(dx * 0.36 * out + flick * 2, -len - 0.06, dz * 0.22)], 0.1, 0.085, 0.016, V(Math.cos(a), 0, -Math.sin(a)))), mLock, hairBack);
+    // (a full, smooth mass of hair falling from her crown, flaring a little toward its ends, which part into soft pointed
+    // clumps; shadowed underneath and shining on top)
+    var shell = lathe([[0.36, -0.72], [0.33, -0.58], [0.29, -0.42], [0.258, -0.24], [0.24, -0.08], [0.232, 0.04], [0.214, 0.12], [0.18, 0.18]], 72, function (v, a, j) {
+      if (Math.cos(a) < 0) { var b = 1 + 0.18 * -Math.cos(a) * Math.sin(Math.min(1, (0.2 - v.y) / 0.6) * Math.PI * 0.9); v.z *= b; }   // (fuller at the back, so she has volume from the side)
+      if (j === 0) { var t = Math.abs(((a / (Math.PI * 2) * 7) % 1 + 1) % 1 - 0.5) * 2; v.y += 0.17 * (1 - Math.pow(1 - t, 2.4)); var r = 1 + 0.04 * (1 - t); v.x *= r; v.z *= r; }   // (soft pointed clumps, curling out a little at their tips)
+    }, Math.PI - 1.8, 3.6);
+    var sc = [], sn = shell.attributes.normal, sp = shell.attributes.position, c0 = new THREE.Color(0x3a2418), c1 = new THREE.Color(0x8e6040), cc = new THREE.Color(), nv = new THREE.Vector3();
+    for (var si = 0; si < sn.count; si++) { nv.fromBufferAttribute(sn, si); var lit = Math.pow(Math.max(0, nv.dot(LIGHT)), 1.5) * 0.8 + Math.max(0, sp.getY(si) + 0.1) * 0.6; cc.copy(c0).lerp(c1, Math.min(1, lit)); sc.push(cc.r, cc.g, cc.b); }
+    shell.setAttribute('color', new THREE.Float32BufferAttribute(sc, 3));
+    mesh(shell, toon(0xffffff, { map: strandTex, vertexColors: true, side: THREE.DoubleSide }), hairBack);
+    // (wide, gently waving locks layered over it, their tips curling outward)
+    for (var k = 0; k < 9; k++) {
+      var a = Math.PI * (0.62 + k / 8 * 0.76), dx = Math.sin(a), dz = Math.cos(a), len = 0.56 + ((k * 7) % 3) * 0.035, wv = (k % 2 ? 1 : -1) * 0.018;
+      function at(r, y, back) { return V(dx * r, y, dz * r * back); }
+      mesh(lockPaint(ribbon([at(0.205, 0.1, 1.05), at(0.25, -0.08, 1.12), at(0.27, -0.26, 1.2), at(0.29 + wv, -0.44, 1.18), at(0.325, -0.54, 1.12), at(0.36, -len, 1.06)], 0.09, 0.08, 0.012, V(Math.cos(a), 0, -Math.sin(a)))), mLock, hairBack);
     }
-    [-1, 1].forEach(function (s) {                                       // (two long locks framing her face, over her shoulders)
-      mesh(lockPaint(ribbon([V(s * 0.175, 0.04, 0.11), V(s * 0.205, -0.1, 0.115), V(s * 0.22, -0.26, 0.1), V(s * 0.235, -0.42, 0.08), V(s * 0.28, -0.58, 0.06)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
-      mesh(lockPaint(ribbon([V(s * 0.19, 0.04, 0.06), V(s * 0.225, -0.12, 0.07), V(s * 0.25, -0.3, 0.05), V(s * 0.28, -0.48, 0.03), V(s * 0.33, -0.62, 0.0)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
+    [[-1, 0.0], [1, 0.0], [-1, 0.5], [1, 0.5]].forEach(function (w) {   // (a few thin wisps flicking out at the bottom)
+      var s = w[0], z = -0.06 - w[1] * 0.12;
+      mesh(lockPaint(ribbon([V(s * 0.27, -0.3, z), V(s * 0.31, -0.48, z - 0.01), V(s * 0.36, -0.62, z - 0.02), V(s * 0.44, -0.7, z - 0.02)], 0.016, 0.012, 0.006, V(0, 0, 1))), mLock, hairBack);
+    });
+    [-1, 1].forEach(function (s) {                                       // (long locks framing her face, over her shoulders, waving a little)
+      mesh(lockPaint(ribbon([V(s * 0.175, 0.04, 0.11), V(s * 0.205, -0.1, 0.115), V(s * 0.225, -0.26, 0.1), V(s * 0.225, -0.42, 0.085), V(s * 0.27, -0.56, 0.07), V(s * 0.32, -0.62, 0.065)], 0.06, 0.05, 0.013, V(0, 0, 1))), mLock, head);
+      mesh(lockPaint(ribbon([V(s * 0.195, 0.04, 0.06), V(s * 0.23, -0.12, 0.07), V(s * 0.255, -0.3, 0.05), V(s * 0.27, -0.48, 0.03), V(s * 0.33, -0.62, 0.01)], 0.065, 0.055, 0.013, V(0, 0, 1))), mLock, head);
     });
 
     // ---- her hat: huge, soft and floppy, with a thick rolled brim lined in purple, a crumpled crown that bends over
