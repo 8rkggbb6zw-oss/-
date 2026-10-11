@@ -2258,7 +2258,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // green eyes, rosy cheeks and a little cat smile; long dark brown hair with blunt bangs; a huge, floppy witch's hat
   // with a thick rolled brim lined in purple, a striped band, a buckle and orange roses, its crumpled crown bending over
   // and curling at the tip; a plain charcoal coat-dress with two rows of buttons, purple-lined
-  // bell sleeves, a black ruffled petticoat and long purple-lined tattered tails behind; torn dark stockings and boots;
+  // bell sleeves, a black ruffled petticoat and long tattered tails behind; torn dark stockings and boots;
   // and a broom in her left hand (your tools are held in her right). She walks, swings her arms, sways her hair and
   // blinks
   var wl = (function () {
@@ -2335,9 +2335,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     paint(skirt, 0xc4c4c4, 0xffffff);
     mesh(skirt, toon(0xffffff, { map: plain, vertexColors: true })).add(new THREE.Mesh(skirt, mPurple));
-    // (long tattered tails behind, reaching nearly to the ground, lined in purple)
+    // (long tattered tails behind, reaching nearly to the ground)
     var tails = lathe([[0.4, 0.03], [0.35, 0.2], [0.27, 0.42], [0.18, 0.56], [0.135, 0.63]], 64, function (v, a, j) { if (j === 0) v.y += 0.13 * tri(a, 12) * jag(a + 1); }, Math.PI - 1.45, 2.9);
-    mesh(paint(tails, 0x2a2430, 0x3c3a4a), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(tails, mPurple));
+    mesh(paint(tails, 0x2a2430, 0x3c3a4a), toon(0xffffff, { vertexColors: true })).add(new THREE.Mesh(tails, toon(0x1c181e, { side: THREE.BackSide })));
     // (her bodice: fitted, with a front placket and two rows of buttons)
     var bod = lathe([[0.122, 0.6, 0.8], [0.108, 0.64, 0.78], [0.112, 0.7, 0.8], [0.118, 0.75, 0.82], [0.098, 0.8, 0.8], [0.05, 0.84, 0.9]], 48);
     mesh(paint(bod, 0x302b29, 0x4c4642), toon(0xffffff, { vertexColors: true }));
@@ -2349,7 +2349,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function arm(s) { var g = new THREE.Group(); g.position.set(s * 0.14, 0.77, 0); chibi.add(g); var sg = sleeveGeo(); mesh(sg, mSleeve, g); g.add(new THREE.Mesh(sg, mPurple)); var h = new THREE.SphereGeometry(0.04, 14, 10); h.translate(0, -0.29, 0.005); mesh(h, mSkin, g); g.rotation.z = s * 0.18; return g; }
     var armL = arm(1), armR = arm(-1);
     var broom = new THREE.Group(); broom.position.set(0, -0.29, 0.01); broom.rotation.set(0.55, 0, -0.3); armL.add(broom);
-    var stick = new THREE.CylinderGeometry(0.011, 0.013, 0.78, 8); stick.translate(0, -0.2, 0); mesh(stick, toon(0x8a5a34), broom);
+    var stick = new THREE.CylinderGeometry(0.011, 0.013, 0.6, 8); stick.translate(0, -0.28, 0);   // (ending in her hand) mesh(stick, toon(0x8a5a34), broom);
     var bristle = lathe([[0.075, -0.78], [0.06, -0.68], [0.03, -0.6], [0.02, -0.56]], 18, function (v, a, j) { if (j === 0) v.y += 0.02 * Math.abs(Math.sin(a * 11)); }); mesh(bristle, toon(0xc28a4c, { side: THREE.DoubleSide }), broom);
     [-0.6, -0.64].forEach(function (y) { var t = new THREE.TorusGeometry(0.03 + (y + 0.6) * -0.6, 0.006, 6, 14); t.rotateX(Math.PI / 2); t.translate(0, y, 0); mesh(t, toon(0x6a4024), broom, true); });
     // (her right arm, the one that holds your tools, is the game's tool arm, dressed to match)
