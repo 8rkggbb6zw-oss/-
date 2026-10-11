@@ -2416,42 +2416,31 @@ EVERDAWN_PARTS.push(function (THREE) {
       var TN = ['#3a2216', '#4a2c1c', '#5e3a28', '#6e4630', '#8a5c3e', '#a2704e']; for (var sk = 0; sk < 900; sk++) { var x = (sk * 7.31) % 1024, cv = ((sk * 13) % 17) - 8; g.strokeStyle = TN[(sk * 5) % TN.length]; g.globalAlpha = 0.3 + ((sk * 11) % 9) / 20; g.lineWidth = 0.8 + ((sk * 3) % 4) * 0.5; [-1024, 0, 1024].forEach(function (o) { g.beginPath(); g.moveTo(x + o, 0); g.quadraticCurveTo(x + o + cv, 256, x + o - cv * 0.6, 512); g.stroke(); }); } g.globalAlpha = 1;   // (fine natural strands, wrapping round without a seam)
       var hl = g.createLinearGradient(0, Y(50), 0, Y(24)); hl.addColorStop(0, 'rgba(176,124,90,0)'); hl.addColorStop(0.5, 'rgba(176,124,90,0.7)'); hl.addColorStop(1, 'rgba(176,124,90,0)'); g.fillStyle = hl; g.fillRect(0, Y(50), 1024, Y(24) - Y(50));   // (a shine round her crown)
       // (her bangs: soft clumps, each with a darker parting between them and light down its middle, sweeping a little to one side)
-      // (her bangs: one smooth, rounded sweep of soft colour, lighter above and deepening toward its edge, with a soft
-      // band of shine across it and a few wide locks marked by fine curved lines that follow the sweep)
-      var bg = g.createLinearGradient(0, Y(40), 0, Y(-10)); bg.addColorStop(0, 'rgba(80,50,34,0)'); bg.addColorStop(0.25, '#4a2c1e'); bg.addColorStop(0.65, '#3c2216'); bg.addColorStop(1, '#2a160c');
-      g.fillStyle = bg; g.fillRect(X(-60), Y(40), X(60) - X(-60), Y(-60) - Y(40));
-      g.save(); g.translate(X(0), Y(20)); g.scale(1, 0.32); var sh = g.createRadialGradient(0, 0, 40, 0, 0, 300); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(0.55, 'rgba(206,146,100,0.0)'); sh.addColorStop(0.72, 'rgba(206,146,100,0.55)'); sh.addColorStop(0.86, 'rgba(206,146,100,0)');
-      g.fillStyle = sh; g.beginPath(); g.arc(0, 0, 300, Math.PI, 2 * Math.PI); g.fill(); g.restore();   // (the soft band of shine)
+      // (her bangs, as in your picture: one big, smooth, rounded fringe in a soft muted brown, its edge a single gentle
+      // curve that just covers the top of one eye and rounds up at the other end into a gap, beyond which a separate lock
+      // falls past her eye to her cheek; marked only by a few fine strands that follow its roundness)
+      var bg = g.createLinearGradient(0, Y(42), 0, Y(-12)); bg.addColorStop(0, 'rgba(110,70,58,0)'); bg.addColorStop(0.2, '#7a4c40'); bg.addColorStop(0.7, '#6c4236'); bg.addColorStop(1, '#58342a');
+      g.fillStyle = bg; g.fillRect(X(-62), Y(42), X(62) - X(-62), Y(-62) - Y(42));
       g.lineCap = 'round';
-      var SB = ['#2e1a10', '#3a2216', '#462a1a', '#523220', '#5e3a26', '#6e4630', '#7e5238'];   // (hundreds of fine strands in slightly varied browns, curving with the sweep)
-      for (var sl = 0; sl < 240; sl++) {
-        var f = ((sl * 0.618034) % 1), bx = -46 + f * 92, top = 40 - ((sl * 7) % 9), endy = -4 - ((sl * 3) % 5) * 0.6;
-        g.strokeStyle = SB[(sl * 5) % SB.length]; g.globalAlpha = 0.12 + ((sl * 11) % 7) / 30; g.lineWidth = 1 + ((sl * 13) % 4) * 0.4;
-        g.beginPath(); g.moveTo(X(bx + 24), Y(top)); g.bezierCurveTo(X(bx + 23), Y(top - 12), X(bx + 9), Y(top - 26), X(bx), Y(endy)); g.stroke();
-      }
-      g.globalAlpha = 1;
-      g.save(); g.translate(X(4), Y(22)); g.scale(1, 0.3); var gl = g.createRadialGradient(0, 0, 60, 0, 0, 320); gl.addColorStop(0, 'rgba(214,160,116,0)'); gl.addColorStop(0.62, 'rgba(214,160,116,0)'); gl.addColorStop(0.74, 'rgba(214,160,116,0.32)'); gl.addColorStop(0.86, 'rgba(214,160,116,0)');
-      g.fillStyle = gl; g.beginPath(); g.arc(0, 0, 320, Math.PI, 2 * Math.PI); g.fill(); g.restore();   // (a soft natural band of shine)
-      [[-34, 34, 0.7], [-24, 32, 0.8], [-14, 35, 0.6], [-4, 33, 0.8], [6, 34, 0.7], [16, 32, 0.6], [26, 35, 0.7]].forEach(function (h) {   // (a few long warm strands of light across the top)
-        var hx = h[0], ht = h[1]; g.strokeStyle = 'rgba(206,132,74,' + h[2] + ')'; g.lineWidth = 2.6;
-        g.beginPath(); g.moveTo(X(hx + 22), Y(ht)); g.bezierCurveTo(X(hx + 21), Y(ht - 8), X(hx + 13), Y(ht - 17), X(hx + 6), Y(ht - 24)); g.stroke();
-        g.strokeStyle = 'rgba(232,166,104,' + (h[2] * 0.5) + ')'; g.lineWidth = 1.5;
-        g.beginPath(); g.moveTo(X(hx + 25), Y(ht - 1)); g.bezierCurveTo(X(hx + 24), Y(ht - 8), X(hx + 17), Y(ht - 15), X(hx + 11), Y(ht - 20)); g.stroke();
+      [[-33, 30, -6, 1], [-25, 34, -3, 0], [-19, 26, 2, 1], [-12, 33, -2, 0], [-4, 28, 3, 1], [3, 34, -1, 0], [9, 27, 4, 1], [14, 31, 3, 0]].forEach(function (s) {   // (a few fine strands, curving with its roundness: some dark, some faintly warm)
+        var bx = s[0], top = s[1], end = s[2], dk = s[3] === 0, sx = bx * 0.8 + 4;
+        g.strokeStyle = dk ? 'rgba(52,26,20,0.38)' : 'rgba(214,150,108,0.28)'; g.lineWidth = dk ? 1.8 : 1.5;
+        var ey = end + (dk ? 0 : 5); g.beginPath(); g.moveTo(X(sx), Y(top)); g.quadraticCurveTo(X(bx - 2.5 + (bx < 0 ? -1 : 0)), Y((top + ey) / 2 + 3), X(bx), Y(ey)); g.stroke();
       });
       function fringe() {
-        g.moveTo(X(-60), 512); g.lineTo(X(-60), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the curtain of hair curving in along her cheek...)
-        g.bezierCurveTo(X(-40), Y(-40), X(-38), Y(-20), X(-37), Y(-4));   // (...up its inner edge)
-        g.bezierCurveTo(X(-36), Y(-9), X(-34), Y(-12.5), X(-31.5), Y(-13)); g.bezierCurveTo(X(-27), Y(-10), X(-23), Y(-4), X(-19.5), Y(-1.5));   // (a lock curving down to a soft point beside one eye)
-        g.bezierCurveTo(X(-17.5), Y(-4.5), X(-15), Y(-6), X(-13), Y(-5.5)); g.bezierCurveTo(X(-10), Y(-3), X(-8), Y(4), X(-7.2), Y(9.5));   // (a lock rounding into the small gap...)
-        g.bezierCurveTo(X(-6.4), Y(4), X(-5), Y(-2.5), X(-2), Y(-4));   // (...and the next starting from it in a point)
-        g.bezierCurveTo(X(3), Y(-5.5), X(10), Y(-3), X(15.5), Y(0)); g.bezierCurveTo(X(18.5), Y(2), X(21.5), Y(5), X(23.6), Y(13.5));   // (the wide middle lock, curving up into the bigger gap)
-        g.bezierCurveTo(X(24.4), Y(7), X(26), Y(-0.5), X(28.5), Y(-4.5)); g.bezierCurveTo(X(31), Y(-8.5), X(33.5), Y(-10.5), X(35.5), Y(-11));   // (the lock beside her face, sweeping down to a point)
-        g.bezierCurveTo(X(37), Y(-9), X(38), Y(-7.5), X(38.5), Y(-7));
-        g.bezierCurveTo(X(39), Y(-22), X(41), Y(-40), X(46), Y(-52));     // (down the curtain on the other side)
-        g.lineTo(X(60), Y(-56)); g.lineTo(X(60), 512); g.closePath();
+        g.moveTo(X(-62), 512); g.lineTo(X(-62), Y(-56)); g.lineTo(X(-46), Y(-52));   // (under the hair falling beside her face...)
+        g.bezierCurveTo(X(-41), Y(-40), X(-39), Y(-24), X(-38), Y(-12));   // (...up its inner edge)
+        g.bezierCurveTo(X(-30), Y(-7), X(-14), Y(-3.5), X(2), Y(-1.5));    // (her fringe: one smooth curve, just covering the top of one eye...)
+        g.bezierCurveTo(X(11), Y(-0.5), X(16.5), Y(1), X(18), Y(6));       // (...rounding up at its end...)
+        g.bezierCurveTo(X(18.6), Y(10), X(19.5), Y(14), X(21.5), Y(15));   // (...into the gap)
+        g.bezierCurveTo(X(24), Y(14), X(26), Y(10), X(28), Y(2));          // (the separate lock, starting at the gap...)
+        g.bezierCurveTo(X(30.5), Y(-10), X(33), Y(-22), X(35.5), Y(-33));  // (...falling past her eye to a point at her cheek...)
+        g.bezierCurveTo(X(37.5), Y(-28), X(39.5), Y(-30), X(41), Y(-38));
+        g.bezierCurveTo(X(42.5), Y(-44), X(44), Y(-49), X(46), Y(-52));    // (...then down the hair beside her face)
+        g.lineTo(X(62), Y(-56)); g.lineTo(X(62), 512); g.closePath();
       }
       g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000'; g.beginPath(); fringe(); g.fill();   // (her face, open below her bangs)
-      g.globalCompositeOperation = 'source-atop'; g.strokeStyle = 'rgba(30,16,8,0.85)'; g.lineWidth = 5; g.lineJoin = 'round'; g.beginPath(); fringe(); g.stroke(); g.strokeStyle = 'rgba(36,20,12,0.35)'; g.lineWidth = 12; g.beginPath(); fringe(); g.stroke();   // (a dark line along the edge of her hair, as in your picture)
+      g.globalCompositeOperation = 'source-atop'; g.strokeStyle = 'rgba(46,22,16,0.8)'; g.lineWidth = 4; g.lineJoin = 'round'; g.beginPath(); fringe(); g.stroke(); g.strokeStyle = 'rgba(46,22,16,0.25)'; g.lineWidth = 10; g.beginPath(); fringe(); g.stroke();   // (a dark line along the edge of her hair, as in your picture)
     });
     var cap = new THREE.SphereGeometry(0.233, 48, 36);
     var cpos = cap.attributes.position;   // (her fringe standing out from her forehead, full and rounded, rather than lying flat)
