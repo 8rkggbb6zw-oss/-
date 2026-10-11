@@ -2253,41 +2253,55 @@ EVERDAWN_PARTS.push(function (THREE) {
     cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), indoors ? 5 : 6, indoors ? 10 : 26);
   }, { passive: false });
 
-  // ---------- You: a witch in black, drawn like your picture ----------
-  // She's drawn as an illustration, in the style of your picture, standing in the world and always turning to face
-  // you (like a paper cut-out, the way some storybook games do it): pale skin, big green eyes with smoky lids and
-  // winged liner, arched brows, dark lips and a soft blush; long, wavy black hair with a side part, falling past her
-  // waist; a black dress with a high collar, a bat-wing neckline and a pointed waist, under sheer dark sleeves; black
-  // nails and a hand resting on her hip; and dark mist curling round her. There's a front view, a back view for when
-  // she walks away from you, and a blink
+  // ---------- You: a witch in black, painted like your picture ----------
+  // She's painted as a lifelike illustration, in the style of your picture, standing in the world and always turning
+  // to face you (like a paper cut-out, the way some storybook games do it). There are no outlines: everything is
+  // shaped by soft light and shade, as in a painting. She has real proportions; pale skin; big green eyes with smoky
+  // lids and winged liner; arched brows and dark lips; and long, wavy black hair with a side part, falling past her
+  // waist, painted strand by strand with a cool sheen along each wave. She wears a black satin dress with a high
+  // collar, a bat-wing sweetheart neckline, a pointed waist and a full, softly folded skirt, under sheer dark sleeves.
+  // She has black nails, a hand resting on her hip, a little crescent-moon earring, a green stone at her throat, and
+  // dark mist curling round her. There's a front view, a back view for when she walks away from you, and a blink
   var wl = (function () {
     for (var i = 0; i < 7; i++) body.children[i].visible = false;     // (the old simple robe, head, hat and eyes)
     M.skin.color.set(0xeed6c4); M.robe.color.set(0x2a2430);            // (your tool arm: a pale hand in a dark sleeve)
-    var W = 600, Hh = 1300, INK = '#151119';
+    var W = 600, Hh = 1300, S = 1.5, OFF = 3000, SKIN = '#efdccd', seed = 1;
+    function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
     function P(g, pts, close) { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) { var p = pts[i]; if (p.length === 4) g.quadraticCurveTo(p[0], p[1], p[2], p[3]); else if (p.length === 6) g.bezierCurveTo(p[0], p[1], p[2], p[3], p[4], p[5]); else g.lineTo(p[0], p[1]); } if (close) g.closePath(); }
-    function fillInk(g, fill, lw) { g.fillStyle = fill; g.fill(); if (lw !== 0) { g.strokeStyle = INK; g.lineWidth = lw || 2.6; g.stroke(); } }
+    function line(g, pts) { g.beginPath(); pts.forEach(function (p, i) { i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); }
     function soft(g, x, y, rx, ry, col, a) { g.save(); g.translate(x, y); g.scale(rx, ry); var gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, 'rgba(' + col + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + col + ',0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); g.restore(); }
-    // her hair, as wavy locks: each lock a long, softly waving shape, dark with blue-grey light along its waves
-    function lock(g, x0, y0, x1, y1, w0, w1, waves, ph, back) {
-      var n = 40, L = [], R2 = [];
-      for (var k = 0; k <= n; k++) {
-        var t = k / n, x = x0 + (x1 - x0) * t + Math.sin(t * waves * Math.PI * 2 + ph) * 13 * Math.min(1, t * 3), y = y0 + (y1 - y0) * t, w = (w0 + (w1 - w0) * t) * (t > 0.9 ? 1 - (t - 0.9) * 7 : 1) * (0.55 + 0.45 * Math.min(1, t * 8));   // (rounded at its root, tapering to a soft point)
-        var dx = (x1 - x0) / n + Math.cos(t * waves * Math.PI * 2 + ph) * 13 * waves * Math.PI * 2 / n, dy = (y1 - y0) / n, l = Math.hypot(dx, dy); L.push([x - dy / l * w, y + dx / l * w]); R2.push([x + dy / l * w, y - dx / l * w]);
+    // paint a shape softly blurred, like an airbrush (drawn off to one side, with only its blurred shadow brought back)
+    function blurred(g, blur, col, draw) { g.save(); g.shadowColor = col; g.shadowBlur = blur * S; g.shadowOffsetX = OFF * S; g.translate(-OFF, 0); g.fillStyle = g.strokeStyle = '#000'; g.lineCap = g.lineJoin = 'round'; draw(g); g.restore(); }
+    // a smooth curve through points, and a tapering tube along one (for arms, fingers and the like)
+    function spline(pts, per) {
+      var out = [];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+        for (var k = 0; k < per; k++) { var t = k / per, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(function (d) { return 0.5 * (2 * p1[d] + (p2[d] - p0[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (3 * p1[d] - p0[d] - 3 * p2[d] + p3[d]) * t3); })); }
       }
-      g.beginPath(); g.moveTo(L[0][0], L[0][1]); L.forEach(function (p) { g.lineTo(p[0], p[1]); }); R2.reverse().forEach(function (p) { g.lineTo(p[0], p[1]); }); g.closePath();
-      var gr = g.createLinearGradient(x0 - 30, 0, x0 + 30, 0); gr.addColorStop(0, '#0e0e14'); gr.addColorStop(0.5, back ? '#1a1b24' : '#1e1f2a'); gr.addColorStop(1, '#0e0e14');
-      g.fillStyle = gr; g.fill(); g.strokeStyle = INK; g.lineWidth = 2; g.stroke();
-      g.save(); g.clip();                                               // (soft blue-grey light catching each wave)
-      for (var k2 = 0; k2 < 8; k2++) { var t2 = (k2 + 0.4) / 8, hx = x0 + (x1 - x0) * t2 + Math.sin(t2 * waves * Math.PI * 2 + ph) * 13, hy = y0 + (y1 - y0) * t2; soft(g, hx - 4, hy, 7, 16, '96,108,140', 0.55); }
-      g.strokeStyle = 'rgba(70,78,104,0.6)'; g.lineWidth = 1.4; g.beginPath(); for (var k3 = 0; k3 <= n; k3++) { var t3 = k3 / n, xx = x0 + (x1 - x0) * t3 + Math.sin(t3 * waves * Math.PI * 2 + ph) * 13 * Math.min(1, t3 * 3) - w0 * 0.25, yy = y0 + (y1 - y0) * t3; k3 ? g.lineTo(xx, yy) : g.moveTo(xx, yy); } g.stroke();   // (a fine line of strands down it)
+      out.push(pts[pts.length - 1].slice()); return out;
+    }
+    function tube(pts, ws, per) {
+      var c = spline(pts, per || 8), n = c.length, L = [], R = [];
+      for (var i = 0; i < n; i++) {
+        var a = c[Math.max(0, i - 1)], b = c[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, f = i / (n - 1) * (ws.length - 1), j = Math.min(ws.length - 2, Math.floor(f)), w = (ws[j] + (ws[j + 1] - ws[j]) * (f - j)) / 2;
+        L.push([c[i][0] - dy / l * w, c[i][1] + dx / l * w]); R.push([c[i][0] + dy / l * w, c[i][1] - dx / l * w]);
+      }
+      return { c: c, L: L, R: R };
+    }
+    function tubePath(g, T) { g.beginPath(); T.L.forEach(function (p, i) { i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); for (var i = T.R.length - 1; i >= 0; i--) g.lineTo(T.R[i][0], T.R[i][1]); g.closePath(); }
+    function inset(T, side, f) { return T.c.map(function (p, i) { var e = T[side][i]; return [p[0] + (e[0] - p[0]) * f, p[1] + (e[1] - p[1]) * f]; }); }
+    // skin, softly rounded: light on the side toward the light (her upper left), shade on the other
+    function skinTube(g, T, light) {
+      tubePath(g, T); g.fillStyle = SKIN; g.fill();
+      g.save(); tubePath(g, T); g.clip();
+      blurred(g, 7, 'rgba(160,108,96,0.6)', function (g) { g.lineWidth = 7; line(g, inset(T, 'R', 1.05)); g.stroke(); });
+      blurred(g, 4, 'rgba(176,124,110,0.35)', function (g) { g.lineWidth = 3; line(g, inset(T, 'L', 1.02)); g.stroke(); });
+      blurred(g, 5, 'rgba(255,246,238,' + (light || 0.6) + ')', function (g) { g.lineWidth = 3.5; line(g, inset(T, 'L', 0.4)); g.stroke(); });
       g.restore();
     }
-    function hairBackMass(g, back) {                                    // (all her hair behind her: long, wavy locks down past her waist)
-      P(g, [[300, 70], [395, 70, 420, 200, 432, 360], [450, 560, 440, 700, 400, 780], [300, 800], [200, 780], [160, 700, 150, 560, 168, 360], [180, 200, 205, 70, 300, 70]], true); g.fillStyle = '#0e0e14'; g.fill();   // (the dark body of her hair, so it reads as one full mass)
-      var locks = [[-92, 120, -132, 760, 40, 20, 2.4, 0.3], [-70, 130, -102, 790, 42, 20, 2.6, 1.4], [-40, 140, -62, 740, 40, 20, 2.3, 2.2], [92, 120, 135, 770, 40, 20, 2.4, 3.1], [70, 130, 108, 800, 42, 20, 2.6, 0.8], [40, 140, 70, 750, 40, 20, 2.5, 1.9]];
-      if (back) locks = locks.concat([[-20, 110, -25, 810, 44, 20, 2.6, 2.7], [10, 110, 15, 820, 44, 20, 2.7, 0.5], [-55, 100, -70, 790, 42, 20, 2.4, 1.1], [55, 100, 72, 795, 42, 20, 2.5, 2.4]]);
-      locks.forEach(function (l) { lock(g, 300 + l[0], l[1], 300 + l[2], l[3], l[4], l[5], l[6], l[7], back); });
-    }
+    function nail(g, T) { var n = T.c.length, a = T.c[n - 4], b = T.c[n - 1], w = Math.hypot(T.L[n - 1][0] - T.R[n - 1][0], T.L[n - 1][1] - T.R[n - 1][1]) * 0.5 + 0.6, ang = Math.atan2(b[1] - a[1], b[0] - a[0]); g.save(); g.translate(b[0], b[1]); g.rotate(ang); g.fillStyle = '#0d0b10'; g.beginPath(); g.moveTo(-8, -w); g.quadraticCurveTo(4, -w, 6.5, 0); g.quadraticCurveTo(4, w, -8, w); g.closePath(); g.fill(); g.fillStyle = 'rgba(190,190,215,0.6)'; g.beginPath(); g.ellipse(-3.5, -w * 0.35, 2.4, 0.6, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+    function finger(g, pts, w0, w1) { var T = tube(pts, [w0, (w0 + w1) / 2, w1], 6); skinTube(g, T, 0.5); g.save(); tubePath(g, T); g.clip(); [0.42, 0.72].forEach(function (f) { var i = Math.round(f * (T.c.length - 1)); blurred(g, 1.5, 'rgba(150,100,90,0.45)', function (g) { g.lineWidth = 0.9; line(g, [T.L[i], T.R[i]]); g.stroke(); }); }); g.restore(); nail(g, T); }
     function faceFeatures(g, closed) {
       function blob(x, y, rx, ry, col, a) { g.save(); g.translate(x, y); g.scale(rx, ry); var gr = g.createRadialGradient(0, 0, 0, 0, 0, 1); gr.addColorStop(0, 'rgba(' + col + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + col + ',0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); g.restore(); }   // (a soft patch of light or shade)
       // the shape of her face in light and shade, as a painter would put it in
@@ -2311,10 +2325,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       blob(0, -0.078, 0.012, 0.008, '255,242,232', 0.4);                  // (light on her chin)
       g.lineCap = 'round'; g.lineJoin = 'round';
       [-1, 1].forEach(function (s) {
-        g.save(); g.translate(s * 0.033, 0.003); g.scale(1.28, 1.28); g.translate(-s * 0.031, -0.004);   // (big, expressive eyes, as in your picture)
+        g.save(); g.translate(s * 0.033, 0.003); g.scale(1.04, 0.96); g.translate(-s * 0.031, -0.004);   // (big, expressive eyes, as in your picture)
         var cx = s * 0.031, cy = 0.004, ix = cx - s * 0.0155, ox = cx + s * 0.0165;
-        blob(cx + s * 0.002, cy + 0.009, 0.02, 0.011, '96,74,66', 0.55);   // (smoky shadow on her lids, deepest at the crease)
-        blob(cx + s * 0.009, cy + 0.006, 0.012, 0.008, '60,46,44', 0.45);  // (darker toward the outer corner)
+        blob(cx + s * 0.002, cy + 0.009, 0.02, 0.011, '80,58,54', 0.7);   // (smoky shadow on her lids, deepest at the crease)
+        blob(cx + s * 0.009, cy + 0.006, 0.012, 0.008, '40,30,30', 0.6);  // (darker toward the outer corner)
         blob(cx, cy - 0.011, 0.016, 0.005, '150,108,100', 0.28);          // (a little shade beneath)
         g.strokeStyle = 'rgba(110,74,62,0.55)'; g.lineWidth = 0.0006; g.beginPath(); g.moveTo(ix + s * 0.001, cy + 0.007); g.quadraticCurveTo(cx, cy + 0.0175, ox + s * 0.002, cy + 0.009); g.stroke();   // (the fold of her lid)
         if (closed) {
@@ -2348,7 +2362,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           }
           g.strokeStyle = 'rgba(30,22,20,0.55)'; g.lineWidth = 0.0002; for (var lk3 = 0; lk3 < 12; lk3++) { var u3 = 0.3 + lk3 / 11 * 0.65, bx3 = ix + (ox - ix) * u3, by3 = cy - 0.0075 * 4 * u3 * (1 - u3) + 0.0028 * u3 * u3 - 0.0004; g.beginPath(); g.moveTo(bx3, by3); g.lineTo(bx3 + s * 0.0005, by3 - 0.0012 - u3 * 0.0006); g.stroke(); }   // (fine lower lashes)
         }
-        g.fillStyle = 'rgba(30,20,20,0.62)'; g.beginPath(); g.moveTo(cx - s * 0.016, cy + 0.0155); g.quadraticCurveTo(cx + s * 0.002, cy + 0.0265, cx + s * 0.021, cy + 0.0195); g.quadraticCurveTo(cx + s * 0.003, cy + 0.023, cx - s * 0.0155, cy + 0.0125); g.closePath(); g.fill();   // (her brow: a soft base...)
+        g.fillStyle = 'rgba(24,16,16,0.75)'; g.beginPath(); g.moveTo(cx - s * 0.016, cy + 0.0155); g.quadraticCurveTo(cx + s * 0.002, cy + 0.0265, cx + s * 0.021, cy + 0.0195); g.quadraticCurveTo(cx + s * 0.003, cy + 0.023, cx - s * 0.0155, cy + 0.0125); g.closePath(); g.fill();   // (her brow: a soft base...)
         g.lineWidth = 0.00045;
         for (var bh = 0; bh < 90; bh++) {                                 // (...and fine hairs, angled up at its start and sweeping along its arch)
           var u4 = Math.min(1, bh / 89 + (glimR(bh * 2.3 + s * 7) - 0.5) * 0.03), bx4 = cx - s * 0.0155 + s * u4 * 0.036, by4 = cy + 0.0135 + 4 * u4 * (1 - u4) * 0.0082 - u4 * 0.0035 + (glimR(bh * 5.1) - 0.5) * 0.0032 * (1 - u4 * 0.6), ang4 = u4 < 0.25 ? Math.PI / 2 - s * 0.4 : s > 0 ? -0.15 - u4 * 0.4 : Math.PI + 0.15 + u4 * 0.4, L4 = 0.0035 * (1 - u4 * 0.4);
@@ -2356,103 +2370,249 @@ EVERDAWN_PARTS.push(function (THREE) {
         }
         g.restore();
       });
+      g.save(); g.scale(1.35, 1);
       // her nose: a soft bridge, a rounded tip and gently curved nostrils
-      g.strokeStyle = 'rgba(140,92,78,0.45)'; g.lineWidth = 0.0006; g.beginPath(); g.moveTo(-0.0052, -0.004); g.bezierCurveTo(-0.0062, -0.016, -0.0066, -0.024, -0.0078, -0.029); g.stroke();
+      g.strokeStyle = 'rgba(140,92,78,0.22)'; g.lineWidth = 0.0009; g.beginPath(); g.moveTo(-0.0052, -0.004); g.bezierCurveTo(-0.0062, -0.016, -0.0066, -0.024, -0.0078, -0.029); g.stroke();
       blob(0, -0.03, 0.006, 0.004, '255,244,236', 0.6);                   // (light on its tip)
       g.strokeStyle = 'rgba(120,76,64,0.55)'; g.lineWidth = 0.0007; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 0.0085, -0.0285); g.bezierCurveTo(s * 0.0112, -0.031, s * 0.0105, -0.0352, s * 0.0062, -0.0355); g.stroke(); });   // (the curve of each nostril's wing)
       g.fillStyle = 'rgba(86,50,42,0.8)'; [-1, 1].forEach(function (s) { g.beginPath(); g.ellipse(s * 0.0042, -0.0352, 0.0021, 0.0009, s * 0.35, 0, Math.PI * 2); g.fill(); });
       g.strokeStyle = 'rgba(150,100,88,0.35)'; g.lineWidth = 0.0005; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(s * 0.0032, -0.0385); g.lineTo(s * 0.0038, -0.0485); g.stroke(); });   // (the little groove above her lip)
+      g.restore();
       // her lips: full and dark, the upper lip shaded deeper, the lower catching the light, with fine lines across them
-      var ly0 = -0.055;
+      var ly0 = -0.055; g.save(); g.translate(0, ly0); g.scale(1.55, 1.3); g.translate(0, -ly0);
       function upperLip() { g.beginPath(); g.moveTo(-0.0158, ly0 + 0.0002); g.bezierCurveTo(-0.011, ly0 + 0.003, -0.0065, ly0 + 0.0072, -0.0028, ly0 + 0.0062); g.quadraticCurveTo(0, ly0 + 0.0048, 0.0028, ly0 + 0.0062); g.bezierCurveTo(0.0065, ly0 + 0.0072, 0.011, ly0 + 0.003, 0.0158, ly0 + 0.0006); g.bezierCurveTo(0.008, ly0 - 0.0002, -0.008, ly0 - 0.0006, -0.0158, ly0 + 0.0002); g.closePath(); }
       function lowerLip() { g.beginPath(); g.moveTo(-0.0148, ly0 - 0.0002); g.bezierCurveTo(-0.009, ly0 - 0.0115, 0.009, ly0 - 0.0118, 0.0148, ly0 + 0.0004); g.bezierCurveTo(0.008, ly0 - 0.0012, -0.008, ly0 - 0.0014, -0.0148, ly0 - 0.0002); g.closePath(); }
       var ug = g.createLinearGradient(0, ly0 + 0.007, 0, ly0); ug.addColorStop(0, '#3e3a44'); ug.addColorStop(1, '#1e1c22'); g.fillStyle = ug; upperLip(); g.fill();
       var lg2 = g.createLinearGradient(0, ly0, 0, ly0 - 0.011); lg2.addColorStop(0, '#26242c'); lg2.addColorStop(0.45, '#4a4652'); lg2.addColorStop(1, '#2c2a32'); g.fillStyle = lg2; lowerLip(); g.fill();
-      g.save(); lowerLip(); g.clip(); blob(0.002, ly0 - 0.0055, 0.006, 0.0018, '196,192,210', 0.6); g.strokeStyle = 'rgba(16,14,18,0.35)'; g.lineWidth = 0.0002; for (var ll = 0; ll < 16; ll++) { var lx = -0.012 + ll * 0.0016; g.beginPath(); g.moveTo(lx, ly0 - 0.001); g.lineTo(lx + (lx * 0.1), ly0 - 0.009); g.stroke(); } g.restore();   // (a soft shine, and the fine lines of her lips)
+      g.save(); lowerLip(); g.clip(); blob(0.002, ly0 - 0.0062, 0.006, 0.0015, '150,146,166', 0.35); g.strokeStyle = 'rgba(16,14,18,0.35)'; g.lineWidth = 0.0002; for (var ll = 0; ll < 16; ll++) { var lx = -0.012 + ll * 0.0016; g.beginPath(); g.moveTo(lx, ly0 - 0.001); g.lineTo(lx + (lx * 0.1), ly0 - 0.009); g.stroke(); } g.restore();   // (a soft shine, and the fine lines of her lips)
       g.save(); upperLip(); g.clip(); blob(-0.004, ly0 + 0.0045, 0.004, 0.0012, '160,156,176', 0.4); blob(0.004, ly0 + 0.0045, 0.004, 0.0012, '160,156,176', 0.4); g.restore();
       g.strokeStyle = '#0c0a0e'; g.lineWidth = 0.0007; g.beginPath(); g.moveTo(-0.0168, ly0 + 0.0012); g.bezierCurveTo(-0.008, ly0 - 0.0004, 0.008, ly0 - 0.0006, 0.0168, ly0 + 0.0016); g.stroke();   // (the line between them, lifting a little at the corners)
+      g.fillStyle = 'rgba(12,8,12,0.9)'; g.beginPath(); g.moveTo(-0.0168, ly0 + 0.0012); g.bezierCurveTo(-0.008, ly0 + 0.0012, 0.008, ly0 + 0.001, 0.0168, ly0 + 0.0016); g.bezierCurveTo(0.008, ly0 - 0.0022, -0.008, ly0 - 0.0022, -0.0168, ly0 + 0.0012); g.fill();   // (the dark line where they meet)
       [-1, 1].forEach(function (s) { blob(s * 0.0175, ly0 + 0.0008, 0.0022, 0.0022, '120,80,70', 0.35); });   // (soft shade at the corners of her mouth)
-    }
-    function skirtPath(g) { P(g, [[238, 598], [205, 760, 165, 1000, 92, 1238], [300, 1262, 508, 1238], [435, 1000, 395, 760, 362, 598]], true); }
-    function drawSkirt(g) {
-      skirtPath(g); var sg = g.createLinearGradient(100, 0, 500, 0); sg.addColorStop(0, '#141218'); sg.addColorStop(0.45, '#2a2632'); sg.addColorStop(0.6, '#24212c'); sg.addColorStop(1, '#121016'); fillInk(g, sg, 2.6);
-      g.save(); skirtPath(g); g.clip(); g.strokeStyle = 'rgba(8,6,10,0.55)'; g.lineWidth = 2;   // (soft folds falling from her waist)
-      [[262, 640, 200, 1240], [290, 650, 265, 1250], [320, 650, 345, 1250], [345, 640, 410, 1240]].forEach(function (f) { g.beginPath(); g.moveTo(f[0], f[1]); g.quadraticCurveTo((f[0] + f[2]) / 2 + 10, (f[1] + f[3]) / 2, f[2], f[3]); g.stroke(); });
-      soft(g, 320, 900, 40, 300, '120,112,140', 0.18); g.restore();
-    }
-    function arm(g, pts, w) {                                           // (a slender arm along a few points)
-      g.lineCap = g.lineJoin = 'round';
-      g.strokeStyle = INK; g.lineWidth = w + 5; P(g, pts); g.stroke();
-      g.strokeStyle = '#eed6c4'; g.lineWidth = w; P(g, pts); g.stroke();
-      g.strokeStyle = 'rgba(200,150,130,0.4)'; g.lineWidth = w * 0.35; g.save(); g.translate(w * 0.22, 0); P(g, pts); g.stroke(); g.restore();   // (a soft shade down one side)
-    }
-    function sleeve(g, pts) { g.lineCap = g.lineJoin = 'round'; g.strokeStyle = 'rgba(20,14,20,0.8)'; g.lineWidth = 64; P(g, pts); g.stroke(); g.strokeStyle = 'rgba(70,56,62,0.55)'; g.lineWidth = 60; P(g, pts); g.stroke(); g.strokeStyle = 'rgba(150,130,140,0.22)'; g.lineWidth = 6; g.save(); g.translate(-14, 0); P(g, pts); g.stroke(); g.restore(); }   // (sheer and dark, showing her arm through it)
-    function hand(g, x, y, ang, s, nails) {                             // (a slender hand with long fingers and black nails)
-      g.save(); g.translate(x, y); g.rotate(ang); g.scale(s, 1);
-      P(g, [[-14, -6], [-16, 18, -6, 30, 4, 30], [16, 28, 18, 10, 14, -6]], true); fillInk(g, '#eed6c4', 2);
-      [[-10, 26, -12, 54], [-3, 30, -4, 62], [4, 30, 5, 60], [11, 26, 13, 50]].forEach(function (f) { g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 8.5; g.beginPath(); g.moveTo(f[0], f[1]); g.lineTo(f[2], f[3]); g.stroke(); g.strokeStyle = '#eed6c4'; g.lineWidth = 6; g.beginPath(); g.moveTo(f[0], f[1]); g.lineTo(f[2], f[3]); g.stroke(); g.fillStyle = '#121014'; g.beginPath(); g.ellipse(f[2], f[3] - 2, 3, 4.5, 0, 0, Math.PI * 2); g.fill(); });
       g.restore();
     }
-    function drawBodyFront(g, closed) {
-      hairBackMass(g, false);
-      drawSkirt(g);
-      arm(g, [[196, 420], [176, 600], [182, 770]], 30);                 // (her right arm, hanging softly)
-      arm(g, [[404, 420], [476, 575], [392, 640]], 30);                 // (her left, with her hand on her hip)
-      P(g, [[186, 422], [228, 392, 270, 372], [330, 372], [372, 392, 414, 422], [420, 470], [244, 600], [356, 600], [180, 470]], false);
-      P(g, [[186, 422], [228, 392, 270, 372], [330, 372], [372, 392, 414, 422], [418, 500], [362, 600], [238, 600], [182, 500]], true); fillInk(g, '#eed6c4', 2.4);   // (her shoulders and chest)
-      // her bodice: a sweetheart neckline edged with little bat-wing scallops, fitted to a pointed waist
-      function bod() { P(g, [[206, 472], [228, 446, 262, 440, 284, 462], [300, 482], [316, 462], [338, 440, 372, 446, 394, 472], [410, 520, 380, 570, 362, 600], [300, 648], [238, 600], [220, 570, 190, 520, 206, 472]], true); }
-      bod(); var bg = g.createLinearGradient(200, 0, 400, 0); bg.addColorStop(0, '#141218'); bg.addColorStop(0.5, '#2a2632'); bg.addColorStop(1, '#141218'); fillInk(g, bg, 2.6);
-      g.save(); bod(); g.clip(); soft(g, 250, 500, 30, 28, '140,130,160', 0.3); soft(g, 352, 500, 30, 28, '140,130,160', 0.3); g.strokeStyle = 'rgba(6,4,8,0.7)'; g.lineWidth = 1.6; P(g, [[300, 484], [300, 646]]); g.stroke(); P(g, [[244, 560], [300, 600], [356, 560]]); g.stroke(); g.restore();   // (soft light on it, and its seams)
-      g.fillStyle = '#0c0a0e'; g.strokeStyle = INK; g.lineWidth = 1.4;
-      for (var sc = 0; sc < 2; sc++) { var s = sc ? 1 : -1; for (var b = 0; b < 4; b++) { var bx = 300 + s * (26 + b * 22), by = (b === 0 ? 470 : b === 1 ? 452 : b === 2 ? 450 : 462); P(g, [[bx - 11, by], [bx - 6, by + 5, bx, by + 13], [bx + 6, by + 5, bx + 11, by]], true); g.fill(); } }   // (bat-wing points along the neckline)
-      P(g, [[293, 482], [300, 500], [307, 482]], true); g.fill();
-      // sheer fabric over her shoulders and chest, with fine straps running up to her collar
-      P(g, [[186, 422], [228, 392, 270, 372], [330, 372], [372, 392, 414, 422], [394, 472], [372, 446, 338, 440, 316, 462], [300, 482], [284, 462], [262, 440, 228, 446, 206, 472]], true);
-      g.fillStyle = 'rgba(40,30,36,0.55)'; g.fill(); g.strokeStyle = 'rgba(20,14,20,0.8)'; g.lineWidth = 1.6; g.stroke();
-      g.strokeStyle = 'rgba(14,10,14,0.9)'; g.lineWidth = 2; [[[300, 380], [300, 482]], [[288, 382], [246, 446]], [[312, 382], [354, 446]]].forEach(function (l) { P(g, l); g.stroke(); });
-      sleeve(g, [[196, 420], [174, 600], [180, 755]]);                  // (her sheer sleeves)
-      sleeve(g, [[404, 420], [476, 575], [400, 632]]);
-      [[180, 760, 0.05], [396, 638, 2.3]].forEach(function (c) { g.save(); g.translate(c[0], c[1]); g.rotate(c[2]); P(g, [[-19, -8], [19, -8], [19, 10], [-19, 10]], true); fillInk(g, '#16131a', 2); g.restore(); });   // (black cuffs at her wrists)
-      hand(g, 182, 768, 0.04, 1, true);                                 // (her right hand)
-      hand(g, 378, 640, -1.15, -1, true);                               // (her left, resting on her hip)
-      // her neck and high collar
-      P(g, [[276, 300], [272, 350], [328, 350], [324, 300]], true); fillInk(g, '#ead0bd', 2);
-      soft(g, 300, 330, 26, 16, '190,140,120', 0.35);
-      P(g, [[270, 336], [266, 384], [292, 390], [300, 372], [308, 390], [334, 384], [330, 336], [300, 344]], true); fillInk(g, '#1a171e', 2.6);
-      P(g, [[300, 344], [300, 372]]); g.strokeStyle = '#08060a'; g.lineWidth = 2; g.stroke();
-      // her face
-      function faceShape() { P(g, [[300, 104], [356, 104, 386, 150, 384, 205], [383, 255, 362, 295, 328, 318], [312, 330, 288, 330, 272, 318], [238, 295, 217, 255, 216, 205], [214, 150, 244, 104, 300, 104]], true); }
-      faceShape(); fillInk(g, '#efd8c6', 2.6);
-      g.save(); faceShape(); g.clip();
-      g.setTransform(1060, 0, 0, -1060, 300, 216);
+    // her hair, painted strand by strand: each lock runs between two edges, and every strand inside it follows the
+    // same soft waves, catching a cool blue-grey sheen where each wave turns toward the light
+    function hairLock(g, o, inn, sp) {
+      var per = 24, total = (o.length - 1) * per;
+      function path(u, jit, ampMul) {
+        var c = spline(o.map(function (p, i) { var q = inn[i]; return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u]; }), per), ph = [];
+        for (var k = 0; k < c.length; k++) { var t = k / total, r = Math.min(1, Math.max(0, (t - sp.from) / 0.15)), a = 2 * Math.PI * sp.waves * t + sp.ph + u * (sp.skew || 2.6) + jit; c[k][0] += Math.sin(a) * sp.amp * r * ampMul; ph.push(a); }
+        return { c: c, ph: ph };
+      }
+      var A = path(0, 0, 1), B = path(1, 0, 1), cut = Math.round(total * 0.9);
+      function sil(g) { g.beginPath(); for (var k = 0; k <= cut; k++) k ? g.lineTo(A.c[k][0], A.c[k][1]) : g.moveTo(A.c[0][0], A.c[0][1]); for (k = cut; k >= 0; k--) g.lineTo(B.c[k][0], B.c[k][1]); g.closePath(); }
+      if (sp.shadow) { g.save(); g.globalCompositeOperation = 'source-atop'; blurred(g, 9, 'rgba(0,0,0,' + sp.shadow + ')', function (g) { g.translate(3, 6); sil(g); g.fill(); }); g.restore(); }   // (the soft shadow it casts)
+      sil(g); g.fillStyle = '#0b0b10'; g.fill();
+      var lv = []; for (var i = 0; i < 17; i++) lv.push([]);
+      for (var s = 0; s < sp.n * 1.4; s++) {
+        var u = rnd(), dark = rnd() < 0.36, sn = rnd() * 0.3, edge = Math.min(u, 1 - u), st = path(u, (rnd() - 0.5) * 1.1, 1 + (u < 0.05 ? rnd() * 0.7 : 0) + (rnd() - 0.5) * 0.2), ox = (rnd() - 0.5) * 1.6, end = Math.round(total * (0.84 + rnd() * 0.16)), cur = -1, pl = null;
+        for (var k = 0; k < end; k++) {
+          var t = k / total, wv = Math.pow(0.5 + 0.5 * Math.cos(st.ph[k] - (sp.la || 0.8)), 5) * Math.min(1, Math.max(0.35, (t - sp.from) / 0.15 + 0.35)),
+            sh = sp.sheen ? Math.exp(-Math.pow((t - sp.sheen[0]) / sp.sheen[1], 2)) * sp.sheen[2] : 0,
+            vol = 0.4 + 0.6 * Math.sin(Math.PI * Math.min(0.95, Math.max(0.05, u))),
+            L = dark ? 0 : Math.min(16, Math.floor(((wv * 0.75 + sh * 0.7) * vol * (sp.light || 1) + sn) * 16));
+          if (L !== cur) { pl = [[st.c[k][0] + ox, st.c[k][1]]]; lv[L].push(pl); cur = L; }
+          pl.push([st.c[k + 1][0] + ox, st.c[k + 1][1]]);
+        }
+      }
+      g.lineCap = g.lineJoin = 'round';
+      lv.forEach(function (pls, L) {
+        var f = Math.pow(L / 16, 1.2); g.strokeStyle = 'rgba(' + Math.round(10 + f * 96) + ',' + Math.round(10 + f * 102) + ',' + Math.round(15 + f * 126) + ',' + (0.5 + f * 0.35) + ')'; g.lineWidth = L < 5 ? 1 : 0.7;
+        g.beginPath(); pls.forEach(function (pl) { pl.forEach(function (p, i) { i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); }); g.stroke();
+      });
+    }
+    var BACK_L = [[300, 38], [236, 44], [208, 124], [200, 240], [186, 380], [176, 560], [182, 760], [196, 880]], BACK_R = BACK_L.map(function (p) { return [600 - p[0], p[1]]; });
+    function hairBehind(g) { seed = 11; hairLock(g, BACK_L, BACK_R, { n: 900, amp: 18, waves: 4, ph: 0.4, from: 0.3, sheen: [0.08, 0.05, 0.5] }); }
+    function hairFront(g, ear, after) {
+      seed = 23;
+      // left of her part: smoothed back behind her ear, then falling over her shoulder
+      hairLock(g, [[278, 42], [244, 48], [222, 90], [212, 150], [204, 230], [190, 330], [178, 450], [180, 600], [188, 740]],
+        [[280, 84], [262, 88], [246, 104], [237, 132], [230, 200], [222, 300], [216, 420], [222, 560], [228, 700]], { n: 600, amp: 16, waves: 3.2, ph: 2.2, from: 0.55, sheen: [0.12, 0.06, 0.55], shadow: 0.55, la: 0.6 });
+      ear();
+      // right of her part: a full sweep over her crown, down past her cheek and over her shoulder
+      hairLock(g, [[280, 42], [340, 34], [398, 74], [420, 150], [428, 240], [438, 340], [448, 460], [442, 600], [432, 770]],
+        [[282, 84], [318, 90], [350, 108], [366, 150], [372, 215], [386, 300], [400, 420], [402, 560], [394, 730]], { n: 900, amp: 20, waves: 3.4, ph: 0.9, from: 0.45, sheen: [0.1, 0.06, 0.6], shadow: 0.6, la: 1 });
+      // and a soft wave across her brow, falling past her cheek
+      hairLock(g, [[282, 54], [334, 76], [378, 136], [386, 210], [394, 290], [410, 400], [418, 500]],
+        [[284, 86], [322, 104], [350, 140], [360, 200], [370, 280], [384, 390], [394, 480]], { n: 420, amp: 13, waves: 2.4, ph: 2.6, from: 0.42, sheen: [0.18, 0.08, 0.7], shadow: 0.55, light: 1.15, la: 0.9 });
+      after();
+    }
+    // from behind: her hair falls from her crown in many long, wavy locks, each waving a little differently
+    function backCol(f) { var d = f - 0.5, a = Math.abs(d); return [[300 + d * 30, 40 + a * 10], [300 + d * 150, 84 + a * 34], [300 + d * 168, 170], [300 + d * 178, 260], [300 + d * 212, 380], [300 + d * 236, 560], [300 + d * 230, 740], [300 + d * 214, 870 - a * 30]]; }
+    function hairBackView(g) {
+      seed = 37;
+      P(g, [[300, 40], [370, 40, 384, 130, 384, 220], [216, 220], [216, 130, 230, 40, 300, 40]], true); g.fillStyle = '#0b0b10'; g.fill();
+      [0, 6, 1, 5, 2, 4, 3].forEach(function (i, k) { hairLock(g, backCol(i / 7 - 0.03), backCol((i + 1) / 7 + 0.03), { n: 420, amp: 12 + (i % 3) * 3, waves: 3.6 + ((i * 5) % 4) * 0.25, ph: i * 1.7, from: 0.3, skew: 1.2, sheen: [0.1, 0.06, 0.7], shadow: k ? 0.5 : 0, la: 0.8 }); });
+    }
+    // her skirt: black satin falling in soft folds to the ground, catching the light along each fold
+    var HEM = [68], TOPX = [244]; seed = 5; (function () { var ws = [], sum = 0; for (var i = 0; i < 10; i++) { ws.push(0.6 + rnd() * 0.8); sum += ws[i]; } for (i = 0; i < 10; i++) { HEM.push(HEM[i] + ws[i] / sum * 466); TOPX.push(244 + (i + 1) * 11.2 + (i < 9 ? (rnd() - 0.5) * 6 : 0)); } })();
+    function skirtPath(g) {
+      g.beginPath(); g.moveTo(236, 518); g.lineTo(364, 518); g.bezierCurveTo(386, 600, 452, 900, 534, 1268);
+      for (var i = 10; i > 0; i--) { var x0 = HEM[i], x1 = HEM[i - 1]; g.quadraticCurveTo((x0 + x1) / 2, 1280 + (x0 - x1) * 0.25, x1, 1268); }
+      g.bezierCurveTo(148, 900, 214, 600, 236, 518); g.closePath();
+    }
+    function drawSkirt(g) {
+      var sg = g.createLinearGradient(70, 0, 534, 0); sg.addColorStop(0, '#1d1a22'); sg.addColorStop(0.5, '#141217'); sg.addColorStop(1, '#0a090d');
+      skirtPath(g); g.fillStyle = sg; g.fill();
+      g.save(); skirtPath(g); g.clip();
+      for (var i = 0; i <= 10; i++) {                                     // (the deep shadow between each fold)
+        var tx = TOPX[i], bx = HEM[i], bend = (i % 3 - 1) * 14;
+        blurred(g, 14, 'rgba(0,0,0,0.55)', function (g) { g.lineWidth = 10; g.beginPath(); g.moveTo(tx, 520); g.quadraticCurveTo((tx + bx) / 2 + 6 + bend, 900, bx, 1290); g.stroke(); });
+      }
+      for (var j = 0; j < 10; j++) {                                      // (and the light along each fold's crest)
+        var tx2 = (TOPX[j] + TOPX[j + 1]) / 2, bx2 = (HEM[j] + HEM[j + 1]) / 2, lf = (1 - j / 11) * (0.6 + (HEM[j + 1] - HEM[j]) / 80), bend2 = (j % 3 - 1) * 12;
+        blurred(g, 16, 'rgba(120,112,146,' + (0.08 + lf * 0.14) + ')', function (g) { g.lineWidth = (HEM[j + 1] - HEM[j]) * 0.3; g.beginPath(); g.moveTo(tx2, 540); g.quadraticCurveTo((tx2 + bx2) / 2 + 4 + bend2, 900, bx2, 1290); g.stroke(); });
+      }
+      blurred(g, 26, 'rgba(0,0,0,0.6)', function (g) { g.lineWidth = 30; line(g, [[230, 528], [370, 528]]); g.stroke(); });   // (shade under her bodice)
+      blurred(g, 30, 'rgba(0,0,0,0.5)', function (g) { g.lineWidth = 60; line(g, [[60, 1290], [540, 1290]]); g.stroke(); });   // (and down at the hem)
+      g.restore();
+    }
+    // her shoulders and chest, under a sheer dark yoke
+    function torsoPath(g) { P(g, [[272, 288], [250, 306, 214, 312, 188, 322], [166, 330, 152, 350, 154, 378], [158, 404, 176, 416, 198, 420], [402, 420], [424, 416, 442, 404, 446, 378], [448, 350, 434, 330, 412, 322], [386, 312, 350, 306, 328, 288]], true); }
+    function sheer(g, path, a) {
+      path(); g.fillStyle = 'rgba(18,13,20,' + a + ')'; g.fill();
+      g.save(); path(); g.clip(); g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 0.6;   // (the fine mesh of the fabric)
+      g.beginPath(); for (var x = -400; x < 700; x += 3.2) { g.moveTo(x, 0); g.lineTo(x + 700, 1300); g.moveTo(x + 700, 0); g.lineTo(x, 1300); } g.stroke(); g.restore();
+    }
+    function drawTorso(g) {
+      torsoPath(g); g.fillStyle = SKIN; g.fill();
+      g.save(); torsoPath(g); g.clip();
+      blurred(g, 3, 'rgba(255,246,238,0.7)', function (g) { g.lineWidth = 3; P(g, [[284, 314], [250, 318, 226, 322]]); g.stroke(); P(g, [[316, 314], [350, 318, 374, 322]]); g.stroke(); });   // (her collarbones)
+      blurred(g, 4, 'rgba(170,118,104,0.5)', function (g) { g.lineWidth = 3; P(g, [[284, 320], [250, 324, 226, 328]]); g.stroke(); P(g, [[316, 320], [350, 324, 374, 328]]); g.stroke(); });
+      blurred(g, 14, 'rgba(160,108,96,0.5)', function (g) { g.lineWidth = 14; P(g, [[300, 330], [300, 420]]); g.stroke(); });
+      blurred(g, 14, 'rgba(150,100,90,0.6)', function (g) { g.lineWidth = 18; P(g, [[160, 360], [168, 420]]); g.stroke(); P(g, [[442, 360], [436, 420]]); g.stroke(); });
+      g.restore();
+      sheer(g, function () { torsoPath(g); }, 0.66);
+      g.save(); torsoPath(g); g.clip(); blurred(g, 16, 'rgba(0,0,0,0.6)', function (g) { g.lineWidth = 18; torsoPath(g); g.stroke(); }); soft(g, 300, 352, 60, 30, '255,230,214', 0.12); g.restore();
+      blurred(g, 3, 'rgba(0,0,0,0.6)', function (g) { g.lineWidth = 2; P(g, [[300, 312], [300, 420]]); g.stroke(); });   // (a fine seam down the middle)
+    }
+    // her bodice: fitted black satin, a sweetheart neckline edged with little bat-wing points, and a pointed waist
+    function neckline(g) {
+      [[198, 414, 250, 372, 300, 424], [300, 424, 350, 372, 402, 414]].forEach(function (c, side) {
+        var pts = []; for (var k = 0; k <= 4; k++) { var t = k / 4, a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, d = t * t; pts.push([a * c[0] + b * c[2] + d * c[4], a * c[1] + b * c[3] + d * c[5]]); }
+        pts.forEach(function (p, k) { if (!k) { if (!side) g.moveTo(p[0], p[1]); return; } var q = pts[k - 1]; g.quadraticCurveTo((p[0] + q[0]) / 2, (p[1] + q[1]) / 2 + 10, p[0], p[1]); });
+      });
+    }
+    function bodicePath(g) { g.beginPath(); neckline(g); g.bezierCurveTo(400, 460, 372, 490, 366, 524); g.bezierCurveTo(358, 560, 330, 586, 300, 608); g.bezierCurveTo(270, 586, 242, 560, 234, 524); g.bezierCurveTo(228, 490, 200, 460, 198, 414); g.closePath(); }
+    function drawBodice(g, back) {
+      var bp = back ? function (g) { P(g, [[198, 410], [402, 410], [400, 460, 372, 490, 366, 524], [358, 548, 340, 560, 300, 566], [260, 560, 242, 548, 234, 524], [228, 490, 200, 460, 198, 410]], true); } : function (g) { bodicePath(g); };
+      blurred(g, 8, 'rgba(0,0,0,0.5)', function (g) { g.translate(0, 4); bp(g); g.fill(); });
+      bp(g); g.fillStyle = '#131116'; g.fill();
+      g.save(); bp(g); g.clip();
+      if (!back) {
+        soft(g, 262, 446, 38, 32, '150,140,176', 0.18); soft(g, 340, 446, 34, 32, '130,120,156', 0.12);   // (light on the curve of her bust)
+        soft(g, 255, 438, 16, 10, '200,192,224', 0.12);
+        blurred(g, 8, 'rgba(0,0,0,0.7)', function (g) { g.lineWidth = 6; P(g, [[226, 470], [262, 494, 300, 482], [338, 494, 374, 470]]); g.stroke(); });   // (shade beneath it)
+        [[262, 470, 286, 600], [338, 470, 314, 600]].forEach(function (s, k) {   // (its seams, each with a fine line of light beside it)
+          blurred(g, 1.5, 'rgba(0,0,0,0.9)', function (g) { g.lineWidth = 1.6; P(g, [[s[0], s[1]], [s[0] + (k ? -6 : 6), 540, s[2], s[3]]]); g.stroke(); });
+          blurred(g, 3, 'rgba(160,150,186,0.3)', function (g) { g.lineWidth = 2; P(g, [[s[0] - 3, s[1] + 6], [s[0] + (k ? -9 : 3), 540, s[2] - 3, s[3] - 8]]); g.stroke(); });
+        });
+        blurred(g, 3, 'rgba(160,150,186,0.22)', function (g) { g.lineWidth = 2; P(g, [[300, 430], [300, 600]]); g.stroke(); });
+      } else {
+        soft(g, 250, 470, 40, 60, '140,130,166', 0.2);
+        g.strokeStyle = 'rgba(150,140,170,0.6)'; g.lineWidth = 1.4; g.beginPath(); for (var k2 = 0; k2 < 8; k2++) { var y = 424 + k2 * 17; g.moveTo(292, y); g.lineTo(308, y + 17); g.moveTo(308, y); g.lineTo(292, y + 17); } g.stroke();   // (lacing down her back)
+      }
+      blurred(g, 14, 'rgba(0,0,0,0.65)', function (g) { g.lineWidth = 16; bp(g); g.stroke(); });   // (darker toward its edges, as it turns away)
+      g.restore();
+      if (!back) { g.save(); g.beginPath(); neckline(g); blurred(g, 1.5, 'rgba(176,166,200,0.55)', function (g) { g.lineWidth = 1.4; g.beginPath(); g.translate(0, 1.5); neckline(g); g.stroke(); }); g.restore(); }   // (a fine edge of light along the neckline)
+    }
+    // her arms: slender, in sheer dark sleeves with black cuffs; one hangs at her side, one rests on her hip
+    var ARM_R = [[198, 348], [166, 430], [158, 525], [162, 620], [168, 704]], ARM_L = [[402, 348], [446, 410], [478, 492], [452, 552], [414, 592]];
+    function drawArm(g, pts, handFn, ws, sws) {
+      var T = tube(pts, ws || [40, 40, 34, 30, 25], 10); skinTube(g, T, 0.55);
+      var SL = tube(pts, sws || [52, 54, 48, 44, 42], 10);                      // (the sheer sleeve over it)
+      sheer(g, function () { tubePath(g, SL); }, 0.64);
+      g.save(); tubePath(g, SL); g.clip();
+      blurred(g, 6, 'rgba(0,0,0,0.7)', function (g) { g.lineWidth = 6; line(g, SL.R); g.stroke(); line(g, SL.L); g.stroke(); });   // (denser where it turns away)
+      for (var f = 0; f < 6; f++) { var i0 = Math.round((SL.c.length - 5) * (0.12 + f * 0.14)); blurred(g, 3, 'rgba(150,134,160,0.22)', function (g) { g.lineWidth = 2; line(g, [inset(SL, 'L', 0.7)[i0], inset(SL, 'R', 0.6)[i0 + 3]]); g.stroke(); }); }   // (soft folds)
+      g.restore();
+      var n = SL.c.length, a = SL.c[n - 3], b = SL.c[n - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      g.save(); g.translate(b[0], b[1]); g.rotate(ang);                  // (a black satin cuff with a fine edge of light)
+      g.fillStyle = '#111014'; g.beginPath(); g.moveTo(-16, -22); g.lineTo(4, -23); g.quadraticCurveTo(10, 0, 4, 23); g.lineTo(-16, 22); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(170,160,196,0.45)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(-14, -20); g.lineTo(-14, 20); g.stroke(); g.restore();
+      if (handFn) handFn();
+    }
+    function handDown(g) {                                              // (her right hand, relaxed, fingers a little curled)
+      var palm = tube([[168, 700], [170, 728], [171, 752]], [24, 30, 30], 6); skinTube(g, palm, 0.55);
+      finger(g, [[182, 746], [185, 770], [184, 790]], 7, 5.5);
+      finger(g, [[175, 750], [177, 780], [175, 804]], 7.8, 6);
+      finger(g, [[167, 752], [167, 784], [163, 810]], 8, 6);
+      finger(g, [[159, 748], [156, 776], [154, 800], [158, 806]], 7.8, 6);
+      finger(g, [[160, 712], [151, 734], [151, 756]], 10, 7.5);           // (her thumb)
+      g.save(); tubePath(g, palm); g.clip(); blurred(g, 4, 'rgba(160,108,96,0.4)', function (g) { g.lineWidth = 3; line(g, [[158, 748], [184, 744]]); g.stroke(); }); g.restore();   // (the line of her knuckles)
+    }
+    function handHip(g) {                                               // (her left hand on her hip, fingers spread over it)
+      var palm = tube([[416, 588], [402, 604], [388, 620]], [25, 31, 31], 6); skinTube(g, palm, 0.5);
+      [[[398, 630], [388, 650], [380, 664]], [[392, 624], [380, 646], [370, 662]], [[386, 618], [372, 638], [360, 650]], [[380, 612], [366, 628], [356, 636]]].forEach(function (f, k) { finger(g, f, k ? 7.6 : 7, 5.6); });
+      blurred(g, 5, 'rgba(0,0,0,0.5)', function (g) { g.translate(3, 6); line(g, [[398, 640], [380, 668]]); g.lineWidth = 6; g.stroke(); });
+    }
+    // her neck and high collar, with a small green stone at her throat
+    function drawNeck(g) {
+      P(g, [[276, 210], [278, 258, 274, 286, 268, 300], [332, 300], [326, 286, 322, 258, 324, 210]], true); g.fillStyle = SKIN; g.fill();
+      g.save(); P(g, [[276, 210], [278, 258, 274, 286, 268, 300], [332, 300], [326, 286, 322, 258, 324, 210]], true); g.clip();
+      blurred(g, 14, 'rgba(130,84,76,0.75)', function (g) { g.beginPath(); g.ellipse(300, 236, 40, 22, 0, 0, Math.PI * 2); g.fill(); });   // (the shadow under her jaw)
+      blurred(g, 8, 'rgba(160,108,96,0.5)', function (g) { g.lineWidth = 8; line(g, [[324, 214], [328, 300]]); g.stroke(); });
+      g.restore();
+    }
+    function collarPath(g) { P(g, [[270, 254], [300, 262, 330, 254], [336, 314], [300, 322, 264, 314]], true); }
+    function drawCollar(g, back) {
+      blurred(g, 6, 'rgba(0,0,0,0.5)', function (g) { g.translate(0, 5); collarPath(g); g.fill(); });
+      var cg = g.createLinearGradient(264, 0, 336, 0); cg.addColorStop(0, '#0c0b0e'); cg.addColorStop(0.35, '#2a2630'); cg.addColorStop(0.6, '#18161b'); cg.addColorStop(1, '#09080b');
+      collarPath(g); g.fillStyle = cg; g.fill();
+      g.save(); collarPath(g); g.clip(); blurred(g, 6, 'rgba(0,0,0,0.7)', function (g) { g.lineWidth = 8; P(g, [[264, 254], [300, 264, 336, 254]]); g.stroke(); }); blurred(g, 4, 'rgba(150,140,176,0.35)', function (g) { g.lineWidth = 3; P(g, [[268, 312], [300, 320, 332, 312]]); g.stroke(); }); g.restore();
+      g.strokeStyle = 'rgba(170,160,196,0.5)'; g.lineWidth = 1.2; P(g, [[271, 256], [300, 264, 329, 256]]); g.stroke();
+      if (back) return;
+      g.fillStyle = '#9a98a8'; g.beginPath(); g.ellipse(300, 296, 8.5, 10.5, 0, 0, Math.PI * 2); g.fill();
+      var gm = g.createRadialGradient(297, 292, 1, 300, 296, 8); gm.addColorStop(0, '#6fd49a'); gm.addColorStop(0.5, '#1f7448'); gm.addColorStop(1, '#0a2a18');
+      g.fillStyle = gm; g.beginPath(); g.ellipse(300, 296, 6.5, 8.5, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(297.5, 292, 1.4, 0, Math.PI * 2); g.fill();
+    }
+    // her face: shaped by soft light and shade, then her eyes, nose and lips painted in
+    function facePath(g) { P(g, [[300, 74], [344, 74, 365, 108, 365, 148], [365, 186, 354, 212, 338, 230], [322, 248, 310, 257, 300, 257], [290, 257, 278, 248, 262, 230], [246, 212, 235, 186, 235, 148], [235, 108, 256, 74, 300, 74]], true); }
+    function drawFace(g, closed) {
+      var fg = g.createRadialGradient(290, 140, 10, 300, 160, 110); fg.addColorStop(0, '#f4e2d5'); fg.addColorStop(0.6, '#ebd3c3'); fg.addColorStop(1, '#d9b7a4');
+      facePath(g); g.fillStyle = fg; g.fill();
+      g.save(); facePath(g); g.clip();
+      blurred(g, 18, 'rgba(170,114,100,0.7)', function (g) { g.lineWidth = 18; facePath(g); g.stroke(); });   // (rounding away at its edges)
+      blurred(g, 22, 'rgba(176,122,108,0.35)', function (g) { g.beginPath(); g.ellipse(362, 168, 22, 60, 0, 0, Math.PI * 2); g.fill(); });   // (the side turned from the light)
+      blurred(g, 12, 'rgba(180,120,106,0.4)', function (g) { [-1, 1].forEach(function (s) { g.beginPath(); g.ellipse(300 + s * 46, 196, 12, 20, s * 0.5, 0, Math.PI * 2); g.fill(); }); });   // (beneath her cheekbones)
+      blurred(g, 10, 'rgba(255,248,242,0.5)', function (g) { [-1, 1].forEach(function (s) { g.beginPath(); g.ellipse(300 + s * 40, 172, 14, 8, s * -0.3, 0, Math.PI * 2); g.fill(); }); g.beginPath(); g.ellipse(296, 100, 30, 14, 0, 0, Math.PI * 2); g.fill(); });   // (light on her cheekbones and brow)
+      g.setTransform(858 * S, 0, 0, -960 * S, 300 * S, 152 * S);
       faceFeatures(g, closed);
-      g.setTransform(1, 0, 0, 1, 0, 0); g.restore();
-      // her ear, on the side where her hair is tucked back
-      P(g, [[220, 205], [204, 200, 202, 236, 216, 250]], false); g.fillStyle = '#e8ccb8'; g.fill(); g.strokeStyle = INK; g.lineWidth = 2.2; g.stroke();
-      g.fillStyle = '#bfbac8'; g.beginPath(); g.arc(212, 256, 3.5, 0, Math.PI * 2); g.fill();
-      // her hair in front: a smooth crown with a side part, a soft wave sweeping across her brow, and locks falling
-      // over her shoulders
-      P(g, [[214, 230], [196, 120, 250, 46, 318, 52], [392, 58, 414, 150, 398, 250], [392, 200, 380, 160, 352, 128], [326, 104, 300, 100, 280, 104], [250, 112, 228, 150, 224, 222]], true);
-      var cg = g.createLinearGradient(220, 50, 400, 250); cg.addColorStop(0, '#22232e'); cg.addColorStop(0.5, '#14141c'); cg.addColorStop(1, '#0c0c12'); fillInk(g, cg, 2.6);
-      g.save(); P(g, [[214, 230], [196, 120, 250, 46, 318, 52], [392, 58, 414, 150, 398, 250], [392, 200, 380, 160, 352, 128], [326, 104, 300, 100, 280, 104], [250, 112, 228, 150, 224, 222]], true); g.clip(); soft(g, 270, 80, 50, 20, '110,120,150', 0.5); soft(g, 360, 110, 22, 40, '100,110,140', 0.4); g.strokeStyle = 'rgba(80,88,116,0.6)'; g.lineWidth = 1.4; for (var hl = 0; hl < 6; hl++) { P(g, [[282 - hl * 8, 60 + hl * 2], [250 - hl * 6, 90, 230 - hl * 3, 160]]); g.stroke(); P(g, [[296 + hl * 9, 58], [350 + hl * 6, 80, 384 + hl * 3, 170]]); g.stroke(); } g.restore();   // (light on her crown and fine strands sweeping from the part)
-      P(g, [[284, 102], [330, 96, 384, 130, 392, 200], [398, 260, 384, 300, 392, 340], [370, 290, 372, 250, 360, 200], [350, 150, 320, 118, 284, 102]], true); fillInk(g, '#16161e', 2.4);   // (the wave across her brow, falling past her cheek)
-      g.save(); P(g, [[284, 102], [330, 96, 384, 130, 392, 200], [398, 260, 384, 300, 392, 340], [370, 290, 372, 250, 360, 200], [350, 150, 320, 118, 284, 102]], true); g.clip(); soft(g, 350, 140, 20, 40, '100,112,146', 0.5); g.restore();
-      lock(g, 385, 220, 418, 580, 26, 14, 2.2, 0.6, false); lock(g, 402, 240, 440, 640, 24, 14, 2.4, 2.1, false); lock(g, 368, 290, 372, 540, 18, 10, 2, 1.3, false);   // (locks over her left shoulder)
-      lock(g, 222, 240, 190, 580, 22, 12, 2.2, 2.6, false);              // (and one behind her right)
+      g.setTransform(S, 0, 0, S, 0, 0);
+      blurred(g, 9, 'rgba(70,40,40,0.4)', function (g) { g.lineWidth = 10; P(g, [[276, 70], [330, 80, 368, 120, 376, 190]]); g.stroke(); });   // (the shadow her hair casts at her hairline)
+      g.restore();
     }
-    function drawBodyBack(g) {
-      drawSkirt(g);
-      arm(g, [[196, 420], [176, 600], [182, 770]], 30); arm(g, [[404, 420], [476, 575], [392, 640]], 30);
-      P(g, [[186, 422], [228, 392, 270, 372], [330, 372], [372, 392, 414, 422], [418, 500], [362, 600], [238, 600], [182, 500]], true); fillInk(g, '#1e1b24', 2.4);   // (the back of her dress)
-      sleeve(g, [[196, 420], [174, 600], [180, 755]]); sleeve(g, [[404, 420], [476, 575], [400, 632]]);
-      hand(g, 182, 768, 0.04, 1, true);
-      P(g, [[270, 336], [266, 384], [334, 384], [330, 336]], true); fillInk(g, '#1a171e', 2.6);
-      P(g, [[300, 48], [380, 50, 404, 140, 398, 250], [300, 270], [202, 250], [196, 140, 220, 50, 300, 48]], true); fillInk(g, '#14141c', 2.6);   // (the back of her head)
-      g.save(); P(g, [[300, 48], [380, 50, 404, 140, 398, 250], [300, 270], [202, 250], [196, 140, 220, 50, 300, 48]], true); g.clip(); soft(g, 280, 90, 60, 26, '110,120,150', 0.45); g.restore();
-      hairBackMass(g, true);
+    function drawEar(g) {
+      P(g, [[238, 144], [225, 136, 218, 152, 221, 168], [224, 182, 230, 191, 240, 188]], true); g.fillStyle = '#dcbca8'; g.fill();
+      g.save(); P(g, [[238, 144], [225, 136, 218, 152, 221, 168], [224, 182, 230, 191, 240, 188]], true); g.clip();
+      blurred(g, 3, 'rgba(140,88,78,0.7)', function (g) { g.lineWidth = 3; P(g, [[232, 146], [224, 148, 223, 166, 230, 178]]); g.stroke(); }); blurred(g, 6, 'rgba(90,56,52,0.6)', function (g) { g.lineWidth = 6; line(g, [[238, 140], [238, 190]]); g.stroke(); });
+      g.restore();
+      g.strokeStyle = '#c8c6d4'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(229, 192); g.lineTo(229, 202); g.stroke();   // (a little silver crescent moon)
+      g.fillStyle = '#d8d6e4'; g.beginPath(); g.arc(229, 210, 7, 0, Math.PI * 2); g.arc(232, 207, 6, 0, Math.PI * 2, true); g.fill('evenodd');
     }
-    var cvs = [false, true, 'back'].map(function (mode) { return glimCanvas(W, Hh, function (g) { if (mode === 'back') drawBodyBack(g); else drawBodyFront(g, mode); }); });   // (front, front blinking, and back)
+    function drawFront(g, closed) {
+      hairBehind(g);
+      drawSkirt(g); drawArm(g, ARM_L); drawArm(g, ARM_R); drawTorso(g); drawBodice(g, false);
+      handDown(g);
+      drawNeck(g); drawCollar(g, false); drawFace(g, closed);
+      hairFront(g, function () { drawEar(g); }, function () {
+        g.save(); g.beginPath(); g.rect(0, 484, 600, 300); g.clip(); drawArm(g, ARM_L.slice(1), null, [40, 34, 30, 25], [54, 48, 44, 42]); g.restore();   // (her forearm in front of the hair falling behind it)
+        handHip(g);
+      });
+    }
+    function drawBack(g) {
+      drawSkirt(g); drawArm(g, ARM_L); drawArm(g, ARM_R); drawTorso(g); drawBodice(g, true);
+      handDown(g);
+      drawNeck(g); drawCollar(g, true);
+      hairBackView(g);
+    }
+    // (front, front blinking, and back; she's painted on the computer's processor rather than its graphics chip, which
+    // paints all of this reliably everywhere; the blink is the front with just her eyes painted again, closed)
+    function sheet(paint) { var c = document.createElement('canvas'); c.width = W * S; c.height = Hh * S; var g = c.getContext('2d', { willReadFrequently: true }); g.scale(S, S); paint(g, c); return c; }
+    var front = sheet(function (g) { drawFront(g, false); });
+    var cvs = [front, sheet(function (g) { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(front, 0, 0); g.restore(); g.save(); g.beginPath(); g.rect(250, 138, 96, 32); g.clip(); drawFace(g, true); g.restore(); }), sheet(function (g) { drawBack(g); })];
     var texs = cvs.map(function (c) { var t = new THREE.CanvasTexture(c); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; });
     var HT = 1.52, mat = new THREE.MeshLambertMaterial({ map: texs[0], alphaTest: 0.4, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: texs[0], emissiveIntensity: 0.45 });   // (lit by the world, with a little glow of its own so she's always clear)
     var card = new THREE.Mesh(new THREE.PlaneGeometry(HT * W / Hh, HT), mat); card.position.y = HT / 2 - 0.01; card.castShadow = true;
@@ -2461,7 +2621,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mistTex = radialAlphaTex([[0, 0.7], [0.4, 0.35], [1, 0]]), mist = [];
     for (var mk = 0; mk < 16; mk++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: mistTex, color: mk % 3 ? 0x6a7088 : 0x9aa0b8, transparent: true, opacity: 0, depthWrite: false })); body.add(sp); mist.push({ s: sp, t: glimR(mk * 3.1), a: glimR(mk * 5.7) * Math.PI * 2, r: 0.18 + glimR(mk * 2.3) * 0.12, size: 0.16 + glimR(mk * 4.1) * 0.14 }); }
     axeArm.children[0].visible = axeArm.children[1].visible = false;   // (the old 3D sleeve and hand: your tools are held in her drawn hand instead)
-    return { cvs: cvs, texs: texs, mat: mat, card: card, spin: spin, mist: mist, view: 0, handAt: new THREE.Vector3(), HT: HT, W: W, Hh: Hh };
+    return { cvs: cvs, texs: texs, mat: mat, card: card, spin: spin, mist: mist, view: 0, handAt: new THREE.Vector3(), HT: HT, W: W, Hh: Hh, HX: 168, HY: 768 };
   })();
   // every frame: she turns to face you, showing her back when she walks away; she sways and bobs a little as she
   // walks, blinks now and then, and dark mist curls round her
@@ -2473,9 +2633,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (view !== wl.view) { wl.view = view; wl.mat.map = wl.mat.emissiveMap = wl.card.customDepthMaterial.map = wl.texs[view]; wl.mat.needsUpdate = true; wl.card.customDepthMaterial.needsUpdate = true; }
     wl.card.rotation.z = moving ? Math.sin(t * 11) * 0.025 : Math.sin(t * 0.9) * 0.006;   // (a gentle sway)
     wl.card.scale.x = (rel < -0.25 && !back ? -1 : 1) * (moving ? 1 : 1);   // (turned to face the way she's walking)
-    wl.card.updateMatrixWorld(true); wl.handAt.set((182 - wl.W / 2) * wl.HT / wl.Hh, (wl.Hh / 2 - 795) * wl.HT / wl.Hh + 0.34, 0.03); wl.card.localToWorld(wl.handAt); body.worldToLocal(wl.handAt); axeArm.position.copy(wl.handAt);   // (your tool, held in her right hand)
+    wl.card.updateMatrixWorld(true); wl.handAt.set((wl.HX - wl.W / 2) * wl.HT / wl.Hh, (wl.Hh / 2 - wl.HY) * wl.HT / wl.Hh + 0.34, 0.03); wl.card.localToWorld(wl.handAt); body.worldToLocal(wl.handAt); axeArm.position.copy(wl.handAt);   // (your tool, held in her right hand)
     wl.mist.forEach(function (m) { m.t += dt * 0.06; if (m.t > 1) m.t -= 1; var a = m.a + t * 0.15; m.s.position.set(Math.cos(a) * m.r, 0.06 + m.t * 0.7, Math.sin(a) * m.r * 0.8); var sz = m.size * (0.7 + m.t * 0.8); m.s.scale.set(sz, sz, 1); m.s.material.opacity = Math.sin(m.t * Math.PI) * 0.22; });
   }
+
 
   // ---------- Every frame ----------
   function updatePlayer(dt) {
