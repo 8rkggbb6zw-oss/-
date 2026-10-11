@@ -1631,6 +1631,37 @@ EVERDAWN_PARTS.push(function (THREE) {
     return span;
   }
 
+  // ---------- Dressing up the shop menus ----------
+  // Every thing for sale goes on its own card (its picture, name, description and price, with its buttons beneath);
+  // long descriptions fold to three lines with a "Read more" to open them; and at Fluff & Feather the supplies (hay,
+  // the Milk Pail and the Shears) come first, under their own heading, then the animals under theirs
+  function shopCards(box) {
+    Array.prototype.slice.call(box.querySelectorAll('.shop-item')).forEach(function (it) {
+      var card = document.createElement('div'); card.className = 'shop-card';
+      it.parentNode.insertBefore(card, it); card.appendChild(it);
+      var buy = card.nextElementSibling; if (buy && buy.classList.contains('shop-buy')) card.appendChild(buy);
+      var desc = it.querySelector('.shop-text > span:not(.shop-price)');
+      if (desc) {
+        desc.classList.add('shop-desc');
+        if (desc.textContent.length > 150) {
+          card.classList.add('clamp');
+          var more = document.createElement('button'); more.type = 'button'; more.className = 'shop-more'; more.textContent = 'Read more ▾';
+          desc.parentNode.insertBefore(more, desc.nextSibling);
+          more.addEventListener('click', function (e) { e.stopPropagation(); var open = card.classList.toggle('clamp'); more.textContent = open ? 'Read more ▾' : 'Show less ▴'; });
+        }
+      }
+    });
+  }
+  function shopHeading(text) { var h = document.createElement('div'); h.className = 'shop-section'; h.textContent = text; return h; }
+  shopCards(shopBox); shopCards(barnShopBox);
+  (function () {
+    var cards = barnShopBox.querySelectorAll('.shop-card'), hay = cards[0], after = hay;
+    [barnShopBox.querySelector('.pail-buy'), barnShopBox.querySelector('.shears-buy')].forEach(function (b) { var c = b && b.closest('.shop-card'); if (c) { after.parentNode.insertBefore(c, after.nextSibling); after = c; } });
+    hay.parentNode.insertBefore(shopHeading('Feed & supplies'), hay);
+    after.parentNode.insertBefore(shopHeading('Magical creatures'), after.nextSibling);
+  })();
+  shopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Seeds'), shopBox.querySelector('.shop-card'));
+
   // ---------- Dragging items between slots ----------
   var slotDrag = null; // { from, startX, startY, ghost }
   function startDrag(i, e) {

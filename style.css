@@ -380,3 +380,96 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
 .animal-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 6px 0 12px; padding: 18px 14px; text-align: center; border: 2px dashed #d9c8f0; border-radius: 14px; background: rgba(123, 79, 214, .05); font-size: .85rem; }
 .animal-empty-icon { font-size: 2.2rem; line-height: 1.2; }
 .animal-empty b { font-size: 1rem; color: #5a3d9a; }
+
+/* ---------- Menus, dressed up: a soft frosted panel with a glowing header, items on cards, prices on gold tags ---------- */
+.inventory {
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 243, 255, 0.95));
+  box-shadow: 0 20px 44px rgba(90, 50, 160, 0.38), 0 0 0 1px rgba(168, 107, 255, 0.28), inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  scrollbar-width: thin; scrollbar-color: #d8c4f4 transparent;
+}
+.inv-head {
+  position: sticky; top: -12px; z-index: 3;
+  margin: -12px -14px 12px; padding: 12px 14px 11px;
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(120deg, #eedfff 0%, #ffe3f1 55%, #fff0d4 100%);
+  box-shadow: 0 1px 0 rgba(168, 107, 255, 0.2), 0 6px 14px -10px rgba(120, 80, 190, 0.5);
+}
+.inv-head b { font-size: 1.2rem; font-weight: 600; color: #6a3fc8; letter-spacing: .3px; text-shadow: 0 1px 0 #fff; }
+.inv-head b::after { content: ' ✦'; color: #ffb64d; font-size: .85em; }
+.inv-close {
+  width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
+  background: #fff; color: #7b4fd6; font-size: .95rem;
+  box-shadow: 0 2px 0 #d8c4f4, 0 3px 8px rgba(120, 80, 190, 0.25);
+}
+.inv-close:active { box-shadow: 0 0 0 #d8c4f4; }
+.ship-hint { color: #7a6a98; opacity: 1; }
+
+/* each thing for sale sits on its own card */
+.shop-card {
+  margin: 0 0 10px; padding: 12px;
+  border-radius: 16px; background: #fff;
+  box-shadow: 0 2px 10px rgba(120, 80, 190, 0.1), inset 0 0 0 1px #efe4ff;
+}
+.shop-card .shop-item { margin: 0 0 10px; align-items: flex-start; }
+.shop-card .shop-item[style] { margin-top: 0 !important; }
+.shop .shop-pic {
+  width: 78px; border-radius: 16px;
+  background: radial-gradient(circle at 50% 38%, #ffffff 0%, #f5ecff 55%, #e9dcff 100%);
+  box-shadow: inset 0 0 0 2px #eadcff, 0 3px 8px rgba(120, 80, 190, 0.15);
+}
+.shop-text { gap: 4px; min-width: 0; }
+.shop-text b { font-size: 1.08rem; color: #5a35b0; }
+.shop-desc { color: #6b5a8a; line-height: 1.42; font-size: .84rem; }
+.shop-card.clamp .shop-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-more { align-self: flex-start; padding: 0; background: none; box-shadow: none; color: #8a5ad8; font-size: .8rem; font-weight: 600; border-radius: 0; }
+.shop-more:active { transform: none; box-shadow: none; }
+.shop-price {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px 2px 6px; border-radius: 999px;
+  background: linear-gradient(135deg, #fff6d8, #ffe7b0); color: #8a5a10;
+  box-shadow: inset 0 0 0 1px #f3d28a;
+}
+.shop-buy button { padding: 9px 8px; font-size: .88rem; }
+.shop-buy button:disabled {
+  opacity: 1; background: linear-gradient(135deg, #efe9f6, #e7e0f0); color: #9d90b6;
+  box-shadow: 0 3px 0 #d4c9e4; cursor: default;
+}
+.shop-buy button:disabled:active { transform: none; }
+
+/* headings between the kinds of things for sale */
+.shop-section { display: flex; align-items: center; gap: 10px; margin: 14px 4px 8px; font-size: .78rem; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #9a7ad8; }
+.shop-section::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #dccbf6, transparent); }
+
+/* how many coins you have (or what the bin will fetch), always in view at the bottom */
+.ship .ship-total {
+  position: sticky; bottom: -10px; z-index: 3;
+  display: flex; align-items: center; gap: 6px;
+  margin: 12px -14px -10px; padding: 11px 16px 12px;
+  border-radius: 0 0 22px 22px;
+  background: linear-gradient(0deg, #fff 60%, rgba(255, 255, 255, 0.9));
+  box-shadow: 0 -1px 0 rgba(168, 107, 255, 0.18);
+}
+.ship .ship-total b { padding: 1px 10px; border-radius: 999px; background: linear-gradient(135deg, #fff6d8, #ffe7b0); color: #8a5a10; box-shadow: inset 0 0 0 1px #f3d28a; }
+.glim-stalls { padding: 8px 12px; border-radius: 12px; background: #f6efff; color: #6b5a8a; }
+
+/* the shipping bin: your bag and the bin as two soft panels */
+.ship-cols > div { padding: 10px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #efe4ff; }
+.ship-cols > div:last-child { background: repeating-linear-gradient(135deg, #fffaf0 0 10px, #fff6e6 10px 20px); box-shadow: inset 0 0 0 2px #f3dfb4; }
+.ship-cols h4 { font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; color: #9a7ad8; }
+.ship-cols > div:last-child h4 { color: #b0832a; }
+.ship-empty { text-align: center; padding: 18px 4px; font-style: italic; }
+.ship-cols > div { min-width: 0; }
+.ship-cols .inv-grid, .ship-bin { gap: 6px; }
+.inv-close { width: auto; min-width: 32px; padding: 0 10px; white-space: nowrap; border-radius: 999px; }
+/* small screens: a slimmer header and footer, so there's more room for what's in the menu */
+@media (max-width: 480px) {
+  .inv-head { padding: 8px 12px 7px; margin-bottom: 8px; }
+  .inv-head b { font-size: 1.02rem; }
+  .inv-close { height: 28px; min-width: 28px; }
+  .ship-hint { font-size: .76rem; margin-bottom: 6px; }
+  .ship .ship-total { padding: 7px 14px 8px; margin-top: 8px; }
+  .shop-card { padding: 9px; }
+  .shop .shop-pic { width: 60px; }
+  .shop-section { margin: 8px 4px 6px; }
+}
