@@ -2614,16 +2614,20 @@ EVERDAWN_PARTS.push(function (THREE) {
   document.getElementById('btnSave').addEventListener('click', function () { saveGame(); focusGame(); });
   document.getElementById('btnLoad').addEventListener('click', function () { loadGame(); focusGame(); });
 
-  // Full screen: the game fills the whole screen. Where the browser allows it (computers, Android, iPad) it also hides
-  // the browser bars; on iPhone it fills the browser window instead
+  // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
+  // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
+  // is built on) turns the keyboard off in its full screen, silently dropping every letter and number key (only the
+  // arrows, space and a few others get through), so I, T, E, Q, F and 1-4 would stop working. So on those the game
+  // just fills the whole browser window instead, and the keyboard keeps working
   var btnFull = document.getElementById('btnFull');
+  var appleTouch = /iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);   // (an iPad says it's a Mac, but has a touch screen)
   function realFullscreen() { return document.fullscreenElement || document.webkitFullscreenElement; }
   function setFullScreen(on) {
     document.body.classList.toggle('full', on);
     btnFull.innerHTML = on ? '✕ Exit full screen <kbd>F</kbd>' : '⛶ Full screen <kbd>F</kbd>';
     var root = document.documentElement;
     try {
-      if (on && !realFullscreen()) {
+      if (on && !realFullscreen() && !appleTouch) {
         var ask = root.requestFullscreen || root.webkitRequestFullscreen;
         if (ask) { var asked = ask.call(root); if (asked && asked.catch) asked.catch(function () {}); }
       } else if (!on && realFullscreen()) {
