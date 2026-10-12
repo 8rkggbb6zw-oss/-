@@ -2364,9 +2364,10 @@ EVERDAWN_PARTS.push(function (THREE) {
         var sh = g.createLinearGradient(0, Y(6), 0, Y(-6)); sh.addColorStop(0, 'rgba(150,90,70,0.35)'); sh.addColorStop(1, 'rgba(150,90,70,0)'); g.fillStyle = sh; g.fillRect(0, Y(6), 2048, Y(-6) - Y(6));   // (soft shade beneath her bangs)
         [-1, 1].forEach(function (s) {
           var bx = X(s * 33), by = Y(-33), bl = g.createRadialGradient(bx, by, 4, bx, by, 84);   // (big, soft salmon blush low on her cheeks)
-          bl.addColorStop(0, 'rgba(236,132,104,0.62)'); bl.addColorStop(0.55, 'rgba(238,142,114,0.3)'); bl.addColorStop(1, 'rgba(238,142,114,0)');
+          bl.addColorStop(0, 'rgba(246,124,124,0.65)'); bl.addColorStop(0.55, 'rgba(246,136,136,0.32)'); bl.addColorStop(1, 'rgba(246,136,136,0)');
           g.fillStyle = bl; g.beginPath(); g.ellipse(bx, by, 88, 58, 0, 0, Math.PI * 2); g.fill();
-          var cx = X(s * 21), cy = Y(-15), rx = 70, ry = 66, tilt = s * 0.12;
+          g.strokeStyle = 'rgba(226,96,100,0.55)'; g.lineWidth = 3; g.lineCap = 'round'; for (var bk = 0; bk < 3; bk++) { var lx = bx - 22 + bk * 20; g.beginPath(); g.moveTo(lx + 8, by - 10); g.lineTo(lx - 2, by + 10); g.stroke(); }   // (with little blush lines)
+          var cx = X(s * 21.5), cy = Y(-17), rx = 76, ry = 80, tilt = s * 0.06;
           if (closed) {                                                    // (happily closed)
             g.strokeStyle = '#3a2016'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 64, cy + 4); g.quadraticCurveTo(cx, cy - 30, cx + 64, cy + 4); g.stroke();
             return;
@@ -2382,23 +2383,23 @@ EVERDAWN_PARTS.push(function (THREE) {
             g.save(); g.translate(f[0], f[1]); g.scale(f[2], f[3]); var fg = g.createRadialGradient(0, 0.2, 0, 0, 0.2, 1); fg.addColorStop(0, 'rgba(250,255,220,' + f[4] + ')'); fg.addColorStop(0.5, 'rgba(240,252,190,' + (f[4] * 0.5) + ')'); fg.addColorStop(1, 'rgba(240,252,190,0)');
             g.fillStyle = fg; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); g.restore(); });
           var pu = g.createRadialGradient(0, -4, 2, 0, -4, rx * 0.36); pu.addColorStop(0, 'rgba(14,22,6,0.95)'); pu.addColorStop(0.75, 'rgba(18,30,8,0.85)'); pu.addColorStop(1, 'rgba(18,30,8,0)');   // (a soft dark pupil...)
-          g.fillStyle = pu; g.beginPath(); g.ellipse(0, -4, rx * 0.34, ry * 0.42, 0, 0, Math.PI * 2); g.fill();
-          g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.ellipse(-rx * 0.3, -ry * 0.32, 15, 17, -0.4, 0, Math.PI * 2); g.fill();   // (...and sparkles: a big round one...)
+          g.fillStyle = pu; g.beginPath(); g.ellipse(0, -2, rx * 0.4, ry * 0.46, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(255,255,255,0.97)'; g.beginPath(); g.ellipse(-rx * 0.28, -ry * 0.3, 22, 25, -0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(rx * 0.32, ry * 0.32, 10, 0, Math.PI * 2); g.fill();   // (...and sparkles: a big round one...)
           function sparkle(x, y, r, a) { g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.beginPath(); for (var q = 0; q < 8; q++) { var qa = q / 8 * Math.PI * 2 - Math.PI / 2, qr = q % 2 ? r * 0.28 : r; g.lineTo(x + Math.cos(qa) * qr, y + Math.sin(qa) * qr); } g.closePath(); g.fill(); }
-          sparkle(rx * 0.3, -ry * 0.12, 13, 0.9);                         // (...a little star...)
-          g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(rx * 0.18, ry * 0.3, 5, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(-rx * 0.08, -ry * 0.1, 3, 0, Math.PI * 2); g.fill();   // (...and tiny glints)
+          sparkle(rx * 0.32, -ry * 0.16, 16, 0.95);                         // (...a little star...)
+          g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(-rx * 0.08, -ry * 0.1, 3, 0, Math.PI * 2); g.fill();   // (...and tiny glints)
           sparkle(-rx * 0.42, ry * 0.36, 7, 0.6);
           g.restore();
           g.strokeStyle = '#3a2016'; g.lineWidth = 7; eyeShape(); g.stroke();   // (a fine dark-brown line round it, a little heavier at the top)
           g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.12 * Math.PI, 1.88 * Math.PI); g.stroke();
-          g.strokeStyle = '#3a2016'; g.lineWidth = 3;                     // (a few fine little lashes at its outer corner)
-          for (var k = 0; k < 5; k++) { var a = (s > 0 ? -0.15 - k * 0.13 : Math.PI + 0.15 + k * 0.13), px = Math.cos(a) * rx, py = Math.sin(a) * ry; g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * 14, py + Math.sin(a) * 14 - 2); g.stroke(); }
+          g.strokeStyle = '#3a2016'; g.lineCap = 'round';                // (a few little lashes flicking out at its outer corner)
+          for (var k = 0; k < 3; k++) { var a = (s > 0 ? -0.22 - k * 0.22 : Math.PI + 0.22 + k * 0.22), px = Math.cos(a) * rx, py = Math.sin(a) * ry; g.lineWidth = 6 - k; g.beginPath(); g.moveTo(px, py); g.quadraticCurveTo(px + Math.cos(a) * 12, py + Math.sin(a) * 12, px + Math.cos(a - s * 0.4) * 22, py + Math.sin(a - s * 0.4) * 22); g.stroke(); }
           g.restore();
         });
         var nz = g.createRadialGradient(X(0.6), Y(-26), 1, X(0.6), Y(-26), 11); nz.addColorStop(0, 'rgba(200,128,104,0.7)'); nz.addColorStop(1, 'rgba(200,128,104,0)'); g.fillStyle = nz; g.beginPath(); g.ellipse(X(0.6), Y(-26), 12, 9, 0, 0, Math.PI * 2); g.fill();   // (a small, soft nose...)
         g.fillStyle = 'rgba(255,238,224,0.7)'; g.beginPath(); g.ellipse(X(-0.4), Y(-25.2), 4, 3, 0, 0, Math.PI * 2); g.fill();   // (...catching the light)
-        g.strokeStyle = '#6a3a2a'; g.lineWidth = 3.5; g.lineCap = 'round'; g.lineJoin = 'round';   // (a thin, wavy little mouth)
-        g.beginPath(); g.moveTo(X(-6.5), Y(-33.5)); g.quadraticCurveTo(X(-4.8), Y(-35.8), X(-3), Y(-34)); g.quadraticCurveTo(X(-1), Y(-32), X(1), Y(-34)); g.quadraticCurveTo(X(3), Y(-36), X(5), Y(-34)); g.quadraticCurveTo(X(6), Y(-33), X(6.8), Y(-32.6)); g.stroke();
+        g.strokeStyle = '#6a3a2a'; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';   // (a tiny, sweet cat smile)
+        g.beginPath(); g.moveTo(X(-4.2), Y(-33)); g.quadraticCurveTo(X(-2.1), Y(-36), X(0), Y(-33.6)); g.quadraticCurveTo(X(2.1), Y(-36), X(4.2), Y(-33)); g.stroke();
       });
     }
     var faceOpen = face(false), faceShut = face(true), mFace = toon(0xffffff, { map: faceOpen, emissive: 0xffffff, emissiveMap: faceOpen, emissiveIntensity: 0.16 });   // (softly, evenly lit, like a drawing)
