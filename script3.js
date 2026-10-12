@@ -2382,13 +2382,13 @@ EVERDAWN_PARTS.push(function (THREE) {
           [[-16, 30, 10, 26, 0.6], [6, 24, 9, 32, 0.8], [25, 32, 7, 20, 0.5]].forEach(function (f) {   // (soft, glowing gleams rising from below)
             g.save(); g.translate(f[0], f[1]); g.scale(f[2], f[3]); var fg = g.createRadialGradient(0, 0.2, 0, 0, 0.2, 1); fg.addColorStop(0, 'rgba(250,255,220,' + f[4] + ')'); fg.addColorStop(0.5, 'rgba(240,252,190,' + (f[4] * 0.5) + ')'); fg.addColorStop(1, 'rgba(240,252,190,0)');
             g.fillStyle = fg; g.beginPath(); g.arc(0, 0, 1, 0, Math.PI * 2); g.fill(); g.restore(); });
-          var pu = g.createRadialGradient(0, -4, 2, 0, -4, rx * 0.36); pu.addColorStop(0, 'rgba(14,22,6,0.95)'); pu.addColorStop(0.75, 'rgba(18,30,8,0.85)'); pu.addColorStop(1, 'rgba(18,30,8,0)');   // (a soft dark pupil...)
-          g.fillStyle = pu; g.beginPath(); g.ellipse(0, -2, rx * 0.4, ry * 0.46, 0, 0, Math.PI * 2); g.fill();
-          g.fillStyle = 'rgba(255,255,255,0.97)'; g.beginPath(); g.ellipse(-rx * 0.28, -ry * 0.3, 22, 25, -0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(rx * 0.32, ry * 0.32, 10, 0, Math.PI * 2); g.fill();   // (...and sparkles: a big round one...)
+          var pu = g.createRadialGradient(0, -2, 2, 0, -2, rx * 0.56); pu.addColorStop(0, 'rgba(14,22,6,0.95)'); pu.addColorStop(0.75, 'rgba(18,30,8,0.85)'); pu.addColorStop(1, 'rgba(18,30,8,0)');   // (a soft dark pupil...)
+          g.fillStyle = pu; g.beginPath(); g.ellipse(0, -2, rx * 0.56, ry * 0.62, 0, 0, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(255,255,255,0.97)'; g.beginPath(); g.ellipse(-rx * 0.26, -ry * 0.28, 16, 18, -0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(rx * 0.3, ry * 0.3, 7, 0, Math.PI * 2); g.fill();   // (...and sparkles: a big round one...)
           function sparkle(x, y, r, a) { g.fillStyle = 'rgba(255,255,255,' + a + ')'; g.beginPath(); for (var q = 0; q < 8; q++) { var qa = q / 8 * Math.PI * 2 - Math.PI / 2, qr = q % 2 ? r * 0.28 : r; g.lineTo(x + Math.cos(qa) * qr, y + Math.sin(qa) * qr); } g.closePath(); g.fill(); }
-          sparkle(rx * 0.32, -ry * 0.16, 16, 0.95);                         // (...a little star...)
+          sparkle(rx * 0.3, -ry * 0.16, 11, 0.95);                         // (...a little star...)
           g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(-rx * 0.08, -ry * 0.1, 3, 0, Math.PI * 2); g.fill();   // (...and tiny glints)
-          sparkle(-rx * 0.42, ry * 0.36, 7, 0.6);
+          sparkle(-rx * 0.4, ry * 0.36, 5, 0.6);
           g.restore();
           g.strokeStyle = '#3a2016'; g.lineWidth = 7; eyeShape(); g.stroke();   // (a fine dark-brown line round it, a little heavier at the top)
           g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.12 * Math.PI, 1.88 * Math.PI); g.stroke();
