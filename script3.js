@@ -2363,37 +2363,41 @@ EVERDAWN_PARTS.push(function (THREE) {
         function X(l) { return 512 + l * 2048 / 360; } function Y(p) { return 512 - p * 1024 / 180; }
         var sh = g.createLinearGradient(0, Y(6), 0, Y(-6)); sh.addColorStop(0, 'rgba(150,86,70,0.45)'); sh.addColorStop(1, 'rgba(150,86,70,0)'); g.fillStyle = sh; g.fillRect(0, Y(6), 2048, Y(-6) - Y(6));   // (soft shade beneath her bangs)
         [-1, 1].forEach(function (s) {
-          var bx = X(s * 34), by = Y(-31), bl = g.createRadialGradient(bx, by, 4, bx, by, 80);   // (soft peachy blush beneath her eyes)
-          bl.addColorStop(0, 'rgba(238,128,110,0.6)'); bl.addColorStop(0.55, 'rgba(240,140,120,0.3)'); bl.addColorStop(1, 'rgba(240,140,120,0)');
-          g.fillStyle = bl; g.beginPath(); g.ellipse(bx, by, 86, 54, 0, 0, Math.PI * 2); g.fill();
-          var cx = X(s * 21), cy = Y(-14), rx = 74, ry = 80;
+          var bx = X(s * 33), by = Y(-29), bl = g.createRadialGradient(bx, by, 4, bx, by, 64);   // (round pink blush beneath her eyes)
+          bl.addColorStop(0, 'rgba(240,112,112,0.75)'); bl.addColorStop(0.55, 'rgba(240,120,120,0.4)'); bl.addColorStop(1, 'rgba(240,120,120,0)');
+          g.fillStyle = bl; g.beginPath(); g.ellipse(bx, by, 70, 46, 0, 0, Math.PI * 2); g.fill();
+          var cx = X(s * 20.5), cy = Y(-13), rx = 66, ry = 94;
           if (closed) {                                                    // (happily closed, with her lashes still flicking out)
             g.strokeStyle = '#1a0e0e'; g.lineWidth = 13; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 70, cy + 6); g.quadraticCurveTo(cx, cy - 34, cx + 70, cy + 6); g.stroke();
             g.fillStyle = '#1a0e0e'; g.beginPath(); g.moveTo(cx + s * 60, cy - 4); g.lineTo(cx + s * 100, cy - 22); g.lineTo(cx + s * 72, cy + 10); g.closePath(); g.fill();
             return;
           }
-          var lid = g.createRadialGradient(cx, cy - ry * 0.7, 6, cx, cy - ry * 0.7, rx * 1.35); lid.addColorStop(0, 'rgba(150,96,90,0.42)'); lid.addColorStop(1, 'rgba(150,96,90,0)'); g.fillStyle = lid; g.beginPath(); g.ellipse(cx, cy - ry * 0.7, rx * 1.35, ry * 0.5, 0, 0, Math.PI * 2); g.fill();   // (a soft smoky shadow above it)
-          function eyeShape() { g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); }   // (a big round eye)
+          var lid = g.createRadialGradient(cx, cy - ry * 0.75, 6, cx, cy - ry * 0.75, rx * 1.3); lid.addColorStop(0, 'rgba(176,120,150,0.45)'); lid.addColorStop(1, 'rgba(176,120,150,0)'); g.fillStyle = lid; g.beginPath(); g.ellipse(cx, cy - ry * 0.75, rx * 1.3, ry * 0.45, 0, 0, Math.PI * 2); g.fill();   // (a soft lilac tint on her lids)
+          g.strokeStyle = 'rgba(120,60,50,0.55)'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - rx * 0.7, cy - ry * 1.02); g.quadraticCurveTo(cx, cy - ry * 1.28, cx + rx * 0.85, cy - ry * 1.0); g.stroke();   // (the fine crease above it)
+          function eyeShape() { g.beginPath(); g.moveTo(cx - rx, cy - 10); g.bezierCurveTo(cx - rx, cy - ry * 0.95, cx + rx, cy - ry * 0.95, cx + rx, cy - 10); g.bezierCurveTo(cx + rx, cy + ry * 1.05, cx - rx, cy + ry * 1.05, cx - rx, cy - 10); g.closePath(); }
           eyeShape(); g.fillStyle = '#fbf6f0'; g.fill();
           g.save(); eyeShape(); g.clip();
-          var ix = cx + s * 2, iy = cy + 4, ir = g.createRadialGradient(ix, iy + ry * 0.35, 6, ix, iy, rx * 0.95);   // (an iris filling nearly all of it, glowing yellow-green throughout...)
-          ir.addColorStop(0, '#eefa9c'); ir.addColorStop(0.35, '#b8e05a'); ir.addColorStop(0.7, '#78a832'); ir.addColorStop(0.92, '#3e6a1a'); ir.addColorStop(1, '#22400c');
-          g.fillStyle = ir; g.beginPath(); g.ellipse(ix, iy, rx * 0.93, ry * 0.93, 0, 0, Math.PI * 2); g.fill();
-          var pp = g.createRadialGradient(ix, iy - 4, 2, ix, iy - 4, rx * 0.42); pp.addColorStop(0, 'rgba(20,40,8,0.85)'); pp.addColorStop(0.6, 'rgba(30,56,12,0.55)'); pp.addColorStop(1, 'rgba(30,56,12,0)'); g.fillStyle = pp; g.beginPath(); g.arc(ix, iy - 4, rx * 0.42, 0, Math.PI * 2); g.fill();   // (...with a soft dark centre)
-          var tp = g.createLinearGradient(0, cy - ry, 0, cy - ry * 0.25); tp.addColorStop(0, 'rgba(16,10,6,0.8)'); tp.addColorStop(1, 'rgba(16,10,6,0)'); g.fillStyle = tp; g.fillRect(cx - rx, cy - ry, rx * 2, ry * 0.75);   // (the shadow of her lashes)
-          g.strokeStyle = '#1e3a0c'; g.lineWidth = 5; g.beginPath(); g.ellipse(ix, iy, rx * 0.93, ry * 0.93, 0, 0, Math.PI * 2); g.stroke();
-          g.fillStyle = '#ffffff';                                         // (a bright star-shaped sparkle...)
-          var gx = cx - s * 8, gy = cy - 8; g.beginPath(); for (var q = 0; q < 8; q++) { var qa = q / 8 * Math.PI * 2 - Math.PI / 2, qr = q % 2 ? 6 : 17; g.lineTo(gx + Math.cos(qa) * qr, gy + Math.sin(qa) * qr * 1.2); } g.closePath(); g.globalAlpha = 0.85; g.fill(); var sg = g.createRadialGradient(gx, gy, 2, gx, gy, 30); sg.addColorStop(0, 'rgba(255,255,230,0.6)'); sg.addColorStop(1, 'rgba(255,255,230,0)'); g.fillStyle = sg; g.beginPath(); g.arc(gx, gy, 30, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; g.fillStyle = '#ffffff';
-          g.globalAlpha = 0.9; g.beginPath(); g.ellipse(cx - 30, cy - 36, 15, 18, -0.4, 0, Math.PI * 2); g.fill();   // (...and glossy highlights)
-          g.globalAlpha = 0.75; g.beginPath(); g.arc(cx + 30, cy + 36, 8, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+          var ix = cx + s * 3, iy = cy + 6, ir = g.createLinearGradient(0, iy - ry, 0, iy + ry * 0.9);   // (a huge iris: dark at the top, glowing yellow-green at the bottom)
+          ir.addColorStop(0, '#142608'); ir.addColorStop(0.3, '#2e5214'); ir.addColorStop(0.6, '#6a9a2a'); ir.addColorStop(0.85, '#b8dc52'); ir.addColorStop(1, '#e8fa98');
+          g.fillStyle = ir; g.beginPath(); g.ellipse(ix, iy, rx * 0.93, ry * 0.97, 0, 0, Math.PI * 2); g.fill();
+          var gl = g.createRadialGradient(ix, iy + ry * 0.55, 4, ix, iy + ry * 0.55, rx * 0.7); gl.addColorStop(0, 'rgba(240,255,170,0.75)'); gl.addColorStop(1, 'rgba(240,255,170,0)'); g.fillStyle = gl; g.fillRect(ix - rx, iy, rx * 2, ry);   // (the glow in its lower half)
+          var pp = g.createRadialGradient(ix, iy - 6, 4, ix, iy - 6, 40); pp.addColorStop(0, 'rgba(10,20,4,0.95)'); pp.addColorStop(0.7, 'rgba(10,20,4,0.85)'); pp.addColorStop(1, 'rgba(10,20,4,0)'); g.fillStyle = pp; g.beginPath(); g.ellipse(ix, iy - 6, 36, 46, 0, 0, Math.PI * 2); g.fill();   // (a big, soft pupil)
+          var tp = g.createLinearGradient(0, cy - ry, 0, cy - ry * 0.2); tp.addColorStop(0, 'rgba(12,8,6,0.85)'); tp.addColorStop(1, 'rgba(12,8,6,0)'); g.fillStyle = tp; g.fillRect(cx - rx, cy - ry, rx * 2, ry * 0.8);   // (the shadow of her lashes)
+          g.strokeStyle = '#0e1a06'; g.lineWidth = 5; g.beginPath(); g.ellipse(ix, iy, rx * 0.93, ry * 0.97, 0, 0, Math.PI * 2); g.stroke();
+          g.strokeStyle = 'rgba(230,255,170,0.55)'; g.lineWidth = 3; for (var sp = 0; sp < 5; sp++) { var sa = 0.35 * Math.PI + sp * 0.07 * Math.PI; g.beginPath(); g.moveTo(ix + Math.cos(sa) * rx * 0.45, iy + Math.sin(sa) * ry * 0.5); g.lineTo(ix + Math.cos(sa) * rx * 0.8, iy + Math.sin(sa) * ry * 0.85); g.stroke(); }   // (fine bright streaks in its glow)
+          g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(cx - 20, cy - 28, 24, 30, -0.3, 0, Math.PI * 2); g.fill();   // (glossy highlights)
+          g.beginPath(); g.ellipse(cx + 26, cy + 38, 12, 10, 0, 0, Math.PI * 2); g.fill();
+          g.globalAlpha = 0.7; g.beginPath(); g.arc(cx + 10, cy - 50, 7, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
           g.restore();
-          g.strokeStyle = '#1c100c'; g.lineWidth = 8; eyeShape(); g.stroke();   // (a dark line all round it...)
-          g.lineWidth = 15; g.lineCap = 'round'; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 1.08 * Math.PI, 1.92 * Math.PI); g.stroke();   // (...heaviest along the top)
-          g.fillStyle = '#1c100c'; var ox = cx + s * rx * 0.94, oy = cy - ry * 0.34;   // (two little lashes flicking out at the corner)
-          [[0, 30, -22], [16, 32, -2]].forEach(function (l) { g.beginPath(); g.moveTo(ox - s * 6, oy + l[0] - 6); g.quadraticCurveTo(ox + s * l[1] * 0.6, oy + l[0] - 8, ox + s * l[1], oy + l[0] + l[2]); g.lineTo(ox - s * 4, oy + l[0] + 8); g.closePath(); g.fill(); });
+          g.strokeStyle = '#3a1e18'; g.lineWidth = 5; g.beginPath(); g.ellipse(cx, cy - 6, rx, ry * 0.98, 0, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();   // (a thin line round its bottom)
+          g.strokeStyle = '#2a1410'; g.lineWidth = 4; [0.2, 0.32].forEach(function (f) { var a = Math.PI * (s > 0 ? f : 1 - f), px = cx + Math.cos(a) * rx, py = cy - 6 + Math.sin(a) * ry * 0.98; g.beginPath(); g.moveTo(px, py); g.lineTo(px + s * 12, py + 12); g.stroke(); });   // (short lower lashes at the outer corner)
+          g.fillStyle = '#140a0a'; g.beginPath();                          // (a heavy black upper lash line...)
+          g.moveTo(cx - rx - 6, cy - 4); g.bezierCurveTo(cx - rx, cy - ry * 1.1, cx + rx, cy - ry * 1.1, cx + rx + 6, cy - 4);
+          g.bezierCurveTo(cx + rx - 10, cy - ry * 0.78, cx - rx + 10, cy - ry * 0.78, cx - rx - 6, cy - 4); g.closePath(); g.fill();
+          var ox = cx + s * (rx - 4);                                     // (...flicking out at the corner in a few thick lashes)
+          [[-50, 36, -72], [-30, 40, -44]].forEach(function (l) { g.beginPath(); g.moveTo(ox, cy + l[0] - 2); g.quadraticCurveTo(ox + s * l[1] * 0.6, cy + l[0] - 6, ox + s * l[1], cy + l[2]); g.lineTo(ox, cy + l[0] + 12); g.closePath(); g.fill(); });
         });
-        var nz = g.createRadialGradient(X(0), Y(-25), 1, X(0), Y(-25), 12); nz.addColorStop(0, 'rgba(206,128,108,0.85)'); nz.addColorStop(0.6, 'rgba(214,140,118,0.45)'); nz.addColorStop(1, 'rgba(214,140,118,0)'); g.fillStyle = nz; g.beginPath(); g.ellipse(X(0), Y(-25), 13, 10, 0, 0, Math.PI * 2); g.fill();   // (a little button nose...)
-        g.fillStyle = 'rgba(255,240,230,0.8)'; g.beginPath(); g.arc(X(-0.6), Y(-24), 2.5, 0, Math.PI * 2); g.fill();   // (...catching the light)
+        g.fillStyle = '#d0907c'; g.beginPath(); g.ellipse(X(0), Y(-24), 5, 3.5, 0, 0, Math.PI * 2); g.fill();   // (a tiny nose)
         g.strokeStyle = '#5a2a22'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round';   // (a little "ω" cat mouth)
         g.beginPath(); g.moveTo(X(-5.5), Y(-30.5)); g.quadraticCurveTo(X(-2.8), Y(-34.5), X(0), Y(-31)); g.quadraticCurveTo(X(2.8), Y(-34.5), X(5.5), Y(-30.5)); g.stroke();
       });
