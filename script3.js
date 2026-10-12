@@ -2367,7 +2367,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           bl.addColorStop(0, 'rgba(246,124,124,0.65)'); bl.addColorStop(0.55, 'rgba(246,136,136,0.32)'); bl.addColorStop(1, 'rgba(246,136,136,0)');
           g.fillStyle = bl; g.beginPath(); g.ellipse(bx, by, 88, 58, 0, 0, Math.PI * 2); g.fill();
           g.strokeStyle = 'rgba(226,96,100,0.55)'; g.lineWidth = 3; g.lineCap = 'round'; for (var bk = 0; bk < 3; bk++) { var lx = bx - 22 + bk * 20; g.beginPath(); g.moveTo(lx + 8, by - 10); g.lineTo(lx - 2, by + 10); g.stroke(); }   // (with little blush lines)
-          var cx = X(s * 21.5), cy = Y(-17), rx = 76, ry = 80, tilt = s * 0.06;
+          var cx = X(s * 21.5), cy = Y(-17), rx = 79, ry = 79, tilt = 0;   // (perfectly round)
           if (closed) {                                                    // (happily closed)
             g.strokeStyle = '#3a2016'; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx - 64, cy + 4); g.quadraticCurveTo(cx, cy - 30, cx + 64, cy + 4); g.stroke();
             return;
@@ -2376,15 +2376,15 @@ EVERDAWN_PARTS.push(function (THREE) {
           function eyeShape() { g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); }   // (a wide, rounded eye...)
           g.save(); eyeShape(); g.clip();
           g.fillStyle = '#b4d45c'; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (...the iris: bright yellow-green below...)
-          var lo = g.createRadialGradient(-rx * 0.1, ry * 0.5, 4, -rx * 0.1, ry * 0.45, rx * 0.85); lo.addColorStop(0, 'rgba(232,244,170,0.95)'); lo.addColorStop(1, 'rgba(232,244,170,0)'); g.fillStyle = lo; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+          var lo = g.createRadialGradient(0, ry * 0.35, 4, 0, ry * 0.1, rx * 0.95); lo.addColorStop(0, 'rgba(232,244,170,0.95)'); lo.addColorStop(1, 'rgba(232,244,170,0)'); g.fillStyle = lo; g.fillRect(-rx, -ry, rx * 2, ry * 2);
           function rr(n) { var v = Math.sin(n * 91.7 + s * 13.1) * 43758.5453; return v - Math.floor(v); }
           for (var m = 0; m < 40; m++) {                                  // (mottled light and shadow through its glow)
             var mx = (rr(m) - 0.5) * 1.8 * rx, my = (0.05 + rr(m + 50) * 0.95) * ry, mr = 5 + rr(m + 99) * 11, lt = rr(m + 7) > 0.45;
             var mg = g.createRadialGradient(mx, my, 0, mx, my, mr); mg.addColorStop(0, lt ? 'rgba(246,252,206,0.55)' : 'rgba(120,152,52,0.45)'); mg.addColorStop(1, lt ? 'rgba(246,252,206,0)' : 'rgba(120,152,52,0)');
             g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
           }
-          var rim = g.createRadialGradient(0, -ry * 0.1, rx * 0.72, 0, -ry * 0.1, rx * 1.1); rim.addColorStop(0, 'rgba(70,104,30,0)'); rim.addColorStop(1, 'rgba(70,104,30,0.7)'); g.fillStyle = rim; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (deepening to darker green round its edge)
-          var P = [[-1.05, 0.22], [-0.78, 0.06], [-0.6, 0.18], [-0.42, -0.1], [-0.26, 0.02], [-0.12, -0.2], [0.02, 0.04], [0.2, -0.06], [0.36, 0.12], [0.55, -0.02], [0.76, 0.14], [1.05, 0.06]];
+          var rim = g.createRadialGradient(0, 0, rx * 0.68, 0, 0, rx); rim.addColorStop(0, 'rgba(70,104,30,0)'); rim.addColorStop(1, 'rgba(70,104,30,0.7)'); g.fillStyle = rim; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (deepening to darker green round its edge)
+          var P = [[-1.05, 0.22], [-0.78, 0.06], [-0.6, 0.18], [-0.42, -0.1], [-0.26, 0.02], [-0.12, -0.2], [0.02, 0.04], [0.2, -0.06], [0.36, 0.12], [0.55, -0.02], [0.76, 0.14], [1.05, 0.06]].map(function (q) { return [q[0], q[1] - 0.12 + 0.5 * q[0] * q[0]]; });   // (the edge curving round with the eye, like a dome)
           function dark(grow) {                                          // (...and muted dark grey-green above, the bright part rising into it in soft, uneven peaks)
             g.beginPath(); g.moveTo(-rx * 1.1, -ry * 1.1); g.lineTo(rx * 1.1, -ry * 1.1); g.lineTo(P[P.length - 1][0] * rx, P[P.length - 1][1] * ry + grow);
             for (var p = P.length - 1; p > 0; p--) { var pa = P[p], pb = P[p - 1]; g.quadraticCurveTo(pa[0] * rx, pa[1] * ry + grow, (pa[0] + pb[0]) / 2 * rx, (pa[1] + pb[1]) / 2 * ry + grow); }
