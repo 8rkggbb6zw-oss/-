@@ -2384,7 +2384,7 @@ EVERDAWN_PARTS.push(function (THREE) {
             g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
           }
           var rim = g.createRadialGradient(0, 0, rx * 0.68, 0, 0, rx); rim.addColorStop(0, 'rgba(70,104,30,0)'); rim.addColorStop(1, 'rgba(70,104,30,0.7)'); g.fillStyle = rim; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (deepening to darker green round its edge)
-          var P = [[-1.05, 0.22], [-0.78, 0.06], [-0.6, 0.18], [-0.42, -0.1], [-0.26, 0.02], [-0.12, -0.2], [0.02, 0.04], [0.2, -0.06], [0.36, 0.12], [0.55, -0.02], [0.76, 0.14], [1.05, 0.06]].map(function (q) { return [q[0], q[1] - 0.12 + 0.5 * q[0] * q[0]]; });   // (the edge curving round with the eye, like a dome)
+          var P = [[-1.05, 0.22], [-0.78, 0.06], [-0.6, 0.18], [-0.42, -0.1], [-0.26, 0.02], [-0.12, -0.2], [0.02, 0.04], [0.2, -0.06], [0.36, 0.12], [0.55, -0.02], [0.76, 0.14], [1.05, 0.06]].map(function (q) { return [q[0], q[1] + 0.28 - 0.5 * q[0] * q[0]]; });   // (the edge curving round with the eye, dipping in the middle like a bowl)
           function dark(grow) {                                          // (...and muted dark grey-green above, the bright part rising into it in soft, uneven peaks)
             g.beginPath(); g.moveTo(-rx * 1.1, -ry * 1.1); g.lineTo(rx * 1.1, -ry * 1.1); g.lineTo(P[P.length - 1][0] * rx, P[P.length - 1][1] * ry + grow);
             for (var p = P.length - 1; p > 0; p--) { var pa = P[p], pb = P[p - 1]; g.quadraticCurveTo(pa[0] * rx, pa[1] * ry + grow, (pa[0] + pb[0]) / 2 * rx, (pa[1] + pb[1]) / 2 * ry + grow); }
