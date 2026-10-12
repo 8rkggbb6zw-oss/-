@@ -2375,26 +2375,37 @@ EVERDAWN_PARTS.push(function (THREE) {
           g.save(); g.translate(cx, cy); g.rotate(tilt);
           function eyeShape() { g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); }   // (a wide, rounded eye...)
           g.save(); eyeShape(); g.clip();
-          function rr(n) { var v = Math.sin(n * 91.7 + s * 13.1) * 43758.5453; return v - Math.floor(v); }
-          function blob(x, y, r, col, a) { var bg = g.createRadialGradient(x, y, 0, x, y, r); bg.addColorStop(0, 'rgba(' + col + ',' + a + ')'); bg.addColorStop(0.55, 'rgba(' + col + ',' + (a * 0.6) + ')'); bg.addColorStop(1, 'rgba(' + col + ',0)'); g.fillStyle = bg; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
-          var base = g.createLinearGradient(0, -ry * 0.1, 0, ry); base.addColorStop(0, '#9cc04a'); base.addColorStop(0.35, '#d0ec7a'); base.addColorStop(1, '#f2fcc0');   // (...the iris: pale, glowing yellow-green below, lightest at the bottom...)
-          g.fillStyle = base; g.fillRect(-rx, -ry, rx * 2, ry * 2);
-          for (var m = 0; m < 34; m++) { var mx = (rr(m) - 0.5) * 1.7 * rx, my = (0.15 + rr(m + 50) * 0.8) * ry, lt = rr(m + 7) > 0.4; blob(mx, my, 7 + rr(m + 99) * 13, lt ? '248,255,214' : '150,190,70', lt ? 0.55 : 0.3); }   // (softly mottled with light and shade)
-          // (...and a smooth, dark grey-brown above, its lower edge soft and cloudy, rising and falling in rounded bumps of different sizes)
-          var B = []; for (var q = 0; q <= 26; q++) { var u = q / 26 * 2 - 1; B.push([u * rx * 1.05, (0.12 - 0.42 * u * u + 0.08 * u + (rr(q + 200) - 0.5) * 0.16 + Math.max(0, Math.sin(q * 1.7 + s)) * -0.08) * ry]); }
-          function dark(grow, lift) {
-            g.beginPath(); g.moveTo(-rx * 1.1, -ry * 1.1); g.lineTo(rx * 1.1, -ry * 1.1); g.lineTo(B[B.length - 1][0], B[B.length - 1][1] + grow);
-            for (var p = B.length - 1; p > 0; p--) { var pa = B[p], pb = B[p - 1]; g.quadraticCurveTo(pa[0], pa[1] + grow - (lift || 0), (pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 + grow); }
-            g.lineTo(B[0][0], B[0][1] + grow); g.closePath();
+          function paintIris(g) {                                        // (the iris, painted on its own and then softly blended)
+            function rr(n) { var v = Math.sin(n * 91.7 + s * 13.1) * 43758.5453; return v - Math.floor(v); }
+            function blob(x, y, r, col, a) { var bg = g.createRadialGradient(x, y, 0, x, y, r); bg.addColorStop(0, 'rgba(' + col + ',' + a + ')'); bg.addColorStop(0.55, 'rgba(' + col + ',' + (a * 0.6) + ')'); bg.addColorStop(1, 'rgba(' + col + ',0)'); g.fillStyle = bg; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+            var base = g.createLinearGradient(0, -ry * 0.1, 0, ry); base.addColorStop(0, '#9cc04a'); base.addColorStop(0.35, '#d0ec7a'); base.addColorStop(1, '#f2fcc0');   // (...the iris: pale, glowing yellow-green below, lightest at the bottom...)
+            g.fillStyle = base; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+            for (var m = 0; m < 34; m++) { var mx = (rr(m) - 0.5) * 1.7 * rx, my = (0.15 + rr(m + 50) * 0.8) * ry, lt = rr(m + 7) > 0.4; blob(mx, my, 7 + rr(m + 99) * 13, lt ? '248,255,214' : '150,190,70', lt ? 0.55 : 0.3); }   // (softly mottled with light and shade)
+            // (...and a smooth, dark grey-brown above, its lower edge soft and cloudy, rising and falling in rounded bumps of different sizes)
+            var B = []; for (var q = 0; q <= 26; q++) { var u = q / 26 * 2 - 1; B.push([u * rx * 1.05, (0.12 - 0.42 * u * u + 0.08 * u + (rr(q + 200) - 0.5) * 0.16 + Math.max(0, Math.sin(q * 1.7 + s)) * -0.08) * ry]); }
+            function dark(grow, lift) {
+              g.beginPath(); g.moveTo(-rx * 1.1, -ry * 1.1); g.lineTo(rx * 1.1, -ry * 1.1); g.lineTo(B[B.length - 1][0], B[B.length - 1][1] + grow);
+              for (var p = B.length - 1; p > 0; p--) { var pa = B[p], pb = B[p - 1]; g.quadraticCurveTo(pa[0], pa[1] + grow - (lift || 0), (pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 + grow); }
+              g.lineTo(B[0][0], B[0][1] + grow); g.closePath();
+            }
+            [[16, 0.07], [12, 0.1], [8, 0.14], [5, 0.2], [2, 0.3]].forEach(function (f) { g.fillStyle = 'rgba(60,62,46,' + f[1] + ')'; dark(f[0]); g.fill(); });   // (its edge melting softly into the glow)
+            var dg = g.createLinearGradient(0, -ry, 0, ry * 0.3); dg.addColorStop(0, '#231c18'); dg.addColorStop(0.5, '#332c26'); dg.addColorStop(1, '#40402e'); g.fillStyle = dg; dark(0); g.fill();
+            g.save(); dark(0); g.clip(); blob(rx * 0.05, -ry * 0.3, rx * 0.65, '82,76,66', 0.35); blob(-rx * 0.35, ry * 0.05, rx * 0.25, '70,92,56', 0.35); blob(rx * 0.4, ry * 0.02, rx * 0.22, '70,92,56', 0.3); g.restore();   // (a little lighter in its middle, tinged green where it meets the glow)
+            var tip = [-rx * 0.18, -ry * 0.12];                             // (one tall, soft peak of white light rising from the glow, with a rounded shoulder beside it)
+            blob(tip[0], tip[1] + ry * 0.3, rx * 0.42, '240,252,196', 0.5);
+            g.fillStyle = 'rgba(248,255,222,0.8)'; g.beginPath(); g.moveTo(tip[0] - rx * 0.22, ry * 0.5); g.bezierCurveTo(tip[0] - rx * 0.2, ry * 0.15, tip[0] - rx * 0.08, tip[1] + ry * 0.02, tip[0], tip[1]); g.bezierCurveTo(tip[0] + rx * 0.05, tip[1] + ry * 0.05, tip[0] + rx * 0.08, ry * 0.0, tip[0] + rx * 0.14, ry * 0.02);
+            g.bezierCurveTo(tip[0] + rx * 0.2, -ry * 0.04, tip[0] + rx * 0.27, ry * 0.02, tip[0] + rx * 0.3, ry * 0.12); g.bezierCurveTo(tip[0] + rx * 0.32, ry * 0.3, tip[0] + rx * 0.3, ry * 0.45, tip[0] + rx * 0.24, ry * 0.5); g.closePath(); g.fill();
+            blob(tip[0] + rx * 0.02, tip[1] + ry * 0.2, rx * 0.14, '250,255,236', 0.65); blob(tip[0] + rx * 0.02, tip[1] + ry * 0.1, rx * 0.2, '240,252,200', 0.35);
           }
-          [[16, 0.07], [12, 0.1], [8, 0.14], [5, 0.2], [2, 0.3]].forEach(function (f) { g.fillStyle = 'rgba(60,62,46,' + f[1] + ')'; dark(f[0]); g.fill(); });   // (its edge melting softly into the glow)
-          var dg = g.createLinearGradient(0, -ry, 0, ry * 0.3); dg.addColorStop(0, '#231c18'); dg.addColorStop(0.5, '#332c26'); dg.addColorStop(1, '#40402e'); g.fillStyle = dg; dark(0); g.fill();
-          g.save(); dark(0); g.clip(); blob(rx * 0.05, -ry * 0.3, rx * 0.65, '82,76,66', 0.35); blob(-rx * 0.35, ry * 0.05, rx * 0.25, '70,92,56', 0.35); blob(rx * 0.4, ry * 0.02, rx * 0.22, '70,92,56', 0.3); g.restore();   // (a little lighter in its middle, tinged green where it meets the glow)
-          var tip = [-rx * 0.18, -ry * 0.12];                             // (one tall, soft peak of white light rising from the glow, with a rounded shoulder beside it)
-          blob(tip[0], tip[1] + ry * 0.3, rx * 0.42, '240,252,196', 0.5);
-          g.fillStyle = 'rgba(244,255,214,0.6)'; g.beginPath(); g.moveTo(tip[0] - rx * 0.22, ry * 0.5); g.bezierCurveTo(tip[0] - rx * 0.2, ry * 0.15, tip[0] - rx * 0.08, tip[1] + ry * 0.02, tip[0], tip[1]); g.bezierCurveTo(tip[0] + rx * 0.05, tip[1] + ry * 0.05, tip[0] + rx * 0.08, ry * 0.0, tip[0] + rx * 0.14, ry * 0.02);
-          g.bezierCurveTo(tip[0] + rx * 0.2, -ry * 0.04, tip[0] + rx * 0.27, ry * 0.02, tip[0] + rx * 0.3, ry * 0.12); g.bezierCurveTo(tip[0] + rx * 0.32, ry * 0.3, tip[0] + rx * 0.3, ry * 0.45, tip[0] + rx * 0.24, ry * 0.5); g.closePath(); g.fill();
-          blob(tip[0] + rx * 0.02, tip[1] + ry * 0.2, rx * 0.14, '250,255,236', 0.65); blob(tip[0] + rx * 0.02, tip[1] + ry * 0.1, rx * 0.2, '240,252,200', 0.35);
+          var IW = Math.ceil(rx * 2 + 24), IH = Math.ceil(ry * 2 + 24), oc = document.createElement('canvas'); oc.width = IW; oc.height = IH; var og = oc.getContext('2d'); og.translate(IW / 2, IH / 2); paintIris(og);
+          var BL = [[0, 0]]; for (var bi = 0; bi < 14; bi++) { var ba = bi * 2.39996, br = 1.1 * Math.sqrt(bi + 1); BL.push([Math.cos(ba) * br, Math.sin(ba) * br]); }   // (blended softly, like paint)
+          BL.forEach(function (o, n) { g.globalAlpha = 1 / (n + 1); g.drawImage(oc, -IW / 2 + o[0], -IH / 2 + o[1]); }); g.globalAlpha = 1;
+          // (then the fine detail on top: faint fibres through the glow, little flecks of light, and a crisp glint at the tip of the peak)
+          function rr2(n) { var v = Math.sin(n * 57.3 + s * 7.7) * 24634.6345; return v - Math.floor(v); }
+          for (var fi = 0; fi < 20; fi++) { var fa = Math.PI * (0.08 + rr2(fi) * 0.84), f0 = rx * (0.25 + rr2(fi + 9) * 0.2), f1 = rx * (0.7 + rr2(fi + 19) * 0.25); g.strokeStyle = rr2(fi + 3) > 0.5 ? 'rgba(252,255,226,0.1)' : 'rgba(110,146,52,0.08)'; g.lineWidth = 3 + rr2(fi + 4) * 3; g.beginPath(); g.moveTo(Math.cos(fa) * f0, Math.sin(fa) * f0 + ry * 0.05); g.lineTo(Math.cos(fa) * f1, Math.sin(fa) * f1); g.stroke(); }
+          for (var fk = 0; fk < 14; fk++) { var kx = (rr2(fk + 40) - 0.5) * 1.4 * rx, ky = (0.25 + rr2(fk + 60) * 0.6) * ry, kr = 1.5 + rr2(fk + 80) * 3; g.fillStyle = 'rgba(255,255,236,' + (0.35 + rr2(fk + 90) * 0.4) + ')'; g.beginPath(); g.arc(kx, ky, kr, 0, Math.PI * 2); g.fill(); }
+          var gx = -rx * 0.17, gy = -ry * 0.02, gg = g.createRadialGradient(gx, gy, 0, gx, gy, 9); gg.addColorStop(0, 'rgba(255,255,255,0.95)'); gg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gg; g.beginPath(); g.arc(gx, gy, 9, 0, Math.PI * 2); g.fill();
+          g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.ellipse(-rx * 0.42, -ry * 0.5, 9, 4, -0.5, 0, Math.PI * 2); g.fill();   // (a faint gloss on the dark)
           var edge = g.createRadialGradient(0, 0, rx * 0.8, 0, 0, rx); edge.addColorStop(0, 'rgba(40,30,22,0)'); edge.addColorStop(1, 'rgba(40,30,22,0.45)'); g.fillStyle = edge; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (shading softly into the rim)
           g.restore();
           g.strokeStyle = '#2a1610'; g.lineWidth = 10; eyeShape(); g.stroke();   // (a thick dark-brown rim, heaviest at the top...)
