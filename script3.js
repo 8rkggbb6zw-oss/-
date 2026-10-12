@@ -2377,6 +2377,13 @@ EVERDAWN_PARTS.push(function (THREE) {
           g.save(); eyeShape(); g.clip();
           g.fillStyle = '#b4d45c'; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (...the iris: bright yellow-green below...)
           var lo = g.createRadialGradient(-rx * 0.1, ry * 0.5, 4, -rx * 0.1, ry * 0.45, rx * 0.85); lo.addColorStop(0, 'rgba(232,244,170,0.95)'); lo.addColorStop(1, 'rgba(232,244,170,0)'); g.fillStyle = lo; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+          function rr(n) { var v = Math.sin(n * 91.7 + s * 13.1) * 43758.5453; return v - Math.floor(v); }
+          for (var m = 0; m < 40; m++) {                                  // (mottled light and shadow through its glow)
+            var mx = (rr(m) - 0.5) * 1.8 * rx, my = (0.05 + rr(m + 50) * 0.95) * ry, mr = 5 + rr(m + 99) * 11, lt = rr(m + 7) > 0.45;
+            var mg = g.createRadialGradient(mx, my, 0, mx, my, mr); mg.addColorStop(0, lt ? 'rgba(246,252,206,0.55)' : 'rgba(120,152,52,0.45)'); mg.addColorStop(1, lt ? 'rgba(246,252,206,0)' : 'rgba(120,152,52,0)');
+            g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.fill();
+          }
+          var rim = g.createRadialGradient(0, -ry * 0.1, rx * 0.72, 0, -ry * 0.1, rx * 1.1); rim.addColorStop(0, 'rgba(70,104,30,0)'); rim.addColorStop(1, 'rgba(70,104,30,0.7)'); g.fillStyle = rim; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (deepening to darker green round its edge)
           var P = [[-1.05, 0.22], [-0.78, 0.06], [-0.6, 0.18], [-0.42, -0.1], [-0.26, 0.02], [-0.12, -0.2], [0.02, 0.04], [0.2, -0.06], [0.36, 0.12], [0.55, -0.02], [0.76, 0.14], [1.05, 0.06]];
           function dark(grow) {                                          // (...and muted dark grey-green above, the bright part rising into it in soft, uneven peaks)
             g.beginPath(); g.moveTo(-rx * 1.1, -ry * 1.1); g.lineTo(rx * 1.1, -ry * 1.1); g.lineTo(P[P.length - 1][0] * rx, P[P.length - 1][1] * ry + grow);
@@ -2386,14 +2393,22 @@ EVERDAWN_PARTS.push(function (THREE) {
           [[12, 0.18], [7, 0.3], [3, 0.45]].forEach(function (f) { g.fillStyle = 'rgba(58,66,44,' + f[1] + ')'; dark(f[0]); g.fill(); });   // (its edge feathered softly)
           var dg = g.createLinearGradient(0, -ry, 0, ry * 0.2); dg.addColorStop(0, '#22261c'); dg.addColorStop(0.55, '#353c2c'); dg.addColorStop(1, '#48523a'); g.fillStyle = dg; dark(0); g.fill();
           var md = g.createRadialGradient(0, -ry * 0.25, 4, 0, -ry * 0.25, rx * 0.7); md.addColorStop(0, 'rgba(76,88,58,0.45)'); md.addColorStop(1, 'rgba(76,88,58,0)'); g.fillStyle = md; dark(0); g.fill();   // (a little lighter in its middle)
+          g.save(); dark(0); g.clip();                                     // (faint streaks and a soft sheen in the dark)
+          g.strokeStyle = 'rgba(14,16,10,0.12)'; g.lineWidth = 6; for (var d = 0; d < 5; d++) { var dx = (-0.6 + d * 0.3) * rx; g.beginPath(); g.moveTo(dx * 0.6, -ry); g.quadraticCurveTo(dx * 0.9, -ry * 0.4, dx, ry * 0.1); g.stroke(); }
+          var sh2 = g.createRadialGradient(-rx * 0.25, -ry * 0.3, 2, -rx * 0.25, -ry * 0.3, rx * 0.5); sh2.addColorStop(0, 'rgba(110,124,90,0.35)'); sh2.addColorStop(1, 'rgba(110,124,90,0)'); g.fillStyle = sh2; g.fillRect(-rx, -ry, rx * 2, ry * 2);
+          g.restore();
+          for (var tp = 0; tp < P.length; tp++) { if (P[tp][1] > 0.02) continue; var tx = P[tp][0] * rx, ty = P[tp][1] * ry;   // (small bright tips flickering up along the edge)
+            var tg2 = g.createRadialGradient(tx, ty + 6, 0, tx, ty + 6, 12); tg2.addColorStop(0, 'rgba(240,250,190,0.7)'); tg2.addColorStop(1, 'rgba(240,250,190,0)'); g.fillStyle = tg2; g.beginPath(); g.ellipse(tx, ty + 4, 7, 14, 0, 0, Math.PI * 2); g.fill(); }
+          var halo = g.createRadialGradient(-rx * 0.15, ry * 0.15, 2, -rx * 0.15, ry * 0.15, rx * 0.5); halo.addColorStop(0, 'rgba(250,255,220,0.55)'); halo.addColorStop(1, 'rgba(250,255,220,0)'); g.fillStyle = halo; g.fillRect(-rx, -ry, rx * 2, ry * 2);   // (the soft halo of the light...)
           function streak(k) { g.beginPath(); g.moveTo(-rx * (0.36 + k), ry * 0.48); g.quadraticCurveTo(-rx * (0.3 + k * 0.5), ry * 0.05, -rx * 0.13, -ry * (0.16 + k)); g.quadraticCurveTo(rx * k * 0.5, ry * 0.06, rx * (0.08 + k), ry * 0.48); g.closePath(); }
-          [[0.1, 0.22], [0.05, 0.35], [0, 0.7]].forEach(function (f) { g.fillStyle = 'rgba(248,252,228,' + f[1] + ')'; streak(f[0]); g.fill(); });   // (a soft pale streak of light rising from below)
+          [[0.1, 0.22], [0.05, 0.35], [0, 0.7]].forEach(function (f) { g.fillStyle = 'rgba(248,252,228,' + f[1] + ')'; streak(f[0]); g.fill(); });   // (...and its pale streak rising from below...)
+          g.fillStyle = 'rgba(255,255,248,0.55)'; g.beginPath(); g.moveTo(-rx * 0.24, ry * 0.3); g.lineTo(-rx * 0.2, ry * 0.05); g.lineTo(-rx * 0.17, ry * 0.1); g.lineTo(-rx * 0.13, -ry * 0.1); g.lineTo(-rx * 0.09, ry * 0.08); g.lineTo(-rx * 0.05, ry * 0.02); g.lineTo(-rx * 0.02, ry * 0.3); g.closePath(); g.fill();   // (...with a bright, uneven white core)
           g.restore();
           g.strokeStyle = '#2a1610'; g.lineWidth = 10; eyeShape(); g.stroke();   // (a thick dark-brown rim, heaviest at the top...)
           g.lineWidth = 15; g.lineCap = 'round'; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
           g.strokeStyle = 'rgba(90,50,40,0.6)'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, 4, rx * 1.12, ry * 1.18, 0, 1.25 * Math.PI, 1.75 * Math.PI); g.stroke();   // (...a thin crease above it...)
           g.fillStyle = '#2a1610';                                        // (...and a little clump of spiky lashes at its outer corner)
-          for (var k = 0; k < 5; k++) { var la = (s > 0 ? -0.12 - k * 0.15 : Math.PI + 0.12 + k * 0.15), px = Math.cos(la) * rx, py = Math.sin(la) * ry, ln = 22 - k * 2.5, lw = 5;
+          for (var k = 0; k < 8; k++) { var la = (s > 0 ? -0.06 - k * 0.11 : Math.PI + 0.06 + k * 0.11), px = Math.cos(la) * rx, py = Math.sin(la) * ry, ln = (k % 2 ? 14 : 24) - k * 1.5, lw = k % 2 ? 3 : 4.5;
             var ex = px + Math.cos(la - s * 0.25) * ln, ey = py + Math.sin(la - s * 0.25) * ln, nx = -Math.sin(la) * lw, ny = Math.cos(la) * lw;
             g.beginPath(); g.moveTo(px - nx, py - ny); g.lineTo(ex, ey); g.lineTo(px + nx, py + ny); g.closePath(); g.fill(); }
           g.restore();
