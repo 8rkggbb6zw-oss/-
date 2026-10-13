@@ -2742,9 +2742,39 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyB' && !e.repeat) toggleFlying(); });
   window.addEventListener('keydown', function (e) { if (flying && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) keys.FlyDown = true; });
   window.addEventListener('keyup', function (e) { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.FlyDown = false; });
+  // ---------- Going in through a door ----------
+  // Outside, walking up to a door no longer takes you in: stand by it and press E (or tap Interact) to go in. Inside,
+  // walking out through the doorway still takes you back out
+  var doorNear = null, doorHinted = null, doorWasIn = false, DOOR_REACH = 1.3;
+  var DOOR_NAMES = { house: 'the farmhouse', shop: 'the seed shop', clinic: 'the clinic', barn: 'Fluff & Feather' };
+  updateDoors = function () {
+    var px = player.position.x, pz = player.position.z;
+    if (!indoors) {                                                    // (outside: just notice which door she's standing by)
+      var near = [['house', dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z)], ['shop', dist(px, pz, shopDoor.x, shopDoor.z)], ['clinic', dist(px, pz, clinicDoor.x, clinicDoor.z)], ['barn', dist(px, pz, barnDoor.x, barnDoor.z)]]
+        .filter(function (n) { return n[1] < DOOR_REACH; }).sort(function (a, b) { return a[1] - b[1]; })[0];
+      doorNear = near ? near[0] : null;
+      if (doorWasIn) { doorHinted = doorNear; doorWasIn = false; }   // (no hint for the door she's just come out of)
+      if (doorNear && doorNear !== doorHinted && !doorBusy) showToast('Press E or tap Interact to go into ' + DOOR_NAMES[doorNear], 2000);
+      doorHinted = doorNear; doorArmed = true;
+      return;
+    }
+    doorWasIn = true; doorNear = doorHinted = null;                                      // (inside: walking out through the doorway takes her out, as before)
+    var dShop = inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99, dClinic = inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99, dBarn = inBarn ? dist(px, pz, AB_X, AB_Z + AB_EXIT_Z) : 99;
+    var d = inShop || inClinic || inBarn ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z);
+    if (!doorArmed) { if (Math.min(d, dShop, dClinic, dBarn) > 0.85) doorArmed = true; return; }   // (stepping away from the door she came in by first)
+    if (d < 0.5) useDoor(false);
+    else if (dShop < 0.5) useDoor(false, true);
+    else if (dClinic < 0.5) useDoor(false, 'clinic');
+    else if (dBarn < 0.5) useDoor(false, 'barn');
+  };
   var interactOnFoot = interact;
   interact = function () {                                             // (Space climbs while she's flying; she has to land before she can work the land)
     if (flying) { if (!keys.Space) showToast('Land your broom first (B)', 1500); return; }
+    if (!indoors && doorNear && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) {   // (by a door: in she goes)
+      var which = doorNear; doorNear = null; walkTarget = null;
+      useDoor(true, which === 'shop' ? true : which === 'house' ? undefined : which);
+      return;
+    }
     return interactOnFoot.apply(this, arguments);
   };
   (function () {                                                       // (a Fly button beside the others, for tapping)
