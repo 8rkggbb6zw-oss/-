@@ -2817,16 +2817,63 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     return w;
   }
+  // (a window box: a little planked trough with nailed corners, dark soil, and a cottage-garden tumble growing in it:
+  // leafy mounds, five-petalled flowers with golden hearts in pink, cream, lilac and coral, tall spikes of lavender,
+  // round little buds on fine stems, and trailing ivy spilling over the front edge)
+  var FB = (function () {
+    var petal = new THREE.SphereGeometry(1, 10, 6); petal.scale(0.026, 0.006, 0.016); petal.translate(0.024, 0, 0);
+    var heart = new THREE.SphereGeometry(0.013, 10, 6); heart.scale(1, 0.6, 1);
+    var leaf = new THREE.SphereGeometry(1, 10, 6); leaf.scale(0.034, 0.006, 0.016); leaf.translate(0.03, 0, 0);
+    var ivy = new THREE.SphereGeometry(1, 8, 5); ivy.scale(0.02, 0.004, 0.018);
+    var stem = new THREE.CylinderGeometry(0.004, 0.005, 1, 5); stem.translate(0, 0.5, 0);
+    var bud = new THREE.SphereGeometry(0.012, 8, 6); bud.scale(1, 1.4, 1);
+    var lav = new THREE.SphereGeometry(0.009, 6, 4); lav.scale(1, 1.5, 1);
+    var mat = function (c, e) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.65, emissive: c, emissiveIntensity: e || 0 }); };
+    return { petal: petal, heart: heart, leaf: leaf, ivy: ivy, stem: stem, bud: bud, lav: lav,
+      petals: [0xffb3d6, 0xfff4dc, 0xc9a0ff, 0xff9a7a, 0xff7fb0].map(function (c) { return mat(c, 0.08); }), heartM: mat(0xf2c040, 0.15),
+      leaves: [0x5f9a44, 0x6aa84f, 0x7ab85a, 0x4f8a3c].map(function (c) { return mat(c); }), stemM: mat(0x4a7a36), soil: mat(0x3a2818), lavM: mat(0x9a78dc, 0.1), ivyM: mat(0x3f7a34) };
+  })();
+  function cpFlowerBox(parent, w, y, z) {
+    var g = new THREE.Group(); g.position.set(0, y, z); parent.add(g);
+    var bw = w + 0.1, H2 = 0.18, D = 0.24, seed = Math.round(w * 97 + y * 31);
+    function R(k) { var v = Math.sin((k + seed) * 91.37) * 43758.5453; return v - Math.floor(v); }
+    function put(geo, m, x, yy, zz, rx, ry, rz, sc) { var o = new THREE.Mesh(geo, m); o.position.set(x, yy, zz); o.rotation.set(rx || 0, ry || 0, rz || 0); if (sc) o.scale.setScalar(sc); g.add(o); return o; }
+    // (the trough: four planks, a plank along the bottom, little corner battens with nail heads)
+    [[0, 0, D / 2 - 0.015, bw, H2, 0.03], [0, 0, -D / 2 + 0.015, bw, H2, 0.03], [bw / 2 - 0.015, 0, 0, 0.03, H2, D], [-bw / 2 + 0.015, 0, 0, 0.03, H2, D], [0, -H2 / 2 + 0.015, 0, bw, 0.03, D]].forEach(function (p) { put(new THREE.BoxGeometry(p[3], p[4], p[5]), cpmPlankDark, p[0], p[1], p[2]); });
+    put(new THREE.BoxGeometry(bw - 0.02, 0.012, 0.03), cpmPlank, 0, 0.002, D / 2 + 0.001);   // (a lighter plank seam along the front)
+    [-1, 1].forEach(function (s) { put(new THREE.BoxGeometry(0.035, H2 + 0.01, 0.035), cpmPlank, s * (bw / 2 - 0.01), 0, D / 2 - 0.005); [0.05, -0.05].forEach(function (ny) { put(new THREE.SphereGeometry(0.006, 6, 4), cpmIron, s * (bw / 2 - 0.01), ny, D / 2 + 0.013); }); });
+    put(new THREE.BoxGeometry(bw - 0.06, 0.02, D - 0.06), FB.soil, 0, H2 / 2 - 0.03, 0);   // (the soil)
+    var top = H2 / 2 - 0.02, n = Math.round(bw / 0.11);
+    for (var i = 0; i < n; i++) {                                     // (leafy mounds all along it)
+      var x = -bw / 2 + 0.06 + (i + R(i) * 0.5) * (bw - 0.12) / n;
+      for (var l = 0; l < 10; l++) { var a = R(i * 7 + l) * Math.PI * 2; put(FB.leaf, FB.leaves[(i + l) % 4], x + Math.cos(a) * 0.015, top + 0.02 + R(i * 3 + l) * 0.03, (R(i * 5 + l) - 0.5) * 0.12, (R(l + i * 11) - 0.5) * 0.5, a, 0.25 + R(i + l * 13) * 0.35, 0.9 + R(l * 3 + i) * 0.5); }
+    }
+    for (var f = 0; f < n + 4; f++) {                                 // (flowers on short stems, facing up and out)
+      var fx = -bw / 2 + 0.07 + R(f * 17 + 1) * (bw - 0.14), fz = (R(f * 19 + 2) - 0.35) * 0.1, fh = 0.06 + R(f * 23 + 3) * 0.07, pm = FB.petals[Math.floor(R(f * 29 + 4) * 5)];
+      put(FB.stem, FB.stemM, fx, top, fz, 0, 0, 0).scale.set(1, fh, 1);
+      var fl = new THREE.Group(); fl.position.set(fx, top + fh, fz); fl.rotation.set(0.5 + R(f) * 0.3, R(f * 3) * 6, 0); g.add(fl);
+      for (var p = 0; p < 5; p++) { var o = new THREE.Mesh(FB.petal, pm); o.rotation.y = p / 5 * Math.PI * 2 + R(f + p) * 0.2; o.rotation.z = 0.25; fl.add(o); }
+      var hm = new THREE.Mesh(FB.heart, FB.heartM); hm.position.y = 0.006; fl.add(hm);
+    }
+    for (var b = 0; b < Math.ceil(n / 2); b++) {                       // (round buds on fine stems, and spikes of lavender)
+      var bx = -bw / 2 + 0.08 + R(b * 37 + 5) * (bw - 0.16), bh = 0.1 + R(b * 41) * 0.08, bz = (R(b * 43) - 0.6) * 0.08;
+      put(FB.stem, FB.stemM, bx, top, bz, (R(b) - 0.5) * 0.2, 0, (R(b * 2) - 0.5) * 0.3).scale.set(0.7, bh, 0.7);
+      if (b % 2) put(FB.bud, FB.petals[b % 5], bx + (R(b * 2) - 0.5) * 0.3 * bh, top + bh, bz);
+      else for (var q = 0; q < 6; q++) put(FB.lav, FB.lavM, bx + (R(b * 2) - 0.5) * 0.3 * bh, top + bh - q * 0.016, bz + (q % 2 ? 0.006 : -0.006));
+    }
+    for (var t = 0; t < Math.ceil(n / 2.5); t++) {                     // (ivy trailing over the front edge and down)
+      var tx = -bw / 2 + 0.08 + R(t * 53 + 6) * (bw - 0.16), len = 4 + Math.floor(R(t * 59) * 4);
+      for (var k = 0; k < len; k++) { var ty = top - k * 0.03, tz = D / 2 + 0.008 + Math.min(k, 2) * 0.006, sway = Math.sin(k * 1.3 + t) * 0.012;
+        put(FB.ivy, FB.ivyM, tx + sway + (k % 2 ? 0.012 : -0.012), ty, tz, Math.PI / 2 - 0.3, 0, (k % 2 ? 0.6 : -0.6)); }
+    }
+    return g;
+  }
   // (a window: a plank frame with a cross of muntins, warm glowing panes and a flower box)
   function carpWindow(parent, x, y, z, ry, w, h, inside) {
     var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; parent.add(g);
     cpPart(new THREE.PlaneGeometry(w, h), inside ? new THREE.MeshStandardMaterial({ color: 0xcfe8ff, emissive: 0xbfe0ff, emissiveIntensity: 0.55 }) : cpmGlowWin, 0, 0, 0, 0, 0, 0, g);
     [[0, h / 2 + 0.04, w + 0.22, 0.09], [0, -h / 2 - 0.04, w + 0.3, 0.1], [w / 2 + 0.05, 0, 0.09, h], [-w / 2 - 0.05, 0, 0.09, h], [0, 0, w, 0.04], [0, 0, 0.04, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), cpmPlankDark, f[0], f[1], 0.04, 0, 0, 0, g); });
-    if (!inside) {
-      cpPart(new THREE.BoxGeometry(w + 0.1, 0.18, 0.24), cpmPlankDark, 0, -h / 2 - 0.2, 0.14, 0, 0, 0, g);   // (the flower box...)
-      for (var f = 0; f < 7; f++) { var fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3d6, 0xfff0a0, 0xc9a0ff, 0xff9a7a][f % 4], roughness: 0.6 })); fl.position.set(-w / 2 + 0.12 + f * (w - 0.24) / 6, -h / 2 - 0.06, 0.16 + (f % 2) * 0.05); g.add(fl);
-        var lf = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6aa84f, roughness: 0.8 })); lf.scale.set(1, 0.6, 1); lf.position.set(fl.position.x + 0.05, -h / 2 - 0.1, 0.12); g.add(lf); }
-    }
+    if (!inside) cpFlowerBox(g, w, -h / 2 - 0.2, 0.14);
     return g;
   }
   function cpLantern(parent, x, y, z, glows) {                           // (a little iron lantern with a warm flame)
