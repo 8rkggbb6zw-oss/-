@@ -3230,6 +3230,57 @@ EVERDAWN_PARTS.push(function (THREE) {
   document.addEventListener('webkitfullscreenchange', function () { setTimeout(layoutMenus, 120); });
   window.addEventListener('keydown', function (e) { if (e.code === 'KeyF' && !e.repeat) setFullScreen(!document.body.classList.contains('full')); });
 
+  // ---------- The Dawn Tree's blossoms, more true to life ----------
+  // Real cherry blossom: soft white-to-blush flowers with notched petals, deeper pink at their hearts with little
+  // stamens, in loose clusters with leaves and gaps between them rather than one solid pink mass; the canopy shaded
+  // darker underneath and in its depths and brightest on top where the sun falls, and only a soft glow of its own
+  (function () {
+    var cv = blossomTex.image, g = cv.getContext('2d'), W = cv.width;
+    g.clearRect(0, 0, W, W);
+    var CL = []; for (var c = 0; c < 9; c++) { var ca = Math.random() * Math.PI * 2, cr = c === 0 ? 0 : 40 + Math.random() * 52; CL.push([128 + Math.cos(ca) * cr, 128 + Math.sin(ca) * cr * 0.9, 30 + Math.random() * 22]); }   // (loose clusters, with gaps between)
+    function inCluster() { var k = CL[Math.floor(Math.random() * CL.length)], a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * k[2]; return [k[0] + Math.cos(a) * r, k[1] + Math.sin(a) * r, k]; }
+    for (var l = 0; l < 70; l++) {                                    // (fresh young leaves peeking out among the flowers)
+      var lp = inCluster(); g.save(); g.translate(lp[0], lp[1]); g.rotate(Math.random() * 6.28);
+      g.fillStyle = 'hsl(' + (80 + Math.random() * 30) + ',' + (30 + Math.random() * 20) + '%,' + (28 + Math.random() * 14) + '%)';
+      g.beginPath(); g.moveTo(-9, 0); g.quadraticCurveTo(0, -5, 9, 0); g.quadraticCurveTo(0, 5, -9, 0); g.fill(); g.restore();
+    }
+    for (var i = 0; i < 260; i++) {                                    // (the flowers, back to front)
+      var fp = inCluster(), x = fp[0], y = fp[1], sz = 5.5 + Math.random() * 5, spin = Math.random() * 6.28;
+      var edge = Math.hypot(x - fp[2][0], y - fp[2][1]) / fp[2][2], lit = Math.max(0, Math.min(1, 0.6 - ((x - 128) + (y - 128)) / 260 + (1 - edge) * 0.15));
+      var hue = 335 + Math.random() * 18, sat = 60 + Math.random() * 30, lo = 70 + lit * 14 + Math.random() * 6;
+      for (var k = 0; k < 5; k++) {                                    // (five rounded petals, each with a little notch at its tip, blushing deeper towards the middle)
+        var pa = spin + k / 5 * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+        g.save(); g.translate(x, y); g.rotate(pa);
+        var pg = g.createLinearGradient(0, 0, sz, 0); pg.addColorStop(0, 'hsl(' + hue + ',' + (sat + 15) + '%,' + (lo - 16) + '%)'); pg.addColorStop(0.55, 'hsl(' + hue + ',' + sat + '%,' + lo + '%)'); pg.addColorStop(1, 'hsl(' + hue + ',' + (sat - 15) + '%,' + Math.min(97, lo + 10) + '%)');
+        g.fillStyle = pg; g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(sz * 0.3, -sz * 0.5, sz * 0.95, -sz * 0.45, sz, -sz * 0.1); g.lineTo(sz * 0.86, 0); g.lineTo(sz, sz * 0.1); g.bezierCurveTo(sz * 0.95, sz * 0.45, sz * 0.3, sz * 0.5, 0, 0); g.fill();
+        g.restore();
+      }
+      g.fillStyle = 'hsl(' + (340 + Math.random() * 10) + ',60%,' + (42 + lit * 10) + '%)'; g.beginPath(); g.arc(x, y, sz * 0.22, 0, Math.PI * 2); g.fill();   // (its deep pink heart...)
+      g.fillStyle = 'rgba(255,236,170,0.9)'; for (var st = 0; st < 5; st++) { var sa = Math.random() * 6.28, sr = sz * (0.25 + Math.random() * 0.15); g.beginPath(); g.arc(x + Math.cos(sa) * sr, y + Math.sin(sa) * sr, 0.9, 0, Math.PI * 2); g.fill(); }   // (...and pale gold stamens)
+    }
+    blossomTex.needsUpdate = true;
+    var sv = strandTex.image, sg = sv.getContext('2d'); sg.clearRect(0, 0, sv.width, sv.height);   // (the hanging strands: soft trailing sprays of pale blossom, thinning towards their tips)
+    for (var y = 4; y < 252; y += 5) {
+      var f = y / 256, n2 = Math.max(1, Math.round(4 * (1 - f * 0.8)));
+      for (var k2 = 0; k2 < n2; k2++) {
+        var bx = 32 + (Math.random() - 0.5) * 30 * (1 - f * 0.6), by = y + Math.random() * 4, bs = 5.5 * (1 - f * 0.55) * (0.7 + Math.random() * 0.5);
+        for (var pt = 0; pt < 5; pt++) { var pa2 = pt / 5 * Math.PI * 2 + Math.random(); sg.fillStyle = 'hsl(' + (330 + Math.random() * 20) + ',' + (55 + Math.random() * 25) + '%,' + (80 + Math.random() * 10 - f * 6) + '%)'; sg.beginPath(); sg.ellipse(bx + Math.cos(pa2) * bs * 0.5, by + Math.sin(pa2) * bs * 0.5, bs * 0.5, bs * 0.35, pa2, 0, Math.PI * 2); sg.fill(); }
+        sg.fillStyle = 'hsl(340,60%,55%)'; sg.beginPath(); sg.arc(bx, by, bs * 0.18, 0, Math.PI * 2); sg.fill();
+      }
+    }
+    strandTex.needsUpdate = true;
+    blossomMat.emissive.set(0x5a2a4a); strandMat.emissive.set(0x3a1a30);   // (a soft glow of their own, not a neon one)
+    var m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), col = new THREE.Color();
+    for (var n = 0; n < blossomCards.count; n++) {                      // (each card a touch smaller, so light shows between the clusters, and shaded by where it sits in the canopy)
+      blossomCards.getMatrixAt(n, m4); m4.decompose(pos, q, sc); sc.multiplyScalar(0.82); m4.compose(pos, q, sc); blossomCards.setMatrixAt(n, m4);
+      var best = null, bd = 1e9; clumps.forEach(function (cl) { var d = pos.distanceTo(cl.p); if (d < bd) { bd = d; best = cl; } });
+      var up = (pos.y - best.p.y) / best.r, out = bd / best.r, high = (pos.y - 3.5) / 3.5;
+      var shade = 0.6 + Math.max(0, Math.min(1, 0.45 + up * 0.5)) * 0.32 + Math.min(1, out) * 0.12 + Math.max(0, Math.min(1, high)) * 0.12 + (Math.random() - 0.5) * 0.06;
+      col.setRGB(Math.min(1, shade * 1.04), shade * 0.97, shade); blossomCards.setColorAt(n, col);
+    }
+    blossomCards.instanceMatrix.needsUpdate = true; if (blossomCards.instanceColor) blossomCards.instanceColor.needsUpdate = true;
+  })();
+
   // Only draw what you can see: every batch of grass, leaves, flowers and stones gets a sphere round all its pieces, and
   // each frame a batch that's off screen, or so far off it's lost in the haze, is skipped. Batches whose pieces move
   // (a tree regrowing, soil being tilled) get their sphere worked out again. Indoors everything stays on, so the
