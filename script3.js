@@ -3236,7 +3236,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // windows still show the whole island
   var cullList = [], cullFrustum = new THREE.Frustum(), cullPV = new THREE.Matrix4(), cullM = new THREE.Matrix4(), cullV = new THREE.Vector3(), cullBox = new THREE.Box3(), cullWasIndoors = null;
   function cullMeasure(c) {
-    var o = c.o; o.updateMatrixWorld(true); cullBox.makeEmpty();
+    var o = c.o; o.updateWorldMatrix(true, false); cullBox.makeEmpty();   // (with everything it sits in placed first, so a batch inside a group, like the Dawn Tree's blossoms, is measured where it really is)
     for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, cullM); cullV.setFromMatrixPosition(cullM).applyMatrix4(o.matrixWorld); cullBox.expandByPoint(cullV); }
     if (cullBox.isEmpty()) { c.r = -1; return; }
     if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
