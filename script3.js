@@ -2882,6 +2882,100 @@ EVERDAWN_PARTS.push(function (THREE) {
     [-1.9, 1.9].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.09, 0.1, 2.5, 10), cpmBark, x, 1.3, D2 + 1.6, 0, 0, 0, G); });
     cpPart(new THREE.BoxGeometry(4.5, 0.1, 1.9), cpmShingle, 0, 2.62, D2 + 0.9, -0.22, 0, 0, G);
     cpLantern(G, -0.95, 2.0, D2 + 0.25, carpGlows); cpLantern(G, 0.95, 2.0, D2 + 0.25, carpGlows);
+    // (its shop sign, in the town's style: a painted board, here a deep oak brown with the grain showing through,
+    // gilded letters with a dark bevel and a shadow, a double gold pinstripe, a gilded oak leaf and flame either side
+    // and little gold rules and diamonds round the small letters; in a moulded frame with a gold bead, with two brass
+    // gooseneck lamps that make the gold shine at night. It stands on the front edge of the porch roof, above the door
+    // and clear of it)
+    function oakSignPaint(g, w, h, metalOnly) {
+      if (metalOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+      else {
+        var base = g.createLinearGradient(0, 0, 0, h); base.addColorStop(0, '#5a3420'); base.addColorStop(0.5, '#4a2a18'); base.addColorStop(1, '#3a2012');
+        g.fillStyle = base; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 300; i++) {
+          var gy = isle2Hash(i * 1.7 + 170) * h, lite = isle2Hash(i * 3.1 + 170) > 0.5;
+          g.strokeStyle = lite ? 'rgba(210,150,100,' + (0.04 + isle2Hash(i + 3) * 0.06) + ')' : 'rgba(20,8,2,' + (0.08 + isle2Hash(i + 5) * 0.1) + ')';
+          g.lineWidth = 0.6 + isle2Hash(i * 5 + 1) * 1.6;
+          g.beginPath(); var x0 = isle2Hash(i * 2.3 + 170) * w * 0.7; g.moveTo(x0, gy);
+          g.bezierCurveTo(x0 + 200, gy + (isle2Hash(i * 7 + 1) - 0.5) * 8, x0 + 420, gy - (isle2Hash(i * 9 + 1) - 0.5) * 8, x0 + 300 + isle2Hash(i * 11 + 1) * 600, gy + (isle2Hash(i * 13 + 1) - 0.5) * 5);
+          g.stroke();
+        }
+        g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, h * 0.5 - 1, w, 2);
+        var vig = g.createLinearGradient(0, 0, 0, h); vig.addColorStop(0, 'rgba(0,0,0,0.3)'); vig.addColorStop(0.18, 'rgba(0,0,0,0)'); vig.addColorStop(0.82, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.38)');
+        g.fillStyle = vig; g.fillRect(0, 0, w, h);
+      }
+      function gold(y0, y1) {
+        if (metalOnly) return '#fff';
+        var gg = g.createLinearGradient(0, y0, 0, y1);
+        gg.addColorStop(0, '#fff5c8'); gg.addColorStop(0.3, '#ecc054'); gg.addColorStop(0.55, '#a87824'); gg.addColorStop(0.78, '#f2d06c'); gg.addColorStop(1, '#7e5814');
+        return gg;
+      }
+      function gild(text, x, y, size, italic, spacing) {
+        g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; g.textBaseline = 'middle';
+        var chars = text.split(''), widths = chars.map(function (c) { return g.measureText(c).width + (spacing || 0); });
+        var total = widths.reduce(function (a2, b2) { return a2 + b2; }, 0) - (spacing || 0), cx = x - total / 2;
+        chars.forEach(function (c, k) {
+          if (!metalOnly) { g.save(); g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowOffsetX = size * 0.04; g.shadowOffsetY = size * 0.06; g.shadowBlur = size * 0.08; g.fillStyle = '#4a3008'; g.fillText(c, cx + 1.5, y + 2); g.restore(); }
+          g.fillStyle = gold(y - size * 0.5, y + size * 0.5); g.fillText(c, cx, y);
+          if (!metalOnly) { g.strokeStyle = 'rgba(255,248,215,0.5)'; g.lineWidth = 1; g.strokeText(c, cx - 0.6, y - 1); }
+          cx += widths[k];
+        });
+      }
+      function rrect(m, r) { g.beginPath(); g.moveTo(m + r, m); g.lineTo(w - m - r, m); g.quadraticCurveTo(w - m, m, w - m, m + r); g.lineTo(w - m, h - m - r); g.quadraticCurveTo(w - m, h - m, w - m - r, h - m); g.lineTo(m + r, h - m); g.quadraticCurveTo(m, h - m, m, h - m - r); g.lineTo(m, m + r); g.quadraticCurveTo(m, m, m + r, m); g.stroke(); }
+      g.strokeStyle = metalOnly ? '#fff' : gold(0, h); g.lineWidth = 6; rrect(18, 26);
+      g.lineWidth = 2; rrect(32, 18);
+      function leaf(cx, cy, s, rot) {                                  // a gilded oak leaf, with its wavy lobes, veins and an acorn at its stem
+        g.save(); g.translate(cx, cy); g.rotate(rot);
+        g.fillStyle = metalOnly ? '#fff' : gold(-s, s);
+        g.beginPath(); g.moveTo(0, -s);
+        for (var k = 0; k <= 8; k++) { var t = k / 8, y = -s + t * s * 1.7, r = Math.sin(t * Math.PI) * s * 0.42 * (1 + 0.32 * Math.cos(t * Math.PI * 8)); g.lineTo(r, y); }
+        for (var k2 = 8; k2 >= 0; k2--) { var t2 = k2 / 8, y2 = -s + t2 * s * 1.7, r2 = Math.sin(t2 * Math.PI) * s * 0.42 * (1 + 0.32 * Math.cos(t2 * Math.PI * 8)); g.lineTo(-r2, y2); }
+        g.closePath(); g.fill();
+        if (!metalOnly) { g.strokeStyle = '#6a4a10'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, -s * 0.9); g.lineTo(0, s * 0.85); g.stroke(); g.lineWidth = 1.6; for (var v = -0.6; v < 0.6; v += 0.22) { g.beginPath(); g.moveTo(0, v * s); g.lineTo(s * 0.28, v * s - s * 0.12); g.moveTo(0, v * s); g.lineTo(-s * 0.28, v * s - s * 0.12); g.stroke(); } }
+        g.fillStyle = metalOnly ? '#fff' : gold(s * 0.7, s * 1.2); g.beginPath(); g.ellipse(s * 0.2, s * 0.95, s * 0.16, s * 0.2, 0, 0, Math.PI * 2); g.fill();   // (the acorn...)
+        g.fillStyle = metalOnly ? '#fff' : '#8a6418'; g.beginPath(); g.ellipse(s * 0.2, s * 0.8, s * 0.19, s * 0.09, 0, 0, Math.PI * 2); g.fill();   // (...and its cup)
+        g.restore();
+      }
+      function flame(cx, cy, s) {                                       // a gilded ember flame
+        g.save(); g.translate(cx, cy); g.fillStyle = metalOnly ? '#fff' : gold(-s, s);
+        g.beginPath(); g.moveTo(0, -s); g.bezierCurveTo(s * 0.55, -s * 0.35, s * 0.6, s * 0.35, s * 0.3, s * 0.72); g.quadraticCurveTo(0, s * 0.95, -s * 0.3, s * 0.72); g.bezierCurveTo(-s * 0.6, s * 0.35, -s * 0.2, -s * 0.2, -s * 0.12, -s * 0.55); g.quadraticCurveTo(-s * 0.05, -s * 0.2, 0, -s); g.fill();
+        if (!metalOnly) { g.fillStyle = 'rgba(90,40,8,0.55)'; g.beginPath(); g.moveTo(0, -s * 0.2); g.bezierCurveTo(s * 0.28, s * 0.1, s * 0.25, s * 0.5, 0, s * 0.62); g.bezierCurveTo(-s * 0.25, s * 0.5, -s * 0.2, s * 0.15, 0, -s * 0.2); g.fill(); }
+        g.restore();
+      }
+      leaf(160, h / 2 + 2, 92, -0.45); flame(w - 160, h / 2 + 4, 92);
+      gild('Oak & Ember', w / 2, h / 2 - 34, 168, true, 2);
+      gild('CARPENTER · WOODWORKS', w / 2, h / 2 + 108, 42, false, 10);
+      g.strokeStyle = metalOnly ? '#fff' : '#c99a3a'; g.lineWidth = 3;
+      [-1, 1].forEach(function (d) {
+        var ex = w / 2 + d * 400;
+        g.beginPath(); g.moveTo(ex, h / 2 + 108); g.lineTo(ex + d * 100, h / 2 + 108); g.stroke();
+        g.fillStyle = metalOnly ? '#fff' : '#e3b54c'; g.beginPath(); g.moveTo(ex + d * 116, h / 2 + 98); g.lineTo(ex + d * 126, h / 2 + 108); g.lineTo(ex + d * 116, h / 2 + 118); g.lineTo(ex + d * 106, h / 2 + 108); g.closePath(); g.fill();
+      });
+    }
+    var oakSignTex = paintTexture(2048, 360, function (g, w, h) { oakSignPaint(g, w, h, false); });
+    var oakSignMetal = paintTexture(2048, 360, function (g, w, h) { oakSignPaint(g, w, h, true); });
+    oakSignTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    var oakSignMat = new THREE.MeshStandardMaterial({ map: oakSignTex, metalnessMap: oakSignMetal, metalness: 0.35, roughness: 0.4, emissive: 0xe8b54a, emissiveMap: oakSignMetal, emissiveIntensity: 0.25 });
+    var OS_Y = 3.12, OS_Z = D2 + 1.72, mOakTrim = new THREE.MeshStandardMaterial({ color: 0x3a2012, roughness: 0.55 });
+    cpPart(new THREE.BoxGeometry(3.35, 0.56, 0.05), new THREE.MeshStandardMaterial({ color: 0x4a2a18, roughness: 0.5 }), 0, OS_Y, OS_Z, 0, 0, 0, G);
+    var osFace = new THREE.Mesh(new THREE.PlaneGeometry(3.24, 0.5), oakSignMat); osFace.position.set(0, OS_Y, OS_Z + 0.027); G.add(osFace);
+    [[0, 0.28, 3.46, 0.06], [0, -0.28, 3.46, 0.06], [-1.7, 0, 0.06, 0.62], [1.7, 0, 0.06, 0.62]].forEach(function (f) {   // (the moulded frame with a gold bead)
+      cpPart(new THREE.BoxGeometry(f[2], f[3], 0.07), mOakTrim, f[0], OS_Y + f[1], OS_Z + 0.035, 0, 0, 0, G);
+      cpPart(new THREE.BoxGeometry(f[2] > 1 ? 3.34 : 0.018, f[3] > 0.1 ? 0.5 : 0.018, 0.02), houseMats.gold, f[0] * 0.985, OS_Y + f[1] * 0.9, OS_Z + 0.065, 0, 0, 0, G);
+    });
+    [-1.2, 1.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.08, 0.32, 0.08), mOakTrim, x, OS_Y - 0.42, OS_Z - 0.04, 0, 0, 0, G); });   // (two little posts holding it up on the porch roof)
+    var oakSignGlows = [], oakLampInner = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.2, side: THREE.BackSide });
+    [-1.15, 1.15].forEach(function (lx) {                              // (brass gooseneck lamps lighting the sign)
+      var y0 = OS_Y + 0.31, z0 = OS_Z + 0.05;
+      cpPart(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 12), houseMats.gold, lx, y0 + 0.01, z0, 0, 0, 0, G);
+      var neck = new THREE.CatmullRomCurve3([new THREE.Vector3(lx, y0, z0), new THREE.Vector3(lx, y0 + 0.16, z0 + 0.04), new THREE.Vector3(lx, y0 + 0.22, z0 + 0.2), new THREE.Vector3(lx, y0 + 0.15, z0 + 0.36)]);
+      cpPart(new THREE.TubeGeometry(neck, 14, 0.012, 6), houseMats.gold, 0, 0, 0, 0, 0, 0, G);
+      cpPart(new THREE.ConeGeometry(0.07, 0.08, 14, 1, true), houseMats.gold, lx, y0 + 0.11, z0 + 0.36, 0.5, 0, 0, G);
+      cpPart(new THREE.ConeGeometry(0.066, 0.076, 14, 1, true), oakLampInner, lx, y0 + 0.11, z0 + 0.36, 0.5, 0, 0, G);
+      var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd08a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      lg.position.set(lx, y0 + 0.06, z0 + 0.34); lg.scale.set(0.6, 0.6, 1); G.add(lg); oakSignGlows.push(lg);
+    });
+    carpGroup.userData.oakSign = { mat: oakSignMat, glows: oakSignGlows, inner: oakLampInner };
     // (the hanging sign, on an iron bracket out from the front corner)
     var sg = new THREE.Group(); sg.position.set(W2 + 0.5, 2.15, D2 + 0.5); G.add(sg);
     cpPart(new THREE.BoxGeometry(0.06, 0.06, 1.3), cpmIron, 0, 0.55, -0.4, 0, 0, 0, sg);
@@ -3016,6 +3110,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     carpGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
     carpGroup.userData.sign.rotation.x = Math.sin(t * 1.3) * 0.05;
     cpmGlowWin.emissiveIntensity = 0.35 + night * 0.9;
+    var os = carpGroup.userData.oakSign; os.mat.emissiveIntensity = 0.25 + night * 0.45; os.inner.emissiveIntensity = 0.2 + night * 1.6; os.glows.forEach(function (gl) { gl.material.opacity = night * 0.75; });   // (the little lamps make the gold letters shine at night)
   }
 
   // ===== inside =====
