@@ -3168,95 +3168,172 @@ EVERDAWN_PARTS.push(function (THREE) {
   var cpSun = new THREE.DirectionalLight(0xffe2b8, 0.45); cpSun.position.set(CPI_X - 5, 8, CPI_Z + 6); cpSun.target.position.set(CPI_X, 0, CPI_Z); cpSun.castShadow = true; cpSun.shadow.mapSize.set(1024, 1024);
   cpSun.shadow.camera.left = -7; cpSun.shadow.camera.right = 7; cpSun.shadow.camera.top = 6; cpSun.shadow.camera.bottom = -6; cpSun.shadow.bias = -0.0006; carpScene.add(cpSun); carpScene.add(cpSun.target);
   var cpLamps = [[-2.4, 0.4], [2.4, -0.4]].map(function (p) { var l = new THREE.PointLight(0xffc888, 0.5, 11); l.position.set(CPI_X + p[0], 2.5, CPI_Z + p[1]); carpScene.add(l); return l; });
-  var cpStoveLight = new THREE.PointLight(0xff8a3a, 0.7, 5); cpStoveLight.position.set(CPI_X + CARP_HW - 0.9, 0.7, CPI_Z - 1.2); carpScene.add(cpStoveLight);
   var carpSolids = [], cpGlows = [], cpWalls = [];
   (function (R) {
     var W2 = CARP_HW, D2 = CARP_HD;
-    var fl = cpPart(new THREE.PlaneGeometry(W2 * 2, D2 * 2), new THREE.MeshStandardMaterial({ map: cpPlankTex, roughness: 0.85 }), 0, 0.001, 0, -Math.PI / 2, 0, 0, R); fl.material.map = cpPlankTex.clone(); fl.material.map.needsUpdate = true; fl.material.map.repeat.set(3, 3); fl.material.map.wrapS = fl.material.map.wrapT = THREE.RepeatWrapping;
-    // (the four log walls, each hidden when it's between you and the camera)
-    [[0, -D2, 0, [[-1.2, 1.2, 1.0, 1.9]], false, [0, 0, -1]], [0, D2, 0, [[-0.65, 0.65, 0, 2.15], [-3.2, -1.8, 0.95, 1.95], [1.8, 3.2, 0.95, 1.95]], false, [0, 0, 1]], [W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [1, 0, 0]], [-W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [-1, 0, 0]]].forEach(function (w) {
-      var g = cpLogWall(R, w[2] ? D2 * 2 : W2 * 2, w[0], w[1], w[2], w[3], w[4]); cpWalls.push({ g: g, n: new THREE.Vector3(w[5][0], 0, w[5][2]), d: w[2] ? W2 : D2 });
+    // (a floor of worn grey stone tiles)
+    var tileTex = cpTex(512, 512, function (g, w, h) {
+      g.fillStyle = '#4a4642'; g.fillRect(0, 0, w, h);
+      var n = 8, s = w / n;
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+        var b = 92 + Math.random() * 34, x = c * s, y = r * s;
+        g.fillStyle = 'rgb(' + Math.round(b) + ',' + Math.round(b * 0.97) + ',' + Math.round(b * 0.92) + ')'; g.fillRect(x + 2, y + 2, s - 4, s - 4);
+        for (var k = 0; k < 40; k++) { g.fillStyle = 'rgba(' + (Math.random() < 0.5 ? '40,36,32' : '170,165,155') + ',' + (0.08 + Math.random() * 0.12) + ')'; g.fillRect(x + 2 + Math.random() * (s - 6), y + 2 + Math.random() * (s - 6), 1 + Math.random() * 3, 1 + Math.random() * 3); }
+        var wg = g.createRadialGradient(x + s / 2, y + s / 2, 4, x + s / 2, y + s / 2, s * 0.75); wg.addColorStop(0, 'rgba(255,240,220,0.06)'); wg.addColorStop(1, 'rgba(0,0,0,0.18)'); g.fillStyle = wg; g.fillRect(x + 2, y + 2, s - 4, s - 4);
+      }
+    }, [5, 4]);
+    cpPart(new THREE.PlaneGeometry(W2 * 2, D2 * 2), new THREE.MeshStandardMaterial({ map: tileTex, bumpMap: tileTex, bumpScale: 0.01, roughness: 0.92 }), 0, 0.001, 0, -Math.PI / 2, 0, 0, R).castShadow = false;
+    // (the four log walls, each hidden when it's between you and the camera; the back one has a big bank of windows)
+    [[0, -D2, 0, [[-2.55, 2.55, 0.95, 2.35]], false, [0, 0, -1]], [0, D2, 0, [[-0.65, 0.65, 0, 2.15], [-3.2, -1.8, 0.95, 1.95], [1.8, 3.2, 0.95, 1.95]], false, [0, 0, 1]], [W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [1, 0, 0]], [-W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [-1, 0, 0]]].forEach(function (w) {
+      var g = cpLogWall(R, w[2] ? D2 * 2 : W2 * 2, w[0], w[1], w[2], w[3], w[4]); cpWalls.push({ g: g, n: new THREE.Vector3(w[5][0], 0, w[5][2]), d: w[2] ? W2 : D2, extra: [] });
     });
-    cpWalls[0].extra = [carpWindow(R, 0, 1.45, -D2 + 0.12, 0, 2.3, 0.85, true)]; cpWalls[2].extra = [carpWindow(R, W2 - 0.12, 1.45, 0, -Math.PI / 2, 1.3, 0.85, true)]; cpWalls[3].extra = [carpWindow(R, -W2 + 0.12, 1.45, 0, Math.PI / 2, 1.3, 0.85, true)];
-    cpWalls[1].extra = [carpWindow(R, -2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true), carpWindow(R, 2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true)];   // (each window steps aside with its wall)
-    // (the big workbench along the back wall, with a pegboard of tools above it)
-    var WB = new THREE.Group(); WB.position.set(-0.6, 0, -D2 + 0.65); R.add(WB);
-    cpPart(new THREE.BoxGeometry(3.4, 0.14, 0.85), cpmPlank, 0, 0.92, 0, 0, 0, 0, WB);
-    [[-1.55, -0.32], [1.55, -0.32], [-1.55, 0.32], [1.55, 0.32]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.12, 0.92, 0.12), cpmPlankDark, l[0], 0.46, l[1], 0, 0, 0, WB); });
-    cpPart(new THREE.BoxGeometry(3.2, 0.06, 0.7), cpmPlankDark, 0, 0.25, 0, 0, 0, 0, WB);
-    for (var bx = 0; bx < 3; bx++) cpPart(new THREE.BoxGeometry(0.9, 0.12, 0.6), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xd8b088 }), -1 + bx * 1.0, 0.36, 0, 0, (Math.random() - 0.5) * 0.1, 0, WB);   // (offcuts stacked underneath)
-    cpPart(new THREE.BoxGeometry(2.6, 1.1, 0.04), new THREE.MeshStandardMaterial({ color: 0xb48a62, roughness: 0.9 }), 0, 1.75, -0.38, 0, 0, 0, WB);   // (the pegboard)
-    var tools = [[-1.0, 'saw'], [-0.55, 'hammer'], [-0.2, 'chisel'], [0.0, 'chisel'], [0.2, 'chisel'], [0.55, 'square'], [0.95, 'saw2']];
-    tools.forEach(function (tl) {
-      var g = new THREE.Group(); g.position.set(tl[0], 1.75, -0.34); WB.add(g);
-      if (tl[1] === 'saw' || tl[1] === 'saw2') { var s = new THREE.Shape(); s.moveTo(-0.08, 0.32); s.lineTo(0.08, 0.32); s.lineTo(0.04, -0.3); s.lineTo(-0.04, -0.3); s.closePath(); cpPart(new THREE.ShapeGeometry(s), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }), 0, -0.05, 0.01, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.2, 0.14, 0.04), new THREE.MeshStandardMaterial({ color: tl[1] === 'saw' ? 0x8a4a2a : 0x6a3a22 }), 0, 0.33, 0.01, 0, 0, 0, g); }
-      else if (tl[1] === 'hammer') { cpPart(new THREE.BoxGeometry(0.04, 0.4, 0.04), cpmPlank, 0, -0.05, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.18, 0.07, 0.06), cpmIron, 0, 0.16, 0.02, 0, 0, 0, g); }
-      else if (tl[1] === 'chisel') { cpPart(new THREE.CylinderGeometry(0.02, 0.022, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xb06a3a }), 0, 0.1, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.03, 0.18, 0.012), cpmSteel, 0, -0.07, 0.02, 0, 0, 0, g); }
-      else { cpPart(new THREE.BoxGeometry(0.04, 0.4, 0.015), cpmSteel, -0.08, 0, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.2, 0.04, 0.015), cpmSteel, 0.02, -0.18, 0.02, 0, 0, 0, g); }
+    cpWalls[2].extra.push(carpWindow(R, W2 - 0.12, 1.45, 0, -Math.PI / 2, 1.3, 0.85, true)); cpWalls[3].extra.push(carpWindow(R, -W2 + 0.12, 1.45, 0, Math.PI / 2, 1.3, 0.85, true));
+    cpWalls[1].extra.push(carpWindow(R, -2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true), carpWindow(R, 2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true));
+    var mWood = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb08a62, roughness: 0.8 }), mWoodTop = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xd8b48a, roughness: 0.75 });
+    var mOld = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 }), mMetal = new THREE.MeshStandardMaterial({ color: 0x5a6266, metalness: 0.55, roughness: 0.45 });
+    var mRust = new THREE.MeshStandardMaterial({ color: 0x8a5a3a, metalness: 0.3, roughness: 0.7 }), mRed = new THREE.MeshStandardMaterial({ color: 0xa83a2a, roughness: 0.5 }), mHandle = new THREE.MeshStandardMaterial({ color: 0xa0683a, roughness: 0.6 });
+    function put(geo, m, x, y, z, rx, ry, rz, p) { return cpPart(geo, m, x, y, z, rx, ry, rz, p); }
+    // ===== the bank of windows on the back wall: three big frames of small panes, with green leaves and daylight beyond =====
+    var leafTex = cpTex(256, 256, function (g, w, h) {
+      var sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#e8f4e0'); sky.addColorStop(1, '#bcd8a8'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 260; i++) { var x = Math.random() * w, y = Math.random() * h * 0.95, r = 6 + Math.random() * 22; g.fillStyle = 'hsla(' + (80 + Math.random() * 40) + ',' + (18 + Math.random() * 20) + '%,' + (45 + Math.random() * 30) + '%,' + (0.25 + Math.random() * 0.35) + ')'; g.beginPath(); g.ellipse(x, y, r, r * 0.7, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
+      for (var j = 0; j < 40; j++) { g.fillStyle = 'rgba(255,255,230,' + (0.3 + Math.random() * 0.4) + ')'; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 2 + Math.random() * 5, 0, Math.PI * 2); g.fill(); }
     });
-    var wp = cpPart(new THREE.BoxGeometry(0.22, 0.06, 1.1), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xe8c49a }), 0.4, 1.02, 0.05, 0, Math.PI / 2 + 0.2, 0, WB);   // (a board being worked, with a plane on it)
-    cpPart(new THREE.BoxGeometry(0.09, 0.07, 0.26), new THREE.MeshStandardMaterial({ color: 0xa06a3c }), 0.2, 1.09, 0.05, 0, Math.PI / 2 + 0.2, 0, WB);
-    for (var sh2 = 0; sh2 < 14; sh2++) { var crl = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 4, 10, 4.5), cpmSawdust); crl.position.set(-0.2 + Math.random() * 1.2, 1.0, (Math.random() - 0.5) * 0.6); crl.rotation.set(Math.random() * 3, Math.random() * 3, 0); WB.add(crl); }
-    cpLantern(WB, -1.45, 1.15, 0.15, cpGlows);
-    carpSolids.push([-0.6, -D2 + 0.65, 0.9], [-1.7, -D2 + 0.65, 0.6], [0.5, -D2 + 0.65, 0.6]);
-    // (the wood stove in the back right corner, glowing, with a stovepipe up through the roof and a basket of logs)
-    var ST = new THREE.Group(); ST.position.set(W2 - 0.9, 0, -1.2); R.add(ST);
-    cpPart(new THREE.BoxGeometry(0.75, 0.7, 0.6), cpmIron, 0, 0.45, 0, 0, 0, 0, ST); [[-0.3, -0.24], [0.3, -0.24], [-0.3, 0.24], [0.3, 0.24]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.06, 0.12, 0.06), cpmIron, l[0], 0.06, l[1], 0, 0, 0, ST); });
-    var fire = cpPart(new THREE.PlaneGeometry(0.4, 0.26), new THREE.MeshBasicMaterial({ color: 0xff8a3a }), -0.38, 0.42, 0, 0, -Math.PI / 2, 0, ST); cpPart(new THREE.BoxGeometry(0.03, 0.34, 0.5), cpmIron, -0.39, 0.42, 0, 0, 0, 0, ST).scale.set(1, 1, 0.98);
-    fire.position.x = -0.385; fire.renderOrder = 2; var fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8a3a, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); fireGlow.position.set(-0.6, 0.45, 0); fireGlow.scale.set(1.2, 1, 1); ST.add(fireGlow);
-    [0.12, 0.23, 0.34].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.02, 0.02, 0.48), cpmIron, -0.4, y + 0.27, 0, 0, 0, 0, ST); });   // (the grate in its door)
-    cpPart(new THREE.CylinderGeometry(0.09, 0.09, CARP_WALL + 0.5, 12), cpmIron, 0.1, 0.8 + (CARP_WALL + 0.5) / 2, 0, 0, 0, 0, ST);
-    var LB = new THREE.Group(); LB.position.set(-0.3, 0, 0.75); ST.add(LB); cpPart(new THREE.CylinderGeometry(0.3, 0.26, 0.35, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0x9a7a4a, side: THREE.DoubleSide, roughness: 0.9 }), 0, 0.18, 0, 0, 0, 0, LB);
-    for (var lg = 0; lg < 5; lg++) cpLog(LB, 0.07, 0.55, (lg % 3 - 1) * 0.15, 0.25 + Math.floor(lg / 3) * 0.12, 0, 0.3 * (lg - 2));
-    carpSolids.push([W2 - 0.9, -1.2, 0.55], [W2 - 1.2, -0.45, 0.35]);
-    carpScene.userData = { fire: fire, fireGlow: fireGlow };
-    // (a lumber rack along the left wall, planks and poles stacked on its arms)
-    var LR = new THREE.Group(); LR.position.set(-W2 + 0.35, 0, -0.6); R.add(LR);
-    [-1.3, 0, 1.3].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.1, 2.1, 0.1), cpmPlankDark, -0.1, 1.05, z, 0, 0, 0, LR); [0.5, 1.1, 1.7].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.5, 0.06, 0.06), cpmPlankDark, 0.15, y, z, 0, 0, 0, LR); }); });
-    [0.5, 1.1, 1.7].forEach(function (y, k) { for (var b = 0; b < 3 + k % 2; b++) cpPart(new THREE.BoxGeometry(0.12, 0.05, 2.9), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xe0b888, 0xc89c6c, 0xa0704a][(b + k) % 3] }), 0.05 + b * 0.11, y + 0.06, 0, 0, 0, 0, LR); });
-    carpSolids.push([-W2 + 0.45, -1.4, 0.5], [-W2 + 0.45, -0.2, 0.5], [-W2 + 0.45, 0.7, 0.5]);
-    // (sawhorses in the middle of the room with a half-made chair beside them)
-    var MH = new THREE.Group(); MH.position.set(0.2, 0, 0.5); MH.rotation.y = 0.3; R.add(MH);
-    [-0.6, 0.6].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.1, 0.1, 0.7), cpmPlank, x, 0.65, 0, 0, 0, 0, MH); [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.06, 0.7, 0.06), cpmPlankDark, x, 0.33, s * 0.2, s * 0.3, 0, 0, MH); }); });
-    cpPart(new THREE.BoxGeometry(1.7, 0.06, 0.32), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xe8c49a }), 0, 0.73, 0, 0, 0, 0, MH);
-    var CHR = new THREE.Group(); CHR.position.set(1.4, 0, 0.7); CHR.rotation.y = -0.5; MH.add(CHR);
-    cpPart(new THREE.BoxGeometry(0.5, 0.05, 0.5), cpmPlank, 0, 0.45, 0, 0, 0, 0, CHR); [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.05, 0.45, 0.05), cpmPlankDark, l[0], 0.22, l[1], 0, 0, 0, CHR); });
-    cpPart(new THREE.BoxGeometry(0.05, 0.45, 0.05), cpmPlankDark, 0.32, 0.03, 0.35, 0, 0, Math.PI / 2 - 0.2, CHR);   // (its fourth leg still on the floor)
-    [-0.2, 0.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 0.55, 0.05), cpmPlankDark, x, 0.75, -0.22, 0, 0, 0, CHR); }); cpPart(new THREE.BoxGeometry(0.45, 0.12, 0.04), cpmPlank, 0, 0.9, -0.22, 0, 0, 0, CHR);
-    carpSolids.push([0.2, 0.5, 0.75], [1.3, 1.1, 0.4]);
-    // (the counter by the door, where the carpenter will serve you, with a ledger, a lamp and a bell)
-    var CT = new THREE.Group(); CT.position.set(-2.6, 0, 1.7); R.add(CT);
-    cpPart(new THREE.BoxGeometry(1.8, 1.0, 0.6), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb88a62 }), 0, 0.5, 0, 0, 0, 0, CT); cpPart(new THREE.BoxGeometry(1.95, 0.08, 0.72), cpmPlankDark, 0, 1.04, 0, 0, 0, 0, CT);
-    cpPart(new THREE.BoxGeometry(0.4, 0.04, 0.3), new THREE.MeshStandardMaterial({ color: 0x6a2a2a }), -0.4, 1.1, 0, 0, 0.2, 0, CT); cpPart(new THREE.BoxGeometry(0.38, 0.01, 0.28), new THREE.MeshStandardMaterial({ color: 0xf0e6d0 }), -0.4, 1.125, 0, 0, 0.2, 0, CT);
-    cpPart(new THREE.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cpmBrass, 0.5, 1.08, 0.05, 0, 0, 0, CT); cpLantern(CT, 0.15, 1.24, -0.1, cpGlows);
-    carpSolids.push([-3.1, 1.7, 0.55], [-2.1, 1.7, 0.55]);
-    // (shelves of carved things on the right wall: bowls, a toy horse, spoons, a birdhouse)
-    var SV = new THREE.Group(); SV.position.set(W2 - 0.25, 0, 1.6); SV.rotation.y = -Math.PI / 2; R.add(SV);
-    [0.6, 1.15, 1.7].forEach(function (y) { cpPart(new THREE.BoxGeometry(1.6, 0.05, 0.35), cpmPlankDark, 0, y, 0, 0, 0, 0, SV); });
-    [-0.75, 0.75].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 1.8, 0.35), cpmPlankDark, x, 0.9, 0, 0, 0, 0, SV); });
-    var mCarve = new THREE.MeshStandardMaterial({ color: 0xc89060, roughness: 0.6 });
-    [-0.45, -0.1, 0.3].forEach(function (x) { var b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc89060, roughness: 0.6, side: THREE.DoubleSide })); b.position.set(x, 0.78, 0); b.rotation.x = Math.PI; b.scale.set(1, 0.7, 1); SV.add(b); });
-    var horse = new THREE.Group(); horse.position.set(-0.3, 1.18, 0); SV.add(horse); cpPart(new THREE.BoxGeometry(0.28, 0.12, 0.09), mCarve, 0, 0.16, 0, 0, 0, 0, horse); cpPart(new THREE.BoxGeometry(0.07, 0.16, 0.07), mCarve, 0.15, 0.25, 0, 0, 0, -0.4, horse); cpPart(new THREE.BoxGeometry(0.11, 0.06, 0.07), mCarve, 0.2, 0.33, 0, 0, 0, 0, horse);
-    [[-0.1, -0.03], [0.1, -0.03], [-0.1, 0.03], [0.1, 0.03]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.03, 0.12, 0.03), mCarve, l[0], 0.06, l[1] * 1.2, 0, 0, 0, horse); });
-    var bh = new THREE.Group(); bh.position.set(0.35, 1.18, 0); SV.add(bh); cpPart(new THREE.BoxGeometry(0.22, 0.24, 0.2), new THREE.MeshStandardMaterial({ color: 0xd8b088 }), 0, 0.12, 0, 0, 0, 0, bh); cpPart(new THREE.ConeGeometry(0.2, 0.14, 4), new THREE.MeshStandardMaterial({ color: 0x8a5a3a }), 0, 0.31, 0, 0, Math.PI / 4, 0, bh);
-    cpPart(new THREE.CircleGeometry(0.04, 12), new THREE.MeshBasicMaterial({ color: 0x2a1a10 }), 0, 0.15, 0.101, 0, 0, 0, bh);
-    for (var sp2 = 0; sp2 < 4; sp2++) cpPart(new THREE.CylinderGeometry(0.01, 0.012, 0.3, 6), mCarve, -0.5 + sp2 * 0.08, 1.85, 0.05, 0.3, 0, 0, SV);
-    cpPart(new THREE.BoxGeometry(0.45, 0.08, 0.3), mCarve, 0.35, 1.76, 0, 0, 0.2, 0, SV);
-    carpSolids.push([W2 - 0.3, 1.0, 0.35], [W2 - 0.3, 2.2, 0.35]);
-    // (a braided rug in the middle, sawdust drifts in the corners)
-    var rugTex = cpTex(256, 256, function (g, w, h) { g.fillStyle = 'rgba(0,0,0,0)'; g.fillRect(0, 0, w, h); var cols = ['#a0583a', '#d8b06a', '#6a8a5a', '#c08a5a', '#8a4a3a']; for (var r = 124, k = 0; r > 4; r -= 9, k++) { g.strokeStyle = cols[k % cols.length]; g.lineWidth = 9; g.beginPath(); g.ellipse(128, 128, r, r * 0.7, 0, 0, Math.PI * 2); g.stroke(); } });
-    var rug = cpPart(new THREE.PlaneGeometry(2.6, 2.6), new THREE.MeshStandardMaterial({ map: rugTex, transparent: true, roughness: 1 }), 0.3, 0.01, 2.2, -Math.PI / 2, 0, 0, R); rug.castShadow = false;
-    [[-W2 + 0.6, -D2 + 0.6], [W2 - 0.6, D2 - 0.6], [-1.0, -D2 + 1.3], [1.3, 0.8]].forEach(function (p) { var d = new THREE.Mesh(new THREE.CircleGeometry(0.4 + Math.random() * 0.4, 16), cpmSawdust); d.rotation.x = -Math.PI / 2; d.position.set(p[0], 0.006, p[1]); d.scale.set(1, 0.7, 1); R.add(d); });
-    [[-2.2, 0], [2.2, 0]].forEach(function (lp) { cpLantern(R, lp[0], 2.25, lp[1], cpGlows); cpPart(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), cpmIron, lp[0], 2.65, lp[1], 0, 0, 0, R); });   // (lanterns hanging on chains from the rafters)
+    var WB = new THREE.Group(); WB.position.set(0, 0, -D2 + 0.14); R.add(WB); cpWalls[0].extra.push(WB);
+    put(new THREE.PlaneGeometry(5.1, 1.4), new THREE.MeshBasicMaterial({ map: leafTex, color: 0xe8ecdc }), 0, 1.65, -0.02, 0, 0, 0, WB);
+    var mFrame = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.7 });
+    [[0, 2.36, 5.25, 0.12], [0, 0.94, 5.25, 0.12], [-2.6, 1.65, 0.12, 1.5], [2.6, 1.65, 0.12, 1.5], [-0.86, 1.65, 0.1, 1.42], [0.86, 1.65, 0.1, 1.42]].forEach(function (f) { put(new THREE.BoxGeometry(f[2], f[3], 0.1), mFrame, f[0], f[1], 0.02, 0, 0, 0, WB); });
+    [-1.73, 0, 1.73].forEach(function (cx) {                           // (each frame divided into small panes by thin muntins)
+      for (var c = 1; c < 4; c++) put(new THREE.BoxGeometry(0.03, 1.38, 0.04), mFrame, cx - 0.84 + c * 0.42, 1.65, 0.03, 0, 0, 0, WB);
+      for (var r = 1; r < 4; r++) put(new THREE.BoxGeometry(1.68, 0.03, 0.04), mFrame, cx, 0.96 + r * 0.345, 0.03, 0, 0, 0, WB);
+    });
+    put(new THREE.BoxGeometry(5.0, 0.04, 0.16), mOld, 0, 1.37, 0.1, 0, 0, 0, WB);   // (a little shelf across the windows, lined with small tools and pots)
+    for (var sh = 0; sh < 16; sh++) { var sx = -2.35 + sh * 0.31 + Math.random() * 0.08, kind = sh % 4;
+      if (kind === 0) put(new THREE.CylinderGeometry(0.035, 0.03, 0.09, 10), new THREE.MeshStandardMaterial({ color: [0x6a7a8a, 0x8a6a4a, 0x5a6a5a][sh % 3], roughness: 0.5 }), sx, 1.435, 0.1, 0, 0, 0, WB);
+      else if (kind === 1) put(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), mHandle, sx, 1.47, 0.1, 0, 0, 0.1, WB);
+      else if (kind === 2) put(new THREE.BoxGeometry(0.1, 0.06, 0.08), mWood, sx, 1.42, 0.1, 0, 0.3, 0, WB);
+      else put(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 6), mMetal, sx, 1.48, 0.1, 0, 0, -0.2, WB); }
+    // (two big round wall clocks above the windows)
+    [-0.8, 0.8].forEach(function (cx, k) {
+      var face = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#efe4c8'; g.beginPath(); g.arc(64, 64, 62, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#3a2a18'; g.lineWidth = 2; for (var i = 0; i < 12; i++) { var a = i / 12 * Math.PI * 2; g.beginPath(); g.moveTo(64 + Math.cos(a) * 50, 64 + Math.sin(a) * 50); g.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); g.stroke(); } g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 26, 64 - 18 - k * 12); g.stroke(); g.lineWidth = 2.5; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 - 10 + k * 30, 64 - 44); g.stroke(); });
+      put(new THREE.CylinderGeometry(0.21, 0.21, 0.06, 28), cpmBrass, cx, 2.56, 0.02, Math.PI / 2, 0, 0, WB);
+      put(new THREE.CircleGeometry(0.18, 28), new THREE.MeshStandardMaterial({ map: face, roughness: 0.4 }), cx, 2.56, 0.055, 0, 0, 0, WB);
+    });
+    // ===== tools hanging all over the walls: wrenches, pliers, hammers, saws, screwdrivers, chisels, clamps, squares =====
+    var TG = {
+      handle: new THREE.CylinderGeometry(0.018, 0.02, 0.16, 8), handleS: new THREE.CylinderGeometry(0.014, 0.016, 0.1, 8), shaft: new THREE.CylinderGeometry(0.006, 0.006, 0.14, 6),
+      wrench: new THREE.BoxGeometry(0.028, 0.24, 0.012), ring: new THREE.TorusGeometry(0.03, 0.01, 6, 14), jaw: new THREE.BoxGeometry(0.05, 0.05, 0.012),
+      plierArm: new THREE.BoxGeometry(0.02, 0.2, 0.012), head: new THREE.BoxGeometry(0.12, 0.045, 0.04), sawBlade: new THREE.BoxGeometry(0.16, 0.42, 0.004),
+      chisel: new THREE.BoxGeometry(0.022, 0.12, 0.006), clampBar: new THREE.BoxGeometry(0.024, 0.32, 0.016), clampJaw: new THREE.BoxGeometry(0.11, 0.03, 0.03),
+      sqA: new THREE.BoxGeometry(0.03, 0.3, 0.008), sqB: new THREE.BoxGeometry(0.18, 0.03, 0.008), peg: new THREE.CylinderGeometry(0.006, 0.006, 0.05, 5)
+    };
+    function tool(p, x, y, kind, k) {                                  // (one tool, hung on a peg at x, y on a wall group)
+      var g = new THREE.Group(); g.position.set(x, y, 0.03); g.rotation.z = (Math.sin(k * 7.3) * 0.08); p.add(g);
+      var hm = [mHandle, mRed, new THREE.MeshStandardMaterial({ color: 0x3a5a7a, roughness: 0.5 }), mHandle][k % 4];
+      put(TG.peg, mMetal, 0, 0.02, 0, Math.PI / 2, 0, 0, g);
+      if (kind === 0) { put(TG.wrench, mMetal, 0, -0.12, 0, 0, 0, 0, g); put(TG.ring, mMetal, 0, -0.27, 0, 0, 0, 0, g); put(TG.jaw, mMetal, 0, 0.0, 0, 0, 0, 0, g); }
+      else if (kind === 1) { [-1, 1].forEach(function (s) { put(TG.plierArm, hm, s * 0.02, -0.1, 0, 0, 0, s * 0.12, g); }); put(TG.jaw, mMetal, 0, 0.02, 0, 0, 0, 0, g); }
+      else if (kind === 2) { put(TG.handle, mHandle, 0, -0.1, 0, 0, 0, 0, g).scale.set(0.8, 1.7, 0.8); put(TG.head, mMetal, 0, 0.02, 0.01, 0, 0, 0, g); }
+      else if (kind === 3) { put(TG.sawBlade, mMetal, 0, -0.27, 0, 0, 0, 0, g); put(new THREE.BoxGeometry(0.13, 0.12, 0.03), hm, 0, -0.02, 0, 0, 0, 0, g); }
+      else if (kind === 4) { put(TG.handleS, hm, 0, -0.05, 0, 0, 0, 0, g); put(TG.shaft, mMetal, 0, -0.17, 0, 0, 0, 0, g); }
+      else if (kind === 5) { put(TG.handleS, mHandle, 0, -0.05, 0, 0, 0, 0, g); put(TG.chisel, mMetal, 0, -0.16, 0, 0, 0, 0, g); }
+      else if (kind === 6) { put(TG.clampBar, mMetal, 0, -0.16, 0, 0, 0, 0, g); [0.0, -0.22].forEach(function (cy) { put(TG.clampJaw, k % 2 ? mRed : mRust, 0.05, cy, 0, 0, 0, 0, g); }); }
+      else { put(TG.sqA, mMetal, -0.07, -0.15, 0, 0, 0, 0, g); put(TG.sqB, mMetal, 0.01, -0.29, 0, 0, 0, 0, g); }
+      return g;
+    }
+    function toolWall(x, z, ry, w, rows, wallIdx, seed) {              // (a planked board fixed to a wall, crowded with hanging tools)
+      var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; R.add(g); cpWalls[wallIdx].extra.push(g);
+      put(new THREE.BoxGeometry(w, rows.length * 0.42 + 0.1, 0.03), mOld, 0, rows[0] - rows.length * 0.21 + 0.21 + 0.02, -0.02, 0, 0, 0, g);
+      rows.forEach(function (ry2, r) { var n = Math.floor(w / 0.17); for (var i = 0; i < n; i++) { var kk = seed + r * 31 + i; if (Math.sin(kk * 12.9) > 0.85) continue; tool(g, -w / 2 + 0.1 + i * (w - 0.2) / (n - 1), ry2, Math.abs(Math.floor(Math.sin(kk * 4.7) * 1000)) % 8, kk); } });
+      return g;
+    }
+    toolWall(-3.55, -D2 + 0.2, 0, 1.75, [2.35, 1.9, 1.45], 0, 3);       // (both sides of the windows on the back wall...)
+    toolWall(3.55, -D2 + 0.2, 0, 1.75, [2.35, 1.9, 1.45], 0, 41);
+    toolWall(-W2 + 0.2, -2.0, Math.PI / 2, 2.3, [2.35, 1.9], 3, 77);    // (...the left wall either side of its window...)
+    toolWall(-W2 + 0.2, 2.15, Math.PI / 2, 1.9, [2.35, 1.9], 3, 99);
+    toolWall(W2 - 0.2, -2.0, -Math.PI / 2, 2.3, [2.35], 2, 133);        // (...and above the shelves on the right)
+    // ===== the long workbench under the windows: a thick, scarred top, a vise, drawers of metal and wood underneath =====
+    var BB = new THREE.Group(); BB.position.set(0, 0, -D2 + 0.6); R.add(BB);
+    put(new THREE.BoxGeometry(6.4, 0.09, 0.8), mWoodTop, 0, 0.9, 0, 0, 0, 0, BB); put(new THREE.BoxGeometry(6.4, 0.12, 0.05), mWood, 0, 0.83, 0.38, 0, 0, 0, BB);
+    [-3.1, -1.05, 1.05, 3.1].forEach(function (x) { [-0.33, 0.33].forEach(function (z) { put(new THREE.BoxGeometry(0.09, 0.86, 0.09), mWood, x, 0.43, z, 0, 0, 0, BB); }); });
+    put(new THREE.BoxGeometry(6.2, 0.04, 0.7), mOld, 0, 0.12, 0, 0, 0, 0, BB);
+    function drawers(p, x, y, z, w, n, metal) {                         // (a stack of drawers, each with a handle)
+      var dh = 0.6 / n; put(new THREE.BoxGeometry(w, 0.62, 0.66), metal ? mMetal : mWood, x, y, z - 0.02, 0, 0, 0, p);
+      for (var i = 0; i < n; i++) { put(new THREE.BoxGeometry(w - 0.06, dh - 0.04, 0.03), metal ? new THREE.MeshStandardMaterial({ color: 0x6a7478, metalness: 0.5, roughness: 0.4 }) : mWoodTop, x, y - 0.3 + dh * (i + 0.5), z + 0.32, 0, 0, 0, p); put(new THREE.BoxGeometry(w * 0.3, 0.02, 0.03), metal ? mMetal : cpmBrass, x, y - 0.3 + dh * (i + 0.5), z + 0.35, 0, 0, 0, p); }
+    }
+    drawers(BB, 0, 0.5, 0, 1.9, 3, true); drawers(BB, 2.05, 0.5, 0, 1.85, 2, false);
+    var vise = new THREE.Group(); vise.position.set(-2.6, 0.95, 0.3); BB.add(vise);
+    put(new THREE.BoxGeometry(0.22, 0.12, 0.2), mMetal, 0, 0.06, 0, 0, 0, 0, vise); put(new THREE.BoxGeometry(0.22, 0.12, 0.05), mMetal, 0, 0.06, 0.18, 0, 0, 0, vise); put(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), mMetal, 0, 0.06, 0.26, 0, 0, Math.PI / 2, vise);
+    [[-1.9, 0.0, 'box'], [-1.4, -0.15, 'plane'], [-0.6, 0.1, 'mallet'], [0.3, -0.2, 'box2'], [0.9, 0.05, 'clamp'], [1.6, -0.1, 'motor'], [2.5, 0.1, 'plane'], [-2.95, -0.2, 'jar']].forEach(function (it, k) {
+      var x = it[0], z = it[1], t = it[2];
+      if (t === 'box') { put(new THREE.BoxGeometry(0.4, 0.14, 0.26), mWood, x, 1.01, z, 0, 0.1, 0, BB); put(new THREE.BoxGeometry(0.42, 0.03, 0.06), mHandle, x, 1.1, z, 0, 0.1, 0, BB); }
+      else if (t === 'box2') { for (var b = 0; b < 3; b++) put(new THREE.BoxGeometry(0.3, 0.08, 0.22), b % 2 ? mWoodTop : mWood, x, 0.98 + b * 0.085, z, 0, b * 0.15, 0, BB); }
+      else if (t === 'plane') { put(new THREE.BoxGeometry(0.08, 0.07, 0.26), mHandle, x, 0.98, z, 0, 0.4, 0, BB); put(new THREE.BoxGeometry(0.06, 0.07, 0.06), mHandle, x, 1.04, z - 0.05, 0, 0.4, 0, BB); }
+      else if (t === 'mallet') { put(new THREE.CylinderGeometry(0.016, 0.016, 0.3, 8), mHandle, x, 0.97, z, 0, 0.5, Math.PI / 2, BB); put(new THREE.BoxGeometry(0.08, 0.08, 0.13), mWood, x + 0.14, 0.99, z + 0.07, 0, 0.5, 0, BB); }
+      else if (t === 'clamp') { put(TG.clampBar, mMetal, x, 0.96, z, Math.PI / 2, 0, 0.4, BB); put(TG.clampJaw, mRed, x, 0.98, z, 0, 0.4, 0, BB); }
+      else if (t === 'motor') { put(new THREE.CylinderGeometry(0.11, 0.11, 0.24, 16), new THREE.MeshStandardMaterial({ color: 0x8a8a7a, metalness: 0.4, roughness: 0.5 }), x, 1.06, z, 0, 0, Math.PI / 2, BB); put(new THREE.BoxGeometry(0.3, 0.06, 0.22), mMetal, x, 0.95, z, 0, 0, 0, BB); }
+      else { put(new THREE.CylinderGeometry(0.05, 0.05, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0xa8b8b0, transparent: true, opacity: 0.7, roughness: 0.1 }), x, 1.02, z, 0, 0, 0, BB); }
+    });
+    for (var cu = 0; cu < 18; cu++) { var crl = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 4, 10, 4.5), cpmSawdust); crl.position.set(-2 + Math.random() * 4, 0.96, (Math.random() - 0.5) * 0.5); crl.rotation.set(Math.random() * 3, Math.random() * 3, 0); BB.add(crl); }
+    carpSolids.push([-2.6, -D2 + 0.6, 0.75], [-1.3, -D2 + 0.6, 0.75], [0, -D2 + 0.6, 0.75], [1.3, -D2 + 0.6, 0.75], [2.6, -D2 + 0.6, 0.75]);
+    // (a strip light hanging over it, glowing pale)
+    put(new THREE.BoxGeometry(2.2, 0.06, 0.12), mMetal, 0, 2.48, -D2 + 0.9, 0, 0, 0, R); put(new THREE.BoxGeometry(2.1, 0.02, 0.08), new THREE.MeshBasicMaterial({ color: 0xfff8e8 }), 0, 2.44, -D2 + 0.9, 0, 0, 0, R);
+    [-0.9, 0.9].forEach(function (x) { put(new THREE.CylinderGeometry(0.005, 0.005, 0.12, 4), cpmIron, x, 2.56, -D2 + 0.9, 0, 0, 0, R); });
+    var stripPt = new THREE.PointLight(0xfff4e0, 0.5, 6); stripPt.position.set(CPI_X, 2.3, CPI_Z - D2 + 1.0); carpScene.add(stripPt);
+    // ===== drawer cabinets with worktops down the sides, crowded with tools and boxes =====
+    function sideBench(x, z0, z1, face, wallIdx) {
+      var g = new THREE.Group(); g.position.set(x, 0, (z0 + z1) / 2); g.rotation.y = face; R.add(g); var L = z1 - z0;
+      put(new THREE.BoxGeometry(L, 0.08, 0.75), mWoodTop, 0, 0.92, 0, 0, 0, 0, g);
+      var n = Math.max(1, Math.round(L / 0.7));
+      for (var i = 0; i < n; i++) { var cx = -L / 2 + (i + 0.5) * L / n; drawers(g, cx, 0.45, 0, L / n - 0.04, i % 2 ? 4 : 3, false); }
+      for (var k = 0; k < Math.round(L * 2); k++) { var tx = -L / 2 + 0.2 + k * 0.5, kind = k % 4;
+        if (kind === 0) put(new THREE.BoxGeometry(0.28, 0.12, 0.2), mWood, tx, 1.02, -0.1, 0, 0.2, 0, g);
+        else if (kind === 1) put(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 10), mMetal, tx, 1.02, 0.1, 0, 0, 0, g);
+        else if (kind === 2) { put(TG.handle, mHandle, tx, 0.98, 0.05, 0, 0, Math.PI / 2, g); put(TG.head, mMetal, tx + 0.09, 0.98, 0.05, 0, 0, Math.PI / 2, g); }
+        else put(new THREE.BoxGeometry(0.22, 0.05, 0.3), mWoodTop, tx, 0.98, 0, 0, 0.3, 0, g); }
+      return g;
+    }
+    sideBench(-W2 + 0.55, -3.0, 2.8, Math.PI / 2, 3);
+    for (var sb = -2.6; sb <= 2.6; sb += 0.65) carpSolids.push([-W2 + 0.55, sb, 0.45]);
+    sideBench(W2 - 0.55, -0.6, 2.8, -Math.PI / 2, 2);
+    for (var sb2 = -0.3; sb2 <= 2.6; sb2 += 0.65) carpSolids.push([W2 - 0.55, sb2, 0.45]);
+    // (shelves high on the right wall, full of jars, boxes, coils, little carved birdhouses and pots)
+    var SV = new THREE.Group(); SV.position.set(W2 - 0.25, 0, 1.1); SV.rotation.y = -Math.PI / 2; R.add(SV); cpWalls[2].extra.push(SV);
+    [1.55, 1.95, 2.35].forEach(function (y, r) {
+      put(new THREE.BoxGeometry(3.2, 0.04, 0.32), mOld, 0, y, 0, 0, 0, 0, SV);
+      for (var i = 0; i < 9; i++) { var x = -1.45 + i * 0.36 + Math.sin(i * 3 + r) * 0.05, k = (i + r * 3) % 5;
+        if (k === 0) put(new THREE.CylinderGeometry(0.06, 0.06, 0.18, 12), new THREE.MeshStandardMaterial({ color: [0x9ab0a8, 0xb89a6a, 0x8aa0b8][i % 3], roughness: 0.3, transparent: true, opacity: 0.85 }), x, y + 0.11, 0, 0, 0, 0, SV);
+        else if (k === 1) put(new THREE.BoxGeometry(0.26, 0.16, 0.22), [mWood, mWoodTop, mRust][i % 3], x, y + 0.1, 0, 0, 0.1, 0, SV);
+        else if (k === 2) { put(new THREE.BoxGeometry(0.16, 0.16, 0.16), mWoodTop, x, y + 0.1, 0, 0, 0, 0, SV); put(new THREE.ConeGeometry(0.15, 0.1, 4), mOld, x, y + 0.23, 0, 0, Math.PI / 4, 0, SV); }
+        else if (k === 3) put(new THREE.TorusGeometry(0.07, 0.025, 6, 14), mRust, x, y + 0.08, 0, Math.PI / 2, 0, 0, SV);
+        else put(new THREE.CylinderGeometry(0.07, 0.05, 0.12, 12), new THREE.MeshStandardMaterial({ color: 0xa0603a, roughness: 0.8 }), x, y + 0.08, 0, 0, 0, 0, SV); }
+    });
+    [-1.55, 1.55].forEach(function (x) { put(new THREE.BoxGeometry(0.05, 1.0, 0.32), mOld, x, 1.95, 0, 0, 0, 0, SV); });
+    // (a lumber stack leaning in the back right corner, and a stool with a few tools on it)
+    for (var lb = 0; lb < 6; lb++) put(new THREE.BoxGeometry(0.12, 2.2, 0.05), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xe0b888, 0xc89c6c, 0xa0704a][lb % 3] }), W2 - 0.35 - lb * 0.07, 1.08, -D2 + 1.3 + lb * 0.05, 0.18, 0, -0.06, R);
+    carpSolids.push([W2 - 0.55, -D2 + 1.4, 0.45]);
+    // ===== your counter, in the middle of the shop, facing the door: a heavy old workbench of a counter with drawers =====
+    var CT = new THREE.Group(); CT.position.set(0, 0, 0.35); R.add(CT);
+    put(new THREE.BoxGeometry(2.4, 0.1, 0.85), mWoodTop, 0, 1.0, 0, 0, 0, 0, CT); put(new THREE.BoxGeometry(2.42, 0.1, 0.06), mWood, 0, 0.92, 0.42, 0, 0, 0, CT);
+    put(new THREE.BoxGeometry(2.3, 0.86, 0.7), mWood, 0, 0.45, -0.02, 0, 0, 0, CT);
+    [-0.8, 0, 0.8].forEach(function (x) { for (var r = 0; r < 3; r++) { put(new THREE.BoxGeometry(0.7, 0.24, 0.03), mWoodTop, x, 0.18 + r * 0.27, 0.34, 0, 0, 0, CT); put(new THREE.BoxGeometry(0.2, 0.025, 0.03), cpmBrass, x, 0.18 + r * 0.27, 0.365, 0, 0, 0, CT); } });
+    put(new THREE.BoxGeometry(0.42, 0.04, 0.3), new THREE.MeshStandardMaterial({ color: 0x6a2a2a }), -0.6, 1.07, 0, 0, 0.2, 0, CT); put(new THREE.BoxGeometry(0.4, 0.012, 0.28), new THREE.MeshStandardMaterial({ color: 0xf0e6d0 }), -0.6, 1.094, 0, 0, 0.2, 0, CT);   // (the ledger...)
+    put(new THREE.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cpmBrass, 0.55, 1.05, 0.12, 0, 0, 0, CT);                                                // (...the little bell...)
+    cpLantern(CT, 0.95, 1.2, -0.15, cpGlows);                                                                                                                   // (...a lantern...)
+    put(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8), mHandle, 0.15, 1.08, -0.1, 0, 0.6, Math.PI / 2, CT); put(new THREE.BoxGeometry(0.06, 0.07, 0.1), mMetal, 0.27, 1.08, -0.02, 0, 0.6, 0, CT);   // (...and a hammer left on it)
+    carpSolids.push([-0.75, 0.35, 0.6], [0, 0.35, 0.6], [0.75, 0.35, 0.6]);
+    // (sawdust drifts in the corners, and lanterns hanging from the rafters)
+    [[-W2 + 1.1, -D2 + 1.2], [W2 - 1.2, D2 - 0.7], [-1.2, -D2 + 1.25], [1.6, -1.2]].forEach(function (p) { var d = new THREE.Mesh(new THREE.CircleGeometry(0.35 + Math.random() * 0.3, 16), cpmSawdust); d.rotation.x = -Math.PI / 2; d.position.set(p[0], 0.006, p[1]); d.scale.set(1, 0.7, 1); R.add(d); });
+    [[-2.2, 1.6], [2.2, 1.6]].forEach(function (lp) { cpLantern(R, lp[0], 2.25, lp[1], cpGlows); put(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), cpmIron, lp[0], 2.65, lp[1], 0, 0, 0, R); });
+    carpScene.userData = {};
   })(carpRoom);
   var cpLook = new THREE.Vector3();
   function updateCarpInside(t) {
     cpLook.set(camera.position.x - CPI_X, 0, camera.position.z - CPI_Z);
-    cpWalls.forEach(function (W) { W.g.visible = cpLook.dot(W.n) < W.d - 0.2; (W.extra || []).forEach(function (e) { e.visible = W.g.visible; }); });   // (the wall between you and the camera steps aside)
+    cpWalls.forEach(function (W) { W.g.visible = cpLook.dot(W.n) < W.d - 0.6; (W.extra || []).forEach(function (e) { e.visible = W.g.visible; }); });   // (the wall between you and the camera steps aside)
     var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
     cpSun.intensity = 0.45 * (1 - nt);
     var fk = 1 + Math.sin(t * 9) * 0.08 + Math.sin(t * 13.3) * 0.06;
-    cpStoveLight.intensity = 0.7 * fk; carpScene.userData.fireGlow.material.opacity = 0.5 * fk; carpScene.userData.fire.material.color.setHSL(0.07 + Math.sin(t * 7) * 0.01, 1, 0.55 + Math.sin(t * 11) * 0.05);
     cpLamps.forEach(function (l, i) { l.intensity = (0.45 + nt * 0.25) * (1 + Math.sin(t * 10 + i) * 0.04); });
     cpGlows.forEach(function (L) { var f = 1 + Math.sin(t * 11 + L.p) * 0.1; L.f.scale.set(f, 1.5 * f, f); L.h.material.opacity = 0.5 * f; });
   }
