@@ -3322,8 +3322,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cpLantern(CT, 0.95, 1.2, -0.15, cpGlows);                                                                                                                   // (...a lantern...)
     put(new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8), mHandle, 0.15, 1.08, -0.1, 0, 0.6, Math.PI / 2, CT); put(new THREE.BoxGeometry(0.06, 0.07, 0.1), mMetal, 0.27, 1.08, -0.02, 0, 0.6, 0, CT);   // (...and a hammer left on it)
     carpSolids.push([-0.75, 0.35, 0.6], [0, 0.35, 0.6], [0.75, 0.35, 0.6]);
-    // (sawdust drifts in the corners, and lanterns hanging from the rafters)
-    [[-W2 + 1.1, -D2 + 1.2], [W2 - 1.2, D2 - 0.7], [-1.2, -D2 + 1.25], [1.6, -1.2]].forEach(function (p) { var d = new THREE.Mesh(new THREE.CircleGeometry(0.35 + Math.random() * 0.3, 16), cpmSawdust); d.rotation.x = -Math.PI / 2; d.position.set(p[0], 0.006, p[1]); d.scale.set(1, 0.7, 1); R.add(d); });
+    // (lanterns hanging from the rafters)
     [[-2.2, 1.6], [2.2, 1.6]].forEach(function (lp) { cpLantern(R, lp[0], 2.25, lp[1], cpGlows); put(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), cpmIron, lp[0], 2.65, lp[1], 0, 0, 0, R); });
     carpScene.userData = {};
   })(carpRoom);
