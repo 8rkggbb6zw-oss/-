@@ -1978,6 +1978,18 @@ EVERDAWN_PARTS.push(function (THREE) {
     label('Bridge', BRIDGE_X + 7, (BRIDGE_Z0 + BRIDGE_Z1) / 2, 0);
     label('West Bridge', -(BRIDGE_Z0 + BRIDGE_Z1) / 2, BRIDGE2_Z - 6, 0);
     label('Western Isle', ISLE3_X + 6, ISLE3_Z + 16, 0, 26);
+    // Oak & Ember: its stepping-stone path, and its brown shingled roof with the ridge across it and the stone chimney
+    g.fillStyle = '#c8bfae'; for (var cq = 4; cq < crpLine.length; cq += 6) { var cpp = mapXY(crpLine[cq][0], crpLine[cq][1]); g.beginPath(); g.arc(cpp[0], cpp[1], 4, 0, Math.PI * 2); g.fill(); }
+    var cpm = mapXY(CARP_X, CARP_Z);
+    g.save(); g.translate(cpm[0], cpm[1]); g.rotate(-CARP_TURN);
+    g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-CARP_HW * K + 8, -CARP_HD * K + 10, CARP_HW * K * 2 + 10, CARP_HD * K * 2 + 8);
+    g.fillStyle = '#6e5038'; g.fillRect(-CARP_HW * K - 6, -CARP_HD * K - 6, CARP_HW * K * 2 + 12, CARP_HD * K + 6);
+    g.fillStyle = '#8a6646'; g.fillRect(-CARP_HW * K - 6, 0, CARP_HW * K * 2 + 12, CARP_HD * K + 6);
+    g.fillStyle = '#5a3c26'; g.fillRect(-CARP_HW * K - 6, -2, CARP_HW * K * 2 + 12, 4);
+    g.fillStyle = '#8a847a'; g.fillRect(CARP_HW * K, -1.6 * K, 0.8 * K, 1.2 * K);
+    g.fillStyle = '#a0784e'; g.fillRect(-1.2 * K, CARP_HD * K + 6, 2.4 * K, 1.6 * K);
+    g.restore();
+    label('Oak & Ember', CARP_X, CARP_Z, 30);
     // Fluff & Feather: its grey gambrel roof with the ridge along it, and the cupola
     var apm = mapXY(ANIMAL_X, ANIMAL_Z);
     g.save(); g.translate(apm[0], apm[1]); g.rotate(-ANIMAL_TURN);
@@ -2034,8 +2046,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
-    if (indoors) you = inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
-    var yp = mapXY(you.x, you.z), fa = indoors ? (inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    if (indoors) you = inCarp ? carpFront(1.5) : inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inCarp ? CARP_TURN : inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
     var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
     g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
@@ -2718,6 +2730,418 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ---------- Every frame ----------
+  // ---------- Oak & Ember: the carpenter's workshop ----------
+  // A cosy log workshop at the back of the town square, its door facing the bridge, with its own stone path. Round
+  // its porch: a workbench, sawhorses, a log pile, a stack of planks, a chopping block, sawdust and a hanging sign; a
+  // stone chimney puffs smoke from the stove inside. Go in with Interact; inside, a warm workshop full of tools.
+  var CARP_X = -1.5, CARP_Z = 127, CARP_TURN = Math.PI + 0.05, CARP_HW = 4.5, CARP_HD = 3.5, CARP_WALL = 2.6;
+  function carpFront(d) { return { x: CARP_X + Math.sin(CARP_TURN) * (CARP_HD + d), z: CARP_Z + Math.cos(CARP_TURN) * (CARP_HD + d) }; }
+  function carpLocal(x, z) { var dx = x - CARP_X, dz = z - CARP_Z, c = Math.cos(CARP_TURN), si = Math.sin(CARP_TURN); return [dx * c - dz * si, dx * si + dz * c]; }
+  function onCarpLot(x, z, m) { var l = carpLocal(x, z); return Math.abs(l[0]) < CARP_HW + 2.6 + m && l[1] > -CARP_HD - 1.2 - m && l[1] < CARP_HD + 3.2 + m; }
+  var carpDoor = carpFront(0.12);
+  var CRP_PTS = [[-0.15, 86.2], [-0.45, 94], [-0.75, 103], [-1.1, 112], [carpFront(2.05).x, carpFront(2.05).z]], crpLine = stoneCurve(CRP_PTS, 150), crpBox = lineBox(crpLine);
+  function carpPathDist(x, z) { return lineDist(crpLine, crpBox, x, z); }
+
+  // (painted textures: bark, the rings on cut log ends, planks, wooden shingles, and the sign)
+  function cpTex(w, h, paint, rep) { var c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h); var t = new THREE.CanvasTexture(c); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; }
+  function cpWrap(w, h, f) { for (var ox = -w; ox <= w; ox += w) for (var oy = -h; oy <= h; oy += h) f(ox, oy); }
+  var cpBarkTex = cpTex(256, 128, function (g, w, h) {
+    g.fillStyle = '#7a5434'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 260; i++) { var x = Math.random() * w, y = Math.random() * h, l = 20 + Math.random() * 70, c = Math.random();
+      g.strokeStyle = c < 0.45 ? 'rgba(52,32,18,' + (0.3 + Math.random() * 0.4) + ')' : c < 0.8 ? 'rgba(150,110,72,' + (0.25 + Math.random() * 0.3) + ')' : 'rgba(190,150,105,0.3)';
+      g.lineWidth = 1 + Math.random() * 2.5; cpWrap(w, h, function (ox, oy) { g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + l, y + oy + (Math.random() - 0.5) * 3); g.stroke(); }); }
+    for (var k = 0; k < 14; k++) { var kx = Math.random() * w, ky = Math.random() * h; g.fillStyle = 'rgba(60,36,20,0.6)'; g.beginPath(); g.ellipse(kx, ky, 5 + Math.random() * 5, 3, 0, 0, Math.PI * 2); g.fill(); }   // (knots)
+  }, [2, 1]);
+  var cpEndTex = cpTex(128, 128, function (g, w, h) {
+    var gr = g.createRadialGradient(64, 64, 2, 64, 64, 64); gr.addColorStop(0, '#e6c48e'); gr.addColorStop(0.8, '#d2a46a'); gr.addColorStop(0.92, '#8a5a34'); gr.addColorStop(1, '#5a3a22');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    for (var r = 6; r < 56; r += 4 + Math.random() * 3) { g.strokeStyle = 'rgba(150,100,55,' + (0.35 + Math.random() * 0.3) + ')'; g.lineWidth = 1 + Math.random(); g.beginPath(); g.ellipse(64, 64, r, r * (0.95 + Math.random() * 0.08), 0, 0, Math.PI * 2); g.stroke(); }
+    g.strokeStyle = 'rgba(90,55,30,0.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 40, 64 + 18); g.stroke();   // (a little check crack)
+  });
+  var cpPlankTex = cpTex(256, 256, function (g, w, h) {
+    var n = 6, ph = h / n;
+    for (var i = 0; i < n; i++) { var base = 150 + Math.random() * 40; g.fillStyle = 'rgb(' + Math.round(base) + ',' + Math.round(base * 0.72) + ',' + Math.round(base * 0.45) + ')'; g.fillRect(0, i * ph, w, ph);
+      for (var s = 0; s < 40; s++) { var y = i * ph + Math.random() * ph; g.strokeStyle = 'rgba(90,55,30,' + (0.1 + Math.random() * 0.2) + ')'; g.lineWidth = 0.8 + Math.random(); g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * 0.3, y + (Math.random() - 0.5) * 6, w * 0.7, y + (Math.random() - 0.5) * 6, w, y); g.stroke(); }
+      g.fillStyle = 'rgba(50,30,15,0.7)'; g.fillRect(0, i * ph, w, 2);   // (the gap between planks)
+      var j = Math.random() * w; g.fillRect(j, i * ph, 2, ph);
+      g.fillStyle = 'rgba(40,25,15,0.6)'; [j - 6, j + 6].forEach(function (nx) { g.beginPath(); g.arc(nx, i * ph + ph * 0.3, 1.6, 0, Math.PI * 2); g.arc(nx, i * ph + ph * 0.7, 1.6, 0, Math.PI * 2); g.fill(); });   // (nail heads)
+    }
+  }, [1, 1]);
+  var cpShingleTex = cpTex(256, 256, function (g, w, h) {
+    g.fillStyle = '#5e4632'; g.fillRect(0, 0, w, h);
+    var rows = 8, rh = h / rows;
+    for (var r = 0; r < rows; r++) { var off = (r % 2) * 16, x = -off;
+      while (x < w) { var sw = 26 + Math.random() * 14, b = 95 + Math.random() * 45; g.fillStyle = 'rgb(' + Math.round(b) + ',' + Math.round(b * 0.72) + ',' + Math.round(b * 0.5) + ')';
+        g.fillRect(x + 1, r * rh + 1, sw - 2, rh - 1); g.fillStyle = 'rgba(30,18,10,0.45)'; g.fillRect(x + 1, r * rh + rh - 4, sw - 2, 4);
+        g.strokeStyle = 'rgba(60,40,25,0.3)'; g.lineWidth = 1; for (var q = 0; q < 3; q++) { var gx = x + 4 + Math.random() * (sw - 8); g.beginPath(); g.moveTo(gx, r * rh + 2); g.lineTo(gx + (Math.random() - 0.5) * 2, r * rh + rh - 4); g.stroke(); }
+        x += sw; }
+      if (Math.random() < 0.6) { g.fillStyle = 'rgba(95,120,60,0.35)'; g.beginPath(); g.ellipse(Math.random() * w, r * rh + rh * 0.7, 14, 4, 0, 0, Math.PI * 2); g.fill(); }   // (a little moss)
+    }
+  }, [3, 2]);
+  var carpSignTex = cpTex(512, 192, function (g, w, h) {
+    var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9a6a3e'); gr.addColorStop(1, '#7a4f2c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 70; i++) { var y = Math.random() * h; g.strokeStyle = 'rgba(70,40,20,' + (0.1 + Math.random() * 0.2) + ')'; g.lineWidth = 1 + Math.random(); g.beginPath(); g.moveTo(0, y); g.bezierCurveTo(w * 0.3, y + 4, w * 0.6, y - 4, w, y); g.stroke(); }
+    g.strokeStyle = '#4a2c16'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10); g.strokeStyle = 'rgba(240,200,140,0.5)'; g.lineWidth = 2; g.strokeRect(14, 14, w - 28, h - 28);
+    g.font = '600 64px Fredoka, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(40,22,10,0.6)'; g.fillText('Oak & Ember', w / 2 + 3, 78 + 3); g.fillStyle = '#f6dcae'; g.fillText('Oak & Ember', w / 2, 78);
+    g.font = '500 26px Fredoka, Georgia, serif'; g.fillStyle = '#ecc98e'; g.fillText('✦ Carpenter & Woodworks ✦', w / 2, 140);
+    g.save(); g.translate(56, 96); g.rotate(-0.5); g.fillStyle = '#c9ced6'; g.beginPath(); g.moveTo(-26, -6); g.lineTo(18, -6); g.lineTo(18, 6); g.lineTo(-26, 4); g.closePath(); g.fill();   // (a little saw...)
+    g.fillStyle = '#8a5a34'; g.fillRect(18, -9, 14, 18); g.restore();
+    g.save(); g.translate(w - 56, 98); g.fillStyle = '#ffb04a'; g.beginPath(); g.moveTo(0, -30); g.quadraticCurveTo(18, -8, 12, 12); g.quadraticCurveTo(0, 24, -12, 12); g.quadraticCurveTo(-18, -8, 0, -30); g.fill();   // (...and a flame)
+    g.fillStyle = '#ffe28a'; g.beginPath(); g.moveTo(0, -10); g.quadraticCurveTo(8, 2, 5, 10); g.quadraticCurveTo(0, 16, -5, 10); g.quadraticCurveTo(-8, 2, 0, -10); g.fill(); g.restore();
+  });
+  carpSignTex.anisotropy = 4;
+  var cpmBark = new THREE.MeshStandardMaterial({ map: cpBarkTex, bumpMap: cpBarkTex, bumpScale: 0.02, roughness: 0.9 });
+  var cpmEnd = new THREE.MeshStandardMaterial({ map: cpEndTex, roughness: 0.85 });
+  var cpmPlank = new THREE.MeshStandardMaterial({ map: cpPlankTex, roughness: 0.85 });
+  var cpmPlankDark = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0x9a7a62, roughness: 0.85 });
+  var cpmShingle = new THREE.MeshStandardMaterial({ map: cpShingleTex, bumpMap: cpShingleTex, bumpScale: 0.03, roughness: 0.9 });
+  var cpmStone = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 0.95 });
+  var cpmIron = new THREE.MeshStandardMaterial({ color: 0x3a3634, metalness: 0.5, roughness: 0.5 });
+  var cpmSteel = new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.6, roughness: 0.3 });
+  var cpmBrass = new THREE.MeshStandardMaterial({ color: 0xc8a050, metalness: 0.6, roughness: 0.35 });
+  var cpmSawdust = new THREE.MeshStandardMaterial({ color: 0xe0c48e, roughness: 1 });
+  var cpmGlowWin = new THREE.MeshStandardMaterial({ color: 0xffd99a, emissive: 0xffb860, emissiveIntensity: 0.6, roughness: 0.4 });
+  function cpPart(geo, m, x, y, z, rx, ry, rz, parent) { var o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx || 0, ry || 0, rz || 0); o.castShadow = true; o.receiveShadow = true; parent.add(o); return o; }
+  function cpLogGeo(r, len) { var g = new THREE.CylinderGeometry(r, r * 1.03, len, 14, 1); g.rotateZ(Math.PI / 2); return g; }   // (a log lying along x)
+  function cpLog(parent, r, len, x, y, z, ry) { var o = new THREE.Mesh(cpLogGeo(r, len), [cpmBark, cpmEnd, cpmEnd]); o.position.set(x, y, z); o.rotation.y = ry || 0; o.castShadow = o.receiveShadow = true; parent.add(o); return o; }
+
+  // (one log wall: logs stacked along x from -L/2 to L/2, with gaps cut for the door and windows; [from, to, bottom, top] each)
+  function cpLogWall(parent, len, x, z, ry, holes, startHalf) {
+    var R = 0.165, step = R * 1.9, w = new THREE.Group(); w.position.set(x, 0, z); w.rotation.y = ry; parent.add(w);
+    for (var y = R + (startHalf ? step / 2 : 0), n = 0; y < CARP_WALL; y += step, n++) {
+      var cuts = [-len / 2 - 0.35, len / 2 + 0.35];                   // (the ends run past the corners, as log cabins do)
+      (holes || []).forEach(function (h) { if (y + R > h[2] && y - R < h[3]) { cuts.splice(cuts.length - 1, 0, h[0], h[1]); } });
+      cuts.sort(function (a, b) { return a - b; });
+      for (var i = 0; i < cuts.length; i += 2) { var a = cuts[i], b = cuts[i + 1]; if (b - a > 0.15) cpLog(w, R * (0.94 + ((n * 7 + i) % 5) * 0.025), b - a, (a + b) / 2, y, 0); }
+    }
+    return w;
+  }
+  // (a window: a plank frame with a cross of muntins, warm glowing panes and a flower box)
+  function carpWindow(parent, x, y, z, ry, w, h, inside) {
+    var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; parent.add(g);
+    cpPart(new THREE.PlaneGeometry(w, h), inside ? new THREE.MeshStandardMaterial({ color: 0xcfe8ff, emissive: 0xbfe0ff, emissiveIntensity: 0.55 }) : cpmGlowWin, 0, 0, 0, 0, 0, 0, g);
+    [[0, h / 2 + 0.04, w + 0.22, 0.09], [0, -h / 2 - 0.04, w + 0.3, 0.1], [w / 2 + 0.05, 0, 0.09, h], [-w / 2 - 0.05, 0, 0.09, h], [0, 0, w, 0.04], [0, 0, 0.04, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), cpmPlankDark, f[0], f[1], 0.04, 0, 0, 0, g); });
+    if (!inside) {
+      cpPart(new THREE.BoxGeometry(w + 0.1, 0.18, 0.24), cpmPlankDark, 0, -h / 2 - 0.2, 0.14, 0, 0, 0, g);   // (the flower box...)
+      for (var f = 0; f < 7; f++) { var fl = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshStandardMaterial({ color: [0xffb3d6, 0xfff0a0, 0xc9a0ff, 0xff9a7a][f % 4], roughness: 0.6 })); fl.position.set(-w / 2 + 0.12 + f * (w - 0.24) / 6, -h / 2 - 0.06, 0.16 + (f % 2) * 0.05); g.add(fl);
+        var lf = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6aa84f, roughness: 0.8 })); lf.scale.set(1, 0.6, 1); lf.position.set(fl.position.x + 0.05, -h / 2 - 0.1, 0.12); g.add(lf); }
+    }
+    return g;
+  }
+  function cpLantern(parent, x, y, z, glows) {                           // (a little iron lantern with a warm flame)
+    var g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
+    cpPart(new THREE.BoxGeometry(0.16, 0.02, 0.16), cpmIron, 0, 0.13, 0, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.18, 0.03, 0.18), cpmIron, 0, -0.12, 0, 0, 0, 0, g);
+    cpPart(new THREE.ConeGeometry(0.12, 0.1, 4), cpmIron, 0, 0.19, 0, 0, Math.PI / 4, 0, g);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { cpPart(new THREE.BoxGeometry(0.015, 0.25, 0.015), cpmIron, c[0] * 0.075, 0, c[1] * 0.075, 0, 0, 0, g); });
+    var fl = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a })); fl.scale.set(1, 1.5, 1); g.add(fl);
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb860, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); halo.scale.set(0.9, 0.9, 1); g.add(halo);
+    if (glows) glows.push({ f: fl, h: halo, p: Math.random() * 9 });
+    return g;
+  }
+
+  // ===== outside =====
+  var carpGroup = new THREE.Group(); carpGroup.position.set(CARP_X, 0, CARP_Z); carpGroup.rotation.y = CARP_TURN; scene.add(carpGroup);
+  var carpGlows = [];
+  (function (G) {
+    var W2 = CARP_HW, D2 = CARP_HD;
+    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.5, 0.3, D2 * 2 + 0.5), cpmStone, 0, 0.0, 0, 0, 0, 0, G);   // (a low stone footing)
+    cpPart(new THREE.BoxGeometry(W2 * 2, 0.04, D2 * 2), cpmPlank, 0, 0.16, 0, 0, 0, 0, G);
+    var DOOR = [-0.65, 0.65, 0, 2.15], WINL = [-3.2, -1.8, 0.95, 1.95], WINR = [1.8, 3.2, 0.95, 1.95];
+    cpLogWall(G, W2 * 2, 0, D2, 0, [DOOR, WINL, WINR]);                   // (the front, with its door and two windows)
+    cpLogWall(G, W2 * 2, 0, -D2, 0, [[-1.2, 1.2, 1.0, 1.9]]);              // (the back, with a window)
+    cpLogWall(G, D2 * 2, W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true);   // (the sides, their logs interlocking at the corners)
+    cpLogWall(G, D2 * 2, -W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true);
+    carpWindow(G, -2.5, 1.45, D2 + 0.02, 0, 1.3, 0.95); carpWindow(G, 2.5, 1.45, D2 + 0.02, 0, 1.3, 0.95);
+    carpWindow(G, 0, 1.45, -D2 - 0.02, Math.PI, 2.3, 0.85); carpWindow(G, W2 + 0.02, 1.45, 0, Math.PI / 2, 1.3, 0.85); carpWindow(G, -W2 - 0.02, 1.45, 0, -Math.PI / 2, 1.3, 0.85);
+    // (the door: thick planks with iron straps and a ring handle, in a frame of squared timber)
+    var door = new THREE.Group(); door.position.set(0, 0.18, D2 + 0.02); G.add(door);
+    for (var p = 0; p < 5; p++) cpPart(new THREE.BoxGeometry(0.25, 1.95, 0.08), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xb08060, 0xa07454, 0xb88a66][p % 3], roughness: 0.85 }), -0.52 + p * 0.26, 0.98, 0, 0, 0, 0, door);
+    [0.4, 1.55].forEach(function (y) { cpPart(new THREE.BoxGeometry(1.2, 0.08, 0.03), cpmIron, 0, y, 0.055, 0, 0, 0, door); });
+    cpPart(new THREE.TorusGeometry(0.07, 0.014, 6, 14), cpmBrass, 0.38, 1.0, 0.075, 0, 0, 0, door);
+    [[-0.72, 1.08, 0.12, 2.25], [0.72, 1.08, 0.12, 2.25], [0, 2.24, 1.6, 0.16]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.22), cpmPlankDark, f[0], f[1] + 0.18, D2 + 0.03, 0, 0, 0, G); });
+    // (the roof: two slopes of wooden shingles over the logs, with the gables filled with upright planks)
+    var RISE = 1.75, OVER = 0.6, slope = Math.hypot(D2 + OVER, RISE), ang = Math.atan2(RISE, D2 + OVER);
+    [-1, 1].forEach(function (s) { var r = cpPart(new THREE.BoxGeometry(W2 * 2 + 1.3, 0.14, slope), cpmShingle, 0, CARP_WALL + RISE / 2 + 0.05, s * (D2 + OVER) / 2, s * ang, 0, 0, G); r.material = cpmShingle; });
+    cpPart(new THREE.CylinderGeometry(0.12, 0.12, W2 * 2 + 1.4, 10).rotateZ(Math.PI / 2), cpmBark, 0, CARP_WALL + RISE + 0.12, 0, 0, 0, 0, G);   // (a log along the ridge)
+    [-1, 1].forEach(function (s) {
+      var sh = new THREE.Shape(); sh.moveTo(-D2 - 0.05, 0); sh.lineTo(D2 + 0.05, 0); sh.lineTo(0, RISE); sh.closePath();
+      var gg = new THREE.ShapeGeometry(sh); var gm = cpPart(gg, new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc49a72, side: THREE.DoubleSide, roughness: 0.85 }), s * (W2 + 0.05), CARP_WALL, 0, 0, s * Math.PI / 2, 0, G);
+      var uv = gg.attributes.uv, ps = gg.attributes.position; for (var i = 0; i < uv.count; i++) uv.setXY(i, ps.getY(i) * 0.6, ps.getX(i) * 0.6);   // (upright planks)
+      var rnd = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), cpmGlowWin); rnd.position.set(s * (W2 + 0.08), CARP_WALL + 0.7, 0); rnd.rotation.y = s * Math.PI / 2; G.add(rnd);   // (a little round attic window)
+      cpPart(new THREE.TorusGeometry(0.3, 0.05, 6, 20), cpmPlankDark, s * (W2 + 0.09), CARP_WALL + 0.7, 0, 0, s * Math.PI / 2, 0, G);
+    });
+    // (a stone chimney up the right side, puffing smoke)
+    var CH = new THREE.Group(); CH.position.set(W2 + 0.45, 0, -1.2); G.add(CH);
+    for (var cy = 0; cy < 5.2; cy += 0.3) for (var cx = 0; cx < 2; cx++) { var st = cpPart(new THREE.BoxGeometry(0.5 + Math.random() * 0.12, 0.28, 0.4), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x8a847a).offsetHSL(0, 0, (Math.random() - 0.5) * 0.12), roughness: 0.95 }), (Math.random() - 0.5) * 0.05, cy + 0.14, -0.3 + cx * 0.6 + ((cy * 10) % 2 ? 0.1 : -0.1), 0, (Math.random() - 0.5) * 0.08, 0, CH); }
+    cpPart(new THREE.BoxGeometry(0.75, 0.12, 1.4), cpmStone, 0, 5.25, 0, 0, 0, 0, CH);
+    var smokes = []; for (var sm = 0; sm < 7; sm++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xd8d2cc, transparent: true, opacity: 0.0, depthWrite: false })); CH.add(sp); smokes.push({ s: sp, t: sm / 7 }); }
+    carpGroup.userData.smokes = smokes;
+    // (the porch: a plank deck, a little shingled awning on two posts over the door, and lanterns)
+    cpPart(new THREE.BoxGeometry(4.2, 0.1, 1.7), cpmPlank, 0, 0.05, D2 + 0.95, 0, 0, 0, G);
+    [-1.9, 1.9].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.09, 0.1, 2.5, 10), cpmBark, x, 1.3, D2 + 1.6, 0, 0, 0, G); });
+    cpPart(new THREE.BoxGeometry(4.5, 0.1, 1.9), cpmShingle, 0, 2.62, D2 + 0.9, -0.22, 0, 0, G);
+    cpLantern(G, -0.95, 2.0, D2 + 0.25, carpGlows); cpLantern(G, 0.95, 2.0, D2 + 0.25, carpGlows);
+    // (the hanging sign, on an iron bracket out from the front corner)
+    var sg = new THREE.Group(); sg.position.set(W2 + 0.5, 2.15, D2 + 0.5); G.add(sg);
+    cpPart(new THREE.BoxGeometry(0.06, 0.06, 1.3), cpmIron, 0, 0.55, -0.4, 0, 0, 0, sg);
+    cpPart(new THREE.CylinderGeometry(0.11, 0.12, 2.75, 10), cpmBark, 0, -0.8, -0.95, 0, 0, 0, sg);
+    var board = new THREE.Group(); board.position.set(0, 0.52, 0.05); sg.add(board); carpGroup.userData.sign = board;
+    [-0.42, 0.42].forEach(function (z) { cpPart(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 4), cpmIron, 0, -0.15, z * 0.9, 0, 0, 0, board); });
+    var bm = [cpmPlankDark, cpmPlankDark, cpmPlankDark, cpmPlankDark, new THREE.MeshStandardMaterial({ map: carpSignTex, roughness: 0.8 }), new THREE.MeshStandardMaterial({ map: carpSignTex, roughness: 0.8 })];
+    var bo = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.5, 0.06), bm); bo.position.set(0, -0.55, 0); bo.rotation.y = Math.PI / 2; bo.castShadow = true; board.add(bo);
+    var bo2 = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.5, 0.06), bm); bo2.position.set(0, -0.55, 0); bo2.rotation.y = -Math.PI / 2; board.add(bo2);   // (readable from both sides)
+    // ===== the yard: a workbench, sawhorses, a log pile, planks, a chopping block, a barrel and sawdust =====
+    var Y = new THREE.Group(); Y.position.set(-W2 - 1.4, 0, 1.0); G.add(Y);   // (the workbench, out to the left of the porch)
+    cpPart(new THREE.BoxGeometry(2.0, 0.12, 0.8), cpmPlank, 0, 0.9, 0, 0, Math.PI / 2, 0, Y);
+    [[-0.32, -0.88], [0.32, -0.88], [-0.32, 0.88], [0.32, 0.88]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.1, 0.9, 0.1), cpmPlankDark, l[0], 0.45, l[1], 0, 0, 0, Y); });
+    cpPart(new THREE.BoxGeometry(0.66, 0.06, 1.8), cpmPlankDark, 0, 0.25, 0, 0, 0, 0, Y);
+    cpPart(new THREE.BoxGeometry(0.2, 0.06, 0.9), cpmPlank, 0.1, 0.99, 0.2, 0, 0.3, 0, Y);   // (a plank being planed...)
+    var plane = new THREE.Group(); plane.position.set(0.12, 1.06, 0.1); plane.rotation.y = 0.3; Y.add(plane); cpPart(new THREE.BoxGeometry(0.08, 0.06, 0.24), new THREE.MeshStandardMaterial({ color: 0xa06a3c }), 0, 0, 0, 0, 0, 0, plane); cpPart(new THREE.BoxGeometry(0.05, 0.06, 0.06), cpmPlankDark, 0, 0.05, -0.03, 0, 0, 0, plane);
+    var saw = new THREE.Group(); saw.position.set(-0.2, 0.97, -0.55); saw.rotation.y = 1.2; Y.add(saw);   // (...a handsaw...)
+    var bl = new THREE.Shape(); bl.moveTo(0, 0); bl.lineTo(0.45, 0.02); bl.lineTo(0.45, 0.06); bl.lineTo(0, 0.12); bl.closePath(); var blg = cpPart(new THREE.ShapeGeometry(bl), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }), 0, 0, 0, -Math.PI / 2, 0, 0, saw);
+    cpPart(new THREE.BoxGeometry(0.12, 0.03, 0.12), new THREE.MeshStandardMaterial({ color: 0x8a4a2a }), -0.05, 0.01, -0.06, 0, 0, 0, saw);
+    cpPart(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 8).rotateZ(Math.PI / 2), cpmPlankDark, -0.05, 1.0, 0.65, 0, 0.4, 0, Y);   // (...and a mallet)
+    cpPart(new THREE.BoxGeometry(0.08, 0.08, 0.14), cpmPlankDark, 0.05, 1.0, 0.7, 0, 0.4, 0, Y);
+    cpPart(new THREE.BoxGeometry(0.16, 0.14, 0.12), cpmIron, -0.36, 0.93, -0.3, 0, 0, 0, Y);   // (a vise on its edge)
+    // (sawhorses with a log across them, and curls of shavings)
+    var SH = new THREE.Group(); SH.position.set(-W2 - 1.0, 0, D2 + 2.1); SH.rotation.y = 0.25; G.add(SH);
+    [-0.7, 0.7].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.1, 0.1, 0.8), cpmPlank, x, 0.7, 0, 0, 0, 0, SH); [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.07, 0.75, 0.07), cpmPlankDark, x, 0.36, s * 0.22, s * 0.3, 0, 0, SH); }); });
+    cpLog(SH, 0.17, 2.0, 0, 0.92, 0, 0);
+    // (a pile of logs against the left wall)
+    var LP = new THREE.Group(); LP.position.set(-W2 - 0.7, 0, -1.6); LP.rotation.y = Math.PI / 2; G.add(LP);
+    for (var row = 0; row < 4; row++) for (var c = 0; c < 5 - row; c++) cpLog(LP, 0.16, 1.6 + Math.random() * 0.2, 0, 0.16 + row * 0.28, (c - (4 - row) / 2) * 0.34, 0);
+    // (a stack of sawn planks by the right of the porch, with a lean-to of offcuts)
+    var PS = new THREE.Group(); PS.position.set(W2 + 1.2, 0, D2 + 1.0); PS.rotation.y = 0.15; G.add(PS);
+    for (var pl = 0; pl < 8; pl++) cpPart(new THREE.BoxGeometry(0.28, 0.06, 2.0), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xe0b888, 0xd4a878, 0xc89c6c][pl % 3], roughness: 0.85 }), (pl % 2) * 0.3 - 0.15, 0.1 + Math.floor(pl / 2) * 0.065, 0, 0, (Math.random() - 0.5) * 0.06, 0, PS);
+    [[-0.1, 0.1], [0.3, -0.2]].forEach(function (b) { cpPart(new THREE.BoxGeometry(0.5, 0.08, 0.08), cpmPlankDark, 0, 0.04, b[0] * 3, 0, 0, 0, PS); });
+    // (a chopping block with an axe in it)
+    var CB = new THREE.Group(); CB.position.set(W2 + 1.6, 0, D2 + 2.6); G.add(CB);
+    var blk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.55, 16), [cpmBark, cpmEnd, cpmEnd]); blk.position.y = 0.275; blk.castShadow = true; CB.add(blk);
+    var ax = new THREE.Group(); ax.position.set(0.05, 0.56, 0); ax.rotation.set(0, 0.6, -0.5); CB.add(ax);
+    cpPart(new THREE.CylinderGeometry(0.025, 0.03, 0.75, 8), cpmPlank, 0, 0.36, 0, 0, 0, 0, ax); cpPart(new THREE.BoxGeometry(0.06, 0.16, 0.22), cpmSteel, 0, 0.02, 0.06, 0, 0, 0, ax);
+    // (a barrel, a bucket of nails, and sawdust and wood shavings scattered on the ground)
+    var br = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.8, 16, 4), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb88a5c, roughness: 0.8 })); var bp = br.geometry.attributes.position;
+    for (var bi = 0; bi < bp.count; bi++) { var by = bp.getY(bi), k = 1 + 0.1 * Math.cos(by / 0.4 * Math.PI / 2); bp.setX(bi, bp.getX(bi) * k); bp.setZ(bi, bp.getZ(bi) * k); } br.geometry.computeVertexNormals();
+    br.position.set(-1.7, 0.4, D2 + 1.95); br.castShadow = true; G.add(br);
+    [0.2, -0.2].forEach(function (y) { cpPart(new THREE.TorusGeometry(0.365, 0.02, 6, 20).rotateX(Math.PI / 2), cpmIron, -1.7, 0.4 + y, D2 + 1.95, 0, 0, 0, G); });
+    for (var sd = 0; sd < 9; sd++) { var dsk = new THREE.Mesh(new THREE.CircleGeometry(0.4 + Math.random() * 0.5, 16), cpmSawdust); dsk.rotation.x = -Math.PI / 2; var spot = [[-W2 - 1.3, 1.0], [-W2 - 1.0, D2 + 2.1], [W2 + 1.6, D2 + 2.6], [-W2 - 0.4, 2.6]][sd % 4]; dsk.position.set(spot[0] + (Math.random() - 0.5) * 1.2, 0.012 + sd * 0.0005, spot[1] + (Math.random() - 0.5) * 1.2); dsk.scale.set(1, 0.7, 1); dsk.receiveShadow = true; G.add(dsk); }
+    for (var cu = 0; cu < 30; cu++) { var curl = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.012, 4, 10, 4.5), cpmSawdust); var cs = [[-W2 - 1.3, 1.0], [-W2 - 1.0, D2 + 2.1]][cu % 2]; curl.position.set(cs[0] + (Math.random() - 0.5) * 1.4, 0.02, cs[1] + (Math.random() - 0.5) * 1.4); curl.rotation.set(Math.random() * 3, Math.random() * 3, 0); G.add(curl); }
+  })(carpGroup);
+  // (no grass, flowers or pebbles growing up through the workshop, its yard or its path)
+  (function () {
+    var m4 = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    scene.traverse(function (o) {
+      if (!o.isInstancedMesh || o.parent === carpGroup) return; o.updateWorldMatrix(true, false); var changed = false;
+      for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); v.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld);
+        if (Math.abs(v.x - CARP_X) < 14 && v.z > 80 && v.z < 142 && (onCarpLot(v.x, v.z, 0) || carpPathDist(v.x, v.z) < SP_W + 0.6)) { o.setMatrixAt(i, zero); changed = true; } }
+      if (changed) o.instanceMatrix.needsUpdate = true;
+    });
+    for (var s = solids.length - 1; s >= 0; s--) if (onCarpLot(solids[s].x, solids[s].z, 0.3)) solids.splice(s, 1);
+    var wl = function (lx, lz) { var c = Math.cos(CARP_TURN), si = Math.sin(CARP_TURN); return { x: CARP_X + lx * c + lz * si, z: CARP_Z - lx * si + lz * c }; };   // (a spot in the workshop's own directions, out in the world)
+    for (var x = -CARP_HW; x <= CARP_HW + 0.01; x += 0.55) { if (Math.abs(x) > 0.9) { var f = wl(x, CARP_HD); solids.push({ x: f.x, z: f.z, r: 0.35 }); } var bk = wl(x, -CARP_HD); solids.push({ x: bk.x, z: bk.z, r: 0.35 }); }   // (its walls, with the doorway left open)
+    for (var z = -CARP_HD; z <= CARP_HD + 0.01; z += 0.55) [-CARP_HW, CARP_HW].forEach(function (x2) { var sd = wl(x2, z); solids.push({ x: sd.x, z: sd.z, r: 0.35 }); });
+    var inner = wl(0, 0); solids.push({ x: inner.x, z: inner.z, r: 2.9 });
+    [[-CARP_HW - 1.4, 1.0, 0.75], [-CARP_HW - 1.4, 0.2, 0.6], [-CARP_HW - 1.4, 1.8, 0.6], [-CARP_HW - 1.0, CARP_HD + 2.1, 0.75], [-CARP_HW - 0.7, -1.6, 0.9], [CARP_HW + 1.2, CARP_HD + 1.0, 0.7], [CARP_HW + 1.2, CARP_HD + 0.2, 0.6], [CARP_HW + 1.6, CARP_HD + 2.6, 0.45], [-1.7, CARP_HD + 1.95, 0.42], [CARP_HW + 0.45, -1.2, 0.6], [-1.9, CARP_HD + 1.6, 0.15], [1.9, CARP_HD + 1.6, 0.15]].forEach(function (o) { var w2 = wl(o[0], o[1]); solids.push({ x: w2.x, z: w2.z, r: o[2] }); });
+  })();
+  // (its own flagstone path, branching off the one from the bridge and laid just like the town's others: paving,
+  // dressed stone kerbs, lavender, flowers and leafy plants along the edges, little glowing mushrooms, and lamp posts)
+  (function () {
+    var paveMat = null; scene.traverse(function (o) { if (!paveMat && o.isMesh && o.material && o.material.polygonOffset && o.material.map && o.material.map.isDataTexture && o.material.bumpMap) paveMat = o.material; });
+    if (!paveMat) return;
+    var paveTex = paveMat.map, dummy = new THREE.Object3D(), col = new THREE.Color();
+    function H(k) { return isle2Hash(k * 1.37 + 4812); }
+    var line = crpLine, pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
+    for (var k = 0; k < line.length; k++) {
+      var a = line[Math.max(0, k - 1)], b = line[Math.min(line.length - 1, k + 1)], tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
+      if (k) run += Math.sqrt(Math.pow(line[k][0] - line[k - 1][0], 2) + Math.pow(line[k][1] - line[k - 1][1], 2));
+      pos.push(line[k][0] - nx * SP_W, 0.021, line[k][1] - nz * SP_W, line[k][0] + nx * SP_W, 0.021, line[k][1] + nz * SP_W); uv.push(0, run / (W * 2), 1, run / (W * 2));
+      if (k) { var q = k * 2; idx.push(q - 2, q, q - 1, q - 1, q, q + 1); }
+    }
+    var pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); pg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); pg.setIndex(idx); pg.computeVertexNormals();
+    var pm = new THREE.Mesh(pg, paveMat); pm.receiveShadow = true; scene.add(pm);
+    function onOther(x, z) { return stonePathDist(x, z) < SP_W + 0.35; }
+    var kerbs = [], blooms = [], lav = [], leaves = [], shrooms = [], lamps = [], gap = 0, row = 0, lampRun = 0, lampSide = 1, walked = 0, end = line[line.length - 1];
+    for (var j = 1; j < line.length; j++) {
+      var p0 = line[j - 1], p1 = line[j], sx = p1[0] - p0[0], sz = p1[1] - p0[1], sl = Math.sqrt(sx * sx + sz * sz);
+      gap += sl; lampRun += sl; walked += sl;
+      var ux = sx / sl, uz = sz / sl, nx2 = -uz, nz2 = ux, turn = Math.atan2(ux, uz), nearEnd = dist(p1[0], p1[1], end[0], end[1]) < 1.1;
+      if (lampRun > 4.6 && walked > 4 && !nearEnd && !onOther(p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55))) { lampRun = 0; lamps.push([p1[0] + nx2 * lampSide * (SP_W + 0.55), p1[1] + nz2 * lampSide * (SP_W + 0.55)]); lampSide = -lampSide; }
+      if (gap < 0.46) continue;
+      gap = 0; row++;
+      for (var e = -1; e <= 1; e += 2) {
+        var kx = p1[0] + nx2 * e * (SP_W + 0.07), kz = p1[1] + nz2 * e * (SP_W + 0.07);
+        if (!nearEnd && !onOther(kx, kz)) kerbs.push([kx, kz, turn, H(row * 19 + e)]);
+        var gx2 = p1[0] + nx2 * e * (SP_W + 0.42), gz2 = p1[1] + nz2 * e * (SP_W + 0.42), kind = H(row * 29 + e);
+        if (nearEnd || walked < 3.5 || onOther(gx2, gz2)) continue;
+        for (var lf = 0; lf < 6; lf++) leaves.push([gx2 + (H(row * 31 + lf + e) - 0.5) * 0.42, gz2 + (H(row * 37 + lf - e) - 0.5) * 0.42, 0.07 + H(row + lf) * 0.05, H(row * 41 + lf)]);
+        if (kind < 0.45) for (var lv = 0; lv < 6; lv++) lav.push([gx2 + (H(row * 43 + lv + e) - 0.5) * 0.32, gz2 + (H(row * 47 + lv - e) - 0.5) * 0.32, 0.34 + H(row * 53 + lv) * 0.14, (H(row * 59 + lv) - 0.5) * 0.4]);
+        else for (var bl2 = 0; bl2 < 5; bl2++) blooms.push([gx2 + (H(row * 61 + bl2 + e) - 0.5) * 0.42, gz2 + (H(row * 67 + bl2 - e) - 0.5) * 0.42, 0.13 + H(row * 71 + bl2) * 0.09, kind < 0.72 ? 0 : (bl2 % 2 ? 1 : 2)]);
+        if (H(row * 73 + e) > 0.88) shrooms.push([gx2 + nx2 * e * 0.22, gz2 + nz2 * e * 0.22]);
+      }
+    }
+    function batch(geo, mat, list, put) {
+      if (!list.length) return null; var im = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach(function (q, i) { var cc = put(q); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); if (cc !== undefined) im.setColorAt(i, col.set(cc)); });
+      dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; scene.add(im); return im;
+    }
+    var kerbGeo = new THREE.BoxGeometry(0.12, 0.1, 0.42, 1, 1, 1); (function () { var kp = kerbGeo.attributes.position; for (var v = 0; v < kp.count; v++) if (kp.getY(v) > 0) { kp.setX(v, kp.getX(v) * 0.82); kp.setZ(v, kp.getZ(v) * 0.94); } kerbGeo.computeVertexNormals(); })();
+    batch(kerbGeo, new THREE.MeshStandardMaterial({ map: paveTex, roughness: 0.85, color: 0xe8e2d8 }), kerbs, function (q) { dummy.position.set(q[0], 0.045, q[1]); dummy.rotation.set(0, q[2] + (q[3] - 0.5) * 0.06, (q[3] - 0.5) * 0.04); return new THREE.Color().setHSL(0.09, 0.08, 0.7 + q[3] * 0.14).getHex(); });
+    batch(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: true }), leaves, function (q) { dummy.position.set(q[0], q[2] * 0.6, q[1]); dummy.rotation.set(q[3] * 3, q[3] * 6, 0); dummy.scale.set(q[2], q[2] * 0.7, q[2]); return new THREE.Color().setHSL(0.26 + q[3] * 0.06, 0.45, 0.28 + q[3] * 0.12).getHex(); });
+    batch(new THREE.CylinderGeometry(0.006, 0.008, 1, 4), new THREE.MeshStandardMaterial({ color: 0x5a7a48 }), lav, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.rotation.set(q[3], 0, -q[3] * 0.7); dummy.scale.set(1, q[2], 1); });
+    batch(new THREE.CylinderGeometry(0.018, 0.012, 0.14, 6), new THREE.MeshStandardMaterial({ color: 0x9a78dc, roughness: 0.7 }), lav, function (q) { dummy.position.set(q[0] + Math.sin(-q[3] * 0.7) * -q[2] * 0.4, q[2] - 0.04, q[1] + Math.sin(q[3]) * q[2] * 0.4); dummy.rotation.set(q[3], 0, -q[3] * 0.7); });
+    var petalCols = [0xf6a6c8, 0xfaf6ee, 0xffe08a];
+    batch(new THREE.CylinderGeometry(0.055, 0.03, 0.02, 7), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 }), blooms, function (q) { dummy.position.set(q[0], q[2], q[1]); dummy.rotation.set((q[2] - 0.17) * 3, q[0] * 5, 0); return petalCols[q[3]]; });
+    batch(new THREE.SphereGeometry(0.018, 6, 4), new THREE.MeshStandardMaterial({ color: 0xe8b84a }), blooms, function (q) { dummy.position.set(q[0], q[2] + 0.012, q[1]); });
+    batch(new THREE.CylinderGeometry(0.005, 0.006, 1, 4), new THREE.MeshStandardMaterial({ color: 0x4f7a3e }), blooms, function (q) { dummy.position.set(q[0], q[2] / 2, q[1]); dummy.scale.set(1, q[2], 1); });
+    var shroomCap = new THREE.MeshStandardMaterial({ color: 0xd9b8ff, emissive: 0x9a5cff, emissiveIntensity: 0.7, roughness: 0.6 }), shroomStem = new THREE.MeshStandardMaterial({ color: 0xf2ece0 }), iron = new THREE.MeshStandardMaterial({ color: 0x24222a, roughness: 0.45, metalness: 0.6 });
+    shrooms.forEach(function (m) { for (var t = 0; t < 3; t++) { var mx = m[0] + Math.cos(t * 2.1) * 0.08, mz = m[1] + Math.sin(t * 2.1) * 0.08, mh = 0.07 + t * 0.025;
+      var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, mh, 6), shroomStem); stem.position.set(mx, mh / 2, mz); scene.add(stem);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), shroomCap); cap.position.set(mx, mh, mz); cap.scale.y = 0.7; scene.add(cap); } });
+    lamps.forEach(function (lp) {                                      // (wrought-iron lantern posts that glow warm at night, like the others)
+      var g = new THREE.Group(); g.position.set(lp[0], 0, lp[1]); scene.add(g);
+      function part(geo, mat, x, y, z) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; }
+      part(new THREE.CylinderGeometry(0.11, 0.14, 0.12, 8), iron, 0, 0.06, 0); part(new THREE.CylinderGeometry(0.025, 0.035, 1.5, 8), iron, 0, 0.84, 0);
+      part(new THREE.TorusGeometry(0.04, 0.008, 6, 12), iron, 0, 0.5, 0).rotation.x = Math.PI / 2; part(new THREE.CylinderGeometry(0.1, 0.08, 0.03, 8), iron, 0, 1.6, 0);
+      part(new THREE.CylinderGeometry(0.075, 0.06, 0.2, 6), pathLampMat, 0, 1.72, 0);
+      [0, 1, 2, 3, 4, 5].forEach(function (s2) { var ba = s2 / 6 * Math.PI * 2; part(new THREE.BoxGeometry(0.008, 0.2, 0.008), iron, Math.cos(ba) * 0.075, 1.72, Math.sin(ba) * 0.075); });
+      part(new THREE.ConeGeometry(0.12, 0.12, 6), iron, 0, 1.88, 0); part(new THREE.SphereGeometry(0.02, 8, 6), iron, 0, 1.96, 0);
+      var glowS = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc870, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glowS.position.set(0, 1.72, 0); glowS.scale.set(1.4, 1.4, 1); g.add(glowS); pathLanternGlows.push(glowS);
+      solids.push({ x: lp[0], z: lp[1], r: 0.18 });
+    });
+  })();
+  function updateCarpOutside(t, night) {                               // smoke drifting up from the chimney, lanterns flickering, the sign swaying in the breeze
+    carpGroup.userData.smokes.forEach(function (s) { s.t = (s.t + 0.0035) % 1; var k = s.t; s.s.position.set(Math.sin(k * 5 + t * 0.3) * 0.25 * k, 5.35 + k * 2.6, k * 0.6); var sc = 0.4 + k * 1.4; s.s.scale.set(sc, sc, 1); s.s.material.opacity = Math.sin(k * Math.PI) * 0.4; });
+    carpGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
+    carpGroup.userData.sign.rotation.x = Math.sin(t * 1.3) * 0.05;
+    cpmGlowWin.emissiveIntensity = 0.35 + night * 0.9;
+  }
+
+  // ===== inside =====
+  var carpScene = new THREE.Scene(); carpScene.background = new THREE.Color(0x1c1410);
+  var CPI_X = 600, CPI_Z = 1000, CPI_W = CARP_HW * 2, CPI_D = CARP_HD * 2, CPI_EXIT_Z = CPI_D / 2 - 0.6, inCarp = false;
+  var carpRoom = new THREE.Group(); carpRoom.position.set(CPI_X, 0, CPI_Z); carpScene.add(carpRoom);
+  carpScene.add(new THREE.HemisphereLight(0xffe8cc, 0x5a4434, 0.55));
+  var cpSun = new THREE.DirectionalLight(0xffe2b8, 0.45); cpSun.position.set(CPI_X - 5, 8, CPI_Z + 6); cpSun.target.position.set(CPI_X, 0, CPI_Z); cpSun.castShadow = true; cpSun.shadow.mapSize.set(1024, 1024);
+  cpSun.shadow.camera.left = -7; cpSun.shadow.camera.right = 7; cpSun.shadow.camera.top = 6; cpSun.shadow.camera.bottom = -6; cpSun.shadow.bias = -0.0006; carpScene.add(cpSun); carpScene.add(cpSun.target);
+  var cpLamps = [[-2.4, 0.4], [2.4, -0.4]].map(function (p) { var l = new THREE.PointLight(0xffc888, 0.5, 11); l.position.set(CPI_X + p[0], 2.5, CPI_Z + p[1]); carpScene.add(l); return l; });
+  var cpStoveLight = new THREE.PointLight(0xff8a3a, 0.7, 5); cpStoveLight.position.set(CPI_X + CARP_HW - 0.9, 0.7, CPI_Z - 1.2); carpScene.add(cpStoveLight);
+  var carpSolids = [], cpGlows = [], cpWalls = [];
+  (function (R) {
+    var W2 = CARP_HW, D2 = CARP_HD;
+    var fl = cpPart(new THREE.PlaneGeometry(W2 * 2, D2 * 2), new THREE.MeshStandardMaterial({ map: cpPlankTex, roughness: 0.85 }), 0, 0.001, 0, -Math.PI / 2, 0, 0, R); fl.material.map = cpPlankTex.clone(); fl.material.map.needsUpdate = true; fl.material.map.repeat.set(3, 3); fl.material.map.wrapS = fl.material.map.wrapT = THREE.RepeatWrapping;
+    // (the four log walls, each hidden when it's between you and the camera)
+    [[0, -D2, 0, [[-1.2, 1.2, 1.0, 1.9]], false, [0, 0, -1]], [0, D2, 0, [[-0.65, 0.65, 0, 2.15], [-3.2, -1.8, 0.95, 1.95], [1.8, 3.2, 0.95, 1.95]], false, [0, 0, 1]], [W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [1, 0, 0]], [-W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true, [-1, 0, 0]]].forEach(function (w) {
+      var g = cpLogWall(R, w[2] ? D2 * 2 : W2 * 2, w[0], w[1], w[2], w[3], w[4]); cpWalls.push({ g: g, n: new THREE.Vector3(w[5][0], 0, w[5][2]), d: w[2] ? W2 : D2 });
+    });
+    cpWalls[0].extra = [carpWindow(R, 0, 1.45, -D2 + 0.12, 0, 2.3, 0.85, true)]; cpWalls[2].extra = [carpWindow(R, W2 - 0.12, 1.45, 0, -Math.PI / 2, 1.3, 0.85, true)]; cpWalls[3].extra = [carpWindow(R, -W2 + 0.12, 1.45, 0, Math.PI / 2, 1.3, 0.85, true)];
+    cpWalls[1].extra = [carpWindow(R, -2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true), carpWindow(R, 2.5, 1.45, D2 - 0.12, Math.PI, 1.3, 0.95, true)];   // (each window steps aside with its wall)
+    // (the big workbench along the back wall, with a pegboard of tools above it)
+    var WB = new THREE.Group(); WB.position.set(-0.6, 0, -D2 + 0.65); R.add(WB);
+    cpPart(new THREE.BoxGeometry(3.4, 0.14, 0.85), cpmPlank, 0, 0.92, 0, 0, 0, 0, WB);
+    [[-1.55, -0.32], [1.55, -0.32], [-1.55, 0.32], [1.55, 0.32]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.12, 0.92, 0.12), cpmPlankDark, l[0], 0.46, l[1], 0, 0, 0, WB); });
+    cpPart(new THREE.BoxGeometry(3.2, 0.06, 0.7), cpmPlankDark, 0, 0.25, 0, 0, 0, 0, WB);
+    for (var bx = 0; bx < 3; bx++) cpPart(new THREE.BoxGeometry(0.9, 0.12, 0.6), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xd8b088 }), -1 + bx * 1.0, 0.36, 0, 0, (Math.random() - 0.5) * 0.1, 0, WB);   // (offcuts stacked underneath)
+    cpPart(new THREE.BoxGeometry(2.6, 1.1, 0.04), new THREE.MeshStandardMaterial({ color: 0xb48a62, roughness: 0.9 }), 0, 1.75, -0.38, 0, 0, 0, WB);   // (the pegboard)
+    var tools = [[-1.0, 'saw'], [-0.55, 'hammer'], [-0.2, 'chisel'], [0.0, 'chisel'], [0.2, 'chisel'], [0.55, 'square'], [0.95, 'saw2']];
+    tools.forEach(function (tl) {
+      var g = new THREE.Group(); g.position.set(tl[0], 1.75, -0.34); WB.add(g);
+      if (tl[1] === 'saw' || tl[1] === 'saw2') { var s = new THREE.Shape(); s.moveTo(-0.08, 0.32); s.lineTo(0.08, 0.32); s.lineTo(0.04, -0.3); s.lineTo(-0.04, -0.3); s.closePath(); cpPart(new THREE.ShapeGeometry(s), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }), 0, -0.05, 0.01, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.2, 0.14, 0.04), new THREE.MeshStandardMaterial({ color: tl[1] === 'saw' ? 0x8a4a2a : 0x6a3a22 }), 0, 0.33, 0.01, 0, 0, 0, g); }
+      else if (tl[1] === 'hammer') { cpPart(new THREE.BoxGeometry(0.04, 0.4, 0.04), cpmPlank, 0, -0.05, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.18, 0.07, 0.06), cpmIron, 0, 0.16, 0.02, 0, 0, 0, g); }
+      else if (tl[1] === 'chisel') { cpPart(new THREE.CylinderGeometry(0.02, 0.022, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xb06a3a }), 0, 0.1, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.03, 0.18, 0.012), cpmSteel, 0, -0.07, 0.02, 0, 0, 0, g); }
+      else { cpPart(new THREE.BoxGeometry(0.04, 0.4, 0.015), cpmSteel, -0.08, 0, 0.02, 0, 0, 0, g); cpPart(new THREE.BoxGeometry(0.2, 0.04, 0.015), cpmSteel, 0.02, -0.18, 0.02, 0, 0, 0, g); }
+    });
+    var wp = cpPart(new THREE.BoxGeometry(0.22, 0.06, 1.1), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xe8c49a }), 0.4, 1.02, 0.05, 0, Math.PI / 2 + 0.2, 0, WB);   // (a board being worked, with a plane on it)
+    cpPart(new THREE.BoxGeometry(0.09, 0.07, 0.26), new THREE.MeshStandardMaterial({ color: 0xa06a3c }), 0.2, 1.09, 0.05, 0, Math.PI / 2 + 0.2, 0, WB);
+    for (var sh2 = 0; sh2 < 14; sh2++) { var crl = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 4, 10, 4.5), cpmSawdust); crl.position.set(-0.2 + Math.random() * 1.2, 1.0, (Math.random() - 0.5) * 0.6); crl.rotation.set(Math.random() * 3, Math.random() * 3, 0); WB.add(crl); }
+    cpLantern(WB, -1.45, 1.15, 0.15, cpGlows);
+    carpSolids.push([-0.6, -D2 + 0.65, 0.9], [-1.7, -D2 + 0.65, 0.6], [0.5, -D2 + 0.65, 0.6]);
+    // (the wood stove in the back right corner, glowing, with a stovepipe up through the roof and a basket of logs)
+    var ST = new THREE.Group(); ST.position.set(W2 - 0.9, 0, -1.2); R.add(ST);
+    cpPart(new THREE.BoxGeometry(0.75, 0.7, 0.6), cpmIron, 0, 0.45, 0, 0, 0, 0, ST); [[-0.3, -0.24], [0.3, -0.24], [-0.3, 0.24], [0.3, 0.24]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.06, 0.12, 0.06), cpmIron, l[0], 0.06, l[1], 0, 0, 0, ST); });
+    var fire = cpPart(new THREE.PlaneGeometry(0.4, 0.26), new THREE.MeshBasicMaterial({ color: 0xff8a3a }), -0.38, 0.42, 0, 0, -Math.PI / 2, 0, ST); cpPart(new THREE.BoxGeometry(0.03, 0.34, 0.5), cpmIron, -0.39, 0.42, 0, 0, 0, 0, ST).scale.set(1, 1, 0.98);
+    fire.position.x = -0.385; fire.renderOrder = 2; var fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xff8a3a, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); fireGlow.position.set(-0.6, 0.45, 0); fireGlow.scale.set(1.2, 1, 1); ST.add(fireGlow);
+    [0.12, 0.23, 0.34].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.02, 0.02, 0.48), cpmIron, -0.4, y + 0.27, 0, 0, 0, 0, ST); });   // (the grate in its door)
+    cpPart(new THREE.CylinderGeometry(0.09, 0.09, CARP_WALL + 0.5, 12), cpmIron, 0.1, 0.8 + (CARP_WALL + 0.5) / 2, 0, 0, 0, 0, ST);
+    var LB = new THREE.Group(); LB.position.set(-0.3, 0, 0.75); ST.add(LB); cpPart(new THREE.CylinderGeometry(0.3, 0.26, 0.35, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0x9a7a4a, side: THREE.DoubleSide, roughness: 0.9 }), 0, 0.18, 0, 0, 0, 0, LB);
+    for (var lg = 0; lg < 5; lg++) cpLog(LB, 0.07, 0.55, (lg % 3 - 1) * 0.15, 0.25 + Math.floor(lg / 3) * 0.12, 0, 0.3 * (lg - 2));
+    carpSolids.push([W2 - 0.9, -1.2, 0.55], [W2 - 1.2, -0.45, 0.35]);
+    carpScene.userData = { fire: fire, fireGlow: fireGlow };
+    // (a lumber rack along the left wall, planks and poles stacked on its arms)
+    var LR = new THREE.Group(); LR.position.set(-W2 + 0.35, 0, -0.6); R.add(LR);
+    [-1.3, 0, 1.3].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.1, 2.1, 0.1), cpmPlankDark, -0.1, 1.05, z, 0, 0, 0, LR); [0.5, 1.1, 1.7].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.5, 0.06, 0.06), cpmPlankDark, 0.15, y, z, 0, 0, 0, LR); }); });
+    [0.5, 1.1, 1.7].forEach(function (y, k) { for (var b = 0; b < 3 + k % 2; b++) cpPart(new THREE.BoxGeometry(0.12, 0.05, 2.9), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xe0b888, 0xc89c6c, 0xa0704a][(b + k) % 3] }), 0.05 + b * 0.11, y + 0.06, 0, 0, 0, 0, LR); });
+    carpSolids.push([-W2 + 0.45, -1.4, 0.5], [-W2 + 0.45, -0.2, 0.5], [-W2 + 0.45, 0.7, 0.5]);
+    // (sawhorses in the middle of the room with a half-made chair beside them)
+    var MH = new THREE.Group(); MH.position.set(0.2, 0, 0.5); MH.rotation.y = 0.3; R.add(MH);
+    [-0.6, 0.6].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.1, 0.1, 0.7), cpmPlank, x, 0.65, 0, 0, 0, 0, MH); [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.06, 0.7, 0.06), cpmPlankDark, x, 0.33, s * 0.2, s * 0.3, 0, 0, MH); }); });
+    cpPart(new THREE.BoxGeometry(1.7, 0.06, 0.32), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xe8c49a }), 0, 0.73, 0, 0, 0, 0, MH);
+    var CHR = new THREE.Group(); CHR.position.set(1.4, 0, 0.7); CHR.rotation.y = -0.5; MH.add(CHR);
+    cpPart(new THREE.BoxGeometry(0.5, 0.05, 0.5), cpmPlank, 0, 0.45, 0, 0, 0, 0, CHR); [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.05, 0.45, 0.05), cpmPlankDark, l[0], 0.22, l[1], 0, 0, 0, CHR); });
+    cpPart(new THREE.BoxGeometry(0.05, 0.45, 0.05), cpmPlankDark, 0.32, 0.03, 0.35, 0, 0, Math.PI / 2 - 0.2, CHR);   // (its fourth leg still on the floor)
+    [-0.2, 0.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 0.55, 0.05), cpmPlankDark, x, 0.75, -0.22, 0, 0, 0, CHR); }); cpPart(new THREE.BoxGeometry(0.45, 0.12, 0.04), cpmPlank, 0, 0.9, -0.22, 0, 0, 0, CHR);
+    carpSolids.push([0.2, 0.5, 0.75], [1.3, 1.1, 0.4]);
+    // (the counter by the door, where the carpenter will serve you, with a ledger, a lamp and a bell)
+    var CT = new THREE.Group(); CT.position.set(-2.6, 0, 1.7); R.add(CT);
+    cpPart(new THREE.BoxGeometry(1.8, 1.0, 0.6), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb88a62 }), 0, 0.5, 0, 0, 0, 0, CT); cpPart(new THREE.BoxGeometry(1.95, 0.08, 0.72), cpmPlankDark, 0, 1.04, 0, 0, 0, 0, CT);
+    cpPart(new THREE.BoxGeometry(0.4, 0.04, 0.3), new THREE.MeshStandardMaterial({ color: 0x6a2a2a }), -0.4, 1.1, 0, 0, 0.2, 0, CT); cpPart(new THREE.BoxGeometry(0.38, 0.01, 0.28), new THREE.MeshStandardMaterial({ color: 0xf0e6d0 }), -0.4, 1.125, 0, 0, 0.2, 0, CT);
+    cpPart(new THREE.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), cpmBrass, 0.5, 1.08, 0.05, 0, 0, 0, CT); cpLantern(CT, 0.15, 1.24, -0.1, cpGlows);
+    carpSolids.push([-3.1, 1.7, 0.55], [-2.1, 1.7, 0.55]);
+    // (shelves of carved things on the right wall: bowls, a toy horse, spoons, a birdhouse)
+    var SV = new THREE.Group(); SV.position.set(W2 - 0.25, 0, 1.6); SV.rotation.y = -Math.PI / 2; R.add(SV);
+    [0.6, 1.15, 1.7].forEach(function (y) { cpPart(new THREE.BoxGeometry(1.6, 0.05, 0.35), cpmPlankDark, 0, y, 0, 0, 0, 0, SV); });
+    [-0.75, 0.75].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 1.8, 0.35), cpmPlankDark, x, 0.9, 0, 0, 0, 0, SV); });
+    var mCarve = new THREE.MeshStandardMaterial({ color: 0xc89060, roughness: 0.6 });
+    [-0.45, -0.1, 0.3].forEach(function (x) { var b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc89060, roughness: 0.6, side: THREE.DoubleSide })); b.position.set(x, 0.78, 0); b.rotation.x = Math.PI; b.scale.set(1, 0.7, 1); SV.add(b); });
+    var horse = new THREE.Group(); horse.position.set(-0.3, 1.18, 0); SV.add(horse); cpPart(new THREE.BoxGeometry(0.28, 0.12, 0.09), mCarve, 0, 0.16, 0, 0, 0, 0, horse); cpPart(new THREE.BoxGeometry(0.07, 0.16, 0.07), mCarve, 0.15, 0.25, 0, 0, 0, -0.4, horse); cpPart(new THREE.BoxGeometry(0.11, 0.06, 0.07), mCarve, 0.2, 0.33, 0, 0, 0, 0, horse);
+    [[-0.1, -0.03], [0.1, -0.03], [-0.1, 0.03], [0.1, 0.03]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.03, 0.12, 0.03), mCarve, l[0], 0.06, l[1] * 1.2, 0, 0, 0, horse); });
+    var bh = new THREE.Group(); bh.position.set(0.35, 1.18, 0); SV.add(bh); cpPart(new THREE.BoxGeometry(0.22, 0.24, 0.2), new THREE.MeshStandardMaterial({ color: 0xd8b088 }), 0, 0.12, 0, 0, 0, 0, bh); cpPart(new THREE.ConeGeometry(0.2, 0.14, 4), new THREE.MeshStandardMaterial({ color: 0x8a5a3a }), 0, 0.31, 0, 0, Math.PI / 4, 0, bh);
+    cpPart(new THREE.CircleGeometry(0.04, 12), new THREE.MeshBasicMaterial({ color: 0x2a1a10 }), 0, 0.15, 0.101, 0, 0, 0, bh);
+    for (var sp2 = 0; sp2 < 4; sp2++) cpPart(new THREE.CylinderGeometry(0.01, 0.012, 0.3, 6), mCarve, -0.5 + sp2 * 0.08, 1.85, 0.05, 0.3, 0, 0, SV);
+    cpPart(new THREE.BoxGeometry(0.45, 0.08, 0.3), mCarve, 0.35, 1.76, 0, 0, 0.2, 0, SV);
+    carpSolids.push([W2 - 0.3, 1.0, 0.35], [W2 - 0.3, 2.2, 0.35]);
+    // (a braided rug in the middle, sawdust drifts in the corners)
+    var rugTex = cpTex(256, 256, function (g, w, h) { g.fillStyle = 'rgba(0,0,0,0)'; g.fillRect(0, 0, w, h); var cols = ['#a0583a', '#d8b06a', '#6a8a5a', '#c08a5a', '#8a4a3a']; for (var r = 124, k = 0; r > 4; r -= 9, k++) { g.strokeStyle = cols[k % cols.length]; g.lineWidth = 9; g.beginPath(); g.ellipse(128, 128, r, r * 0.7, 0, 0, Math.PI * 2); g.stroke(); } });
+    var rug = cpPart(new THREE.PlaneGeometry(2.6, 2.6), new THREE.MeshStandardMaterial({ map: rugTex, transparent: true, roughness: 1 }), 0.3, 0.01, 2.2, -Math.PI / 2, 0, 0, R); rug.castShadow = false;
+    [[-W2 + 0.6, -D2 + 0.6], [W2 - 0.6, D2 - 0.6], [-1.0, -D2 + 1.3], [1.3, 0.8]].forEach(function (p) { var d = new THREE.Mesh(new THREE.CircleGeometry(0.4 + Math.random() * 0.4, 16), cpmSawdust); d.rotation.x = -Math.PI / 2; d.position.set(p[0], 0.006, p[1]); d.scale.set(1, 0.7, 1); R.add(d); });
+    [[-2.2, 0], [2.2, 0]].forEach(function (lp) { cpLantern(R, lp[0], 2.25, lp[1], cpGlows); cpPart(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), cpmIron, lp[0], 2.65, lp[1], 0, 0, 0, R); });   // (lanterns hanging on chains from the rafters)
+  })(carpRoom);
+  var cpLook = new THREE.Vector3();
+  function updateCarpInside(t) {
+    cpLook.set(camera.position.x - CPI_X, 0, camera.position.z - CPI_Z);
+    cpWalls.forEach(function (W) { W.g.visible = cpLook.dot(W.n) < W.d - 0.2; (W.extra || []).forEach(function (e) { e.visible = W.g.visible; }); });   // (the wall between you and the camera steps aside)
+    var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
+    cpSun.intensity = 0.45 * (1 - nt);
+    var fk = 1 + Math.sin(t * 9) * 0.08 + Math.sin(t * 13.3) * 0.06;
+    cpStoveLight.intensity = 0.7 * fk; carpScene.userData.fireGlow.material.opacity = 0.5 * fk; carpScene.userData.fire.material.color.setHSL(0.07 + Math.sin(t * 7) * 0.01, 1, 0.55 + Math.sin(t * 11) * 0.05);
+    cpLamps.forEach(function (l, i) { l.intensity = (0.45 + nt * 0.25) * (1 + Math.sin(t * 10 + i) * 0.04); });
+    cpGlows.forEach(function (L) { var f = 1 + Math.sin(t * 11 + L.p) * 0.1; L.f.scale.set(f, 1.5 * f, f); L.h.material.opacity = 0.5 * f; });
+  }
+  function carpDoorUse(goIn) {                                         // through Oak & Ember's door, in or out
+    if (doorBusy) return;
+    doorBusy = true; doorArmed = false; walkTarget = null; doorSound(); fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (goIn) {
+        indoors = true; inShop = inClinic = inBarn = false; inCarp = true;
+        carpScene.add(player); player.position.set(CPI_X, 0, CPI_Z + CPI_EXIT_Z - 1.0); facing = Math.PI;
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8.5; cam.pitch = 0.85; cam.yaw = 0;
+      } else {
+        indoors = false; inCarp = false; scene.add(player);
+        var o = carpFront(1.8); player.position.set(o.x, 0, o.z); facing = CARP_TURN;
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+      }
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      fadeBox.style.opacity = 0;
+      setTimeout(function () { doorBusy = false; }, 380);
+    }, 380);
+  }
+  function updateCarpenter(t, night) {
+    if (inCarp && player.parent !== carpScene) inCarp = false;         // (carried home or teleported away from inside: no longer in the workshop)
+    if (inCarp) updateCarpInside(t); else updateCarpOutside(t, night);
+  }
+  TELEPORTS.push({ name: 'Oak & Ember', icon: '🪚', spot: function () { var f = carpFront(2.4); return { x: f.x, z: f.z, face: CARP_TURN + Math.PI, view: CARP_TURN }; } });
+
   // ---------- Flying on her broom ----------
   // B (or the Fly button) hops on and off her broom; only outdoors. Once up she flies a little faster than she walks,
   // anywhere over the island, the lake and just out over the sea; Space climbs higher and Shift drops lower. Landing
@@ -2746,11 +3170,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Outside, walking up to a door no longer takes you in: stand by it and press E (or tap Interact) to go in. Inside,
   // walking out through the doorway still takes you back out
   var doorNear = null, doorHinted = null, doorWasIn = false, DOOR_REACH = 1.3;
-  var DOOR_NAMES = { house: 'the farmhouse', shop: 'the seed shop', clinic: 'the clinic', barn: 'Fluff & Feather' };
+  var DOOR_NAMES = { house: 'the farmhouse', shop: 'the seed shop', clinic: 'the clinic', barn: 'Fluff & Feather', carp: 'Oak & Ember' };
   updateDoors = function () {
     var px = player.position.x, pz = player.position.z;
     if (!indoors) {                                                    // (outside: just notice which door she's standing by)
-      var near = [['house', dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z)], ['shop', dist(px, pz, shopDoor.x, shopDoor.z)], ['clinic', dist(px, pz, clinicDoor.x, clinicDoor.z)], ['barn', dist(px, pz, barnDoor.x, barnDoor.z)]]
+      var near = [['house', dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z)], ['shop', dist(px, pz, shopDoor.x, shopDoor.z)], ['clinic', dist(px, pz, clinicDoor.x, clinicDoor.z)], ['barn', dist(px, pz, barnDoor.x, barnDoor.z)], ['carp', dist(px, pz, carpDoor.x, carpDoor.z)]]
         .filter(function (n) { return n[1] < DOOR_REACH; }).sort(function (a, b) { return a[1] - b[1]; })[0];
       doorNear = near ? near[0] : null;
       if (doorWasIn) { doorHinted = doorNear; doorWasIn = false; }   // (no hint for the door she's just come out of)
@@ -2760,6 +3184,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     doorWasIn = true; doorNear = doorHinted = null;                                      // (inside: walking out through the doorway takes her out, as before)
     var dShop = inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99, dClinic = inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99, dBarn = inBarn ? dist(px, pz, AB_X, AB_Z + AB_EXIT_Z) : 99;
+    if (inCarp) { if (!doorArmed) { if (dist(px, pz, CPI_X, CPI_Z + CPI_EXIT_Z) > 0.85) doorArmed = true; return; } if (dist(px, pz, CPI_X, CPI_Z + CPI_EXIT_Z) < 0.5) carpDoorUse(false); return; }   // (out of Oak & Ember)
     var d = inShop || inClinic || inBarn ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z);
     if (!doorArmed) { if (Math.min(d, dShop, dClinic, dBarn) > 0.85) doorArmed = true; return; }   // (stepping away from the door she came in by first)
     if (d < 0.5) useDoor(false);
@@ -2772,7 +3197,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (flying) { if (!keys.Space) showToast('Land your broom first (B)', 1500); return; }
     if (!indoors && doorNear && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) {   // (by a door: in she goes)
       var which = doorNear; doorNear = null; walkTarget = null;
-      useDoor(true, which === 'shop' ? true : which === 'house' ? undefined : which);
+      if (which === 'carp') carpDoorUse(true); else useDoor(true, which === 'shop' ? true : which === 'house' ? undefined : which);
       return;
     }
     return interactOnFoot.apply(this, arguments);
@@ -2828,11 +3253,11 @@ EVERDAWN_PARTS.push(function (THREE) {
           if (d < min && d > 0.0001) { player.position.x = o.x + dx / d * min; player.position.z = o.z + dz / d * min; }
         });
       } else if (indoors) { // inside the farmhouse or the seed shop: stay between the walls and bump into the furniture
-        var rx0 = inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
-        var hw = (inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.35, hd = (inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.35;
+        var rx0 = inCarp ? CPI_X : inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inCarp ? CPI_Z : inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
+        var hw = (inCarp ? CPI_W : inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.45, hd = (inCarp ? CPI_D : inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.45;
         player.position.x = Math.max(rx0 - hw, Math.min(rx0 + hw, player.position.x));
         player.position.z = Math.max(rz0 - hd, Math.min(rz0 + hd, player.position.z));
-        (inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
+        (inCarp ? carpSolids : inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
           var dx = player.position.x - (rx0 + o[0]), dz = player.position.z - (rz0 + o[1]);
           var d = Math.hypot(dx, dz), min = o[2] + 0.35;
           if (d < min && d > 0.0001) {
@@ -3058,6 +3483,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inShop) { var so = shopFront(2.0); px = so.x; pz = so.z; }    // saved inside the shop? you'll load in outside its door
     if (inClinic) { var co = clinicFront(2.3); px = co.x; pz = co.z; } // and the same for the clinic
     if (inBarn) { var bo = animalFront(1.6); px = bo.x; pz = bo.z; }  // and Fluff & Feather
+    if (inCarp) { var cpo = carpFront(1.8); px = cpo.x; pz = cpo.z; } // and Oak & Ember
     var data = {
       v: 1,
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
@@ -3337,6 +3763,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateGlimButton();
     updateBridge(state.time, night);
     updateInterior(dt, state.time);
+    updateCarpenter(state.time, night);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
@@ -3348,7 +3775,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
-    renderer.render(indoors ? (inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
+    renderer.render(indoors ? (inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
 
