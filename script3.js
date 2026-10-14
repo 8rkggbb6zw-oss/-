@@ -2871,7 +2871,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // (a window: a plank frame with a cross of muntins, warm glowing panes and a flower box)
   function carpWindow(parent, x, y, z, ry, w, h, inside) {
     var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; parent.add(g);
-    cpPart(new THREE.PlaneGeometry(w, h), inside ? new THREE.MeshStandardMaterial({ color: 0xcfe8ff, emissive: 0xbfe0ff, emissiveIntensity: 0.55 }) : cpmGlowWin, 0, 0, 0, 0, 0, 0, g);
+    cpPart(new THREE.PlaneGeometry(w, h), inside ? siWindowMask : cpmGlowWin, 0, 0, 0, 0, 0, 0, g).castShadow = !inside;   // (inside, the real island seen through the glass, like the other shops)
     [[0, h / 2 + 0.04, w + 0.22, 0.09], [0, -h / 2 - 0.04, w + 0.3, 0.1], [w / 2 + 0.05, 0, 0.09, h], [-w / 2 - 0.05, 0, 0.09, h], [0, 0, w, 0.04], [0, 0, 0.04, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), cpmPlankDark, f[0], f[1], 0.04, 0, 0, 0, g); });
     if (!inside) cpFlowerBox(g, w, -h / 2 - 0.2, 0.14);
     return g;
@@ -3193,14 +3193,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mOld = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 }), mMetal = new THREE.MeshStandardMaterial({ color: 0x5a6266, metalness: 0.55, roughness: 0.45 });
     var mRust = new THREE.MeshStandardMaterial({ color: 0x8a5a3a, metalness: 0.3, roughness: 0.7 }), mRed = new THREE.MeshStandardMaterial({ color: 0xa83a2a, roughness: 0.5 }), mHandle = new THREE.MeshStandardMaterial({ color: 0xa0683a, roughness: 0.6 });
     function put(geo, m, x, y, z, rx, ry, rz, p) { return cpPart(geo, m, x, y, z, rx, ry, rz, p); }
-    // ===== the bank of windows on the back wall: three big frames of small panes, with green leaves and daylight beyond =====
-    var leafTex = cpTex(256, 256, function (g, w, h) {
-      var sky = g.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, '#e8f4e0'); sky.addColorStop(1, '#bcd8a8'); g.fillStyle = sky; g.fillRect(0, 0, w, h);
-      for (var i = 0; i < 260; i++) { var x = Math.random() * w, y = Math.random() * h * 0.95, r = 6 + Math.random() * 22; g.fillStyle = 'hsla(' + (80 + Math.random() * 40) + ',' + (18 + Math.random() * 20) + '%,' + (45 + Math.random() * 30) + '%,' + (0.25 + Math.random() * 0.35) + ')'; g.beginPath(); g.ellipse(x, y, r, r * 0.7, Math.random() * 3, 0, Math.PI * 2); g.fill(); }
-      for (var j = 0; j < 40; j++) { g.fillStyle = 'rgba(255,255,230,' + (0.3 + Math.random() * 0.4) + ')'; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 2 + Math.random() * 5, 0, Math.PI * 2); g.fill(); }
-    });
+    // ===== the bank of windows on the back wall: three big frames of small panes, looking out on the island behind =====
     var WB = new THREE.Group(); WB.position.set(0, 0, -D2 + 0.14); R.add(WB); cpWalls[0].extra.push(WB);
-    put(new THREE.PlaneGeometry(5.1, 1.4), new THREE.MeshBasicMaterial({ map: leafTex, color: 0xe8ecdc }), 0, 1.65, -0.02, 0, 0, 0, WB);
+    put(new THREE.PlaneGeometry(5.1, 1.4), siWindowMask, 0, 1.65, -0.02, 0, 0, 0, WB).castShadow = false;
     var mFrame = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.7 });
     [[0, 2.36, 5.25, 0.12], [0, 0.94, 5.25, 0.12], [-2.6, 1.65, 0.12, 1.5], [2.6, 1.65, 0.12, 1.5], [-0.86, 1.65, 0.1, 1.42], [0.86, 1.65, 0.1, 1.42]].forEach(function (f) { put(new THREE.BoxGeometry(f[2], f[3], 0.1), mFrame, f[0], f[1], 0.02, 0, 0, 0, WB); });
     [-1.73, 0, 1.73].forEach(function (cx) {                           // (each frame divided into small panes by thin muntins)
@@ -3335,6 +3330,20 @@ EVERDAWN_PARTS.push(function (THREE) {
     var fk = 1 + Math.sin(t * 9) * 0.08 + Math.sin(t * 13.3) * 0.06;
     cpLamps.forEach(function (l, i) { l.intensity = (0.45 + nt * 0.25) * (1 + Math.sin(t * 10 + i) * 0.04); });
     cpGlows.forEach(function (L) { var f = 1 + Math.sin(t * 11 + L.p) * 0.1; L.f.scale.set(f, 1.5 * f, f); L.h.material.opacity = 0.5 * f; });
+  }
+  function drawCarpView() {                                            // (the windows look out on the real island, just like the other shops')
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    shopViewMap.makeTranslation(CARP_X, 0.16, CARP_Z).multiply(shopViewTmp.makeRotationY(CARP_TURN)).multiply(shopViewTmp.makeTranslation(-CPI_X, 0, -CPI_Z));   // (its floor sits up on its stone footing)
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    carpGroup.visible = false;                                         // (you're inside it, so its own outside walls stay out of the way)
+    renderer.setRenderTarget(shopViewTarget);
+    renderer.render(scene, shopViewCam);
+    renderer.setRenderTarget(null);
+    carpGroup.visible = true;
   }
   function carpDoorUse(goIn) {                                         // through Oak & Ember's door, in or out
     if (doorBusy) return;
@@ -3993,6 +4002,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
+    if (inCarp) { camera.updateMatrixWorld(); drawCarpView(); }
     renderer.render(indoors ? (inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
