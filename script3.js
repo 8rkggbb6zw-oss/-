@@ -562,6 +562,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var sz = GLIM_STALLS[g.stall];
     g.x = g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'lotus' ? -3.1 : -3.0; g.z = sz - 0.2; g.tx = g.x; g.tz = g.z; g.face = Math.PI / 2; g.wait = 1 + glimR(g.stall) * 2; g.hop = 0; g.pet = 0; g.flut = glimR(g.stall * 7) * 6;
     if (g.kind === 'moon') moonBuildExtras(g); else if (g.kind === 'duck') duckBuildExtras(g); else if (g.kind === 'ember') emberBuildExtras(g); else if (g.kind === 'gem') gemBuildExtras(g); else if (g.kind === 'aurora') auroraBuildExtras(g); else if (g.kind === 'zephyra') zephyraBuildExtras(g); else if (g.kind === 'luna') lunaBuildExtras(g); else if (g.kind === 'bubble') bubbleBuildExtras(g); else if (g.kind === 'prism') prismBuildExtras(g); else if (g.kind === 'lotus') lotusBuildExtras(g); else if (g.kind === 'axo') axoBuildExtras(g); else if (g.kind === 'liz') lizBuildExtras(g); else if (g.kind === 'tort') tortBuildExtras(g); else if (g.kind === 'bison') bisBuildExtras(g); else if (g.kind === 'ostrich') ostBuildExtras(g); else if (g.kind === 'crab') crbBuildExtras(g); else glimBuildExtras(g);
+    if (g.stall >= COOP_STALL0) coopMoveIn(g);                          // (one of the coop's: it lives there instead)
     glimmers.push(g); glimRefresh(g);
     return g;
   }
@@ -571,7 +572,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function glimHeartBurst(x, y, z) {
     for (var i = 0; i < 6; i++) {
       var h = new THREE.Sprite(new THREE.SpriteMaterial({ map: glimHeartTex, transparent: true, depthWrite: false })); h.scale.set(0.09, 0.09, 1);
-      h.position.set(x + (Math.random() - 0.5) * 0.25, y, z + (Math.random() - 0.5) * 0.25); abRoom.add(h);
+      h.position.set(x + (Math.random() - 0.5) * 0.25, y, z + (Math.random() - 0.5) * 0.25); (inCoop ? coopRoom : abRoom).add(h);
       glimHearts.push({ s: h, t: -i * 0.12, vx: (Math.random() - 0.5) * 0.15 });
     }
   }
@@ -617,16 +618,19 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (missedScale.length) news.push(missedScale.join(' and ') + ' missed a day of care, so ' + (missedScale.length > 1 ? 'their scale counts start' : 'their scale count starts') + ' over');
       if (missedFrond.length) news.push(missedFrond.join(' and ') + ' missed a day of care, so ' + (missedFrond.length > 1 ? 'their kelp counts start' : 'their kelp count starts') + ' over');
       if (missed.length) news.push(missed.join(' and ') + ' missed a day of care, so ' + (missed.length > 1 ? 'their quill counts start' : 'their quill count starts') + ' over');
-      if (news.length) setTimeout(function () { showToast('✧ ' + news.join(', and ') + '! Visit them at Fluff & Feather.', 3600); }, 4200);
+      var inB = glimmers.some(function (g) { return g.stall < COOP_STALL0; }), inC = glimmers.some(function (g) { return g.stall >= COOP_STALL0; });
+      if (news.length) setTimeout(function () { showToast('✧ ' + news.join(', and ') + '! ' + (inB && inC ? 'Go and see them!' : inC ? 'Visit them in your coop.' : 'Visit them at Fluff & Feather.'), 3600); }, 4200);
     }
-    if (!inBarn) return;
+    if (!inBarn && !inCoop) return;
     var t = state.time;
     glimmers.forEach(function (g) {
+      if ((g.stall >= COOP_STALL0) !== inCoop) return;                 // (only the animals in the room you're in)
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
       var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember', gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', pri = g.kind === 'prism', lot = g.kind === 'lotus', axo = g.kind === 'axo', liz = g.kind === 'liz', tort = g.kind === 'tort', bis = g.kind === 'bison', ost = g.kind === 'ostrich', crb = g.kind === 'crab';
       if (g.wait <= 0 && g.pet <= 0) {
-        if (crb) { g.tx = -3.45 + Math.random() * 0.7; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 2.5 + Math.random() * 5; }   // (scuttling about, then pausing to look round)
+        if (g.stall >= COOP_STALL0) coopWander(g);                     // (in the coop: pottering about its floor)
+        else if (crb) { g.tx = -3.45 + Math.random() * 0.7; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 2.5 + Math.random() * 5; }   // (scuttling about, then pausing to look round)
         else if (ost) { g.tx = -3.4 + Math.random() * 0.6; g.tz = sz - 0.7 + Math.random() * 0.95; g.wait = 3 + Math.random() * 6; }   // (strolling about gracefully)
         else if (bis) { g.tx = -3.35 + Math.random() * 0.45; g.tz = sz - 0.55 + Math.random() * 0.7; g.wait = 6 + Math.random() * 9; }   // (a big, calm grazer)
         else if (tort) { g.tx = -3.35 + Math.random() * 0.5; g.tz = sz - 0.6 + Math.random() * 0.8; g.wait = 6 + Math.random() * 8; }   // (slow and unhurried)
@@ -690,7 +694,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var h = glimHearts[i]; h.t += dt;
       if (h.t < 0) { h.s.visible = false; continue; }
       h.s.visible = true; h.s.position.y += dt * 0.45; h.s.position.x += h.vx * dt; h.s.material.opacity = Math.max(0, 1 - h.t / 1.3);
-      if (h.t > 1.3) { abRoom.remove(h.s); h.s.material.dispose(); glimHearts.splice(i, 1); }
+      if (h.t > 1.3) { if (h.s.parent) h.s.parent.remove(h.s); h.s.material.dispose(); glimHearts.splice(i, 1); }
     }
   }
   // reaching one: standing in its stall, or just in front of it in the aisle
@@ -834,8 +838,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     var name = glimNameInput.value.replace(/\s+/g, ' ').replace(/^ | $/g, '') || glimSuggest();
     var g = glimAdd({ kind: glimPending.kind, name: name, stall: glimPending.stall, pal: glimPending.pal });
     glimPending = null; glimNaming = false; glimNameBox.hidden = true; glimNameInput.blur(); focusGame();
-    glimHeartBurst(g.x, 0.5, g.z); spellSound();
-    showToast('✧ ' + name + ' has moved into stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ' + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : g.kind === 'ostrich' ? 'after every three days in a row they\'ll lay a Dawnshell Egg.' : g.kind === 'crab' ? 'after every six days in a row they\'ll leave you a Tidelight Pearl.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
+    if (g.stall < COOP_STALL0) glimHeartBurst(g.x, 0.5, g.z); spellSound();
+    showToast('✧ ' + name + ' has moved into ' + (g.stall >= COOP_STALL0 ? 'your coop! Put hay on its feeding bench and pet them every day, and ' : 'stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ') + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : g.kind === 'ostrich' ? 'after every three days in a row they\'ll lay a Dawnshell Egg.' : g.kind === 'crab' ? 'after every six days in a row they\'ll leave you a Tidelight Pearl.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
   function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
@@ -892,7 +896,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // saving and loading
   function glimmerSaveData() { return { day: glimDay, list: glimmers.map(function (g) { return { kind: g.kind, name: g.name, stall: g.stall, pal: g.pal, fed: g.fed, petted: g.petted, egg: g.egg, days: g.days }; }) }; }
   function glimmerLoadData(d) {
-    glimmers.forEach(function (g) { abRoom.remove(g.m.root); abRoom.remove(g.eggMesh); abRoom.remove(g.hayMesh); g.slate.map = abSlateTex; g.slate.needsUpdate = true; });
+    glimmers.forEach(function (g) { [g.m.root, g.eggMesh, g.hayMesh].forEach(function (o) { if (o.parent) o.parent.remove(o); }); g.slate.map = abSlateTex; g.slate.needsUpdate = true; });
     glimmers = [];
     if (d && d.list) d.list.forEach(function (x) { glimAdd(x); });
     glimDay = d && d.day !== undefined && d.day !== null ? d.day : state.day;
@@ -1990,6 +1994,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#a0784e'; g.fillRect(-1.2 * K, CARP_HD * K + 6, 2.4 * K, 1.6 * K);
     g.restore();
     label('Oak & Ember', CARP_X, CARP_Z, 30);
+    if (coop.built) coopDrawOnMap(g, K, label);                         // your coop, if you've built one
     // Fluff & Feather: its grey gambrel roof with the ridge along it, and the cupola
     var apm = mapXY(ANIMAL_X, ANIMAL_Z);
     g.save(); g.translate(apm[0], apm[1]); g.rotate(-ANIMAL_TURN);
@@ -2046,8 +2051,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
-    if (indoors) you = inCarp ? carpFront(1.5) : inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
-    var yp = mapXY(you.x, you.z), fa = indoors ? (inCarp ? CARP_TURN : inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    if (indoors) you = inCoop ? coopFront(1.5) : inCarp ? carpFront(1.5) : inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inCoop ? 0 : inCarp ? CARP_TURN : inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
     var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
     g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
@@ -3369,6 +3374,666 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   TELEPORTS.push({ name: 'Oak & Ember', icon: '🪚', spot: function () { var f = carpFront(2.4); return { x: f.x, z: f.z, face: CARP_TURN + Math.PI, view: CARP_TURN }; } });
 
+  // ---------- Oak & Ember's menu, and your coop ----------
+  // Step up to the counter inside Oak & Ember and press E for the carpenter's menu. For now it has one thing: a coop,
+  // for 2,000 Star Coins. Buy it and a grid of your farm opens: tap where it should go (it takes 5 × 4 tiles, its
+  // door facing south), then build it there. Anywhere open will do, even where a tree, bush or rock was cleared, and
+  // nothing grows back under it. Up to four Glimmerwings, Puddlewisps, Emberwings, Gemwrens and Celestaras can live
+  // in it. Go in with Interact; inside, a feeding bench has eight spots for hay: fill them up, and every hungry
+  // animal goes over and eats a bundle by itself (pet them and collect their eggs just like at Fluff & Feather)
+  var COOP_COST = 2000, COOP_STALL0 = 3, COOP_CAP = 4, COOP_KINDS = ['glim', 'duck', 'ember', 'gem', 'ostrich'];
+  var COOP_NAMES = { glim: 'Glimmerwing', duck: 'Puddlewisp', ember: 'Emberwing', gem: 'Gemwren', ostrich: 'Celestara' };
+  var COOP_FC = 5, COOP_FR = 4, COOP_BW = 5.6, COOP_BD = 4.0, COOP_WALL = 2.4, COOP_PEAK = 1.35;   // tiles it takes; its walls' width, depth and height; how high the roof rises
+  var COOP_SLOT_Z = [], COOP_NESTS = [];
+  for (var cps = 0; cps < 8; cps++) COOP_SLOT_Z.push(-1.435 + cps * 0.41);                       // (the eight spots on the feeding bench)
+  for (var cpn = 0; cpn < COOP_CAP; cpn++) COOP_NESTS.push({ x: -1.2 + cpn * 0.8, z: -1.6 });      // (and a nesting box for each animal)
+  var coop = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null };
+  var coopDoor = { x: 1e6, z: 1e6 }, coopGroup = null, coopGlows = [], inCoop = false;
+  function coopFront(d) { return { x: coop.x, z: coop.z + COOP_BD / 2 + d }; }
+  function coopCovers(x, z, r) { return coop.built && Math.abs(x - coop.fx) < COOP_FC * TILE / 2 + r && Math.abs(z - coop.fz) < COOP_FR * TILE / 2 + r; }
+  var coopBaseSoilNear = soilNear;                                     // nothing grows back under the coop, just as nothing grows back through your soil
+  soilNear = function (x, z, r) { return coopBaseSoilNear(x, z, r) || coopCovers(x, z, r); };
+  function coopFreeStall() { for (var s = COOP_STALL0; s < COOP_STALL0 + COOP_CAP; s++) if (!glimmers.some(function (g) { return g.stall === s; })) return s; return -1; }
+  function coopAnimals() { return glimmers.filter(function (g) { return g.stall >= COOP_STALL0; }); }
+  function coopKindCost(kind) { return kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : kind === 'gem' ? GEM_COST : kind === 'ostrich' ? OST_COST : GLIM_COST; }
+
+  // ===== what it's made of =====
+  var coopBoardTex = cpTex(256, 256, function (g, w, h) {             // whitewashed boards, five to a metre, standing upright
+    g.fillStyle = '#e8dcc8'; g.fillRect(0, 0, w, h);
+    for (var b = 0; b < 5; b++) {
+      var x0 = b * w / 5, l = 226 + Math.random() * 18;
+      g.fillStyle = 'rgb(' + Math.round(l) + ',' + Math.round(l * 0.965) + ',' + Math.round(l * 0.91) + ')'; g.fillRect(x0 + 2, 0, w / 5 - 4, h);
+      for (var s = 0; s < 16; s++) { var gx = x0 + 4 + Math.random() * (w / 5 - 8); g.strokeStyle = 'rgba(150,120,90,' + (0.05 + Math.random() * 0.08) + ')'; g.lineWidth = 0.8 + Math.random(); g.beginPath(); g.moveTo(gx, 0); g.lineTo(gx + (Math.random() - 0.5) * 6, h); g.stroke(); }
+      g.fillStyle = 'rgba(110,85,60,0.45)'; g.fillRect(x0, 0, 2, h); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x0 + 2, 0, 1, h);   // (the gap, and a lit edge)
+    }
+    for (var k = 0; k < 6; k++) { g.fillStyle = 'rgba(130,100,70,0.3)'; g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 3, 5, 0, 0, Math.PI * 2); g.fill(); }   // (knots showing through the whitewash)
+  }, [1, 1]);
+  var coopStrawTex = cpTex(512, 512, function (g, w, h) {             // the floor: planks under a thick scatter of straw
+    g.fillStyle = '#8a6440'; g.fillRect(0, 0, w, h);
+    for (var p = 0; p < 8; p++) { g.fillStyle = 'rgba(' + (p % 2 ? '70,48,28' : '110,80,50') + ',0.35)'; g.fillRect(0, p * h / 8, w, h / 8 - 2); }
+    for (var i = 0; i < 4200; i++) {
+      var x = Math.random() * w, y = Math.random() * h, a = Math.random() * Math.PI, l = 8 + Math.random() * 22, lt = 50 + Math.random() * 28;
+      g.strokeStyle = 'hsl(' + (38 + Math.random() * 12) + ',' + (50 + Math.random() * 25) + '%,' + lt + '%)'; g.lineWidth = 1 + Math.random() * 1.6;
+      cpWrap(w, h, function (ox, oy) { g.beginPath(); g.moveTo(x + ox, y + oy); g.lineTo(x + ox + Math.cos(a) * l, y + oy + Math.sin(a) * l); g.stroke(); });
+    }
+    for (var d = 0; d < 400; d++) { g.fillStyle = 'rgba(60,40,15,' + Math.random() * 0.25 + ')'; g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 5, 1); }
+  }, [2, 1.5]);
+  var coopSignTex = cpTex(512, 176, function (g, w, h) {              // the little painted sign over the door
+    var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9dbf9e'); gr.addColorStop(1, '#86aa88'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#f6efe2'; g.lineWidth = 8; g.strokeRect(10, 10, w - 20, h - 20);
+    g.font = '600 76px Fredoka, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(40,60,40,0.35)'; g.fillText('The Coop', w / 2 + 3, h / 2 + 5); g.fillStyle = '#fffaf0'; g.fillText('The Coop', w / 2, h / 2 + 2);
+    [[60, 1], [w - 60, -1]].forEach(function (e) {                   // (an egg either side)
+      g.save(); g.translate(e[0], h / 2 + 2); g.rotate(e[1] * 0.25); g.fillStyle = '#fff6e6'; g.beginPath(); g.ellipse(0, 0, 18, 24, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(240,170,200,0.9)'; g.beginPath(); g.ellipse(-5, -6, 4, 3, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    });
+  });
+  var coopBenchTex = cpTex(256, 96, function (g, w, h) {              // the board over the feeding bench
+    g.fillStyle = '#5a3c24'; g.fillRect(0, 0, w, h); g.fillStyle = '#e8d2a8'; g.fillRect(6, 6, w - 12, h - 12);
+    g.font = '600 30px Fredoka, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#5a3c24'; g.fillText('🌾 Feeding bench 🌾', w / 2, h / 2 + 2);
+  });
+  var cpmBoard = new THREE.MeshStandardMaterial({ map: coopBoardTex, roughness: 0.85 });
+  var cpmBoardIn = new THREE.MeshStandardMaterial({ map: coopBoardTex, color: 0xf2e2c4, roughness: 0.85 });
+  var cpmSage = new THREE.MeshStandardMaterial({ color: 0x92b596, roughness: 0.7 });
+  var cpmSageDoor = new THREE.MeshStandardMaterial({ map: coopBoardTex, color: 0x9cc29f, roughness: 0.7 });
+  var cpmCream = new THREE.MeshStandardMaterial({ color: 0xf6efe2, roughness: 0.7 });
+  var cpmDark = new THREE.MeshBasicMaterial({ color: 0x1a120c });
+  // (one wall: boards w wide and h tall, rising to a gable peak if it has one, with holes for windows and a notch for a door)
+  function coopWall(parent, w, h, peak, holes, door, mat, x, z, ry) {
+    var s = new THREE.Shape(); s.moveTo(-w / 2, 0);
+    if (door) { s.lineTo(door[0], 0); s.lineTo(door[0], door[2]); s.lineTo(door[1], door[2]); s.lineTo(door[1], 0); }
+    s.lineTo(w / 2, 0); s.lineTo(w / 2, h); if (peak) s.lineTo(0, h + peak); s.lineTo(-w / 2, h); s.closePath();
+    holes.forEach(function (o) { var p = new THREE.Path(); p.moveTo(o[0], o[2]); p.lineTo(o[1], o[2]); p.lineTo(o[1], o[3]); p.lineTo(o[0], o[3]); p.closePath(); s.holes.push(p); });
+    var geo = new THREE.ExtrudeGeometry(s, { depth: 0.12, bevelEnabled: false }); geo.translate(0, 0, -0.06);
+    var m = new THREE.Mesh(geo, mat); m.position.set(x, 0, z); m.rotation.y = ry; m.castShadow = m.receiveShadow = true; parent.add(m); return m;
+  }
+  function coopRoofGeo(G, len, under) {                                // (the two slopes of the roof, the ridge cap, and the boards along its gable edges)
+    var run = COOP_BD / 2 + 0.06 + 0.4, a = Math.atan(COOP_PEAK / (COOP_BD / 2 + 0.06)), L = run / Math.cos(a) + 0.04;
+    [-1, 1].forEach(function (s) {
+      var zc = s * run / 2, yc = COOP_WALL + COOP_PEAK - Math.tan(a) * run / 2;
+      cpPart(new THREE.BoxGeometry(len, 0.1, L), cpmShingle, 0, yc + Math.cos(a) * 0.06, zc + s * Math.sin(a) * 0.06, s * a, 0, 0, G);
+      if (under) [-1, 1].forEach(function (e) { cpPart(new THREE.BoxGeometry(0.06, 0.18, L), cpmSage, e * (len / 2 + 0.01), yc - Math.cos(a) * 0.02, zc - s * Math.sin(a) * 0.02, s * a, 0, 0, G); });
+    });
+    cpPart(new THREE.BoxGeometry(len + 0.06, 0.12, 0.3), cpmShingle, 0, COOP_WALL + COOP_PEAK + 0.1, 0, 0, 0, 0, G);
+  }
+
+  // ===== outside: built where you choose =====
+  function coopBuildOutside() {
+    var G = new THREE.Group(), W2 = COOP_BW / 2, D2 = COOP_BD / 2, H = COOP_WALL; coopGlows = [];
+    G.position.set(coop.x, coop.fy, coop.z);
+    var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, groundHeight(coop.x + gx * (W2 + 0.3), coop.z + gz * (D2 + 0.3)));
+    var fh = coop.fy - minG + 0.3;
+    cpPart(new THREE.BoxGeometry(COOP_BW + 0.24, fh, COOP_BD + 0.24), cpmStone, 0, -fh / 2, 0, 0, 0, 0, G);           // (a low stone footing)
+    // (the four walls: the front with its door and two windows, the back with two little ones, a gable each side)
+    coopWall(G, COOP_BW, H, 0, [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], [-0.52, 0.52, 1.92], cpmBoard, 0, D2, 0);
+    coopWall(G, COOP_BW, H, 0, [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], null, cpmBoard, 0, -D2, Math.PI);
+    coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [[-0.5, 0.5, 1.02, 1.78]], null, cpmBoard, -W2, 0, -Math.PI / 2);
+    coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [], null, cpmBoard, W2, 0, Math.PI / 2);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { cpPart(new THREE.BoxGeometry(0.16, H, 0.16), cpmSage, c[0] * (W2 + 0.04), H / 2, c[1] * (D2 + 0.04), 0, 0, 0, G); });   // (corner boards)
+    [[0, D2 + 0.07, COOP_BW, 0], [0, -D2 - 0.07, COOP_BW, 0], [W2 + 0.07, 0, COOP_BD, Math.PI / 2], [-W2 - 0.07, 0, COOP_BD, Math.PI / 2]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], 0.14, 0.03), cpmSage, b[0], 0.07, b[1], 0, b[3], 0, G); });   // (a skirting board)
+    [[0, D2 + 0.07, COOP_BW, 0], [0, -D2 - 0.07, COOP_BW, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2] + 0.2, 0.12, 0.04), cpmSage, b[0], H - 0.06, b[1], 0, b[3], 0, G); });   // (and a board under the eaves)
+    coopRoofGeo(G, COOP_BW + 0.72, true);
+    // (windows with flower boxes, as at Oak & Ember)
+    carpWindow(G, -1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76, false); carpWindow(G, 1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76, false);
+    carpWindow(G, -1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6, false); carpWindow(G, 1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6, false);
+    carpWindow(G, -W2 - 0.07, 1.4, 0, -Math.PI / 2, 1.0, 0.76, false);
+    // (the door: sage-green boards with a Z brace, a little heart cut in it, a latch, and white trim round it)
+    var DR = new THREE.Group(); DR.position.set(0, 0, D2 + 0.02); G.add(DR);
+    cpPart(new THREE.BoxGeometry(1.02, 1.9, 0.06), cpmSageDoor, 0, 0.95, 0, 0, 0, 0, DR);
+    [[0, 1.62, 0], [0, 0.3, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(0.92, 0.12, 0.04), cpmSage, b[0], b[1], 0.045, 0, 0, b[2], DR); });
+    cpPart(new THREE.BoxGeometry(0.1, 1.48, 0.04), cpmSage, 0, 0.96, 0.045, 0, 0, -0.62, DR);
+    var heart = new THREE.Shape(); heart.moveTo(0, -0.07); heart.bezierCurveTo(-0.12, 0.0, -0.08, 0.1, 0, 0.05); heart.bezierCurveTo(0.08, 0.1, 0.12, 0.0, 0, -0.07);
+    cpPart(new THREE.ShapeGeometry(heart), cpmDark, 0, 1.36, 0.068, 0, 0, 0, DR).castShadow = false;
+    cpPart(new THREE.BoxGeometry(0.16, 0.05, 0.05), cpmIron, 0.38, 1.0, 0.06, 0, 0, 0, DR); cpPart(new THREE.SphereGeometry(0.03, 8, 6), cpmIron, 0.3, 1.0, 0.09, 0, 0, 0, DR);
+    [[-0.58, 0.97, 0.1, 1.94], [0.58, 0.97, 0.1, 1.94], [0, 1.97, 1.26, 0.1]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.05), cpmCream, t[0], t[1], 0.03, 0, 0, 0, DR); });
+    // (a plank ramp with little cleats down to the ground)
+    var gyR = groundHeight(coop.x, coop.z + D2 + 0.95) - coop.fy, rl = Math.hypot(0.95, gyR), ra = Math.atan2(-gyR, 0.95);
+    var RP = new THREE.Group(); RP.position.set(0, gyR / 2 - 0.02, D2 + 0.08 + 0.475); RP.rotation.x = ra; G.add(RP);
+    cpPart(new THREE.BoxGeometry(1.12, 0.06, rl), cpmPlank, 0, 0, 0, 0, 0, 0, RP);
+    for (var cl = -rl / 2 + 0.15; cl < rl / 2; cl += 0.2) cpPart(new THREE.BoxGeometry(1.0, 0.025, 0.035), cpmPlankDark, 0, 0.04, cl, 0, 0, 0, RP);
+    // (a little pop hole for the birds, with its own tiny ramp)
+    cpPart(new THREE.PlaneGeometry(0.36, 0.4), cpmDark, 1.65, 0.24, D2 + 0.065, 0, 0, 0, G).castShadow = false;
+    [[1.45, 0.24, 0.05, 0.48], [1.85, 0.24, 0.05, 0.48], [1.65, 0.47, 0.46, 0.06]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.04), cpmCream, t[0], t[1], D2 + 0.08, 0, 0, 0, G); });
+    var gyP = groundHeight(coop.x + 1.65, coop.z + D2 + 0.5) - coop.fy, pl = Math.hypot(0.45, gyP - 0.04);
+    cpPart(new THREE.BoxGeometry(0.32, 0.03, pl), cpmPlank, 1.65, (0.04 + gyP) / 2, D2 + 0.08 + 0.225, Math.atan2(0.04 - gyP, 0.45), 0, 0, G);
+    // (a nesting box built out from the right-hand wall, with a sloping shingled lid on iron hinges)
+    var NB = new THREE.Group(); NB.position.set(W2 + 0.06, 0, 0); G.add(NB);
+    cpPart(new THREE.BoxGeometry(0.5, 0.55, 1.7), cpmBoard, 0.25, 0.85, 0, 0, 0, 0, NB);
+    cpPart(new THREE.BoxGeometry(0.66, 0.05, 1.86), cpmShingle, 0.3, 1.2, 0, 0, 0, -0.3, NB);
+    [-0.5, 0.5].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.12, 0.02, 0.05), cpmIron, 0.04, 1.27, z, 0, 0, -0.3, NB); });
+    [-0.8, 0.8].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.06, 0.4, 0.06), cpmSage, 0.4, 0.4, z, 0, 0, 0.6, NB); });   // (two brackets under it)
+    // (a painted sign on two posts beside the ramp, a lantern by the door, and a weathervane with a little hen on the ridge)
+    var SG = new THREE.Group(), sgY = groundHeight(coop.x + 2.45, coop.z + D2 + 0.75) - coop.fy; SG.position.set(2.45, sgY, D2 + 0.75); SG.rotation.y = -0.2; G.add(SG);
+    [-0.42, 0.42].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 0.95, 0.07), cpmPlankDark, x, 0.47, -0.02, 0, 0, 0, SG); });
+    cpPart(new THREE.BoxGeometry(1.08, 0.4, 0.04), cpmPlankDark, 0, 0.75, 0, 0, 0, 0, SG);
+    cpPart(new THREE.PlaneGeometry(1.0, 0.34), new THREE.MeshStandardMaterial({ map: coopSignTex, roughness: 0.7 }), 0, 0.75, 0.022, 0, 0, 0, SG).castShadow = false;
+    cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.22), cpmIron, 0.8, 1.86, D2 + 0.12, 0, 0, 0, G);
+    cpLantern(G, 0.8, 1.68, D2 + 0.24, coopGlows);
+    var WV = new THREE.Group(); WV.position.set(1.9, H + COOP_PEAK + 0.12, 0); G.add(WV);
+    cpPart(new THREE.CylinderGeometry(0.018, 0.022, 0.75, 8), cpmIron, 0, 0.37, 0, 0, 0, 0, WV);
+    var spin = new THREE.Group(); spin.position.y = 0.7; WV.add(spin); G.userData.vane = spin;
+    cpPart(new THREE.BoxGeometry(0.6, 0.02, 0.02), cpmIron, 0, 0, 0, 0, 0, 0, spin); cpPart(new THREE.ConeGeometry(0.04, 0.1, 6), cpmIron, 0.32, 0, 0, 0, 0, -Math.PI / 2, spin);
+    var hen = new THREE.Shape(); hen.moveTo(-0.2, 0.02); hen.quadraticCurveTo(-0.05, -0.04, 0.12, 0.04); hen.quadraticCurveTo(0.2, 0.1, 0.19, 0.2); hen.lineTo(0.25, 0.23); hen.lineTo(0.19, 0.26);
+    hen.quadraticCurveTo(0.2, 0.33, 0.15, 0.34); hen.quadraticCurveTo(0.1, 0.32, 0.11, 0.24); hen.quadraticCurveTo(0.06, 0.15, -0.06, 0.15); hen.quadraticCurveTo(-0.16, 0.35, -0.27, 0.3); hen.quadraticCurveTo(-0.22, 0.18, -0.2, 0.02);
+    var henGeo = new THREE.ExtrudeGeometry(hen, { depth: 0.015, bevelEnabled: false }); henGeo.translate(0, 0, -0.0075);
+    cpPart(henGeo, cpmIron, 0, 0.04, 0, 0, 0, 0, spin); cpPart(new THREE.BoxGeometry(0.01, 0.06, 0.01), cpmIron, 0, 0.02, 0, 0, 0, 0, spin);
+    // (a hay bale and a little bucket by the door)
+    var bale = pickupModel('hay'); bale.scale.setScalar(2.6); bale.position.set(-2.25, groundHeight(coop.x - 2.25, coop.z + 2.65) - coop.fy + 0.22, 2.62); bale.rotation.y = 0.15; G.add(bale);
+    bale.traverse(function (o) { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+    var bk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.22, 14, 1, true), cpmSteel); bk.position.set(-1.45, groundHeight(coop.x - 1.45, coop.z + 2.7) - coop.fy + 0.11, 2.7); bk.castShadow = true; G.add(bk);
+    scene.add(G);
+    return G;
+  }
+  function updateCoopOutside(t, night) {
+    if (!coopGroup) return;
+    coopGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
+    coopGroup.userData.vane.rotation.y = Math.sin(t * 0.21) * 0.9 + Math.sin(t * 0.63) * 0.25;   // (the hen turns with the breeze)
+  }
+
+  // ===== inside =====
+  var coopScene = new THREE.Scene(); coopScene.background = new THREE.Color(0x1c1410);
+  var COI_X = 800, COI_Z = 1000, COI_EXIT_Z = COOP_BD / 2 - 0.6;
+  var coopRoom = new THREE.Group(); coopRoom.position.set(COI_X, 0, COI_Z); coopScene.add(coopRoom);
+  coopScene.add(new THREE.HemisphereLight(0xfff0d8, 0x6a5440, 0.6));
+  var coSun = new THREE.DirectionalLight(0xffe6c0, 0.5); coSun.position.set(COI_X - 4, 8, COI_Z + 5); coSun.target.position.set(COI_X, 0, COI_Z); coSun.castShadow = true; coSun.shadow.mapSize.set(1024, 1024);
+  coSun.shadow.camera.left = -5; coSun.shadow.camera.right = 5; coSun.shadow.camera.top = 4; coSun.shadow.camera.bottom = -4; coSun.shadow.bias = -0.0006; coopScene.add(coSun); coopScene.add(coSun.target);
+  var coLamp = new THREE.PointLight(0xffc888, 0.6, 9); coLamp.position.set(COI_X, 2.0, COI_Z); coopScene.add(coLamp);
+  var coopSolids = [], coopInGlows = [], coopWalls = [], coopHayMeshes = [];
+  for (var csl = COOP_STALL0; csl < COOP_STALL0 + COOP_CAP; csl++) abStallSlates[csl] = new THREE.MeshStandardMaterial({ map: abSlateTex, roughness: 0.95 });   // (a name slate over each nesting box)
+  function coopInWindow(parent, x, y, z, ry, w, h) {                   // (a window from the inside: the real island through the glass, a frame and a sill)
+    var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; parent.add(g);
+    cpPart(new THREE.PlaneGeometry(w, h), siWindowMask, 0, 0, 0, 0, 0, 0, g).castShadow = false;
+    [[0, h / 2 + 0.04, w + 0.2, 0.08], [0, -h / 2 - 0.04, w + 0.26, 0.08], [w / 2 + 0.04, 0, 0.08, h], [-w / 2 - 0.04, 0, 0.08, h], [0, 0, w, 0.03], [0, 0, 0.03, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.06), cpmCream, f[0], f[1], 0.02, 0, 0, 0, g); });
+    cpPart(new THREE.BoxGeometry(w + 0.3, 0.04, 0.14), cpmCream, 0, -h / 2 - 0.08, 0.06, 0, 0, 0, g);
+    return g;
+  }
+  (function (R) {
+    var W2 = COOP_BW / 2, D2 = COOP_BD / 2, H = COOP_WALL;
+    function put(geo, m, x, y, z, rx, ry, rz, p) { return cpPart(geo, m, x, y, z, rx, ry, rz, p || R); }
+    var mOld = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 }), mWood = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc89c6c, roughness: 0.8 });
+    put(new THREE.PlaneGeometry(COOP_BW, COOP_BD), new THREE.MeshStandardMaterial({ map: coopStrawTex, roughness: 1 }), 0, 0.001, 0, -Math.PI / 2, 0, 0).castShadow = false;
+    // (the four walls, each stepping aside when it's between you and the camera)
+    function wall(w, peak, holes, door, x, z, ry, n, d) { var g = new THREE.Group(); R.add(g); coopWall(g, w, H, peak, holes, door, cpmBoardIn, x, z, ry); var W = { g: g, n: new THREE.Vector3(n[0], 0, n[1]), d: d }; coopWalls.push(W); return g; }
+    var wB = wall(COOP_BW, 0, [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], null, 0, -D2, 0, [0, -1], D2);
+    var wF = wall(COOP_BW, 0, [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], [-0.52, 0.52, 1.92], 0, D2, Math.PI, [0, 1], D2);
+    var wL = wall(COOP_BD, COOP_PEAK, [[-0.5, 0.5, 1.02, 1.78]], null, -W2, 0, Math.PI / 2, [-1, 0], W2);
+    var wR = wall(COOP_BD, COOP_PEAK, [], null, W2, 0, -Math.PI / 2, [1, 0], W2);
+    coopInWindow(wB, -1.4, 1.5, -D2 + 0.07, 0, 0.8, 0.6); coopInWindow(wB, 1.4, 1.5, -D2 + 0.07, 0, 0.8, 0.6);
+    coopInWindow(wF, -1.65, 1.4, D2 - 0.07, Math.PI, 1.0, 0.76); coopInWindow(wF, 1.65, 1.4, D2 - 0.07, Math.PI, 1.0, 0.76);
+    coopInWindow(wL, -W2 + 0.07, 1.4, 0, Math.PI / 2, 1.0, 0.76);
+    put(new THREE.BoxGeometry(1.02, 1.9, 0.05), cpmSageDoor, 0, 0.95, D2 - 0.02, 0, 0, 0, wF);                 // (the door, shut, from inside)
+    [[0, 1.62], [0, 0.3]].forEach(function (b) { put(new THREE.BoxGeometry(0.92, 0.12, 0.04), cpmSage, b[0], b[1], D2 - 0.075, 0, 0, 0, wF); });
+    put(new THREE.BoxGeometry(0.1, 1.48, 0.04), cpmSage, 0, 0.96, D2 - 0.075, 0, 0, 0.62, wF);
+    // (a beam along the ridge, and a lantern hanging from it)
+    put(new THREE.BoxGeometry(COOP_BW - 0.1, 0.14, 0.12), mOld, 0, H + COOP_PEAK - 0.2, 0);
+    put(new THREE.CylinderGeometry(0.008, 0.008, 0.95, 4), cpmIron, 0, H + COOP_PEAK - 0.7, 0); cpLantern(R, 0, 2.1, 0, coopInGlows);
+    // (four nesting boxes along the back wall, deep in straw, each with a name slate over it)
+    var strawM = new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 });
+    COOP_NESTS.forEach(function (n, k) {
+      var B = new THREE.Group(); B.position.set(n.x, 0, n.z); R.add(B);
+      [[0, 0.3, 0, 0.74, 0.04, 0.58], [0, 0.82, -0.02, 0.8, 0.04, 0.64], [-0.36, 0.56, 0, 0.03, 0.52, 0.58], [0.36, 0.56, 0, 0.03, 0.52, 0.58], [0, 0.37, 0.28, 0.74, 0.14, 0.03], [0, 0.76, 0.28, 0.74, 0.1, 0.03]].forEach(function (b) { put(new THREE.BoxGeometry(b[3], b[4], b[5]), mWood, b[0], b[1], b[2], 0, 0, 0, B); });
+      [[-0.33, -0.24], [0.33, -0.24], [-0.33, 0.24], [0.33, 0.24]].forEach(function (l) { put(new THREE.BoxGeometry(0.05, 0.3, 0.05), mOld, l[0], 0.15, l[1], 0, 0, 0, B); });
+      put(wbLumpGeo(700 + k, 0.3), strawM, 0, 0.36, -0.02, 0, k, 0, B).scale.set(0.3, 0.07, 0.24);
+      put(new THREE.BoxGeometry(0.5, 0.28, 0.03), mOld, 0, 0.99, -0.27, 0, 0, 0, B);
+      put(new THREE.PlaneGeometry(0.44, 0.22), abStallSlates[COOP_STALL0 + k], 0, 0.99, -0.25, 0, 0, 0, B).castShadow = false;
+      coopSolids.push([n.x, n.z, 0.38]);
+    });
+    // (the feeding bench along the right-hand wall: eight spots for hay, with little dividers between them)
+    var FB2 = new THREE.Group(); FB2.position.set(2.42, 0, 0); R.add(FB2);
+    put(new THREE.BoxGeometry(0.5, 0.06, 3.4), mWood, 0, 0.46, 0, 0, 0, 0, FB2);
+    put(new THREE.BoxGeometry(0.03, 0.1, 3.4), mOld, -0.25, 0.5, 0, 0, 0, 0, FB2); put(new THREE.BoxGeometry(0.03, 0.16, 3.4), mOld, 0.24, 0.53, 0, 0, 0, 0, FB2);
+    [-1.6, -0.55, 0.55, 1.6].forEach(function (z) { [-0.2, 0.2].forEach(function (x) { put(new THREE.BoxGeometry(0.06, 0.44, 0.06), mOld, x, 0.22, z, 0, 0, 0, FB2); }); });
+    put(new THREE.BoxGeometry(0.44, 0.04, 3.3), mOld, 0, 0.12, 0, 0, 0, 0, FB2);
+    for (var dv = 1; dv < 8; dv++) put(new THREE.BoxGeometry(0.46, 0.08, 0.02), mOld, 0, 0.53, -1.64 + dv * 0.41, 0, 0, 0, FB2);
+    COOP_SLOT_Z.forEach(function (z) { var hb = pickupModel('hay'); hb.position.set(0, 0.575, z); hb.rotation.y = Math.PI / 2 + (Math.random() - 0.5) * 0.15; hb.traverse(function (o) { if (o.isMesh) o.castShadow = true; }); hb.visible = false; FB2.add(hb); coopHayMeshes.push(hb); });
+    put(new THREE.PlaneGeometry(0.9, 0.34), new THREE.MeshStandardMaterial({ map: coopBenchTex, roughness: 0.8 }), 0.25, 1.15, 0, 0, -Math.PI / 2, 0, FB2).castShadow = false;
+    for (var bs = -1.2; bs <= 1.2; bs += 0.8) coopSolids.push([2.42, bs, 0.35]);
+    // (a roosting ladder leaning on the left-hand wall)
+    var RL = new THREE.Group(); RL.position.set(-W2 + 0.1, 0, -1.05); R.add(RL);
+    [-0.4, 0.4].forEach(function (z) { put(new THREE.BoxGeometry(0.06, 1.7, 0.06), mOld, 0.42, 0.78, z, 0, 0, 0.5, RL); });
+    for (var rg = 0; rg < 4; rg++) put(new THREE.CylinderGeometry(0.025, 0.025, 0.86, 8), mWood, 0.75 - rg * 0.2, 0.2 + rg * 0.36, 0, Math.PI / 2, 0, 0, RL);
+    coopSolids.push([-W2 + 0.45, -1.05, 0.5]);
+    // (a galvanised waterer by the door, and a hay bale with a basket of eggs on top)
+    put(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 20), cpmSteel, -2.25, 0.03, 1.45); put(new THREE.CylinderGeometry(0.14, 0.14, 0.42, 18), cpmSteel, -2.25, 0.27, 1.45);
+    put(new THREE.SphereGeometry(0.14, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), cpmSteel, -2.25, 0.48, 1.45); put(new THREE.TorusGeometry(0.06, 0.008, 6, 16, Math.PI), cpmIron, -2.25, 0.6, 1.45);
+    put(new THREE.CylinderGeometry(0.235, 0.235, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0x8ac6e8, roughness: 0.1, transparent: true, opacity: 0.8 }), -2.25, 0.062, 1.45).castShadow = false;
+    coopSolids.push([-2.25, 1.45, 0.3]);
+    var bale = pickupModel('hay'); bale.scale.setScalar(3); bale.position.set(-2.3, 0.255, 0.55); bale.rotation.y = Math.PI / 2; bale.traverse(function (o) { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); R.add(bale);
+    put(new THREE.CylinderGeometry(0.14, 0.11, 0.1, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xb08850, roughness: 0.9, side: THREE.DoubleSide }), -2.3, 0.57, 0.55);
+    [[-0.05, -0.03], [0.05, 0.02], [0, 0.06], [-0.04, 0.05]].forEach(function (e, k) { put(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshStandardMaterial({ color: [0xfff6e8, 0xf0dcc0, 0xe8f0ff, 0xfff0f4][k], roughness: 0.4 }), -2.3 + e[0], 0.6, 0.55 + e[1]).scale.set(1, 1.25, 1); });
+    coopSolids.push([-2.3, 0.55, 0.45]);
+  })(coopRoom);
+  function coopHayShow() { coopHayMeshes.forEach(function (m, i) { m.visible = coop.hay[i]; }); }
+  var coLook = new THREE.Vector3();
+  function updateCoopInside(t) {
+    coLook.set(camera.position.x - COI_X, 0, camera.position.z - COI_Z);
+    coopWalls.forEach(function (W) { W.g.visible = coLook.dot(W.n) < W.d - 0.6; });
+    var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
+    coSun.intensity = 0.5 * (1 - nt); coLamp.intensity = (0.5 + nt * 0.3) * (1 + Math.sin(t * 10) * 0.04);
+    coopInGlows.forEach(function (L) { var f = 1 + Math.sin(t * 11 + L.p) * 0.1; L.f.scale.set(f, 1.5 * f, f); L.h.material.opacity = 0.5 * f; });
+  }
+  function drawCoopView() {                                            // (the windows look out on the real farm, like the shops')
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    shopViewMap.makeTranslation(coop.x - COI_X, coop.fy, coop.z - COI_Z);
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    if (coopGroup) coopGroup.visible = false;                          // (you're inside it, so its own outside walls stay out of the way)
+    renderer.setRenderTarget(shopViewTarget); renderer.render(scene, shopViewCam); renderer.setRenderTarget(null);
+    if (coopGroup) coopGroup.visible = true;
+  }
+  function coopDoorUse(goIn) {                                         // through the coop's door, in or out
+    if (doorBusy) return;
+    doorBusy = true; doorArmed = false; walkTarget = null; doorSound(); fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (goIn) {
+        indoors = true; inShop = inClinic = inBarn = inCarp = false; inCoop = true;
+        coopScene.add(player); player.position.set(COI_X, 0, COI_Z + COI_EXIT_Z - 1.0); facing = Math.PI;
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 7.5; cam.pitch = 0.9; cam.yaw = 0;
+      } else {
+        indoors = false; inCoop = false; scene.add(player);
+        var o = coopFront(1.6); player.position.set(o.x, 0, o.z); facing = 0;
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+      }
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      fadeBox.style.opacity = 0;
+      setTimeout(function () { doorBusy = false; }, 380);
+    }, 380);
+  }
+
+  // ===== building it, and taking it down (when a save without one is loaded) =====
+  function coopPlace(c0, r0) {
+    coopRemove();
+    coop.built = true; coop.c = c0; coop.r = r0;
+    coop.fx = FARM_X + (c0 + COOP_FC / 2) * TILE; coop.fz = FARM_Z + (r0 + COOP_FR / 2) * TILE;
+    coop.x = coop.fx; coop.z = coop.fz - 0.45;                          // (the coop sits at the back of its patch, its ramp in front)
+    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(coop.x + gx * COOP_BW / 2, coop.z + gz * COOP_BD / 2));
+    coop.fy = top + 0.2;
+    var HX = COOP_FC * TILE / 2, HZ = COOP_FR * TILE / 2;
+    allScenery.forEach(function (t) {                                  // (whatever was cut down here stays down: stumps and saplings are cleared away)
+      var u = t.userData; if (u.gone || u.state === 'standing') return;
+      if (Math.abs(u.solid.x - coop.fx) < HX + u.solidR && Math.abs(u.solid.z - coop.fz) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes());
+    });
+    mineable.forEach(function (r) {
+      if (r.gone || r.state === 'whole') return;
+      if (Math.abs(r.solid.x - coop.fx) < HX + r.solidR && Math.abs(r.solid.z - coop.fz) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes());
+    });
+    for (var c = c0; c < c0 + COOP_FC; c++) for (var r = r0; r < r0 + COOP_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); coop.grass.push(ft); }   // (no grass poking up through the floor)
+    [[-1.8, -1], [0, -1], [1.8, -1], [-1.8, 1], [0, 1], [1.8, 1], [-2.3, -1.5, 0.7], [2.3, -1.5, 0.7], [-2.3, 1.5, 0.7], [2.3, 1.5, 0.7], [3.1, 0, 0.5]].forEach(function (s) {   // (you bump into its walls)
+      var sd = { x: coop.x + s[0], z: coop.z + s[1], r: s[2] || 1.0 }; solids.push(sd); coop.solids.push(sd);
+    });
+    coopDoor = coopFront(0.12);
+    coopGroup = coopBuildOutside();
+    if (!coop.tp) { coop.tp = { name: 'Your Coop', icon: '🐔', spot: function () { var f = coopFront(2.2); return { x: f.x, z: f.z, face: Math.PI, view: 0 }; } }; }
+    if (TELEPORTS.indexOf(coop.tp) < 0) TELEPORTS.push(coop.tp);
+    flushDirty();
+  }
+  function coopRemove() {
+    if (!coop.built) return;
+    if (coopGroup) { scene.remove(coopGroup); coopGroup = null; }
+    coop.solids.forEach(function (sd) { var i = solids.indexOf(sd); if (i >= 0) solids.splice(i, 1); }); coop.solids = [];
+    coop.grass.forEach(uncoverGrass); coop.grass = [];
+    var ti = TELEPORTS.indexOf(coop.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
+    coop.built = false; coopDoor = { x: 1e6, z: 1e6 };
+  }
+  function coopSaveData() { return coop.built ? { c: coop.c, r: coop.r, hay: coop.hay.slice() } : null; }
+  function coopLoadData(d) {
+    coopRemove();
+    coop.hay = [false, false, false, false, false, false, false, false]; coop.res = [];
+    if (d) { coopPlace(d.c, d.r); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) coop.hay[i] = !!h; }); }
+    coopAnimals().forEach(function (g) { g.eatSlot = null; });
+    coopHayShow();
+  }
+
+  // ===== the animals that live in it =====
+  function coopMoveIn(g) {                                             // (called as one is adopted or loaded: it moves out of the barn room into the coop)
+    var n = COOP_NESTS[g.stall - COOP_STALL0];
+    coopRoom.add(g.m.root); coopRoom.add(g.eggMesh); g.eggMesh.position.set(n.x, 0.33, n.z + 0.04);
+    if (g.hayMesh.parent) g.hayMesh.parent.remove(g.hayMesh);
+    g.x = n.x + (Math.random() - 0.5) * 0.4; g.z = -0.7 + Math.random() * 0.8; g.tx = g.x; g.tz = g.z; g.face = 0; g.eatSlot = null; g.eatT = 0;
+    g.m.root.position.set(g.x, 0, g.z);
+  }
+  function coopWander(g) {                                             // (where it potters to next)
+    if (g.eatSlot !== null && g.eatSlot !== undefined) { g.wait = 0.5; return; }
+    g.tx = -2.0 + Math.random() * 3.5; g.tz = -0.95 + Math.random() * (g.kind === 'ostrich' ? 1.9 : 2.3);
+    g.wait = (g.kind === 'gem' ? 1.5 : g.kind === 'ember' ? 4 : 2.5) + Math.random() * 5;
+  }
+  function coopEat(g) {
+    var i = g.eatSlot; coop.hay[i] = false; coop.res[i] = null; g.eatSlot = null; g.eatT = 0;
+    g.fed = true; glimRefresh(g); coopHayShow();
+    if (inCoop) { popSound(); g.wait = 0.8 + Math.random(); }
+  }
+  function updateCoopFeeding(dt) {                                     // a hungry animal goes to the nearest bundle on the bench and eats it
+    coopAnimals().forEach(function (g) {
+      if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { coop.res[g.eatSlot] = null; g.eatSlot = null; } return; }
+      if (g.eatSlot === null || g.eatSlot === undefined) {
+        var best = -1, bd = 1e9;
+        for (var i = 0; i < 8; i++) if (coop.hay[i] && !coop.res[i]) { var d = Math.abs(COOP_SLOT_Z[i] - g.z); if (d < bd) { bd = d; best = i; } }
+        if (best < 0) return;
+        g.eatSlot = best; coop.res[best] = g; g.eatT = 0;
+      }
+      if (!inCoop) { coopEat(g); return; }                             // (while you're away, they just help themselves)
+      var sx = 1.98, sz = COOP_SLOT_Z[g.eatSlot];
+      g.tx = sx; g.tz = sz; g.wait = 1;
+      if (Math.hypot(g.x - sx, g.z - sz) < 0.06) { g.face = Math.PI / 2; g.eatT += dt; if (g.eatT > 2.4) coopEat(g); }
+    });
+  }
+  function coopCare(g) {                                               // collecting what it gave you, and petting it (it feeds itself at the bench)
+    var wx = COI_X + g.x, wz = COI_Z + g.z, glim = g.kind === 'glim';
+    if (g.egg && glim) {
+      if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
+      addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      showToast('You collected a Glimmer Egg from ' + g.name + '! ✧', 2200); return;
+    }
+    if (g.egg || (g.fed && !glim)) { (g.kind === 'duck' ? puddlewispAction : g.kind === 'ember' ? emberwingAction : g.kind === 'gem' ? gemwrenAction : celestaraAction)(g, wx, wz); return; }
+    if (!g.petted) {
+      g.petted = true; glimRefresh(g); g.pet = 1.4; g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
+      glimHeartBurst(g.x, g.kind === 'ostrich' ? 0.75 : 0.55, g.z); popSound();
+      showToast(g.fed ? g.name + ' coos and flutters their wings 💜 An egg tomorrow morning!' : g.name + ' loves the attention 💜 Put hay on the feeding bench so they can eat too!', 2600); return;
+    }
+    if (!g.fed) { showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400); return; }
+    g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z);
+    showToast(g.name + ' is fed, petted and happy ✧ Come back tomorrow!', 2000);
+  }
+  function coopBenchAction() {
+    var i = coop.hay.indexOf(false);
+    if (i < 0) { showToast('The feeding bench is full: all 8 spots have hay 🌾', 2200); return; }
+    if (!takeItem('hay', 1)) { showToast('You need hay to put on the bench. Buy it at Fluff & Feather, or trim bushes for it 🌾', 2800); return; }
+    coop.hay[i] = true; coopHayShow(); popSound();
+    showToast('You put a bundle of hay on the feeding bench (' + coop.hay.filter(Boolean).length + '/8) 🌾', 1800);
+  }
+  function coopTarget() {                                              // what Interact would do in here: the bench, or one of your animals (or its nesting box)
+    if (!inCoop || glimNaming) return null;
+    var lx = player.position.x - COI_X, lz = player.position.z - COI_Z, best = null, bd = 1.0;
+    coopAnimals().forEach(function (g) {
+      var n = COOP_NESTS[g.stall - COOP_STALL0], d = Math.min(Math.hypot(lx - g.x, lz - g.z), g.egg ? Math.hypot(lx - n.x, lz - n.z) - 0.1 : 9);
+      if (d < bd) { bd = d; best = g; }
+    });
+    var atBench = lx > 1.2 && Math.abs(lz) < 1.85;
+    if (best && bd < 0.7 && (best.egg || !atBench)) return best;       // (right by the bench, the bench comes first, unless there's an egg to collect)
+    return atBench ? 'bench' : best;
+  }
+  var coopBtn = document.createElement('button');
+  coopBtn.type = 'button'; coopBtn.className = 'sleep-btn ship-btn';
+  canvas.parentNode.appendChild(coopBtn);
+  coopBtn.addEventListener('click', function () { var tg = coopTarget(); if (tg === 'bench') coopBenchAction(); else if (tg) coopCare(tg); focusGame(); });
+  var coopBtnText = '';
+  function updateCoopButton() {
+    var tg = coopTarget(), txt = '';
+    if (tg === 'bench') txt = '🌾 Put hay on the bench (' + coop.hay.filter(Boolean).length + '/8)';
+    else if (tg) txt = tg.egg ? (tg.kind === 'ember' ? '🪶 Pick up quill' : '🥚 Collect egg') : !tg.petted ? '💜 Pet ' + tg.name : !tg.fed ? '🌾 ' + tg.name + ' is hungry' : '✧ ' + tg.name;
+    if (txt !== coopBtnText) { coopBtnText = txt; if (txt) coopBtn.innerHTML = txt.replace(/&/g, '&amp;').replace(/</g, '&lt;') + ' <kbd>E</kbd>'; }
+    var show = !!txt;
+    if (coopBtn.classList.contains('show') !== show) coopBtn.classList.toggle('show', show);
+  }
+
+  // ===== adopting one at Fluff & Feather once you have a coop: the barn, or the coop? =====
+  var coopChoosing = false, coopAsk = null;
+  var coopHomeBox = document.createElement('div');
+  coopHomeBox.className = 'inventory ship shop'; coopHomeBox.hidden = true;
+  coopHomeBox.innerHTML = '<div class="inv-head"><b class="coop-home-title">Where should they live?</b><button type="button" class="inv-close" aria-label="Cancel">✕</button></div>' +
+    '<p class="ship-hint coop-home-hint"></p><div class="shop-buy"><button type="button" class="coop-home-barn"></button><button type="button" class="coop-home-coop"></button></div>';
+  canvas.parentNode.appendChild(coopHomeBox);
+  function coopAskHome(kind, barn, cs, cost) {
+    coopAsk = { kind: kind, barn: barn, coop: cs, cost: cost }; coopChoosing = true; walkTarget = null;
+    var nm = COOP_NAMES[kind], freeB = 0, freeC = 0;
+    for (var s = 0; s < GLIM_STALLS.length; s++) if (!glimmers.some(function (g) { return g.stall === s; })) freeB++;
+    for (var s2 = COOP_STALL0; s2 < COOP_STALL0 + COOP_CAP; s2++) if (!glimmers.some(function (g) { return g.stall === s2; })) freeC++;
+    coopHomeBox.querySelector('.coop-home-title').textContent = '✧ Where should your ' + nm + ' live?';
+    coopHomeBox.querySelector('.coop-home-hint').textContent = 'There\'s room for them in a stall here at Fluff & Feather, or in your coop on the farm.';
+    coopHomeBox.querySelector('.coop-home-barn').textContent = '🏡 A barn stall (' + freeB + ' free)';
+    coopHomeBox.querySelector('.coop-home-coop').textContent = '🐔 Your coop (' + freeC + ' free)';
+    closeBarnShop(); coopHomeBox.hidden = false;
+  }
+  function coopHomeDone(which) {
+    var a = coopAsk; coopAsk = null; coopChoosing = false; coopHomeBox.hidden = true; focusGame();
+    if (!a || !which) return;
+    if (state.coins < a.cost) { showToast('Not enough Star Coins', 1800); return; }
+    state.coins -= a.cost; showCoins(true); coinSound(5);
+    glimStartNaming(which === 'coop' ? a.coop : a.barn, a.kind);
+  }
+  coopHomeBox.querySelector('.coop-home-barn').addEventListener('click', function () { coopHomeDone('barn'); });
+  coopHomeBox.querySelector('.coop-home-coop').addEventListener('click', function () { coopHomeDone('coop'); });
+  coopHomeBox.querySelector('.inv-close').addEventListener('click', function () { coopHomeDone(null); });
+  var coopBaseAdopt = adoptGlimmerwing;
+  adoptGlimmerwing = function (kind) {
+    if (COOP_KINDS.indexOf(kind) < 0 || !coop.built) return coopBaseAdopt(kind);
+    var barn = glimFreeStall(), cs = coopFreeStall(), cost = coopKindCost(kind);
+    if (barn < 0 && cs < 0) { showToast('Your barn stalls and your coop are all full!', 2200); return; }
+    if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
+    if (cs < 0) return coopBaseAdopt(kind);
+    if (barn < 0) { state.coins -= cost; showCoins(true); coinSound(5); closeBarnShop(); glimStartNaming(cs, kind); return; }
+    coopAskHome(kind, barn, cs, cost);
+  };
+  var coopBarnRender = renderBarnShop;
+  renderBarnShop = function () {                                       // (with a coop, the birds can be adopted until the barn AND the coop are full)
+    coopBarnRender();
+    if (!coop.built) return;
+    var full = glimFreeStall() < 0 && coopFreeStall() < 0;
+    [[glimAdoptBtn, GLIM_COST], [duckAdoptBtn, DUCK_COST], [emberAdoptBtn, EMBER_COST], [gemAdoptBtn, GEM_COST], [ostAdoptBtn, OST_COST]].forEach(function (b) {
+      b[0].innerHTML = full ? 'Barn and coop are full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = full || state.coins < b[1];
+    });
+    barnTilesSync();
+  };
+  var coopBaseNaming = glimStartNaming, glimNameHint = glimNameBox.querySelector('.ship-hint'), glimNameHintText = glimNameHint.textContent;
+  glimStartNaming = function (stall, kind) {
+    coopBaseNaming(stall, kind);
+    glimNameHint.textContent = stall >= COOP_STALL0 ? 'What would you like to call your new friend? They\'ll move into your coop on the farm.' : glimNameHintText;
+  };
+
+  // ===== the carpenter's menu, at Oak & Ember's counter =====
+  var coopShopIcon = (function () {                                    // (a little picture of the coop, for the menu)
+    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
+    g.fillStyle = 'rgba(0,0,0,0.15)'; g.beginPath(); g.ellipse(64, 110, 52, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#7a8a7a'; g.fillRect(18, 98, 92, 10);
+    var wg = g.createLinearGradient(0, 50, 0, 100); wg.addColorStop(0, '#fbf4e6'); wg.addColorStop(1, '#e6d8c0'); g.fillStyle = wg; g.fillRect(20, 52, 88, 48);
+    g.strokeStyle = 'rgba(150,120,90,0.35)'; g.lineWidth = 1; for (var b = 26; b < 106; b += 9) { g.beginPath(); g.moveTo(b, 52); g.lineTo(b, 100); g.stroke(); }
+    g.fillStyle = '#7a5236'; g.beginPath(); g.moveTo(8, 56); g.lineTo(64, 18); g.lineTo(120, 56); g.lineTo(112, 60); g.lineTo(64, 28); g.lineTo(16, 60); g.closePath(); g.fill();
+    g.fillStyle = '#9a6a44'; g.beginPath(); g.moveTo(16, 56); g.lineTo(64, 24); g.lineTo(112, 56); g.closePath(); g.fill();
+    g.fillStyle = '#92b596'; g.fillRect(55, 68, 18, 32); g.fillStyle = '#f6efe2'; g.fillRect(53, 66, 22, 3);
+    g.fillStyle = '#3a2418'; g.beginPath(); g.moveTo(64, 76); g.bezierCurveTo(58, 72, 59, 68, 64, 71); g.bezierCurveTo(69, 68, 70, 72, 64, 76); g.fill();
+    [[30, 64], [82, 64]].forEach(function (w) { g.fillStyle = '#ffd99a'; g.fillRect(w[0], w[1], 16, 13); g.strokeStyle = '#5a3c24'; g.lineWidth = 2; g.strokeRect(w[0], w[1], 16, 13); g.fillStyle = '#e88ab0'; g.fillRect(w[0] - 2, w[1] + 15, 20, 4); });
+    g.fillStyle = '#c8a070'; g.beginPath(); g.moveTo(54, 100); g.lineTo(74, 100); g.lineTo(78, 112); g.lineTo(50, 112); g.closePath(); g.fill();
+    g.fillStyle = '#fff6e6'; g.beginPath(); g.ellipse(96, 104, 9, 7, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(103, 97, 5, 0, Math.PI * 2); g.fill();   // (a little hen out front)
+    g.fillStyle = '#e05050'; g.beginPath(); g.arc(104, 92, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f0b040'; g.beginPath(); g.moveTo(107, 97); g.lineTo(111, 98); g.lineTo(107, 99); g.fill();
+    return c.toDataURL();
+  })();
+  var carpShopOpen = false;
+  var carpShopBtn = document.createElement('button');
+  carpShopBtn.type = 'button'; carpShopBtn.className = 'sleep-btn ship-btn'; carpShopBtn.innerHTML = '🪚 Shop <kbd>E</kbd>';
+  canvas.parentNode.appendChild(carpShopBtn);
+  var carpShopBox = document.createElement('div');
+  carpShopBox.className = 'inventory ship shop'; carpShopBox.hidden = true;
+  carpShopBox.innerHTML = '<div class="inv-head"><b>🪚 Oak &amp; Ember</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+    '<p class="ship-hint">Welcome to Oak &amp; Ember! Sturdy, handmade buildings for your farm, built right where you want them.</p>' +
+    '<div class="shop-item"><div class="slot shop-pic coop-pic"></div><div class="shop-text"><b>Coop</b><span>A snug little whitewashed coop with a sage-green door, a shingled roof and flower boxes under the windows. Up to 4 Glimmerwings, Puddlewisps, Emberwings, Gemwrens or Celestaras can live in it, each with their own nesting box. Inside there\'s a feeding bench with 8 spots for hay: fill it up and your animals help themselves. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US') + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="coop-buy">Build</button></div>' +
+    '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(carpShopBox);
+  (function () { var pic = document.createElement('img'); pic.src = coopShopIcon; pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.coop-pic').appendChild(pic); })();
+  shopCards(carpShopBox);
+  carpShopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Buildings'), carpShopBox.querySelector('.shop-card'));
+  var carpTilesSync = shopCatalogue(carpShopBox); carpShopBox.classList.add('shop-wide');
+  var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy');
+  function renderCarpShop() {
+    carpShopCoins.textContent = state.coins;
+    coopBuyBtn.innerHTML = coop.built ? 'Built ✓' : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
+    coopBuyBtn.disabled = coop.built || state.coins < COOP_COST;
+    carpTilesSync();
+  }
+  function atCarpCounter(margin) {                                     // standing in front of the counter, on the door side
+    if (!inCarp) return false;
+    var lx = player.position.x - CPI_X, lz = player.position.z - CPI_Z, m = margin || 0;
+    return Math.abs(lx) < 1.6 + m && lz > 0.8 && lz < 2.4 + m;
+  }
+  function openCarpShop() { if (carpShopOpen) return; toggleBag(false); carpShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; carpShopBox.hidden = false; renderCarpShop(); }
+  function closeCarpShop() { carpShopOpen = false; carpShopBox.hidden = true; }
+  carpShopBox.querySelector('.inv-close').addEventListener('click', function () { closeCarpShop(); focusGame(); });
+  carpShopBtn.addEventListener('click', function () { openCarpShop(); focusGame(); });
+  coopBuyBtn.addEventListener('click', function () {
+    if (coop.built) { showToast('You already have a coop', 1800); return; }
+    if (state.coins < COOP_COST) { showToast('Not enough Star Coins', 1800); return; }
+    closeCarpShop(); coopOpenPlacer();
+  });
+  function updateCarpShop() {
+    if (carpShopOpen && !atCarpCounter(1.2)) closeCarpShop();          // it stays open until you really walk away from the counter
+    if (carpShopOpen && carpShopCoins.textContent !== String(state.coins)) renderCarpShop();
+    var show = atCarpCounter() && !carpShopOpen;
+    if (carpShopBtn.classList.contains('show') !== show) carpShopBtn.classList.toggle('show', show);
+  }
+
+  // ===== choosing where it goes: a grid of your farm =====
+  var CPG_X0 = -36, CPG_Z0 = -36, CPG_SPAN = 72, CPG_S = 12;          // the area the grid shows, and how many pixels a metre
+  var coopPlacing = false, coopPick = null, coopHover = null, coopOK = {}, coopBg = null;
+  var coopPlaceBox = document.createElement('div');
+  coopPlaceBox.className = 'inventory ship shop shop-wide'; coopPlaceBox.hidden = true;
+  coopPlaceBox.innerHTML = '<div class="inv-head"><b>🐔 Where should your coop go?</b><button type="button" class="inv-close" aria-label="Cancel">✕</button></div>' +
+    '<p class="ship-hint">Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map). <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under your coop.</p>' +
+    '<div class="coop-map" style="height:min(52vh,420px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:#cfe8ff;position:relative;cursor:crosshair;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y"></div>' +
+    '<p class="ship-hint coop-note" style="margin:8px 2px;min-height:1.3em;font-weight:600"></p>' +
+    '<div class="shop-buy"><button type="button" class="coop-cancel">Cancel</button><button type="button" class="coop-build">Build here</button></div>';
+  canvas.parentNode.appendChild(coopPlaceBox);
+  var coopMapBox = coopPlaceBox.querySelector('.coop-map'), coopNote = coopPlaceBox.querySelector('.coop-note'), coopBuildBtn = coopPlaceBox.querySelector('.coop-build');
+  var coopCv = document.createElement('canvas'); coopCv.width = coopCv.height = CPG_SPAN * CPG_S * 2;
+  coopCv.style.cssText = 'display:block;width:' + CPG_SPAN * CPG_S + 'px;height:' + CPG_SPAN * CPG_S + 'px;max-width:none;';
+  coopMapBox.appendChild(coopCv);
+  function cpgXY(x, z) { return [(x - CPG_X0) * CPG_S * 2, (z - CPG_Z0) * CPG_S * 2]; }
+  var CPG_C0 = Math.ceil((CPG_X0 - FARM_X) / TILE), CPG_C1 = Math.floor((CPG_X0 + CPG_SPAN - FARM_X) / TILE) - 1, CPG_R0 = Math.ceil((CPG_Z0 - FARM_Z) / TILE), CPG_R1 = Math.floor((CPG_Z0 + CPG_SPAN - FARM_Z) / TILE) - 1;
+  function coopTileOK(c, r, clear) {                                   // is this tile open ground the coop could stand on?
+    var x = FARM_X + (c + 0.5) * TILE, z = FARM_Z + (r + 0.5) * TILE, h = TILE / 2;
+    var pts = [[x - h, z - h], [x + h, z - h], [x - h, z + h], [x + h, z + h], [x, z]];
+    for (var k = 0; k < pts.length; k++) {
+      var px = pts[k][0], pz = pts[k][1];
+      if (!onIsland(px, pz) || onIsle2(px, pz, -2) || onDock(px, pz) || groundHeight(px, pz) < -0.02 || nearBridgeLanding(px, pz, 0) || pathDist(px, pz) < PATH_W + 0.15) return false;   // (on the land, off the lake, the dock, the bridge and the path)
+    }
+    if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.6 || inHouseYard(x, z) || dist(x, z, binWorld.x, binWorld.z) < 1.8) return false;
+    var t = tileMap[tileKey(c, r)]; if (t && t.soil) return false;    // (not on your soil)
+    for (var i = 0; i < solids.length; i++) { var sd = solids[i]; if (sd.r > 0 && !clear[i] && Math.abs(sd.x - x) < sd.r + h && Math.abs(sd.z - z) < sd.r + h) return false; }   // (nothing standing in the way)
+    return true;
+  }
+  function coopFits(c0, r0) { for (var c = c0; c < c0 + COOP_FC; c++) for (var r = r0; r < r0 + COOP_FR; r++) if (!coopOK[c + ',' + r]) return false; return true; }
+  function coopDrawBg() {                                              // the farm, its soil, its trees, bushes and rocks, the house and the Dawn Tree, and the grid over it all
+    if (!mapBase) mapBase = drawMapBase();
+    var cv = document.createElement('canvas'); cv.width = cv.height = coopCv.width; var g = cv.getContext('2d'), K = CPG_S * 2;
+    var ms = MAP_S * 2; g.drawImage(mapBase, (CPG_X0 - MAP_X0) * ms, (CPG_Z0 - MAP_Z0) * ms, CPG_SPAN * ms, CPG_SPAN * ms, 0, 0, cv.width, cv.height);
+    function dot(x, z, r, col, ring) { var p = cpgXY(x, z); g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); g.fillStyle = col; g.fill(); if (ring) { g.strokeStyle = ring; g.lineWidth = 2; g.stroke(); } }
+    tiles.forEach(function (t) { if (!t.soil) return; var p = cpgXY(t.x, t.z), s = TILE * K * 0.92; g.fillStyle = t.wet ? '#5a3a24' : '#8a5a3c'; g.fillRect(p[0] - s / 2, p[1] - s / 2, s, s); });
+    for (var c = CPG_C0; c <= CPG_C1; c++) for (var r = CPG_R0; r <= CPG_R1; r++) {   // (the grid: tiles where the coop can't go are shaded red)
+      var x = FARM_X + (c + 0.5) * TILE, z = FARM_Z + (r + 0.5) * TILE; if (!onIsland(x, z)) continue;
+      var p = cpgXY(FARM_X + c * TILE, FARM_Z + r * TILE), s = TILE * K;
+      if (!coopOK[c + ',' + r]) { g.fillStyle = 'rgba(225,60,85,0.4)'; g.fillRect(p[0], p[1], s, s); }
+      g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 1.5; g.strokeRect(p[0] + 0.75, p[1] + 0.75, s - 1.5, s - 1.5);
+    }
+    var hp = cpgXY(HOUSE_X, HOUSE_Z), hw2 = HW / 2 * K, hd2 = HD / 2 * K;   // (the house, the Dawn Tree, and everything standing)
+    g.fillStyle = '#6a4aa8'; g.fillRect(hp[0] - hw2 - 4, hp[1] - hd2 - 4, hw2 * 2 + 8, hd2 * 2 + 8); g.fillStyle = '#7d5cc0'; g.fillRect(hp[0] - hw2 - 4, hp[1] - hd2 - 4, hw2 * 2 + 8, hd2 + 4);
+    var dp = cpgXY(TREE_X, TREE_Z), dg = g.createRadialGradient(dp[0], dp[1], 4, dp[0], dp[1], TREE_ZONE * K + 20); dg.addColorStop(0, 'rgba(255,170,230,0.95)'); dg.addColorStop(1, 'rgba(255,170,230,0)');
+    g.fillStyle = dg; g.beginPath(); g.arc(dp[0], dp[1], TREE_ZONE * K + 20, 0, Math.PI * 2); g.fill();
+    mineable.forEach(function (r) { if (r.gone) return; if (r.state === 'whole') { dot(r.x, r.z, 4 + r.size * 4, '#a4a4ae', 'rgba(70,70,80,0.7)'); dot(r.x - 0.1, r.z - 0.12, 2 + r.size * 1.5, 'rgba(255,255,255,0.5)'); } });
+    allScenery.forEach(function (t) {
+      var u = t.userData; if (u.gone) return;
+      if (u.state !== 'standing') { dot(u.base.x, u.base.z, 6, '#9a7048', '#6a4a2a'); dot(u.base.x, u.base.z, 3, '#e0c090'); return; }   // (a stump or a cleared spot: fine to build on)
+      if (choppable.indexOf(t) < 0) { dot(u.base.x, u.base.z, 8, '#7cc464', 'rgba(40,90,40,0.6)'); return; }   // (a bush)
+      var sz = u.size || 1; dot(u.base.x + 3, u.base.z + 4, 14 * sz, 'rgba(0,0,0,0.18)');
+      dot(u.base.x, u.base.z, 14 * sz, u.leafy ? '#3f9a3a' : '#2a6a30', 'rgba(20,60,20,0.7)'); dot(u.base.x - 0.25, u.base.z - 0.25, 6 * sz, u.leafy ? '#74c45e' : '#4a8a46');   // (a tree, seen from above)
+    });
+    return cv;
+  }
+  function coopDrawPlacer() {
+    var g = coopCv.getContext('2d'), K = CPG_S * 2; g.drawImage(coopBg, 0, 0);
+    var yp = cpgXY(player.position.x, player.position.z);              // (you, as a little purple hat)
+    if (!indoors) { g.beginPath(); g.ellipse(yp[0], yp[1] + 5, 13, 5, 0, 0, Math.PI * 2); g.fillStyle = '#5b3fb0'; g.fill(); g.beginPath(); g.moveTo(yp[0] - 7, yp[1] + 4); g.lineTo(yp[0] + 3, yp[1] - 16); g.lineTo(yp[0] + 7, yp[1] + 4); g.closePath(); g.fillStyle = '#7b4fd6'; g.fill(); }
+    var sel = coopPick || coopHover; if (!sel) return;
+    var ok = coopFits(sel[0], sel[1]), p = cpgXY(FARM_X + sel[0] * TILE, FARM_Z + sel[1] * TILE), w = COOP_FC * TILE * K, h = COOP_FR * TILE * K;
+    g.fillStyle = ok ? 'rgba(80,200,110,' + (coopPick ? 0.5 : 0.3) + ')' : 'rgba(220,70,70,0.45)'; g.fillRect(p[0], p[1], w, h);
+    g.lineWidth = coopPick ? 4 : 2; g.strokeStyle = ok ? '#2f8a4e' : '#c0392b'; g.strokeRect(p[0], p[1], w, h);
+    var bx = p[0] + w / 2, by = p[1] + (h / 2 - 0.45 * K);                // (the coop's roof, and its door at the front)
+    g.fillStyle = ok ? 'rgba(122,82,54,0.85)' : 'rgba(122,82,54,0.5)'; g.fillRect(bx - COOP_BW / 2 * K, by - COOP_BD / 2 * K, COOP_BW * K, COOP_BD * K);
+    g.fillStyle = 'rgba(90,60,36,0.9)'; g.fillRect(bx - COOP_BW / 2 * K, by - 2, COOP_BW * K, 4);
+    g.fillStyle = '#92b596'; g.fillRect(bx - 0.55 * K, by + COOP_BD / 2 * K, 1.1 * K, 0.95 * K);
+    g.font = 'bold 22px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText('🐔', bx, by - COOP_BD / 4 * K);
+  }
+  function coopPickAt(e) {
+    var rc = coopCv.getBoundingClientRect(), x = CPG_X0 + (e.clientX - rc.left) / rc.width * CPG_SPAN, z = CPG_Z0 + (e.clientY - rc.top) / rc.height * CPG_SPAN;
+    return [Math.floor((x - FARM_X) / TILE) - 2, Math.floor((z - FARM_Z) / TILE) - 2];
+  }
+  function coopPlacerState() {
+    var ok = coopPick && coopFits(coopPick[0], coopPick[1]);
+    coopBuildBtn.innerHTML = 'Build here · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US'); paintCoinIcons(coopPlaceBox);
+    coopBuildBtn.disabled = !ok || state.coins < COOP_COST;
+    coopNote.style.color = !coopPick ? '#7a6a98' : ok ? '#2f8a4e' : '#c0392b';
+    coopNote.textContent = !coopPick ? 'Tap a spot on the map.' : ok ? 'That spot is perfect! Press "Build here".' : 'Something\'s in the way there: try somewhere else.';
+  }
+  (function () {                                                       // tap to choose; drag (or scroll) to look around
+    var dragAt = null, dragged = false;
+    coopMapBox.addEventListener('mousedown', function (e) { dragAt = { x: e.clientX, y: e.clientY, l: coopMapBox.scrollLeft, t: coopMapBox.scrollTop }; dragged = false; e.preventDefault(); });
+    window.addEventListener('mousemove', function (e) {
+      if (dragAt) { if (Math.abs(e.clientX - dragAt.x) + Math.abs(e.clientY - dragAt.y) > 6) dragged = true; if (dragged) { coopMapBox.scrollLeft = dragAt.l - (e.clientX - dragAt.x); coopMapBox.scrollTop = dragAt.t - (e.clientY - dragAt.y); } return; }
+      if (coopPlacing && e.target === coopCv) { var h = coopPickAt(e); if (!coopHover || h[0] !== coopHover[0] || h[1] !== coopHover[1]) { coopHover = h; coopDrawPlacer(); } }
+    });
+    window.addEventListener('mouseup', function () { dragAt = null; });
+    coopCv.addEventListener('mouseleave', function () { if (coopHover) { coopHover = null; coopDrawPlacer(); } });
+    coopCv.addEventListener('click', function (e) { if (dragged) { dragged = false; return; } coopPick = coopPickAt(e); coopDrawPlacer(); coopPlacerState(); });
+  })();
+  function coopOpenPlacer() {
+    var clear = solids.map(function () { return false; });             // (stumps, saplings and cleared spots don't count as in the way)
+    allScenery.forEach(function (t) { var u = t.userData; if (!u.gone && u.state !== 'standing') { var i = solids.indexOf(u.solid); if (i >= 0) clear[i] = true; } });
+    mineable.forEach(function (r) { if (!r.gone && r.state !== 'whole') { var i = solids.indexOf(r.solid); if (i >= 0) clear[i] = true; } });
+    coopOK = {};
+    for (var c = CPG_C0; c <= CPG_C1; c++) for (var r = CPG_R0; r <= CPG_R1; r++) coopOK[c + ',' + r] = coopTileOK(c, r, clear);
+    coopBg = coopDrawBg(); coopPick = coopHover = null;
+    toggleBag(false); coopPlacing = true; walkTarget = null; coopPlaceBox.hidden = false;
+    coopDrawPlacer(); coopPlacerState();
+    var fx = indoors ? 0 : player.position.x, fz = indoors ? 0 : player.position.z, cp = cpgXY(fx, fz);
+    setTimeout(function () { coopMapBox.scrollLeft = cp[0] / 2 - coopMapBox.clientWidth / 2; coopMapBox.scrollTop = cp[1] / 2 - coopMapBox.clientHeight / 2; }, 0);
+  }
+  function coopClosePlacer() { coopPlacing = false; coopPlaceBox.hidden = true; coopBg = null; focusGame(); }
+  coopPlaceBox.querySelector('.inv-close').addEventListener('click', coopClosePlacer);
+  coopPlaceBox.querySelector('.coop-cancel').addEventListener('click', coopClosePlacer);
+  coopBuildBtn.addEventListener('click', function () {
+    if (!coopPick || !coopFits(coopPick[0], coopPick[1]) || coop.built) return;
+    if (state.coins < COOP_COST) { showToast('Not enough Star Coins', 1800); return; }
+    state.coins -= COOP_COST; showCoins(true); coinSound(10);
+    coop.hay = [false, false, false, false, false, false, false, false]; coop.res = [];
+    coopPlace(coopPick[0], coopPick[1]); coopHayShow(); coopClosePlacer(); spellSound();
+    showToast('🐔 Your coop is built! Adopt Glimmerwings, Puddlewisps, Emberwings, Gemwrens or Celestaras at Fluff & Feather to fill it, and fill its feeding bench with hay.', 5200);
+  });
+  window.addEventListener('keydown', function (e) {
+    if (e.code !== 'Escape') return;
+    if (carpShopOpen) closeCarpShop();
+    if (coopPlacing) coopClosePlacer();
+    if (coopChoosing) coopHomeDone(null);
+  });
+  function coopDrawOnMap(g, K, label) {                                // (on the world map: its brown roof with the ridge along it, and its green door)
+    var p = mapXY(coop.x, coop.z);
+    g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(p[0] - COOP_BW / 2 * K + 6, p[1] - COOP_BD / 2 * K + 8, COOP_BW * K, COOP_BD * K);
+    g.fillStyle = '#6e5038'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1] - COOP_BD / 2 * K - 4, COOP_BW * K + 8, COOP_BD / 2 * K + 4);
+    g.fillStyle = '#8a6646'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1], COOP_BW * K + 8, COOP_BD / 2 * K + 4);
+    g.fillStyle = '#5a3c26'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1] - 2, COOP_BW * K + 8, 4);
+    g.fillStyle = '#92b596'; g.fillRect(p[0] - 0.55 * K, p[1] + COOP_BD / 2 * K + 4, 1.1 * K, 0.9 * K);
+    label('Coop', coop.x, coop.z, COOP_BD / 2 * K + 30);
+  }
+
+  // ===== every frame =====
+  var coopBaseInteract = interact;
+  interact = function () {
+    if (coopPlacing || coopChoosing) return;
+    if (carpShopOpen) { if (!menuJustOpened()) closeCarpShop(); return; }
+    if (atCarpCounter()) { openCarpShop(); return; }                   // at Oak & Ember's counter: the carpenter's menu
+    if (inCoop && !glimNaming) { var tg = coopTarget(); if (tg) { if (tg === 'bench') coopBenchAction(); else coopCare(tg); return; } }
+    return coopBaseInteract.apply(this, arguments);
+  };
+  function updateCoop(dt, night) {
+    if (inCoop && player.parent !== coopScene) inCoop = false;         // (carried home or teleported away from inside)
+    updateCarpShop();
+    updateCoopButton();
+    if (!coop.built) return;
+    updateCoopFeeding(dt);
+    if (inCoop) updateCoopInside(state.time); else updateCoopOutside(state.time, night);
+  }
+
   // ---------- Flying on her broom ----------
   // B (or the Fly button) hops on and off her broom; only outdoors. Once up she flies a little faster than she walks,
   // anywhere over the island, the lake and just out over the sea; Space climbs higher and Shift drops lower. Landing
@@ -3397,11 +4062,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Outside, walking up to a door no longer takes you in: stand by it and press E (or tap Interact) to go in. Inside,
   // walking out through the doorway still takes you back out
   var doorNear = null, doorHinted = null, doorWasIn = false, DOOR_REACH = 1.3;
-  var DOOR_NAMES = { house: 'the farmhouse', shop: 'the seed shop', clinic: 'the clinic', barn: 'Fluff & Feather', carp: 'Oak & Ember' };
+  var DOOR_NAMES = { house: 'the farmhouse', shop: 'the seed shop', clinic: 'the clinic', barn: 'Fluff & Feather', carp: 'Oak & Ember', coop: 'your coop' };
   updateDoors = function () {
     var px = player.position.x, pz = player.position.z;
     if (!indoors) {                                                    // (outside: just notice which door she's standing by)
-      var near = [['house', dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z)], ['shop', dist(px, pz, shopDoor.x, shopDoor.z)], ['clinic', dist(px, pz, clinicDoor.x, clinicDoor.z)], ['barn', dist(px, pz, barnDoor.x, barnDoor.z)], ['carp', dist(px, pz, carpDoor.x, carpDoor.z)]]
+      var near = [['house', dist(px, pz, OUT_DOOR_X, OUT_DOOR_Z)], ['shop', dist(px, pz, shopDoor.x, shopDoor.z)], ['clinic', dist(px, pz, clinicDoor.x, clinicDoor.z)], ['barn', dist(px, pz, barnDoor.x, barnDoor.z)], ['carp', dist(px, pz, carpDoor.x, carpDoor.z)], ['coop', dist(px, pz, coopDoor.x, coopDoor.z)]]
         .filter(function (n) { return n[1] < DOOR_REACH; }).sort(function (a, b) { return a[1] - b[1]; })[0];
       doorNear = near ? near[0] : null;
       if (doorWasIn) { doorHinted = doorNear; doorWasIn = false; }   // (no hint for the door she's just come out of)
@@ -3411,6 +4076,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     doorWasIn = true; doorNear = doorHinted = null;                                      // (inside: walking out through the doorway takes her out, as before)
     var dShop = inShop ? dist(px, pz, SIN_X, SIN_Z + SIN_EXIT_Z) : 99, dClinic = inClinic ? dist(px, pz, CIN_X, CIN_Z + CIN_EXIT_Z) : 99, dBarn = inBarn ? dist(px, pz, AB_X, AB_Z + AB_EXIT_Z) : 99;
+    if (inCoop) { if (!doorArmed) { if (dist(px, pz, COI_X, COI_Z + COI_EXIT_Z) > 0.85) doorArmed = true; return; } if (dist(px, pz, COI_X, COI_Z + COI_EXIT_Z) < 0.5) coopDoorUse(false); return; }   // (out of the coop)
     if (inCarp) { if (!doorArmed) { if (dist(px, pz, CPI_X, CPI_Z + CPI_EXIT_Z) > 0.85) doorArmed = true; return; } if (dist(px, pz, CPI_X, CPI_Z + CPI_EXIT_Z) < 0.5) carpDoorUse(false); return; }   // (out of Oak & Ember)
     var d = inShop || inClinic || inBarn ? 99 : dist(px, pz, IN_X, IN_Z + EXIT_Z);
     if (!doorArmed) { if (Math.min(d, dShop, dClinic, dBarn) > 0.85) doorArmed = true; return; }   // (stepping away from the door she came in by first)
@@ -3424,7 +4090,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (flying) { if (!keys.Space) showToast('Land your broom first (B)', 1500); return; }
     if (!indoors && doorNear && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) {   // (by a door: in she goes)
       var which = doorNear; doorNear = null; walkTarget = null;
-      if (which === 'carp') carpDoorUse(true); else useDoor(true, which === 'shop' ? true : which === 'house' ? undefined : which);
+      if (which === 'carp') carpDoorUse(true); else if (which === 'coop') coopDoorUse(true); else useDoor(true, which === 'shop' ? true : which === 'house' ? undefined : which);
       return;
     }
     return interactOnFoot.apply(this, arguments);
@@ -3480,11 +4146,11 @@ EVERDAWN_PARTS.push(function (THREE) {
           if (d < min && d > 0.0001) { player.position.x = o.x + dx / d * min; player.position.z = o.z + dz / d * min; }
         });
       } else if (indoors) { // inside the farmhouse or the seed shop: stay between the walls and bump into the furniture
-        var rx0 = inCarp ? CPI_X : inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inCarp ? CPI_Z : inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
-        var hw = (inCarp ? CPI_W : inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.45, hd = (inCarp ? CPI_D : inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.45;
+        var rx0 = inCoop ? COI_X : inCarp ? CPI_X : inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inCoop ? COI_Z : inCarp ? CPI_Z : inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
+        var hw = (inCoop ? COOP_BW : inCarp ? CPI_W : inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.45, hd = (inCoop ? COOP_BD : inCarp ? CPI_D : inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.45;
         player.position.x = Math.max(rx0 - hw, Math.min(rx0 + hw, player.position.x));
         player.position.z = Math.max(rz0 - hd, Math.min(rz0 + hd, player.position.z));
-        (inCarp ? carpSolids : inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
+        (inCoop ? coopSolids : inCarp ? carpSolids : inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
           var dx = player.position.x - (rx0 + o[0]), dz = player.position.z - (rz0 + o[1]);
           var d = Math.hypot(dx, dz), min = o[2] + 0.35;
           if (d < min && d > 0.0001) {
@@ -3711,6 +4377,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inClinic) { var co = clinicFront(2.3); px = co.x; pz = co.z; } // and the same for the clinic
     if (inBarn) { var bo = animalFront(1.6); px = bo.x; pz = bo.z; }  // and Fluff & Feather
     if (inCarp) { var cpo = carpFront(1.8); px = cpo.x; pz = cpo.z; } // and Oak & Ember
+    if (inCoop) { var coo = coopFront(1.8); px = coo.x; pz = coo.z; } // and your coop
     var data = {
       v: 1,
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
@@ -3724,7 +4391,8 @@ EVERDAWN_PARTS.push(function (THREE) {
         return u.state === 'regrowing' ? u.felledAt : gameMinutes();
       }),
       rocks: mineable.map(function (r) { return r.state === 'whole' || r.gone ? null : (r.state === 'regrowing' ? r.brokeAt : gameMinutes()); }),
-      glimmers: glimmerSaveData()                                     // your Glimmerwings
+      glimmers: glimmerSaveData(),                                    // your Glimmerwings
+      coop: coopSaveData()                                            // your coop: where it stands, and the hay on its bench
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -3808,6 +4476,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // trees, bushes and rocks
     allScenery.forEach(function (t, n) { setSceneryCut(t, data.scenery[n] === undefined ? null : data.scenery[n]); });
     mineable.forEach(function (r, n) { setRockBroken(r, data.rocks[n] === undefined ? null : data.rocks[n]); });
+    coopLoadData(data.coop || null);                                  // your coop (none in older saves)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
     // and you: back outside if you were in the house, standing where you saved
@@ -3816,6 +4485,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       inShop = false;
       inClinic = false;
       inBarn = false;
+      inCarp = inCoop = false;
       scene.add(player);
       if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
     }
@@ -3991,19 +4661,21 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateBridge(state.time, night);
     updateInterior(dt, state.time);
     updateCarpenter(state.time, night);
+    updateCoop(dt, night);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
     updateCamera(dt);
     updateClinicInterior(state.time);
     cullScene();
-    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
+    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || coopPlacing || coopChoosing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
     if (inCarp) { camera.updateMatrixWorld(); drawCarpView(); }
-    renderer.render(indoors ? (inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
+    if (inCoop) { camera.updateMatrixWorld(); drawCoopView(); }
+    renderer.render(indoors ? (inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   renderer.setAnimationLoop(frame);
 
