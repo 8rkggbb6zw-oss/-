@@ -3457,70 +3457,233 @@ EVERDAWN_PARTS.push(function (THREE) {
     cpPart(new THREE.BoxGeometry(len + 0.06, 0.12, 0.3), cpmShingle, 0, COOP_WALL + COOP_PEAK + 0.1, 0, 0, 0, 0, G);
   }
 
+  // ===== the finer details: battens, cedar shakes, stones, flowers =====
+  var coopShakeTex = cpTex(64, 128, function (g, w, h) {              // one cedar shake: fine grain running down it, a darker butt end
+    g.fillStyle = '#d8c4a8'; g.fillRect(0, 0, w, h);
+    for (var i = 0; i < 26; i++) { var x = Math.random() * w; g.strokeStyle = 'rgba(90,60,35,' + (0.08 + Math.random() * 0.18) + ')'; g.lineWidth = 0.6 + Math.random() * 1.2; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 2, h * 0.3, x - 2, h * 0.6, x + (Math.random() - 0.5) * 4, h); g.stroke(); }
+    var bt = g.createLinearGradient(0, h * 0.75, 0, h); bt.addColorStop(0, 'rgba(60,35,20,0)'); bt.addColorStop(1, 'rgba(60,35,20,0.45)'); g.fillStyle = bt; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(40,25,15,0.5)'; g.fillRect(0, 0, 1.5, h); g.fillRect(w - 1.5, 0, 1.5, h);
+  });
+  var coopGrimeTex = cpTex(16, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,1)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  var coopHeartTex = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 54); g.bezierCurveTo(4, 34, 8, 8, 32, 22); g.bezierCurveTo(56, 8, 60, 34, 32, 54); g.fill(); });
+  var cpmShake = new THREE.MeshStandardMaterial({ map: coopShakeTex, roughness: 0.9 });
+  var cpmBatten = new THREE.MeshStandardMaterial({ color: 0xf4ecde, roughness: 0.8 });
+  var cpmGrime = new THREE.MeshBasicMaterial({ color: 0x4a3a24, alphaMap: coopGrimeTex, transparent: true, opacity: 0.32, depthWrite: false });
+  var cpmCopper = new THREE.MeshStandardMaterial({ color: 0xc08050, metalness: 0.55, roughness: 0.38, side: THREE.DoubleSide });
+  var cpmFootStone = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
+  var cpmBarrel = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb88a5a, roughness: 0.85 });
+  var COOP_BOX = new THREE.BoxGeometry(1, 1, 1);
+  function coopInst(parent, geo, mat, list, color) {                   // (many small pieces in one batch: each item [x, y, z, rx, ry, rz, sx, sy, sz, colour])
+    var im = new THREE.InstancedMesh(geo, mat, list.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color();
+    list.forEach(function (it, i) { e.set(it[3], it[4], it[5]); q.setFromEuler(e); m4.compose(p.set(it[0], it[1], it[2]), q, s.set(it[6], it[7], it[8])); im.setMatrixAt(i, m4); if (color) im.setColorAt(i, c.set(it[9] === undefined ? 0xffffff : it[9])); });
+    im.castShadow = im.receiveShadow = true; parent.add(im); return im;
+  }
+  // (upright strips along a wall, every so far apart, stopping short of its windows and door: battens outside, studs inside)
+  function coopStrips(parent, w, peak, holes, door, x, z, ry, gap, sw, sd, off, mat, bottom, topY) {
+    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; parent.add(g); var list = [];
+    var cuts = holes.map(function (o) { return [o[0] - 0.1, o[1] + 0.1, o[2] - 0.1, o[3] + 0.1]; }); if (door) cuts.push([door[0] - 0.1, door[1] + 0.1, -1, door[2] + 0.12]);
+    for (var bx = -w / 2 + gap / 2; bx < w / 2 - 0.05; bx += gap) {
+      var top = topY || COOP_WALL + (peak ? peak * (1 - Math.abs(bx) / (w / 2)) : 0) - 0.06, segs = [[bottom, top]];
+      cuts.forEach(function (o) { if (bx < o[0] || bx > o[1]) return; var ns = []; segs.forEach(function (sg) { if (o[3] <= sg[0] || o[2] >= sg[1]) ns.push(sg); else { if (o[2] > sg[0]) ns.push([sg[0], o[2]]); if (o[3] < sg[1]) ns.push([o[3], sg[1]]); } }); segs = ns; });
+      segs.forEach(function (sg) { if (sg[1] - sg[0] > 0.08) list.push([bx, (sg[0] + sg[1]) / 2, off, 0, 0, 0, sw, sg[1] - sg[0], sd]); });
+    }
+    coopInst(g, COOP_BOX, mat, list); return g;
+  }
+  function coopShutter(parent, x, w, h) {                               // (a board shutter with a Z brace and a little heart cut through it)
+    var g = new THREE.Group(); g.position.set(x, 0, 0); parent.add(g);
+    for (var b = 0; b < 3; b++) cpPart(new THREE.BoxGeometry(w / 3 - 0.008, h, 0.035), cpmSageDoor, -w / 3 + b * w / 3, 0, 0, 0, 0, 0, g);
+    [h / 2 - 0.1, -h / 2 + 0.1].forEach(function (y) { cpPart(new THREE.BoxGeometry(w - 0.02, 0.07, 0.02), cpmSage, 0, y, 0.025, 0, 0, 0, g); });
+    cpPart(new THREE.BoxGeometry(0.05, Math.hypot(w, h - 0.2) * 0.92, 0.02), cpmSage, 0, 0, 0.025, 0, 0, Math.atan2(w, h - 0.2) * (x < 0 ? 1 : -1), g);
+    cpPart(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ color: 0x2a1c12, alphaMap: coopHeartTex, transparent: true, depthWrite: false }), 0, h / 2 - 0.22, 0.04, 0, 0, 0, g).castShadow = false;
+    [h / 2 - 0.1, -h / 2 + 0.1].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.1, 0.025, 0.012), cpmIron, (x < 0 ? 1 : -1) * (w / 2 - 0.05), y, 0.04, 0, 0, 0, g); });   // (hinges)
+    return g;
+  }
+  function coopFlowers(parent, pts, seed) {                            // (little clumps of cottage flowers: leafy mounds, stems, and five-petalled blooms with golden hearts)
+    var leaves = [], stems = [], petals = [], hearts = [], cols = [0xf4a6c8, 0xfff2e0, 0xc8a8f0, 0xffb08a, 0xf8d860, 0xe87aa8];
+    pts.forEach(function (pt, k) {
+      for (var l = 0; l < 7; l++) { var a = isle2Hash(seed + k * 13 + l) * 6.28, r = 0.04 + isle2Hash(seed + k * 7 + l * 3) * 0.12; leaves.push([pt[0] + Math.cos(a) * r, pt[1] + 0.05, pt[2] + Math.sin(a) * r, 0.3, a, 0.2, 0.09, 0.06, 0.05, 0x5f9a48 + (l % 3) * 0x060a04]); }
+      for (var f = 0; f < 5; f++) {
+        var fa = isle2Hash(seed + k * 31 + f) * 6.28, fr = isle2Hash(seed + k * 17 + f * 5) * 0.12, fx = pt[0] + Math.cos(fa) * fr, fz = pt[2] + Math.sin(fa) * fr, fh = 0.16 + isle2Hash(seed + k + f * 9) * 0.18, col = cols[Math.floor(isle2Hash(seed * 3 + k * 5 + f) * cols.length)];
+        stems.push([fx, pt[1] + fh / 2, fz, 0, 0, (isle2Hash(seed + f) - 0.5) * 0.3, 0.008, fh, 0.008, 0x4a7a38]);
+        for (var p = 0; p < 5; p++) { var pa = p / 5 * 6.28; petals.push([fx + Math.cos(pa) * 0.022, pt[1] + fh, fz + Math.sin(pa) * 0.022, 0.15, -pa, 0, 0.024, 0.008, 0.016, col]); }
+        hearts.push([fx, pt[1] + fh + 0.006, fz, 0, 0, 0, 0.013, 0.01, 0.013, 0xf0b830]);
+      }
+    });
+    var sph = new THREE.SphereGeometry(1, 8, 6), mat = new THREE.MeshStandardMaterial({ roughness: 0.75 });
+    coopInst(parent, sph, mat, leaves, true); coopInst(parent, COOP_BOX, mat, stems, true); coopInst(parent, sph, mat, petals, true); coopInst(parent, sph, mat, hearts, true);
+  }
+  function coopBarrel(parent, x, y, z, r, h, open) {                    // (a stave barrel with iron hoops)
+    var g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
+    var pts = []; for (var i = 0; i <= 8; i++) { var t = i / 8; pts.push(new THREE.Vector2(r * (0.88 + Math.sin(t * Math.PI) * 0.12), t * h)); }
+    cpPart(new THREE.LatheGeometry(pts, 24), cpmBarrel, 0, 0, 0, 0, 0, 0, g);
+    for (var s = 0; s < 12; s++) { var a = s / 12 * Math.PI * 2; cpPart(new THREE.BoxGeometry(0.006, h * 0.98, 0.01), cpmPlankDark, Math.cos(a) * r * 0.99, h / 2, Math.sin(a) * r * 0.99, 0, -a, 0, g); }
+    [0.12, 0.5, 0.88].forEach(function (f) { var rr = r * (0.88 + Math.sin(f * Math.PI) * 0.12) + 0.008; cpPart(new THREE.TorusGeometry(rr, 0.012, 6, 28), cpmIron, 0, f * h, 0, Math.PI / 2, 0, 0, g); });
+    cpPart(new THREE.CircleGeometry(r * 0.86, 24), open ? new THREE.MeshStandardMaterial({ color: 0x5a7a8a, roughness: 0.1, metalness: 0.2 }) : cpmBarrel, 0, h * (open ? 0.92 : 0.99), 0, -Math.PI / 2, 0, 0, g);
+    return g;
+  }
+
   // ===== outside: built where you choose =====
   function coopBuildOutside() {
     var G = new THREE.Group(), W2 = COOP_BW / 2, D2 = COOP_BD / 2, H = COOP_WALL; coopGlows = [];
     G.position.set(coop.x, coop.fy, coop.z);
-    var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, groundHeight(coop.x + gx * (W2 + 0.3), coop.z + gz * (D2 + 0.3)));
-    var fh = coop.fy - minG + 0.3;
-    cpPart(new THREE.BoxGeometry(COOP_BW + 0.24, fh, COOP_BD + 0.24), cpmStone, 0, -fh / 2, 0, 0, 0, 0, G);           // (a low stone footing)
+    function gy(lx, lz) { return groundHeight(coop.x + lx, coop.z + lz) - coop.fy; }   // (the ground, measured from the coop's floor)
+    var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * (W2 + 0.3), gz * (D2 + 0.3)));
+    var fh = -minG + 0.3;
+    // (a footing of rough fieldstones, mortared, under the sill)
+    cpPart(new THREE.BoxGeometry(COOP_BW + 0.16, fh, COOP_BD + 0.16), new THREE.MeshStandardMaterial({ color: 0x6e6a62, roughness: 1 }), 0, -fh / 2 - 0.02, 0, 0, 0, 0, G);
+    var stones = [], n = 0;
+    [[0, D2 + 0.1, COOP_BW + 0.3, 0], [0, -D2 - 0.1, COOP_BW + 0.3, 0], [W2 + 0.1, 0, COOP_BD + 0.3, Math.PI / 2], [-W2 - 0.1, 0, COOP_BD + 0.3, Math.PI / 2]].forEach(function (sd) {
+      for (var row = 0, y = -0.11; y > -fh - 0.05; y -= 0.19, row++) for (var u = -sd[2] / 2 + (row % 2) * 0.17; u < sd[2] / 2; n++) {
+        var sw = 0.24 + isle2Hash(n * 1.7 + 3) * 0.2, k = 0.4 + isle2Hash(n * 2.3) * 0.22, c = new THREE.Color().setRGB(k * 1.02, k * 0.97, k * 0.88);
+        var along = Math.min(u + sw / 2, sd[2] / 2 - 0.05);
+        stones.push([sd[0] + (sd[3] ? 0 : along), y + (isle2Hash(n) - 0.5) * 0.02, sd[1] + (sd[3] ? along : 0), (isle2Hash(n * 3) - 0.5) * 0.08, sd[3] + (isle2Hash(n * 5) - 0.5) * 0.06, (isle2Hash(n * 7) - 0.5) * 0.08, sw - 0.025, 0.16 + isle2Hash(n * 9) * 0.04, 0.1 + isle2Hash(n * 11) * 0.06, c.getHex()]);
+        u += sw;
+      }
+    });
+    coopInst(G, new THREE.DodecahedronGeometry(0.5, 1), cpmFootStone, stones, true);
     // (the four walls: the front with its door and two windows, the back with two little ones, a gable each side)
-    coopWall(G, COOP_BW, H, 0, [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], [-0.52, 0.52, 1.92], cpmBoard, 0, D2, 0);
-    coopWall(G, COOP_BW, H, 0, [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], null, cpmBoard, 0, -D2, Math.PI);
-    coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [[-0.5, 0.5, 1.02, 1.78]], null, cpmBoard, -W2, 0, -Math.PI / 2);
+    var FH = [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], BH = [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], LH = [[-0.5, 0.5, 1.02, 1.78]], DOOR = [-0.52, 0.52, 1.92];
+    coopWall(G, COOP_BW, H, 0, FH, DOOR, cpmBoard, 0, D2, 0);
+    coopWall(G, COOP_BW, H, 0, BH, null, cpmBoard, 0, -D2, Math.PI);
+    coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, LH, null, cpmBoard, -W2, 0, -Math.PI / 2);
     coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [], null, cpmBoard, W2, 0, Math.PI / 2);
+    // (battens over the joins between the boards)
+    coopStrips(G, COOP_BW, 0, FH, DOOR, 0, D2, 0, 0.4, 0.06, 0.025, 0.07, cpmBatten, 0.14);
+    coopStrips(G, COOP_BW, 0, BH, null, 0, -D2, Math.PI, 0.4, 0.06, 0.025, 0.07, cpmBatten, 0.14);
+    coopStrips(G, COOP_BD, COOP_PEAK, LH.concat([[-0.36, 0.36, 2.85, 3.4]]), null, -W2, 0, -Math.PI / 2, 0.4, 0.06, 0.025, 0.07, cpmBatten, 0.14);
+    coopStrips(G, COOP_BD, COOP_PEAK, [[-0.95, 0.95, 0.5, 1.25], [-0.36, 0.36, 2.85, 3.4]], null, W2, 0, Math.PI / 2, 0.4, 0.06, 0.025, 0.07, cpmBatten, 0.14);
+    // (a little grime splashed up along the bottom of the walls)
+    [[0, D2 + 0.064, COOP_BW, 0], [0, -D2 - 0.064, COOP_BW, Math.PI], [-W2 - 0.064, 0, COOP_BD + 0.1, -Math.PI / 2], [W2 + 0.064, 0, COOP_BD + 0.1, Math.PI / 2]].forEach(function (b) { var gm = cpPart(new THREE.PlaneGeometry(b[2], 0.45), cpmGrime, b[0], 0.225, b[1], 0, b[3], 0, G); gm.castShadow = false; gm.receiveShadow = false; gm.renderOrder = 1; });
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { cpPart(new THREE.BoxGeometry(0.16, H, 0.16), cpmSage, c[0] * (W2 + 0.04), H / 2, c[1] * (D2 + 0.04), 0, 0, 0, G); });   // (corner boards)
     [[0, D2 + 0.07, COOP_BW, 0], [0, -D2 - 0.07, COOP_BW, 0], [W2 + 0.07, 0, COOP_BD, Math.PI / 2], [-W2 - 0.07, 0, COOP_BD, Math.PI / 2]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], 0.14, 0.03), cpmSage, b[0], 0.07, b[1], 0, b[3], 0, G); });   // (a skirting board)
-    [[0, D2 + 0.07, COOP_BW, 0], [0, -D2 - 0.07, COOP_BW, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2] + 0.2, 0.12, 0.04), cpmSage, b[0], H - 0.06, b[1], 0, b[3], 0, G); });   // (and a board under the eaves)
-    coopRoofGeo(G, COOP_BW + 0.72, true);
-    // (windows with flower boxes, as at Oak & Ember)
-    carpWindow(G, -1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76, false); carpWindow(G, 1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76, false);
-    carpWindow(G, -1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6, false); carpWindow(G, 1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6, false);
-    carpWindow(G, -W2 - 0.07, 1.4, 0, -Math.PI / 2, 1.0, 0.76, false);
-    // (the door: sage-green boards with a Z brace, a little heart cut in it, a latch, and white trim round it)
-    var DR = new THREE.Group(); DR.position.set(0, 0, D2 + 0.02); G.add(DR);
-    cpPart(new THREE.BoxGeometry(1.02, 1.9, 0.06), cpmSageDoor, 0, 0.95, 0, 0, 0, 0, DR);
-    [[0, 1.62, 0], [0, 0.3, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(0.92, 0.12, 0.04), cpmSage, b[0], b[1], 0.045, 0, 0, b[2], DR); });
-    cpPart(new THREE.BoxGeometry(0.1, 1.48, 0.04), cpmSage, 0, 0.96, 0.045, 0, 0, -0.62, DR);
-    var heart = new THREE.Shape(); heart.moveTo(0, -0.07); heart.bezierCurveTo(-0.12, 0.0, -0.08, 0.1, 0, 0.05); heart.bezierCurveTo(0.08, 0.1, 0.12, 0.0, 0, -0.07);
-    cpPart(new THREE.ShapeGeometry(heart), cpmDark, 0, 1.36, 0.068, 0, 0, 0, DR).castShadow = false;
-    cpPart(new THREE.BoxGeometry(0.16, 0.05, 0.05), cpmIron, 0.38, 1.0, 0.06, 0, 0, 0, DR); cpPart(new THREE.SphereGeometry(0.03, 8, 6), cpmIron, 0.3, 1.0, 0.09, 0, 0, 0, DR);
-    [[-0.58, 0.97, 0.1, 1.94], [0.58, 0.97, 0.1, 1.94], [0, 1.97, 1.26, 0.1]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.05), cpmCream, t[0], t[1], 0.03, 0, 0, 0, DR); });
-    // (a plank ramp with little cleats down to the ground)
-    var gyR = groundHeight(coop.x, coop.z + D2 + 0.95) - coop.fy, rl = Math.hypot(0.95, gyR), ra = Math.atan2(-gyR, 0.95);
-    var RP = new THREE.Group(); RP.position.set(0, gyR / 2 - 0.02, D2 + 0.08 + 0.475); RP.rotation.x = ra; G.add(RP);
-    cpPart(new THREE.BoxGeometry(1.12, 0.06, rl), cpmPlank, 0, 0, 0, 0, 0, 0, RP);
-    for (var cl = -rl / 2 + 0.15; cl < rl / 2; cl += 0.2) cpPart(new THREE.BoxGeometry(1.0, 0.025, 0.035), cpmPlankDark, 0, 0.04, cl, 0, 0, 0, RP);
-    // (a little pop hole for the birds, with its own tiny ramp)
-    cpPart(new THREE.PlaneGeometry(0.36, 0.4), cpmDark, 1.65, 0.24, D2 + 0.065, 0, 0, 0, G).castShadow = false;
-    [[1.45, 0.24, 0.05, 0.48], [1.85, 0.24, 0.05, 0.48], [1.65, 0.47, 0.46, 0.06]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.04), cpmCream, t[0], t[1], D2 + 0.08, 0, 0, 0, G); });
-    var gyP = groundHeight(coop.x + 1.65, coop.z + D2 + 0.5) - coop.fy, pl = Math.hypot(0.45, gyP - 0.04);
-    cpPart(new THREE.BoxGeometry(0.32, 0.03, pl), cpmPlank, 1.65, (0.04 + gyP) / 2, D2 + 0.08 + 0.225, Math.atan2(0.04 - gyP, 0.45), 0, 0, G);
-    // (a nesting box built out from the right-hand wall, with a sloping shingled lid on iron hinges)
-    var NB = new THREE.Group(); NB.position.set(W2 + 0.06, 0, 0); G.add(NB);
-    cpPart(new THREE.BoxGeometry(0.5, 0.55, 1.7), cpmBoard, 0.25, 0.85, 0, 0, 0, 0, NB);
-    cpPart(new THREE.BoxGeometry(0.66, 0.05, 1.86), cpmShingle, 0.3, 1.2, 0, 0, 0, -0.3, NB);
-    [-0.5, 0.5].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.12, 0.02, 0.05), cpmIron, 0.04, 1.27, z, 0, 0, -0.3, NB); });
-    [-0.8, 0.8].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.06, 0.4, 0.06), cpmSage, 0.4, 0.4, z, 0, 0, 0.6, NB); });   // (two brackets under it)
-    // (a painted sign on two posts beside the ramp, a lantern by the door, and a weathervane with a little hen on the ridge)
-    var SG = new THREE.Group(), sgY = groundHeight(coop.x + 2.45, coop.z + D2 + 0.75) - coop.fy; SG.position.set(2.45, sgY, D2 + 0.75); SG.rotation.y = -0.2; G.add(SG);
-    [-0.42, 0.42].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 0.95, 0.07), cpmPlankDark, x, 0.47, -0.02, 0, 0, 0, SG); });
-    cpPart(new THREE.BoxGeometry(1.08, 0.4, 0.04), cpmPlankDark, 0, 0.75, 0, 0, 0, 0, SG);
-    cpPart(new THREE.PlaneGeometry(1.0, 0.34), new THREE.MeshStandardMaterial({ map: coopSignTex, roughness: 0.7 }), 0, 0.75, 0.022, 0, 0, 0, SG).castShadow = false;
-    cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.22), cpmIron, 0.8, 1.86, D2 + 0.12, 0, 0, 0, G);
-    cpLantern(G, 0.8, 1.68, D2 + 0.24, coopGlows);
-    var WV = new THREE.Group(); WV.position.set(1.9, H + COOP_PEAK + 0.12, 0); G.add(WV);
-    cpPart(new THREE.CylinderGeometry(0.018, 0.022, 0.75, 8), cpmIron, 0, 0.37, 0, 0, 0, 0, WV);
-    var spin = new THREE.Group(); spin.position.y = 0.7; WV.add(spin); G.userData.vane = spin;
+    [[0, D2 + 0.08, COOP_BW, 0], [0, -D2 - 0.08, COOP_BW, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2] + 0.2, 0.14, 0.05), cpmSage, b[0], H - 0.07, b[1], 0, b[3], 0, G); });   // (and a board under the eaves)
+    // (the roof: rows of cedar shakes over boards, a ridge cap, rafter tails under the eaves, and copper gutters)
+    var run = D2 + 0.06 + 0.4, a = Math.atan(COOP_PEAK / (D2 + 0.06)), L = run / Math.cos(a) + 0.04, len = COOP_BW + 0.72, ridgeY = H + COOP_PEAK;
+    var shakes = [];
+    [-1, 1].forEach(function (s) {
+      var zc = s * run / 2, yc = ridgeY - Math.tan(a) * run / 2;
+      cpPart(new THREE.BoxGeometry(len, 0.08, L), new THREE.MeshStandardMaterial({ color: 0x5a3e28, roughness: 0.9 }), 0, yc + Math.cos(a) * 0.05, zc + s * Math.sin(a) * 0.05, s * a, 0, 0, G);
+      [-1, 1].forEach(function (e) { cpPart(new THREE.BoxGeometry(0.06, 0.2, L), cpmSage, e * (len / 2 + 0.01), yc - Math.cos(a) * 0.03, zc - s * Math.sin(a) * 0.03, s * a, 0, 0, G); });
+      for (var r = 0, d = L - 0.02; d > 0.12; d -= 0.19, r++) {          // (rows from the eave up to the ridge, each overlapping the one below)
+        var off = 0.105 + (r % 2) * 0.004, cz = s * (d - 0.15) * Math.cos(a), cy = ridgeY - (d - 0.15) * Math.sin(a);
+        for (var x = -len / 2 + (r % 2 ? 0.12 : 0), k = 0; x < len / 2 - 0.02; k++) {
+          var sw = 0.17 + isle2Hash(r * 37 + k * 3.1 + s) * 0.16, xw = Math.min(sw, len / 2 - x), tone = 0.62 + isle2Hash(r * 11 + k * 5.7 + s * 3) * 0.38, grey = isle2Hash(r * 7 + k * 13) < 0.12;
+          var c = grey ? new THREE.Color(0.56, 0.52, 0.48).multiplyScalar(tone + 0.1) : new THREE.Color(0.6, 0.4, 0.27).multiplyScalar(tone);
+          shakes.push([x + xw / 2, cy + Math.cos(a) * off, cz + s * Math.sin(a) * off, s * (a - 0.05), 0, (isle2Hash(r + k * 2.2) - 0.5) * 0.03, xw - 0.014, 0.022, 0.32, c.getHex()]);
+          x += xw;
+        }
+      }
+      for (var rt = -W2; rt <= W2 + 0.01; rt += 0.56) cpPart(new THREE.BoxGeometry(0.06, 0.1, 0.42), new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.8 }), rt, H - 0.02 - Math.tan(a) * 0.2 + 0.02, s * (D2 + 0.24), s * a, 0, 0, G);   // (rafter tails)
+      cpPart(new THREE.CylinderGeometry(0.065, 0.065, len - 0.1, 14, 1, true, 0, Math.PI), cpmCopper, 0, ridgeY - Math.tan(a) * run + 0.02, s * (run + 0.05), 0, 0, -Math.PI / 2, G);
+      [-1, 1].forEach(function (e) { cpPart(new THREE.CircleGeometry(0.065, 12, Math.PI, Math.PI), cpmCopper, e * (len / 2 - 0.05), ridgeY - Math.tan(a) * run + 0.02, s * (run + 0.05), 0, Math.PI / 2, 0, G); });
+    });
+    coopInst(G, COOP_BOX, cpmShake, shakes, true);
+    [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(len + 0.04, 0.035, 0.2), new THREE.MeshStandardMaterial({ color: 0x6a4630, roughness: 0.85 }), 0, ridgeY + 0.14 - 0.035, s * 0.08, s * a, 0, 0, G); });   // (the ridge cap: two boards meeting over the top)
+    // (a copper downpipe at the front corner, into a rain barrel)
+    var gutY = ridgeY - Math.tan(a) * run + 0.02, bY = gy(-2.85, 2.5);
+    cpPart(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 10), cpmCopper, -2.85, gutY - 0.12, run + 0.02, -0.5, 0, 0, G);
+    cpPart(new THREE.CylinderGeometry(0.035, 0.035, gutY - 0.2 - (bY + 0.82), 10), cpmCopper, -2.85, (gutY - 0.24 + bY + 0.82) / 2, 2.52, 0, 0, 0, G);
+    coopBarrel(G, -2.85, bY, 2.5, 0.27, 0.78, true);
+    // (a little cupola on the ridge with louvred sides and a pointed roof, and the weathervane on top of it)
+    var CU = new THREE.Group(); CU.position.set(-1.25, ridgeY - 0.12, 0); G.add(CU);
+    cpPart(new THREE.BoxGeometry(0.66, 0.55, 0.66), cpmBoard, 0, 0.27, 0, 0, 0, 0, CU);
+    [[0, 0.335], [0, -0.335], [0.335, 0], [-0.335, 0]].forEach(function (f) {
+      var ry = Math.atan2(f[0], f[1]), FG = new THREE.Group(); FG.position.set(f[0], 0.62, f[1]); FG.rotation.y = ry; CU.add(FG);
+      cpPart(new THREE.PlaneGeometry(0.46, 0.34), cpmDark, 0, 0, 0.0, 0, 0, 0, FG).castShadow = false;
+      for (var l = 0; l < 5; l++) cpPart(new THREE.BoxGeometry(0.46, 0.05, 0.012), cpmCream, 0, -0.13 + l * 0.065, 0.02, -0.6, 0, 0, FG);
+    });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { cpPart(new THREE.BoxGeometry(0.07, 0.42, 0.07), cpmSage, c[0] * 0.31, 0.62, c[1] * 0.31, 0, 0, 0, CU); });
+    cpPart(new THREE.BoxGeometry(0.74, 0.05, 0.74), cpmSage, 0, 0.84, 0, 0, 0, 0, CU);
+    cpPart(new THREE.ConeGeometry(0.58, 0.45, 4, 1), cpmShingle, 0, 1.09, 0, 0, Math.PI / 4, 0, CU);
+    cpPart(new THREE.SphereGeometry(0.04, 10, 8), cpmCopper, 0, 1.33, 0, 0, 0, 0, CU);
+    var WV = new THREE.Group(); WV.position.set(0, 1.35, 0); CU.add(WV);
+    cpPart(new THREE.CylinderGeometry(0.014, 0.018, 0.55, 8), cpmIron, 0, 0.27, 0, 0, 0, 0, WV);
+    cpPart(new THREE.BoxGeometry(0.34, 0.012, 0.012), cpmIron, 0, 0.2, 0, 0, 0, 0, WV); cpPart(new THREE.BoxGeometry(0.012, 0.012, 0.34), cpmIron, 0, 0.2, 0, 0, 0, 0, WV);
+    var spin = new THREE.Group(); spin.position.y = 0.52; WV.add(spin); G.userData.vane = spin;
     cpPart(new THREE.BoxGeometry(0.6, 0.02, 0.02), cpmIron, 0, 0, 0, 0, 0, 0, spin); cpPart(new THREE.ConeGeometry(0.04, 0.1, 6), cpmIron, 0.32, 0, 0, 0, 0, -Math.PI / 2, spin);
+    var fin = new THREE.Shape(); fin.moveTo(-0.3, 0); fin.lineTo(-0.2, 0.07); fin.lineTo(-0.2, -0.07); fin.closePath(); cpPart(new THREE.ShapeGeometry(fin), cpmIron, 0, 0, 0, 0, 0, 0, spin).material.side = THREE.DoubleSide;
     var hen = new THREE.Shape(); hen.moveTo(-0.2, 0.02); hen.quadraticCurveTo(-0.05, -0.04, 0.12, 0.04); hen.quadraticCurveTo(0.2, 0.1, 0.19, 0.2); hen.lineTo(0.25, 0.23); hen.lineTo(0.19, 0.26);
     hen.quadraticCurveTo(0.2, 0.33, 0.15, 0.34); hen.quadraticCurveTo(0.1, 0.32, 0.11, 0.24); hen.quadraticCurveTo(0.06, 0.15, -0.06, 0.15); hen.quadraticCurveTo(-0.16, 0.35, -0.27, 0.3); hen.quadraticCurveTo(-0.22, 0.18, -0.2, 0.02);
     var henGeo = new THREE.ExtrudeGeometry(hen, { depth: 0.015, bevelEnabled: false }); henGeo.translate(0, 0, -0.0075);
     cpPart(henGeo, cpmIron, 0, 0.04, 0, 0, 0, 0, spin); cpPart(new THREE.BoxGeometry(0.01, 0.06, 0.01), cpmIron, 0, 0.02, 0, 0, 0, 0, spin);
-    // (a hay bale and a little bucket by the door)
-    var bale = pickupModel('hay'); bale.scale.setScalar(2.6); bale.position.set(-2.25, groundHeight(coop.x - 2.25, coop.z + 2.65) - coop.fy + 0.22, 2.62); bale.rotation.y = 0.15; G.add(bale);
+    // (louvred vents high in each gable)
+    [-1, 1].forEach(function (s) {
+      var V = new THREE.Group(); V.position.set(s * (W2 + 0.085), H + 0.72, 0); V.rotation.y = s * Math.PI / 2; G.add(V);
+      var tri = new THREE.Shape(); tri.moveTo(-0.32, -0.2); tri.lineTo(0.32, -0.2); tri.lineTo(0, 0.22); tri.closePath();
+      cpPart(new THREE.ShapeGeometry(tri), cpmDark, 0, 0, 0, 0, 0, 0, V).castShadow = false;
+      for (var l = 0; l < 4; l++) { var lw = 0.56 * (1 - l / 4.2); cpPart(new THREE.BoxGeometry(lw, 0.05, 0.012), cpmCream, 0, -0.16 + l * 0.095, 0.02, -0.6, 0, 0, V); }
+      [[-0.17, 0.0, 0.07, 0.5, -0.83], [0.17, 0.0, 0.07, 0.5, 0.83]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], b[3], 0.03), cpmCream, b[0], b[1], 0.02, 0, 0, b[4], V); });
+      cpPart(new THREE.BoxGeometry(0.72, 0.06, 0.03), cpmCream, 0, -0.22, 0.02, 0, 0, 0, V);
+    });
+    // (windows with flower boxes, as at Oak & Ember, and board shutters beside them)
+    [[-1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76], [1.65, 1.4, D2 + 0.07, 0, 1.0, 0.76], [-1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6], [1.4, 1.5, -D2 - 0.07, Math.PI, 0.8, 0.6], [-W2 - 0.07, 1.4, 0, -Math.PI / 2, 1.0, 0.76]].forEach(function (wd) {
+      var wg = carpWindow(G, wd[0], wd[1], wd[2], wd[3], wd[4], wd[5], false), sw = wd[4] * 0.38;
+      [-1, 1].forEach(function (e) { var sh = coopShutter(wg, e * (wd[4] / 2 + 0.07 + sw / 2), sw, wd[5] + 0.18); sh.position.z = 0.03; sh.rotation.y = e * 0.1; });
+    });
+    // (the door: sage-green boards with a Z brace, a little heart cut in it, long strap hinges, a ring pull, white trim round it, and a horseshoe over it for luck)
+    var DR = new THREE.Group(); DR.position.set(0, 0, D2 + 0.02); G.add(DR);
+    for (var db = 0; db < 5; db++) cpPart(new THREE.BoxGeometry(0.2, 1.9, 0.06), cpmSageDoor, -0.408 + db * 0.204, 0.95, 0, 0, 0, 0, DR);
+    [[0, 1.62, 0], [0, 0.3, 0]].forEach(function (b) { cpPart(new THREE.BoxGeometry(0.92, 0.12, 0.04), cpmSage, b[0], b[1], 0.045, 0, 0, b[2], DR); });
+    cpPart(new THREE.BoxGeometry(0.1, 1.48, 0.04), cpmSage, 0, 0.96, 0.045, 0, 0, -0.62, DR);
+    var heart = new THREE.Shape(); heart.moveTo(0, -0.07); heart.bezierCurveTo(-0.12, 0.0, -0.08, 0.1, 0, 0.05); heart.bezierCurveTo(0.08, 0.1, 0.12, 0.0, 0, -0.07);
+    cpPart(new THREE.ShapeGeometry(heart), cpmDark, 0, 1.36, 0.068, 0, 0, 0, DR).castShadow = false;
+    [0.3, 1.62].forEach(function (y) {
+      cpPart(new THREE.BoxGeometry(0.62, 0.05, 0.012), cpmIron, -0.2, y, 0.075, 0, 0, 0, DR); cpPart(new THREE.CylinderGeometry(0.035, 0.035, 0.012, 14), cpmIron, 0.11, y, 0.075, Math.PI / 2, 0, 0, DR);
+      for (var bt = 0; bt < 4; bt++) cpPart(new THREE.SphereGeometry(0.011, 6, 4), cpmIron, -0.46 + bt * 0.16, y, 0.083, 0, 0, 0, DR);
+      cpPart(new THREE.CylinderGeometry(0.025, 0.025, 0.12, 8), cpmIron, -0.53, y, 0.03, 0, 0, 0, DR);
+    });
+    cpPart(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12), cpmIron, 0.36, 1.0, 0.075, Math.PI / 2, 0, 0, DR); cpPart(new THREE.TorusGeometry(0.055, 0.009, 6, 18), cpmIron, 0.36, 0.95, 0.09, 0, 0, 0, DR);
+    [[-0.58, 0.97, 0.1, 1.94], [0.58, 0.97, 0.1, 1.94], [0, 1.97, 1.26, 0.1]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.05), cpmCream, t[0], t[1], 0.03, 0, 0, 0, DR); });
+    cpPart(new THREE.TorusGeometry(0.075, 0.016, 6, 20, Math.PI * 1.3), cpmIron, 0, 2.18, 0.07, 0, 0, -Math.PI * 0.15 - Math.PI, DR);
+    // (a plank ramp with little cleats and a handrail of sorts, down to the ground)
+    var gyR = gy(0, D2 + 0.95), rl = Math.hypot(0.95, gyR), ra = Math.atan2(-gyR, 0.95);
+    var RP = new THREE.Group(); RP.position.set(0, gyR / 2 - 0.02, D2 + 0.08 + 0.475); RP.rotation.x = ra; G.add(RP);
+    for (var rb = 0; rb < 5; rb++) cpPart(new THREE.BoxGeometry(0.215, 0.06, rl), cpmPlank, -0.44 + rb * 0.22, 0, 0, 0, 0, 0, RP);
+    for (var cl = -rl / 2 + 0.15; cl < rl / 2; cl += 0.2) cpPart(new THREE.BoxGeometry(1.0, 0.025, 0.035), cpmPlankDark, 0, 0.04, cl, 0, 0, 0, RP);
+    [-0.6, 0.6].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 0.1, rl), cpmPlankDark, x, 0.02, 0, 0, 0, 0, RP); });
+    // (a little pop hole for the birds, with a sliding door held up on a cord, and its own tiny ramp)
+    cpPart(new THREE.PlaneGeometry(0.36, 0.4), cpmDark, 1.65, 0.24, D2 + 0.065, 0, 0, 0, G).castShadow = false;
+    [[1.45, 0.24, 0.05, 0.48], [1.85, 0.24, 0.05, 0.48], [1.65, 0.47, 0.46, 0.06]].forEach(function (t) { cpPart(new THREE.BoxGeometry(t[2], t[3], 0.04), cpmCream, t[0], t[1], D2 + 0.08, 0, 0, 0, G); });
+    cpPart(new THREE.BoxGeometry(0.4, 0.38, 0.025), cpmSageDoor, 1.65, 0.69, D2 + 0.1, 0, 0, 0, G);
+    cpPart(new THREE.CylinderGeometry(0.004, 0.004, 0.75, 4), new THREE.MeshStandardMaterial({ color: 0xc8a878 }), 1.65, 1.25, D2 + 0.1, 0, 0, 0, G);
+    var gyP = gy(1.65, D2 + 0.5), pl = Math.hypot(0.45, gyP - 0.04), pa = Math.atan2(0.04 - gyP, 0.45);
+    cpPart(new THREE.BoxGeometry(0.32, 0.03, pl), cpmPlank, 1.65, (0.04 + gyP) / 2, D2 + 0.08 + 0.225, pa, 0, 0, G);
+    for (var pc = 0; pc < 3; pc++) cpPart(new THREE.BoxGeometry(0.3, 0.015, 0.02), cpmPlankDark, 1.65, 0.04 + (gyP - 0.04) * (0.25 + pc * 0.25) + 0.02, D2 + 0.08 + 0.45 * (0.25 + pc * 0.25), pa, 0, 0, G);
+    // (a nesting box built out from the right-hand wall: shingled lid on strap hinges, a latch, and brackets under it)
+    var NB = new THREE.Group(); NB.position.set(W2 + 0.06, 0, 0); G.add(NB);
+    cpPart(new THREE.BoxGeometry(0.5, 0.55, 1.7), cpmBoard, 0.25, 0.85, 0, 0, 0, 0, NB);
+    coopStrips(NB, 1.7, 0, [], null, 0.505, 0, Math.PI / 2, 0.34, 0.05, 0.02, 0.0, cpmBatten, 0.6, 1.1);
+    [[0.5, 0.585, 1.74, 0.06], [0.5, 1.115, 1.74, 0.06]].forEach(function (t) { cpPart(new THREE.BoxGeometry(0.03, t[3], t[2]), cpmSage, t[0] + 0.01, t[1], 0, 0, 0, 0, NB); });
+    var LID = new THREE.Group(); LID.position.set(0.3, 1.18, 0); LID.rotation.z = -0.3; NB.add(LID);
+    cpPart(new THREE.BoxGeometry(0.66, 0.04, 1.86), new THREE.MeshStandardMaterial({ color: 0x5a3e28 }), 0, 0, 0, 0, 0, 0, LID);
+    var lidShakes = []; for (var lr = 0; lr < 3; lr++) for (var lz = -0.92 + (lr % 2) * 0.1, lk = 0; lz < 0.92; lk++) { var lw = 0.16 + isle2Hash(lr * 9 + lk) * 0.12, lt = 0.65 + isle2Hash(lr + lk * 3) * 0.35; lidShakes.push([0.26 - lr * 0.2, 0.035, Math.min(lz + lw / 2, 0.9), 0, 0, -0.05, 0.26, 0.02, Math.min(lw, 0.92 - lz) - 0.012, new THREE.Color(0.6, 0.4, 0.27).multiplyScalar(lt).getHex()]); lz += lw; }
+    coopInst(LID, COOP_BOX, cpmShake, lidShakes, true);
+    [-0.5, 0.5].forEach(function (z) { cpPart(new THREE.BoxGeometry(0.3, 0.012, 0.045), cpmIron, -0.17, 0.03, z, 0, 0, 0, LID); });
+    cpPart(new THREE.BoxGeometry(0.02, 0.1, 0.04), cpmIron, 0.52, 1.02, 0, 0, 0, 0, NB); cpPart(new THREE.TorusGeometry(0.02, 0.005, 5, 10), cpmIron, 0.53, 0.95, 0, 0, Math.PI / 2, 0, NB);
+    [-0.7, 0.7].forEach(function (z) { var br = new THREE.Shape(); br.moveTo(0, 0); br.lineTo(0.42, 0); br.lineTo(0, -0.4); br.closePath(); var bg = new THREE.ExtrudeGeometry(br, { depth: 0.05, bevelEnabled: false }); bg.translate(0, 0, -0.025); cpPart(bg, cpmSage, 0.02, 0.575, z, 0, 0, 0, NB); });
+    // (a painted sign on two posts beside the ramp, a lantern on a curly bracket by the door)
+    var SG = new THREE.Group(), sgY = gy(2.45, D2 + 0.75); SG.position.set(2.45, sgY, D2 + 0.75); SG.rotation.y = -0.2; G.add(SG);
+    [-0.42, 0.42].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 0.95, 0.07), cpmPlankDark, x, 0.47, -0.02, 0, 0, 0, SG); cpPart(new THREE.ConeGeometry(0.05, 0.07, 4), cpmPlankDark, x, 0.98, -0.02, 0, Math.PI / 4, 0, SG); });
+    cpPart(new THREE.BoxGeometry(1.08, 0.4, 0.04), cpmPlankDark, 0, 0.75, 0, 0, 0, 0, SG);
+    cpPart(new THREE.PlaneGeometry(1.0, 0.34), new THREE.MeshStandardMaterial({ map: coopSignTex, roughness: 0.7 }), 0, 0.75, 0.022, 0, 0, 0, SG).castShadow = false;
+    coopFlowers(SG, [[-0.3, 0, 0.12], [0.3, 0, 0.14]], 51);
+    cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.22), cpmIron, 0.8, 1.86, D2 + 0.12, 0, 0, 0, G);
+    cpPart(new THREE.TorusGeometry(0.06, 0.01, 6, 16, Math.PI * 1.5), cpmIron, 0.8, 1.8, D2 + 0.12, 0, Math.PI / 2, 0, G);
+    cpLantern(G, 0.8, 1.68, D2 + 0.24, coopGlows);
+    // (flowers along the foot of the walls)
+    var bed = []; [-2.45, -2.15, -1.25, -0.95, 0.8, 1.1, 2.15, 2.5].forEach(function (x) { bed.push([x, gy(x, D2 + 0.22), D2 + 0.22]); });
+    [-1.6, -1.1, -0.6, 0.6, 1.1, 1.6].forEach(function (z) { bed.push([-W2 - 0.22, gy(-W2 - 0.22, z), z]); });
+    coopFlowers(G, bed, 7);
+    // (a hay bale with a pitchfork leaning on it, and a bucket)
+    var bale = pickupModel('hay'); bale.scale.setScalar(2.6); bale.position.set(-1.75, gy(-1.75, 2.62) + 0.22, 2.62); bale.rotation.y = 0.15; G.add(bale);
     bale.traverse(function (o) { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
-    var bk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.22, 14, 1, true), cpmSteel); bk.position.set(-1.45, groundHeight(coop.x - 1.45, coop.z + 2.7) - coop.fy + 0.11, 2.7); bk.castShadow = true; G.add(bk);
+    var PF = new THREE.Group(); PF.position.set(-1.35, gy(-1.35, 2.55), 2.55); PF.rotation.set(0, 0.4, 0.32); G.add(PF);
+    cpPart(new THREE.CylinderGeometry(0.016, 0.018, 1.3, 8), cpmBarrel, 0, 0.65, 0, 0, 0, 0, PF);
+    cpPart(new THREE.BoxGeometry(0.16, 0.02, 0.02), cpmIron, 0, 1.3, 0, 0, 0, 0, PF);
+    [-0.07, 0, 0.07].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.006, 0.003, 0.26, 5), cpmIron, x, 1.43, 0, 0, 0, 0, PF); });
+    var bk = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.22, 14, 1, true), cpmSteel); bk.position.set(-0.95, gy(-0.95, 2.78) + 0.11, 2.78); bk.castShadow = true; G.add(bk);
+    cpPart(new THREE.TorusGeometry(0.12, 0.006, 5, 16, Math.PI), cpmIron, -0.95, gy(-0.95, 2.78) + 0.22, 2.78, 0, 0.3, 0, G);
+    cpPart(new THREE.CircleGeometry(0.1, 14), cpmSteel, -0.95, gy(-0.95, 2.78) + 0.005, 2.78, -Math.PI / 2, 0, 0, G);
     scene.add(G);
     return G;
   }
@@ -3603,6 +3766,134 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-0.05, -0.03], [0.05, 0.02], [0, 0.06], [-0.04, 0.05]].forEach(function (e, k) { put(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshStandardMaterial({ color: [0xfff6e8, 0xf0dcc0, 0xe8f0ff, 0xfff0f4][k], roughness: 0.4 }), -2.3 + e[0], 0.6, 0.55 + e[1]).scale.set(1, 1.25, 1); });
     coopSolids.push([-2.3, 0.55, 0.45]);
   })(coopRoom);
+  var coopShafts = [], coopMotes = null;
+  (function (R) {                                                      // ===== the finer details inside =====
+    var W2 = COOP_BW / 2, D2 = COOP_BD / 2, H = COOP_WALL, wB = coopWalls[0].g, wF = coopWalls[1].g, wL = coopWalls[2].g, wR = coopWalls[3].g;
+    function put(geo, m, x, y, z, rx, ry, rz, p) { return cpPart(geo, m, x, y, z, rx, ry, rz, p || R); }
+    var mStud = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc89c6c, roughness: 0.85 }), mOld = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 });
+    var mWood = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc89c6c, roughness: 0.8 });
+    // (the timber frame showing inside: studs, top plates, and the rafters up the gables)
+    coopStrips(wB, COOP_BW, 0, [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], null, 0, -D2, 0, 0.8, 0.07, 0.08, 0.1, mStud, 0);
+    coopStrips(wF, COOP_BW, 0, [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], [-0.52, 0.52, 1.92], 0, D2, Math.PI, 0.8, 0.07, 0.08, 0.1, mStud, 0);
+    coopStrips(wL, COOP_BD, COOP_PEAK, [[-0.5, 0.5, 1.02, 1.78]], null, -W2, 0, Math.PI / 2, 0.8, 0.07, 0.08, 0.1, mStud, 0);
+    coopStrips(wR, COOP_BD, COOP_PEAK, [], null, W2, 0, -Math.PI / 2, 0.8, 0.07, 0.08, 0.1, mStud, 0);
+    put(new THREE.BoxGeometry(COOP_BW - 0.1, 0.09, 0.09), mStud, 0, H - 0.05, -D2 + 0.1, 0, 0, 0, wB); put(new THREE.BoxGeometry(COOP_BW - 0.1, 0.09, 0.09), mStud, 0, H - 0.05, D2 - 0.1, 0, 0, 0, wF);
+    var ra = Math.atan(COOP_PEAK / D2), rl = Math.hypot(D2, COOP_PEAK);
+    [[wL, -W2 + 0.1], [wR, W2 - 0.1]].forEach(function (w) {
+      put(new THREE.BoxGeometry(0.09, 0.09, COOP_BD - 0.1), mStud, w[1], H - 0.05, 0, 0, 0, 0, w[0]);
+      [-1, 1].forEach(function (s) { put(new THREE.BoxGeometry(0.09, 0.1, rl), mStud, w[1], H + COOP_PEAK / 2 - 0.06, s * D2 / 2, s * ra, 0, 0, w[0]); });
+    });
+    // (loose straw everywhere: thousands of single strands, drifted up thicker along the walls, and spilling out of the nesting boxes)
+    var strands = [];
+    for (var i = 0; i < 2600; i++) {
+      var edge = i % 5 < 2, x, z, y = 0.004;
+      if (edge) {
+        var side = i % 4, u = Math.random(), r = Math.pow(Math.random(), 2) * 0.35;
+        if (side === 0) { x = -W2 + 0.08 + u * (COOP_BW - 0.16); z = -D2 + 0.06 + r; } else if (side === 1) { x = -W2 + 0.08 + u * (COOP_BW - 0.16); z = D2 - 0.06 - r; }
+        else if (side === 2) { x = -W2 + 0.06 + r; z = -D2 + 0.1 + u * (COOP_BD - 0.2); } else { x = W2 - 0.06 - r; z = -D2 + 0.1 + u * (COOP_BD - 0.2); }
+        y += Math.random() * 0.03;
+      }
+      else { x = -W2 + 0.05 + Math.random() * (COOP_BW - 0.1); z = -D2 + 0.05 + Math.random() * (COOP_BD - 0.1); }
+      var l = 0.05 + Math.random() * 0.12, c = new THREE.Color().setHSL(0.1 + Math.random() * 0.03, 0.5 + Math.random() * 0.25, 0.48 + Math.random() * 0.28);
+      strands.push([x, y, z, 0, Math.random() * Math.PI * 2, Math.PI / 2 + (Math.random() - 0.5) * 0.25, 1, l, 1, c.getHex()]);
+    }
+    COOP_NESTS.forEach(function (n) { for (var j = 0; j < 26; j++) { var c2 = new THREE.Color().setHSL(0.11, 0.55, 0.5 + Math.random() * 0.25); strands.push([n.x + (Math.random() - 0.5) * 0.66, 0.43 + Math.random() * 0.02, n.z + 0.3 + Math.random() * 0.03, 0, Math.PI / 2 + (Math.random() - 0.5) * 0.8, Math.PI / 2 + 0.5 + Math.random() * 0.4, 1, 0.07 + Math.random() * 0.08, 1, c2.getHex()]); } });
+    coopInst(R, new THREE.CylinderGeometry(0.0028, 0.0028, 1, 3), new THREE.MeshStandardMaterial({ roughness: 0.9 }), strands, true).castShadow = false;
+    // (a few soft feathers dropped in the straw)
+    var featherTex = cpTex(32, 128, function (g, w, h) {
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(16, 4); g.bezierCurveTo(30, 30, 28, 90, 17, 124); g.lineTo(15, 124); g.bezierCurveTo(4, 90, 2, 30, 16, 4); g.fill();
+      g.globalCompositeOperation = 'destination-out'; for (var k = 0; k < 7; k++) { g.beginPath(); g.moveTo(k % 2 ? 32 : 0, 30 + k * 12); g.lineTo(16, 34 + k * 12); g.lineWidth = 1.5; g.stroke(); } g.globalCompositeOperation = 'source-over';
+      g.strokeStyle = 'rgba(160,140,120,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(16, 6); g.lineTo(16, 126); g.stroke();
+    });
+    [0xffffff, 0xfff4e4, 0xf8c8d8, 0xd8c8f4, 0xc8e0f8, 0xf8e0b8].forEach(function (col, k) {
+      var fm = new THREE.MeshStandardMaterial({ map: featherTex, color: col, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.8 });
+      for (var j = 0; j < 3; j++) put(new THREE.PlaneGeometry(0.035, 0.12), fm, -2.1 + Math.random() * 3.8, 0.012 + j * 0.001, -1.2 + Math.random() * 2.7, -Math.PI / 2 + 0.08, 0, Math.random() * 6.28).castShadow = false;
+    });
+    // (gingham curtains on the nesting boxes, drawn back with ribbons, and a scalloped valance over each)
+    var ginghamTex = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#fff6f8'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(236,140,176,0.5)'; for (var k = 0; k < 4; k++) { g.fillRect(k * 16, 0, 8, h); g.fillRect(0, k * 16, w, 8); } }, [3, 3]);
+    var mGing = new THREE.MeshStandardMaterial({ map: ginghamTex, roughness: 0.9, side: THREE.DoubleSide });
+    var valTex = cpTex(128, 32, function (g, w, h) { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h * 0.55); for (var k = 0; k < 8; k++) { g.beginPath(); g.arc(8 + k * 16, h * 0.55, 8, 0, Math.PI); g.fill(); } });
+    var mVal = new THREE.MeshStandardMaterial({ map: ginghamTex, alphaMap: valTex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 });
+    COOP_NESTS.forEach(function (n) {
+      var B = new THREE.Group(); B.position.set(n.x, 0, n.z + 0.31); R.add(B);
+      put(new THREE.CylinderGeometry(0.006, 0.006, 0.74, 6), cpmIron, 0, 0.72, 0, 0, 0, Math.PI / 2, B);
+      [-1, 1].forEach(function (s) {
+        var cg = new THREE.PlaneGeometry(0.16, 0.28, 8, 6), cp = cg.attributes.position;
+        for (var v = 0; v < cp.count; v++) { var cx = cp.getX(v), cy = cp.getY(v), pinch = (0.14 - cy) / 0.28; cp.setX(v, cx * (1 - pinch * 0.55) + s * pinch * 0.03); cp.setZ(v, Math.sin(cx * 60) * 0.008); }
+        cg.computeVertexNormals(); put(cg, mGing, s * 0.27, 0.58, 0.012, 0, 0, 0, B).castShadow = false;
+        put(new THREE.SphereGeometry(0.014, 8, 6), new THREE.MeshStandardMaterial({ color: 0xe86a98 }), s * 0.29, 0.52, 0.02, 0, 0, 0, B);
+      });
+      put(new THREE.PlaneGeometry(0.72, 0.07), mVal, 0, 0.68, 0.016, 0, 0, 0, B).castShadow = false;
+    });
+    // (round wooden number tags along the feeding bench, little iron brackets, and a tin scoop)
+    for (var t = 0; t < 8; t++) {
+      var numTex = cpTex(64, 64, (function (k) { return function (g, w, h) { g.fillStyle = '#d8b480'; g.beginPath(); g.arc(32, 32, 31, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#7a5230'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#5a3a20'; g.font = '600 36px Fredoka, Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(k + 1), 32, 34); }; })(t));
+      put(new THREE.CircleGeometry(0.04, 18), new THREE.MeshStandardMaterial({ map: numTex, roughness: 0.8 }), 2.42 - 0.268, 0.5, COOP_SLOT_Z[t], 0, -Math.PI / 2, 0).castShadow = false;
+    }
+    [-1.6, -0.55, 0.55, 1.6].forEach(function (z) { [-0.2, 0.2].forEach(function (x) { put(new THREE.BoxGeometry(0.075, 0.012, 0.075), cpmIron, 2.42 + x, 0.425, z); }); });
+    put(new THREE.CylinderGeometry(0.05, 0.045, 0.09, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xb8c0c8, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide }), 2.42, 0.53, 1.73, 0, 0, Math.PI / 2 - 0.2);
+    // (a chalkboard on the back wall keeping the egg tally, with bunting strung along the top of the walls)
+    var chalk = cpTex(256, 128, function (g, w, h) {
+      g.fillStyle = '#2c3a34'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(230,240,235,0.06)'; for (var k = 0; k < 30; k++) g.fillRect(Math.random() * w, Math.random() * h, 30, 2);
+      g.fillStyle = '#f4f0e6'; g.font = 'italic 600 26px Georgia, serif'; g.textAlign = 'center'; g.fillText('Egg tally', w / 2, 30);
+      g.strokeStyle = 'rgba(244,240,230,0.85)'; g.lineWidth = 2.5;
+      [40, 102, 164, 226].forEach(function (cx, k) { for (var m = 0; m < Math.min(4, 2 + k); m++) { var x = cx - 14 + m * 7; g.beginPath(); g.moveTo(x, 56); g.lineTo(x - 1, 82); g.stroke(); } if (k === 3) { g.beginPath(); g.moveTo(cx - 18, 78); g.lineTo(cx + 12, 60); g.stroke(); } });
+      g.fillStyle = '#f6b8cc'; g.beginPath(); g.moveTo(228, 112); g.bezierCurveTo(214, 102, 218, 92, 228, 98); g.bezierCurveTo(238, 92, 242, 102, 228, 112); g.fill();
+      g.strokeStyle = '#f8e8a0'; g.lineWidth = 2; g.beginPath(); g.ellipse(40, 104, 9, 11, 0, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.ellipse(62, 104, 9, 11, 0, 0, Math.PI * 2); g.stroke();
+    });
+    put(new THREE.BoxGeometry(1.06, 0.56, 0.03), mOld, 0, 1.62, -D2 + 0.155, 0, 0, 0, wB);
+    put(new THREE.PlaneGeometry(0.98, 0.48), new THREE.MeshStandardMaterial({ map: chalk, roughness: 0.95 }), 0, 1.62, -D2 + 0.172, 0, 0, 0, wB).castShadow = false;
+    put(new THREE.BoxGeometry(0.98, 0.03, 0.06), mOld, 0, 1.33, -D2 + 0.18, 0, 0, 0, wB); put(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 6), new THREE.MeshBasicMaterial({ color: 0xf8f6f0 }), 0.3, 1.355, -D2 + 0.19, 0, 0, Math.PI / 2, wB);
+    var flagCols = [0xf4a6c8, 0xfff0c8, 0xb8e0c8, 0xc8b8f0, 0xffc8a0, 0xa8d4f0];
+    function bunting(parent, a, b, y, sag, seed) {                     // (a string of little pennant flags from point a to point b, sagging between)
+      var dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz), ry = Math.atan2(-dz, dx), nF = Math.floor(L / 0.17), tri = new THREE.Shape(); tri.moveTo(-0.055, 0); tri.lineTo(0.055, 0); tri.lineTo(0, -0.13); tri.closePath();
+      var tg = new THREE.ShapeGeometry(tri), pts = [];
+      for (var k = 0; k <= 20; k++) { var f = k / 20; pts.push(new THREE.Vector3(a[0] + dx * f, y - Math.sin(f * Math.PI) * sag, a[1] + dz * f)); }
+      put(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 30, 0.004, 4), new THREE.MeshStandardMaterial({ color: 0xf0e6d8 }), 0, 0, 0, 0, 0, 0, parent).castShadow = false;
+      for (var j = 1; j < nF; j++) { var f2 = j / nF; put(tg, new THREE.MeshStandardMaterial({ color: flagCols[(j + seed) % flagCols.length], side: THREE.DoubleSide, roughness: 0.9 }), a[0] + dx * f2, y - Math.sin(f2 * Math.PI) * sag, a[1] + dz * f2, 0, ry, (isle2Hash(j + seed) - 0.5) * 0.15, parent).castShadow = false; }
+    }
+    bunting(wB, [-2.6, -D2 + 0.2], [2.6, -D2 + 0.2], 2.28, 0.14, 0);
+    bunting(wL, [-W2 + 0.2, -1.85], [-W2 + 0.2, 1.85], 2.28, 0.12, 3);
+    bunting(wR, [W2 - 0.2, -1.85], [W2 - 0.2, 1.85], 2.28, 0.12, 5);
+    // (tools on a peg rail by the door: a pitchfork, a rake and a broom)
+    put(new THREE.BoxGeometry(0.04, 0.08, 1.05), mOld, -W2 + 0.15, 1.62, 1.3, 0, 0, 0, wL);
+    [0.95, 1.3, 1.65].forEach(function (z) { put(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 6), mWood, -W2 + 0.2, 1.62, z, 0, 0, Math.PI / 2, wL); });
+    var tx = -W2 + 0.22;
+    put(new THREE.CylinderGeometry(0.016, 0.016, 1.35, 8), mWood, tx, 1.0, 0.95, 0, 0, 0, wL); put(new THREE.BoxGeometry(0.02, 0.02, 0.17), cpmIron, tx, 1.7, 0.95, 0, 0, 0, wL);
+    [-0.07, 0, 0.07].forEach(function (z) { put(new THREE.CylinderGeometry(0.005, 0.003, 0.24, 5), cpmIron, tx, 1.83, 0.95 + z, 0, 0, 0, wL); });
+    put(new THREE.CylinderGeometry(0.016, 0.016, 1.35, 8), mWood, tx, 1.0, 1.3, 0, 0, 0, wL); put(new THREE.BoxGeometry(0.03, 0.03, 0.34), cpmIron, tx, 1.7, 1.3, 0, 0, 0, wL);
+    for (var rk = 0; rk < 9; rk++) put(new THREE.CylinderGeometry(0.004, 0.004, 0.07, 4), cpmIron, tx, 1.75, 1.15 + rk * 0.0375, 0, 0, 0, wL);
+    put(new THREE.CylinderGeometry(0.014, 0.014, 1.0, 8), mWood, tx, 1.15, 1.65, 0, 0, 0, wL);
+    var brm = put(new THREE.ConeGeometry(0.12, 0.38, 12, 1, true), new THREE.MeshStandardMaterial({ map: haySideTex, color: 0xe0c070, roughness: 1, side: THREE.DoubleSide }), tx, 0.53, 1.65, 0, 0, 0, wL); brm.scale.set(1, 1, 0.45);
+    put(new THREE.TorusGeometry(0.025, 0.006, 5, 10), new THREE.MeshStandardMaterial({ color: 0xa83a2a }), tx, 0.72, 1.65, 0, Math.PI / 2, 0, wL);
+    // (a shelf over the feeding bench: jars of grain, a tin, a ball of twine, an oil can and a little pot of daisies)
+    var sx = W2 - 0.2;
+    put(new THREE.BoxGeometry(0.24, 0.035, 3.2), mWood, sx, 1.72, 0, 0, 0, 0, wR);
+    [-1.3, 0, 1.3].forEach(function (z) { var br2 = new THREE.Shape(); br2.moveTo(0, 0); br2.lineTo(0.2, 0); br2.lineTo(0, -0.2); br2.closePath(); var bgeo = new THREE.ExtrudeGeometry(br2, { depth: 0.03, bevelEnabled: false }); bgeo.translate(0, 0, -0.015); put(bgeo, mOld, sx + 0.1, 1.7, z, 0, Math.PI, 0, wR); });
+    var glassM = new THREE.MeshStandardMaterial({ color: 0xd8e8e8, roughness: 0.1, transparent: true, opacity: 0.45 }), grainCols = [0xe8c868, 0xc89048, 0xf0e0b0];
+    [-1.35, -1.1, -0.85].forEach(function (z, k) { put(new THREE.CylinderGeometry(0.055, 0.055, 0.12, 14), new THREE.MeshStandardMaterial({ color: grainCols[k], roughness: 1 }), sx, 1.795, z, 0, 0, 0, wR); put(new THREE.CylinderGeometry(0.06, 0.06, 0.17, 14), glassM, sx, 1.825, z, 0, 0, 0, wR); put(new THREE.CylinderGeometry(0.062, 0.062, 0.025, 14), cpmSteel, sx, 1.92, z, 0, 0, 0, wR); });
+    put(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 16), new THREE.MeshStandardMaterial({ color: 0x8aa0b8, metalness: 0.5, roughness: 0.4 }), sx, 1.81, -0.35, 0, 0, 0, wR);
+    put(new THREE.SphereGeometry(0.06, 12, 10), new THREE.MeshStandardMaterial({ color: 0xc8a878, roughness: 1 }), sx, 1.795, 0.3, 0, 0, 0, wR);
+    put(new THREE.CylinderGeometry(0.05, 0.06, 0.1, 12), cpmCopper, sx, 1.79, 0.75, 0, 0, 0, wR); put(new THREE.CylinderGeometry(0.006, 0.01, 0.16, 6), cpmCopper, sx - 0.05, 1.87, 0.75, 0, 0, 0.9, wR);
+    put(new THREE.CylinderGeometry(0.06, 0.045, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xc0704a, roughness: 0.9 }), sx, 1.79, 1.3, 0, 0, 0, wR);
+    coopFlowers(wR, [[sx, 1.8, 1.3]], 91);
+    // (two feed sacks by the door)
+    [[-1.4, 1.62, 0.5, 0], [-1.05, 1.68, -0.3, 1]].forEach(function (sk) { if (!barnSackProtos[sk[3]]) return; var sg = barnSackProtos[sk[3]].clone(); sg.position.set(sk[0], 0, sk[1]); sg.rotation.set(0, sk[2], 0); sg.scale.setScalar(0.85); R.add(sg); });
+    coopSolids.push([-1.25, 1.62, 0.4]);
+    // (sunbeams slanting in through the windows, with dust drifting in them)
+    var beamTex = cpTex(64, 128, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); var gx = g.createLinearGradient(0, 0, w, 0); gx.addColorStop(0, 'rgba(0,0,0,1)'); gx.addColorStop(0.2, 'rgba(0,0,0,0)'); gx.addColorStop(0.8, 'rgba(0,0,0,0)'); gx.addColorStop(1, 'rgba(0,0,0,1)'); g.globalCompositeOperation = 'destination-out'; g.fillStyle = gx; g.fillRect(0, 0, w, h); });
+    var motePts = [];
+    [[-1.65, 1.4, D2 - 0.08, Math.PI, 0.95], [1.65, 1.4, D2 - 0.08, Math.PI, 0.95], [-W2 + 0.08, 1.4, 0, Math.PI / 2, 0.95]].forEach(function (b) {
+      var g = new THREE.Group(); g.position.set(b[0], b[1], b[2]); g.rotation.y = b[3]; R.add(g);
+      var phi = 0.62, L = 2.3, bm = new THREE.MeshBasicMaterial({ map: beamTex, color: 0xfff0c8, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      var pl = new THREE.Mesh(new THREE.PlaneGeometry(b[4], L), bm); pl.position.set(0, -Math.sin(phi) * L / 2 + 0.3, Math.cos(phi) * L / 2); pl.rotation.x = phi - Math.PI / 2; g.add(pl); coopShafts.push(bm);
+      g.updateMatrixWorld(true);
+      for (var m = 0; m < 22; m++) { var f = Math.random(), p = new THREE.Vector3((Math.random() - 0.5) * b[4] * 0.7, 0.3 - Math.sin(phi) * L * f, Math.cos(phi) * L * f + (Math.random() - 0.5) * 0.2); g.localToWorld(p); R.worldToLocal(p); motePts.push(p.x, p.y, p.z); }
+    });
+    var mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(motePts, 3));
+    coopMotes = new THREE.Points(mg, new THREE.PointsMaterial({ map: dawnGlowTex, color: 0xfff4d8, size: 0.045, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    coopMotes.userData.base = motePts.slice(); R.add(coopMotes);
+  })(coopRoom);
   function coopHayShow() { coopHayMeshes.forEach(function (m, i) { m.visible = coop.hay[i]; }); }
   var coLook = new THREE.Vector3();
   function updateCoopInside(t) {
@@ -3611,6 +3902,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hr = state.minutes / 60, nt = hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1;
     coSun.intensity = 0.5 * (1 - nt); coLamp.intensity = (0.5 + nt * 0.3) * (1 + Math.sin(t * 10) * 0.04);
     coopInGlows.forEach(function (L) { var f = 1 + Math.sin(t * 11 + L.p) * 0.1; L.f.scale.set(f, 1.5 * f, f); L.h.material.opacity = 0.5 * f; });
+    coopShafts.forEach(function (m, i) { m.opacity = (1 - nt) * (0.1 + Math.sin(t * 0.4 + i) * 0.025); });   // (the sunbeams fade with the daylight)
+    var mp = coopMotes.geometry.attributes.position, mb = coopMotes.userData.base;   // (and the dust drifts lazily in them)
+    for (var k = 0; k < mp.count; k++) mp.setXYZ(k, mb[k * 3] + Math.sin(t * 0.3 + k * 1.7) * 0.06, mb[k * 3 + 1] + Math.sin(t * 0.22 + k * 2.3) * 0.08, mb[k * 3 + 2] + Math.cos(t * 0.27 + k) * 0.06);
+    mp.needsUpdate = true; coopMotes.material.opacity = (1 - nt) * 0.75;
   }
   function drawCoopView() {                                            // (the windows look out on the real farm, like the shops')
     renderer.getDrawingBufferSize(shopViewSize);
@@ -3661,7 +3956,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (Math.abs(r.solid.x - coop.fx) < HX + r.solidR && Math.abs(r.solid.z - coop.fz) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes());
     });
     for (var c = c0; c < c0 + COOP_FC; c++) for (var r = r0; r < r0 + COOP_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); coop.grass.push(ft); }   // (no grass poking up through the floor)
-    [[-1.8, -1], [0, -1], [1.8, -1], [-1.8, 1], [0, 1], [1.8, 1], [-2.3, -1.5, 0.7], [2.3, -1.5, 0.7], [-2.3, 1.5, 0.7], [2.3, 1.5, 0.7], [3.1, 0, 0.5]].forEach(function (s) {   // (you bump into its walls)
+    [[-1.8, -1], [0, -1], [1.8, -1], [-1.8, 1], [0, 1], [1.8, 1], [-2.3, -1.5, 0.7], [2.3, -1.5, 0.7], [-2.3, 1.5, 0.7], [2.3, 1.5, 0.7], [3.1, 0, 0.5], [-2.85, 2.5, 0.35], [-1.75, 2.62, 0.45]].forEach(function (s) {   // (you bump into its walls)
       var sd = { x: coop.x + s[0], z: coop.z + s[1], r: s[2] || 1.0 }; solids.push(sd); coop.solids.push(sd);
     });
     coopDoor = coopFront(0.12);
@@ -3769,51 +4064,27 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (coopBtn.classList.contains('show') !== show) coopBtn.classList.toggle('show', show);
   }
 
-  // ===== adopting one at Fluff & Feather once you have a coop: the barn, or the coop? =====
-  var coopChoosing = false, coopAsk = null;
-  var coopHomeBox = document.createElement('div');
-  coopHomeBox.className = 'inventory ship shop'; coopHomeBox.hidden = true;
-  coopHomeBox.innerHTML = '<div class="inv-head"><b class="coop-home-title">Where should they live?</b><button type="button" class="inv-close" aria-label="Cancel">✕</button></div>' +
-    '<p class="ship-hint coop-home-hint"></p><div class="shop-buy"><button type="button" class="coop-home-barn"></button><button type="button" class="coop-home-coop"></button></div>';
-  canvas.parentNode.appendChild(coopHomeBox);
-  function coopAskHome(kind, barn, cs, cost) {
-    coopAsk = { kind: kind, barn: barn, coop: cs, cost: cost }; coopChoosing = true; walkTarget = null;
-    var nm = COOP_NAMES[kind], freeB = 0, freeC = 0;
-    for (var s = 0; s < GLIM_STALLS.length; s++) if (!glimmers.some(function (g) { return g.stall === s; })) freeB++;
-    for (var s2 = COOP_STALL0; s2 < COOP_STALL0 + COOP_CAP; s2++) if (!glimmers.some(function (g) { return g.stall === s2; })) freeC++;
-    coopHomeBox.querySelector('.coop-home-title').textContent = '✧ Where should your ' + nm + ' live?';
-    coopHomeBox.querySelector('.coop-home-hint').textContent = 'There\'s room for them in a stall here at Fluff & Feather, or in your coop on the farm.';
-    coopHomeBox.querySelector('.coop-home-barn').textContent = '🏡 A barn stall (' + freeB + ' free)';
-    coopHomeBox.querySelector('.coop-home-coop').textContent = '🐔 Your coop (' + freeC + ' free)';
-    closeBarnShop(); coopHomeBox.hidden = false;
-  }
-  function coopHomeDone(which) {
-    var a = coopAsk; coopAsk = null; coopChoosing = false; coopHomeBox.hidden = true; focusGame();
-    if (!a || !which) return;
-    if (state.coins < a.cost) { showToast('Not enough Star Coins', 1800); return; }
-    state.coins -= a.cost; showCoins(true); coinSound(5);
-    glimStartNaming(which === 'coop' ? a.coop : a.barn, a.kind);
-  }
-  coopHomeBox.querySelector('.coop-home-barn').addEventListener('click', function () { coopHomeDone('barn'); });
-  coopHomeBox.querySelector('.coop-home-coop').addEventListener('click', function () { coopHomeDone('coop'); });
-  coopHomeBox.querySelector('.inv-close').addEventListener('click', function () { coopHomeDone(null); });
+  // ===== adopting one at Fluff & Feather: the five coop birds only ever live in your coop =====
   var coopBaseAdopt = adoptGlimmerwing;
   adoptGlimmerwing = function (kind) {
-    if (COOP_KINDS.indexOf(kind) < 0 || !coop.built) return coopBaseAdopt(kind);
-    var barn = glimFreeStall(), cs = coopFreeStall(), cost = coopKindCost(kind);
-    if (barn < 0 && cs < 0) { showToast('Your barn stalls and your coop are all full!', 2200); return; }
+    if (COOP_KINDS.indexOf(kind) < 0) return coopBaseAdopt(kind);
+    if (!coop.built) { showToast(COOP_NAMES[kind] + 's live in a coop: build one at Oak & Ember first 🐔', 2800); return; }
+    var cs = coopFreeStall(), cost = coopKindCost(kind);
+    if (cs < 0) { showToast('Your coop is full: it has room for 4', 2200); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
-    if (cs < 0) return coopBaseAdopt(kind);
-    if (barn < 0) { state.coins -= cost; showCoins(true); coinSound(5); closeBarnShop(); glimStartNaming(cs, kind); return; }
-    coopAskHome(kind, barn, cs, cost);
+    state.coins -= cost; showCoins(true); coinSound(5); closeBarnShop(); glimStartNaming(cs, kind);
   };
+  [glimAdoptBtn, duckAdoptBtn, emberAdoptBtn, gemAdoptBtn, ostAdoptBtn].forEach(function (b) {   // (their cards at Fluff & Feather say where they live)
+    var card = b.closest('.shop-card'); if (!card) return;
+    var note = document.createElement('p'); note.className = 'ship-hint'; note.style.cssText = 'margin:6px 2px 8px;font-weight:600;color:#5a8a5e'; note.textContent = '🐔 Lives in your coop (build one at Oak & Ember)';
+    card.insertBefore(note, card.querySelector('.shop-buy'));
+  });
   var coopBarnRender = renderBarnShop;
-  renderBarnShop = function () {                                       // (with a coop, the birds can be adopted until the barn AND the coop are full)
+  renderBarnShop = function () {                                       // (they can be adopted while your coop has room, whatever the barn stalls hold)
     coopBarnRender();
-    if (!coop.built) return;
-    var full = glimFreeStall() < 0 && coopFreeStall() < 0;
+    var free = coop.built && coopFreeStall() >= 0;
     [[glimAdoptBtn, GLIM_COST], [duckAdoptBtn, DUCK_COST], [emberAdoptBtn, EMBER_COST], [gemAdoptBtn, GEM_COST], [ostAdoptBtn, OST_COST]].forEach(function (b) {
-      b[0].innerHTML = full ? 'Barn and coop are full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = full || state.coins < b[1];
+      b[0].innerHTML = !coop.built ? '🐔 Needs a coop' : !free ? 'Your coop is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1];
     });
     barnTilesSync();
   };
@@ -3825,19 +4096,38 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ===== the carpenter's menu, at Oak & Ember's counter =====
   var coopShopIcon = (function () {                                    // (a little picture of the coop, for the menu)
-    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
-    g.fillStyle = 'rgba(0,0,0,0.15)'; g.beginPath(); g.ellipse(64, 110, 52, 9, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#7a8a7a'; g.fillRect(18, 98, 92, 10);
-    var wg = g.createLinearGradient(0, 50, 0, 100); wg.addColorStop(0, '#fbf4e6'); wg.addColorStop(1, '#e6d8c0'); g.fillStyle = wg; g.fillRect(20, 52, 88, 48);
-    g.strokeStyle = 'rgba(150,120,90,0.35)'; g.lineWidth = 1; for (var b = 26; b < 106; b += 9) { g.beginPath(); g.moveTo(b, 52); g.lineTo(b, 100); g.stroke(); }
-    g.fillStyle = '#7a5236'; g.beginPath(); g.moveTo(8, 56); g.lineTo(64, 18); g.lineTo(120, 56); g.lineTo(112, 60); g.lineTo(64, 28); g.lineTo(16, 60); g.closePath(); g.fill();
-    g.fillStyle = '#9a6a44'; g.beginPath(); g.moveTo(16, 56); g.lineTo(64, 24); g.lineTo(112, 56); g.closePath(); g.fill();
-    g.fillStyle = '#92b596'; g.fillRect(55, 68, 18, 32); g.fillStyle = '#f6efe2'; g.fillRect(53, 66, 22, 3);
-    g.fillStyle = '#3a2418'; g.beginPath(); g.moveTo(64, 76); g.bezierCurveTo(58, 72, 59, 68, 64, 71); g.bezierCurveTo(69, 68, 70, 72, 64, 76); g.fill();
-    [[30, 64], [82, 64]].forEach(function (w) { g.fillStyle = '#ffd99a'; g.fillRect(w[0], w[1], 16, 13); g.strokeStyle = '#5a3c24'; g.lineWidth = 2; g.strokeRect(w[0], w[1], 16, 13); g.fillStyle = '#e88ab0'; g.fillRect(w[0] - 2, w[1] + 15, 20, 4); });
-    g.fillStyle = '#c8a070'; g.beginPath(); g.moveTo(54, 100); g.lineTo(74, 100); g.lineTo(78, 112); g.lineTo(50, 112); g.closePath(); g.fill();
-    g.fillStyle = '#fff6e6'; g.beginPath(); g.ellipse(96, 104, 9, 7, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(103, 97, 5, 0, Math.PI * 2); g.fill();   // (a little hen out front)
-    g.fillStyle = '#e05050'; g.beginPath(); g.arc(104, 92, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f0b040'; g.beginPath(); g.moveTo(107, 97); g.lineTo(111, 98); g.lineTo(107, 99); g.fill();
+    var c = document.createElement('canvas'); c.width = c.height = 256; var g = c.getContext('2d'); g.scale(2, 2);
+    g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(64, 112, 56, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#8a8478'; g.fillRect(17, 99, 94, 9); g.fillStyle = 'rgba(255,255,255,0.18)'; for (var s = 19; s < 110; s += 9) g.fillRect(s, 100 + (s % 2) * 3, 7, 3);   // (the stone footing)
+    var wg = g.createLinearGradient(0, 52, 0, 100); wg.addColorStop(0, '#fdf7ea'); wg.addColorStop(1, '#e8dcc4'); g.fillStyle = wg; g.fillRect(19, 52, 90, 48);
+    g.fillStyle = '#f6efe0'; for (var b = 23; b < 108; b += 7) g.fillRect(b, 52, 1.6, 48); g.strokeStyle = 'rgba(150,120,90,0.25)'; g.lineWidth = 0.6; for (var b2 = 23; b2 < 108; b2 += 7) { g.beginPath(); g.moveTo(b2 + 1.8, 52); g.lineTo(b2 + 1.8, 100); g.stroke(); }
+    g.fillStyle = 'rgba(70,50,30,0.18)'; g.fillRect(19, 92, 90, 8);
+    g.fillStyle = '#92b596'; g.fillRect(17, 52, 3, 48); g.fillRect(108, 52, 3, 48); g.fillRect(19, 97, 90, 3);
+    g.fillStyle = '#5a3e28'; g.beginPath(); g.moveTo(6, 57); g.lineTo(64, 17); g.lineTo(122, 57); g.closePath(); g.fill();   // (the roof, in rows of shakes)
+    for (var r = 0; r < 6; r++) { var y0 = 22 + r * 6.2, w = (y0 - 17) / 40 * 58; for (var x = 64 - w; x < 64 + w; x += 4 + (r % 2)) { var t2 = 0.75 + ((x * 7 + r * 13) % 10) / 40; g.fillStyle = 'rgb(' + Math.round(196 * t2) + ',' + Math.round(128 * t2) + ',' + Math.round(80 * t2) + ')'; g.fillRect(x, y0, 3.6, 5.4); } }
+    g.fillStyle = '#6a4630'; g.beginPath(); g.moveTo(4, 58); g.lineTo(64, 16); g.lineTo(124, 58); g.lineTo(120, 60); g.lineTo(64, 21); g.lineTo(8, 60); g.closePath(); g.fill();
+    g.fillStyle = '#c08050'; g.fillRect(8, 58, 112, 2.5);
+    g.fillStyle = '#efe6d6'; g.fillRect(40, 7, 12, 14); g.fillStyle = '#2a1c12'; g.fillRect(42, 10, 8, 7); g.fillStyle = '#f6efe2'; for (var l = 0; l < 3; l++) g.fillRect(42, 10.5 + l * 2.4, 8, 1.1);   // (the cupola)
+    g.fillStyle = '#7a5236'; g.beginPath(); g.moveTo(37, 8); g.lineTo(46, 1); g.lineTo(55, 8); g.closePath(); g.fill();
+    g.strokeStyle = '#3a3634'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(46, 1); g.lineTo(46, -4); g.stroke();
+    g.fillStyle = '#86aa88'; g.fillRect(55, 67, 18, 32); g.strokeStyle = 'rgba(60,90,60,0.45)'; g.lineWidth = 0.6; for (var d = 58.6; d < 73; d += 3.6) { g.beginPath(); g.moveTo(d, 67); g.lineTo(d, 99); g.stroke(); }   // (the door)
+    g.fillStyle = '#3a3634'; g.fillRect(55, 71, 10, 1.6); g.fillRect(55, 93, 10, 1.6); g.fillStyle = '#f6efe2'; g.fillRect(53, 65, 22, 2.4); g.fillRect(53, 65, 2.2, 34); g.fillRect(72.8, 65, 2.2, 34);
+    g.fillStyle = '#3a2418'; g.beginPath(); g.moveTo(64, 76); g.bezierCurveTo(59, 72, 60, 69, 64, 71.5); g.bezierCurveTo(68, 69, 69, 72, 64, 76); g.fill();
+    g.strokeStyle = '#3a3634'; g.lineWidth = 1.2; g.beginPath(); g.arc(64, 61, 2.6, Math.PI * 0.2, Math.PI * 0.8, true); g.stroke();
+    [[29, 64], [83, 64]].forEach(function (w) {                       // (windows with shutters and flower boxes)
+      g.fillStyle = '#86aa88'; g.fillRect(w[0] - 6, w[1] - 1, 5, 16); g.fillRect(w[0] + 17, w[1] - 1, 5, 16);
+      g.fillStyle = '#ffe2a8'; g.fillRect(w[0], w[1], 16, 13); g.strokeStyle = '#5a3c24'; g.lineWidth = 1.6; g.strokeRect(w[0], w[1], 16, 13); g.beginPath(); g.moveTo(w[0] + 8, w[1]); g.lineTo(w[0] + 8, w[1] + 13); g.moveTo(w[0], w[1] + 6.5); g.lineTo(w[0] + 16, w[1] + 6.5); g.stroke();
+      g.fillStyle = '#7a5236'; g.fillRect(w[0] - 2, w[1] + 15, 20, 4); g.fillStyle = '#5f9a48'; g.fillRect(w[0] - 1, w[1] + 13.5, 18, 2);
+      ['#f4a6c8', '#fff2e0', '#c8a8f0', '#ffb08a', '#f4a6c8'].forEach(function (col, k) { g.fillStyle = col; g.beginPath(); g.arc(w[0] + 1 + k * 3.6, w[1] + 13.5, 1.6, 0, Math.PI * 2); g.fill(); });
+    });
+    g.fillStyle = '#c8a070'; g.beginPath(); g.moveTo(54, 100); g.lineTo(74, 100); g.lineTo(78, 112); g.lineTo(50, 112); g.closePath(); g.fill(); g.fillStyle = 'rgba(90,60,30,0.5)'; for (var cl = 103; cl < 112; cl += 3) g.fillRect(52, cl, 24, 0.9);
+    g.fillStyle = '#b88a5a'; g.fillRect(9, 86, 10, 16); g.fillStyle = '#3a3634'; g.fillRect(9, 89, 10, 1.2); g.fillRect(9, 98, 10, 1.2); g.fillStyle = '#c08050'; g.fillRect(12.5, 58, 2.4, 28);   // (the rain barrel and its downpipe)
+    g.fillStyle = '#5f9a48'; [[24, 100], [36, 101], [92, 101], [104, 100]].forEach(function (f) { g.beginPath(); g.arc(f[0], f[1], 3.4, 0, Math.PI * 2); g.fill(); });
+    [[22, 98, '#f4a6c8'], [26, 99, '#fff2e0'], [35, 98, '#c8a8f0'], [91, 98, '#ffb08a'], [95, 99, '#f8d860'], [104, 97, '#f4a6c8']].forEach(function (f) { g.fillStyle = f[2]; g.beginPath(); g.arc(f[0], f[1], 1.6, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = '#fff6e6'; g.beginPath(); g.ellipse(98, 108, 8, 6, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(104, 101.5, 4.4, 0, Math.PI * 2); g.fill();   // (a little hen out front)
+    g.beginPath(); g.moveTo(90, 106); g.lineTo(86, 100); g.lineTo(92, 104); g.fill();
+    g.fillStyle = '#e05050'; g.beginPath(); g.arc(104, 97, 2.2, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f0b040'; g.beginPath(); g.moveTo(108, 101); g.lineTo(111.5, 102); g.lineTo(108, 103); g.fill();
+    g.fillStyle = '#2a2018'; g.beginPath(); g.arc(105.4, 100.8, 0.9, 0, Math.PI * 2); g.fill();
     return c.toDataURL();
   })();
   var carpShopOpen = false;
@@ -4004,7 +4294,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.code !== 'Escape') return;
     if (carpShopOpen) closeCarpShop();
     if (coopPlacing) coopClosePlacer();
-    if (coopChoosing) coopHomeDone(null);
   });
   function coopDrawOnMap(g, K, label) {                                // (on the world map: its brown roof with the ridge along it, and its green door)
     var p = mapXY(coop.x, coop.z);
@@ -4019,7 +4308,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ===== every frame =====
   var coopBaseInteract = interact;
   interact = function () {
-    if (coopPlacing || coopChoosing) return;
+    if (coopPlacing) return;
     if (carpShopOpen) { if (!menuJustOpened()) closeCarpShop(); return; }
     if (atCarpCounter()) { openCarpShop(); return; }                   // at Oak & Ember's counter: the carpenter's menu
     if (inCoop && !glimNaming) { var tg = coopTarget(); if (tg) { if (tg === 'bench') coopBenchAction(); else coopCare(tg); return; } }
@@ -4668,7 +4957,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateCamera(dt);
     updateClinicInterior(state.time);
     cullScene();
-    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || coopPlacing || coopChoosing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
+    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || coopPlacing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
