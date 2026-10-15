@@ -5634,6 +5634,77 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function siteReady(o) { return o.built && o.stage >= SITE_DAYS; }
 
+  // ---------- Sitting in the rowboat ----------
+  // Walk to the end of the dock and press Interact to climb into the little rowboat tied there: she sits on its back
+  // seat facing the bow, legs stretched out in front of her and hands in her lap, bobbing and rocking with the boat on
+  // the water. Press Interact again (or try to walk, fly or teleport) to climb back out onto the dock
+  var inBoat = false, BOAT_SEAT = new THREE.Vector3(-0.35 * BOAT_L / 2, hullRise(-0.35) - 0.07 + 0.018, 0), boatSeatW = new THREE.Vector3(), boatFwd = new THREE.Vector3();
+  function boatWorldPos() { boat.updateWorldMatrix(true, false); return boat.localToWorld(boatSeatW.set(0, 0, 0)); }
+  function boatNear() {
+    if (inBoat || indoors || flying || flyH > 0 || teleporting || sleeping) return false;
+    var b = boatWorldPos();
+    return onDock(player.position.x, player.position.z) && dist(player.position.x, player.position.z, b.x, b.z) < 2.6;
+  }
+  function boatSeat() {                                                // (where her hips go, and which way the bow points)
+    boat.updateWorldMatrix(true, false);
+    var p = boat.localToWorld(boatSeatW.copy(BOAT_SEAT));
+    boatFwd.set(1, 0, 0).transformDirection(boat.matrixWorld);
+    return { x: p.x, y: p.y, z: p.z, face: Math.atan2(boatFwd.x, boatFwd.z) };
+  }
+  function boatClimbIn() {
+    inBoat = true; walkTarget = null; keys = {};
+    var s = boatSeat(); facing = s.face; popSound();
+    burst(s.x, s.y - 0.1, s.z, 0xbfe6ff, 12, 1.2, 1.4, -2);               // (a little splash as the boat dips)
+    showToast('🛶 You climb into the rowboat and settle on its seat. Press Interact to climb back out.', 3200);
+  }
+  function boatClimbOut(quiet) {
+    if (!inBoat) return;
+    inBoat = false;
+    var p = dock.localToWorld(new THREE.Vector3(DOCK_LEN - 0.7, 0, 0.35));
+    player.position.set(p.x, DOCK_Y, p.z); body.position.set(0, 0, 0); body.rotation.set(0, 0, 0);
+    if (!quiet) popSound();
+  }
+  var boatBaseUpdatePlayer = updatePlayer;
+  updatePlayer = function (dt) {
+    if (inBoat && (indoors || teleporting || sleeping || player.parent !== scene)) inBoat = false;   // (carried home, or whisked away some other way)
+    if (!inBoat) return boatBaseUpdatePlayer(dt);
+    var tryWalk = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD || keys.ArrowUp || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || walkTarget;
+    if (tryWalk) { walkTarget = null; boatClimbOut(); return boatBaseUpdatePlayer(dt); }   // (walking off: she steps back onto the dock)
+    var s = boatSeat();
+    facing = s.face; player.rotation.y = facing;
+    player.position.set(s.x, s.y - 0.36, s.z);                          // (her hips on the seat)
+    body.position.set(0, 0, 0);
+    body.rotation.set(boat.rotation.x * 1.2, 0, boat.rotation.z * 1.2);  // (rocking with the boat)
+    hatStar.rotation.y += dt * 2;
+    witchLook(dt, false);
+    var w = wl, t = state.time;                                        // (sitting: legs stretched out in front, hands resting in her lap, broom laid down)
+    w.legs[0].rotation.set(-1.42, 0, 0.1); w.legs[1].rotation.set(-1.42, 0, -0.1);
+    w.armL.rotation.x = -0.55; w.armR.rotation.x = -0.55;
+    w.chibi.position.y = 0; w.broom.visible = false;
+    w.head.rotation.z = Math.sin(t * 0.6) * 0.05;                       // (looking about, enjoying the water)
+  };
+  var boatBaseToggleFlying = toggleFlying;
+  toggleFlying = function () { if (inBoat) boatClimbOut(); return boatBaseToggleFlying.apply(this, arguments); };
+  var boatBaseTeleport = teleportTo;
+  teleportTo = function () { if (inBoat) boatClimbOut(true); return boatBaseTeleport.apply(this, arguments); };
+  var boatBaseInteract = interact;
+  interact = function () {
+    if (inBoat) { boatClimbOut(); return; }
+    if (boatNear() && !coopPlacing) { boatClimbIn(); return; }
+    return boatBaseInteract.apply(this, arguments);
+  };
+  var boatBtn = document.createElement('button');
+  boatBtn.type = 'button'; boatBtn.className = 'sleep-btn ship-btn';
+  canvas.parentNode.appendChild(boatBtn);
+  boatBtn.addEventListener('click', function () { if (inBoat) boatClimbOut(); else if (boatNear()) boatClimbIn(); focusGame(); });
+  var boatBtnText = '';
+  function updateBoatButton() {
+    var txt = inBoat ? '🛶 Climb out of the boat' : boatNear() ? '🛶 Sit in the boat' : '';
+    if (txt !== boatBtnText) { boatBtnText = txt; if (txt) boatBtn.innerHTML = txt + ' <kbd>E</kbd>'; }
+    var show = !!txt;
+    if (boatBtn.classList.contains('show') !== show) boatBtn.classList.toggle('show', show);
+  }
+
   // ---------- Flying on her broom ----------
   // B (or the Fly button) hops on and off her broom; only outdoors. Once up she flies a little faster than she walks,
   // anywhere over the island, the lake and just out over the sea; Space climbs higher and Shift drops lower. Landing
@@ -6297,6 +6368,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateFbarn(dt, night);
     updateMill(dt, night);
     updateSilo(dt, night);
+    updateBoatButton();
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
