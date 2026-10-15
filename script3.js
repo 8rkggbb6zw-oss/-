@@ -6272,6 +6272,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   setTimeout(function () { if (!mapBase) mapBase = drawMapBase(); }, 2500);   // get the world map ready in the background, so it opens straight away
 
+  state.coins = 100000; showCoins(false);                              // a new game starts with 100,000 Star Coins (loading a save gives you the coins you saved with)
   var clock = new THREE.Clock();
   cam.target.set(player.position.x, 0.8, player.position.z);
 
