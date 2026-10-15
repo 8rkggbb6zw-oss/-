@@ -3392,7 +3392,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var COOP_SLOT_Z = [], COOP_NESTS = [];
   for (var cps = 0; cps < 8; cps++) COOP_SLOT_Z.push(-1.435 + cps * 0.41);                       // (the eight spots on the feeding bench)
   for (var cpn = 0; cpn < COOP_CAP; cpn++) COOP_NESTS.push({ x: -1.2 + cpn * 0.8, z: -1.6 });      // (and a nesting box for each animal)
-  var coop = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null };
+  var coop = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null, start: 0, stage: -1 };
   var coopDoor = { x: 1e6, z: 1e6 }, coopGroup = null, coopGlows = [], inCoop = false;
   function coopFront(d) { return { x: coop.x, z: coop.z + COOP_BD / 2 + d }; }
   function coopCovers(x, z, r) { return coop.built && Math.abs(x - coop.fx) < COOP_FC * TILE / 2 + r && Math.abs(z - coop.fz) < COOP_FR * TILE / 2 + r; }
@@ -3693,7 +3693,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     return G;
   }
   function updateCoopOutside(t, night) {
-    if (!coopGroup) return;
+    if (!coopGroup || !coopGroup.userData.vane) return;   // (not while it's still a building site)
     coopGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
     coopGroup.userData.vane.rotation.y = Math.sin(t * 0.21) * 0.9 + Math.sin(t * 0.63) * 0.25;   // (the hen turns with the breeze)
   }
@@ -3944,9 +3944,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ===== building it, and taking it down (when a save without one is loaded) =====
-  function coopPlace(c0, r0) {
+  function coopPlace(c0, r0, start) {
     coopRemove();
-    coop.built = true; coop.c = c0; coop.r = r0;
+    coop.built = true; coop.c = c0; coop.r = r0; coop.start = start; coop.stage = siteStage(coop);   // (start: the farm day Oak & Ember started building it)
     coop.fx = FARM_X + (c0 + COOP_FC / 2) * TILE; coop.fz = FARM_Z + (r0 + COOP_FR / 2) * TILE;
     coop.x = coop.fx; coop.z = coop.fz - 0.45;                          // (the coop sits at the back of its patch, its ramp in front)
     var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(coop.x + gx * COOP_BW / 2, coop.z + gz * COOP_BD / 2));
@@ -3964,8 +3964,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-1.8, -1], [0, -1], [1.8, -1], [-1.8, 1], [0, 1], [1.8, 1], [-2.3, -1.5, 0.7], [2.3, -1.5, 0.7], [-2.3, 1.5, 0.7], [2.3, 1.5, 0.7], [3.1, 0, 0.5], [-2.85, 2.5, 0.35], [-1.75, 2.62, 0.45]].forEach(function (s) {   // (you bump into its walls)
       var sd = { x: coop.x + s[0], z: coop.z + s[1], r: s[2] || 1.0 }; solids.push(sd); coop.solids.push(sd);
     });
-    coopDoor = coopFront(0.12);
-    coopGroup = coopBuildOutside();
+    coopDoor = coop.stage < SITE_DAYS ? { x: 1e6, z: 1e6 } : coopFront(0.12);   // (no way in until it's finished)
+    coopGroup = coop.stage < SITE_DAYS ? siteBuild('coop', coop.stage) : coopBuildOutside();
     if (!coop.tp) { coop.tp = { name: 'Your Coop', icon: '🐔', spot: function () { var f = coopFront(2.2); return { x: f.x, z: f.z, face: Math.PI, view: 0 }; } }; }
     if (TELEPORTS.indexOf(coop.tp) < 0) TELEPORTS.push(coop.tp);
     flushDirty();
@@ -3978,11 +3978,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = TELEPORTS.indexOf(coop.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
     coop.built = false; coopDoor = { x: 1e6, z: 1e6 };
   }
-  function coopSaveData() { return coop.built ? { c: coop.c, r: coop.r, hay: coop.hay.slice() } : null; }
+  function coopSaveData() { return coop.built ? { c: coop.c, r: coop.r, hay: coop.hay.slice(), start: coop.start } : null; }
   function coopLoadData(d) {
     coopRemove();
     coop.hay = [false, false, false, false, false, false, false, false]; coop.res = [];
-    if (d) { coopPlace(d.c, d.r); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) coop.hay[i] = !!h; }); }
+    if (d) { coopPlace(d.c, d.r, d.start === undefined ? -99 : d.start); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) coop.hay[i] = !!h; }); }
     coopAnimals().forEach(function (g) { g.eatSlot = null; });
     coopHayShow();
   }
@@ -4074,6 +4074,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   adoptGlimmerwing = function (kind) {
     if (COOP_KINDS.indexOf(kind) < 0) return coopBaseAdopt(kind);
     if (!coop.built) { showToast(COOP_NAMES[kind] + 's live in a coop: build one at Oak & Ember first 🐔', 2800); return; }
+    if (!siteReady(coop)) { showToast('Your coop is still being built: it\'ll be ready on the morning of day ' + (coop.start + SITE_DAYS) + ' 🪚', 2800); return; }
     var cs = coopFreeStall(), cost = coopKindCost(kind);
     if (cs < 0) { showToast('Your coop is full: it has room for 4', 2200); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
@@ -4087,9 +4088,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   var coopBarnRender = renderBarnShop;
   renderBarnShop = function () {                                       // (they can be adopted while your coop has room, whatever the barn stalls hold)
     coopBarnRender();
-    var free = coop.built && coopFreeStall() >= 0;
+    var free = siteReady(coop) && coopFreeStall() >= 0;
     [[glimAdoptBtn, GLIM_COST], [duckAdoptBtn, DUCK_COST], [emberAdoptBtn, EMBER_COST], [gemAdoptBtn, GEM_COST], [ostAdoptBtn, OST_COST]].forEach(function (b) {
-      b[0].innerHTML = !coop.built ? '🐔 Needs a coop' : !free ? 'Your coop is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1];
+      b[0].innerHTML = !coop.built ? '🐔 Needs a coop' : !siteReady(coop) ? '🪚 Coop being built' : !free ? 'Your coop is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1];
     });
     barnTilesSync();
   };
@@ -4143,10 +4144,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   carpShopBox.className = 'inventory ship shop'; carpShopBox.hidden = true;
   carpShopBox.innerHTML = '<div class="inv-head"><b>🪚 Oak &amp; Ember</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
     '<p class="ship-hint">Welcome to Oak &amp; Ember! Sturdy, handmade buildings for your farm, built right where you want them.</p>' +
-    '<div class="shop-item"><div class="slot shop-pic coop-pic"></div><div class="shop-text"><b>Coop</b><span>A snug little whitewashed coop with a sage-green door, a shingled roof and flower boxes under the windows. Up to 4 Glimmerwings, Puddlewisps, Emberwings, Gemwrens or Celestaras can live in it, each with their own nesting box. Inside there\'s a feeding bench with 8 spots for hay: fill it up and your animals help themselves. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
+    '<div class="shop-item"><div class="slot shop-pic coop-pic"></div><div class="shop-text"><b>Coop</b><span>A snug little whitewashed coop with a sage-green door, a shingled roof and flower boxes under the windows. Up to 4 Glimmerwings, Puddlewisps, Emberwings, Gemwrens or Celestaras can live in it, each with their own nesting box. Inside there\'s a feeding bench with 8 spots for hay: fill it up and your animals help themselves. It takes Oak &amp; Ember two days to build. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="coop-buy">Build</button></div>' +
-    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic fbarn-pic"></div><div class="shop-text"><b>Barn</b><span>A big red gambrel barn with white trim, sliding doors on an iron track, a hayloft with its pulley, a cupola with a moon-and-star weathervane, and a painted barn quilt. Every animal that isn\'t a coop bird lives here, up to 4, each in its own stall. Inside there\'s a feeding bench with 8 spots for hay down the middle: fill it up and your animals walk out of their stalls to eat. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic fbarn-pic"></div><div class="shop-text"><b>Barn</b><span>A big red gambrel barn with white trim, sliding doors on an iron track, a hayloft with its pulley, a cupola with a moon-and-star weathervane, and a painted barn quilt. Every animal that isn\'t a coop bird lives here, up to 4, each in its own stall. Inside there\'s a feeding bench with 8 spots for hay down the middle: fill it up and your animals walk out of their stalls to eat. It takes Oak &amp; Ember two days to build. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="fbarn-buy">Build</button></div>' +
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic mill-pic"></div><div class="shop-text"><b>Mill</b><span>A tall white windmill on a fieldstone base, with a wooden gallery all round, a green cap, four lattice sails with canvas that turn in the breeze, and a little fantail. It takes Oak &amp; Ember two days to build: watch it go up, from a timber frame to its sails. It doesn\'t do anything just yet. You choose where it goes on a grid of your farm.</span>' +
@@ -4163,9 +4164,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy');
   function renderCarpShop() {
     carpShopCoins.textContent = state.coins;
-    coopBuyBtn.innerHTML = coop.built ? 'Built ✓' : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
+    coopBuyBtn.innerHTML = coop.built ? (siteReady(coop) ? 'Built ✓' : 'Being built: ready day ' + (coop.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
     coopBuyBtn.disabled = coop.built || state.coins < COOP_COST;
-    fbarnBuyBtn.innerHTML = fbarn.built ? 'Built ✓' : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
+    fbarnBuyBtn.innerHTML = fbarn.built ? (siteReady(fbarn) ? 'Built ✓' : 'Being built: ready day ' + (fbarn.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
     fbarnBuyBtn.disabled = fbarn.built || state.coins < FBARN_COST;
     millBuyBtn.innerHTML = !mill.built ? 'Build · <img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') : mill.stage < MILL_DAYS ? 'Being built: ready day ' + (mill.start + MILL_DAYS) : 'Built ✓';
     millBuyBtn.disabled = mill.built || state.coins < MILL_COST;
@@ -4320,8 +4321,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
   var PLACE_HINT_END = ' <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under it.';
   var COOP_SPEC = { title: '🐔 Where should your coop go?', hint: 'Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: COOP_FC, fr: COOP_FR, bw: COOP_BW, bd: COOP_BD, off: 0.45, door: 1.1, roof: 'rgba(122,82,54,0.85)', doorCol: '#92b596', emoji: '🐔', cost: COOP_COST,
-    built: function () { return coop.built; }, build: function (c, r) { coop.hay = [false, false, false, false, false, false, false, false]; coop.res = []; coopPlace(c, r); coopHayShow(); },
-    done: '🐔 Your coop is built! Adopt Glimmerwings, Puddlewisps, Emberwings, Gemwrens or Celestaras at Fluff & Feather to fill it, and fill its feeding bench with hay.' };
+    built: function () { return coop.built; }, build: function (c, r) { coop.hay = [false, false, false, false, false, false, false, false]; coop.res = []; coopPlace(c, r, farmDay()); coopHayShow(); },
+    done: function () { return '🐔 Oak & Ember have started building your coop! It takes two days: it\'ll be finished on the morning of day ' + (coop.start + SITE_DAYS) + '.'; } };
   window.addEventListener('keydown', function (e) {
     if (e.code !== 'Escape') return;
     if (carpShopOpen) closeCarpShop();
@@ -4334,7 +4335,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#8a6646'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1], COOP_BW * K + 8, COOP_BD / 2 * K + 4);
     g.fillStyle = '#5a3c26'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1] - 2, COOP_BW * K + 8, 4);
     g.fillStyle = '#92b596'; g.fillRect(p[0] - 0.55 * K, p[1] + COOP_BD / 2 * K + 4, 1.1 * K, 0.9 * K);
-    label('Coop', coop.x, coop.z, COOP_BD / 2 * K + 30);
+    label(siteReady(coop) ? 'Coop' : 'Coop (being built)', coop.x, coop.z, COOP_BD / 2 * K + 30);
   }
 
   // ===== every frame =====
@@ -4351,6 +4352,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateCarpShop();
     updateCoopButton();
     if (!coop.built) return;
+    siteTick('coop');
     updateCoopFeeding(dt);
     if (inCoop) updateCoopInside(state.time); else updateCoopOutside(state.time, night);
   }
@@ -4368,11 +4370,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   var FBARN_DZ = 4 - FBARN_BD / 2;                                     // (the stalls' frame: Fluff & Feather's stalls, turned a quarter so they run along the back wall)
   for (var fbs = 0; fbs < FBARN_CAP; fbs++) GLIM_STALLS[FBARN_STALL0 + fbs] = -3.3 + fbs * 2.2;
   var FBARN_SLOT_X = []; for (var fbx = 0; fbx < 8; fbx++) FBARN_SLOT_X.push(-2.45 + fbx * 0.7);
-  var fbarn = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null };
+  var fbarn = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null, start: 0, stage: -1 };
   var fbarnDoor = { x: 1e6, z: 1e6 }, fbarnGroup = null, fbarnGlows = [], inFbarn = false;
   var FBARN_SPEC = { title: '🐮 Where should your barn go?', hint: 'Tap your farm to choose a spot. The barn takes 8 × 7 tiles, with its big doors facing south (down the map).' + PLACE_HINT_END, fc: FBARN_FC, fr: FBARN_FR, bw: FBARN_BW, bd: FBARN_BD, off: FBARN_OFF, door: 3.0, roof: 'rgba(100,96,92,0.88)', doorCol: '#b84a3c', emoji: '🐮', ridgeZ: true, cost: FBARN_COST,
-    built: function () { return fbarn.built; }, build: function (c, r) { fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = []; fbarnPlace(c, r); fbarnHayShow(); },
-    done: '🐮 Your barn is built! Every animal that isn\'t a coop bird lives here now: adopt them at Fluff & Feather, and fill its feeding bench with hay.' };
+    built: function () { return fbarn.built; }, build: function (c, r) { fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = []; fbarnPlace(c, r, farmDay()); fbarnHayShow(); },
+    done: function () { return '🐮 Oak & Ember have started building your barn! It takes two days: it\'ll be finished on the morning of day ' + (fbarn.start + SITE_DAYS) + '.'; } };
   function fbarnFront(d) { return { x: fbarn.x, z: fbarn.z + FBARN_BD / 2 + d }; }
   function fbarnCovers(x, z, r) { return fbarn.built && Math.abs(x - fbarn.fx) < FBARN_FC * TILE / 2 + r && Math.abs(z - fbarn.fz) < FBARN_FR * TILE / 2 + r; }
   var fbarnBaseSoilNear = soilNear;                                    // (nothing grows back under the barn either)
@@ -4602,7 +4604,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     return G;
   }
   function updateFbarnOutside(t, night) {
-    if (!fbarnGroup) return;
+    if (!fbarnGroup || !fbarnGroup.userData.vane) return;   // (not while it's still a building site)
     fbarnGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 9 + L.p) * 0.04; L.h.material.opacity = (0.15 + night * 0.7) * fl; L.f.material.color.setHSL(0.11, 1, 0.6 + night * 0.25); });
     fbarnGroup.userData.vane.rotation.y = Math.sin(t * 0.18 + 1) * 1.0 + Math.sin(t * 0.55) * 0.25;
   }
@@ -4804,9 +4806,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ===== building it, and taking it down (when a save without one is loaded) =====
-  function fbarnPlace(c0, r0) {
+  function fbarnPlace(c0, r0, start) {
     fbarnRemove();
-    fbarn.built = true; fbarn.c = c0; fbarn.r = r0;
+    fbarn.built = true; fbarn.c = c0; fbarn.r = r0; fbarn.start = start; fbarn.stage = siteStage(fbarn);   // (start: the farm day Oak & Ember started building it)
     fbarn.fx = FARM_X + (c0 + FBARN_FC / 2) * TILE; fbarn.fz = FARM_Z + (r0 + FBARN_FR / 2) * TILE;
     fbarn.x = fbarn.fx; fbarn.z = fbarn.fz - FBARN_OFF;
     var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(fbarn.x + gx * FBARN_BW / 2, fbarn.z + gz * FBARN_BD / 2));
@@ -4819,8 +4821,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var sx = -3.5; sx <= 3.51; sx += 1.4) for (var sz = -2.4; sz <= 2.41; sz += 1.6) sl.push([sx, sz, 1.15]);
     [-1, 1].forEach(function (s) { [-2.9, 0, 2.9].forEach(function (z) { sl.push([s * 4.1, z, 0.7]); }); });
     sl.forEach(function (s) { var sd = { x: fbarn.x + s[0], z: fbarn.z + s[1], r: s[2] }; solids.push(sd); fbarn.solids.push(sd); });
-    fbarnDoor = fbarnFront(0.15);
-    fbarnGroup = fbarnBuildOutside();
+    fbarnDoor = fbarn.stage < SITE_DAYS ? { x: 1e6, z: 1e6 } : fbarnFront(0.15);   // (no way in until it's finished)
+    fbarnGroup = fbarn.stage < SITE_DAYS ? siteBuild('fbarn', fbarn.stage) : fbarnBuildOutside();
     if (!fbarn.tp) fbarn.tp = { name: 'Your Barn', icon: '🐮', spot: function () { var f = fbarnFront(2.6); return { x: f.x, z: f.z, face: Math.PI, view: 0 }; } };
     if (TELEPORTS.indexOf(fbarn.tp) < 0) TELEPORTS.push(fbarn.tp);
     flushDirty();
@@ -4833,11 +4835,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = TELEPORTS.indexOf(fbarn.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
     fbarn.built = false; fbarnDoor = { x: 1e6, z: 1e6 };
   }
-  function fbarnSaveData() { return fbarn.built ? { c: fbarn.c, r: fbarn.r, hay: fbarn.hay.slice() } : null; }
+  function fbarnSaveData() { return fbarn.built ? { c: fbarn.c, r: fbarn.r, hay: fbarn.hay.slice(), start: fbarn.start } : null; }
   function fbarnLoadData(d) {
     fbarnRemove();
     fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = [];
-    if (d) { fbarnPlace(d.c, d.r); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) fbarn.hay[i] = !!h; }); }
+    if (d) { fbarnPlace(d.c, d.r, d.start === undefined ? -99 : d.start); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) fbarn.hay[i] = !!h; }); }
     fbarnAnimals().forEach(function (g) { g.eatSlot = null; });
     fbarnHayShow();
   }
@@ -4846,7 +4848,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var moved = [];
     glimmers.slice().forEach(function (g) {
       if (g.stall >= COOP_STALL0) return;
-      var to = COOP_KINDS.indexOf(g.kind) >= 0 ? (coop.built ? coopFreeStall() : -1) : (fbarn.built ? fbarnFreeStall() : -1);
+      var to = COOP_KINDS.indexOf(g.kind) >= 0 ? (siteReady(coop) ? coopFreeStall() : -1) : (siteReady(fbarn) ? fbarnFreeStall() : -1);
       if (to < 0) return;
       [g.m.root, g.eggMesh, g.hayMesh].forEach(function (o) { if (o && o.parent) o.parent.remove(o); }); g.slate.map = abSlateTex; g.slate.needsUpdate = true;
       glimmers.splice(glimmers.indexOf(g), 1);
@@ -4928,6 +4930,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   adoptGlimmerwing = function (kind) {
     if (FBARN_KINDS.indexOf(kind) < 0) return fbarnBaseAdopt(kind);
     if (!fbarn.built) { showToast('A ' + FBARN_NAMES[kind] + ' lives in a barn: build one at Oak & Ember first 🐮', 2800); return; }
+    if (!siteReady(fbarn)) { showToast('Your barn is still being built: it\'ll be ready on the morning of day ' + (fbarn.start + SITE_DAYS) + ' 🪚', 2800); return; }
     var fs2 = fbarnFreeStall(), cost = fbarnKindCost(kind);
     if (fs2 < 0) { showToast('Your barn is full: it has room for 4', 2200); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
@@ -4942,8 +4945,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   var fbarnBarnRender = renderBarnShop;
   renderBarnShop = function () {
     fbarnBarnRender();
-    var free = fbarn.built && fbarnFreeStall() >= 0;
-    FBARN_BTNS.forEach(function (b) { b[0].innerHTML = !fbarn.built ? '🐮 Needs a barn' : !free ? 'Your barn is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1]; });
+    var free = siteReady(fbarn) && fbarnFreeStall() >= 0;
+    FBARN_BTNS.forEach(function (b) { b[0].innerHTML = !fbarn.built ? '🐮 Needs a barn' : !siteReady(fbarn) ? '🪚 Barn being built' : !free ? 'Your barn is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1]; });
     barnTilesSync();
   };
 
@@ -4956,7 +4959,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#3e3430'; g.fillRect(p[0] - 2, p[1] - hd, 4, hd * 2);
     g.fillStyle = '#b84a3c'; g.fillRect(p[0] - 9, p[1] - 9, 18, 18); g.fillStyle = '#f6efe2'; g.fillRect(p[0] - 9, p[1] - 9, 18, 3);
     g.fillStyle = '#b84a3c'; g.fillRect(p[0] - 1.5 * K, p[1] + hd, 3 * K, 6); g.fillStyle = '#f6efe2'; g.fillRect(p[0] - 1, p[1] + hd, 2, 6);
-    label('Barn', fbarn.x, fbarn.z, hd + 30);
+    label(siteReady(fbarn) ? 'Barn' : 'Barn (being built)', fbarn.x, fbarn.z, hd + 30);
   }
   var fbarnBaseInteract = interact;
   interact = function () {
@@ -4967,6 +4970,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inFbarn && player.parent !== fbarnScene) inFbarn = false;      // (carried home or teleported away from inside)
     updateFbarnButton();
     if (!fbarn.built) return;
+    siteTick('fbarn');
     updateFbarnFeeding(dt);
     if (inFbarn) updateFbarnInside(state.time); else updateFbarnOutside(state.time, night);
   }
@@ -5207,6 +5211,88 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[38, 112, '#f4a6c8'], [44, 113, '#fff2e0'], [86, 112, '#c8a8f0'], [91, 113, '#ffb08a']].forEach(function (f) { g.fillStyle = '#5f9a48'; g.beginPath(); g.arc(f[0], f[1] + 1, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = f[2]; g.beginPath(); g.arc(f[0], f[1] - 1, 1.6, 0, Math.PI * 2); g.fill(); });
     return c.toDataURL();
   }
+
+  // ---------- Building sites: the coop and the barn take two days to build too ----------
+  // Like the mill: the day you buy one, a building site goes up on its spot (a stone footing and floorboards, a bare
+  // timber frame with its roof skeleton, scaffolding, lumber and Oak & Ember's sign); by the next morning its walls
+  // are up; and on the second morning it's finished. You can't go in, or adopt animals into it, until then
+  var SITE_DAYS = 2, siteSigns = {};
+  function siteStage(o) { return Math.min(SITE_DAYS, farmDay() - o.start); }   // 0: just started, 1: walls up, 2: finished
+  function siteSignTex(name) {
+    if (!siteSigns[name]) siteSigns[name] = cpTex(512, 160, function (g, w, h) {
+      g.fillStyle = '#7a5236'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4e6c8'; g.fillRect(8, 8, w - 16, h - 16);
+      g.fillStyle = '#5a3a20'; g.textAlign = 'center'; g.font = '600 48px Fredoka, Georgia, serif'; g.fillText('Your ' + name + ' is coming!', w / 2, 70);
+      g.font = '28px Fredoka, Georgia, serif'; g.fillText('🪚 Built by Oak & Ember · ready in two days', w / 2, 120);
+    });
+    return siteSigns[name];
+  }
+  function siteBuild(kind, stage) {                                    // (the building site for your coop or barn, as far as it's got)
+    var coopK = kind === 'coop', o = coopK ? coop : fbarn, W = coopK ? COOP_BW : FBARN_BW, D = coopK ? COOP_BD : FBARN_BD, H = coopK ? COOP_WALL : FBARN_WALL, apron = coopK ? 0.95 : 1.6;
+    var G = new THREE.Group(); G.position.set(o.x, o.fy, o.z);
+    function gy(lx, lz) { return groundHeight(o.x + lx, o.z + lz) - o.fy; }
+    var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * (W / 2 + 0.3), gz * (D / 2 + 0.3)));
+    var fh = -minG + 0.3;
+    cpPart(new THREE.BoxGeometry(W + 0.2, fh, D + 0.2), mlmStone, 0, -fh / 2, 0, 0, 0, 0, G);   // (the footing, and the floor laid on it)
+    for (var fb = -W / 2 + 0.15; fb < W / 2; fb += 0.3) cpPart(new THREE.BoxGeometry(0.28, 0.05, D), [mlmWood, mlmFrame][Math.round((fb + W) / 0.3) % 2], fb, 0.025, 0, 0, 0, 0, G);
+    if (stage >= 1) {                                                  // (day two: the walls are up)
+      if (coopK) {
+        coopWall(G, COOP_BW, H, 0, [[-2.15, -1.15, 1.02, 1.78], [1.15, 2.15, 1.02, 1.78]], [-0.52, 0.52, 1.92], cpmBoard, 0, D / 2, 0);
+        coopWall(G, COOP_BW, H, 0, [[-1.8, -1.0, 1.2, 1.8], [1.0, 1.8, 1.2, 1.8]], null, cpmBoard, 0, -D / 2, Math.PI);
+        coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [[-0.5, 0.5, 1.02, 1.78]], null, cpmBoard, -W / 2, 0, -Math.PI / 2);
+        coopWall(G, COOP_BD + 0.12, H, COOP_PEAK, [], null, cpmBoard, W / 2, 0, Math.PI / 2);
+      } else {
+        fbarnWall(G, FBG, FB_FRH, FB_DOOR, fbmRed, 0, D / 2, 0); fbarnWall(G, FBG, FB_BKH, null, fbmRed, 0, -D / 2, Math.PI);
+        fbarnWall(G, FB_SIDE, FB_SH, null, fbmRed, -W / 2, 0, -Math.PI / 2); fbarnWall(G, FB_SIDE, FB_SH, null, fbmRed, W / 2, 0, Math.PI / 2);
+      }
+    } else {                                                           // (day one: just the timber frame)
+      var posts = [];
+      for (var px = -W / 2; px <= W / 2 + 0.01; px += W / Math.round(W / 0.9)) posts.push([px, -D / 2], [px, D / 2]);
+      for (var pz = -D / 2 + D / Math.round(D / 0.9); pz < D / 2 - 0.01; pz += D / Math.round(D / 0.9)) posts.push([-W / 2, pz], [W / 2, pz]);
+      posts.forEach(function (p) { millBeam(G, [p[0], 0, p[1]], [p[0], H, p[1]], 0.1, mlmFrame); });
+      [[-W / 2, -D / 2, W / 2, -D / 2], [-W / 2, D / 2, W / 2, D / 2], [-W / 2, -D / 2, -W / 2, D / 2], [W / 2, -D / 2, W / 2, D / 2]].forEach(function (e) {
+        [0.08, H].forEach(function (y) { millBeam(G, [e[0], y, e[1]], [e[2], y, e[3]], 0.11, mlmFrame); });
+        millBeam(G, [e[0], 0.3, e[1]], [e[2], H - 0.3, e[3]], 0.07, mlmWood);   // (a brace across each side)
+      });
+    }
+    // (the roof's skeleton: rafters along its length, a ridge beam, and purlins, with no roof on yet)
+    var prof = coopK ? [[-D / 2 - 0.3, H - 0.2], [0, H + COOP_PEAK], [D / 2 + 0.3, H - 0.2]] : [[-5.0, 2.75], [-2.9, 4.5], [0, 5.35], [2.9, 4.5], [5.0, 2.75]];
+    var L = coopK ? W + 0.3 : D + 0.4, n = Math.round(L / 0.75);
+    function at(p, q) { return coopK ? [p, q[1], q[0]] : [q[0], q[1], p]; }
+    for (var i = 0; i <= n; i++) { var p = -L / 2 + i * L / n; for (var k = 0; k < prof.length - 1; k++) millBeam(G, at(p, prof[k]), at(p, prof[k + 1]), 0.08, mlmFrame); }
+    prof.forEach(function (q, k) { if (k === 0 || k === prof.length - 1) return; millBeam(G, at(-L / 2, q), at(L / 2, q), 0.1, mlmFrame); });
+    prof.slice(0, -1).forEach(function (q, k) { var m = [(q[0] + prof[k + 1][0]) / 2, (q[1] + prof[k + 1][1]) / 2]; millBeam(G, at(-L / 2, m), at(L / 2, m), 0.06, mlmWood); });
+    // (scaffolding along the front, with a ladder, planks at each level and a rail)
+    var sz = D / 2 + 0.38, top = coopK ? H + 0.6 : H + 1.6;
+    for (var sx = -W / 2 + 0.3; sx <= W / 2 - 0.29; sx += (W - 0.6) / Math.round((W - 0.6) / 1.4)) [sz - 0.25, sz + 0.25].forEach(function (z) { cpPart(new THREE.CylinderGeometry(0.035, 0.035, top - gy(sx, z), 6), mlmFrame, sx, (top + gy(sx, z)) / 2, z, 0, 0, 0, G); });
+    for (var lv = 1.0; lv < top - 0.2; lv += 1.05) { cpPart(new THREE.BoxGeometry(W - 0.4, 0.04, 0.42), mlmWood, 0, lv, sz, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.022, 0.022, W - 0.5, 6), mlmFrame, 0, lv + 0.45, sz + 0.24, 0, 0, Math.PI / 2, G); }
+    var LD = new THREE.Group(); LD.position.set(W / 2 - 0.5, gy(W / 2 - 0.5, sz + 0.55), sz + 0.55); LD.rotation.set(-0.25, 0, 0); G.add(LD);
+    [-0.2, 0.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, top + 0.3, 0.05), mlmFrame, x, (top + 0.3) / 2, 0, 0, 0, 0, LD); }); for (var lr = 0; lr < Math.floor(top / 0.3); lr++) cpPart(new THREE.CylinderGeometry(0.018, 0.018, 0.4, 5), mlmWood, 0, 0.25 + lr * 0.3, 0, 0, 0, Math.PI / 2, LD);
+    // (stacks of lumber, a sawhorse with a plank on it, a keg of nails, and Oak & Ember's sign)
+    var lx = -W / 2 + 1.0, lz = D / 2 + apron * 0.62;
+    for (var pl = 0; pl < 9; pl++) cpPart(new THREE.BoxGeometry(1.7, 0.06, 0.2), [mlmWood, mlmFrame][pl % 2], lx + (pl % 2) * 0.05, gy(lx, lz) + 0.05 + Math.floor(pl / 3) * 0.06, lz + (pl % 3) * 0.21 - 0.21, 0, 0.1, 0, G);
+    var SH = new THREE.Group(); SH.position.set(-0.6, gy(-0.6, D / 2 + apron * 0.7), D / 2 + apron * 0.7); SH.rotation.y = 0.3; G.add(SH);
+    cpPart(new THREE.BoxGeometry(1.0, 0.1, 0.12), mlmWood, 0, 0.62, 0, 0, 0, 0, SH); [-0.4, 0.4].forEach(function (x) { [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.06, 0.7, 0.06), mlmWood, x, 0.32, s * 0.14, s * 0.35, 0, 0, SH); }); });
+    cpPart(new THREE.BoxGeometry(1.4, 0.05, 0.2), mlmFrame, 0.2, 0.7, 0, 0, 0.1, 0, SH);
+    coopBarrel(G, 0.55, gy(0.55, D / 2 + apron * 0.75), D / 2 + apron * 0.75, 0.16, 0.36, false);
+    var SG = new THREE.Group(); SG.position.set(W / 2 - 1.1, gy(W / 2 - 1.1, D / 2 + apron * 0.8), D / 2 + apron * 0.8); SG.rotation.y = -0.15; G.add(SG);
+    [-0.55, 0.55].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 1.1, 0.07), mlmWood, x, 0.55, -0.02, 0, 0, 0, SG); });
+    cpPart(new THREE.BoxGeometry(1.3, 0.44, 0.04), mlmWood, 0, 0.85, 0, 0, 0, 0, SG);
+    cpPart(new THREE.PlaneGeometry(1.24, 0.39), new THREE.MeshStandardMaterial({ map: siteSignTex(coopK ? 'coop' : 'barn'), roughness: 0.8 }), 0, 0.85, 0.022, 0, 0, 0, SG).castShadow = false;
+    scene.add(G);
+    return G;
+  }
+  function siteTick(kind) {                                            // (each morning Oak & Ember get further; on the second, it's finished)
+    var coopK = kind === 'coop', o = coopK ? coop : fbarn, st = siteStage(o);
+    if (st === o.stage) return;
+    var was = o.stage; o.stage = st;
+    if (coopK) { if (coopGroup) scene.remove(coopGroup); coopGroup = st < SITE_DAYS ? siteBuild('coop', st) : coopBuildOutside(); if (st === SITE_DAYS) coopDoor = coopFront(0.12); }
+    else { if (fbarnGroup) scene.remove(fbarnGroup); fbarnGroup = st < SITE_DAYS ? siteBuild('fbarn', st) : fbarnBuildOutside(); if (st === SITE_DAYS) fbarnDoor = fbarnFront(0.15); }
+    if (was < 0) return;
+    if (st === SITE_DAYS) homeMigrate(false);
+    var nm = coopK ? 'coop' : 'barn';
+    setTimeout(function () { showToast(st === SITE_DAYS ? (coopK ? '🐔' : '🐮') + ' Your ' + nm + ' is finished! You can go in, and adopt animals for it at Fluff & Feather.' : '🪚 Oak & Ember worked on your ' + nm + ' all day: its walls are up! One more day to go.', 4600); }, coopK ? 7000 : 7600);
+  }
+  function siteReady(o) { return o.built && o.stage >= SITE_DAYS; }
 
   // ---------- Flying on her broom ----------
   // B (or the Fly button) hops on and off her broom; only outdoors. Once up she flies a little faster than she walks,
