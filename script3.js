@@ -1999,6 +1999,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (coop.built) coopDrawOnMap(g, K, label);                         // your coop, if you've built one
     if (fbarn.built) fbarnDrawOnMap(g, K, label);                       // and your barn
     if (mill.built) millDrawOnMap(g, K, label);                         // and your mill
+    if (silo.built) siloDrawOnMap(g, K, label);                         // and your silo
     // Fluff & Feather: its grey gambrel roof with the ridge along it, and the cupola
     var apm = mapXY(ANIMAL_X, ANIMAL_Z);
     g.save(); g.translate(apm[0], apm[1]); g.rotate(-ANIMAL_TURN);
@@ -3385,7 +3386,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // nothing grows back under it. Up to four Glimmerwings, Puddlewisps, Emberwings, Gemwrens and Celestaras can live
   // in it. Go in with Interact; inside, a feeding bench has eight spots for hay: fill them up, and every hungry
   // animal goes over and eats a bundle by itself (pet them and collect their eggs just like at Fluff & Feather)
-  var FBARN_COST = 3000, MILL_COST = 2000;                             // (the barn's and the mill's prices, for Oak & Ember's menu: see "Your barn" and "Your mill" below)
+  var FBARN_COST = 3000, MILL_COST = 2000, SILO_COST = 2500;          // (the barn's, the mill's and the silo's prices, for Oak & Ember's menu: see "Your barn", "Your mill" and "Your silo" below)
   var COOP_COST = 2000, COOP_STALL0 = 3, COOP_CAP = 4, COOP_KINDS = ['glim', 'duck', 'ember', 'gem', 'ostrich'];
   var COOP_NAMES = { glim: 'Glimmerwing', duck: 'Puddlewisp', ember: 'Emberwing', gem: 'Gemwren', ostrich: 'Celestara' };
   var COOP_FC = 5, COOP_FR = 4, COOP_BW = 5.6, COOP_BD = 4.0, COOP_WALL = 2.4, COOP_PEAK = 1.35;   // tiles it takes; its walls' width, depth and height; how high the roof rises
@@ -4040,12 +4041,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   function coopBenchAction() {
     var i = coop.hay.indexOf(false);
     if (i < 0) { showToast('The feeding bench is full: all 8 spots have hay 🌾', 2200); return; }
-    if (!takeItem('hay', 1)) { showToast('You need hay to put on the bench. Buy it at Fluff & Feather, or trim bushes for it 🌾', 2800); return; }
+    if (!takeItem('hay', 1)) { showToast('You need hay to put on the bench. Take it from the hopper' + (siloReady() ? ' (' + silo.hay + ' in your silo)' : '') + ', buy it at Fluff & Feather, or trim bushes for it 🌾', 3000); return; }
     coop.hay[i] = true; coopHayShow(); popSound();
     showToast('You put a bundle of hay on the feeding bench (' + coop.hay.filter(Boolean).length + '/8) 🌾', 1800);
   }
   function coopTarget() {                                              // what Interact would do in here: the bench, or one of your animals (or its nesting box)
-    if (!inCoop || glimNaming) return null;
+    if (!inCoop || glimNaming || siloHopperHere()) return null;      // (by the hopper, Interact takes hay out of it instead)
     var lx = player.position.x - COI_X, lz = player.position.z - COI_Z, best = null, bd = 1.0;
     coopAnimals().forEach(function (g) {
       var n = COOP_NESTS[g.stall - COOP_STALL0], d = Math.min(Math.hypot(lx - g.x, lz - g.z), g.egg ? Math.hypot(lx - n.x, lz - n.z) - 0.1 : 9);
@@ -4165,15 +4166,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic mill-pic"></div><div class="shop-text"><b>Mill</b><span>A tall white windmill on a fieldstone base, with a wooden gallery all round, a green cap, four lattice sails with canvas that turn in the breeze, and a little fantail. It takes Oak &amp; Ember two days to build: watch it go up, from a timber frame to its sails. It doesn\'t do anything just yet. You choose where it goes on a grid of your farm.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="mill-buy">Build</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic silo-pic"></div><div class="shop-text"><b>Silo</b><span>A tall round silo of red-painted staves bound with iron hoops, on a fieldstone base, with a silver dome and a little weathervane, a ladder up its side, and a glass strip up its front that shows how full it is. It holds hay and only hay: up to 300 bundles. Pour your hay in through the chute at its foot, and take it out a bundle at a time from the hoppers in your coop and barn. It takes Oak &amp; Ember two days to build. You choose where it goes on a grid of your farm.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + SILO_COST.toLocaleString('en-US') + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="silo-buy">Build</button></div>' +
     '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(carpShopBox);
   (function () { var pic = document.createElement('img'); pic.src = coopShopIcon; pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.coop-pic').appendChild(pic); })();
   (function () { var pic = document.createElement('img'); pic.src = fbarnShopIcon(); pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.fbarn-pic').appendChild(pic); })();
   (function () { var pic = document.createElement('img'); pic.src = millShopIcon(); pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.mill-pic').appendChild(pic); })();
+  (function () { var pic = document.createElement('img'); pic.src = siloShopIcon(); pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.silo-pic').appendChild(pic); })();
   shopCards(carpShopBox);
   carpShopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Buildings'), carpShopBox.querySelector('.shop-card'));
   var carpTilesSync = shopCatalogue(carpShopBox); carpShopBox.classList.add('shop-wide');
-  var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy');
+  var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy'), siloBuyBtn = carpShopBox.querySelector('.silo-buy');
   function renderCarpShop() {
     carpShopCoins.textContent = state.coins;
     coopBuyBtn.innerHTML = coop.built ? (siteReady(coop) ? 'Built ✓' : 'Being built: ready day ' + (coop.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
@@ -4182,6 +4187,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     fbarnBuyBtn.disabled = fbarn.built || state.coins < FBARN_COST;
     millBuyBtn.innerHTML = !mill.built ? 'Build · <img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') : mill.stage < MILL_DAYS ? 'Being built: ready day ' + (mill.start + MILL_DAYS) : 'Built ✓';
     millBuyBtn.disabled = mill.built || state.coins < MILL_COST;
+    siloBuyBtn.innerHTML = !silo.built ? 'Build · <img class="coin-icon" alt=""> ' + SILO_COST.toLocaleString('en-US') : !siloReady() ? 'Being built: ready day ' + (silo.start + SILO_DAYS) : 'Built ✓';
+    siloBuyBtn.disabled = silo.built || state.coins < SILO_COST;
     carpTilesSync();
   }
   function atCarpCounter(margin) {                                     // standing in front of the counter, on the door side
@@ -4207,6 +4214,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (mill.built) { showToast('You already have a mill', 1800); return; }
     if (state.coins < MILL_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(MILL_SPEC);
+  });
+  siloBuyBtn.addEventListener('click', function () {
+    if (silo.built) { showToast('You already have a silo', 1800); return; }
+    if (state.coins < SILO_COST) { showToast('Not enough Star Coins', 1800); return; }
+    closeCarpShop(); coopOpenPlacer(SILO_SPEC);
   });
   function updateCarpShop() {
     if (carpShopOpen && !atCarpCounter(1.2)) closeCarpShop();          // it stays open until you really walk away from the counter
@@ -4241,7 +4253,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.6 || inHouseYard(x, z) || dist(x, z, binWorld.x, binWorld.z) < 1.8) return false;
     var t = tileMap[tileKey(c, r)]; if (t && t.soil) return false;    // (not on your soil)
-    if (coopCovers(x, z, -0.05) || fbarnCovers(x, z, -0.05) || millCovers(x, z, -0.05)) return false;   // (nor on your coop, barn or mill)
+    if (coopCovers(x, z, -0.05) || fbarnCovers(x, z, -0.05) || millCovers(x, z, -0.05) || siloCovers(x, z, -0.05)) return false;   // (nor on your coop, barn, mill or silo)
     for (var i = 0; i < solids.length; i++) { var sd = solids[i]; if (sd.r > 0 && !clear[i] && Math.abs(sd.x - x) < sd.r + h && Math.abs(sd.z - z) < sd.r + h) return false; }   // (nothing standing in the way)
     return true;
   }
@@ -4911,12 +4923,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnBenchAction() {
     var i = fbarn.hay.indexOf(false);
     if (i < 0) { showToast('The feeding bench is full: all 8 spots have hay 🌾', 2200); return; }
-    if (!takeItem('hay', 1)) { showToast('You need hay to put on the bench. Buy it at Fluff & Feather, or trim bushes for it 🌾', 2800); return; }
+    if (!takeItem('hay', 1)) { showToast('You need hay to put on the bench. Take it from the hopper' + (siloReady() ? ' (' + silo.hay + ' in your silo)' : '') + ', buy it at Fluff & Feather, or trim bushes for it 🌾', 3000); return; }
     fbarn.hay[i] = true; fbarnHayShow(); popSound();
     showToast('You put a bundle of hay on the feeding bench (' + fbarn.hay.filter(Boolean).length + '/8) 🌾', 1800);
   }
   function fbarnTarget() {                                             // what Interact would do in here: the bench, or one of your animals
-    if (!inFbarn || glimNaming) return null;
+    if (!inFbarn || glimNaming || siloHopperHere()) return null;     // (by the hopper, Interact takes hay out of it instead)
     var lx = player.position.x - FBI_X, lz = player.position.z - FBI_Z, best = null, bd = 1.3;
     fbarnAnimals().forEach(function (g) { var p = fbarnToRoom(g.x, g.z), d = Math.hypot(lx - p[0], lz - p[1]); if (d < bd) { bd = d; best = g; } });
     var atBench = Math.abs(lx) < 3.1 && lz > 0.25 && lz < 1.25;
@@ -5225,6 +5237,319 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.fillStyle = '#4a3626'; g.beginPath(); g.arc(0, 0, 3.4, 0, Math.PI * 2); g.fill(); g.restore();
     [[38, 112, '#f4a6c8'], [44, 113, '#fff2e0'], [86, 112, '#c8a8f0'], [91, 113, '#ffb08a']].forEach(function (f) { g.fillStyle = '#5f9a48'; g.beginPath(); g.arc(f[0], f[1] + 1, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = f[2]; g.beginPath(); g.arc(f[0], f[1] - 1, 1.6, 0, Math.PI * 2); g.fill(); });
     return c.toDataURL();
+  }
+
+  // ---------- Your silo: Oak & Ember's fourth building ----------
+  // For 2,500 Star Coins, Oak & Ember builds you a tall red stave silo with a silver dome, placed with the same grid
+  // of your farm (it takes 3 × 3 tiles). It takes two days to build. It holds hay and nothing else, 300 bundles at
+  // most: walk up to it with hay in your bag and press Interact to pour it in through the chute. A glass strip up its
+  // front shows how full it is. The hay comes back out through hoppers, one in your coop by the door and one on the
+  // right-hand wall of your barn: each press of Interact at a hopper drops a bundle into your bag, ready for the bench
+  var SILO_FC = 3, SILO_FR = 3, SILO_DAYS = 2, SILO_R = 1.3, SILO_H = 5.2, SILO_CAP = 300;   // tiles it takes; days to build; its radius and the height of its walls; the most hay it holds
+  var silo = { built: false, c: 0, r: 0, x: 0, z: 0, fy: 0, start: 0, stage: -1, hay: 0, grass: [], solids: [] };
+  var siloGroup = null, siloGauge = null, siloTuft = null, siloGlows = [], siloHopperTufts = [];
+  function siloCovers(x, z, r) { return silo.built && Math.abs(x - silo.x) < SILO_FC * TILE / 2 + r && Math.abs(z - silo.z) < SILO_FR * TILE / 2 + r; }
+  var siloBaseSoilNear = soilNear;                                     // (nothing grows back under the silo either)
+  soilNear = function (x, z, r) { return siloBaseSoilNear(x, z, r) || siloCovers(x, z, r); };
+  function siloStage() { return !silo.built ? -1 : Math.min(SILO_DAYS, farmDay() - silo.start); }   // 0: just started, 1: half built, 2: finished
+  function siloReady() { return silo.built && silo.stage >= SILO_DAYS; }
+  var SILO_SPEC = { title: '🌾 Where should your silo go?', hint: 'Tap your farm to choose a spot. The silo takes 3 × 3 tiles, with its hay chute facing south (down the map).' + PLACE_HINT_END, fc: SILO_FC, fr: SILO_FR, bw: 2.7, bd: 2.7, off: 0, door: 0.7, roof: 'rgba(200,206,214,0.92)', doorCol: '#8a6040', emoji: '🌾', cost: SILO_COST,
+    built: function () { return silo.built; }, build: function (c, r) { silo.hay = 0; siloPlace(c, r, farmDay()); },
+    done: function () { return '🌾 Oak & Ember have started building your silo! It takes two days: it\'ll be finished on the morning of day ' + (silo.start + SILO_DAYS) + '.'; } };
+
+  // ===== what it's made of =====
+  var siloStaveTex = cpTex(256, 256, function (g, w, h) {             // (red-painted staves standing side by side, each with its own grain and a pale seam)
+    var n = 16, sw = w / n;
+    for (var i = 0; i < n; i++) {
+      var k = 0.9 + Math.random() * 0.14; g.fillStyle = 'rgb(' + Math.round(184 * k) + ',' + Math.round(74 * k) + ',' + Math.round(60 * k) + ')'; g.fillRect(i * sw, 0, sw, h);
+      for (var s = 0; s < 6; s++) { var x = i * sw + 2 + Math.random() * (sw - 4); g.strokeStyle = 'rgba(90,30,20,' + (0.08 + Math.random() * 0.1) + ')'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + 2, h * 0.3, x - 2, h * 0.7, x + 1, h); g.stroke(); }
+      g.fillStyle = 'rgba(60,20,14,0.45)'; g.fillRect(i * sw, 0, 1.5, h); g.fillStyle = 'rgba(255,220,200,0.12)'; g.fillRect(i * sw + 1.5, 0, 1.5, h);
+      for (var p = 0; p < 3; p++) { g.fillStyle = 'rgba(240,226,206,' + (0.05 + Math.random() * 0.08) + ')'; g.fillRect(i * sw + Math.random() * sw, Math.random() * h, 2 + Math.random() * 4, 6 + Math.random() * 20); }   // (weathered paint)
+    }
+  }, [6, 3]);
+  var smStave = new THREE.MeshStandardMaterial({ map: siloStaveTex, roughness: 0.82 });
+  var smStaveIn = new THREE.MeshStandardMaterial({ map: siloStaveTex, color: 0x9a7060, roughness: 0.9, side: THREE.BackSide });
+  var smDome = new THREE.MeshStandardMaterial({ color: 0xc4cad2, metalness: 0.65, roughness: 0.32 });
+  var smRib = new THREE.MeshStandardMaterial({ color: 0x9aa2ac, metalness: 0.7, roughness: 0.3 });
+  var smHoop = new THREE.MeshStandardMaterial({ color: 0x3a3634, metalness: 0.55, roughness: 0.45 });
+  var smHay = new THREE.MeshStandardMaterial({ map: haySideTex, color: 0xf0d080, roughness: 1 });
+  var smGlass = new THREE.MeshStandardMaterial({ color: 0xcfe6f0, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.32, depthWrite: false });
+  var smConcrete = new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.95 });
+  var siloCountCv = document.createElement('canvas'); siloCountCv.width = 256; siloCountCv.height = 128;
+  var siloCountTex = new THREE.CanvasTexture(siloCountCv), siloCountShown = -1;
+  function siloDrawCount() {                                           // (the little plaque on the silo and on each hopper: how much hay is in your silo)
+    if (siloCountShown === silo.hay) return; siloCountShown = silo.hay;
+    var g = siloCountCv.getContext('2d'), w = 256, h = 128;
+    g.fillStyle = '#6a4630'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4e6c8'; g.fillRect(7, 7, w - 14, h - 14);
+    g.strokeStyle = 'rgba(122,82,54,0.5)'; g.lineWidth = 2; g.strokeRect(13, 13, w - 26, h - 26);
+    g.fillStyle = '#5a3a20'; g.textAlign = 'center'; g.font = '600 30px Fredoka, Georgia, serif'; g.fillText('🌾 Silo hay', w / 2, 50);
+    g.font = '600 40px Fredoka, Georgia, serif'; g.fillStyle = silo.hay >= SILO_CAP ? '#2f8a4e' : silo.hay ? '#5a3a20' : '#a04a3a'; g.fillText(silo.hay + ' / ' + SILO_CAP, w / 2, 98);
+    siloCountTex.needsUpdate = true;
+  }
+
+  // ===== building it: a building site, then half built, then finished =====
+  function siloBuildModel(stage) {
+    var G = new THREE.Group(); G.position.set(silo.x, silo.fy, silo.z); siloGlows = []; siloGauge = null; siloTuft = null;
+    var R = SILO_R;
+    function gy(lx, lz) { return groundHeight(silo.x + lx, silo.z + lz) - silo.fy; }
+    function on(a, r, y) { return [Math.sin(a) * r, y, Math.cos(a) * r]; }   // (a point round the silo, at angle a from the front)
+    var minG = 99; for (var k = 0; k < 12; k++) { var a0 = k / 12 * Math.PI * 2; minG = Math.min(minG, gy(Math.sin(a0) * (R + 0.4), Math.cos(a0) * (R + 0.4))); }
+    var fh = -minG + 0.12;
+    cpPart(new THREE.CylinderGeometry(R + 0.42, R + 0.46, fh, 40), smConcrete, 0, -fh / 2 + 0.06, 0, 0, 0, 0, G);   // (a round concrete pad it all stands on)
+    var wallTop = stage === 0 ? 0.55 : stage === 1 ? 2.9 : SILO_H;
+    // (a fieldstone base, then the red staves above it, open at the top until the dome goes on)
+    cpPart(new THREE.CylinderGeometry(R + 0.1, R + 0.14, 0.86, 40), mlmStone, 0, 0.49, 0, 0, 0, 0, G);
+    cpPart(new THREE.TorusGeometry(R + 0.1, 0.035, 6, 48), smConcrete, 0, 0.92, 0, Math.PI / 2, 0, 0, G);
+    if (wallTop > 1) {
+      var body = new THREE.CylinderGeometry(R, R, wallTop - 0.9, 48, 1, true);
+      cpPart(body, smStave, 0, 0.9 + (wallTop - 0.9) / 2, 0, 0, 0, 0, G); cpPart(body, smStaveIn, 0, 0.9 + (wallTop - 0.9) / 2, 0, 0, 0, 0, G);
+      for (var hy = 1.4; hy < wallTop - 0.15; hy += 0.62) {            // (iron hoops round it, each drawn tight with a pair of lugs)
+        cpPart(new THREE.TorusGeometry(R + 0.014, 0.022, 6, 64), smHoop, 0, hy, 0, Math.PI / 2, 0, 0, G);
+        var la = 2.2 + (hy * 1.7) % 1.2, lp = on(la, R + 0.05, hy);
+        cpPart(new THREE.BoxGeometry(0.07, 0.09, 0.06), smHoop, lp[0], lp[1], lp[2], 0, la, 0, G);
+        cpPart(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), cpmBrass, lp[0], lp[1], lp[2], 0, la, Math.PI / 2, G);
+      }
+      cpPart(new THREE.TorusGeometry(R + 0.02, 0.04, 6, 64), mlmDark, 0, wallTop - 0.02, 0, Math.PI / 2, 0, 0, G);   // (a dark rim along the top)
+    }
+    if (stage === 2) {
+      // (the silver dome, with ribs down it, a ring round its foot, and a little vent with a cap on top)
+      var D = new THREE.Group(); D.position.y = SILO_H; D.scale.y = 0.72; G.add(D);
+      cpPart(new THREE.SphereGeometry(R + 0.07, 40, 16, 0, Math.PI * 2, 0, Math.PI / 2), smDome, 0, 0, 0, 0, 0, 0, D);
+      for (var rb = 0; rb < 16; rb++) cpPart(new THREE.TorusGeometry(R + 0.08, 0.016, 4, 24, Math.PI / 2), smRib, 0, 0, 0, 0, rb / 16 * Math.PI * 2, 0, D);
+      cpPart(new THREE.TorusGeometry(R + 0.09, 0.05, 8, 64), smRib, 0, SILO_H + 0.02, 0, Math.PI / 2, 0, 0, G);
+      var vy = SILO_H + (R + 0.07) * 0.72;
+      cpPart(new THREE.CylinderGeometry(0.16, 0.2, 0.3, 16), smDome, 0, vy + 0.1, 0, 0, 0, 0, G);
+      cpPart(new THREE.ConeGeometry(0.3, 0.2, 16), smRib, 0, vy + 0.36, 0, 0, 0, 0, G);
+      cpPart(new THREE.SphereGeometry(0.06, 12, 8), cpmBrass, 0, vy + 0.5, 0, 0, 0, 0, G);
+      [0, 1, 2, 3].forEach(function (q) { var a = q * Math.PI / 2 + 0.4; cpPart(new THREE.BoxGeometry(0.03, 0.12, 0.03), smHoop, Math.sin(a) * 0.17, vy + 0.29, Math.cos(a) * 0.17, 0, 0, 0, G); });
+      // (a tiny weathervane: a hay bundle on an arrow)
+      var WV = new THREE.Group(); WV.position.set(0, vy + 0.55, 0); WV.rotation.y = 0.7; G.add(WV);
+      cpPart(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), smHoop, 0, 0.25, 0, 0, 0, 0, WV);
+      cpPart(new THREE.BoxGeometry(0.42, 0.012, 0.012), smHoop, 0, 0.4, 0, 0, 0, 0, WV); cpPart(new THREE.ConeGeometry(0.03, 0.08, 4), smHoop, 0.23, 0.4, 0, 0, 0, -Math.PI / 2, WV);
+      cpPart(new THREE.BoxGeometry(0.06, 0.08, 0.008), smHoop, -0.2, 0.4, 0, 0, 0, 0, WV);
+      var vb = pickupModel('hay'); vb.scale.setScalar(0.55); vb.position.set(0, 0.46, 0); WV.add(vb);
+      // (a ladder up its side to the dome, with a safety cage round the top half)
+      var la2 = -2.35, LD = new THREE.Group(); var lp2 = on(la2, R + 0.12, 0); LD.position.set(lp2[0], 0, lp2[2]); LD.rotation.y = la2; G.add(LD);
+      var ltop = SILO_H + 0.5;
+      [-0.18, 0.18].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.035, ltop - 0.6, 0.035), smHoop, x, 0.6 + (ltop - 0.6) / 2, 0, 0, 0, 0, LD); cpPart(new THREE.BoxGeometry(0.03, 0.03, 0.12), smHoop, x, 1.0, -0.06, 0, 0, 0, LD); cpPart(new THREE.BoxGeometry(0.03, 0.03, 0.12), smHoop, x, ltop - 0.6, -0.06, 0, 0, 0, LD); });
+      for (var rg = 0.9; rg < ltop - 0.1; rg += 0.3) cpPart(new THREE.CylinderGeometry(0.012, 0.012, 0.36, 6), smHoop, 0, rg, 0, 0, 0, Math.PI / 2, LD);
+      for (var cg = 2.4; cg < ltop; cg += 0.55) cpPart(new THREE.TorusGeometry(0.28, 0.012, 4, 16, Math.PI), smHoop, 0, cg, 0, Math.PI / 2, 0, 0, LD);
+      [-0.26, 0, 0.26].forEach(function (x) { var zz = Math.sqrt(Math.max(0, 0.0784 - x * x)); cpPart(new THREE.BoxGeometry(0.014, ltop - 2.4, 0.014), smHoop, x, 2.4 + (ltop - 2.4) / 2, zz, 0, 0, 0, LD); });
+      // (the fill gauge: a glass strip up the front, with the hay inside rising and falling as you fill it and use it)
+      var ga = -0.42, GG = new THREE.Group(); var gp = on(ga, R + 0.005, 0); GG.position.set(gp[0], 0, gp[2]); GG.rotation.y = ga; G.add(GG);
+      cpPart(new THREE.BoxGeometry(0.22, 3.5, 0.03), mlmDark, 0, 1.1 + 1.75, -0.005, 0, 0, 0, GG);
+      siloGauge = cpPart(new THREE.BoxGeometry(0.16, 1, 0.02), smHay, 0, 1.15, 0.012, 0, 0, 0, GG); siloGauge.castShadow = false;
+      cpPart(new THREE.PlaneGeometry(0.16, 3.4), smGlass, 0, 1.15 + 1.7, 0.026, 0, 0, 0, GG).castShadow = false;
+      [[0, 0.06, 0.26, 0.05], [3.4, 0.06, 0.26, 0.05], [1.7, 0.03, 0.06, 0.02], [0.85, 0.02, 0.04, 0.02], [2.55, 0.02, 0.04, 0.02]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], b[1], b[3]), b[1] > 0.04 ? mlmDark : cpmBrass, 0.1, 1.15 + b[0], 0.03, 0, 0, 0, GG); });
+      // (the hay chute at the front: a hatch in the staves and a wooden trough sloping up to it, with a bundle waiting in it when there's hay inside)
+      var CH = new THREE.Group(); var cp2 = on(0, R, 0); CH.position.set(cp2[0], 0, cp2[2]); G.add(CH);
+      cpPart(new THREE.BoxGeometry(0.66, 0.74, 0.1), mlmWood, 0, 1.38, -0.005, 0, 0, 0, CH);
+      [[0, 1.77, 0.76, 0.06], [0, 0.99, 0.76, 0.06], [-0.36, 1.38, 0.06, 0.84], [0.36, 1.38, 0.06, 0.84]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], b[3], 0.06), mlmDark, b[0], b[1], 0.04, 0, 0, 0, CH); });
+      [1.15, 1.6].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.3, 0.04, 0.02), smHoop, -0.18, y, 0.06, 0, 0, 0, CH); });
+      cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.05), cpmBrass, 0.24, 1.38, 0.07, 0, 0, 0, CH);
+      var TR = new THREE.Group(); TR.position.set(0, 1.0, 0.1); TR.rotation.x = 0.42; CH.add(TR);
+      cpPart(new THREE.BoxGeometry(0.62, 0.04, 0.72), mlmWood, 0, 0, 0.36, 0, 0, 0, TR);
+      [-0.31, 0.31].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.04, 0.18, 0.72), mlmFrame, x, 0.08, 0.36, 0, 0, 0, TR); });
+      cpPart(new THREE.BoxGeometry(0.62, 0.14, 0.04), mlmFrame, 0, 0.06, 0.72, 0, 0, 0, TR);
+      siloTuft = pickupModel('hay'); siloTuft.scale.setScalar(1.6); siloTuft.position.set(0, 0.12, 0.42); siloTuft.rotation.y = Math.PI / 2; TR.add(siloTuft);
+      [-0.24, 0.24].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 0.66, 0.05), mlmDark, x, 0.39, 0.76, 0, 0, 0, CH); });   // (and legs under its outer end)
+      // (the plaque over the chute, saying how much hay is in it, and a lantern to see it by at night)
+      cpPart(new THREE.BoxGeometry(0.86, 0.46, 0.16), mlmDark, 0, 2.25, -0.03, 0, 0, 0, CH);
+      cpPart(new THREE.PlaneGeometry(0.8, 0.4), new THREE.MeshStandardMaterial({ map: siloCountTex, roughness: 0.8 }), 0, 2.25, 0.055, 0, 0, 0, CH).castShadow = false;
+      var lnp = on(0.5, R + 0.22, 0); cpLantern(G, lnp[0], 2.2, lnp[2], siloGlows); var lbp = on(0.5, R + 0.08, 0); cpPart(new THREE.BoxGeometry(0.04, 0.04, 0.2), smHoop, lbp[0], 2.42, lbp[2], 0, 0.5, 0, G);
+      // (the pipe that carries the hay underground to your coop and barn, leaving from its side and going down into the ground)
+      var pa = 1.75, PP = new THREE.Group(); var pp = on(pa, R, 0); PP.position.set(pp[0], 0, pp[2]); PP.rotation.y = pa; G.add(PP);
+      cpPart(new THREE.CylinderGeometry(0.09, 0.09, 0.42, 16), cpmSteel, 0, 1.15, 0.2, Math.PI / 2, 0, 0, PP);
+      cpPart(new THREE.SphereGeometry(0.1, 16, 10), cpmSteel, 0, 1.15, 0.42, 0, 0, 0, PP);
+      var pgy = gy(pp[0] + Math.sin(pa) * 0.42, pp[2] + Math.cos(pa) * 0.42);
+      cpPart(new THREE.CylinderGeometry(0.09, 0.09, 1.15 - pgy + 0.1, 16), cpmSteel, 0, (1.15 + pgy - 0.1) / 2, 0.42, 0, 0, 0, PP);
+      [0.25, 0.75].forEach(function (y) { cpPart(new THREE.TorusGeometry(0.1, 0.018, 6, 20), smRib, 0, pgy + y, 0.42, Math.PI / 2, 0, 0, PP); });
+      cpPart(new THREE.CylinderGeometry(0.2, 0.24, 0.12, 18), smConcrete, 0, pgy + 0.04, 0.42, 0, 0, 0, PP);
+      cpPart(new THREE.TorusGeometry(0.1, 0.02, 6, 20), smRib, 0, 1.15, 0.03, 0, 0, 0, PP);
+      // (a hay bale and a pitchfork by its foot, and flowers round the pad)
+      var bl = pickupModel('hay'); bl.scale.setScalar(3.1); var bp = on(0.95, R + 0.62, 0); bl.position.set(bp[0], gy(bp[0], bp[2]) + 0.26, bp[2]); bl.rotation.y = 0.95 + Math.PI / 2; bl.traverse(function (o) { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); G.add(bl);
+      var PF = new THREE.Group(); var pfp = on(-0.75, R + 0.25, 0); PF.position.set(pfp[0], gy(pfp[0], pfp[2]), pfp[2]); PF.rotation.set(0.28, -0.75, 0.05); G.add(PF);
+      cpPart(new THREE.CylinderGeometry(0.016, 0.018, 1.35, 8), mlmWood, 0, 0.68, 0, 0, 0, 0, PF); cpPart(new THREE.BoxGeometry(0.16, 0.02, 0.02), smHoop, 0, 1.36, 0, 0, 0, 0, PF);
+      [-0.07, 0, 0.07].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.006, 0.003, 0.26, 5), smHoop, x, 1.49, 0, 0, 0, 0, PF); });
+      var fl = []; [-1.25, -1.0, 0.55, 1.3, 2.55, 3.0, 3.6].forEach(function (a) { var fp = on(a, R + 0.36, 0); fl.push([fp[0], gy(fp[0], fp[2]), fp[2]]); }); coopFlowers(G, fl, 131);
+    } else {
+      // (still being built: scaffolding round it, with planks at each level and a ladder, lumber and Oak & Ember's sign)
+      var top = stage === 0 ? 2.4 : 4.2, SR = R + 0.5, posts = [];
+      for (var p = 0; p < 8; p++) { var pa2 = (p + 0.5) / 8 * Math.PI * 2, pq = on(pa2, SR, 0); posts.push(pq); cpPart(new THREE.CylinderGeometry(0.035, 0.035, top - gy(pq[0], pq[2]), 6), mlmFrame, pq[0], (top + gy(pq[0], pq[2])) / 2, pq[2], 0, 0, 0, G); }
+      for (var lv = 1.1; lv < top - 0.2; lv += 1.05) posts.forEach(function (q, k) {
+        var q2 = posts[(k + 1) % 8], m = [(q[0] + q2[0]) / 2, (q[2] + q2[2]) / 2], len = Math.hypot(q2[0] - q[0], q2[2] - q[2]), ang = Math.atan2(q2[0] - q[0], q2[2] - q[2]);
+        cpPart(new THREE.BoxGeometry(0.4, 0.04, len), mlmWood, m[0] * 0.93, lv, m[1] * 0.93, 0, ang, 0, G);
+        millBeam(G, [q[0], lv + 0.45, q[2]], [q2[0], lv + 0.45, q2[2]], 0.04, mlmFrame);
+      });
+      if (stage === 0) {                                              // (day one: a ring of staves standing ready, and hoops waiting)
+        for (var st = 0; st < 10; st++) { var sa = 2.6 + st * 0.11; var sp = on(sa, R + 0.95, 0); cpPart(new THREE.BoxGeometry(0.14, 2.2, 0.04), smStave, sp[0], gy(sp[0], sp[2]) + 1.05, sp[2], -0.1, sa, 0.05 * (st % 3 - 1), G); }
+        for (var hp = 0; hp < 3; hp++) { var hq = on(-2.0, R + 0.95, 0); cpPart(new THREE.TorusGeometry(0.45, 0.02, 6, 28), smHoop, hq[0], gy(hq[0], hq[2]) + 0.03 + hp * 0.04, hq[2], Math.PI / 2, 0, 0, G); }
+      }
+      var LD2 = new THREE.Group(); var lq = on(0.4, SR + 0.35, 0); LD2.position.set(lq[0], gy(lq[0], lq[2]), lq[2]); LD2.rotation.set(-0.25, 0.4, 0); G.add(LD2);
+      [-0.2, 0.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, top + 0.3, 0.05), mlmFrame, x, (top + 0.3) / 2, 0, 0, 0, 0, LD2); }); for (var lr = 0; lr < Math.floor(top / 0.3); lr++) cpPart(new THREE.CylinderGeometry(0.018, 0.018, 0.4, 5), mlmWood, 0, 0.25 + lr * 0.3, 0, 0, 0, Math.PI / 2, LD2);
+      var lz = on(-0.6, R + 1.05, 0);
+      for (var pl = 0; pl < 9; pl++) cpPart(new THREE.BoxGeometry(1.4, 0.06, 0.2), [mlmWood, mlmFrame][pl % 2], lz[0] + (pl % 2) * 0.05, gy(lz[0], lz[2]) + 0.05 + Math.floor(pl / 3) * 0.06, lz[2] + (pl % 3) * 0.21 - 0.21, 0, -0.6, 0, G);
+      var bq = on(1.0, R + 0.95, 0); coopBarrel(G, bq[0], gy(bq[0], bq[2]), bq[2], 0.16, 0.36, false);
+      var SG = new THREE.Group(); var sq = on(0.05, R + 1.15, 0); SG.position.set(sq[0], gy(sq[0], sq[2]), sq[2]); G.add(SG);
+      [-0.55, 0.55].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 1.1, 0.07), mlmWood, x, 0.55, -0.02, 0, 0, 0, SG); });
+      cpPart(new THREE.BoxGeometry(1.3, 0.44, 0.04), mlmWood, 0, 0.85, 0, 0, 0, 0, SG);
+      cpPart(new THREE.PlaneGeometry(1.24, 0.39), new THREE.MeshStandardMaterial({ map: siteSignTex('silo'), roughness: 0.8 }), 0, 0.85, 0.022, 0, 0, 0, SG).castShadow = false;
+    }
+    scene.add(G);
+    return G;
+  }
+  function siloShowHay() {                                             // (the gauge, the plaques, and the bundles waiting in the chute and the hoppers)
+    siloDrawCount();
+    if (siloGauge) { var f = Math.max(0.004, silo.hay / SILO_CAP) * 3.36; siloGauge.scale.y = f; siloGauge.position.y = 1.17 + f / 2; }
+    if (siloTuft) siloTuft.visible = silo.hay > 0;
+    siloHopperTufts.forEach(function (t) { t.visible = siloReady() && silo.hay > 0; });
+  }
+  function siloPlace(c0, r0, start) {
+    siloRemove();
+    silo.built = true; silo.c = c0; silo.r = r0; silo.start = start;
+    silo.x = FARM_X + (c0 + SILO_FC / 2) * TILE; silo.z = FARM_Z + (r0 + SILO_FR / 2) * TILE;
+    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(silo.x + gx * 1.4, silo.z + gz * 1.4));
+    silo.fy = top + 0.05;
+    var HX = SILO_FC * TILE / 2, HZ = SILO_FR * TILE / 2;
+    allScenery.forEach(function (t) { var u = t.userData; if (u.gone || u.state === 'standing') return; if (Math.abs(u.solid.x - silo.x) < HX + u.solidR && Math.abs(u.solid.z - silo.z) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes()); });
+    mineable.forEach(function (r) { if (r.gone || r.state === 'whole') return; if (Math.abs(r.solid.x - silo.x) < HX + r.solidR && Math.abs(r.solid.z - silo.z) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes()); });
+    for (var c = c0; c < c0 + SILO_FC; c++) for (var r = r0; r < r0 + SILO_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); silo.grass.push(ft); }
+    var sd = { x: silo.x, z: silo.z, r: SILO_R + 0.22 }; solids.push(sd); silo.solids.push(sd);
+    silo.stage = siloStage(); siloGroup = siloBuildModel(silo.stage); siloShowHay();
+    flushDirty();
+  }
+  function siloRemove() {
+    if (!silo.built) return;
+    if (siloGroup) { scene.remove(siloGroup); siloGroup = null; } siloGauge = siloTuft = null;
+    silo.solids.forEach(function (sd) { var i = solids.indexOf(sd); if (i >= 0) solids.splice(i, 1); }); silo.solids = [];
+    silo.grass.forEach(uncoverGrass); silo.grass = [];
+    silo.built = false; silo.stage = -1;
+  }
+  function siloSaveData() { return silo.built ? { c: silo.c, r: silo.r, start: silo.start, hay: silo.hay } : null; }
+  function siloLoadData(d) { siloRemove(); silo.hay = 0; if (d) { silo.hay = Math.max(0, Math.min(SILO_CAP, d.hay | 0)); siloPlace(d.c, d.r, d.start === undefined ? -99 : d.start); } siloShowHay(); }
+
+  // ===== filling it, and taking hay out at the hoppers =====
+  function siloNear() { return silo.built && !indoors && !flying && dist(player.position.x, player.position.z, silo.x, silo.z) < SILO_R + 1.35; }
+  function siloFill() {
+    if (!siloReady()) { showToast('Your silo is still being built: it\'ll be ready on the morning of day ' + (silo.start + SILO_DAYS) + ' 🪚', 2600); return; }
+    if (silo.hay >= SILO_CAP) { showToast('Your silo is full: it holds ' + SILO_CAP + ' hay 🌾', 2200); return; }
+    var have = bagCount('hay');
+    if (!have) { showToast('Your silo only takes hay, and you don\'t have any. Buy it at Fluff & Feather, or trim bushes for it 🌾 (' + silo.hay + '/' + SILO_CAP + ')', 3200); return; }
+    var n = Math.min(have, SILO_CAP - silo.hay);
+    if (!takeItem('hay', n)) return;
+    silo.hay += n; siloShowHay(); popSound();
+    showToast('🌾 You poured ' + n + ' hay into your silo (' + silo.hay + '/' + SILO_CAP + ')' + (n < have ? ': it\'s full now, so you kept the other ' + (have - n) : ''), 3000);
+  }
+  function siloHopperTake() {                                          // (a bundle of hay from your silo, through the hopper)
+    if (!silo.built) { showToast('This hopper gives you hay from a silo, but you don\'t have one yet: Oak & Ember can build you one 🌾', 3000); return; }
+    if (!siloReady()) { showToast('Your silo is still being built: hay will come out here from the morning of day ' + (silo.start + SILO_DAYS) + ' 🪚', 2800); return; }
+    if (silo.hay <= 0) { showToast('Your silo is empty: put hay in it through its chute, outside 🌾', 2600); return; }
+    if (!addItem('hay', 1)) { bagFull(); return; }
+    silo.hay--; siloShowHay(); popSound();
+    showToast('🌾 A bundle of hay drops out of the hopper (' + silo.hay + ' left in your silo)', 1800);
+  }
+  function siloAtHopper(hop, room) {                                   // (standing in front of a hopper)
+    var lx = player.position.x - room[0], lz = player.position.z - room[1];
+    return Math.hypot(lx - hop[0], lz - hop[1]) < 1.0;
+  }
+  function siloHopperHere() { return !glimNaming && ((inCoop && siloAtHopper(SILO_HOP_COOP, [COI_X, COI_Z])) || (inFbarn && siloAtHopper(SILO_HOP_FBARN, [FBI_X, FBI_Z]))); }
+  function siloAction() {                                              // (Interact by a hopper, or by your silo: true if it did something)
+    if (coopPlacing || carpShopOpen) return false;
+    if (siloHopperHere()) { siloHopperTake(); return true; }
+    if (siloNear() && siloReady()) { siloFill(); return true; }
+    return false;
+  }
+  var siloBtn = document.createElement('button');
+  siloBtn.type = 'button'; siloBtn.className = 'sleep-btn ship-btn';
+  canvas.parentNode.appendChild(siloBtn);
+  siloBtn.addEventListener('click', function () { siloAction(); focusGame(); });
+  var siloBtnText = '';
+  function updateSiloButton() {
+    var txt = coopPlacing ? '' : siloHopperHere() ? '🌾 Take hay from the hopper (' + (siloReady() ? silo.hay + ' in your silo' : silo.built ? 'silo being built' : 'no silo yet') + ')' : siloNear() && siloReady() ? '🌾 Put hay in the silo (' + silo.hay + '/' + SILO_CAP + ')' : '';
+    if (txt !== siloBtnText) { siloBtnText = txt; if (txt) siloBtn.innerHTML = txt + ' <kbd>E</kbd>'; }
+    var show = !!txt;
+    if (siloBtn.classList.contains('show') !== show) siloBtn.classList.toggle('show', show);
+  }
+  // (the hoppers: a wooden cabinet with a steel funnel on top, fed by a pipe coming down the wall, a crank on its side,
+  // a little tray at the front where the hay drops out, and a plaque saying how much is left in your silo)
+  var SILO_HOP_COOP = [0.95, 1.7], SILO_HOP_FBARN = [4.39, -0.95];
+  function siloHopper(R, x, z, ry, pipeTop, sol) {
+    var H = new THREE.Group(); H.position.set(x, 0, z); H.rotation.y = ry; R.add(H);
+    var mW = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc89c6c, roughness: 0.8 }), mO = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 });
+    [[-0.27, -0.19], [0.27, -0.19], [-0.27, 0.19], [0.27, 0.19]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.07, 0.78, 0.07), mO, l[0], 0.39, l[1], 0, 0, 0, H); });
+    cpPart(new THREE.BoxGeometry(0.6, 0.5, 0.44), mW, 0, 0.5, 0, 0, 0, 0, H);
+    [0.26, 0.74].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.64, 0.05, 0.48), mO, 0, y, 0, 0, 0, 0, H); });
+    cpPart(new THREE.CylinderGeometry(0.47, 0.25, 0.3, 4, 1, true), new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }), 0, 0.92, 0, 0, Math.PI / 4, 0, H);
+    cpPart(new THREE.BoxGeometry(0.68, 0.03, 0.03), cpmIron, 0, 1.07, 0.24, 0, 0, 0, H); cpPart(new THREE.BoxGeometry(0.68, 0.03, 0.03), cpmIron, 0, 1.07, -0.24, 0, 0, 0, H);
+    cpPart(new THREE.CylinderGeometry(0.06, 0.06, pipeTop - 0.95, 14), cpmSteel, 0, (pipeTop + 0.95) / 2, -0.05, 0, 0, 0, H);   // (the pipe from your silo)
+    for (var fy = 1.3; fy < pipeTop - 0.1; fy += 0.7) cpPart(new THREE.TorusGeometry(0.066, 0.014, 6, 16), cpmIron, 0, fy, -0.05, Math.PI / 2, 0, 0, H);
+    cpPart(new THREE.SphereGeometry(0.065, 12, 8), cpmSteel, 0, pipeTop, -0.05, 0, 0, 0, H);
+    cpPart(new THREE.CylinderGeometry(0.06, 0.06, 0.22, 14), cpmSteel, 0, pipeTop, -0.16, Math.PI / 2, 0, 0, H);
+    cpPart(new THREE.BoxGeometry(0.16, 0.04, 0.1), cpmIron, 0, pipeTop - 0.5, -0.17, 0, 0, 0, H);
+    var TR = new THREE.Group(); TR.position.set(0, 0.3, 0.22); TR.rotation.x = 0.3; H.add(TR);   // (the tray at the front, where a bundle waits)
+    cpPart(new THREE.BoxGeometry(0.4, 0.03, 0.26), mO, 0, 0, 0.12, 0, 0, 0, TR);
+    [-0.2, 0.2].forEach(function (xx) { cpPart(new THREE.BoxGeometry(0.03, 0.08, 0.26), mO, xx, 0.04, 0.12, 0, 0, 0, TR); });
+    var tuft = pickupModel('hay'); tuft.scale.setScalar(0.9); tuft.position.set(0, 0.07, 0.12); tuft.rotation.y = Math.PI / 2 + 0.1; TR.add(tuft); siloHopperTufts.push(tuft);
+    cpPart(new THREE.BoxGeometry(0.34, 0.12, 0.03), mO, 0, 0.36, 0.215, 0, 0, 0, H);           // (the little door the hay drops through)
+    var CR = new THREE.Group(); CR.position.set(0.31, 0.58, 0); H.add(CR);                    // (the crank on its side)
+    cpPart(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14), cpmIron, 0.01, 0, 0, 0, 0, Math.PI / 2, CR);
+    cpPart(new THREE.BoxGeometry(0.02, 0.2, 0.03), cpmIron, 0.03, -0.08, 0, 0, 0, 0, CR);
+    cpPart(new THREE.CylinderGeometry(0.018, 0.018, 0.08, 8), cpmBrass, 0.07, -0.17, 0, 0, 0, Math.PI / 2, CR);
+    cpPart(new THREE.BoxGeometry(0.34, 0.18, 0.012), mO, 0, 0.56, 0.227, 0, 0, 0, H);         // (the plaque: how much hay your silo has)
+    cpPart(new THREE.PlaneGeometry(0.31, 0.155), new THREE.MeshStandardMaterial({ map: siloCountTex, roughness: 0.8 }), 0, 0.56, 0.234, 0, 0, 0, H).castShadow = false;
+    sol.push([x, z, 0.36]);
+    return H;
+  }
+  siloHopper(coopRoom, SILO_HOP_COOP[0], SILO_HOP_COOP[1], Math.PI, COOP_WALL - 0.08, coopSolids);
+  siloHopper(fbarnRoom, SILO_HOP_FBARN[0], SILO_HOP_FBARN[1], -Math.PI / 2, FBARN_WALL - 0.1, fbarnSolids);
+  siloDrawCount(); siloShowHay();
+
+  // ===== on Oak & Ember's menu, on the world map, and every frame =====
+  function siloShopIcon() {                                            // (a little picture of the silo, for Oak & Ember's menu)
+    var c = document.createElement('canvas'); c.width = c.height = 256; var g = c.getContext('2d'); g.scale(2, 2);
+    g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(64, 118, 36, 6, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#b8b2a6'; g.beginPath(); g.ellipse(64, 114, 33, 6, 0, 0, Math.PI * 2); g.fill();
+    var sg = g.createLinearGradient(40, 0, 88, 0); sg.addColorStop(0, '#8a857c'); sg.addColorStop(0.5, '#aaa498'); sg.addColorStop(1, '#7a756c'); g.fillStyle = sg; g.fillRect(41, 98, 46, 15);
+    g.fillStyle = 'rgba(255,255,255,0.18)'; for (var s = 0; s < 8; s++) g.fillRect(43 + (s % 4) * 11 + Math.floor(s / 4) * 5, 100 + Math.floor(s / 4) * 6, 8, 4);
+    var bg = g.createLinearGradient(42, 0, 86, 0); bg.addColorStop(0, '#8a3428'); bg.addColorStop(0.45, '#c8564a'); bg.addColorStop(1, '#7a2e24'); g.fillStyle = bg; g.fillRect(42, 32, 44, 67);
+    g.strokeStyle = 'rgba(70,20,14,0.35)'; g.lineWidth = 0.8; for (var x = 45; x < 86; x += 3.4) { g.beginPath(); g.moveTo(x, 32); g.lineTo(x, 99); g.stroke(); }
+    g.strokeStyle = '#3a3634'; g.lineWidth = 1.6; for (var y = 42; y < 98; y += 9) { g.beginPath(); g.moveTo(42, y); g.lineTo(86, y); g.stroke(); }
+    var dg = g.createLinearGradient(42, 0, 86, 0); dg.addColorStop(0, '#9aa2ac'); dg.addColorStop(0.45, '#eef2f6'); dg.addColorStop(1, '#8a929c'); g.fillStyle = dg;
+    g.beginPath(); g.ellipse(64, 33, 23, 16, 0, Math.PI, 0); g.fill(); g.strokeStyle = 'rgba(80,90,100,0.5)'; g.lineWidth = 0.7; [-14, -7, 0, 7, 14].forEach(function (d) { g.beginPath(); g.moveTo(64 + d * 1.55, 33); g.quadraticCurveTo(64 + d * 1.1, 22, 64, 17); g.stroke(); });
+    g.fillStyle = '#9aa2ac'; g.fillRect(41, 31, 46, 3); g.fillStyle = '#c4cad2'; g.fillRect(60, 11, 8, 6); g.fillStyle = '#8a929c'; g.beginPath(); g.moveTo(56, 12); g.lineTo(64, 6); g.lineTo(72, 12); g.closePath(); g.fill();
+    g.fillStyle = '#3a2a1e'; g.fillRect(55.5, 46, 4, 50); g.fillStyle = '#f0d080'; g.fillRect(56.3, 74, 2.4, 21.5); g.fillStyle = 'rgba(220,240,255,0.35)'; g.fillRect(56.3, 47, 2.4, 48);   // (the gauge, about half full)
+    g.fillStyle = '#7a5236'; g.fillRect(64, 81, 13, 14); g.strokeStyle = '#3a2a1e'; g.lineWidth = 1; g.strokeRect(64, 81, 13, 14);
+    g.fillStyle = '#b08a62'; g.beginPath(); g.moveTo(63, 95); g.lineTo(78, 95); g.lineTo(82, 108); g.lineTo(59, 108); g.closePath(); g.fill(); g.fillStyle = '#e8c870'; g.fillRect(64, 99, 13, 5);
+    g.fillStyle = '#f4e6c8'; g.fillRect(62, 68, 17, 9); g.strokeStyle = '#4a3626'; g.strokeRect(62, 68, 17, 9);
+    g.strokeStyle = '#3a3634'; g.lineWidth = 1.2; [37, 39.5].forEach(function (x) { g.beginPath(); g.moveTo(x, 40); g.lineTo(x, 100); g.stroke(); }); for (var r2 = 44; r2 < 100; r2 += 5) { g.beginPath(); g.moveTo(37, r2); g.lineTo(39.5, r2); g.stroke(); }
+    g.fillStyle = '#c9ced6'; g.fillRect(86, 86, 9, 5); g.fillRect(91, 86, 4, 28);
+    [[30, 112, '#f4a6c8'], [36, 114, '#fff2e0'], [96, 113, '#c8a8f0'], [101, 112, '#ffb08a']].forEach(function (f) { g.fillStyle = '#5f9a48'; g.beginPath(); g.arc(f[0], f[1] + 1, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = f[2]; g.beginPath(); g.arc(f[0], f[1] - 1, 1.6, 0, Math.PI * 2); g.fill(); });
+    return c.toDataURL();
+  }
+  function siloDrawOnMap(g, K, label) {                                // (on the world map: its round silver dome, seen from above)
+    var p = mapXY(silo.x, silo.z), r = (SILO_R + 0.1) * K;
+    g.beginPath(); g.arc(p[0] + 5, p[1] + 7, r, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fill();
+    g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); var dg = g.createRadialGradient(p[0] - r * 0.3, p[1] - r * 0.3, 2, p[0], p[1], r); dg.addColorStop(0, siloReady() ? '#f2f5f8' : '#e0c090'); dg.addColorStop(1, siloReady() ? '#8a929c' : '#a07850'); g.fillStyle = dg; g.fill();
+    g.strokeStyle = siloReady() ? '#b8564a' : '#7a5236'; g.lineWidth = 3; g.stroke();
+    if (siloReady()) { g.strokeStyle = 'rgba(80,90,100,0.4)'; g.lineWidth = 1.2; for (var k = 0; k < 8; k++) { var a = k / 8 * Math.PI * 2; g.beginPath(); g.moveTo(p[0] + Math.cos(a) * 3, p[1] + Math.sin(a) * 3); g.lineTo(p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r); g.stroke(); } }
+    g.fillStyle = '#8a6040'; g.fillRect(p[0] - 0.35 * K, p[1] + r, 0.7 * K, 0.7 * K);
+    label(siloReady() ? 'Silo · ' + silo.hay + '/' + SILO_CAP + ' hay' : 'Silo (being built)', silo.x, silo.z, r + 26);
+  }
+  var siloBaseInteract = interact;
+  interact = function () {
+    if (siloAction()) return;
+    return siloBaseInteract.apply(this, arguments);
+  };
+  function updateSilo(dt, night) {
+    updateSiloButton();
+    if (!silo.built) return;
+    var st = siloStage();
+    if (st !== silo.stage) {                                            // (a new morning: Oak & Ember have got further)
+      var was = silo.stage; silo.stage = st;
+      if (siloGroup) scene.remove(siloGroup); siloGroup = siloBuildModel(st); siloShowHay();
+      if (was >= 0) setTimeout(function () { showToast(st === SILO_DAYS ? '🌾 Your silo is finished! Pour hay in through its chute, and take it out at the hoppers in your coop and barn.' : '🪚 Oak & Ember worked on your silo all day: it\'s half built! One more day to go.', 4600); }, 8200);
+    }
+    siloGlows.forEach(function (L) { var fl = 1 + Math.sin(state.time * 11 + L.p) * 0.1; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
   }
 
   // ---------- Building sites: the coop and the barn take two days to build too ----------
@@ -5674,7 +5999,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       glimmers: glimmerSaveData(),                                    // your Glimmerwings
       coop: coopSaveData(),                                           // your coop: where it stands, and the hay on its bench
       fbarn: fbarnSaveData(),                                         // and the same for your barn
-      mill: millSaveData()                                            // your mill: where it is, and the day Oak & Ember started on it
+      mill: millSaveData(),                                           // your mill: where it is, and the day Oak & Ember started on it
+      silo: siloSaveData()                                            // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -5777,6 +6103,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     coopLoadData(data.coop || null);                                  // your coop (none in older saves)
     fbarnLoadData(data.fbarn || null);                                // your barn (likewise)
     millLoadData(data.mill || null);                                  // and your mill
+    siloLoadData(data.silo || null);                                  // and your silo, with its hay
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
@@ -5968,6 +6295,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateCoop(dt, night);
     updateFbarn(dt, night);
     updateMill(dt, night);
+    updateSilo(dt, night);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
