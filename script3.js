@@ -1998,6 +1998,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     label('Oak & Ember', CARP_X, CARP_Z, 30);
     if (coop.built) coopDrawOnMap(g, K, label);                         // your coop, if you've built one
     if (fbarn.built) fbarnDrawOnMap(g, K, label);                       // and your barn
+    if (mill.built) millDrawOnMap(g, K, label);                         // and your mill
     // Fluff & Feather: its grey gambrel roof with the ridge along it, and the cupola
     var apm = mapXY(ANIMAL_X, ANIMAL_Z);
     g.save(); g.translate(apm[0], apm[1]); g.rotate(-ANIMAL_TURN);
@@ -3384,7 +3385,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // nothing grows back under it. Up to four Glimmerwings, Puddlewisps, Emberwings, Gemwrens and Celestaras can live
   // in it. Go in with Interact; inside, a feeding bench has eight spots for hay: fill them up, and every hungry
   // animal goes over and eats a bundle by itself (pet them and collect their eggs just like at Fluff & Feather)
-  var FBARN_COST = 3000;                                               // (the barn's price, for Oak & Ember's menu: see "Your barn" below)
+  var FBARN_COST = 3000, MILL_COST = 2000;                             // (the barn's and the mill's prices, for Oak & Ember's menu: see "Your barn" and "Your mill" below)
   var COOP_COST = 2000, COOP_STALL0 = 3, COOP_CAP = 4, COOP_KINDS = ['glim', 'duck', 'ember', 'gem', 'ostrich'];
   var COOP_NAMES = { glim: 'Glimmerwing', duck: 'Puddlewisp', ember: 'Emberwing', gem: 'Gemwren', ostrich: 'Celestara' };
   var COOP_FC = 5, COOP_FR = 4, COOP_BW = 5.6, COOP_BD = 4.0, COOP_WALL = 2.4, COOP_PEAK = 1.35;   // tiles it takes; its walls' width, depth and height; how high the roof rises
@@ -4148,20 +4149,26 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic fbarn-pic"></div><div class="shop-text"><b>Barn</b><span>A big red gambrel barn with white trim, sliding doors on an iron track, a hayloft with its pulley, a cupola with a moon-and-star weathervane, and a painted barn quilt. Every animal that isn\'t a coop bird lives here, up to 4, each in its own stall. Inside there\'s a feeding bench with 8 spots for hay down the middle: fill it up and your animals walk out of their stalls to eat. You choose where it goes on a grid of your farm, even where a tree used to be.</span>' +
     '<span class="shop-price"><img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US') + '</span></div></div>' +
     '<div class="shop-buy"><button type="button" class="fbarn-buy">Build</button></div>' +
+    '<div class="shop-item" style="margin-top:16px"><div class="slot shop-pic mill-pic"></div><div class="shop-text"><b>Mill</b><span>A tall white windmill on a fieldstone base, with a wooden gallery all round, a green cap, four lattice sails with canvas that turn in the breeze, and a little fantail. It takes Oak &amp; Ember two days to build: watch it go up, from a timber frame to its sails. It doesn\'t do anything just yet. You choose where it goes on a grid of your farm.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="mill-buy">Build</button></div>' +
     '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(carpShopBox);
   (function () { var pic = document.createElement('img'); pic.src = coopShopIcon; pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.coop-pic').appendChild(pic); })();
   (function () { var pic = document.createElement('img'); pic.src = fbarnShopIcon(); pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.fbarn-pic').appendChild(pic); })();
+  (function () { var pic = document.createElement('img'); pic.src = millShopIcon(); pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; carpShopBox.querySelector('.mill-pic').appendChild(pic); })();
   shopCards(carpShopBox);
   carpShopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Buildings'), carpShopBox.querySelector('.shop-card'));
   var carpTilesSync = shopCatalogue(carpShopBox); carpShopBox.classList.add('shop-wide');
-  var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy');
+  var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy');
   function renderCarpShop() {
     carpShopCoins.textContent = state.coins;
     coopBuyBtn.innerHTML = coop.built ? 'Built ✓' : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
     coopBuyBtn.disabled = coop.built || state.coins < COOP_COST;
     fbarnBuyBtn.innerHTML = fbarn.built ? 'Built ✓' : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
     fbarnBuyBtn.disabled = fbarn.built || state.coins < FBARN_COST;
+    millBuyBtn.innerHTML = !mill.built ? 'Build · <img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') : mill.stage < MILL_DAYS ? 'Being built: ready day ' + (mill.start + MILL_DAYS) : 'Built ✓';
+    millBuyBtn.disabled = mill.built || state.coins < MILL_COST;
     carpTilesSync();
   }
   function atCarpCounter(margin) {                                     // standing in front of the counter, on the door side
@@ -4182,6 +4189,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (fbarn.built) { showToast('You already have a barn', 1800); return; }
     if (state.coins < FBARN_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(FBARN_SPEC);
+  });
+  millBuyBtn.addEventListener('click', function () {
+    if (mill.built) { showToast('You already have a mill', 1800); return; }
+    if (state.coins < MILL_COST) { showToast('Not enough Star Coins', 1800); return; }
+    closeCarpShop(); coopOpenPlacer(MILL_SPEC);
   });
   function updateCarpShop() {
     if (carpShopOpen && !atCarpCounter(1.2)) closeCarpShop();          // it stays open until you really walk away from the counter
@@ -4216,7 +4228,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     if (dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 1.6 || inHouseYard(x, z) || dist(x, z, binWorld.x, binWorld.z) < 1.8) return false;
     var t = tileMap[tileKey(c, r)]; if (t && t.soil) return false;    // (not on your soil)
-    if (coopCovers(x, z, -0.05) || fbarnCovers(x, z, -0.05)) return false;   // (nor on your coop or barn)
+    if (coopCovers(x, z, -0.05) || fbarnCovers(x, z, -0.05) || millCovers(x, z, -0.05)) return false;   // (nor on your coop, barn or mill)
     for (var i = 0; i < solids.length; i++) { var sd = solids[i]; if (sd.r > 0 && !clear[i] && Math.abs(sd.x - x) < sd.r + h && Math.abs(sd.z - z) < sd.r + h) return false; }   // (nothing standing in the way)
     return true;
   }
@@ -4304,7 +4316,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.coins < placeSpec.cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= placeSpec.cost; showCoins(true); coinSound(10);
     placeSpec.build(coopPick[0], coopPick[1]); coopClosePlacer(); spellSound(); homeMigrate(false);
-    showToast(placeSpec.done, 5200);
+    showToast(typeof placeSpec.done === 'function' ? placeSpec.done() : placeSpec.done, 5200);
   });
   var PLACE_HINT_END = ' <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under it.';
   var COOP_SPEC = { title: '🐔 Where should your coop go?', hint: 'Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: COOP_FC, fr: COOP_FR, bw: COOP_BW, bd: COOP_BD, off: 0.45, door: 1.1, roof: 'rgba(122,82,54,0.85)', doorCol: '#92b596', emoji: '🐔', cost: COOP_COST,
@@ -4982,6 +4994,220 @@ EVERDAWN_PARTS.push(function (THREE) {
     return c.toDataURL();
   }
 
+  // ---------- Your mill: Oak & Ember's third building ----------
+  // For 2,000 Star Coins, Oak & Ember builds you a windmill, placed with the same grid of your farm (it takes 4 × 4
+  // tiles). It takes two days to build: right away a building site goes up on its spot (a stone footing, a timber
+  // frame, scaffolding and stacks of lumber), by the next morning the lower half is boarded and its gallery is on,
+  // and on the second morning it's finished, its sails turning in the breeze. It has no use just yet
+  var MILL_FC = 4, MILL_FR = 4, MILL_DAYS = 2, MILL_R = 1.6, MILL_TOP = 6.4;   // tiles it takes; the days it takes to build; its tower's radius at the bottom, and its height
+  var mill = { built: false, c: 0, r: 0, x: 0, z: 0, fy: 0, start: 0, stage: -1, grass: [], solids: [], tp: null };
+  var millGroup = null, millSails = null, millFan = null, millGlows = [];
+  function millCovers(x, z, r) { return mill.built && Math.abs(x - mill.x) < MILL_FC * TILE / 2 + r && Math.abs(z - mill.z) < MILL_FR * TILE / 2 + r; }
+  var millBaseSoilNear = soilNear;                                     // (nothing grows back under the mill either)
+  soilNear = function (x, z, r) { return millBaseSoilNear(x, z, r) || millCovers(x, z, r); };
+  function millStage() { return !mill.built ? -1 : Math.min(MILL_DAYS, farmDay() - mill.start); }   // 0: just started, 1: half built, 2: finished
+  var MILL_SPEC = { title: '🌾 Where should your mill go?', hint: 'Tap your farm to choose a spot. The mill takes 4 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: MILL_FC, fr: MILL_FR, bw: 3.6, bd: 3.6, off: 0, door: 0.9, roof: 'rgba(240,232,214,0.9)', doorCol: '#7a5236', emoji: '🌾', cost: MILL_COST,
+    built: function () { return mill.built; }, build: function (c, r) { millPlace(c, r, farmDay()); },
+    done: function () { return '🌾 Oak & Ember have started building your mill! It takes two days: it\'ll be finished on the morning of day ' + (mill.start + MILL_DAYS) + '.'; } };
+
+  // ===== what it's made of =====
+  var millBoardTex = cpTex(256, 256, function (g, w, h) {             // (white weatherboards, overlapping, each with a shadow under its edge)
+    var n = 8, ph = h / n;
+    for (var i = 0; i < n; i++) {
+      var l = 232 + Math.random() * 16; g.fillStyle = 'rgb(' + Math.round(l) + ',' + Math.round(l * 0.97) + ',' + Math.round(l * 0.9) + ')'; g.fillRect(0, i * ph, w, ph);
+      var sh = g.createLinearGradient(0, i * ph + ph - 7, 0, i * ph + ph); sh.addColorStop(0, 'rgba(90,70,50,0)'); sh.addColorStop(1, 'rgba(90,70,50,0.4)'); g.fillStyle = sh; g.fillRect(0, i * ph + ph - 7, w, 7);
+      for (var s = 0; s < 14; s++) { var y = i * ph + 3 + Math.random() * (ph - 10); g.strokeStyle = 'rgba(150,120,90,' + (0.05 + Math.random() * 0.08) + ')'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + (Math.random() - 0.5) * 3); g.stroke(); }
+    }
+  }, [6, 5]);
+  var millStoneTex = cpTex(256, 128, function (g, w, h) {             // (rough fieldstone, mortared)
+    g.fillStyle = '#8a857c'; g.fillRect(0, 0, w, h);
+    for (var r = 0, y = 0; y < h; r++) { var rh = 14 + Math.random() * 8; for (var x = -(r % 2) * 14; x < w;) { var sw = 22 + Math.random() * 20, k = 140 + Math.random() * 50;
+      g.fillStyle = 'rgb(' + Math.round(k) + ',' + Math.round(k * 0.97) + ',' + Math.round(k * 0.9) + ')'; g.beginPath(); g.ellipse(x + sw / 2, y + rh / 2, sw / 2 - 1.5, rh / 2 - 1.5, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.14)'; g.beginPath(); g.ellipse(x + sw / 2 - 3, y + rh / 2 - 3, sw / 4, rh / 5, 0, 0, Math.PI * 2); g.fill(); x += sw; } y += rh; }
+  }, [5, 1]);
+  var mlmBoard = new THREE.MeshStandardMaterial({ map: millBoardTex, roughness: 0.85 });
+  var mlmStone = new THREE.MeshStandardMaterial({ map: millStoneTex, bumpMap: millStoneTex, bumpScale: 0.03, roughness: 0.95 });
+  var mlmWood = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xb08a62, roughness: 0.85 });
+  var mlmFrame = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xd8b48a, roughness: 0.85 });
+  var mlmDark = new THREE.MeshStandardMaterial({ color: 0x4a3626, roughness: 0.8 });
+  var mlmCloth = new THREE.MeshStandardMaterial({ color: 0xf2e8d4, roughness: 0.95, side: THREE.DoubleSide });
+  var mlmCap = new THREE.MeshStandardMaterial({ color: 0x5a6a5e, roughness: 0.75 });
+  var millSignTex = cpTex(512, 160, function (g, w, h) {
+    g.fillStyle = '#7a5236'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4e6c8'; g.fillRect(8, 8, w - 16, h - 16);
+    g.fillStyle = '#5a3a20'; g.textAlign = 'center'; g.font = '600 50px Fredoka, Georgia, serif'; g.fillText('Your mill is coming!', w / 2, 70);
+    g.font = '28px Fredoka, Georgia, serif'; g.fillText('🪚 Built by Oak & Ember · ready in two days', w / 2, 120);
+  });
+  function millRing(r, y) {                                            // (a point on an octagon of radius r, for a corner k)
+    return function (k) { var a = (k + 0.5) / 8 * Math.PI * 2; return [Math.sin(a) * r, y, Math.cos(a) * r]; };
+  }
+  function millBeam(G, a, b, s, m) {                                   // (a square beam from point a to point b)
+    var d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = d.length(), o = new THREE.Mesh(new THREE.BoxGeometry(s, L, s), m);
+    o.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); o.castShadow = o.receiveShadow = true; G.add(o); return o;
+  }
+  function millTowerRadius(y) { return MILL_R - (MILL_R - 1.0) * (y - 1.6) / (MILL_TOP - 1.6); }
+
+  // ===== building it: a building site, then half built, then finished =====
+  function millBuildModel(stage) {
+    var G = new THREE.Group(); G.position.set(mill.x, mill.fy, mill.z); millGlows = []; millSails = null; millFan = null;
+    function gy(lx, lz) { return groundHeight(mill.x + lx, mill.z + lz) - mill.fy; }
+    var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * 2, gz * 2));
+    // (the stone base: two storeys of fieldstone, an octagon, with an arched door and little windows)
+    var baseH = 1.6;
+    cpPart(new THREE.CylinderGeometry(1.95, 2.05, baseH - minG + 0.1, 8), mlmStone, 0, (baseH + minG - 0.1) / 2, 0, 0, Math.PI / 8, 0, G);
+    cpPart(new THREE.CylinderGeometry(2.0, 2.0, 0.1, 8), mlmDark, 0, baseH, 0, 0, Math.PI / 8, 0, G);
+    if (stage === 0) cpPart(new THREE.PlaneGeometry(0.84, 1.2), cpmDark, 0, 0.6, 1.87, 0, 0, 0, G).castShadow = false;   // (the doorway, not hung yet)
+    if (stage > 0) {
+      var arch = new THREE.Shape(); arch.moveTo(-0.42, 0); arch.lineTo(0.42, 0); arch.lineTo(0.42, 0.95); arch.absarc(0, 0.95, 0.42, 0, Math.PI, false); arch.closePath();
+      var ag = new THREE.ExtrudeGeometry(arch, { depth: 0.06, bevelEnabled: false });
+      cpPart(ag, new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0x9a6e48, roughness: 0.8 }), 0, 0, 1.9, 0, 0, 0, G);
+      var archF = new THREE.Shape(); archF.moveTo(-0.55, 0); archF.lineTo(0.55, 0); archF.lineTo(0.55, 0.95); archF.absarc(0, 0.95, 0.55, 0, Math.PI, false); archF.closePath();
+      var hole = new THREE.Path(); hole.moveTo(-0.42, 0); hole.lineTo(0.42, 0); hole.lineTo(0.42, 0.95); hole.absarc(0, 0.95, 0.42, 0, Math.PI, false); hole.closePath(); archF.holes.push(hole);
+      cpPart(new THREE.ExtrudeGeometry(archF, { depth: 0.1, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: 0xc8c0b0, roughness: 0.9 }), 0, 0, 1.86, 0, 0, 0, G);
+      [0.25, 0.75].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.5, 0.04, 0.012), cpmIron, -0.12, y, 1.97, 0, 0, 0, G); });
+      cpPart(new THREE.TorusGeometry(0.05, 0.01, 6, 14), cpmIron, 0.28, 0.55, 1.98, 0, 0, 0, G);
+      [-1, 1].forEach(function (s) { var a = s * Math.PI / 2, wg = new THREE.Group(); wg.position.set(Math.sin(a) * 1.93, 1.0, Math.cos(a) * 1.93); wg.rotation.y = a; G.add(wg); cpPart(new THREE.PlaneGeometry(0.36, 0.44), cpmGlowWin, 0, 0, 0.05, 0, 0, 0, wg).castShadow = false; [[0, 0.25, 0.5, 0.07], [0, -0.25, 0.56, 0.08], [0.21, 0, 0.07, 0.5], [-0.21, 0, 0.07, 0.5], [0, 0, 0.36, 0.03], [0, 0, 0.03, 0.44]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.06), cpmCream, f[0], f[1], 0.07, 0, 0, 0, wg); }); cpFlowerBox(wg, 0.4, -0.36, 0.12); });
+      for (var st = 0; st < 3; st++) cpPart(new THREE.BoxGeometry(1.2 - st * 0.1, 0.12, 0.3), mlmStone, 0, gy(0, 2.2 + 0.3 * (2 - st)) + 0.06 + st * 0.12 - 0.12, 2.0 + 0.3 * (2 - st) - 0.2, 0, 0, 0, G);
+    }
+    var topY = stage === 0 ? 0 : stage === 1 ? 3.9 : MILL_TOP;            // (how high the boarding reaches)
+    // (the smock tower: an octagon tapering up, boarded white with corner posts)
+    if (stage > 0) {
+      var tb = new THREE.CylinderGeometry(millTowerRadius(topY), MILL_R, topY - 1.6, 8, 1, true); tb.translate(0, (topY - 1.6) / 2 + 1.6, 0);
+      cpPart(tb, mlmBoard, 0, 0, 0, 0, Math.PI / 8, 0, G).material.side = THREE.DoubleSide;
+      [2.4, 3.7, 5.0].forEach(function (y, k) { if (y + 0.4 > topY) return; var r = millTowerRadius(y); [0, 3, 6].forEach(function (f) { var a = (f + k * 2) / 8 * Math.PI * 2 + Math.PI / 8 - Math.PI / 8, wg = new THREE.Group(); wg.position.set(Math.sin(a) * (r * Math.cos(Math.PI / 8) + 0.02), y, Math.cos(a) * (r * Math.cos(Math.PI / 8) + 0.02)); wg.rotation.y = a; G.add(wg); cpPart(new THREE.PlaneGeometry(0.3, 0.38), cpmGlowWin, 0, 0, 0.01, -0.12, 0, 0, wg).castShadow = false; [[0, 0.22, 0.42, 0.06], [0, -0.22, 0.46, 0.07], [0.18, 0, 0.06, 0.44], [-0.18, 0, 0.06, 0.44]].forEach(function (fr) { cpPart(new THREE.BoxGeometry(fr[2], fr[3], 0.05), mlmDark, fr[0], fr[1], 0.03, -0.12, 0, 0, wg); }); }); });
+    }
+    var frameTop = stage === 2 ? MILL_TOP : MILL_TOP;                  // (the frame is up from the first day)
+    for (var k = 0; k < 8; k++) { var a0 = millRing(MILL_R + 0.02, 1.6)(k), a1 = millRing(millTowerRadius(frameTop) + 0.02, frameTop)(k); millBeam(G, a0, a1, stage === 0 ? 0.13 : 0.1, stage === 2 ? cpmCream : mlmFrame); }
+    if (stage < 2) [2.6, 3.6, 4.6, 5.6, 6.35].forEach(function (y) { var r = millTowerRadius(y) + 0.03; for (var k2 = 0; k2 < 8; k2++) millBeam(G, millRing(r, y)(k2), millRing(r, y)(k2 + 1), 0.09, mlmFrame); });
+    if (stage === 0) [1.0].forEach(function () { for (var k3 = 0; k3 < 8; k3++) millBeam(G, millRing(MILL_R + 0.02, 1.6)(k3), millRing(MILL_R + 0.02, 1.6)(k3 + 1), 0.12, mlmFrame); });
+    // (the gallery: a wooden stage all round at the top of the stone base, with a railing)
+    if (stage > 0) {
+      var gal = new THREE.CylinderGeometry(2.45, 2.45, 0.08, 8); cpPart(gal, mlmWood, 0, 1.68, 0, 0, Math.PI / 8, 0, G);
+      for (var b = 0; b < 8; b++) {
+        var p0 = millRing(2.38, 1.72)(b), p1 = millRing(2.38, 1.72)(b + 1);
+        millBeam(G, p0, [p0[0], 2.55, p0[2]], 0.07, mlmDark);
+        millBeam(G, [p0[0], 2.55, p0[2]], [p1[0], 2.55, p1[2]], 0.07, mlmDark); millBeam(G, [p0[0], 2.12, p0[2]], [p1[0], 2.12, p1[2]], 0.05, mlmDark);
+        for (var sp = 1; sp < 5; sp++) { var f = sp / 5; millBeam(G, [p0[0] + (p1[0] - p0[0]) * f, 1.72, p0[2] + (p1[2] - p0[2]) * f], [p0[0] + (p1[0] - p0[0]) * f, 2.12, p0[2] + (p1[2] - p0[2]) * f], 0.03, mlmDark); }
+        millBeam(G, millRing(2.0, 1.2)(b), millRing(2.4, 1.64)(b), 0.07, mlmDark);   // (brackets under it)
+      }
+    }
+    // (finished: the cap with its ridge, the windshaft, four lattice sails with canvas, and the fantail that turns it into the wind)
+    if (stage === 2) {
+      var CAP = new THREE.Group(); CAP.position.y = MILL_TOP; G.add(CAP);
+      cpPart(new THREE.CylinderGeometry(1.12, 1.12, 0.14, 16), mlmDark, 0, 0.07, 0, 0, 0, 0, CAP);
+      var capG = new THREE.SphereGeometry(1.15, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2); capG.scale(1, 0.85, 1.25);
+      cpPart(capG, mlmCap, 0, 0.12, 0, 0, 0, 0, CAP);
+      for (var rb = 0; rb < 9; rb++) { var ra = -Math.PI / 2 + rb / 8 * Math.PI; var ribPts = []; for (var q = 0; q <= 12; q++) { var t = q / 12 * Math.PI / 2; ribPts.push(new THREE.Vector3(Math.cos(t) * Math.sin(ra) * 1.16, 0.12 + Math.sin(t) * 0.98, Math.cos(t) * Math.cos(ra) * 1.44)); } cpPart(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ribPts), 16, 0.025, 5), cpmCream, 0, 0, 0, 0, 0, 0, CAP); }
+      cpPart(new THREE.SphereGeometry(0.1, 12, 8), cpmCopper, 0, 1.12, 0, 0, 0, 0, CAP); cpPart(new THREE.ConeGeometry(0.05, 0.3, 8), cpmCopper, 0, 1.3, 0, 0, 0, 0, CAP);
+      cpPart(new THREE.CylinderGeometry(0.16, 0.18, 1.0, 12), mlmDark, 0, 0.55, 1.2, Math.PI / 2 - 0.12, 0, 0, CAP);   // (the windshaft, tilted up a little)
+      var SL = new THREE.Group(); SL.position.set(0, 0.6, 1.72); SL.rotation.x = -0.12; CAP.add(SL); millSails = new THREE.Group(); SL.add(millSails);
+      cpPart(new THREE.CylinderGeometry(0.28, 0.28, 0.3, 14), mlmDark, 0, 0, 0, Math.PI / 2, 0, 0, millSails); cpPart(new THREE.SphereGeometry(0.16, 12, 8), cpmCopper, 0, 0, 0.18, 0, 0, 0, millSails);
+      for (var sl = 0; sl < 4; sl++) {
+        var S = new THREE.Group(); S.rotation.z = sl * Math.PI / 2 + Math.PI / 4; millSails.add(S);
+        cpPart(new THREE.BoxGeometry(0.13, 4.3, 0.12), mlmWood, 0, 2.15, 0.05, 0, 0, 0, S);   // (the whip)
+        for (var bar = 0; bar < 15; bar++) cpPart(new THREE.BoxGeometry(0.75, 0.035, 0.04), mlmDark, 0.38, 0.75 + bar * 0.24, 0.07, 0, 0, 0, S);
+        [0.06, 0.74].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.04, 3.4, 0.05), mlmDark, x, 2.45, 0.07, 0, 0, 0, S); });
+        var cloth = new THREE.PlaneGeometry(0.66, 3.3, 2, 12), cp2 = cloth.attributes.position; for (var v = 0; v < cp2.count; v++) cp2.setZ(v, Math.sin((cp2.getX(v) + 0.33) / 0.66 * Math.PI) * 0.05);
+        cloth.computeVertexNormals(); cpPart(cloth, mlmCloth, 0.4, 2.45, 0.1, 0, 0, 0, S).castShadow = true;
+        [1.2, 2.4, 3.6].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.74, 0.015, 0.015), new THREE.MeshStandardMaterial({ color: 0xc8a878 }), 0.4, y, 0.14, 0, 0, 0, S); });   // (reefing ropes)
+      }
+      var FT = new THREE.Group(); FT.position.set(0, 0.35, -1.25); CAP.add(FT);   // (the fantail on its frame at the back)
+      millBeam(FT, [0, 0, 0], [0, 0.3, -0.9], 0.06, mlmDark); millBeam(FT, [-0.3, -0.1, 0], [0, 0.3, -0.9], 0.05, mlmDark); millBeam(FT, [0.3, -0.1, 0], [0, 0.3, -0.9], 0.05, mlmDark);
+      millFan = new THREE.Group(); millFan.position.set(0, 0.45, -0.92); millFan.rotation.y = Math.PI / 2; FT.add(millFan);
+      for (var fb = 0; fb < 6; fb++) { var bl = new THREE.Group(); bl.rotation.x = fb / 6 * Math.PI * 2; millFan.add(bl); cpPart(new THREE.BoxGeometry(0.03, 0.42, 0.12), cpmCream, 0, 0.24, 0, 0, 0.5, 0, bl); }
+      cpPart(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 10), mlmDark, 0, 0, 0, 0, 0, Math.PI / 2, millFan);
+      cpLantern(G, 0.62, 1.25, 2.12, millGlows); cpPart(new THREE.BoxGeometry(0.04, 0.04, 0.2), cpmIron, 0.62, 1.42, 2.02, 0, 0, 0, G);
+      // (sacks of flour by the door, a barrel, and flowers)
+      [[-1.4, 2.0, 0.4, 0], [-1.75, 1.6, -0.3, 1]].forEach(function (sk) { if (!barnSackProtos[sk[3]]) return; var sg = barnSackProtos[sk[3]].clone(); sg.position.set(sk[0], gy(sk[0], sk[1]), sk[1]); sg.rotation.set(0, sk[2], 0); sg.scale.setScalar(0.85); G.add(sg); });
+      coopBarrel(G, 1.55, gy(1.55, 1.75), 1.75, 0.26, 0.74, false);
+      coopFlowers(G, [[-0.9, gy(-0.9, 2.15), 2.15], [0.95, gy(0.95, 2.15), 2.15], [-2.1, gy(-2.1, 0.2), 0.2], [2.1, gy(2.1, 0.2), 0.2], [-1.2, gy(-1.2, -1.8), -1.8], [1.2, gy(1.2, -1.8), -1.8]], 77);
+    } else {
+      // (the building site: scaffolding up two sides with ladders, stacks of lumber, a sawhorse, stones, and Oak & Ember's sign)
+      var hgt = stage === 0 ? 4.4 : 6.6;
+      [[-1, 1], [1, 1]].forEach(function (sd) {
+        var cx = sd[0] * 1.55, cz = 2.15;
+        [[cx - 0.6, cz], [cx + 0.6, cz], [cx - 0.6, cz - 1.05], [cx + 0.6, cz - 1.05]].forEach(function (p) { cpPart(new THREE.CylinderGeometry(0.035, 0.035, hgt - minG, 6), mlmFrame, p[0], (hgt + minG) / 2, p[1], 0, 0, 0, G); });
+        for (var lv = 1.2; lv < hgt; lv += 1.1) { cpPart(new THREE.BoxGeometry(1.3, 0.04, 0.32), mlmWood, cx, lv, cz - 0.15, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.025, 0.025, 1.25, 6), mlmFrame, cx, lv + 0.45, cz, 0, 0, Math.PI / 2, G); }
+        millBeam(G, [cx - 0.6, 0.3, cz], [cx + 0.6, Math.min(hgt - 0.3, 2.6), cz], 0.04, mlmFrame);
+      });
+      var LD = new THREE.Group(); LD.position.set(2.15, 0, 2.3); LD.rotation.set(0.0, 0.3, -0.25); G.add(LD);
+      [-0.2, 0.2].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.05, 3.2, 0.05), mlmFrame, x, 1.6, 0, 0, 0, 0, LD); }); for (var lr = 0; lr < 10; lr++) cpPart(new THREE.CylinderGeometry(0.018, 0.018, 0.4, 5), mlmWood, 0, 0.25 + lr * 0.3, 0, 0, 0, Math.PI / 2, LD);
+      [[-2.05, -1.9, 0.3], [2.0, -1.85, -0.4]].forEach(function (lp, li) { for (var pl = 0; pl < 7; pl++) cpPart(new THREE.BoxGeometry(1.6, 0.06, 0.2), [mlmWood, mlmFrame][(pl + li) % 2], lp[0] + (pl % 2) * 0.05, gy(lp[0], lp[1]) + 0.05 + Math.floor(pl / 3) * 0.06, lp[1] + (pl % 3) * 0.21 - 0.21, 0, lp[2], 0, G); });
+      var SH = new THREE.Group(); SH.position.set(-2.1, gy(-2.1, 0.9), 0.9); SH.rotation.y = 0.5; G.add(SH);
+      cpPart(new THREE.BoxGeometry(1.0, 0.1, 0.12), mlmWood, 0, 0.62, 0, 0, 0, 0, SH); [-0.4, 0.4].forEach(function (x) { [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.06, 0.7, 0.06), mlmWood, x, 0.32, s * 0.14, s * 0.35, 0, 0, SH); }); });
+      cpPart(new THREE.BoxGeometry(0.5, 0.05, 0.16), mlmFrame, 0.1, 0.7, 0, 0, 0.2, 0, SH);
+      for (var sn = 0; sn < 9; sn++) cpPart(new THREE.DodecahedronGeometry(0.16 + isle2Hash(sn) * 0.08, 0), cpmFootStone, 2.1 + (isle2Hash(sn * 3) - 0.5) * 0.6, gy(2.1, 0.6) + 0.12 + (sn > 5 ? 0.18 : 0), 0.6 + (isle2Hash(sn * 5) - 0.5) * 0.6, sn, sn * 2, 0, G).material = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 0.95 });
+      var SG = new THREE.Group(); SG.position.set(0, gy(0, 2.45), 2.45); G.add(SG);
+      [-0.55, 0.55].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 1.1, 0.07), mlmWood, x, 0.55, -0.02, 0, 0, 0, SG); });
+      cpPart(new THREE.BoxGeometry(1.3, 0.44, 0.04), mlmWood, 0, 0.85, 0, 0, 0, 0, SG);
+      cpPart(new THREE.PlaneGeometry(1.24, 0.39), new THREE.MeshStandardMaterial({ map: millSignTex, roughness: 0.8 }), 0, 0.85, 0.022, 0, 0, 0, SG).castShadow = false;
+    }
+    scene.add(G);
+    return G;
+  }
+  function millPlace(c0, r0, start) {
+    millRemove();
+    mill.built = true; mill.c = c0; mill.r = r0; mill.start = start;
+    mill.x = FARM_X + (c0 + MILL_FC / 2) * TILE; mill.z = FARM_Z + (r0 + MILL_FR / 2) * TILE;
+    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(mill.x + gx * 2, mill.z + gz * 2));
+    mill.fy = top + 0.05;
+    var HX = MILL_FC * TILE / 2, HZ = MILL_FR * TILE / 2;
+    allScenery.forEach(function (t) { var u = t.userData; if (u.gone || u.state === 'standing') return; if (Math.abs(u.solid.x - mill.x) < HX + u.solidR && Math.abs(u.solid.z - mill.z) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes()); });
+    mineable.forEach(function (r) { if (r.gone || r.state === 'whole') return; if (Math.abs(r.solid.x - mill.x) < HX + r.solidR && Math.abs(r.solid.z - mill.z) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes()); });
+    for (var c = c0; c < c0 + MILL_FC; c++) for (var r = r0; r < r0 + MILL_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); mill.grass.push(ft); }
+    [[0, 0, 2.45], [-2.05, -1.9, 0.5], [2.0, -1.85, 0.5]].forEach(function (s) { var sd = { x: mill.x + s[0], z: mill.z + s[1], r: s[2] }; solids.push(sd); mill.solids.push(sd); });
+    mill.stage = millStage(); millGroup = millBuildModel(mill.stage);
+    if (!mill.tp) mill.tp = { name: 'Your Mill', icon: '🌾', spot: function () { return { x: mill.x, z: mill.z + 3.6, face: Math.PI, view: 0 }; } };
+    if (TELEPORTS.indexOf(mill.tp) < 0) TELEPORTS.push(mill.tp);
+    flushDirty();
+  }
+  function millRemove() {
+    if (!mill.built) return;
+    if (millGroup) { scene.remove(millGroup); millGroup = null; }
+    mill.solids.forEach(function (sd) { var i = solids.indexOf(sd); if (i >= 0) solids.splice(i, 1); }); mill.solids = [];
+    mill.grass.forEach(uncoverGrass); mill.grass = [];
+    var ti = TELEPORTS.indexOf(mill.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
+    mill.built = false; mill.stage = -1;
+  }
+  function millSaveData() { return mill.built ? { c: mill.c, r: mill.r, start: mill.start } : null; }
+  function millLoadData(d) { millRemove(); if (d) millPlace(d.c, d.r, d.start); }
+  function millDrawOnMap(g, K, label) {                                // (on the world map: its octagon, and its sails, once it's finished)
+    var p = mapXY(mill.x, mill.z), r = 2.4 * K;
+    g.beginPath(); for (var k = 0; k < 8; k++) { var a = (k + 0.5) / 8 * Math.PI * 2; g.lineTo(p[0] + Math.sin(a) * r, p[1] + Math.cos(a) * r); } g.closePath(); g.fillStyle = mill.stage === 2 ? '#e8e0cc' : '#c8a878'; g.fill(); g.strokeStyle = '#7a5236'; g.lineWidth = 2; g.stroke();
+    g.beginPath(); g.arc(p[0], p[1], 1.1 * K, 0, Math.PI * 2); g.fillStyle = mill.stage === 2 ? '#5a6a5e' : '#a07850'; g.fill();
+    if (mill.stage === 2) { g.strokeStyle = '#4a3626'; g.lineWidth = 5; [[-1, -1], [1, 1], [-1, 1], [1, -1]].forEach(function (d) { g.beginPath(); g.moveTo(p[0], p[1] + 1.5 * K); g.lineTo(p[0] + d[0] * 3 * K, p[1] + 1.5 * K + d[1] * 0.4 * K); g.stroke(); }); }
+    label(mill.stage === 2 ? 'Mill' : 'Mill (being built)', mill.x, mill.z, 2.4 * K + 28);
+  }
+  function updateMill(dt, night) {
+    if (!mill.built) return;
+    var st = millStage();
+    if (st !== mill.stage) {                                            // (a new morning: Oak & Ember have got further)
+      var was = mill.stage; mill.stage = st;
+      if (millGroup) scene.remove(millGroup); millGroup = millBuildModel(st);
+      if (was >= 0) setTimeout(function () { showToast(st === 2 ? '🌾 Your mill is finished! Oak & Ember have put the last of its sails up.' : '🪚 Oak & Ember worked on your mill all day: it\'s half built! One more day to go.', 4200); }, 6400);
+    }
+    if (millSails) millSails.rotation.z -= dt * 0.55;
+    if (millFan) millFan.rotation.x += dt * 1.1;
+    millGlows.forEach(function (L) { var fl = 1 + Math.sin(state.time * 11 + L.p) * 0.1; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
+  }
+  function millShopIcon() {                                            // (a little picture of the mill, for Oak & Ember's menu)
+    var c = document.createElement('canvas'); c.width = c.height = 256; var g = c.getContext('2d'); g.scale(2, 2);
+    g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(64, 116, 40, 7, 0, 0, Math.PI * 2); g.fill();
+    var sg = g.createLinearGradient(0, 86, 0, 116); sg.addColorStop(0, '#a8a296'); sg.addColorStop(1, '#888276'); g.fillStyle = sg; g.fillRect(40, 86, 48, 30);
+    g.fillStyle = 'rgba(255,255,255,0.2)'; for (var s = 0; s < 12; s++) g.fillRect(42 + (s % 4) * 12 + (Math.floor(s / 4) % 2) * 5, 89 + Math.floor(s / 4) * 9, 9, 6);
+    g.fillStyle = '#7a5236'; g.beginPath(); g.moveTo(58, 116); g.lineTo(58, 102); g.arc(64, 102, 6, Math.PI, 0); g.lineTo(70, 116); g.closePath(); g.fill();
+    g.fillStyle = '#5a3a26'; g.fillRect(30, 84, 68, 4); for (var r = 32; r < 98; r += 6) g.fillRect(r, 78, 1.6, 7); g.fillRect(30, 77, 68, 2);
+    var tg = g.createLinearGradient(44, 0, 84, 0); tg.addColorStop(0, '#e8e0cc'); tg.addColorStop(0.5, '#fbf6ea'); tg.addColorStop(1, '#dcd2bc'); g.fillStyle = tg;
+    g.beginPath(); g.moveTo(44, 84); g.lineTo(52, 34); g.lineTo(76, 34); g.lineTo(84, 84); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(120,100,80,0.3)'; g.lineWidth = 0.7; for (var b = 38; b < 84; b += 4) { var w = 12 + (b - 34) / 50 * 8; g.beginPath(); g.moveTo(64 - w, b); g.lineTo(64 + w, b); g.stroke(); }
+    g.fillStyle = '#ffe2a8'; g.fillRect(60, 52, 8, 9); g.strokeStyle = '#4a3626'; g.lineWidth = 1.2; g.strokeRect(60, 52, 8, 9);
+    g.fillStyle = '#5a6a5e'; g.beginPath(); g.ellipse(64, 34, 15, 9, 0, Math.PI, 0); g.fill(); g.fillStyle = '#c08050'; g.beginPath(); g.arc(64, 24, 2, 0, Math.PI * 2); g.fill();
+    g.save(); g.translate(64, 36); g.rotate(0.3);
+    for (var sl = 0; sl < 4; sl++) { g.save(); g.rotate(sl * Math.PI / 2); g.fillStyle = '#7a5236'; g.fillRect(-1.2, 0, 2.4, 34); g.fillStyle = '#f2e8d4'; g.fillRect(1.2, 8, 9, 25); g.strokeStyle = '#4a3626'; g.lineWidth = 0.7; g.strokeRect(1.2, 8, 9, 25); for (var bb = 11; bb < 33; bb += 4) { g.beginPath(); g.moveTo(1.2, bb); g.lineTo(10.2, bb); g.stroke(); } g.restore(); }
+    g.fillStyle = '#4a3626'; g.beginPath(); g.arc(0, 0, 3.4, 0, Math.PI * 2); g.fill(); g.restore();
+    [[38, 112, '#f4a6c8'], [44, 113, '#fff2e0'], [86, 112, '#c8a8f0'], [91, 113, '#ffb08a']].forEach(function (f) { g.fillStyle = '#5f9a48'; g.beginPath(); g.arc(f[0], f[1] + 1, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = f[2]; g.beginPath(); g.arc(f[0], f[1] - 1, 1.6, 0, Math.PI * 2); g.fill(); });
+    return c.toDataURL();
+  }
+
   // ---------- Flying on her broom ----------
   // B (or the Fly button) hops on and off her broom; only outdoors. Once up she flies a little faster than she walks,
   // anywhere over the island, the lake and just out over the sea; Space climbs higher and Shift drops lower. Landing
@@ -5343,7 +5569,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       rocks: mineable.map(function (r) { return r.state === 'whole' || r.gone ? null : (r.state === 'regrowing' ? r.brokeAt : gameMinutes()); }),
       glimmers: glimmerSaveData(),                                    // your Glimmerwings
       coop: coopSaveData(),                                           // your coop: where it stands, and the hay on its bench
-      fbarn: fbarnSaveData()                                          // and the same for your barn
+      fbarn: fbarnSaveData(),                                         // and the same for your barn
+      mill: millSaveData()                                            // your mill: where it is, and the day Oak & Ember started on it
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -5429,6 +5656,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     mineable.forEach(function (r, n) { setRockBroken(r, data.rocks[n] === undefined ? null : data.rocks[n]); });
     coopLoadData(data.coop || null);                                  // your coop (none in older saves)
     fbarnLoadData(data.fbarn || null);                                // your barn (likewise)
+    millLoadData(data.mill || null);                                  // and your mill
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
@@ -5616,6 +5844,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateCarpenter(state.time, night);
     updateCoop(dt, night);
     updateFbarn(dt, night);
+    updateMill(dt, night);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
