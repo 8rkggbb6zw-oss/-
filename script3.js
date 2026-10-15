@@ -5691,6 +5691,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (ti >= 0) tilling.splice(ti, 1);
     tile.wet = false; tile.stage = 0; tile.growth = 0;
   }
+  // The clock's little sky icons, written as codes so they always show properly, however the page is read
+  clockText = function (totalMinutes) {
+    var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
+    var icon = hour >= 5 && hour < 8 ? '\u263C' : hour >= 8 && hour < 17 ? '\u2600' : hour >= 17 && hour < 20 ? '\u263E' : '\u2605';
+    var hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return icon + ' ' + hour12 + ':' + twoDigits(minute) + ' ' + (hour < 12 ? 'AM' : 'PM');
+  };
   // A tree, bush or rock you've cut down or broken doesn't get in your way again until it has grown back halfway
   function markYoungScenery() {
     allScenery.forEach(function (t) {
