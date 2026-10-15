@@ -5765,7 +5765,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     showToast('Game loaded ✦');
   }
   function saveLoadSafely(what, fn) {                                  // (if saving or loading ever goes wrong, say what happened instead of doing nothing)
-    try { fn(); } catch (err) { showToast((what === 'save' ? 'Saving' : 'Loading') + ' went wrong: ' + (err && err.message ? err.message : err) + '. Try copying script3.js again from the copy page.', 9000); if (window.console) console.error(err); }
+    try { fn(); } catch (err) { showToast((what === 'save' ? 'Saving' : 'Loading') + ' went wrong: ' + (err && err.message ? err.message : err) + '.', 9000); if (window.console) console.error(err); }
   }
   document.getElementById('btnSave').addEventListener('click', function () { saveLoadSafely('save', saveGame); focusGame(); });
   document.getElementById('btnLoad').addEventListener('click', function () { saveLoadSafely('load', loadGame); focusGame(); });
