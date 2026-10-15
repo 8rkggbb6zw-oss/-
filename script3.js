@@ -5764,8 +5764,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     popSound();
     showToast('Game loaded ✦');
   }
-  document.getElementById('btnSave').addEventListener('click', function () { saveGame(); focusGame(); });
-  document.getElementById('btnLoad').addEventListener('click', function () { loadGame(); focusGame(); });
+  function saveLoadSafely(what, fn) {                                  // (if saving or loading ever goes wrong, say what happened instead of doing nothing)
+    try { fn(); } catch (err) { showToast((what === 'save' ? 'Saving' : 'Loading') + ' went wrong: ' + (err && err.message ? err.message : err) + '. Try copying script3.js again from the copy page.', 9000); if (window.console) console.error(err); }
+  }
+  document.getElementById('btnSave').addEventListener('click', function () { saveLoadSafely('save', saveGame); focusGame(); });
+  document.getElementById('btnLoad').addEventListener('click', function () { saveLoadSafely('load', loadGame); focusGame(); });
 
   // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
   // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
