@@ -4080,10 +4080,21 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= cost; showCoins(true); coinSound(5); closeBarnShop(); glimStartNaming(cs, kind);
   };
+  function homeCardText(card, where) {                                // (their descriptions say where they really live, not "in a stall here")
+    var tw = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null, false), t;
+    while ((t = tw.nextNode())) if (t.nodeValue.indexOf('It lives in a stall here.') >= 0) t.nodeValue = t.nodeValue.replace('It lives in a stall here.', 'It lives in your ' + where + '.');
+  }
+  function homeNoteText(o, name) {                                     // (what the note on their card says, depending on how your coop or barn is getting on)
+    if (!o.built) return 'Lives in your ' + name + ': build one at Oak & Ember';
+    if (!siteReady(o)) return 'Lives in your ' + name + ': it\'s being built, ready on day ' + (o.start + SITE_DAYS);
+    return 'Lives in your ' + name;
+  }
+  var COOP_NOTES = [];
   [glimAdoptBtn, duckAdoptBtn, emberAdoptBtn, gemAdoptBtn, ostAdoptBtn].forEach(function (b) {   // (their cards at Fluff & Feather say where they live)
     var card = b.closest('.shop-card'); if (!card) return;
-    var note = document.createElement('p'); note.className = 'ship-hint'; note.style.cssText = 'margin:6px 2px 8px;font-weight:600;color:#5a8a5e'; note.textContent = '🐔 Lives in your coop (build one at Oak & Ember)';
-    card.insertBefore(note, card.querySelector('.shop-buy'));
+    homeCardText(card, 'coop');
+    var note = document.createElement('p'); note.className = 'ship-hint'; note.style.cssText = 'margin:6px 2px 8px;font-weight:600;color:#5a8a5e'; note.textContent = '🐔 ' + homeNoteText(coop, 'coop');
+    card.insertBefore(note, card.querySelector('.shop-buy')); COOP_NOTES.push(note);
   });
   var coopBarnRender = renderBarnShop;
   renderBarnShop = function () {                                       // (they can be adopted while your coop has room, whatever the barn stalls hold)
@@ -4092,6 +4103,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[glimAdoptBtn, GLIM_COST], [duckAdoptBtn, DUCK_COST], [emberAdoptBtn, EMBER_COST], [gemAdoptBtn, GEM_COST], [ostAdoptBtn, OST_COST]].forEach(function (b) {
       b[0].innerHTML = !coop.built ? '🐔 Needs a coop' : !siteReady(coop) ? '🪚 Coop being built' : !free ? 'Your coop is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1];
     });
+    var cn = '🐔 ' + homeNoteText(coop, 'coop'); COOP_NOTES.forEach(function (n) { if (n.textContent !== cn) n.textContent = cn; });
     barnTilesSync();
   };
   var coopBaseNaming = glimStartNaming, glimNameHint = glimNameBox.querySelector('.ship-hint'), glimNameHintText = glimNameHint.textContent;
@@ -4937,16 +4949,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     state.coins -= cost; showCoins(true); coinSound(5); closeBarnShop(); glimStartNaming(fs2, kind);
   };
   var FBARN_BTNS = [[moonAdoptBtn, MOON_COST], [auroraAdoptBtn, AURORA_COST], [zephyraAdoptBtn, ZEPHYRA_COST], [lunaAdoptBtn, LUNA_COST], [bubbleAdoptBtn, BUBBLE_COST], [prismAdoptBtn, PRISM_COST], [lotusAdoptBtn, LOTUS_COST], [axoAdoptBtn, AXO_COST], [lizAdoptBtn, LIZ_COST], [tortAdoptBtn, TORT_COST], [bisAdoptBtn, BIS_COST], [crbAdoptBtn, CRB_COST]];
+  var FBARN_NOTES = [];
   FBARN_BTNS.forEach(function (b) {                                    // (their cards at Fluff & Feather say where they live)
     var card = b[0].closest('.shop-card'); if (!card) return;
-    var note = document.createElement('p'); note.className = 'ship-hint'; note.style.cssText = 'margin:6px 2px 8px;font-weight:600;color:#a84a3c'; note.textContent = '🐮 Lives in your barn (build one at Oak & Ember)';
-    card.insertBefore(note, card.querySelector('.shop-buy'));
+    homeCardText(card, 'barn');
+    var note = document.createElement('p'); note.className = 'ship-hint'; note.style.cssText = 'margin:6px 2px 8px;font-weight:600;color:#a84a3c'; note.textContent = '🐮 ' + homeNoteText(fbarn, 'barn');
+    card.insertBefore(note, card.querySelector('.shop-buy')); FBARN_NOTES.push(note);
   });
   var fbarnBarnRender = renderBarnShop;
   renderBarnShop = function () {
     fbarnBarnRender();
     var free = siteReady(fbarn) && fbarnFreeStall() >= 0;
     FBARN_BTNS.forEach(function (b) { b[0].innerHTML = !fbarn.built ? '🐮 Needs a barn' : !siteReady(fbarn) ? '🪚 Barn being built' : !free ? 'Your barn is full' : 'Adopt · <img class="coin-icon" alt=""> ' + b[1].toLocaleString('en-US'); b[0].disabled = !free || state.coins < b[1]; });
+    var bn = '🐮 ' + homeNoteText(fbarn, 'barn'); FBARN_NOTES.forEach(function (n) { if (n.textContent !== bn) n.textContent = bn; });
     barnTilesSync();
   };
 
