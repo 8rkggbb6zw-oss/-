@@ -5418,6 +5418,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           else { player.position.x = beforeX; player.position.z = beforeZ; }
         }
         if (flyH < 2.2) solids.forEach(function (o) {
+          if (o.young) return;                                        // (still small after being cut down: you go right over it)
           var dx = player.position.x - o.x, dz = player.position.z - o.z, d = Math.hypot(dx, dz), min = o.r + 0.35;
           if (d < min && d > 0.0001) { player.position.x = o.x + dx / d * min; player.position.z = o.z + dz / d * min; }
         });
@@ -5441,6 +5442,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         else { player.position.x = beforeX; player.position.z = beforeZ; }
       }
       solids.forEach(function (o) {
+        if (o.young) return;                                          // (still small after being cut down: you go right over it)
         var dx = player.position.x - o.x, dz = player.position.z - o.z;
         var d = Math.hypot(dx, dz), min = o.r + 0.35;
         if (d < min && d > 0.0001) {
@@ -5552,6 +5554,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     boat.rotation.x = Math.sin(t * 0.9 + 1) * 0.02;
     updateFish(dt, t, night); // magical fish swim, glow and leap
     updateTrees(dt);          // chopped trees fall, stumps wait, and new trees grow back
+    markYoungScenery();       // and until they're halfway grown back, you can walk right over them
     forestTime.value = t;     // trees sway in the breeze
     lilyFlowers.forEach(function (flower, n) {
       flower.position.y = WATER_Y + 0.03 + Math.sin(t * 1.4 + n * 2.1) * 0.008;
@@ -5687,6 +5690,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = tilling.indexOf(tile);
     if (ti >= 0) tilling.splice(ti, 1);
     tile.wet = false; tile.stage = 0; tile.growth = 0;
+  }
+  // A tree, bush or rock you've cut down or broken doesn't get in your way again until it has grown back halfway
+  function markYoungScenery() {
+    allScenery.forEach(function (t) {
+      var u = t.userData, at = u.base || t.position;
+      if (Math.abs(at.x - u.solid.x) > 0.5 || Math.abs(at.z - u.solid.z) > 0.5) return;   // (only the tree or bush that's really standing on this spot counts)
+      u.solid.young = u.state === 'regrowing' && u.shownK < 0.5;
+    });
+    mineable.forEach(function (r) { r.solid.young = r.state === 'regrowing' && r.shownK < 0.5; });
   }
   function setSceneryCut(t, cutAt) {                                  // puts a tree or bush back to standing, or cut down at a given time
     var u = t.userData;
