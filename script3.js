@@ -4754,7 +4754,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (hay bales stacked in the front corner, with a ladder leaning by them and a pitchfork)
     [[-4.05, 0, 2.95, 0], [-3.1, 0, 2.95, 0.04], [-2.15, 0, 2.95, -0.03], [-3.6, 1, 2.95, 0.05], [-2.65, 1, 2.95, -0.04], [-3.12, 2, 2.95, 0.02], [-4.05, 0, 2.3, Math.PI / 2]].forEach(function (b) { var bale = pickupModel('hay'); bale.scale.setScalar(3.2); bale.position.set(b[0], 0.27 + b[1] * 0.545, b[2]); bale.rotation.y = b[3]; bale.traverse(function (o) { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); R.add(bale); });
     fbarnSolids.push([-3.6, 2.95, 0.75], [-2.3, 2.95, 0.5], [-4.05, 2.25, 0.45]);
-    var LA = new THREE.Group(); LA.position.set(-4.45, 0, 1.25); LA.rotation.z = -0.2; R.add(LA);
+    var LA = new THREE.Group(); LA.position.set(-4.04, 0, -1.1); LA.rotation.z = 0.2; R.add(LA); fbarnSolids.push([-4.15, -1.1, 0.3]);   // (feet out in the barn, top resting on the wall between two windows)
     [-0.22, 0.22].forEach(function (z) { put(new THREE.BoxGeometry(0.06, 2.6, 0.06), mPost, 0, 1.3, z, 0, 0, 0, LA); });
     for (var lr = 0; lr < 8; lr++) put(new THREE.CylinderGeometry(0.02, 0.02, 0.44, 6), mWood, 0, 0.25 + lr * 0.32, 0, Math.PI / 2, 0, 0, LA);
     var PF = new THREE.Group(); PF.position.set(-1.75, 0, 3.2); PF.rotation.set(-0.15, 0.3, 0.12); R.add(PF);
