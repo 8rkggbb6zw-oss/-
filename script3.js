@@ -7376,6 +7376,33 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   // ===== snow on the roofs: on everything up high that faces the sky (roofs, chimneys, lamp tops, the tops of big rocks) =====
   var winterRoofSkip = null, winterRoofT = -99;
+  var wsBox = new THREE.Box3(), wsV = new THREE.Vector3(), wsM = new THREE.Matrix4(), wsC = new THREE.Vector3();
+  function winterSlabOf(size, M) {                                     // (1 if a box of this size, placed by matrix M, lies flat-ish up high)
+    var e = M.elements, d = [size.x * Math.hypot(e[0], e[1], e[2]), size.y * Math.hypot(e[4], e[5], e[6]), size.z * Math.hypot(e[8], e[9], e[10])];
+    var order = [0, 1, 2].sort(function (a, b) { return d[a] - d[b]; });
+    if (!(d[order[0]] < 0.4 * d[order[1]])) return 0;
+    var k = order[0] * 4, ay = e[k + 1] / (Math.hypot(e[k], e[k + 1], e[k + 2]) || 1);
+    wsBox.getCenter(wsC).applyMatrix4(M);
+    return Math.abs(ay) >= 0.5 && wsC.y >= 1.4 ? 1 : 0;              // (walls stand upright, and low things are left alone)
+  }
+  function winterSlab(o) {                                             // (a roof tile, shingle or roof board lies flat-ish up high: its edges take snow too, so the tiles don't show through)
+    var g = o.geometry; if (!g || o.userData.slabDone || !g.attributes.position) return;
+    o.userData.slabDone = true; o.updateMatrixWorld(true);
+    if (!g.boundingBox) g.computeBoundingBox();
+    wsBox.copy(g.boundingBox); var size = wsBox.getSize(new THREE.Vector3());
+    if (o.isInstancedMesh) {                                           // (each piece in a batch on its own: shingles and battens can share one box)
+      var vals = new Float32Array(o.count), any = 0, im = new THREE.Matrix4();
+      for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, im); vals[i] = winterSlabOf(size, wsM.multiplyMatrices(o.matrixWorld, im)); any += vals[i]; }
+      if (!any) return;
+      o.geometry = g.clone(); o.geometry.setAttribute('snowSlab', new THREE.InstancedBufferAttribute(vals, 1));
+      return;
+    }
+    var slab = winterSlabOf(size, o.matrixWorld);
+    if (!slab) return;
+    if (g.attributes.snowSlab) return;                                 // (shared with another piece that already decided)
+    var arr = new Float32Array(g.attributes.position.count); arr.fill(1);
+    g.setAttribute('snowSlab', new THREE.BufferAttribute(arr, 1));
+  }
   function winterRoofPatch() {
     if (!winterRoofSkip) {                                             // (not on you, the ground, the grass, the trees' own foliage or the water)
       winterRoofSkip = new Set([terrain.material, grassMat, leafBatch.material, needleBatch.material, litterMat, barkMat, pineBarkMat, rootMat, pineRootMat]);
@@ -7383,6 +7410,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     scene.traverse(function (o) {
       if (!o.isMesh || !o.material) return;
+      winterSlab(o);
       [].concat(o.material).forEach(function (m) {
         if (!m || m.userData.snowy || winterRoofSkip.has(m) || m.transparent || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
         m.userData.snowy = true;
@@ -7391,17 +7419,18 @@ EVERDAWN_PARTS.push(function (THREE) {
         m.onBeforeCompile = function (shader) {
           if (before) before.call(this, shader);
           shader.uniforms.uSnowOn = winterSnowOn;
-          shader.vertexShader = 'varying float vSnowY;\nvarying vec2 vSnowXZ;\n' + shader.vertexShader.replace('#include <project_vertex>', [
+          shader.vertexShader = 'varying float vSnowY;\nvarying vec2 vSnowXZ;\nattribute float snowSlab;\nvarying float vSnowSlab;\n' + shader.vertexShader.replace('#include <project_vertex>', [
             '#include <project_vertex>',
             'vec4 snowP = vec4(transformed, 1.0);',
             '#ifdef USE_INSTANCING', 'snowP = instanceMatrix * snowP;', '#endif',
-            'vec4 snowW = modelMatrix * snowP; vSnowY = snowW.y; vSnowXZ = snowW.xz;'
+            'vec4 snowW = modelMatrix * snowP; vSnowY = snowW.y; vSnowXZ = snowW.xz; vSnowSlab = snowSlab;'
           ].join('\n'));
-          shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowY;\nvarying vec2 vSnowXZ;\nfloat snowHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat snowNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(snowHash(i), snowHash(i + vec2(1.0, 0.0)), f.x), mix(snowHash(i + vec2(0.0, 1.0)), snowHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + shader.fragmentShader.replace('#include <normal_fragment_maps>', [
+          shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowY;\nvarying vec2 vSnowXZ;\nvarying float vSnowSlab;\nfloat snowHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat snowNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(snowHash(i), snowHash(i + vec2(1.0, 0.0)), f.x), mix(snowHash(i + vec2(0.0, 1.0)), snowHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + shader.fragmentShader.replace('#include <normal_fragment_maps>', [
             '#include <normal_fragment_maps>',
             'vec3 roofUp = normalize((vec4(normal, 0.0) * viewMatrix).xyz);',
             'float snowPatch = snowNoise(vSnowXZ * 1.6) * 0.65 + snowNoise(vSnowXZ * 5.0) * 0.35;',   // (just a little: soft patches here and there, and a light dusting between)
-            'float roofSnow = smoothstep(0.3, 0.6, roofUp.y) * smoothstep(1.3, 1.8, vSnowY) * uSnowOn * smoothstep(0.55, 0.6, snowPatch);',   // (solid patches with a soft edge: no tiles showing through)
+            'float snowUpMin = mix(0.3, -1.5, step(0.5, vSnowSlab));',   // (on roof tiles, every side of them, so no edges show through)
+            'float roofSnow = smoothstep(snowUpMin, snowUpMin + 0.3, roofUp.y) * smoothstep(1.3, 1.8, vSnowY) * uSnowOn * smoothstep(0.55, 0.6, snowPatch);',   // (solid patches with a soft edge: no tiles showing through)
             'float snowLump = snowNoise(vSnowXZ * 6.0) * 0.6 + snowNoise(vSnowXZ * 14.0) * 0.3 + snowNoise(vSnowXZ * 30.0) * 0.1;',   // (lumpy: soft mounds lit on top, blue-grey in the dips)
             'float snowLit = snowNoise(vSnowXZ * 6.0 + vec2(0.05, 0.05)) * 0.6 + snowNoise(vSnowXZ * 14.0 + vec2(0.025, 0.025)) * 0.3 + snowNoise(vSnowXZ * 30.0 + vec2(0.01, 0.01)) * 0.1;',
             'float snowShade = clamp(0.7 + (snowLump - snowLit) * 3.0 + (snowLump - 0.5) * 0.5, 0.0, 1.0);',
@@ -7412,8 +7441,9 @@ EVERDAWN_PARTS.push(function (THREE) {
             'float snowLx = snowNoise((vSnowXZ + vec2(0.03, 0.0)) * 6.0) * 0.7 + snowNoise((vSnowXZ + vec2(0.03, 0.0)) * 14.0) * 0.3;',
             'float snowLz = snowNoise((vSnowXZ + vec2(0.0, 0.03)) * 6.0) * 0.7 + snowNoise((vSnowXZ + vec2(0.0, 0.03)) * 14.0) * 0.3;',
             'vec3 snowTilt = (viewMatrix * vec4(-(snowLx - snowL0) * 7.0, 0.0, -(snowLz - snowL0) * 7.0, 0.0)).xyz;',
-            'normal = normalize(mix(normal, geometryNormal, roofSnow) + snowTilt * roofSnow);'
-          ].join('\n'));
+            'vec3 snowUpV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);',   // (a patch is lit as one smooth blanket, whatever is under it)
+            'normal = normalize(mix(normal, snowUpV, roofSnow) + snowTilt * roofSnow);'
+          ].join('\n')).replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.rgb = mix(gl_FragColor.rgb, snowCol * 0.97, roofSnow * 0.7);');   // (and kept bright and solid, even in shadow)
         };
         m.needsUpdate = true;
       });
