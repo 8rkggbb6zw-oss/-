@@ -6172,19 +6172,27 @@ EVERDAWN_PARTS.push(function (THREE) {
   function springHash(n) { var v = Math.sin(n * 78.233 + 1.7) * 43758.5453; return v - Math.floor(v); }
   function springNow() { return seasonOf(state.day) === 0; }
   // ===== blossom on the trees =====
-  var springBlossomTex = (function () {                                // (a little spray of five-petalled flowers, white so each card can be tinted)
-    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
-    for (var f = 0; f < 9; f++) {
-      var cx = 22 + springHash(f * 3.1) * 84, cy = 22 + springHash(f * 7.7) * 84, r = 9 + springHash(f * 5.3) * 7, a0 = springHash(f) * 6.28;
+  var springBlossomTex = (function () {                                // (a little spray of blossom, white so each card can be tinted: open five-petalled
+    var c = document.createElement('canvas'); c.width = c.height = 256; var g = c.getContext('2d');   //  flowers with notched petals, pink veins and stamens, plump buds, and a few new leaves)
+    function leaf(x, y, a, L) { g.save(); g.translate(x, y); g.rotate(a); var gr = g.createLinearGradient(0, 0, L, 0); gr.addColorStop(0, '#6aa848'); gr.addColorStop(1, '#9ad070'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(L * 0.5, -L * 0.32, L, 0); g.quadraticCurveTo(L * 0.5, L * 0.32, 0, 0); g.fill(); g.strokeStyle = 'rgba(60,110,40,0.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0); g.lineTo(L * 0.9, 0); g.stroke(); g.restore(); }
+    function bud(x, y, a, r) { g.save(); g.translate(x, y); g.rotate(a); var gr = g.createRadialGradient(-r * 0.3, -r * 0.4, 1, 0, 0, r * 1.3); gr.addColorStop(0, '#fff4f8'); gr.addColorStop(1, '#e89ab8'); g.fillStyle = gr; g.beginPath(); g.ellipse(0, -r * 0.3, r * 0.75, r * 1.05, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#6a9a48'; g.beginPath(); g.moveTo(-r * 0.7, r * 0.3); g.quadraticCurveTo(0, r * 1.4, r * 0.7, r * 0.3); g.quadraticCurveTo(0, r * 0.7, -r * 0.7, r * 0.3); g.fill(); g.restore(); }
+    function flower(cx, cy, r, a0) {
       for (var p = 0; p < 5; p++) {
-        var a = a0 + p / 5 * Math.PI * 2, px = cx + Math.cos(a) * r * 0.55, py = cy + Math.sin(a) * r * 0.55;
-        var gr = g.createRadialGradient(px, py, 0, px, py, r * 0.62); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.75, '#fff4f8'); gr.addColorStop(1, '#f2d6e2');
-        g.fillStyle = gr; g.beginPath(); g.ellipse(px, py, r * 0.6, r * 0.46, a, 0, Math.PI * 2); g.fill();
+        var a = a0 + p / 5 * Math.PI * 2; g.save(); g.translate(cx, cy); g.rotate(a);
+        var gr = g.createLinearGradient(0, 0, r, 0); gr.addColorStop(0, '#f0b8cc'); gr.addColorStop(0.35, '#fff2f6'); gr.addColorStop(1, '#ffffff');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0);
+        g.bezierCurveTo(r * 0.3, -r * 0.55, r * 0.95, -r * 0.5, r, -r * 0.12); g.lineTo(r * 0.86, 0); g.lineTo(r, r * 0.12);   // (the little notch at its tip)
+        g.bezierCurveTo(r * 0.95, r * 0.5, r * 0.3, r * 0.55, 0, 0); g.fill();
+        g.strokeStyle = 'rgba(214,120,150,0.35)'; g.lineWidth = 0.8; [-0.18, 0, 0.18].forEach(function (v) { g.beginPath(); g.moveTo(r * 0.12, 0); g.quadraticCurveTo(r * 0.5, v * r * 0.6, r * 0.8, v * r * 1.1); g.stroke(); });
+        g.restore();
       }
-      g.fillStyle = '#f6c84a'; g.beginPath(); g.arc(cx, cy, r * 0.2, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#e8a030'; for (var s = 0; s < 5; s++) { var sa = s / 5 * 6.28; g.beginPath(); g.arc(cx + Math.cos(sa) * r * 0.28, cy + Math.sin(sa) * r * 0.28, 1.1, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#c8d870'; g.beginPath(); g.arc(cx, cy, r * 0.16, 0, Math.PI * 2); g.fill();
+      for (var s = 0; s < 12; s++) { var sa = s / 12 * Math.PI * 2 + a0, sl = r * (0.36 + (s % 3) * 0.06); g.strokeStyle = 'rgba(220,150,170,0.9)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(sa) * sl, cy + Math.sin(sa) * sl); g.stroke(); g.fillStyle = '#f2b830'; g.beginPath(); g.arc(cx + Math.cos(sa) * sl, cy + Math.sin(sa) * sl, 1.5, 0, Math.PI * 2); g.fill(); }
     }
-    var t = new THREE.CanvasTexture(c); return t;
+    for (var l = 0; l < 4; l++) leaf(40 + springHash(l * 4.1) * 170, 40 + springHash(l * 6.3) * 170, springHash(l * 2.2) * 6.28, 30 + springHash(l) * 16);
+    for (var b = 0; b < 5; b++) bud(30 + springHash(b * 8.3 + 1) * 196, 30 + springHash(b * 3.9 + 2) * 196, springHash(b * 1.7) * 6.28, 7 + springHash(b * 5.5) * 4);
+    for (var f = 0; f < 8; f++) flower(44 + springHash(f * 3.1) * 168, 44 + springHash(f * 7.7) * 168, 20 + springHash(f * 5.3) * 12, springHash(f) * 6.28);
+    var t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
   })();
   var springBlossoms = foliageBatch(new THREE.PlaneGeometry(1, 1), springBlossomTex, 16000);
   var springBlossomM = new THREE.Matrix4();
@@ -6232,37 +6240,63 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (which !== 'ground' && t.userData.blossoms) springBlossomMove(t.userData, M);
   };
   // ===== tulips and daffodils in the meadows =====
-  var SPRING_FLOWERS = [], springFlowerMesh = [], springFlowerShown = null;
+  var SPRING_FLOWERS = [], SPRING_CLUMPS = [], springFlowerMesh = [], springFlowerShown = null;
   (function () {
-    var cols = [0xf05a6a, 0xff8fb0, 0xfff2f6, 0xf6d24a, 0xb48af0, 0xff9a4a, 0xffe46a];
-    for (var c = 0, tries = 0; c < 70 && tries < 4000; tries++) {
+    // (each patch is one kind: tulips in red, pink, white, purple or orange; daffodils in yellow or cream with a deeper trumpet; or low crocuses)
+    var KINDS = [
+      { kind: 'tulip', cols: [0xe8404e, 0xf05a6a], h: 0.34 }, { kind: 'tulip', cols: [0xff8fb0, 0xffb4cc], h: 0.34 }, { kind: 'tulip', cols: [0xfff2f6, 0xffe0ea], h: 0.34 },
+      { kind: 'tulip', cols: [0xa070e0, 0xb48af0], h: 0.34 }, { kind: 'tulip', cols: [0xff9a4a, 0xffb060], h: 0.34 },
+      { kind: 'daff', cols: [0xffe46a, 0xf6d24a], trumpet: 0xf09a20, h: 0.36 }, { kind: 'daff', cols: [0xfff6d8, 0xfff0c0], trumpet: 0xf6c030, h: 0.36 },
+      { kind: 'crocus', cols: [0x9a6ad8, 0xb890f0, 0xfff4fa, 0xf8d050], h: 0.1 }
+    ];
+    for (var c = 0, tries = 0; c < 80 && tries < 5000; tries++) {
       var cx = -ISLAND + 3 + springHash(tries * 3.7 + 11) * (ISLAND * 2 - 6), cz = -ISLAND + 3 + springHash(tries * 5.3 + 7) * (ISLAND * 2 - 6);
       if (!springFlowerSpot(cx, cz, 1.0)) continue;
-      c++;
-      var kind = Math.floor(springHash(c * 9.1) * cols.length), daff = cols[kind] === 0xf6d24a || cols[kind] === 0xffe46a, n = 6 + Math.floor(springHash(c * 4.4) * 7);
+      c++; SPRING_CLUMPS.push({ x: cx, z: cz, y: groundHeight(cx, cz) });
+      var K = KINDS[Math.floor(springHash(c * 9.1) * KINDS.length)], n = (K.kind === 'crocus' ? 9 : 6) + Math.floor(springHash(c * 4.4) * 7);
       for (var f = 0; f < n; f++) {
-        var a = springHash(c * 17 + f * 3.3) * 6.28, r = 0.15 + springHash(c * 13 + f * 1.7) * 0.55, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+        var a = springHash(c * 17 + f * 3.3) * 6.28, r = 0.12 + springHash(c * 13 + f * 1.7) * (K.kind === 'crocus' ? 0.45 : 0.55), x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
         if (!springFlowerSpot(x, z, 0.3)) continue;
-        SPRING_FLOWERS.push({ x: x, z: z, y: groundHeight(x, z), h: 0.32 + springHash(c * 7 + f) * 0.14, rot: springHash(c * 3 + f * 5) * 6.28, tilt: (springHash(c + f * 11) - 0.5) * 0.25, col: springHash(c * 2 + f) < 0.85 ? cols[kind] : cols[(kind + 2) % cols.length], daff: daff });
+        SPRING_FLOWERS.push({ x: x, z: z, y: groundHeight(x, z), kind: K.kind, h: K.h + springHash(c * 7 + f) * K.h * 0.4, rot: springHash(c * 3 + f * 5) * 6.28, tilt: (springHash(c + f * 11) - 0.5) * 0.25,
+          col: K.cols[Math.floor(springHash(c * 2 + f * 1.3) * K.cols.length)], trumpet: K.trumpet, open: springHash(c * 5 + f * 2.1) });
       }
     }
-    var stemGeo = new THREE.CylinderGeometry(0.011, 0.014, 1, 5); stemGeo.translate(0, 0.5, 0);
-    var leafGeo = new THREE.PlaneGeometry(0.035, 0.16); leafGeo.translate(0, 0.08, 0); leafGeo.rotateZ(0.35);
-    var tulipGeo = new THREE.LatheGeometry([[0.0, -0.02], [0.03, -0.012], [0.042, 0.02], [0.038, 0.055], [0.022, 0.07], [0.028, 0.062]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 10);
-    var daffGeo = (function () {                                       // (six pointed petals round a trumpet)
-      var g = new THREE.CylinderGeometry(0.02, 0.014, 0.05, 10, 1, true); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.03);
-      var parts = [g]; for (var i = 0; i < 6; i++) { var pg = new THREE.PlaneGeometry(0.03, 0.05); pg.translate(0, 0.03, 0); pg.rotateZ(i / 6 * Math.PI * 2); parts.push(pg); }
-      return mergeSimple(parts);
-    })();
-    var mStem = new THREE.MeshStandardMaterial({ color: 0x5aa04a, roughness: 0.8, side: THREE.DoubleSide }), mHead = new THREE.MeshStandardMaterial({ roughness: 0.55, side: THREE.DoubleSide });
-    var tulips = SPRING_FLOWERS.filter(function (f) { return !f.daff; }), daffs = SPRING_FLOWERS.filter(function (f) { return f.daff; });
+    // (a stem; and a long strap leaf that arches outward and narrows to its tip)
+    var stemGeo = new THREE.CylinderGeometry(0.009, 0.013, 1, 6); stemGeo.translate(0, 0.5, 0);
+    var leafGeo = new THREE.PlaneGeometry(0.05, 0.3, 1, 8), lp = leafGeo.attributes.position;
+    for (var v = 0; v < lp.count; v++) { var ly = lp.getY(v) + 0.15, t = ly / 0.3; lp.setXYZ(v, lp.getX(v) * (1 - t * 0.75), ly * (1 - t * 0.25), t * t * 0.11); }
+    leafGeo.computeVertexNormals();
+    // (a tulip: an inner and an outer ring of three curved petals, making a deep cup)
+    var tulipParts = [];
+    for (var pp = 0; pp < 6; pp++) {
+      var inner = pp % 2, pr = inner ? 0.041 : 0.045, pg = new THREE.SphereGeometry(pr, 8, 8, pp / 6 * Math.PI * 2 - 0.62, 1.24, Math.PI * 0.3, Math.PI * 0.7);
+      pg.scale(1, 1.45, 1); pg.translate(0, pr * 1.45, 0); tulipParts.push(pg);
+    }
+    var tulipGeo = mergeSimple(tulipParts);
+    // (a daffodil: six pointed petals in a star, cupped forward a little, round a ruffled trumpet)
+    var petal = new THREE.Shape(); petal.moveTo(0, 0); petal.quadraticCurveTo(0.017, 0.022, 0, 0.056); petal.quadraticCurveTo(-0.017, 0.022, 0, 0);
+    var daffParts = [];
+    for (var dp = 0; dp < 6; dp++) { var sg = new THREE.ShapeGeometry(petal, 6); sg.rotateX(-0.3); sg.rotateZ(dp / 6 * Math.PI * 2 + (dp % 2) * 0.08); daffParts.push(sg); }
+    var daffGeo = mergeSimple(daffParts);
+    var trumpetGeo = new THREE.LatheGeometry([[0.008, 0], [0.013, 0.012], [0.015, 0.03], [0.02, 0.042], [0.024, 0.046]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 18);
+    var tp = trumpetGeo.attributes.position;
+    for (var w = 0; w < tp.count; w++) if (tp.getY(w) > 0.044) { var ang = Math.atan2(tp.getZ(w), tp.getX(w)), rr = 1 + Math.sin(ang * 9) * 0.14; tp.setX(w, tp.getX(w) * rr); tp.setZ(w, tp.getZ(w) * rr); }   // (its frilly rim)
+    trumpetGeo.rotateX(Math.PI / 2); trumpetGeo.computeVertexNormals();
+    var mStem = new THREE.MeshStandardMaterial({ color: 0x5aa04a, roughness: 0.75, side: THREE.DoubleSide }), mLeaf = new THREE.MeshStandardMaterial({ color: 0x4f9440, roughness: 0.7, side: THREE.DoubleSide });
+    var mHead = new THREE.MeshStandardMaterial({ roughness: 0.5, side: THREE.DoubleSide });
+    function only(k) { return SPRING_FLOWERS.filter(function (f) { return f.kind === k; }); }
+    var daffs = only('daff');
     springFlowerMesh = [
-      { im: new THREE.InstancedMesh(stemGeo, mStem, SPRING_FLOWERS.length), list: SPRING_FLOWERS, part: 'stem' },
-      { im: new THREE.InstancedMesh(leafGeo, mStem, SPRING_FLOWERS.length), list: SPRING_FLOWERS, part: 'leaf' },
-      { im: new THREE.InstancedMesh(tulipGeo, mHead, Math.max(1, tulips.length)), list: tulips, part: 'tulip' },
-      { im: new THREE.InstancedMesh(daffGeo, mHead, Math.max(1, daffs.length)), list: daffs, part: 'daff' }
-    ];
-    springFlowerMesh.forEach(function (F) { F.im.castShadow = true; F.im.frustumCulled = false; scene.add(F.im); F.list.forEach(function (f, i) { F.im.setColorAt(i, new THREE.Color(F.part === 'stem' || F.part === 'leaf' ? 0xffffff : f.col)); }); });
+      { geo: stemGeo, m: mStem, list: SPRING_FLOWERS, part: 'stem' },
+      { geo: leafGeo, m: mLeaf, list: SPRING_FLOWERS, part: 'leaf', side: 0 }, { geo: leafGeo, m: mLeaf, list: SPRING_FLOWERS, part: 'leaf', side: 1 },
+      { geo: tulipGeo, m: mHead, list: only('tulip'), part: 'tulip' }, { geo: tulipGeo, m: mHead, list: only('crocus'), part: 'crocus' },
+      { geo: daffGeo, m: mHead, list: daffs, part: 'daff' }, { geo: trumpetGeo, m: mHead, list: daffs, part: 'trumpet' }
+    ].map(function (F) {
+      F.im = new THREE.InstancedMesh(F.geo, F.m, Math.max(1, F.list.length)); F.im.castShadow = true; F.im.frustumCulled = false; scene.add(F.im);
+      var col = new THREE.Color();
+      F.list.forEach(function (f, i) { var k = 0.92 + f.open * 0.16; F.im.setColorAt(i, F.part === 'stem' || F.part === 'leaf' ? col.setRGB(k, k, k) : col.set(F.part === 'trumpet' ? f.trumpet : f.col)); });
+      return F;
+    });
   })();
   function mergeSimple(geos) {                                         // (a handful of little shapes joined into one)
     var pos = [], nor = [], idx = [], off = 0;
@@ -6291,11 +6325,14 @@ EVERDAWN_PARTS.push(function (THREE) {
         springFlowerE.set(f.tilt, f.rot, f.tilt * 0.6); springFlowerQ.setFromEuler(springFlowerE);   // (each stem leans a little its own way)
         springFlowerV.set(f.x, f.y, f.z);
         if (F.part === 'stem') springFlowerS.set(k, f.h * k, k);
-        else if (F.part === 'leaf') { springFlowerS.setScalar(k * 1.6); springFlowerE.set(0, f.rot + 1.3, 0); springFlowerQ.setFromEuler(springFlowerE); }
-        else {                                                           // (the flower on top of its stem: tulips upright, daffodils nodding outward)
+        else if (F.part === 'leaf') {                                    // (two leaves from the base, arching out on either side)
+          var big = f.kind === 'crocus' ? 0.55 : 1.1 + f.open * 0.3; springFlowerS.setScalar(k * big);
+          springFlowerE.set(0.12 + f.open * 0.2, f.rot + 1.3 + F.side * Math.PI + (f.open - 0.5) * 0.6, 0, 'YXZ'); springFlowerQ.setFromEuler(springFlowerE);
+        } else {                                                         // (the flower on top of its stem: tulips and crocuses upright, daffodils nodding outward)
           springFlowerV.set(0, f.h, 0).applyQuaternion(springFlowerQ).add(springFlowerS.set(f.x, f.y, f.z));
-          springFlowerS.setScalar(k * (F.part === 'daff' ? 2.3 : 2));
-          if (F.part === 'daff') { springFlowerE.set(-0.35, f.rot, 0); springFlowerQ.setFromEuler(springFlowerE); }
+          springFlowerS.setScalar(k * (F.part === 'tulip' ? 1.7 + f.open * 0.3 : F.part === 'crocus' ? 1.25 : 2.0));
+          if (F.part === 'daff' || F.part === 'trumpet') { springFlowerE.set(-0.35, f.rot, 0); springFlowerQ.setFromEuler(springFlowerE); }
+          if (F.part === 'crocus') { springFlowerE.set(f.tilt, f.rot, 0); springFlowerQ.setFromEuler(springFlowerE); springFlowerS.y *= 1.25; }
         }
         springFlowerM.compose(springFlowerV, springFlowerQ, springFlowerS); F.im.setMatrixAt(i, springFlowerM);
       });
@@ -6322,6 +6359,59 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     a.needsUpdate = true;
   }
+  // ===== butterflies over the flowers =====
+  var springButterflies = (function () {
+    var SPECIES = [['#fbfaf4', '#4a4a4a', '#e8e4d8'], ['#f6e46a', '#c8a020', '#f0d850'], ['#fbfaf4', '#f08a2a', '#e8e0d0'], ['#8ab8f0', '#3a5aa8', '#b8d4f8'], ['#f4a6c8', '#b85a88', '#f8c8dc']];
+    function wingTex(sp, lower) {                                      // (a wing, with darker tips and veins, and a spot)
+      var c = document.createElement('canvas'); c.width = c.height = 64; var g = c.getContext('2d');
+      g.fillStyle = sp[0]; g.beginPath();
+      if (lower) { g.moveTo(2, 4); g.bezierCurveTo(30, 0, 56, 18, 46, 44); g.bezierCurveTo(36, 62, 10, 52, 2, 30); }
+      else { g.moveTo(2, 58); g.bezierCurveTo(10, 20, 40, 0, 62, 8); g.bezierCurveTo(60, 34, 40, 56, 2, 60); }
+      g.closePath(); g.fill(); g.save(); g.clip();
+      g.fillStyle = sp[1]; if (lower) { g.beginPath(); g.arc(40, 40, 10, 0, 6.28); g.fill(); } else { g.beginPath(); g.ellipse(56, 12, 14, 9, 0.5, 0, 6.28); g.fill(); g.fillStyle = sp[0]; g.beginPath(); g.arc(52, 16, 3, 0, 6.28); g.fill(); }
+      g.strokeStyle = 'rgba(60,50,40,0.35)'; g.lineWidth = 1; for (var v = 0; v < 5; v++) { g.beginPath(); g.moveTo(3, lower ? 6 : 56); g.lineTo(lower ? 20 + v * 8 : 30 + v * 7, lower ? 20 + v * 7 : 6 + v * 9); g.stroke(); }
+      g.fillStyle = sp[1]; g.beginPath(); g.arc(lower ? 24 : 34, lower ? 26 : 28, 3.4, 0, 6.28); g.fill();
+      g.restore(); g.strokeStyle = 'rgba(60,50,40,0.5)'; g.lineWidth = 1.5; g.stroke();
+      var t = new THREE.CanvasTexture(c); return t;
+    }
+    var mBody = new THREE.MeshStandardMaterial({ color: 0x3a3028, roughness: 0.7 });
+    var list = [];
+    for (var b = 0; b < 12; b++) {
+      var sp = SPECIES[b % SPECIES.length], G = new THREE.Group(), mats = [false, true].map(function (lower) { return new THREE.MeshStandardMaterial({ map: wingTex(sp, lower), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.6 }); });
+      var body = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.004, 0.06, 6), mBody); body.rotation.x = Math.PI / 2; G.add(body);
+      var head = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), mBody); head.position.z = 0.032; G.add(head);
+      [-1, 1].forEach(function (s) { var an = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.04, 3), mBody); an.position.set(s * 0.008, 0.012, 0.048); an.rotation.set(0.9, 0, -s * 0.3); G.add(an); });
+      var wings = [-1, 1].map(function (s) {                          // (each side: a hinge at the body, with the fore and hind wing on it)
+        var hinge = new THREE.Group(); hinge.scale.x = s; G.add(hinge);
+        var up = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.07), mats[0]); up.rotation.x = -Math.PI / 2; up.position.set(0.035, 0, 0.012); hinge.add(up);
+        var lo = new THREE.Mesh(new THREE.PlaneGeometry(0.055, 0.055), mats[1]); lo.rotation.x = -Math.PI / 2; lo.position.set(0.027, -0.001, -0.022); hinge.add(lo);
+        return hinge;
+      });
+      G.scale.setScalar(2.4); G.visible = false; scene.add(G);   // (a little bigger than life, so you can see them)
+      list.push({ g: G, wings: wings, clump: null, ph: springHash(b * 3.1) * 6.28, sp: 0.7 + springHash(b * 1.9) * 0.6, x: 0, y: 0, z: 0 });
+    }
+    return list;
+  })();
+  function springButterfliesMove(dt, on) {
+    var px = player.position.x, pz = player.position.z, t = state.time;
+    springButterflies.forEach(function (B, i) {
+      if (B.g.visible !== on) B.g.visible = on;
+      if (!on) { B.clump = null; return; }
+      if (!B.clump || dist(B.clump.x, B.clump.z, px, pz) > 26) {         // (each one keeps to a flower patch near you, moving on to another as you go)
+        var near = SPRING_CLUMPS.filter(function (c) { return dist(c.x, c.z, px, pz) < 18; });
+        if (!near.length) { B.g.visible = false; return; }
+        B.clump = near[Math.floor(springHash(i * 7.7 + Math.floor(t / 20)) * near.length) % near.length];
+        B.x = B.clump.x; B.z = B.clump.z; B.y = B.clump.y + 0.6;
+      }
+      var c = B.clump, a = t * 0.45 * B.sp + B.ph;                      // (a lazy, looping wander over its patch, dipping toward the flowers now and then)
+      var nx = c.x + Math.sin(a) * 1.3 + Math.sin(a * 2.3) * 0.5, nz = c.z + Math.cos(a * 0.8) * 1.2 + Math.cos(a * 1.9) * 0.4, ny = c.y + 0.55 + Math.sin(a * 1.6) * 0.3 + Math.sin(t * 7 + B.ph) * 0.04;
+      var dx = nx - B.x, dz = nz - B.z;
+      B.x = nx; B.y = ny; B.z = nz; B.g.position.set(nx, ny, nz);
+      if (Math.abs(dx) + Math.abs(dz) > 1e-5) B.g.rotation.y = Math.atan2(dx, dz);
+      var flap = Math.sin(t * 18 * B.sp + B.ph) * 0.9 + 0.35;              // (wings beating)
+      B.wings[0].rotation.z = flap; B.wings[1].rotation.z = flap;
+    });
+  }
   // ===== every frame =====
   function updateSpring(dt) {
     var on = springNow();
@@ -6330,6 +6420,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hr = state.minutes / 60, petals = on && !indoors && hr > 6 && hr < 19.5;
     if (springPetals.visible !== petals) springPetals.visible = petals;
     if (petals) springPetalsMove(dt);
+    springButterfliesMove(dt, petals);
   }
 
 
