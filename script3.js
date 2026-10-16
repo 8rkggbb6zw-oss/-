@@ -7229,6 +7229,126 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (drift) fallDriftMove(dt);
   }
 
+  // ---------- Winter on the island ----------
+  // While it's Winter: snow lies over the whole island, the broadleaf trees and bushes stand bare with snow along their
+  // branches, the pines are heavy with snow, the grass pokes up pale and frosted, snowflakes drift down all day, the
+  // light goes cool and silvery, and a few snowmen stand about in their scarves and hats
+  function winterNow() { return seasonOf(state.day) === 3; }
+  // ===== snow-laden pines =====
+  var winterNeedleTex = paintTexture(256, 128, function (g) {          // (pine needles, with snow heaped along the branch and lying over them)
+    for (var i = 0; i < 420; i++) {
+      var t = Math.random(), x = 6 + t * 240, y = 64 + t * t * 14, reach = (44 - t * 26) * (0.5 + Math.random() * 0.5), side = Math.random() < 0.5 ? -1 : 1;
+      g.strokeStyle = 'hsl(' + (140 + Math.random() * 20) + ',' + (24 + Math.random() * 14) + '%,' + (20 + Math.random() * 16) + '%)'; g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 6 + Math.random() * 12, y + side * reach); g.stroke();
+    }
+    g.strokeStyle = '#4a3828'; g.lineWidth = 3; g.beginPath(); g.moveTo(2, 64); g.quadraticCurveTo(128, 68, 252, 78); g.stroke();
+    for (var k = 0; k < 70; k++) {                                     // (soft heaps of snow, thickest along the branch, thinning toward the tips)
+      var t2 = Math.random(), x3 = 8 + t2 * 236, y3 = 64 + t2 * t2 * 14 + (Math.random() - 0.5) * (50 - t2 * 30), r = (16 - t2 * 9) * (0.6 + Math.random() * 0.5);
+      var gr = g.createRadialGradient(x3 - r * 0.3, y3 - r * 0.3, 1, x3, y3, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.7, '#eef4fc'); gr.addColorStop(1, 'rgba(200,218,240,0.85)');
+      g.fillStyle = gr; g.beginPath(); g.ellipse(x3, y3, r, r * 0.75, 0, 0, Math.PI * 2); g.fill();
+    }
+  });
+  var winterSnowOn = { value: 0 };                                    // (snow lying along the tops of the trunks, branches and roots: wherever the bark faces the sky)
+  [barkMat, pineBarkMat, rootMat, pineRootMat].forEach(function (m) {
+    var before = m.onBeforeCompile;
+    m.onBeforeCompile = function (shader) {
+      if (before) before.call(this, shader);
+      shader.uniforms.uSnowOn = winterSnowOn;
+      shader.fragmentShader = 'uniform float uSnowOn;\n' + shader.fragmentShader.replace('#include <normal_fragment_maps>', [
+        '#include <normal_fragment_maps>',
+        'vec3 snowUp = normalize((vec4(normal, 0.0) * viewMatrix).xyz);',   // (this bit of bark's direction in the world)
+        'float snowAmt = smoothstep(0.15, 0.55, snowUp.y) * uSnowOn;',
+        'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.96, 1.0), snowAmt);'
+      ].join('\n'));
+    };
+    m.needsUpdate = true;
+  });
+  var winterGreenNeedle = needleBatch.material.map, winterShown = null;
+  // ===== a snowy island: the ground and the grass =====
+  var winterSnowTex = cpTex(512, 512, function (g, w, h) {             // (snow: soft blue shadows, gentle drifts and a glitter of crystals)
+    g.fillStyle = '#eef3fa'; g.fillRect(0, 0, w, h);
+    for (var d = 0; d < 60; d++) { var x = springHash(d * 3.7) * w, y = springHash(d * 5.1) * h, r = 30 + springHash(d) * 70, gr = g.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, 'rgba(200,214,236,0.45)'); gr.addColorStop(1, 'rgba(200,214,236,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+    for (var b = 0; b < 40; b++) { var x2 = springHash(b * 9.3) * w, y2 = springHash(b * 2.9) * h, r2 = 20 + springHash(b * 4.4) * 50, gr2 = g.createRadialGradient(x2, y2, 2, x2, y2, r2); gr2.addColorStop(0, 'rgba(255,255,255,0.8)'); gr2.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr2; g.fillRect(x2 - r2, y2 - r2, r2 * 2, r2 * 2); }
+    for (var s = 0; s < 900; s++) { g.fillStyle = springHash(s) < 0.5 ? '#ffffff' : 'rgba(170,200,240,0.9)'; g.fillRect(springHash(s * 1.7) * w, springHash(s * 2.3) * h, 1.2, 1.2); }
+  }, [14, 14]);
+  var winterGround = { map: terrain.material.map, bump: terrain.material.bumpMap };
+  var WINTER_GRASS = new THREE.Color(0.86, 0.82, 0.66);
+  // ===== snowflakes =====
+  var winterSnow = (function () {
+    var N = 900, pos = new Float32Array(N * 3), seeds = [];
+    for (var i = 0; i < N; i++) seeds.push({ x: (springHash(i * 3.3 + 7) - 0.5) * 34, y: springHash(i * 5.7 + 7) * 12, z: (springHash(i * 7.1 + 7) - 0.5) * 34, s: 0.5 + springHash(i * 2.2) * 0.6, w: springHash(i * 9.9) * 6.28 });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var c = document.createElement('canvas'); c.width = c.height = 32; var x = c.getContext('2d'), gr = x.createRadialGradient(16, 16, 1, 16, 16, 15); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+    var pts = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), size: 0.09, transparent: true, depthWrite: false }));
+    pts.frustumCulled = false; pts.visible = false; pts.userData.seeds = seeds; scene.add(pts); return pts;
+  })();
+  function winterSnowMove(dt) {
+    var a = winterSnow.geometry.attributes.position, S = winterSnow.userData.seeds, cx = cam.target.x, cz = cam.target.z, t = state.time;
+    S.forEach(function (s, i) {
+      s.y -= dt * s.s; s.x += dt * Math.sin(t * 0.4 + s.w) * 0.25; s.z += dt * Math.cos(t * 0.3 + s.w) * 0.2;
+      var wx = cx + ((s.x % 34) + 51) % 34 - 17, wz = cz + ((s.z % 34) + 51) % 34 - 17, gy = Math.max(groundHeight(wx, wz), WATER_Y);
+      if (s.y < gy) s.y = gy + 10 + springHash(i + t) * 2;
+      a.setXYZ(i, wx + Math.sin(t * 1.1 + s.w) * 0.2, s.y, wz);
+    });
+    a.needsUpdate = true;
+  }
+  // ===== snowmen =====
+  var WINTER_MEN = [], winterMenGroup = new THREE.Group(); winterMenGroup.visible = false; scene.add(winterMenGroup);
+  (function () {
+    var mSnow = new THREE.MeshStandardMaterial({ map: winterSnowTex, color: 0xffffff, roughness: 0.9 }), mCoal = new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.6 });
+    var mCarrot = new THREE.MeshStandardMaterial({ color: 0xf08a24, roughness: 0.6 }), mStick = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.9 }), mHat = new THREE.MeshStandardMaterial({ color: 0x2a2228, roughness: 0.7 });
+    var SCARVES = [0xd8302c, 0x3a7ac8, 0x5aa84a, 0x9a5ac8];
+    for (var c = 0, tries = 0; c < 4 && tries < 3000; tries++) {
+      var x = HOUSE_X - 14 + springHash(tries * 2.9 + 11) * 28, z = HOUSE_Z + 6 + springHash(tries * 4.1 + 3) * 22;
+      if (!springFlowerSpot(x, z, 0.8) || WINTER_MEN.some(function (q) { return dist(q.x, q.z, x, z) < 6; })) continue;
+      c++; var G = new THREE.Group(), y = groundHeight(x, z); G.position.set(x, y, z); G.rotation.y = Math.atan2(HOUSE_X - x, HOUSE_Z + 12 - z) + Math.PI + (springHash(c) - 0.5) * 0.8; winterMenGroup.add(G); WINTER_MEN.push({ x: x, z: z });
+      var mScarf = new THREE.MeshStandardMaterial({ color: SCARVES[c % 4], roughness: 0.9 }), mStripe = new THREE.MeshStandardMaterial({ color: 0xf6f0e4, roughness: 0.9 });
+      [[0.34, 0.3], [0.25, 0.84], [0.18, 1.22]].forEach(function (b, k) { var m = cpPart(new THREE.SphereGeometry(b[0], 20, 14), mSnow, 0, b[1], 0, 0, 0, 0, G); m.scale.set(1, k === 0 ? 0.88 : 0.92, 1); });
+      cpPart(new THREE.CylinderGeometry(0.36, 0.42, 0.06, 20), mSnow, 0, 0.03, 0, 0, 0, 0, G);   // (packed snow round its foot)
+      [-1, 1].forEach(function (s) { cpPart(new THREE.SphereGeometry(0.022, 8, 6), mCoal, s * 0.06, 1.27, 0.16, 0, 0, 0, G); });   // (coal eyes)
+      for (var m = 0; m < 5; m++) { var a = -0.55 + m * 0.275; cpPart(new THREE.SphereGeometry(0.013, 6, 4), mCoal, Math.sin(a) * 0.12, 1.16 - Math.cos(a) * 0.035, 0.155, 0, 0, 0, G); }   // (a smile)
+      cpPart(new THREE.ConeGeometry(0.03, 0.17, 10), mCarrot, 0, 1.22, 0.25, Math.PI / 2, 0, 0, G);   // (carrot nose)
+      [0.95, 0.78, 0.62].forEach(function (yy) { cpPart(new THREE.SphereGeometry(0.03, 8, 6), mCoal, 0, yy, 0.24 - Math.abs(yy - 0.8) * 0.2, 0, 0, 0, G); });   // (buttons)
+      [-1, 1].forEach(function (s) {                                   // (stick arms, with little forked twigs at the ends)
+        var arm = new THREE.Group(); arm.position.set(s * 0.22, 0.92, 0); arm.rotation.z = s * (0.7 + springHash(c * 3 + s) * 0.4); G.add(arm);
+        cpPart(new THREE.CylinderGeometry(0.012, 0.016, 0.5, 6), mStick, 0, 0.25, 0, 0, 0, 0, arm);
+        [-0.5, 0.5].forEach(function (f) { cpPart(new THREE.CylinderGeometry(0.006, 0.008, 0.12, 5), mStick, f * 0.04, 0.5, 0, 0, 0, f, arm); });
+      });
+      cpPart(new THREE.TorusGeometry(0.18, 0.045, 8, 22), mScarf, 0, 1.06, 0, Math.PI / 2, 0, 0, G);   // (a striped scarf, with its tail hanging)
+      for (var st = 0; st < 3; st++) cpPart(new THREE.BoxGeometry(0.09, 0.02, 0.025), mStripe, 0.12, 0.92 - st * 0.07, 0.15, 0, 0, 0.1, G);
+      cpPart(new THREE.BoxGeometry(0.09, 0.26, 0.025), mScarf, 0.12, 0.88, 0.14, 0, 0, 0.1, G);
+      if (c % 2) { cpPart(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), mHat, 0, 1.37, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 18), mHat, 0, 1.47, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.131, 0.131, 0.04, 18), mScarf, 0, 1.4, 0, 0, 0, 0, G); }   // (a top hat with a band)
+      else { cpPart(new THREE.SphereGeometry(0.17, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mScarf, 0, 1.3, 0, 0, 0, 0, G); cpPart(new THREE.TorusGeometry(0.165, 0.03, 6, 20), mStripe, 0, 1.31, 0, Math.PI / 2, 0, 0, G); cpPart(new THREE.SphereGeometry(0.055, 10, 8), mStripe, 0, 1.48, 0, 0, 0, 0, G); }   // (or a bobble hat)
+    }
+  })();
+  // ===== cool, silvery winter light =====
+  var WINTER_SKY = new THREE.Color(0xc4d6ea), WINTER_SUN = new THREE.Color(0xdde8ff);
+  var winterBaseSky = updateSky;
+  updateSky = function () {
+    var night = winterBaseSky.apply(this, arguments);
+    if (winterNow()) { var day = Math.max(0, 1 - night * 1.6); scene.background.lerp(WINTER_SKY, 0.55 * day); scene.fog.color.copy(scene.background); sun.color.lerp(WINTER_SUN, 0.55 * day); hemi.intensity *= 1 + 0.15 * day; }
+    return night;
+  };
+  // ===== every frame =====
+  function updateWinter(dt) {
+    var on = winterNow();
+    if (winterShown !== on) {                                          // (the snow comes, or melts away)
+      winterShown = on;
+      leafBatch.visible = !on; winterSnowOn.value = on ? 1 : 0;                                         // (the broadleaf trees and bushes lose their leaves; the pines keep theirs)
+      needleBatch.material.map = on ? winterNeedleTex : winterGreenNeedle; needleBatch.material.needsUpdate = true;
+      terrain.material.map = on ? winterSnowTex : winterGround.map; terrain.material.bumpMap = on ? winterSnowTex : winterGround.bump; terrain.material.vertexColors = !on; terrain.material.needsUpdate = true;
+      grassMat.vertexColors = !on; grassMat.needsUpdate = true;
+      flowerHeads.visible = flowerStems.visible = !on;
+      winterMenGroup.visible = on;
+    }
+    if (on) {
+      grassMat.color.copy(WINTER_GRASS); terrain.material.color.setRGB(1, 1, 1);
+    }
+    var snowing = on && !indoors;
+    if (winterSnow.visible !== snowing) winterSnow.visible = snowing;
+    if (snowing) winterSnowMove(dt);
+  }
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
@@ -7520,6 +7640,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateSpring(dt);
     updateSummer(dt);
     updateFall(dt);
+    updateWinter(dt);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
