@@ -6130,20 +6130,23 @@ EVERDAWN_PARTS.push(function (THREE) {
   rwGlassMat.map = siGlassTex; rwGlassMat.needsUpdate = true;         // (Fluff & Feather's round window gets its glass now that the glass is made)
   // ---------- The seasons ----------
   // The year has four seasons of 28 days each: Spring, Summer, Fall and Winter, and then it's Spring again. The day
-  // counter says which season it is and how far into it you are ("Spring, Day 1" up to "Spring, Day 28", then
-  // "Summer, Day 1"), and the morning a new season starts, a message says so
+  // counter says the day of the week, which season it is and how far into it you are ("Monday · Spring, Day 1" up to
+  // "Sunday · Spring, Day 28", then "Monday · Summer, Day 1"), and the morning a new season starts, a message says so
   var SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'], SEASON_DAYS = 28;
   var SEASON_NEWS = ['🌸 Spring has arrived! Blossoms and fresh green shoots everywhere.', '☀ Summer has arrived! Long, warm, golden days.', '🍂 Fall has arrived! Crisp air and leaves of red and gold.', '❄ Winter has arrived! Frosty mornings and cozy evenings.'];
   function seasonOf(day) { return Math.floor((day - 1) / SEASON_DAYS) % SEASONS.length; }   // (0: Spring, 1: Summer, 2: Fall, 3: Winter)
   function seasonDayNum(day) { return (day - 1) % SEASON_DAYS + 1; }  // (1 to 28)
   function seasonDay(day) { return SEASONS[seasonOf(day)] + ', Day ' + seasonDayNum(day); }   // ("Spring, Day 1")
+  var WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];   // (every season is four whole weeks, so each one starts on a Monday)
+  function weekdayOf(day) { return WEEKDAYS[(day - 1) % 7]; }
+  function fullDay(day) { return weekdayOf(day) + ', ' + seasonDay(day); }   // ("Monday, Spring, Day 1")
   var seasonLastDay = state.day, seasonNewsDue = false;
   updateClock = function (dt) {
     state.minutes += dt * GAME_MINUTES_PER_SECOND;
     if (state.minutes >= 24 * 60) { state.minutes -= 24 * 60; state.day += 1; }
     var text = clockText(state.minutes);
     if (ui.clock.textContent !== text) ui.clock.textContent = text;
-    var dayText = seasonDay(state.day);
+    var dayText = weekdayOf(state.day) + ' \u00b7 ' + seasonDay(state.day);   // ("Monday · Spring, Day 1")
     if (ui.day.textContent !== dayText) ui.day.textContent = dayText;
     if (state.day !== seasonLastDay) {                                 // (a new day: by the clock, or by sleeping, but not by loading a save)
       if (state.day === seasonLastDay + 1 && seasonDayNum(state.day) === 1) seasonNewsDue = true;
@@ -6152,7 +6155,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (seasonNewsDue && !sleeping && state.minutes >= 6 * 60) {       // (said in the morning, once you're up)
       seasonNewsDue = false;
       var sn = SEASON_NEWS[seasonOf(state.day)];
-      setTimeout(function () { showToast(sn + ' ' + seasonDay(state.day) + '.', 4600); }, 3000);
+      setTimeout(function () { showToast(sn + ' ' + fullDay(state.day) + '.', 4600); }, 3000);
     }
   };
   (function () {                                                      // (on a phone, the coins, time, mana and stamina wrap onto two lines instead of running off the edge)
@@ -6160,7 +6163,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   var seasonBaseToast = showToast;                                    // (the good-morning messages say the season too: "☀ Spring, Day 2")
   showToast = function (message, ms) {
-    if (typeof message === 'string') message = message.replace(/☀ Day (\d+)/, function (m, n) { return '☀ ' + seasonDay(+n); });
+    if (typeof message === 'string') message = message.replace(/☀ Day (\d+)/, function (m, n) { return '☀ ' + fullDay(+n); });
     return seasonBaseToast.call(this, message, ms);
   };
 
