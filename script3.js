@@ -7374,6 +7374,41 @@ EVERDAWN_PARTS.push(function (THREE) {
       else { cpPart(new THREE.SphereGeometry(0.17, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mScarf, 0, 1.3, 0, 0, 0, 0, G); cpPart(new THREE.TorusGeometry(0.165, 0.03, 6, 20), mStripe, 0, 1.31, 0, Math.PI / 2, 0, 0, G); cpPart(new THREE.SphereGeometry(0.055, 10, 8), mStripe, 0, 1.48, 0, 0, 0, 0, G); }   // (or a bobble hat)
     }
   })();
+  // ===== snow on the roofs: on everything up high that faces the sky (roofs, chimneys, lamp tops, the tops of big rocks) =====
+  var winterRoofSkip = null, winterRoofT = -99;
+  function winterRoofPatch() {
+    if (!winterRoofSkip) {                                             // (not on you, the ground, the grass, the trees' own foliage or the water)
+      winterRoofSkip = new Set([terrain.material, grassMat, leafBatch.material, needleBatch.material, litterMat, barkMat, pineBarkMat, rootMat, pineRootMat]);
+      player.traverse(function (o) { if (o.material) [].concat(o.material).forEach(function (m) { winterRoofSkip.add(m); }); });
+    }
+    scene.traverse(function (o) {
+      if (!o.isMesh || !o.material) return;
+      [].concat(o.material).forEach(function (m) {
+        if (!m || m.userData.snowy || winterRoofSkip.has(m) || m.transparent || !(m.isMeshStandardMaterial || m.isMeshLambertMaterial || m.isMeshPhongMaterial)) return;
+        m.userData.snowy = true;
+        var before = m.onBeforeCompile, key = before ? before.toString() : '';
+        m.customProgramCacheKey = function () { return key + '|roofsnow'; };
+        m.onBeforeCompile = function (shader) {
+          if (before) before.call(this, shader);
+          shader.uniforms.uSnowOn = winterSnowOn;
+          shader.vertexShader = 'varying float vSnowY;\nvarying vec2 vSnowXZ;\n' + shader.vertexShader.replace('#include <project_vertex>', [
+            '#include <project_vertex>',
+            'vec4 snowP = vec4(transformed, 1.0);',
+            '#ifdef USE_INSTANCING', 'snowP = instanceMatrix * snowP;', '#endif',
+            'vec4 snowW = modelMatrix * snowP; vSnowY = snowW.y; vSnowXZ = snowW.xz;'
+          ].join('\n'));
+          shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowY;\nvarying vec2 vSnowXZ;\nfloat snowHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat snowNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(snowHash(i), snowHash(i + vec2(1.0, 0.0)), f.x), mix(snowHash(i + vec2(0.0, 1.0)), snowHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' + shader.fragmentShader.replace('#include <normal_fragment_maps>', [
+            '#include <normal_fragment_maps>',
+            'vec3 roofUp = normalize((vec4(normal, 0.0) * viewMatrix).xyz);',
+            'float snowPatch = snowNoise(vSnowXZ * 1.6) * 0.65 + snowNoise(vSnowXZ * 5.0) * 0.35;',   // (just a little: soft patches here and there, and a light dusting between)
+            'float roofSnow = smoothstep(0.3, 0.6, roofUp.y) * smoothstep(1.3, 1.8, vSnowY) * uSnowOn * (smoothstep(0.55, 0.72, snowPatch) * 0.9 + 0.12);',
+            'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.97, 1.0), roofSnow);'
+          ].join('\n'));
+        };
+        m.needsUpdate = true;
+      });
+    });
+  }
   // ===== cool, silvery winter light =====
   var WINTER_SKY = new THREE.Color(0xc4d6ea), WINTER_SUN = new THREE.Color(0xdde8ff);
   var winterBaseSky = updateSky;
@@ -7391,10 +7426,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       needleBatch.material.map = on ? winterNeedleTex : winterGreenNeedle; needleBatch.material.needsUpdate = true;
       terrain.material.map = on ? winterSnowTex : winterGround.map; terrain.material.bumpMap = on ? winterSnowBump : winterGround.bump; terrain.material.bumpScale = on ? 0.06 : winterGround.bumpScale; terrain.material.roughness = on ? 0.82 : winterGround.rough; terrain.material.vertexColors = !on; terrain.material.needsUpdate = true;
       grassMat.vertexColors = !on; grassMat.needsUpdate = true;
-      winterBury(on);
+      winterBury(on); if (on) { winterRoofPatch(); winterRoofT = state.time; }
       winterMenGroup.visible = on;
     }
     if (on) {
+      if (state.time - winterRoofT > 4) { winterRoofT = state.time; winterRoofPatch(); }   // (and on anything built since, like a new coop or barn)
       grassMat.color.copy(WINTER_GRASS); terrain.material.color.setRGB(1, 1, 1);
     }
     var snowing = on && !indoors;
