@@ -4733,10 +4733,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-0.82, 0.82].forEach(function (e) { put(new THREE.BoxGeometry(0.4, 1.15, 0.06), mWood, x + e, 0.575, -D2 + 1.67); put(new THREE.BoxGeometry(0.44, 0.06, 0.1), mPost, x + e, 1.18, -D2 + 1.67); fbarnSolids.push([x + e, -D2 + 1.67, 0.22]); });
       put(new THREE.BoxGeometry(0.56, 0.32, 0.03), mOld, x, 2.0, -D2 + 1.76);
       put(new THREE.PlaneGeometry(0.5, 0.25), abStallSlates[FBARN_STALL0 + k], x, 2.0, -D2 + 1.776).castShadow = false;
-      var HR = new THREE.Group(); HR.position.set(x - 0.35, 0, -D2 + 0.12); R.add(HR);   // (a hay rack on the back wall)
-      put(new THREE.BoxGeometry(0.9, 0.05, 0.05), mPost, 0, 1.75, 0.3, 0, 0, 0, HR); put(new THREE.BoxGeometry(0.9, 0.05, 0.05), mPost, 0, 1.15, 0.03, 0, 0, 0, HR);
-      for (var hb = 0; hb < 8; hb++) put(new THREE.CylinderGeometry(0.01, 0.01, 0.66, 5), cpmIron, -0.4 + hb * 0.115, 1.45, 0.165, -0.42, 0, 0, HR);
-      put(wbLumpGeo(900 + k, 0.35), new THREE.MeshStandardMaterial({ map: haySideTex, roughness: 1 }), 0, 1.5, 0.12, 0, k, 0, HR).scale.set(0.42, 0.18, 0.13);
       var BK = new THREE.Group(); BK.position.set(x + 0.6, 0.95, -D2 + 0.22); R.add(BK);   // (a water bucket on a hook)
       put(new THREE.CylinderGeometry(0.13, 0.1, 0.24, 16, 1, true), cpmSteel, 0, 0, 0, 0, 0, 0, BK); put(new THREE.CircleGeometry(0.1, 14), cpmSteel, 0, -0.12, 0, -Math.PI / 2, 0, 0, BK);
       put(new THREE.CircleGeometry(0.12, 16), fbmWater, 0, 0.08, 0, -Math.PI / 2, 0, 0, BK).castShadow = false; put(new THREE.TorusGeometry(0.125, 0.006, 5, 18, Math.PI), cpmIron, 0, 0.12, 0, 0, 0, 0, BK);
