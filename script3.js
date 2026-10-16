@@ -4080,7 +4080,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   adoptGlimmerwing = function (kind) {
     if (COOP_KINDS.indexOf(kind) < 0) return coopBaseAdopt(kind);
     if (!coop.built) { showToast(COOP_NAMES[kind] + 's live in a coop: build one at Oak & Ember first 🐔', 2800); return; }
-    if (!siteReady(coop)) { showToast('Your coop is still being built: it\'ll be ready on the morning of day ' + (coop.start + SITE_DAYS) + ' 🪚', 2800); return; }
+    if (!siteReady(coop)) { showToast('Your coop is still being built: it\'ll be ready on the morning of ' + seasonDay(coop.start + SITE_DAYS) + ' 🪚', 2800); return; }
     var cs = coopFreeStall(), cost = coopKindCost(kind);
     if (cs < 0) { showToast('Your coop is full: it has room for 4', 2200); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
@@ -4092,7 +4092,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function homeNoteText(o, name) {                                     // (what the note on their card says, depending on how your coop or barn is getting on)
     if (!o.built) return 'Lives in your ' + name + ': build one at Oak & Ember';
-    if (!siteReady(o)) return 'Lives in your ' + name + ': it\'s being built, ready on day ' + (o.start + SITE_DAYS);
+    if (!siteReady(o)) return 'Lives in your ' + name + ': it\'s being built, ready on ' + seasonDay(o.start + SITE_DAYS);
     return 'Lives in your ' + name;
   }
   var COOP_NOTES = [];
@@ -4186,13 +4186,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy'), siloBuyBtn = carpShopBox.querySelector('.silo-buy');
   function renderCarpShop() {
     carpShopCoins.textContent = state.coins;
-    coopBuyBtn.innerHTML = coop.built ? (siteReady(coop) ? 'Built ✓' : 'Being built: ready day ' + (coop.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
+    coopBuyBtn.innerHTML = coop.built ? (siteReady(coop) ? 'Built ✓' : 'Being built: ready ' + seasonDay(coop.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
     coopBuyBtn.disabled = coop.built || state.coins < COOP_COST;
-    fbarnBuyBtn.innerHTML = fbarn.built ? (siteReady(fbarn) ? 'Built ✓' : 'Being built: ready day ' + (fbarn.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
+    fbarnBuyBtn.innerHTML = fbarn.built ? (siteReady(fbarn) ? 'Built ✓' : 'Being built: ready ' + seasonDay(fbarn.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
     fbarnBuyBtn.disabled = fbarn.built || state.coins < FBARN_COST;
-    millBuyBtn.innerHTML = !mill.built ? 'Build · <img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') : mill.stage < MILL_DAYS ? 'Being built: ready day ' + (mill.start + MILL_DAYS) : 'Built ✓';
+    millBuyBtn.innerHTML = !mill.built ? 'Build · <img class="coin-icon" alt=""> ' + MILL_COST.toLocaleString('en-US') : mill.stage < MILL_DAYS ? 'Being built: ready ' + seasonDay(mill.start + MILL_DAYS) : 'Built ✓';
     millBuyBtn.disabled = mill.built || state.coins < MILL_COST;
-    siloBuyBtn.innerHTML = !silo.built ? 'Build · <img class="coin-icon" alt=""> ' + SILO_COST.toLocaleString('en-US') : !siloReady() ? 'Being built: ready day ' + (silo.start + SILO_DAYS) : 'Built ✓';
+    siloBuyBtn.innerHTML = !silo.built ? 'Build · <img class="coin-icon" alt=""> ' + SILO_COST.toLocaleString('en-US') : !siloReady() ? 'Being built: ready ' + seasonDay(silo.start + SILO_DAYS) : 'Built ✓';
     siloBuyBtn.disabled = silo.built || state.coins < SILO_COST;
     carpTilesSync();
   }
@@ -4351,7 +4351,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var PLACE_HINT_END = ' <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under it.';
   var COOP_SPEC = { title: '🐔 Where should your coop go?', hint: 'Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: COOP_FC, fr: COOP_FR, bw: COOP_BW, bd: COOP_BD, off: 0.45, door: 1.1, roof: 'rgba(122,82,54,0.85)', doorCol: '#92b596', emoji: '🐔', cost: COOP_COST,
     built: function () { return coop.built; }, build: function (c, r) { coop.hay = [false, false, false, false, false, false, false, false]; coop.res = []; coopPlace(c, r, farmDay()); coopHayShow(); },
-    done: function () { return '🐔 Oak & Ember have started building your coop! It takes two days: it\'ll be finished on the morning of day ' + (coop.start + SITE_DAYS) + '.'; } };
+    done: function () { return '🐔 Oak & Ember have started building your coop! It takes two days: it\'ll be finished on the morning of ' + seasonDay(coop.start + SITE_DAYS) + '.'; } };
   window.addEventListener('keydown', function (e) {
     if (e.code !== 'Escape') return;
     if (carpShopOpen) closeCarpShop();
@@ -4403,7 +4403,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var fbarnDoor = { x: 1e6, z: 1e6 }, fbarnGroup = null, fbarnGlows = [], inFbarn = false;
   var FBARN_SPEC = { title: '🐮 Where should your barn go?', hint: 'Tap your farm to choose a spot. The barn takes 8 × 7 tiles, with its big doors facing south (down the map).' + PLACE_HINT_END, fc: FBARN_FC, fr: FBARN_FR, bw: FBARN_BW, bd: FBARN_BD, off: FBARN_OFF, door: 3.0, roof: 'rgba(100,96,92,0.88)', doorCol: '#b84a3c', emoji: '🐮', ridgeZ: true, cost: FBARN_COST,
     built: function () { return fbarn.built; }, build: function (c, r) { fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = []; fbarnPlace(c, r, farmDay()); fbarnHayShow(); },
-    done: function () { return '🐮 Oak & Ember have started building your barn! It takes two days: it\'ll be finished on the morning of day ' + (fbarn.start + SITE_DAYS) + '.'; } };
+    done: function () { return '🐮 Oak & Ember have started building your barn! It takes two days: it\'ll be finished on the morning of ' + seasonDay(fbarn.start + SITE_DAYS) + '.'; } };
   function fbarnFront(d) { return { x: fbarn.x, z: fbarn.z + FBARN_BD / 2 + d }; }
   function fbarnCovers(x, z, r) { return fbarn.built && Math.abs(x - fbarn.fx) < FBARN_FC * TILE / 2 + r && Math.abs(z - fbarn.fz) < FBARN_FR * TILE / 2 + r; }
   var fbarnBaseSoilNear = soilNear;                                    // (nothing grows back under the barn either)
@@ -4993,7 +4993,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   adoptGlimmerwing = function (kind) {
     if (FBARN_KINDS.indexOf(kind) < 0) return fbarnBaseAdopt(kind);
     if (!fbarn.built) { showToast('A ' + FBARN_NAMES[kind] + ' lives in a barn: build one at Oak & Ember first 🐮', 2800); return; }
-    if (!siteReady(fbarn)) { showToast('Your barn is still being built: it\'ll be ready on the morning of day ' + (fbarn.start + SITE_DAYS) + ' 🪚', 2800); return; }
+    if (!siteReady(fbarn)) { showToast('Your barn is still being built: it\'ll be ready on the morning of ' + seasonDay(fbarn.start + SITE_DAYS) + ' 🪚', 2800); return; }
     var fs2 = fbarnFreeStall(), cost = fbarnKindCost(kind);
     if (fs2 < 0) { showToast('Your barn is full: it has room for 4', 2200); return; }
     if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
@@ -5078,7 +5078,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function millStage() { return !mill.built ? -1 : Math.min(MILL_DAYS, farmDay() - mill.start); }   // 0: just started, 1: half built, 2: finished
   var MILL_SPEC = { title: '🌾 Where should your mill go?', hint: 'Tap your farm to choose a spot. The mill takes 4 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: MILL_FC, fr: MILL_FR, bw: 3.6, bd: 3.6, off: 0, door: 0.9, roof: 'rgba(240,232,214,0.9)', doorCol: '#7a5236', emoji: '🌾', cost: MILL_COST,
     built: function () { return mill.built; }, build: function (c, r) { millPlace(c, r, farmDay()); },
-    done: function () { return '🌾 Oak & Ember have started building your mill! It takes two days: it\'ll be finished on the morning of day ' + (mill.start + MILL_DAYS) + '.'; } };
+    done: function () { return '🌾 Oak & Ember have started building your mill! It takes two days: it\'ll be finished on the morning of ' + seasonDay(mill.start + MILL_DAYS) + '.'; } };
 
   // ===== what it's made of =====
   var millBoardTex = cpTex(256, 256, function (g, w, h) {             // (white weatherboards, overlapping, each with a shadow under its edge)
@@ -5294,7 +5294,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function siloReady() { return silo.built && silo.stage >= SILO_DAYS; }
   var SILO_SPEC = { title: '🌾 Where should your silo go?', hint: 'Tap your farm to choose a spot. The silo takes 3 × 3 tiles, with its hay chute facing south (down the map).' + PLACE_HINT_END, fc: SILO_FC, fr: SILO_FR, bw: 2.7, bd: 2.7, off: 0, door: 0.7, roof: 'rgba(200,206,214,0.92)', doorCol: '#8a6040', emoji: '🌾', cost: SILO_COST,
     built: function () { return silo.built; }, build: function (c, r) { silo.hay = 0; siloPlace(c, r, farmDay()); },
-    done: function () { return '🌾 Oak & Ember have started building your silo! It takes two days: it\'ll be finished on the morning of day ' + (silo.start + SILO_DAYS) + '.'; } };
+    done: function () { return '🌾 Oak & Ember have started building your silo! It takes two days: it\'ll be finished on the morning of ' + seasonDay(silo.start + SILO_DAYS) + '.'; } };
 
   // ===== what it's made of =====
   var siloStaveTex = cpTex(256, 256, function (g, w, h) {             // (red-painted staves standing side by side, each with its own grain and a pale seam)
@@ -5470,7 +5470,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ===== filling it, and taking hay out at the hoppers =====
   function siloNear() { return silo.built && !indoors && !flying && dist(player.position.x, player.position.z, silo.x, silo.z) < SILO_R + 1.35; }
   function siloFill() {
-    if (!siloReady()) { showToast('Your silo is still being built: it\'ll be ready on the morning of day ' + (silo.start + SILO_DAYS) + ' 🪚', 2600); return; }
+    if (!siloReady()) { showToast('Your silo is still being built: it\'ll be ready on the morning of ' + seasonDay(silo.start + SILO_DAYS) + ' 🪚', 2600); return; }
     if (silo.hay >= SILO_CAP) { showToast('Your silo is full: it holds ' + SILO_CAP + ' hay 🌾', 2200); return; }
     var have = bagCount('hay');
     if (!have) { showToast('Your silo only takes hay, and you don\'t have any. Buy it at Fluff & Feather, or trim bushes for it 🌾 (' + silo.hay + '/' + SILO_CAP + ')', 3200); return; }
@@ -5481,7 +5481,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function siloHopperTake() {                                          // (a bundle of hay from your silo, through the hopper)
     if (!silo.built) { showToast('This hopper gives you hay from a silo, but you don\'t have one yet: Oak & Ember can build you one 🌾', 3000); return; }
-    if (!siloReady()) { showToast('Your silo is still being built: hay will come out here from the morning of day ' + (silo.start + SILO_DAYS) + ' 🪚', 2800); return; }
+    if (!siloReady()) { showToast('Your silo is still being built: hay will come out here from the morning of ' + seasonDay(silo.start + SILO_DAYS) + ' 🪚', 2800); return; }
     if (silo.hay <= 0) { showToast('Your silo is empty: put hay in it through its chute, outside 🌾', 2600); return; }
     if (!addItem('hay', 1)) { bagFull(); return; }
     silo.hay--; siloShowHay(); popSound();
@@ -6128,6 +6128,42 @@ EVERDAWN_PARTS.push(function (THREE) {
     tile.wet = false; tile.stage = 0; tile.growth = 0;
   }
   rwGlassMat.map = siGlassTex; rwGlassMat.needsUpdate = true;         // (Fluff & Feather's round window gets its glass now that the glass is made)
+  // ---------- The seasons ----------
+  // The year has four seasons of 28 days each: Spring, Summer, Fall and Winter, and then it's Spring again. The day
+  // counter says which season it is and how far into it you are ("Spring, Day 1" up to "Spring, Day 28", then
+  // "Summer, Day 1"), and the morning a new season starts, a message says so
+  var SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'], SEASON_DAYS = 28;
+  var SEASON_NEWS = ['🌸 Spring has arrived! Blossoms and fresh green shoots everywhere.', '☀ Summer has arrived! Long, warm, golden days.', '🍂 Fall has arrived! Crisp air and leaves of red and gold.', '❄ Winter has arrived! Frosty mornings and cosy evenings.'];
+  function seasonOf(day) { return Math.floor((day - 1) / SEASON_DAYS) % SEASONS.length; }   // (0: Spring, 1: Summer, 2: Fall, 3: Winter)
+  function seasonDayNum(day) { return (day - 1) % SEASON_DAYS + 1; }  // (1 to 28)
+  function seasonDay(day) { return SEASONS[seasonOf(day)] + ', Day ' + seasonDayNum(day); }   // ("Spring, Day 1")
+  var seasonLastDay = state.day, seasonNewsDue = false;
+  updateClock = function (dt) {
+    state.minutes += dt * GAME_MINUTES_PER_SECOND;
+    if (state.minutes >= 24 * 60) { state.minutes -= 24 * 60; state.day += 1; }
+    var text = clockText(state.minutes);
+    if (ui.clock.textContent !== text) ui.clock.textContent = text;
+    var dayText = seasonDay(state.day);
+    if (ui.day.textContent !== dayText) ui.day.textContent = dayText;
+    if (state.day !== seasonLastDay) {                                 // (a new day: by the clock, or by sleeping, but not by loading a save)
+      if (state.day === seasonLastDay + 1 && seasonDayNum(state.day) === 1) seasonNewsDue = true;
+      seasonLastDay = state.day;
+    }
+    if (seasonNewsDue && !sleeping && state.minutes >= 6 * 60) {       // (said in the morning, once you're up)
+      seasonNewsDue = false;
+      var sn = SEASON_NEWS[seasonOf(state.day)];
+      setTimeout(function () { showToast(sn + ' ' + seasonDay(state.day) + '.', 4600); }, 3000);
+    }
+  };
+  (function () {                                                      // (on a phone, the coins, time, mana and stamina wrap onto two lines instead of running off the edge)
+    var st = document.createElement('style'); st.textContent = '@media (max-width: 640px) { .stats { flex-wrap: wrap !important; row-gap: 6px; } }'; document.head.appendChild(st);
+  })();
+  var seasonBaseToast = showToast;                                    // (the good-morning messages say the season too: "☀ Spring, Day 2")
+  showToast = function (message, ms) {
+    if (typeof message === 'string') message = message.replace(/☀ Day (\d+)/, function (m, n) { return '☀ ' + seasonDay(+n); });
+    return seasonBaseToast.call(this, message, ms);
+  };
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
