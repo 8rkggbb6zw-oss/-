@@ -6164,6 +6164,175 @@ EVERDAWN_PARTS.push(function (THREE) {
     return seasonBaseToast.call(this, message, ms);
   };
 
+  // ---------- Spring on the island ----------
+  // While it's Spring, the island looks it: many of the broadleaf trees (and some of the bushes) are covered in pink,
+  // white and rose blossom, patches of tulips and daffodils come up in the meadows, and on fine days a few loose
+  // petals drift down through the air around you. The blossom moves with its tree, so it falls with a chopped tree,
+  // grows back with it, and shudders with it when you swing your axe. Out of Spring it's all tucked away
+  function springHash(n) { var v = Math.sin(n * 78.233 + 1.7) * 43758.5453; return v - Math.floor(v); }
+  function springNow() { return seasonOf(state.day) === 0; }
+  // ===== blossom on the trees =====
+  var springBlossomTex = (function () {                                // (a little spray of five-petalled flowers, white so each card can be tinted)
+    var c = document.createElement('canvas'); c.width = c.height = 128; var g = c.getContext('2d');
+    for (var f = 0; f < 9; f++) {
+      var cx = 22 + springHash(f * 3.1) * 84, cy = 22 + springHash(f * 7.7) * 84, r = 9 + springHash(f * 5.3) * 7, a0 = springHash(f) * 6.28;
+      for (var p = 0; p < 5; p++) {
+        var a = a0 + p / 5 * Math.PI * 2, px = cx + Math.cos(a) * r * 0.55, py = cy + Math.sin(a) * r * 0.55;
+        var gr = g.createRadialGradient(px, py, 0, px, py, r * 0.62); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.75, '#fff4f8'); gr.addColorStop(1, '#f2d6e2');
+        g.fillStyle = gr; g.beginPath(); g.ellipse(px, py, r * 0.6, r * 0.46, a, 0, Math.PI * 2); g.fill();
+      }
+      g.fillStyle = '#f6c84a'; g.beginPath(); g.arc(cx, cy, r * 0.2, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#e8a030'; for (var s = 0; s < 5; s++) { var sa = s / 5 * 6.28; g.beginPath(); g.arc(cx + Math.cos(sa) * r * 0.28, cy + Math.sin(sa) * r * 0.28, 1.1, 0, Math.PI * 2); g.fill(); }
+    }
+    var t = new THREE.CanvasTexture(c); return t;
+  })();
+  var springBlossoms = foliageBatch(new THREE.PlaneGeometry(1, 1), springBlossomTex, 16000);
+  var springBlossomM = new THREE.Matrix4();
+  scene.add(springBlossoms);
+  (function () {
+    var m = new THREE.Matrix4(), rot = new THREE.Matrix4(), sc = new THREE.Matrix4(), off = new THREE.Matrix4(), cur = new THREE.Matrix4(), inv = new THREE.Matrix4(), p = new THREE.Vector3(), mid = new THREE.Vector3(), col = new THREE.Color();
+    var TINTS = [[1, 0.72, 0.84], [1, 0.8, 0.9], [1, 0.62, 0.78], [1, 0.95, 0.97], [1, 0.76, 0.88]];
+    allScenery.forEach(function (t, ti) {
+      var u = t.userData, tree = choppable.indexOf(t) >= 0;
+      if (u.gone || (tree && !u.leafy) || !u.leaves || !u.leafOrig) return;
+      if (springHash(ti * 1.37) > (tree ? 0.62 : 0.4)) return;          // (not every tree blossoms)
+      var tint = TINTS[Math.floor(springHash(ti * 2.9) * TINTS.length)], start = springBlossoms.count, orig = [];
+      u.leaves.forEach(function (L, n) {
+        if (L.batch !== leafBatch || !L.count) return;
+        var o = u.leafOrig[n]; mid.set(0, 0, 0);
+        for (var i = 0; i < L.count; i++) { p.set(o[i * 16 + 12], o[i * 16 + 13], o[i * 16 + 14]); mid.add(p); }
+        mid.multiplyScalar(1 / L.count);
+        for (var j = 0; j < L.count; j++) {
+          if (springHash(ti * 31 + n * 7 + j * 1.91) > 0.75 || springBlossoms.count >= springBlossoms.instanceMatrix.count) continue;
+          m.fromArray(o, j * 16); p.set(o[j * 16 + 12], o[j * 16 + 13], o[j * 16 + 14]).sub(mid);
+          if (p.y < -0.25 * (u.size || 1)) continue;                    // (blossom on the outside and the top of the canopy, not underneath)
+          p.normalize().multiplyScalar(0.1 * (u.size || 1));
+          m.premultiply(off.makeTranslation(p.x, p.y + 0.03, p.z)).multiply(rot.makeRotationZ(springHash(j * 5.1) * 6.28)).multiply(sc.makeScale(0.9, 0.9, 0.9));
+          orig.push.apply(orig, m.toArray());
+          var k = 0.92 + springHash(j * 2.3) * 0.12; col.setRGB(tint[0] * k, tint[1] * k, tint[2] * k);
+          springBlossoms.setMatrixAt(springBlossoms.count, m); springBlossoms.setColorAt(springBlossoms.count, col); springBlossoms.count++;
+        }
+      });
+      var count = springBlossoms.count - start; if (!count) return;
+      u.blossoms = { start: start, count: count, orig: orig };
+      // (if the tree is already cut down or growing back, its blossom starts out the same way)
+      var L0 = u.leaves[0];
+      if (L0 && L0.count) { cur.fromArray(L0.batch.instanceMatrix.array, L0.start * 16); inv.fromArray(u.leafOrig[0], 0).invert(); springBlossomMove(u, cur.multiply(inv)); }
+    });
+    springBlossoms.instanceMatrix.needsUpdate = true; if (springBlossoms.instanceColor) springBlossoms.instanceColor.needsUpdate = true;
+  })();
+  function springBlossomMove(u, M) {
+    var B = u.blossoms, arr = springBlossoms.instanceMatrix.array, m = springBlossomM;
+    for (var i = 0; i < B.count; i++) { m.fromArray(B.orig, i * 16).premultiply(M); m.toArray(arr, (B.start + i) * 16); }
+    markDirty(springBlossoms.instanceMatrix, B.start * 16, B.count * 16);
+  }
+  var springBaseTreeTransform = setTreeTransform;                     // (the blossom goes wherever its tree goes)
+  setTreeTransform = function (t, M, which) {
+    springBaseTreeTransform(t, M, which);
+    if (which !== 'ground' && t.userData.blossoms) springBlossomMove(t.userData, M);
+  };
+  // ===== tulips and daffodils in the meadows =====
+  var SPRING_FLOWERS = [], springFlowerMesh = [], springFlowerShown = null;
+  (function () {
+    var cols = [0xf05a6a, 0xff8fb0, 0xfff2f6, 0xf6d24a, 0xb48af0, 0xff9a4a, 0xffe46a];
+    for (var c = 0, tries = 0; c < 70 && tries < 4000; tries++) {
+      var cx = -ISLAND + 3 + springHash(tries * 3.7 + 11) * (ISLAND * 2 - 6), cz = -ISLAND + 3 + springHash(tries * 5.3 + 7) * (ISLAND * 2 - 6);
+      if (!springFlowerSpot(cx, cz, 1.0)) continue;
+      c++;
+      var kind = Math.floor(springHash(c * 9.1) * cols.length), daff = cols[kind] === 0xf6d24a || cols[kind] === 0xffe46a, n = 6 + Math.floor(springHash(c * 4.4) * 7);
+      for (var f = 0; f < n; f++) {
+        var a = springHash(c * 17 + f * 3.3) * 6.28, r = 0.15 + springHash(c * 13 + f * 1.7) * 0.55, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+        if (!springFlowerSpot(x, z, 0.3)) continue;
+        SPRING_FLOWERS.push({ x: x, z: z, y: groundHeight(x, z), h: 0.32 + springHash(c * 7 + f) * 0.14, rot: springHash(c * 3 + f * 5) * 6.28, tilt: (springHash(c + f * 11) - 0.5) * 0.25, col: springHash(c * 2 + f) < 0.85 ? cols[kind] : cols[(kind + 2) % cols.length], daff: daff });
+      }
+    }
+    var stemGeo = new THREE.CylinderGeometry(0.011, 0.014, 1, 5); stemGeo.translate(0, 0.5, 0);
+    var leafGeo = new THREE.PlaneGeometry(0.035, 0.16); leafGeo.translate(0, 0.08, 0); leafGeo.rotateZ(0.35);
+    var tulipGeo = new THREE.LatheGeometry([[0.0, -0.02], [0.03, -0.012], [0.042, 0.02], [0.038, 0.055], [0.022, 0.07], [0.028, 0.062]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 10);
+    var daffGeo = (function () {                                       // (six pointed petals round a trumpet)
+      var g = new THREE.CylinderGeometry(0.02, 0.014, 0.05, 10, 1, true); g.rotateX(Math.PI / 2); g.translate(0, 0, 0.03);
+      var parts = [g]; for (var i = 0; i < 6; i++) { var pg = new THREE.PlaneGeometry(0.03, 0.05); pg.translate(0, 0.03, 0); pg.rotateZ(i / 6 * Math.PI * 2); parts.push(pg); }
+      return mergeSimple(parts);
+    })();
+    var mStem = new THREE.MeshStandardMaterial({ color: 0x5aa04a, roughness: 0.8, side: THREE.DoubleSide }), mHead = new THREE.MeshStandardMaterial({ roughness: 0.55, side: THREE.DoubleSide });
+    var tulips = SPRING_FLOWERS.filter(function (f) { return !f.daff; }), daffs = SPRING_FLOWERS.filter(function (f) { return f.daff; });
+    springFlowerMesh = [
+      { im: new THREE.InstancedMesh(stemGeo, mStem, SPRING_FLOWERS.length), list: SPRING_FLOWERS, part: 'stem' },
+      { im: new THREE.InstancedMesh(leafGeo, mStem, SPRING_FLOWERS.length), list: SPRING_FLOWERS, part: 'leaf' },
+      { im: new THREE.InstancedMesh(tulipGeo, mHead, Math.max(1, tulips.length)), list: tulips, part: 'tulip' },
+      { im: new THREE.InstancedMesh(daffGeo, mHead, Math.max(1, daffs.length)), list: daffs, part: 'daff' }
+    ];
+    springFlowerMesh.forEach(function (F) { F.im.castShadow = true; F.im.frustumCulled = false; scene.add(F.im); F.list.forEach(function (f, i) { F.im.setColorAt(i, new THREE.Color(F.part === 'stem' || F.part === 'leaf' ? 0xffffff : f.col)); }); });
+  })();
+  function mergeSimple(geos) {                                         // (a handful of little shapes joined into one)
+    var pos = [], nor = [], idx = [], off = 0;
+    geos.forEach(function (g) { var p = g.attributes.position, nn = g.attributes.normal; for (var i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(nn.getX(i), nn.getY(i), nn.getZ(i)); } if (g.index) for (var k = 0; k < g.index.count; k++) idx.push(g.index.getX(k) + off); else for (var q = 0; q < p.count; q++) idx.push(q + off); off += p.count; });
+    var out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); out.setIndex(idx); return out;
+  }
+  function springFlowerSpot(x, z, pad) {                               // (open meadow: not on a path, your fields or yard, a building, the lake or under a tree or rock)
+    if (!onIsland(x, z) || inLake(x, z) || onDock(x, z) || underDock(x, z) || groundHeight(x, z) < 0) return false;
+    if (pathDist(x, z) < PATH_W + 0.6 || stonePathDist(x, z) < 1.2 || inHouseYard(x, z) || dist(x, z, HOUSE_X, HOUSE_Z) < 7 || dist(x, z, TREE_X, TREE_Z) < TREE_ZONE + 2) return false;
+    if (Math.abs(x - (FARM_X + COLS * TILE / 2)) < COLS * TILE / 2 + 1.5 && Math.abs(z - (FARM_Z + ROWS * TILE / 2)) < ROWS * TILE / 2 + 1.5) return false;
+    for (var i = 0; i < solids.length; i++) { var sd = solids[i]; if (sd.r > 0 && Math.abs(sd.x - x) < sd.r + pad && Math.abs(sd.z - z) < sd.r + pad && dist(x, z, sd.x, sd.z) < sd.r + pad) return false; }
+    return true;
+  }
+  function springFlowerOK(f) {                                         // (still there? not dug up into soil, built over, or under a tree that's grown back)
+    var t = tileMap[tileKey(Math.floor((f.x - FARM_X) / TILE), Math.floor((f.z - FARM_Z) / TILE))];
+    if (t && t.soil) return false;
+    return !(coopCovers(f.x, f.z, 0.3) || fbarnCovers(f.x, f.z, 0.3) || millCovers(f.x, f.z, 0.3) || siloCovers(f.x, f.z, 0.3));
+  }
+  var springFlowerM = new THREE.Matrix4(), springFlowerQ = new THREE.Quaternion(), springFlowerE = new THREE.Euler(), springFlowerV = new THREE.Vector3(), springFlowerS = new THREE.Vector3(), springFlowerT = -99, springWasOn = null;
+  function springFlowersPlace(show) {
+    var key = SPRING_FLOWERS.map(function (f) { return show && springFlowerOK(f) ? 1 : 0; }).join('');
+    if (key === springFlowerShown) return; springFlowerShown = key;
+    springFlowerMesh.forEach(function (F) {
+      F.list.forEach(function (f, i) {
+        var k = key[SPRING_FLOWERS.indexOf(f)] === '1' ? 1 : 0;
+        springFlowerE.set(f.tilt, f.rot, f.tilt * 0.6); springFlowerQ.setFromEuler(springFlowerE);   // (each stem leans a little its own way)
+        springFlowerV.set(f.x, f.y, f.z);
+        if (F.part === 'stem') springFlowerS.set(k, f.h * k, k);
+        else if (F.part === 'leaf') { springFlowerS.setScalar(k * 1.6); springFlowerE.set(0, f.rot + 1.3, 0); springFlowerQ.setFromEuler(springFlowerE); }
+        else {                                                           // (the flower on top of its stem: tulips upright, daffodils nodding outward)
+          springFlowerV.set(0, f.h, 0).applyQuaternion(springFlowerQ).add(springFlowerS.set(f.x, f.y, f.z));
+          springFlowerS.setScalar(k * (F.part === 'daff' ? 2.3 : 2));
+          if (F.part === 'daff') { springFlowerE.set(-0.35, f.rot, 0); springFlowerQ.setFromEuler(springFlowerE); }
+        }
+        springFlowerM.compose(springFlowerV, springFlowerQ, springFlowerS); F.im.setMatrixAt(i, springFlowerM);
+      });
+      F.im.instanceMatrix.needsUpdate = true; if (F.im.instanceColor) F.im.instanceColor.needsUpdate = true;
+    });
+  }
+  // ===== petals drifting down =====
+  var springPetals = (function () {
+    var N = 150, pos = new Float32Array(N * 3), seeds = [];
+    for (var i = 0; i < N; i++) seeds.push({ x: (springHash(i * 3.3) - 0.5) * 28, y: springHash(i * 5.7) * 9, z: (springHash(i * 7.1) - 0.5) * 28, s: 0.25 + springHash(i * 2.2) * 0.35, w: springHash(i * 9.9) * 6.28 });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var c = document.createElement('canvas'); c.width = c.height = 32; var x = c.getContext('2d');
+    x.fillStyle = '#ffd6e4'; x.beginPath(); x.ellipse(16, 16, 11, 6, 0.6, 0, Math.PI * 2); x.fill(); x.fillStyle = 'rgba(255,255,255,0.7)'; x.beginPath(); x.ellipse(13, 14, 5, 2.5, 0.6, 0, Math.PI * 2); x.fill();
+    var pts = new THREE.Points(g, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(c), size: 0.15, transparent: true, alphaTest: 0.3, depthWrite: false }));
+    pts.frustumCulled = false; pts.userData.seeds = seeds; scene.add(pts); return pts;
+  })();
+  function springPetalsMove(dt) {
+    var a = springPetals.geometry.attributes.position, S = springPetals.userData.seeds, cx = cam.target.x, cz = cam.target.z, t = state.time;
+    S.forEach(function (s, i) {
+      s.y -= dt * s.s; s.x += dt * (0.25 + Math.sin(t * 0.7 + s.w) * 0.3); s.z += dt * Math.cos(t * 0.5 + s.w) * 0.2;
+      var wx = cx + ((s.x % 28) + 42) % 28 - 14, wz = cz + ((s.z % 28) + 42) % 28 - 14, gy = groundHeight(wx, wz);
+      if (s.y < Math.max(gy, WATER_Y) + 0.05) { s.y = gy + 7 + springHash(i + t) * 3; }   // (a petal that reaches the ground is gone; a new one starts up high)
+      a.setXYZ(i, wx + Math.sin(t * 2 + s.w) * 0.15, s.y, wz);
+    });
+    a.needsUpdate = true;
+  }
+  // ===== every frame =====
+  function updateSpring(dt) {
+    var on = springNow();
+    if (springBlossoms.visible !== on) springBlossoms.visible = on;
+    if (on !== springWasOn || state.time - springFlowerT > 2) { springWasOn = on; springFlowerT = state.time; springFlowersPlace(on); }   // (and every couple of seconds, in case one's been dug up or built over)
+    var hr = state.minutes / 60, petals = on && !indoors && hr > 6 && hr < 19.5;
+    if (springPetals.visible !== petals) springPetals.visible = petals;
+    if (petals) springPetalsMove(dt);
+  }
+
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
@@ -6452,6 +6621,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateMill(dt, night);
     updateSilo(dt, night);
     updateBoatButton();
+    updateSpring(dt);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
