@@ -2913,7 +2913,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     var W2 = CARP_HW, D2 = CARP_HD;
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.5, 0.3, D2 * 2 + 0.5), cpmStone, 0, 0.0, 0, 0, 0, 0, G);   // (a low stone footing)
     cpPart(new THREE.BoxGeometry(W2 * 2, 0.04, D2 * 2), cpmPlank, 0, 0.16, 0, 0, 0, 0, G);
-    var DOOR = [-0.65, 0.65, 0, 2.15], WINL = [-3.2, -1.8, 0.95, 1.95], WINR = [1.8, 3.2, 0.95, 1.95];
+    var DOOR = [-0.6, 0.6, 0, 2.1],                                  // (the logs cut a little narrower than the door, so their ends overlap its edges and leave no gap)
+    WINL = [-3.2, -1.8, 0.95, 1.95], WINR = [1.8, 3.2, 0.95, 1.95];
     cpLogWall(G, W2 * 2, 0, D2, 0, [DOOR, WINL, WINR]);                   // (the front, with its door and two windows)
     cpLogWall(G, W2 * 2, 0, -D2, 0, [[-1.2, 1.2, 1.0, 1.9]]);              // (the back, with a window)
     cpLogWall(G, D2 * 2, W2, 0, Math.PI / 2, [[-0.7, 0.7, 1.0, 1.9]], true);   // (the sides, their logs interlocking at the corners)
@@ -2925,7 +2926,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var p = 0; p < 5; p++) cpPart(new THREE.BoxGeometry(0.25, 1.95, 0.08), new THREE.MeshStandardMaterial({ map: cpPlankTex, color: [0xb08060, 0xa07454, 0xb88a66][p % 3], roughness: 0.85 }), -0.52 + p * 0.26, 0.98, 0, 0, 0, 0, door);
     [0.4, 1.55].forEach(function (y) { cpPart(new THREE.BoxGeometry(1.2, 0.08, 0.03), cpmIron, 0, y, 0.055, 0, 0, 0, door); });
     cpPart(new THREE.TorusGeometry(0.07, 0.014, 6, 14), cpmBrass, 0.38, 1.0, 0.075, 0, 0, 0, door);
-    [[-0.72, 1.08, 0.12, 2.25], [0.72, 1.08, 0.12, 2.25], [0, 2.24, 1.6, 0.16]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.22), cpmPlankDark, f[0], f[1] + 0.18, D2 + 0.03, 0, 0, 0, G); });
+    [[-0.69, 1.08, 0.18, 2.25], [0.69, 1.08, 0.18, 2.25], [0, 2.24, 1.6, 0.16]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.22), cpmPlankDark, f[0], f[1] + 0.18, D2 + 0.08, 0, 0, 0, G); });   // (out in front of the log ends, so it frames the doorway neatly)
     // (the roof: two slopes of wooden shingles over the logs, with the gables filled with upright planks)
     var RISE = 1.75, OVER = 0.6, slope = Math.hypot(D2 + OVER, RISE), ang = Math.atan2(RISE, D2 + OVER);
     [-1, 1].forEach(function (s) { var r = cpPart(new THREE.BoxGeometry(W2 * 2 + 1.3, 0.14, slope), cpmShingle, 0, CARP_WALL + RISE / 2 + 0.05, s * (D2 + OVER) / 2, s * ang, 0, 0, G); r.material = cpmShingle; });
