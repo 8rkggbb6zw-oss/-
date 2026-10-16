@@ -7268,14 +7268,64 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
   var winterGreenNeedle = needleBatch.material.map, winterShown = null;
   // ===== a snowy island: the ground and the grass =====
-  var winterSnowTex = cpTex(512, 512, function (g, w, h) {             // (snow: soft blue shadows, gentle drifts and a glitter of crystals)
-    g.fillStyle = '#eef3fa'; g.fillRect(0, 0, w, h);
-    for (var d = 0; d < 60; d++) { var x = springHash(d * 3.7) * w, y = springHash(d * 5.1) * h, r = 30 + springHash(d) * 70, gr = g.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, 'rgba(200,214,236,0.45)'); gr.addColorStop(1, 'rgba(200,214,236,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
-    for (var b = 0; b < 40; b++) { var x2 = springHash(b * 9.3) * w, y2 = springHash(b * 2.9) * h, r2 = 20 + springHash(b * 4.4) * 50, gr2 = g.createRadialGradient(x2, y2, 2, x2, y2, r2); gr2.addColorStop(0, 'rgba(255,255,255,0.8)'); gr2.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr2; g.fillRect(x2 - r2, y2 - r2, r2 * 2, r2 * 2); }
-    for (var s = 0; s < 900; s++) { g.fillStyle = springHash(s) < 0.5 ? '#ffffff' : 'rgba(170,200,240,0.9)'; g.fillRect(springHash(s * 1.7) * w, springHash(s * 2.3) * h, 1.2, 1.2); }
-  }, [14, 14]);
-  var winterGround = { map: terrain.material.map, bump: terrain.material.bumpMap };
-  var WINTER_GRASS = new THREE.Color(0.86, 0.82, 0.66);
+  var winterSnowTex, winterSnowBump;
+  (function () {                                                       // (snow: built from layers of soft, seamless noise, so it has gentle drifts with blue shadows
+    var N = 512, img, bmp;                                             //  in the hollows, wind ripples, a fine powdery grain and glinting crystals, and never looks tiled)
+    function lattice(p, seed) { var v = []; for (var i = 0; i < p * p; i++) v.push(springHash(i * 1.618 + seed * 97.3)); return v; }
+    function noise(P, seed) {                                          // (smooth noise that wraps round at the edges, P cells across)
+      var L = lattice(P, seed), out = new Float32Array(N * N);
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+        var fx = x / N * P, fy = y / N * P, ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+        tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+        var x1 = (ix + 1) % P, y1 = (iy + 1) % P;
+        var a = L[iy * P + ix] + (L[iy * P + x1] - L[iy * P + ix]) * tx, b = L[y1 * P + ix] + (L[y1 * P + x1] - L[y1 * P + ix]) * tx;
+        out[y * N + x] = a + (b - a) * ty;
+      }
+      return out;
+    }
+    var drift = [noise(3, 1), noise(6, 2), noise(12, 3)], ripple = noise(24, 4), fine = [noise(64, 5), noise(128, 6)];
+    var H = new Float32Array(N * N);
+    for (var i = 0; i < N * N; i++) {
+      var y = Math.floor(i / N), x = i % N;
+      var d = drift[0][i] * 0.5 + drift[1][i] * 0.3 + drift[2][i] * 0.2;
+      var r = Math.sin((x * 0.9 + y * 0.35) / N * Math.PI * 2 * 18 + ripple[i] * 9) * 0.5 + 0.5;   // (wind ripples, wandering across the drifts)
+      H[i] = d * 0.8 + r * 0.06 * (0.4 + d) + fine[0][i] * 0.08 + fine[1][i] * 0.06;
+    }
+    var cv = document.createElement('canvas'); cv.width = cv.height = N; var g = cv.getContext('2d'); img = g.createImageData(N, N);
+    var bc = document.createElement('canvas'); bc.width = bc.height = N; var bg = bc.getContext('2d'); bmp = bg.createImageData(N, N);
+    for (var j = 0; j < N * N; j++) {
+      var jx = j % N, jy = Math.floor(j / N), hx = H[jy * N + (jx + 1) % N] - H[jy * N + (jx + N - 1) % N], hy = H[((jy + 1) % N) * N + jx] - H[((jy + N - 1) % N) * N + jx];
+      var lit = Math.max(-1, Math.min(1, (-hx - hy) * 40));             // (light from up and to the left: slopes facing it bright, the far sides in soft blue shadow)
+      var shade = 0.55 + lit * 0.45, hollow = Math.max(0, 0.55 - H[j]) * 0.9;
+      var R = 250 - (1 - shade) * 52 - hollow * 46, G2 = 252 - (1 - shade) * 36 - hollow * 30, B = 255 - (1 - shade) * 12 - hollow * 6;
+      var grain = (fine[1][j] - 0.5) * 6; R += grain; G2 += grain; B += grain;
+      if (springHash(j * 0.731) > 0.9985) { R = G2 = B = 255; }           // (a glinting crystal)
+      img.data[j * 4] = Math.max(0, Math.min(255, R)); img.data[j * 4 + 1] = Math.max(0, Math.min(255, G2)); img.data[j * 4 + 2] = Math.max(0, Math.min(255, B)); img.data[j * 4 + 3] = 255;
+      var hv = Math.round(H[j] * 255); bmp.data[j * 4] = bmp.data[j * 4 + 1] = bmp.data[j * 4 + 2] = hv; bmp.data[j * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0); bg.putImageData(bmp, 0, 0);
+    winterSnowTex = new THREE.CanvasTexture(cv); winterSnowBump = new THREE.CanvasTexture(bc);
+    [winterSnowTex, winterSnowBump].forEach(function (t) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.08, 0.08); t.anisotropy = 8; });   // (one pattern about 22 m across, so the drifts are big and soft)
+  })();
+  var winterGround = { map: terrain.material.map, bump: terrain.material.bumpMap, bumpScale: terrain.material.bumpScale, rough: terrain.material.roughness };
+  var WINTER_GRASS = new THREE.Color(0.78, 0.72, 0.52), winterBuried = [], winterBM = new THREE.Matrix4(), winterBP = new THREE.Vector3();
+  function winterBury(on) {                                            // (most of the grass and all the wildflowers lie buried under the snow; a few dry tufts poke through)
+    winterBuried.forEach(function (b) {
+      if (b.mesh === grass || b.mesh === flowerHeads) { var t = tileMap[tileKey(Math.floor((b.p.x - FARM_X) / TILE), Math.floor((b.p.z - FARM_Z) / TILE))]; if (t && t.soil) { (t.grass = t.grass || []).push({ i: b.i, m: b.m, f: b.mesh === flowerHeads }); return; } }   // (dug into soil meanwhile: it stays tucked away with that tile)
+      b.mesh.setMatrixAt(b.i, b.m); if (b.mesh === flowerHeads) flowerStems.setMatrixAt(b.i, b.m);
+    });
+    winterBuried = [];
+    if (on) [grass, isle2Grass, isle3Grass, flowerHeads].forEach(function (mesh) {
+      for (var i = 0; i < mesh.count; i++) {
+        if (mesh !== flowerHeads && springHash(i * 0.917 + 3) > 0.82) continue;   // (about one tuft in six stays)
+        mesh.getMatrixAt(i, winterBM); if (winterBM.elements[0] === 0 && winterBM.elements[5] === 0) continue;
+        winterBuried.push({ mesh: mesh, i: i, m: winterBM.clone(), p: winterBP.setFromMatrixPosition(winterBM).clone() });
+        mesh.setMatrixAt(i, hideM); if (mesh === flowerHeads) flowerStems.setMatrixAt(i, hideM);
+      }
+    });
+    [grass, isle2Grass, isle3Grass, flowerHeads, flowerStems].forEach(function (m) { m.instanceMatrix.needsUpdate = true; });
+    litterMat.visible = !on;
+  }
   // ===== snowflakes =====
   var winterSnow = (function () {
     var N = 900, pos = new Float32Array(N * 3), seeds = [];
@@ -7339,9 +7389,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       winterShown = on;
       leafBatch.visible = !on; winterSnowOn.value = on ? 1 : 0;                                         // (the broadleaf trees and bushes lose their leaves; the pines keep theirs)
       needleBatch.material.map = on ? winterNeedleTex : winterGreenNeedle; needleBatch.material.needsUpdate = true;
-      terrain.material.map = on ? winterSnowTex : winterGround.map; terrain.material.bumpMap = on ? winterSnowTex : winterGround.bump; terrain.material.vertexColors = !on; terrain.material.needsUpdate = true;
+      terrain.material.map = on ? winterSnowTex : winterGround.map; terrain.material.bumpMap = on ? winterSnowBump : winterGround.bump; terrain.material.bumpScale = on ? 0.06 : winterGround.bumpScale; terrain.material.roughness = on ? 0.82 : winterGround.rough; terrain.material.vertexColors = !on; terrain.material.needsUpdate = true;
       grassMat.vertexColors = !on; grassMat.needsUpdate = true;
-      flowerHeads.visible = flowerStems.visible = !on;
+      winterBury(on);
       winterMenGroup.visible = on;
     }
     if (on) {
