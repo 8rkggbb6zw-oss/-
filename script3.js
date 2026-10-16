@@ -6998,10 +6998,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       im.instanceMatrix.needsUpdate = true;
     });
   }
-  // ===== pumpkin patches, corn shocks and mushrooms =====
+  // ===== pumpkin patches and mushrooms =====
   var FALL_PUMPKINS = [], FALL_MUSH = [], fallDecorShown = null, fallDecorT = -99, fallWasOn = null, fallMeshes = [];
   var FALL_SHOCKS = [];
-  (function () {                                                       // (corn shocks round the edge of your farm, each with a pumpkin or two at its foot)
+  (function () {                                                       // (little groups of pumpkins round the edge of your farm)
     var fx = FARM_X + COLS * TILE / 2, fz = FARM_Z + ROWS * TILE / 2;
     for (var c = 0, tries = 0; c < 7 && tries < 3000; tries++) {
       var a = springHash(tries * 2.7 + 77) * 6.28, d = 6 + springHash(tries * 1.9 + 3) * 9, x = fx + Math.cos(a) * d, z = fz + Math.sin(a) * d;
@@ -7084,26 +7084,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       fallMeshes.push({ vine: vine, list: ps });
     });
   })();
-  (function () {                                                       // (the finer things of fall: corn shocks, acorns and pinecones, and bracket fungi on the trunks)
+  (function () {                                                       // (the finer things of fall: acorns and pinecones, and bracket fungi on the trunks)
     var up = new THREE.Vector3(0, 1, 0);
     function cylBetween(a, b, r0, r1, seg) {                           // (a tapering rod from point a to point b)
       var d = new THREE.Vector3().subVectors(b, a), L = d.length(), g = new THREE.CylinderGeometry(r1, r0, L, seg || 5);
       g.translate(0, L / 2, 0); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize()))); g.translate(a.x, a.y, a.z); return g;
     }
-    // (a corn shock: two dozen dried stalks gathered into a teepee, tied with twine, their tassels and leaves flaring out above and drooping)
-    var stalks = [], cleaves = [];
-    for (var i = 0; i < 26; i++) {
-      var a = i / 26 * Math.PI * 2 + springHash(i * 3.3) * 0.2, rb = 0.26 + springHash(i * 1.7) * 0.1;
-      var B = new THREE.Vector3(Math.cos(a) * rb, 0, Math.sin(a) * rb), Tq = new THREE.Vector3(Math.cos(a) * 0.06, 0.78, Math.sin(a) * 0.06), Tp = new THREE.Vector3(Math.cos(a) * (0.14 + springHash(i) * 0.12), 1.45 + springHash(i * 5.1) * 0.25, Math.sin(a) * (0.14 + springHash(i) * 0.12));
-      stalks.push(cylBetween(B, Tq, 0.013, 0.011), cylBetween(Tq, Tp, 0.011, 0.005));
-      if (i % 2 === 0) {                                               // (a long dry leaf, curving out and down from part way up)
-        var lg = new THREE.PlaneGeometry(0.035, 0.42, 1, 6), lp = lg.attributes.position;
-        for (var v = 0; v < lp.count; v++) { var t = (lp.getY(v) + 0.21) / 0.42; lp.setXYZ(v, lp.getX(v) * (1 - t * 0.8), t * 0.42 - t * t * 0.3, t * t * 0.18 + Math.sin(t * 9 + i) * 0.01); }
-        lg.rotateY(-a + Math.PI / 2); lg.translate(Math.cos(a) * 0.08, 0.6 + springHash(i * 2.2) * 0.5, Math.sin(a) * 0.08); cleaves.push(lg);
-      }
-    }
-    var shockGeo = mergeSimple(stalks), shockLeafGeo = mergeSimple(cleaves);
-    var twineGeo = new THREE.TorusGeometry(0.075, 0.012, 6, 20); twineGeo.rotateX(Math.PI / 2); twineGeo.translate(0, 0.76, 0);
     // (an acorn in its scaly cap; and a pinecone, its scales spiralling round in rings)
     var nutGeo = new THREE.SphereGeometry(0.013, 10, 8); nutGeo.scale(1, 1.35, 1); nutGeo.translate(0, 0.0175, 0);
     var capGeo2 = new THREE.SphereGeometry(0.0145, 10, 5, 0, Math.PI * 2, 0, Math.PI * 0.45); capGeo2.scale(1, 0.75, 1); capGeo2.translate(0, 0.026, 0);
@@ -7134,12 +7120,9 @@ EVERDAWN_PARTS.push(function (THREE) {
         brackets.push({ x: u.base.x + Math.cos(ba) * tr, y: u.base.y + bh, z: u.base.z + Math.sin(ba) * tr, rx: 0, ry: Math.atan2(-Math.sin(ba), Math.cos(ba)), rz: 0, s: 1.6 + springHash(ti * 3.3) * 0.6, tree: t, needStanding: true });
       }
     });
-    var mStalk = new THREE.MeshStandardMaterial({ color: 0xd2b070, roughness: 0.9 }), mCLeaf = new THREE.MeshStandardMaterial({ color: 0xc8a460, roughness: 0.9, side: THREE.DoubleSide }), mTwine = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.95 });
     var mNut = new THREE.MeshStandardMaterial({ color: 0xa8743a, roughness: 0.45 }), mCup = new THREE.MeshStandardMaterial({ color: 0x6a4a28, roughness: 0.95 }), mCone = new THREE.MeshStandardMaterial({ color: 0x7a4a26, roughness: 0.9 });
     var mBracket = new THREE.MeshStandardMaterial({ map: bandTex, roughness: 0.85 });
-    var shockRecs = FALL_SHOCKS.map(function (s) { return { x: s.x, y: s.y, z: s.z, rx: 0, ry: s.ry, rz: 0, s: s.s }; });
-    [{ geo: shockGeo, m: mStalk, list: shockRecs }, { geo: shockLeafGeo, m: mCLeaf, list: shockRecs }, { geo: twineGeo, m: mTwine, list: shockRecs },
-     { geo: nutGeo, m: mNut, list: acorns }, { geo: capGeo2, m: mCup, list: acorns }, { geo: cupStalk, m: mCup, list: acorns }, { geo: pineconeGeo, m: mCone, list: cones },
+    [{ geo: nutGeo, m: mNut, list: acorns }, { geo: capGeo2, m: mCup, list: acorns }, { geo: cupStalk, m: mCup, list: acorns }, { geo: pineconeGeo, m: mCone, list: cones },
      { geo: bracketGeo, m: mBracket, list: brackets }
     ].forEach(function (F) {
       F.part = 'thing'; F.im = new THREE.InstancedMesh(F.geo, F.m, Math.max(1, F.list.length)); F.im.castShadow = true; F.im.receiveShadow = true; F.im.frustumCulled = false; F.im.visible = false; scene.add(F.im); fallMeshes.push(F);
@@ -7176,7 +7159,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   var fpM = new THREE.Matrix4(), fpQ = new THREE.Quaternion(), fpE = new THREE.Euler(), fpV = new THREE.Vector3(), fpS = new THREE.Vector3();
   var fallHidden = [], fallGM = new THREE.Matrix4(), fallGP = new THREE.Vector3();
-  function fallGrassUnder(spots) {                                     // (the grass blades and wildflowers under pumpkins and corn shocks tuck away, and come back after)
+  function fallGrassUnder(spots) {                                     // (the grass blades and wildflowers under pumpkins tuck away, and come back after)
     fallHidden.forEach(function (b) {
       var t = tileMap[tileKey(Math.floor((b.p.x - FARM_X) / TILE), Math.floor((b.p.z - FARM_Z) / TILE))];
       if (t && t.soil) { (t.grass = t.grass || []).push({ i: b.i, m: b.m, f: b.f }); return; }   // (dug into soil meanwhile: it stays tucked away with that tile)
@@ -7201,7 +7184,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     var spots = [];
     if (show) {
       FALL_PUMPKINS.forEach(function (pk) { if (ok(pk)) spots.push([pk.x, pk.z, 0.3 * pk.s + 0.1]); });
-      FALL_SHOCKS.forEach(function (S) { spots.push([S.x, S.z, 0.42 * S.s]); });
     }
     fallGrassUnder(spots);
     fallMeshes.forEach(function (F) {
