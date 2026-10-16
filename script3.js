@@ -2821,12 +2821,19 @@ EVERDAWN_PARTS.push(function (THREE) {
   // (one log wall: logs stacked along x from -L/2 to L/2, with gaps cut for the door and windows; [from, to, bottom, top] each)
   function cpLogWall(parent, len, x, z, ry, holes, startHalf) {
     var R = 0.165, step = R * 1.9, w = new THREE.Group(); w.position.set(x, 0, z); w.rotation.y = ry; parent.add(w);
+    var span = (holes || []).map(function () { return [1e9, -1e9]; });
     for (var y = R + (startHalf ? step / 2 : 0), n = 0; y < CARP_WALL; y += step, n++) {
       var cuts = [-len / 2 - 0.35, len / 2 + 0.35];                   // (the ends run past the corners, as log cabins do)
-      (holes || []).forEach(function (h) { if (y + R > h[2] && y - R < h[3]) { cuts.splice(cuts.length - 1, 0, h[0], h[1]); } });
+      (holes || []).forEach(function (h, k) { if (y + R > h[2] && y - R < h[3]) { cuts.splice(cuts.length - 1, 0, h[0], h[1]); span[k][0] = Math.min(span[k][0], y - R); span[k][1] = Math.max(span[k][1], y + R); } });
       cuts.sort(function (a, b) { return a - b; });
       for (var i = 0; i < cuts.length; i += 2) { var a = cuts[i], b = cuts[i + 1]; if (b - a > 0.15) cpLog(w, R * (0.94 + ((n * 7 + i) % 5) * 0.025), b - a, (a + b) / 2, y, 0); }
     }
+    (holes || []).forEach(function (h, k) {                            // (whole rows are cut away round an opening, so a squarer-trimmed log fills the gap above it, and below it)
+      [[span[k][0], h[2]], [h[3], span[k][1]]].forEach(function (gp) {
+        var gap = gp[1] - gp[0]; if (gap < 0.02) return;
+        cpLog(w, R, h[1] - h[0] + 0.02, (h[0] + h[1]) / 2, (gp[0] + gp[1]) / 2, 0).scale.y = gap / (2 * R);
+      });
+    });
     return w;
   }
   // (a window box: a little planked trough with nailed corners, dark soil, and a cottage-garden tumble growing in it:
@@ -2884,7 +2891,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function carpWindow(parent, x, y, z, ry, w, h, inside) {
     var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; parent.add(g);
     cpPart(new THREE.PlaneGeometry(w, h), inside ? siWindowMask : cpmGlowWin, 0, 0, 0, 0, 0, 0, g).castShadow = !inside;   // (inside, the real island seen through the glass, like the other shops)
-    [[0, h / 2 + 0.04, w + 0.22, 0.09], [0, -h / 2 - 0.04, w + 0.3, 0.1], [w / 2 + 0.05, 0, 0.09, h], [-w / 2 - 0.05, 0, 0.09, h], [0, 0, w, 0.04], [0, 0, 0.04, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), cpmPlankDark, f[0], f[1], 0.04, 0, 0, 0, g); });
+    [[0, h / 2 + 0.04, w + 0.22, 0.09], [0, -h / 2 - 0.04, w + 0.3, 0.1], [w / 2 + 0.04, 0, 0.11, h + 0.04], [-w / 2 - 0.04, 0, 0.11, h + 0.04], [0, 0, w, 0.04], [0, 0, 0.04, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), cpmPlankDark, f[0], f[1], 0.04, 0, 0, 0, g); });
     if (!inside) cpFlowerBox(g, w, -h / 2 - 0.2, 0.14);
     return g;
   }
