@@ -5544,8 +5544,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   // (the hoppers: a wooden cabinet with a steel funnel on top, fed by a pipe coming down the wall, a crank on its side,
   // a little tray at the front where the hay drops out, and a plaque saying how much is left in your silo)
-  var SILO_HOP_COOP = [0.95, 1.7], SILO_HOP_FBARN = [4.39, -0.95];
-  function siloHopper(R, x, z, ry, pipeTop, sol) {
+  var SILO_HOP_COOP = [0.95, 1.7], SILO_HOP_FBARN = [4.22, -1.1];   // (in the barn: far enough off the wall for its funnel, between two windows)
+  function siloHopper(R, x, z, ry, pipeTop, sol, reach) {
+    reach = reach || 0.22;                                             // (how far back the pipe's elbow runs, into the wall)
     var H = new THREE.Group(); H.position.set(x, 0, z); H.rotation.y = ry; R.add(H);
     var mW = new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc89c6c, roughness: 0.8 }), mO = new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.85 });
     [[-0.27, -0.19], [0.27, -0.19], [-0.27, 0.19], [0.27, 0.19]].forEach(function (l) { cpPart(new THREE.BoxGeometry(0.07, 0.78, 0.07), mO, l[0], 0.39, l[1], 0, 0, 0, H); });
@@ -5556,8 +5557,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     cpPart(new THREE.CylinderGeometry(0.06, 0.06, pipeTop - 0.95, 14), cpmSteel, 0, (pipeTop + 0.95) / 2, -0.05, 0, 0, 0, H);   // (the pipe from your silo)
     for (var fy = 1.3; fy < pipeTop - 0.1; fy += 0.7) cpPart(new THREE.TorusGeometry(0.066, 0.014, 6, 16), cpmIron, 0, fy, -0.05, Math.PI / 2, 0, 0, H);
     cpPart(new THREE.SphereGeometry(0.065, 12, 8), cpmSteel, 0, pipeTop, -0.05, 0, 0, 0, H);
-    cpPart(new THREE.CylinderGeometry(0.06, 0.06, 0.22, 14), cpmSteel, 0, pipeTop, -0.16, Math.PI / 2, 0, 0, H);
-    cpPart(new THREE.BoxGeometry(0.16, 0.04, 0.1), cpmIron, 0, pipeTop - 0.5, -0.17, 0, 0, 0, H);
+    cpPart(new THREE.CylinderGeometry(0.06, 0.06, reach, 14), cpmSteel, 0, pipeTop, -0.05 - reach / 2, Math.PI / 2, 0, 0, H);
+    cpPart(new THREE.BoxGeometry(0.16, 0.04, reach - 0.12), cpmIron, 0, pipeTop - 0.5, -0.11 - reach / 2 + 0.06, 0, 0, 0, H);
     var TR = new THREE.Group(); TR.position.set(0, 0.3, 0.22); TR.rotation.x = 0.3; H.add(TR);   // (the tray at the front, where a bundle waits)
     cpPart(new THREE.BoxGeometry(0.4, 0.03, 0.26), mO, 0, 0, 0.12, 0, 0, 0, TR);
     [-0.2, 0.2].forEach(function (xx) { cpPart(new THREE.BoxGeometry(0.03, 0.08, 0.26), mO, xx, 0.04, 0.12, 0, 0, 0, TR); });
@@ -5573,7 +5574,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     return H;
   }
   siloHopper(coopRoom, SILO_HOP_COOP[0], SILO_HOP_COOP[1], Math.PI, COOP_WALL - 0.08, coopSolids);
-  siloHopper(fbarnRoom, SILO_HOP_FBARN[0], SILO_HOP_FBARN[1], -Math.PI / 2, FBARN_WALL - 0.1, fbarnSolids);
+  siloHopper(fbarnRoom, SILO_HOP_FBARN[0], SILO_HOP_FBARN[1], -Math.PI / 2, FBARN_WALL - 0.1, fbarnSolids, 0.42);
   siloDrawCount(); siloShowHay();
 
   // ===== on Oak & Ember's menu, on the world map, and every frame =====
