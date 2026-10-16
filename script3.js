@@ -1573,8 +1573,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     var gotShears = hasShears();
     shearsBtn.innerHTML = gotShears ? 'You have them ✓' : 'Buy · <img class="coin-icon" alt=""> ' + SHEARS_COST;
     shearsBtn.disabled = gotShears || state.coins < SHEARS_COST;
-    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Celestara)' : g.kind === 'crab' ? ' (Iridelle)' : ' (Glimmerwing)'); }).join(', ') + ' · ' + glimmers.length + ' of 3 stalls' : 'There are 3 empty stalls waiting for your animals.';
+    glimStallsNote.textContent = glimmers.length ? 'Your animals: ' + glimmers.map(function (g) { return g.name + (g.kind === 'moon' ? ' (Mooncalf)' : g.kind === 'duck' ? ' (Puddlewisp)' : g.kind === 'ember' ? ' (Emberwing)' : g.kind === 'gem' ? ' (Gemwren)' : g.kind === 'aurora' ? ' (Auroraram)' : g.kind === 'zephyra' ? ' (Zephyra)' : g.kind === 'luna' ? ' (Lunastra)' : g.kind === 'bubble' ? ' (Sirenna)' : g.kind === 'prism' ? ' (Prismara)' : g.kind === 'lotus' ? ' (Nymphalia)' : g.kind === 'axo' ? ' (Veilaris)' : g.kind === 'liz' ? ' (Lumora)' : g.kind === 'tort' ? ' (Amarys)' : g.kind === 'bison' ? ' (Nyxalia)' : g.kind === 'ostrich' ? ' (Celestara)' : g.kind === 'crab' ? ' (Iridelle)' : ' (Glimmerwing)'); }).join(', ') + glimHomesNote() : glimHomesNote() ? 'No animals yet' + glimHomesNote() : 'Build a coop or a barn with Oak & Ember to give your animals a home.';
     paintCoinIcons(barnShopBox);
+  }
+  function glimHomesNote() {                                           // (how full each home is: your barn's stalls, your coop's nests, and anyone still in Fluff & Feather's stalls)
+    var parts = [], old = glimmers.filter(function (g) { return g.stall < COOP_STALL0; }).length;
+    if (siteReady(fbarn)) parts.push(fbarnAnimals().length + ' of ' + FBARN_CAP + ' stalls in your barn');
+    if (siteReady(coop)) parts.push(coopAnimals().length + ' of ' + COOP_CAP + ' nests in your coop');
+    if (old) parts.push(old + ' still in Fluff & Feather\'s stalls');
+    return parts.length ? ' · ' + parts.join(' · ') : '';
   }
   function buyHay(n) {
     var cost = n * HAY_COST;
