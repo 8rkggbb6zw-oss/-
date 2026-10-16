@@ -2941,9 +2941,36 @@ EVERDAWN_PARTS.push(function (THREE) {
       cpPart(new THREE.TorusGeometry(0.3, 0.05, 6, 20), cpmPlankDark, s * (W2 + 0.09), CARP_WALL + 0.7, 0, 0, s * Math.PI / 2, 0, G);
     });
     // (a stone chimney up the right side, puffing smoke)
-    var CH = new THREE.Group(); CH.position.set(W2 + 0.45, 0, -1.2); G.add(CH);
-    for (var cy = 0; cy < 5.2; cy += 0.3) for (var cx = 0; cx < 2; cx++) { var st = cpPart(new THREE.BoxGeometry(0.5 + Math.random() * 0.12, 0.28, 0.4), new THREE.MeshStandardMaterial({ color: new THREE.Color(0x8a847a).offsetHSL(0, 0, (Math.random() - 0.5) * 0.12), roughness: 0.95 }), (Math.random() - 0.5) * 0.05, cy + 0.14, -0.3 + cx * 0.6 + ((cy * 10) % 2 ? 0.1 : -0.1), 0, (Math.random() - 0.5) * 0.08, 0, CH); }
-    cpPart(new THREE.BoxGeometry(0.75, 0.12, 1.4), cpmStone, 0, 5.25, 0, 0, 0, 0, CH);
+    var CH = new THREE.Group(); CH.position.set(W2 + 0.5, 0, -1.2); G.add(CH);
+    (function () {                                                     // (one solid stack of fieldstone: a broad base, sloping shoulders, then a narrower flue up past the roof, capped with a slab and a clay pot)
+      var stoneMats = [0, 1, 2, 3, 4].map(function (k) { return new THREE.MeshStandardMaterial({ color: new THREE.Color([0x9a948a, 0x8a8478, 0xa69e90, 0x7e786e, 0x948c80][k]), roughness: 0.95 }); });
+      var mortar = new THREE.MeshStandardMaterial({ color: 0x6e6860, roughness: 1 });
+      function section(y0, y1, d, w) {                                 // (a solid core, then courses of stones laid over its three outer faces in a broken bond)
+        cpPart(new THREE.BoxGeometry(d, y1 - y0, w), mortar, 0, (y0 + y1) / 2, 0, 0, 0, 0, CH);
+        for (var y = y0, row = 0; y < y1 - 0.05; y += 0.24, row++) {
+          var hgt = Math.min(0.22, y1 - y - 0.02), cy2 = y + hgt / 2 + 0.01;
+          for (var z = -w / 2 + (row % 2 ? 0.17 : 0); z < w / 2 - 0.02;) {   // (the outer face)
+            var len = Math.min(0.26 + springHash(row * 7 + z * 13) * 0.16, w / 2 - z); if (len < 0.06) break;
+            cpPart(new THREE.BoxGeometry(0.06, hgt, len - 0.025), stoneMats[Math.floor(springHash(row * 3.1 + z * 5.7) * 5)], d / 2 + 0.02, cy2, z + len / 2, 0, 0, 0, CH); z += len;
+          }
+          if (row % 2) cpPart(new THREE.BoxGeometry(0.06, hgt, 0.15), stoneMats[row % 5], d / 2 + 0.02, cy2, -w / 2 + 0.085, 0, 0, 0, CH);
+          [-1, 1].forEach(function (sd) {                                // (the two sides)
+            for (var x = -d / 2 + (row % 2 ? 0 : 0.14); x < d / 2 - 0.02;) {
+              var l2 = Math.min(0.24 + springHash(row * 5 + x * 11 + sd) * 0.14, d / 2 - x); if (l2 < 0.06) break;
+              cpPart(new THREE.BoxGeometry(l2 - 0.025, hgt, 0.06), stoneMats[Math.floor(springHash(row * 2.3 + x * 9 + sd * 4) * 5)], x + l2 / 2, cy2, sd * (w / 2 + 0.02), 0, 0, 0, CH); x += l2;
+            }
+            if (!(row % 2)) cpPart(new THREE.BoxGeometry(0.12, hgt, 0.06), stoneMats[(row + 2) % 5], -d / 2 + 0.06, cy2, sd * (w / 2 + 0.02), 0, 0, 0, CH);
+          });
+        }
+      }
+      section(0, 2.3, 0.72, 1.15);                                     // (the broad base, up the side wall)
+      section(2.3, 2.56, 0.68, 0.98); section(2.56, 2.84, 0.64, 0.84);   // (the shoulders, stepping in a course at a time)
+      cpPart(new THREE.BoxGeometry(0.8, 0.05, 1.21), cpmStone, -0.02, 2.31, 0, 0, 0, 0, CH); cpPart(new THREE.BoxGeometry(0.76, 0.05, 1.04), cpmStone, -0.02, 2.57, 0, 0, 0, 0, CH);   // (flat ledge stones on each step)
+      section(2.84, 5.15, 0.6, 0.72);                                  // (the flue, up past the roof)
+      cpPart(new THREE.BoxGeometry(0.78, 0.12, 0.9), cpmStone, 0, 5.21, 0, 0, 0, 0, CH);   // (the capstone)
+      cpPart(new THREE.CylinderGeometry(0.11, 0.14, 0.26, 12), new THREE.MeshStandardMaterial({ color: 0xb06a46, roughness: 0.85 }), 0, 5.4, 0, 0, 0, 0, CH);   // (a clay chimney pot)
+      cpPart(new THREE.CylinderGeometry(0.125, 0.125, 0.04, 12), new THREE.MeshStandardMaterial({ color: 0x9a5a3a, roughness: 0.85 }), 0, 5.53, 0, 0, 0, 0, CH);
+    })();
     var smokes = []; for (var sm = 0; sm < 7; sm++) { var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xd8d2cc, transparent: true, opacity: 0.0, depthWrite: false })); CH.add(sp); smokes.push({ s: sp, t: sm / 7 }); }
     carpGroup.userData.smokes = smokes;
     // (the porch: a plank deck, a little shingled awning on two posts over the door, and lanterns)
@@ -3175,7 +3202,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
   })();
   function updateCarpOutside(t, night) {                               // smoke drifting up from the chimney, lanterns flickering, the sign swaying in the breeze
-    carpGroup.userData.smokes.forEach(function (s) { s.t = (s.t + 0.0035) % 1; var k = s.t; s.s.position.set(Math.sin(k * 5 + t * 0.3) * 0.25 * k, 5.35 + k * 2.6, k * 0.6); var sc = 0.4 + k * 1.4; s.s.scale.set(sc, sc, 1); s.s.material.opacity = Math.sin(k * Math.PI) * 0.4; });
+    carpGroup.userData.smokes.forEach(function (s) { s.t = (s.t + 0.0035) % 1; var k = s.t; s.s.position.set(Math.sin(k * 5 + t * 0.3) * 0.25 * k, 5.6 + k * 2.6, k * 0.6); var sc = 0.4 + k * 1.4; s.s.scale.set(sc, sc, 1); s.s.material.opacity = Math.sin(k * Math.PI) * 0.4; });
     carpGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
     carpGroup.userData.sign.rotation.x = Math.sin(t * 1.3) * 0.05;
     cpmGlowWin.emissiveIntensity = 0.35 + night * 0.9;
