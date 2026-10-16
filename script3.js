@@ -6298,6 +6298,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       return F;
     });
   })();
+  function mergeUV(geos) {                                             // (the same, keeping each shape's texture coordinates, for petals with a painted face)
+    var out = mergeSimple(geos), uv = [];
+    geos.forEach(function (g) { var u = g.attributes.uv; for (var i = 0; i < g.attributes.position.count; i++) uv.push(u ? u.getX(i) : 0, u ? u.getY(i) : 0); });
+    out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); return out;
+  }
   function mergeSimple(geos) {                                         // (a handful of little shapes joined into one)
     var pos = [], nor = [], idx = [], off = 0;
     geos.forEach(function (g) { var p = g.attributes.position, nn = g.attributes.normal; for (var i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(nn.getX(i), nn.getY(i), nn.getZ(i)); } if (g.index) for (var k = 0; k < g.index.count; k++) idx.push(g.index.getX(k) + off); else for (var q = 0; q < p.count; q++) idx.push(q + off); off += p.count; });
@@ -6397,8 +6402,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     springButterflies.forEach(function (B, i) {
       if (B.g.visible !== on) B.g.visible = on;
       if (!on) { B.clump = null; return; }
-      if (!B.clump || dist(B.clump.x, B.clump.z, px, pz) > 26) {         // (each one keeps to a flower patch near you, moving on to another as you go)
-        var near = SPRING_CLUMPS.filter(function (c) { return dist(c.x, c.z, px, pz) < 18; });
+      var patches = summerNow() ? SUMMER_CLUMPS : SPRING_CLUMPS;          // (in Summer they visit the summer flowers)
+      if (!B.clump || patches.indexOf(B.clump) < 0 || dist(B.clump.x, B.clump.z, px, pz) > 26) {   // (each one keeps to a flower patch near you, moving on to another as you go)
+        var near = patches.filter(function (c) { return dist(c.x, c.z, px, pz) < 18; });
         if (!near.length) { B.g.visible = false; return; }
         B.clump = near[Math.floor(springHash(i * 7.7 + Math.floor(t / 20)) * near.length) % near.length];
         B.x = B.clump.x; B.z = B.clump.z; B.y = B.clump.y + 0.6;
@@ -6420,9 +6426,498 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hr = state.minutes / 60, petals = on && !indoors && hr > 6 && hr < 19.5;
     if (springPetals.visible !== petals) springPetals.visible = petals;
     if (petals) springPetalsMove(dt);
-    springButterfliesMove(dt, petals);
+    springButterfliesMove(dt, (on || summerNow()) && !indoors && hr > 6 && hr < 19.5);   // (butterflies through Spring and Summer)
   }
 
+
+  // ---------- Summer on the island ----------
+  // While it's Summer: the broadleaf trees and bushes are a deep, rich green, and the trees that blossomed in Spring
+  // are hung with ripe red and orange fruit (which falls with a chopped tree and grows back with it, like the blossom).
+  // Tall sunflowers, red poppies, oxeye daisies and bushes of lavender fill the meadows, the butterflies stay on for
+  // the summer flowers, and on warm evenings fireflies blink over the grass
+  function summerNow() { return seasonOf(state.day) === 1; }
+  // ===== a deeper green =====
+  var SUMMER_LEAF = new THREE.Color(0.58, 0.8, 0.46), PLAIN_LEAF = new THREE.Color(1, 1, 1);
+  // ===== fruit on the trees that blossomed =====
+  var summerFruitGeo = new THREE.LatheGeometry([[0, -0.052], [0.022, -0.058], [0.05, -0.04], [0.066, -0.005], [0.064, 0.028], [0.046, 0.05], [0.02, 0.052], [0.006, 0.04], [0, 0.036]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 16);   // (an apple: round, with a dimple at the top and a smaller one underneath)
+  summerFruitGeo.computeVertexNormals();
+  var summerStalkGeo = new THREE.CylinderGeometry(0.004, 0.006, 0.06, 5); summerStalkGeo.translate(0, 0.064, 0); summerStalkGeo.rotateZ(0.2);
+  var summerLeafGeo = (function () { var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.quadraticCurveTo(0.03, 0.02, 0.07, 0); sh.quadraticCurveTo(0.03, -0.02, 0, 0); var g = new THREE.ShapeGeometry(sh, 5); g.rotateX(-1.1); g.rotateY(0.6); g.translate(-0.01, 0.085, 0); return g; })();
+  var summerFruitLeaves = new THREE.InstancedMesh(summerLeafGeo, new THREE.MeshStandardMaterial({ color: 0x4a8a34, roughness: 0.7, side: THREE.DoubleSide }), 3000);
+  var summerFruit = new THREE.InstancedMesh(summerFruitGeo, new THREE.MeshStandardMaterial({ roughness: 0.35 }), 3000);
+  var summerStalks = new THREE.InstancedMesh(summerStalkGeo, new THREE.MeshStandardMaterial({ color: 0x5a3a20, roughness: 0.8 }), 3000);
+  summerFruit.castShadow = true; summerFruit.setColorAt(0, new THREE.Color(1, 1, 1)); summerFruit.count = summerStalks.count = summerFruitLeaves.count = 0; scene.add(summerFruitLeaves);   // (making room for each fruit's colour first)
+  scene.add(summerFruit); scene.add(summerStalks);
+  var summerFruitM = new THREE.Matrix4();
+  (function () {
+    var m = new THREE.Matrix4(), cur = new THREE.Matrix4(), inv = new THREE.Matrix4(), col = new THREE.Color(), p = new THREE.Vector3();
+    var FRUIT = [[0xd8302c, 0xe84838], [0xf08a2a, 0xf6a040], [0xc81e3a, 0xe03c50], [0xe8c040, 0xb8d050]];   // (red apples, apricots, cherries, golden plums)
+    allScenery.forEach(function (t, ti) {
+      var u = t.userData; if (!u.blossoms || choppable.indexOf(t) < 0) return;
+      var B = u.blossoms, pal = FRUIT[Math.floor(springHash(ti * 4.7) * FRUIT.length)], start = summerFruit.count, orig = [];
+      for (var i = 0; i < B.count; i += 3) {
+        if (summerFruit.count >= 3000) break;
+        p.set(B.orig[i * 16 + 12], B.orig[i * 16 + 13] - 0.12, B.orig[i * 16 + 14]);   // (hanging just under the leaves)
+        var s = (0.85 + springHash(ti + i * 1.3) * 0.35) * Math.max(0.8, Math.min(1.3, u.size || 1));
+        m.makeRotationY(springHash(i * 2.1) * 6.28).scale(p.clone().set(s, s, s)).setPosition(p);
+        orig.push.apply(orig, m.toArray());
+        col.set(pal[i % 2]).multiplyScalar(0.9 + springHash(i * 7.3) * 0.2);
+        summerFruit.setMatrixAt(summerFruit.count, m); summerStalks.setMatrixAt(summerFruit.count, m); summerFruitLeaves.setMatrixAt(summerFruit.count, m); summerFruit.setColorAt(summerFruit.count, col);
+        summerFruit.count++;
+      }
+      summerStalks.count = summerFruitLeaves.count = summerFruit.count;
+      var count = summerFruit.count - start; if (!count) return;
+      u.fruits = { start: start, count: count, orig: orig };
+      var L0 = u.leaves[0]; if (L0 && L0.count) { cur.fromArray(L0.batch.instanceMatrix.array, L0.start * 16); inv.fromArray(u.leafOrig[0], 0).invert(); summerFruitMove(u, cur.multiply(inv)); }
+    });
+    summerFruit.instanceMatrix.needsUpdate = summerStalks.instanceMatrix.needsUpdate = summerFruitLeaves.instanceMatrix.needsUpdate = true; if (summerFruit.instanceColor) summerFruit.instanceColor.needsUpdate = true;
+  })();
+  function summerFruitMove(u, M) {
+    var F = u.fruits, a1 = summerFruit.instanceMatrix.array, a2 = summerStalks.instanceMatrix.array, a3 = summerFruitLeaves.instanceMatrix.array, m = summerFruitM;
+    for (var i = 0; i < F.count; i++) { m.fromArray(F.orig, i * 16).premultiply(M); m.toArray(a1, (F.start + i) * 16); m.toArray(a2, (F.start + i) * 16); m.toArray(a3, (F.start + i) * 16); }
+    markDirty(summerFruit.instanceMatrix, F.start * 16, F.count * 16); markDirty(summerStalks.instanceMatrix, F.start * 16, F.count * 16); markDirty(summerFruitLeaves.instanceMatrix, F.start * 16, F.count * 16);
+  }
+  var summerBaseTreeTransform = setTreeTransform;                     // (the fruit goes wherever its tree goes, like the blossom)
+  setTreeTransform = function (t, M, which) {
+    summerBaseTreeTransform(t, M, which);
+    if (which !== 'ground' && t.userData.fruits) summerFruitMove(t.userData, M);
+  };
+  // ===== sunflowers, poppies, daisies and lavender =====
+  var SUMMER_FLOWERS = [], SUMMER_LEAVES = [], SUMMER_CLUMPS = [], summerFlowerMesh = [], summerFlowerShown = null, summerFlowerT = -99, summerWasOn = null;
+  (function () {
+    var KINDS = ['sun', 'sun', 'poppy', 'poppy', 'daisy', 'daisy', 'lav'], sunPatches = [];
+    for (var c = 0, tries = 0; c < 75 && tries < 5000; tries++) {
+      var cx = -ISLAND + 3 + springHash(tries * 4.9 + 301) * (ISLAND * 2 - 6), cz = -ISLAND + 3 + springHash(tries * 6.1 + 77) * (ISLAND * 2 - 6);
+      if (!springFlowerSpot(cx, cz, 1.0)) continue;
+      c++; SUMMER_CLUMPS.push({ x: cx, z: cz, y: groundHeight(cx, cz) });
+      var kind = KINDS[Math.floor(springHash(c * 3.3 + 50) * KINDS.length)];
+      if (kind === 'sun' && sunPatches.some(function (q) { return dist(q[0], q[1], cx, cz) < 8; })) kind = springHash(c * 1.9) < 0.5 ? 'poppy' : 'daisy';   // (sunflower patches keep well apart)
+      if (kind === 'sun') sunPatches.push([cx, cz]);
+      var n = kind === 'sun' ? 3 + Math.floor(springHash(c * 2.7) * 4) : kind === 'lav' ? 2 + Math.floor(springHash(c * 2.7) * 2) : 8 + Math.floor(springHash(c * 2.7) * 8);
+      for (var f = 0; f < n; f++) {
+        var a = springHash(c * 19 + f * 3.7) * 6.28, r = (kind === 'sun' ? 0.45 : kind === 'lav' ? 0.35 : 0.12) + springHash(c * 11 + f * 1.9) * (kind === 'sun' ? 1.1 : 0.55), x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+        if (!springFlowerSpot(x, z, kind === 'sun' ? 0.45 : 0.3)) continue;
+        if (kind === 'sun' && SUMMER_FLOWERS.some(function (o) { return o.kind === 'sun' && dist(o.x, o.z, x, z) < 0.85; })) continue;   // (each sunflower with room round it)
+        if (kind === 'lav') {                                            // (a lavender bush: a dome of slender stems, each with a purple spike)
+          for (var st = 0; st < 16; st++) { var la = st / 16 * 6.28 + springHash(st + f * 9) * 0.4, lt = 0.15 + springHash(st * 3 + f) * 0.4;
+            SUMMER_FLOWERS.push({ x: x, z: z, y: groundHeight(x, z), kind: 'lav', h: 0.38 + springHash(st * 7 + f) * 0.16, rot: la, tilt: lt, v: springHash(st * 5.5 + c) }); }
+          continue;
+        }
+        var fl = { x: x, z: z, y: groundHeight(x, z), kind: kind, h: kind === 'sun' ? 1.15 + springHash(c * 5 + f) * 0.5 : kind === 'poppy' ? 0.36 + springHash(c * 5 + f) * 0.16 : 0.3 + springHash(c * 5 + f) * 0.14,
+          rot: kind === 'sun' ? (springHash(c + f * 3) - 0.5) * 0.9 : springHash(c * 3 + f * 5) * 6.28, tilt: (springHash(c + f * 11) - 0.5) * (kind === 'sun' ? 0.12 : 0.3), v: springHash(c * 9 + f * 2.2) };
+        SUMMER_FLOWERS.push(fl);
+        if (kind === 'sun') for (var lv = 0; lv < 5; lv++) SUMMER_LEAVES.push({ f: fl, at: 0.2 + lv * 0.14, a: lv * 2.4 + fl.v * 6.28, s: 1.6 - lv * 0.2 });   // (big leaves up its stem)
+      }
+    }
+    var stemGeo = new THREE.CylinderGeometry(0.009, 0.013, 1, 6); stemGeo.translate(0, 0.5, 0);
+    var thickGeo = new THREE.CylinderGeometry(0.018, 0.026, 1, 8); thickGeo.translate(0, 0.5, 0);
+    // (a sunflower leaf: broad and heart-shaped, drooping from its stalk)
+    var sl = new THREE.Shape(); sl.moveTo(0, 0); sl.bezierCurveTo(0.06, 0.07, 0.2, 0.08, 0.26, 0); sl.bezierCurveTo(0.2, -0.08, 0.06, -0.07, 0, 0);
+    var sLeafGeo = new THREE.ShapeGeometry(sl, 8), slp = sLeafGeo.attributes.position;
+    for (var v = 0; v < slp.count; v++) { var lx = slp.getX(v); slp.setZ(v, -lx * lx * 1.6); }
+    sLeafGeo.rotateX(-Math.PI / 2); sLeafGeo.computeVertexNormals();
+    // (a sunflower head: a domed brown disc of seeds, and two rings of long golden petals; it faces +z)
+    var seedTex = cpTex(128, 128, function (g, w, h) {
+      var gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, '#5a3818'); gr.addColorStop(0.7, '#3a220e'); gr.addColorStop(1, '#6a4a1a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var s = 0; s < 1100; s++) { var a = s * 2.39996, r = Math.sqrt(s) * 1.85, sz = 0.8 + r / 64 * 1.3; if (r > 62) break; g.fillStyle = r > 52 ? (s % 2 ? '#e8a020' : '#c88018') : s % 3 ? '#7a4e1c' : '#2a180a'; g.beginPath(); g.ellipse(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, sz, sz * 0.75, a, 0, Math.PI * 2); g.fill(); }   // (seeds in their golden spiral, and a ring of tiny florets round the edge)
+    });
+    // (the seed disc: a gently domed face covered in seeds in their golden spiral; and a rim behind it)
+    var discGeo = new THREE.CircleGeometry(0.12, 48), dgp = discGeo.attributes.position;
+    for (var dv = 0; dv < dgp.count; dv++) { var dr = Math.hypot(dgp.getX(dv), dgp.getY(dv)) / 0.12; dgp.setZ(dv, 0.026 * (1 - dr * dr)); }
+    discGeo.computeVertexNormals();
+    // (the petals: broad and pointed, folded down the middle and curling back at the tips, in two overlapping rings)
+    function sunPetal(len, wid) {
+      var g = new THREE.PlaneGeometry(1, 1, 4, 8), gp = g.attributes.position;
+      for (var i = 0; i < gp.count; i++) {
+        var u = gp.getX(i) + 0.5, t = gp.getY(i) + 0.5, w = Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.08)), 0.7) * (1 - t * 0.35);
+        var x = (u - 0.5) * wid * w, y = t * len;
+        gp.setXYZ(i, x, y, Math.abs(x) * 0.35 - t * t * len * 0.28);
+      }
+      g.computeVertexNormals(); return g;
+    }
+    var sunPetals = [];
+    for (var pr2 = 0; pr2 < 2; pr2++) for (var pj = 0; pj < 22; pj++) {
+      var pg2 = sunPetal(0.13 + springHash(pj * 3.3 + pr2) * 0.025, 0.05); pg2.translate(0, 0.105, 0); pg2.rotateX(-0.18 - pr2 * 0.18);
+      pg2.rotateZ((pj + pr2 * 0.5) / 22 * Math.PI * 2 + (springHash(pj * 7.1) - 0.5) * 0.08); pg2.translate(0, 0, -0.004 - pr2 * 0.01); sunPetals.push(pg2);
+    }
+    var rimGeo = new THREE.TorusGeometry(0.118, 0.012, 6, 40);
+    var sunPetalGeo = mergeSimple(sunPetals);
+    var bract = new THREE.Shape(); bract.moveTo(0, 0); bract.quadraticCurveTo(0.02, 0.04, 0, 0.075); bract.quadraticCurveTo(-0.02, 0.04, 0, 0);
+    var bracts = []; for (var bi = 0; bi < 14; bi++) { var bg = new THREE.ShapeGeometry(bract, 3); bg.translate(0, 0.07, 0); bg.rotateX(-0.6); bg.rotateZ(bi / 14 * Math.PI * 2 + 0.11); bg.translate(0, 0, -0.03); bracts.push(bg); }
+    var bractGeo = mergeSimple(bracts);
+    // (a poppy: two outer and two inner petals, broad, cupped and crinkled like tissue, each with a dark blotch at its base
+    // and fine veins; in the middle a green seed pod with its ridged crown, ringed by dark stamens. Some are still nodding buds)
+    var poppyTex = cpTex(128, 128, function (g, w, h) {
+      g.fillStyle = '#fff4f0'; g.fillRect(0, 0, w, h);
+      for (var v = 0; v < 26; v++) { var a = -1.25 + v / 25 * 2.5; g.strokeStyle = 'rgba(150,40,40,0.16)'; g.lineWidth = 1; g.beginPath(); g.moveTo(w / 2, h); g.quadraticCurveTo(w / 2 + Math.sin(a) * w * 0.3, h * 0.55, w / 2 + Math.sin(a) * w * 0.62, 0); g.stroke(); }
+      var bl = g.createRadialGradient(w / 2, h - 4, 2, w / 2, h - 4, 30); bl.addColorStop(0, 'rgba(20,10,16,1)'); bl.addColorStop(0.7, 'rgba(30,14,20,0.95)'); bl.addColorStop(1, 'rgba(30,14,20,0)');
+      g.fillStyle = bl; g.beginPath(); g.ellipse(w / 2, h - 4, 26, 24, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.beginPath(); g.ellipse(w / 2, h - 4, 27, 25, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+    });
+    function poppyPetal(len, wid, lean, seed) {
+      var g = new THREE.PlaneGeometry(1, 1, 7, 7), gp = g.attributes.position;
+      for (var i = 0; i < gp.count; i++) {
+        var u = gp.getX(i) + 0.5, t = gp.getY(i) + 0.5, w = Math.pow(Math.sin(Math.PI * (0.12 + 0.86 * t)), 0.55), x = (u - 0.5) * wid * w;
+        gp.setXYZ(i, x, t * len, -Math.pow(x / wid, 2) * wid * 0.9 + Math.sin(u * 13 + t * 7 + seed) * 0.0025 * t);   // (cupped inward, crinkled toward the edge)
+      }
+      g.rotateX(lean); g.computeVertexNormals(); return g;
+    }
+    var poppyParts = [];
+    for (var pp = 0; pp < 4; pp++) { var ppg = pp % 2 ? poppyPetal(0.048, 0.07, 0.5, pp) : poppyPetal(0.056, 0.082, 0.82, pp); ppg.translate(0, 0.002 + (pp % 2) * 0.003, 0); ppg.rotateY(pp / 4 * Math.PI * 2 + (pp % 2) * 0.35); poppyParts.push(ppg); }
+    var poppyGeo = mergeUV(poppyParts);
+    var poppyPodGeo = new THREE.LatheGeometry([[0, 0], [0.008, 0.002], [0.012, 0.012], [0.011, 0.022], [0.014, 0.026], [0.008, 0.029], [0, 0.03]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 12);
+    var stamParts = [];
+    for (var sm = 0; sm < 28; sm++) { var sa = sm / 28 * Math.PI * 2, st = new THREE.CylinderGeometry(0.0008, 0.0008, 0.016, 3); st.translate(0, 0.008, 0); st.rotateZ(0.5 + (sm % 3) * 0.12); st.rotateY(sa); st.translate(Math.cos(sa) * 0.012, 0.006, -Math.sin(sa) * 0.012); stamParts.push(st);
+      var an = new THREE.SphereGeometry(0.0022, 4, 3); an.translate(Math.cos(sa) * (0.012 + 0.008), 0.02, -Math.sin(sa) * (0.012 + 0.008)); stamParts.push(an); }
+    for (var ray = 0; ray < 9; ray++) { var rb = new THREE.BoxGeometry(0.0022, 0.0015, 0.012); rb.translate(0, 0.0305, 0.006); rb.rotateY(ray / 9 * Math.PI * 2); stamParts.push(rb); }   // (the dark rays on the pod's crown)
+    var poppyStamGeo = mergeSimple(stamParts);
+    var poppyBudGeo = new THREE.SphereGeometry(0.018, 10, 8); poppyBudGeo.scale(0.85, 1.35, 0.85); poppyBudGeo.translate(0, -0.022, 0);
+    // (an oxeye daisy: slim, notched white petals with fine grooves, drooping a little at the tips; a domed golden centre packed
+    // with tiny florets; and a ring of green bracts underneath)
+    var daisyTex = cpTex(64, 128, function (g, w, h) {
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); var gr = g.createLinearGradient(0, h, 0, h * 0.7); gr.addColorStop(0, 'rgba(240,220,120,0.5)'); gr.addColorStop(1, 'rgba(240,220,120,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var v = 1; v < 5; v++) { g.strokeStyle = 'rgba(180,180,190,0.35)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(v / 5 * w, h); g.lineTo(v / 5 * w + (v - 2.5) * 2, 0); g.stroke(); }
+    });
+    function daisyPetal(len, wid) {
+      var g = new THREE.PlaneGeometry(1, 1, 2, 6), gp = g.attributes.position;
+      for (var i = 0; i < gp.count; i++) {
+        var u = gp.getX(i) + 0.5, t = gp.getY(i) + 0.5, w = Math.pow(Math.sin(Math.PI * (0.18 + 0.8 * t)), 0.4);
+        gp.setXYZ(i, (u - 0.5) * wid * w, t * len - (t > 0.99 && Math.abs(u - 0.5) < 0.1 ? 0.004 : 0), -t * t * 0.012);   // (a notch at the tip, and drooping)
+      }
+      g.rotateX(-Math.PI / 2); g.computeVertexNormals(); return g;
+    }
+    var daisyParts = []; for (var di = 0; di < 22; di++) { var dg = daisyPetal(0.05 + springHash(di * 2.7) * 0.008, 0.013); dg.translate(0, 0.002, -0.013); dg.rotateY(di / 22 * Math.PI * 2 + springHash(di) * 0.06); daisyParts.push(dg); }
+    var daisyGeo = mergeUV(daisyParts);
+    var floretTex = cpTex(128, 128, function (g, w, h) {
+      g.fillStyle = '#e8a818'; g.fillRect(0, 0, w, h);
+      for (var s = 0; s < 500; s++) { var a = s * 2.39996, r = Math.sqrt(s) * 2.8; if (r > 64) break; g.fillStyle = r < 14 ? '#c89a20' : s % 2 ? '#f6c830' : '#d89818'; g.beginPath(); g.arc(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, 1.8, 0, Math.PI * 2); g.fill(); }
+    });
+    var daisyMidGeo = new THREE.CircleGeometry(0.016, 24), dmp = daisyMidGeo.attributes.position;
+    for (var dm = 0; dm < dmp.count; dm++) { var drr = Math.hypot(dmp.getX(dm), dmp.getY(dm)) / 0.016; dmp.setZ(dm, 0.008 * (1 - drr * drr)); }
+    daisyMidGeo.rotateX(-Math.PI / 2); daisyMidGeo.translate(0, 0.002, 0); daisyMidGeo.computeVertexNormals();
+    var dBr = new THREE.Shape(); dBr.moveTo(-0.004, 0); dBr.lineTo(0.004, 0); dBr.lineTo(0, 0.016); dBr.closePath();
+    var dBracts = []; for (var db = 0; db < 12; db++) { var dbg = new THREE.ShapeGeometry(dBr, 1); dbg.rotateX(-Math.PI / 2 - 0.6); dbg.rotateY(db / 12 * Math.PI * 2); dbg.translate(0, -0.003, 0); dBracts.push(dbg); }
+    var daisyBractGeo = mergeSimple(dBracts);
+    // (a lavender spike: whorls of tiny florets up the top of its stem, deeper purple below and paler at the tip; and narrow
+    // silvery leaves at the foot of the bush)
+    function lavWhorls(from, to) {
+      var parts = [];
+      for (var lw = from; lw < to; lw++) for (var fl = 0; fl < 6; fl++) {
+        var fa = fl / 6 * Math.PI * 2 + lw * 0.6, fr = 0.0078 * (1 - lw * 0.05), lg = new THREE.SphereGeometry(fr, 5, 3); lg.scale(0.8, 1.3, 0.8); lg.rotateZ(0.5); lg.rotateY(fa);
+        lg.translate(Math.cos(fa) * 0.006 * (1 - lw * 0.05), lw * 0.016 + (lw % 2) * 0.004, -Math.sin(fa) * 0.006 * (1 - lw * 0.05)); parts.push(lg);
+      }
+      return mergeSimple(parts);
+    }
+    var lavGeo = lavWhorls(0, 6), lavTopGeo = lavWhorls(6, 9);
+    var lavStemGeo = new THREE.CylinderGeometry(0.0035, 0.005, 1, 5); lavStemGeo.translate(0, 0.5, 0);
+    var lavLeafGeo = new THREE.PlaneGeometry(0.008, 0.14, 1, 4), llp = lavLeafGeo.attributes.position;
+    for (var ll = 0; ll < llp.count; ll++) { var lt2 = (llp.getY(ll) + 0.07) / 0.14; llp.setXYZ(ll, llp.getX(ll) * (1 - lt2 * 0.6), lt2 * 0.14, lt2 * lt2 * 0.03); }
+    lavLeafGeo.computeVertexNormals();
+    var mStem = new THREE.MeshStandardMaterial({ color: 0x5a9a44, roughness: 0.75, side: THREE.DoubleSide }), mSunLeaf = new THREE.MeshStandardMaterial({ color: 0x4a8a38, roughness: 0.7, side: THREE.DoubleSide });
+    var mHead = new THREE.MeshStandardMaterial({ roughness: 0.5, side: THREE.DoubleSide }), mDisc = new THREE.MeshStandardMaterial({ map: seedTex, roughness: 0.9 });
+    var mPoppy = new THREE.MeshStandardMaterial({ map: poppyTex, roughness: 0.55, side: THREE.DoubleSide }), mDaisy = new THREE.MeshStandardMaterial({ map: daisyTex, roughness: 0.6, side: THREE.DoubleSide });
+    var mFloret = new THREE.MeshStandardMaterial({ map: floretTex, roughness: 0.8 }), mLavLeaf = new THREE.MeshStandardMaterial({ color: 0x8aa684, roughness: 0.8, side: THREE.DoubleSide });
+    function only(k) { return SUMMER_FLOWERS.filter(function (f) { return f.kind === k; }); }
+    var suns = only('sun'), poppies = only('poppy'), poppyOpen = poppies.filter(function (f) { return f.v <= 0.8; }), poppyBuds = poppies.filter(function (f) { return f.v > 0.8; }), daisies = only('daisy'), lav = only('lav'), thin = SUMMER_FLOWERS.filter(function (f) { return f.kind !== 'sun' && f.kind !== 'lav'; });
+    summerFlowerMesh = [
+      { geo: thickGeo, m: mStem, list: suns, part: 'stem' }, { geo: stemGeo, m: mStem, list: thin, part: 'stem' },
+      { geo: sLeafGeo, m: mSunLeaf, list: SUMMER_LEAVES, part: 'sunleaf' },
+      { geo: discGeo, m: mDisc, list: suns, part: 'disc' }, { geo: rimGeo, m: mHead, list: suns, part: 'rim', col: function () { return 0x6a4a1c; } }, { geo: bractGeo, m: mSunLeaf, list: suns, part: 'bracts' }, { geo: sunPetalGeo, m: mHead, list: suns, part: 'sunpetals', col: function (f) { return f.v < 0.7 ? 0xf6c428 : 0xf0a020; } },
+      { geo: poppyGeo, m: mPoppy, list: poppyOpen, part: 'poppy', col: function (f) { return f.v < 0.55 ? 0xe8281c : f.v < 0.7 ? 0xf0402a : 0xf26a3a; } },
+      { geo: poppyPodGeo, m: mHead, list: poppyOpen, part: 'poppypod', col: function () { return 0x8aa86a; } }, { geo: poppyStamGeo, m: mHead, list: poppyOpen, part: 'poppystam', col: function () { return 0x2a1e26; } },
+      { geo: poppyBudGeo, m: mStem, list: poppyBuds, part: 'poppybud' },
+      { geo: daisyGeo, m: mDaisy, list: daisies, part: 'daisy' }, { geo: daisyMidGeo, m: mFloret, list: daisies, part: 'daisymid' }, { geo: daisyBractGeo, m: mSunLeaf, list: daisies, part: 'daisybract' },
+      { geo: lavGeo, m: mHead, list: lav, part: 'lav', col: function (f) { return f.v < 0.5 ? 0x6e4cb8 : f.v < 0.85 ? 0x7a58c4 : 0x6444a8; } },
+      { geo: lavTopGeo, m: mHead, list: lav, part: 'lavtop', col: function (f) { return f.v < 0.5 ? 0xa48ae6 : 0xb49cf0; } },
+      { geo: lavLeafGeo, m: mLavLeaf, list: lav, part: 'lavleaf' }, { geo: lavStemGeo, m: mLavLeaf, list: lav, part: 'stem' }
+    ].map(function (F) {
+      F.im = new THREE.InstancedMesh(F.geo, F.m, Math.max(1, F.list.length)); F.im.castShadow = true; F.im.frustumCulled = false; scene.add(F.im);
+      if (F.col) { var col = new THREE.Color(); F.list.forEach(function (f, i) { F.im.setColorAt(i, col.set(F.col(f))); }); }
+      return F;
+    });
+  })();
+  var sfM = new THREE.Matrix4(), sfQ = new THREE.Quaternion(), sfE = new THREE.Euler(), sfV = new THREE.Vector3(), sfS = new THREE.Vector3(), sfB = new THREE.Vector3();
+  function summerFlowersPlace(show) {
+    var key = SUMMER_FLOWERS.map(function (f) { return show && springFlowerOK(f) ? 1 : 0; }).join('');
+    if (key === summerFlowerShown) return; summerFlowerShown = key;
+    summerFlowerMesh.forEach(function (F) {
+      F.list.forEach(function (rec, i) {
+        var f = rec.f || rec, k = key[SUMMER_FLOWERS.indexOf(f)] === '1' ? 1 : 0;
+        if (f.kind === 'lav') sfE.set(f.tilt, f.rot, 0, 'YXZ'); else sfE.set(f.tilt, f.rot, f.tilt * 0.6);   // (each stem leans its own way; lavender fans out)
+        sfQ.setFromEuler(sfE); sfB.set(f.x, f.y, f.z);
+        if (F.part === 'stem') { sfV.copy(sfB); sfS.set(k, f.h * k, k); }
+        else if (F.part === 'sunleaf') { sfV.set(0, f.h * rec.at, 0).applyQuaternion(sfQ).add(sfB); sfE.set(0, rec.a, -0.35); sfQ.setFromEuler(sfE); sfS.setScalar(k * rec.s); }
+        else {
+          sfV.set(0, f.h, 0).applyQuaternion(sfQ).add(sfB);
+          if (F.part === 'disc' || F.part === 'sunpetals' || F.part === 'bracts' || F.part === 'rim') { sfE.set(0.12, f.rot, 0); sfQ.setFromEuler(sfE); sfS.setScalar(k * (0.9 + f.v * 0.3)); }   // (sunflowers turn their faces toward the sun)
+          else if (F.part === 'lav' || F.part === 'lavtop') { sfV.set(0, f.h - 0.13, 0).applyQuaternion(sfQ).add(sfB); sfS.setScalar(k * 1.15); }
+          else if (F.part === 'lavleaf') { sfV.copy(sfB); sfE.set(0.75 + f.v * 0.5, f.rot + 0.4, 0, 'YXZ'); sfQ.setFromEuler(sfE); sfS.setScalar(k * (0.8 + f.v * 0.4)); }   // (narrow leaves splaying out at its foot)
+          else if (F.part === 'poppybud') { sfE.set(f.tilt + 0.95, f.rot, 0); sfQ.setFromEuler(sfE); sfS.setScalar(k * 1.5); }   // (a bud nodding on its hooked stem)
+          else sfS.setScalar(k * (F.part.indexOf('poppy') === 0 ? 1.5 : 1.6));
+        }
+        sfM.compose(sfV, sfQ, sfS); F.im.setMatrixAt(i, sfM);
+      });
+      F.im.instanceMatrix.needsUpdate = true; if (F.im.instanceColor) F.im.instanceColor.needsUpdate = true;
+    });
+  }
+  // ===== fireflies on summer evenings =====
+  var summerFireflies = (function () {
+    var N = 140, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), seeds = [];
+    for (var i = 0; i < N; i++) seeds.push({ x: (springHash(i * 4.3 + 9) - 0.5) * 30, z: (springHash(i * 6.1 + 3) - 0.5) * 30, h: 0.3 + springHash(i * 2.9) * 1.4, w: springHash(i * 8.8) * 6.28, b: 0.6 + springHash(i * 1.1) * 0.9 });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    var pts = new THREE.Points(g, new THREE.PointsMaterial({ map: dawnGlowTex, size: 0.34, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    var halo = new THREE.Points(g, new THREE.PointsMaterial({ map: dawnGlowTex, size: 1.1, vertexColors: true, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));   // (and a soft glow round each one)
+    halo.frustumCulled = false; pts.add(halo);
+    pts.frustumCulled = false; pts.visible = false; pts.userData.seeds = seeds; scene.add(pts); return pts;
+  })();
+  function summerFirefliesMove(night) {
+    var a = summerFireflies.geometry.attributes.position, c = summerFireflies.geometry.attributes.color, S = summerFireflies.userData.seeds, cx = cam.target.x, cz = cam.target.z, t = state.time;
+    S.forEach(function (s, i) {
+      var x = cx + (((s.x + Math.sin(t * 0.13 + s.w) * 2) % 30) + 45) % 30 - 15, z = cz + (((s.z + Math.cos(t * 0.11 + s.w) * 2) % 30) + 45) % 30 - 15;
+      var y = Math.max(groundHeight(x, z), WATER_Y) + s.h + Math.sin(t * 0.9 + s.w) * 0.25;
+      a.setXYZ(i, x, y, z);
+      var glow = Math.max(0, Math.sin(t * s.b + s.w * 3)) * night; glow = glow * glow;   // (each one blinks slowly on and off)
+      c.setXYZ(i, Math.min(1, glow * 1.2), Math.min(1, glow * 1.4), glow * 0.45);
+    });
+    a.needsUpdate = c.needsUpdate = true;
+  }
+  // ===== long, bright summer days: a deep blue sky, warm golden sunshine, and lusher grass =====
+  var SUMMER_SKY = new THREE.Color(0x3f9ef0), SUMMER_SUN = new THREE.Color(0xffd890), SUMMER_GRASS = new THREE.Color(0.78, 0.94, 0.66), SUMMER_GROUND = new THREE.Color(0.88, 0.98, 0.8), summerPlain = new THREE.Color(1, 1, 1);
+  var summerBaseSky = updateSky;
+  updateSky = function () {
+    var night = summerBaseSky.apply(this, arguments);
+    if (summerNow()) {
+      var day = Math.max(0, 1 - night * 1.6);                           // (strongest at midday, fading out toward dusk)
+      scene.background.lerp(SUMMER_SKY, 0.55 * day); scene.fog.color.copy(scene.background);
+      sun.color.lerp(SUMMER_SUN, 0.45 * day); sun.intensity *= 1 + 0.3 * day; hemi.intensity *= 1 + 0.12 * day;
+    }
+    return night;
+  };
+  // ===== dragonflies darting over the pond =====
+  var summerDragonflies = (function () {
+    var list = [], mBody = [0x2a8ad0, 0x30b0a0, 0xd04a30, 0x7a50c0].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, metalness: 0.5, roughness: 0.3 }); });
+    var mWing = new THREE.MeshStandardMaterial({ color: 0xdff2ff, transparent: true, opacity: 0.45, side: THREE.DoubleSide, roughness: 0.1, metalness: 0.3, depthWrite: false });
+    for (var i = 0; i < 6; i++) {
+      var G = new THREE.Group();
+      var tail = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.004, 0.16, 6), mBody[i % 4]); tail.rotation.x = Math.PI / 2; tail.position.z = -0.08; G.add(tail);
+      var thorax = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), mBody[i % 4]); thorax.scale.set(1, 1, 1.5); G.add(thorax);
+      [-1, 1].forEach(function (s) { var eye = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), mBody[i % 4]); eye.position.set(s * 0.011, 0.004, 0.028); G.add(eye); });
+      var wings = [];
+      [0.006, -0.02].forEach(function (z, r) { [-1, 1].forEach(function (s) { var w = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 0.026), mWing); w.position.set(s * 0.068, 0.006, z); w.rotation.x = -Math.PI / 2; G.add(w); wings.push({ m: w, s: s, r: r }); }); });
+      G.scale.setScalar(2.6); G.visible = false; scene.add(G);
+      list.push({ g: G, wings: wings, ph: springHash(i * 5.3 + 2) * 6.28, sp: 0.6 + springHash(i * 2.7) * 0.6, dart: 0 });
+    }
+    return list;
+  })();
+  function summerDragonfliesMove(on) {
+    var t = state.time;
+    summerDragonflies.forEach(function (D, i) {
+      if (D.g.visible !== on) D.g.visible = on;
+      if (!on) return;
+      var a = t * 0.35 * D.sp + D.ph, r = LAKE_R * (0.35 + 0.35 * Math.sin(a * 0.7 + i));   // (zipping about over the water, hovering, then darting off again)
+      var hover = Math.sin(t * 0.8 + D.ph) > 0.3 ? 0.15 : 1, x = LAKE_X + Math.cos(a * hover) * r, z = LAKE_Z + Math.sin(a * 1.3 * hover) * r * 0.8, y = WATER_Y + 0.35 + Math.sin(t * 1.7 + i) * 0.15;
+      var dx = x - D.g.position.x, dz = z - D.g.position.z;
+      D.g.position.set(x, y, z); if (Math.abs(dx) + Math.abs(dz) > 1e-4) D.g.rotation.y = Math.atan2(dx, dz);
+      D.wings.forEach(function (w) { w.m.rotation.y = w.s * Math.sin(t * 60 + w.r * 1.5 + D.ph) * 0.35; });   // (wings a blur)
+    });
+  }
+  // ===== big fluffy summer clouds, drifting slowly across the blue =====
+  var summerClouds = (function () {
+    function cloudTex(seed) {                                          // (heaped, sunlit puffs, bright on top and soft grey-blue underneath)
+      var c = document.createElement('canvas'); c.width = 512; c.height = 256; var g = c.getContext('2d');
+      var puffs = [];
+      for (var i = 0; i < 26; i++) { var u = springHash(seed * 13 + i * 1.7), v = springHash(seed * 7 + i * 2.9); puffs.push([90 + u * 330, 150 - Math.sin(u * Math.PI) * (40 + v * 60) + v * 20, 34 + springHash(seed + i * 3.1) * 46]); }
+      puffs.sort(function (a, b) { return b[1] - a[1]; });
+      puffs.forEach(function (p) {
+        var gr = g.createRadialGradient(p[0] - p[2] * 0.25, p[1] - p[2] * 0.35, p[2] * 0.1, p[0], p[1], p[2]);
+        gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(250,252,255,0.95)'); gr.addColorStop(0.85, 'rgba(214,226,242,0.75)'); gr.addColorStop(1, 'rgba(200,214,236,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(p[0], p[1], p[2], 0, Math.PI * 2); g.fill();
+      });
+      var base = g.createLinearGradient(0, 150, 0, 210); base.addColorStop(0, 'rgba(190,206,230,0)'); base.addColorStop(1, 'rgba(255,255,255,0)');
+      var t = new THREE.CanvasTexture(c); return t;
+    }
+    var list = [];
+    for (var i = 0; i < 9; i++) {
+      var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex(i + 1), fog: false, depthWrite: false, transparent: true, opacity: 0.95 }));
+      var w = 34 + springHash(i * 2.3) * 30; s.scale.set(w, w * 0.5, 1); s.renderOrder = -1; s.visible = false; scene.add(s);
+      list.push({ s: s, a: i / 9 * Math.PI * 2 + springHash(i) * 0.5, r: 90 + springHash(i * 5.1) * 60, y: 32 + springHash(i * 3.3) * 22 });
+    }
+    return list;
+  })();
+  function summerCloudsMove(on) {
+    var t = state.time, cx = camera.position.x, cz = camera.position.z;
+    summerClouds.forEach(function (C) {
+      if (C.s.visible !== on) C.s.visible = on;
+      if (!on) return;
+      var a = C.a + t * 0.004; C.s.position.set(cx + Math.cos(a) * C.r, C.y, cz + Math.sin(a) * C.r);
+    });
+  }
+  // ===== bees busy over the sunflowers and the lavender =====
+  var summerBees = (function () {                                      // (honeybees and fat, furry bumblebees, each with its fuzzy thorax, banded abdomen, big
+    //                                                                     dark eyes, elbowed antennae, six legs with pollen on the back pair, and four veined wings)
+    function bandTex(cols, bands) {                                    // (stripes running round the abdomen, softened with fine hairs)
+      return cpTex(64, 128, function (g, w, h) {
+        bands.forEach(function (b, i) { g.fillStyle = cols[b]; g.fillRect(0, i / bands.length * h, w, h / bands.length + 1); });
+        for (var k = 0; k < 900; k++) { var x = springHash(k * 1.3) * w, y = springHash(k * 2.7) * h; g.strokeStyle = 'rgba(' + (springHash(k) < 0.5 ? '255,240,200' : '30,20,10') + ',0.25)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 1.5, y + 3); g.stroke(); }
+      });
+    }
+    function furTex(base, tip) {                                       // (a dense coat of hair, for the thorax)
+      return cpTex(64, 64, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); for (var k = 0; k < 700; k++) { var x = springHash(k * 3.1 + 1) * w, y = springHash(k * 1.9 + 2) * h; g.strokeStyle = springHash(k * 7) < 0.6 ? tip : 'rgba(40,25,10,0.5)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (springHash(k) - 0.5) * 3, y + 2.5); g.stroke(); } });
+    }
+    var hairTex = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); for (var k = 0; k < 500; k++) { var x = springHash(k * 5.3) * w, y = springHash(k * 6.1) * h; g.strokeStyle = 'rgba(255,236,190,0.55)'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (springHash(k * 2) - 0.5) * 2, y + 3); g.stroke(); } });
+    var wingTex = cpTex(128, 64, function (g, w, h) {                  // (clear wing with dark veins and a faint rainbow sheen)
+      g.clearRect(0, 0, w, h); var gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(220,240,255,0.55)'); gr.addColorStop(0.5, 'rgba(240,220,255,0.4)'); gr.addColorStop(1, 'rgba(220,255,236,0.5)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(60,45,30,0.85)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, 18); g.lineTo(w * 0.95, 14); g.moveTo(4, 40); g.quadraticCurveTo(w * 0.4, 30, w * 0.7, 22); g.moveTo(w * 0.3, 18); g.lineTo(w * 0.36, 42); g.moveTo(w * 0.52, 16); g.lineTo(w * 0.6, 36); g.lineTo(w * 0.8, 34); g.lineTo(w * 0.72, 17); g.stroke();
+    });
+    var KINDS = [
+      { name: 'honey', band: bandTex(['#e8a830', '#3a2412', '#c88a20'], [0, 1, 2, 1, 0, 1, 2, 1, 1]), fur: furTex('#b88a40', 'rgba(255,220,150,0.7)'), size: 1, fat: 1 },
+      { name: 'bumble', band: bandTex(['#f2c838', '#1e1612', '#fbf6ea'], [1, 0, 0, 1, 1, 1, 2, 2, 2]), fur: furTex('#e8c040', 'rgba(255,240,170,0.8)'), size: 1.25, fat: 1.25, thoraxBand: true }
+    ];
+    var mDark = new THREE.MeshStandardMaterial({ color: 0x1e1612, roughness: 0.55 }), mEye = new THREE.MeshStandardMaterial({ color: 0x120e10, roughness: 0.15, metalness: 0.3 });
+    var mLeg = new THREE.MeshStandardMaterial({ color: 0x2a1e14, roughness: 0.7 }), mPollen = new THREE.MeshStandardMaterial({ color: 0xf0a020, roughness: 0.9 });
+    var mWing = new THREE.MeshStandardMaterial({ map: wingTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.15, metalness: 0.2 });
+    var mHair = new THREE.MeshStandardMaterial({ map: hairTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 1 });
+    var abdGeo = new THREE.LatheGeometry([[0.0, -0.034], [0.006, -0.032], [0.013, -0.024], [0.016, -0.012], [0.016, 0.0], [0.013, 0.008], [0.008, 0.012], [0, 0.013]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 14);
+    abdGeo.rotateX(Math.PI / 2);                                       // (the abdomen lies along the body, its tip at the back)
+    var foreWing = (function () { var sh = new THREE.Shape(); sh.moveTo(0, 0); sh.bezierCurveTo(0.012, 0.008, 0.035, 0.01, 0.045, 0.002); sh.bezierCurveTo(0.04, -0.008, 0.015, -0.008, 0, 0); var g = new THREE.ShapeGeometry(sh, 8), uv = g.attributes.uv, p = g.attributes.position; for (var i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / 0.045, (p.getY(i) + 0.01) / 0.02); g.rotateX(-Math.PI / 2); return g; })();
+    var hindWing = foreWing.clone(); hindWing.scale(0.68, 1, 0.7);
+    var list = [];
+    for (var i = 0; i < 10; i++) {
+      var K = KINDS[i % 3 === 2 ? 1 : 0], G = new THREE.Group();
+      var mBand = new THREE.MeshStandardMaterial({ map: K.band, roughness: 0.75 }), mFur = new THREE.MeshStandardMaterial({ map: K.fur, roughness: 1 });
+      var abd = new THREE.Mesh(abdGeo, mBand); abd.position.z = -0.012; abd.scale.set(K.fat, K.fat, 1); G.add(abd);
+      var abdHair = new THREE.Mesh(abdGeo, mHair); abdHair.position.z = -0.012; abdHair.scale.set(K.fat * 1.12, K.fat * 1.12, 1.06); G.add(abdHair);
+      var sting = new THREE.Mesh(new THREE.ConeGeometry(0.0018, 0.006, 4), mDark); sting.rotation.x = -Math.PI / 2; sting.position.z = -0.048; G.add(sting);
+      var thorax = new THREE.Mesh(new THREE.SphereGeometry(0.012 * K.fat, 12, 10), mFur); thorax.position.z = 0.012; G.add(thorax);
+      var thHair = new THREE.Mesh(new THREE.SphereGeometry(0.014 * K.fat, 12, 10), mHair); thHair.position.z = 0.012; G.add(thHair);
+      var head = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 10, 8), mDark); head.scale.set(1.15, 1, 0.85); head.position.set(0, -0.001, 0.027); G.add(head);
+      [-1, 1].forEach(function (s) {
+        var eye = new THREE.Mesh(new THREE.SphereGeometry(0.0045, 8, 6), mEye); eye.scale.set(0.7, 1.3, 0.9); eye.position.set(s * 0.0072, 0.001, 0.028); G.add(eye);   // (big glossy compound eyes)
+        var a1 = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0007, 0.01, 4), mDark); a1.position.set(s * 0.003, 0.007, 0.032); a1.rotation.set(0.5, 0, -s * 0.3); G.add(a1);   // (antennae, bent at the elbow)
+        var a2 = new THREE.Mesh(new THREE.CylinderGeometry(0.0007, 0.0006, 0.011, 4), mDark); a2.position.set(s * 0.006, 0.0105, 0.039); a2.rotation.set(1.3, 0, -s * 0.2); G.add(a2);
+        var mand = new THREE.Mesh(new THREE.BoxGeometry(0.0018, 0.0012, 0.004), mDark); mand.position.set(s * 0.002, -0.007, 0.033); mand.rotation.y = s * 0.4; G.add(mand);
+        for (var l = 0; l < 3; l++) {                                    // (six legs, folded under, the back pair carrying pollen)
+          var leg = new THREE.Group(); leg.position.set(s * 0.008, -0.008, 0.02 - l * 0.009); leg.rotation.set(0.35 * (l - 1), 0, s * 0.9); G.add(leg);
+          var up = new THREE.Mesh(new THREE.CylinderGeometry(0.0009, 0.0008, 0.012, 4), mLeg); up.position.y = -0.006; leg.add(up);
+          var low = new THREE.Mesh(new THREE.CylinderGeometry(0.0008, 0.0006, 0.013, 4), mLeg); low.position.set(0, -0.012, 0.004); low.rotation.x = -0.9; leg.add(low);
+          if (l === 2) { var pol = new THREE.Mesh(new THREE.SphereGeometry(0.0032, 8, 6), mPollen); pol.position.set(0, -0.011, 0.002); leg.add(pol); }
+        }
+      });
+      var wings = [-1, 1].map(function (s) {                          // (each side: a hinge on the thorax, with the fore and hind wing on it)
+        var hinge = new THREE.Group(); hinge.position.set(s * 0.006, 0.011 * K.fat, 0.014); hinge.scale.x = s; G.add(hinge);
+        var fw = new THREE.Mesh(foreWing, mWing); fw.rotation.y = -0.35; hinge.add(fw);
+        var hw = new THREE.Mesh(hindWing, mWing); hw.position.z = -0.006; hw.rotation.y = -0.6; hinge.add(hw);
+        return hinge;
+      });
+      G.scale.setScalar(1.45 * K.size); G.visible = false; scene.add(G);
+      list.push({ g: G, wings: wings, ph: springHash(i * 3.7 + 9) * 6.28, sp: 0.8 + springHash(i * 1.3) * 0.5, f: null });
+    }
+    return list;
+  })();
+  function summerBeesMove(on) {
+    var t = state.time, px = player.position.x, pz = player.position.z;
+    summerBees.forEach(function (B, i) {
+      if (B.g.visible !== on) B.g.visible = on;
+      if (!on) { B.f = null; return; }
+      if (!B.f || dist(B.f.x, B.f.z, px, pz) > 22 || Math.sin(t * 0.07 + B.ph) > 0.97) {   // (to a flower near you, and off to another now and then)
+        var near = SUMMER_FLOWERS.filter(function (f) { return (f.kind === 'sun' || f.kind === 'lav') && dist(f.x, f.z, px, pz) < 16; });
+        if (!near.length) { B.g.visible = false; return; }
+        B.f = near[Math.floor(springHash(i * 5.9 + Math.floor(t / 9)) * near.length) % near.length];
+      }
+      var f = B.f, a = t * 2.2 * B.sp + B.ph, top = f.y + f.h + (f.kind === 'sun' ? 0.05 : -0.05), landed = Math.sin(t * 0.45 * B.sp + B.ph) > 0.45;
+      if (landed) {                                                    // (settled on the flower a moment: on a sunflower's face, or the top of a lavender spike)
+        var fx = f.kind === 'sun' ? Math.sin(f.rot) * 0.05 : 0, fz = f.kind === 'sun' ? Math.cos(f.rot) * 0.05 : 0;
+        B.g.position.set(f.x + fx + Math.sin(i * 2.1) * 0.04, f.y + f.h + (f.kind === 'sun' ? 0.02 + Math.cos(i * 1.7) * 0.04 : 0.03), f.z + fz);
+        B.g.rotation.set(f.kind === 'sun' ? -0.9 : 0, f.kind === 'sun' ? f.rot + Math.PI : B.ph, 0);
+        B.wings.forEach(function (w, k) { w.rotation.z = (k ? -1 : 1) * (0.08 + Math.max(0, Math.sin(t * 9 + B.ph)) * 0.15); });   // (wings folded, with a flick now and then)
+        return;
+      }
+      var x = f.x + Math.sin(a) * 0.28 + Math.sin(a * 3.1) * 0.06, z = f.z + Math.cos(a * 0.8) * 0.28, y = top + 0.12 + Math.sin(a * 2.3) * 0.1;
+      B.g.position.set(x, y, z); B.g.rotation.set(Math.sin(a * 2.3) * 0.15, a + Math.PI / 2, 0);
+      B.wings.forEach(function (w, k) { w.rotation.z = (k ? -1 : 1) * (0.25 + Math.sin(t * 70 + B.ph) * 0.55); });   // (a blur of beating wings)
+    });
+  }
+  // ===== dandelion clocks in the grass, and more water lilies opening on the pond =====
+  var summerClocks = (function () {                                    // (dandelions: fluffy seed clocks and golden flowers, each with a rosette of toothed leaves)
+    var pts = [];
+    for (var c = 0, tries = 0; c < 50 && tries < 3000; tries++) {
+      var x = -ISLAND + 3 + springHash(tries * 2.9 + 501) * (ISLAND * 2 - 6), z = -ISLAND + 3 + springHash(tries * 3.7 + 211) * (ISLAND * 2 - 6);
+      if (!springFlowerSpot(x, z, 0.6)) continue; c++;
+      for (var k = 0; k < 4; k++) {
+        var xx = x + (springHash(c * 5 + k) - 0.5) * 0.8, zz = z + (springHash(c * 7 + k) - 0.5) * 0.8;
+        if (springFlowerSpot(xx, zz, 0.3)) pts.push({ x: xx, z: zz, y: groundHeight(xx, zz), h: 0.24 + springHash(c + k * 3) * 0.14, tilt: (springHash(c * 2 + k) - 0.5) * 0.3, rot: springHash(c * 3 + k) * 6.28, clock: springHash(c * 9 + k * 2) < 0.6 });
+      }
+    }
+    // (the clock: a soft, see-through ball of fine white seed fluff, with a paler core)
+    var fluffTex = cpTex(512, 256, function (g, w, h) {
+      g.clearRect(0, 0, w, h);
+      for (var i = 0; i < 900; i++) {
+        var x = springHash(i * 1.7 + 3) * w, y = 8 + springHash(i * 2.3 + 5) * (h - 16), r = 6 + springHash(i * 3.1) * 5;
+        g.strokeStyle = 'rgba(255,255,255,' + (0.75 + springHash(i) * 0.25) + ')'; g.lineWidth = 1.5;
+        for (var ray = 0; ray < 9; ray++) { var a = ray / 9 * Math.PI * 2 + i; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); g.stroke(); }   // (each seed's little parachute, seen end on)
+        g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(x, y, 0.9, 0, Math.PI * 2); g.fill();
+      }
+    });
+    var outer = new THREE.SphereGeometry(0.05, 20, 14), inner = new THREE.SphereGeometry(0.04, 16, 12), knob = new THREE.SphereGeometry(0.006, 8, 6);
+    // (the flower: a shaggy golden pompom of strap-shaped florets in three rings, with green bracts curling back underneath)
+    var fl = new THREE.Shape(); fl.moveTo(-0.003, 0); fl.lineTo(0.003, 0); fl.lineTo(0.004, 0.026); fl.lineTo(0.0015, 0.029); fl.lineTo(0, 0.027); fl.lineTo(-0.0015, 0.029); fl.lineTo(-0.004, 0.026); fl.closePath();
+    var flParts = [];
+    [[30, 0.12, 1], [26, 0.55, 0.92], [20, 0.98, 0.78], [12, 1.4, 0.56]].forEach(function (ring, ri) { for (var i = 0; i < ring[0]; i++) { var g = new THREE.ShapeGeometry(fl, 2); g.scale(ring[2], ring[2], 1); g.rotateX(-Math.PI / 2 + ring[1]); g.rotateY(i / ring[0] * Math.PI * 2 + ri * 0.4); g.translate(0, ri * 0.004, 0); flParts.push(g); } });
+    var flowerGeo = mergeSimple(flParts);
+    var bracts = []; for (var bi = 0; bi < 10; bi++) { var bg = new THREE.ShapeGeometry(fl, 2); bg.scale(0.9, 0.8, 1); bg.rotateX(Math.PI / 2 + 0.5); bg.rotateY(bi / 10 * Math.PI * 2); bracts.push(bg); }
+    var bractGeo = mergeSimple(bracts);
+    // (a rosette leaf: long, with deep backward-pointing teeth, rising from the ground at a slant)
+    var lf = new THREE.Shape(); lf.moveTo(0, -0.008);
+    [[0.012, 0.03], [0.006, 0.04], [0.02, 0.075], [0.009, 0.085], [0.024, 0.12], [0.01, 0.13], [0.018, 0.16], [0, 0.19]].forEach(function (q) { lf.lineTo(q[0], q[1]); });
+    [[-0.018, 0.16], [-0.01, 0.13], [-0.024, 0.12], [-0.009, 0.085], [-0.02, 0.075], [-0.006, 0.04], [-0.012, 0.03], [0, -0.008]].forEach(function (q) { lf.lineTo(q[0], q[1]); });
+    var leafGeo = new THREE.ShapeGeometry(lf, 1); leafGeo.rotateX(-Math.PI / 2 + 0.45);
+    var stem = new THREE.CylinderGeometry(0.0035, 0.005, 1, 5); stem.translate(0, 0.5, 0);
+    var mStem = new THREE.MeshStandardMaterial({ color: 0x7aa85a, roughness: 0.8 }), mLeaf = new THREE.MeshStandardMaterial({ color: 0x4e8a3a, roughness: 0.75, side: THREE.DoubleSide });
+    var mFluff = new THREE.MeshStandardMaterial({ map: fluffTex, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.8, emissive: 0x9a9a96, emissiveMap: fluffTex });
+    var mCore = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x6a6a66, transparent: true, opacity: 0.62, depthWrite: false, roughness: 0.9 });
+    var mKnob = new THREE.MeshStandardMaterial({ color: 0x8a7050, roughness: 0.9 }), mGold = new THREE.MeshStandardMaterial({ color: 0xf6c020, roughness: 0.6, side: THREE.DoubleSide });
+    var clocks = pts.filter(function (p) { return p.clock; }), blooms = pts.filter(function (p) { return !p.clock; });
+    var parts = [
+      { geo: stem, m: mStem, list: pts, at: 'stem' }, { geo: leafGeo, m: mLeaf, list: pts, at: 'leaves' },
+      { geo: knob, m: mKnob, list: clocks, at: 'head' }, { geo: inner, m: mCore, list: clocks, at: 'head' }, { geo: outer, m: mFluff, list: clocks, at: 'head' },
+      { geo: flowerGeo, m: mGold, list: blooms, at: 'head', big: 1.35 }, { geo: bractGeo, m: mLeaf, list: blooms, at: 'head' }
+    ];
+    var ims = [], m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3();
+    parts.forEach(function (P) {
+      var n = P.at === 'leaves' ? P.list.length * 5 : P.list.length, im = new THREE.InstancedMesh(P.geo, P.m, Math.max(1, n)), k = 0;
+      P.list.forEach(function (p) {
+        e.set(p.tilt, p.rot, 0); q.setFromEuler(e);
+        if (P.at === 'stem') { v.set(p.x, p.y, p.z); m.compose(v, q, s.set(1, p.h, 1)); im.setMatrixAt(k++, m); }
+        else if (P.at === 'leaves') for (var l = 0; l < 5; l++) { e.set(0, p.rot + l * 1.26 + springHash(l + p.x) * 0.3, 0); q.setFromEuler(e); v.set(p.x, p.y + 0.01, p.z); var ls = 0.85 + springHash(l * 3 + p.z) * 0.4; m.compose(v, q, s.set(ls, ls, ls)); im.setMatrixAt(k++, m); }
+        else { var hs = 1.3 * (P.big || 1); v.set(0, p.h, 0).applyQuaternion(q).add(s.set(p.x, p.y, p.z)); m.compose(v, q, s.set(hs, hs, hs)); im.setMatrixAt(k++, m); }
+      });
+      im.castShadow = P.m !== mFluff && P.m !== mCore; im.frustumCulled = false; im.visible = false; scene.add(im); ims.push(im);
+    });
+    return { ims: ims, pts: pts };
+  })();
+  var summerLilies = (function () {                                    // (lilies opening on pads that had none)
+    var out = [];
+    lilyPads.forEach(function (pad, i) {
+      if (springHash(i * 3.3 + 70) > 0.45) return;
+      if (lilyFlowers.some(function (f) { return dist(f.position.x, f.position.z, pad.position.x, pad.position.z) < 0.5; })) return;
+      var f = waterLily(pad.position.x + 0.05, pad.position.z - 0.04, springHash(i * 1.7) < 0.55); f.visible = false; lilyFlowers.push(f); out.push(f);
+    });
+    return out;
+  })();
+  // ===== every frame =====
+  function updateSummer(dt) {
+    var on = summerNow();
+    leafBatch.material.color.copy(on ? SUMMER_LEAF : PLAIN_LEAF);
+    grassMat.color.copy(on ? SUMMER_GRASS : summerPlain); terrain.material.color.copy(on ? SUMMER_GROUND : summerPlain);
+    var dhr = state.minutes / 60; summerDragonfliesMove(on && !indoors && dhr > 7 && dhr < 19);
+    summerCloudsMove(on && !indoors); summerBeesMove(on && !indoors && dhr > 7 && dhr < 19);
+    if (summerClocks.ims[0].visible !== on) { summerClocks.ims.forEach(function (im) { im.visible = on; }); summerLilies.forEach(function (f) { f.visible = on; }); }
+    if (summerFruit.visible !== on) { summerFruit.visible = on; summerStalks.visible = on; summerFruitLeaves.visible = on; }
+    if (on !== summerWasOn || state.time - summerFlowerT > 2) { summerWasOn = on; summerFlowerT = state.time; summerFlowersPlace(on); }
+    var hr = state.minutes / 60, dusk = hr >= 19 ? Math.min(1, (hr - 19) / 1.2) : hr < 4.5 ? 1 : hr < 5.5 ? 5.5 - hr : 0, flies = on && !indoors && dusk > 0;
+    if (summerFireflies.visible !== flies) summerFireflies.visible = flies;
+    if (flies) summerFirefliesMove(dusk);
+  }
 
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
@@ -6713,6 +7208,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateSilo(dt, night);
     updateBoatButton();
     updateSpring(dt);
+    updateSummer(dt);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
