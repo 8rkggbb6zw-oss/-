@@ -2931,8 +2931,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var RISE = 1.75, OVER = 0.6, slope = Math.hypot(D2 + OVER, RISE), ang = Math.atan2(RISE, D2 + OVER);
     [-1, 1].forEach(function (s) { var r = cpPart(new THREE.BoxGeometry(W2 * 2 + 1.3, 0.14, slope), cpmShingle, 0, CARP_WALL + RISE / 2 + 0.05, s * (D2 + OVER) / 2, s * ang, 0, 0, G); r.material = cpmShingle; });
     cpPart(new THREE.CylinderGeometry(0.12, 0.12, W2 * 2 + 1.4, 10).rotateZ(Math.PI / 2), cpmBark, 0, CARP_WALL + RISE + 0.12, 0, 0, 0, 0, G);   // (a log along the ridge)
+    [-1, 1].forEach(function (s) { cpLog(G, 0.165, W2 * 2 + 0.7, 0, 2.69, s * D2, 0); });   // (one more log along the top of the front and back walls, right up under the eaves)
     [-1, 1].forEach(function (s) {
-      var sh = new THREE.Shape(); sh.moveTo(-D2 - 0.05, 0); sh.lineTo(D2 + 0.05, 0); sh.lineTo(0, RISE); sh.closePath();
+      var eave = 0.07 + RISE * (OVER - 0.05) / (D2 + OVER) - 0.07 / Math.cos(ang);   // (the gable reaches right up under the roof at its corners, so there's no gap)
+      var sh = new THREE.Shape(); sh.moveTo(-D2 - 0.05, 0); sh.lineTo(D2 + 0.05, 0); sh.lineTo(D2 + 0.05, eave); sh.lineTo(0, RISE + 0.04); sh.lineTo(-D2 - 0.05, eave); sh.closePath();
       var gg = new THREE.ShapeGeometry(sh); var gm = cpPart(gg, new THREE.MeshStandardMaterial({ map: cpPlankTex, color: 0xc49a72, side: THREE.DoubleSide, roughness: 0.85 }), s * (W2 + 0.05), CARP_WALL, 0, 0, s * Math.PI / 2, 0, G);
       var uv = gg.attributes.uv, ps = gg.attributes.position; for (var i = 0; i < uv.count; i++) uv.setXY(i, ps.getY(i) * 0.6, ps.getX(i) * 0.6);   // (upright planks)
       var rnd = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), cpmGlowWin); rnd.position.set(s * (W2 + 0.08), CARP_WALL + 0.7, 0); rnd.rotation.y = s * Math.PI / 2; G.add(rnd);   // (a little round attic window)
