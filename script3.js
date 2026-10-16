@@ -6919,6 +6919,334 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (flies) summerFirefliesMove(dusk);
   }
 
+  // ---------- Fall on the island ----------
+  // While it's Fall: the broadleaf trees and bushes turn crimson, orange, gold and russet (the pines stay green), the
+  // light goes warm and golden, the grass dries toward straw, leaves come tumbling down around you, pumpkin
+  // patches ripen in the meadows among their big leaves and curling vines, and clusters
+  // of red-and-white toadstools and brown mushrooms come up at the feet of the trees
+  function fallNow() { return seasonOf(state.day) === 2; }
+  // ===== autumn colours on the trees =====
+  var fallLeafTex = paintTexture(256, 256, function (g) {             // (the same round clumps of leaves as the green ones, in autumn colours)
+    for (var i = 0; i < 320; i++) {
+      var a = Math.random() * Math.PI * 2, r = Math.pow(Math.random(), 0.65) * 108, x = 128 + Math.cos(a) * r, y = 128 + Math.sin(a) * r * 0.92;
+      var len = 14 + Math.random() * 14, ang = Math.random() * Math.PI * 2, sunny = Math.max(0, Math.min(1, 0.55 - ((x - 128) + (y - 128)) / 300));
+      g.save(); g.translate(x, y); g.rotate(ang);
+      var hue = [8, 18, 28, 38, 46][Math.floor(Math.random() * 5)] + Math.random() * 8;
+      g.fillStyle = 'hsl(' + hue + ',' + (70 + Math.random() * 20) + '%,' + (34 + sunny * 24 + Math.random() * 10) + '%)';
+      g.beginPath(); g.ellipse(0, 0, len / 2, len * 0.26, 0, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(70,30,10,0.22)'; g.lineWidth = 1; g.stroke();
+      g.strokeStyle = 'rgba(255,230,170,' + (0.15 + sunny * 0.3) + ')'; g.beginPath(); g.moveTo(-len / 2, 0); g.lineTo(len / 2, 0); g.stroke();
+      g.restore();
+    }
+  });
+  var fallGreenTex = leafBatch.material.map, fallLeafOrig = leafBatch.instanceColor ? leafBatch.instanceColor.array.slice() : null, fallLeafCols = null, fallShown = null;
+  (function () {                                                       // (each tree its own autumn colour: scarlet maples, orange, gold, russet, and the odd one still turning)
+    if (!fallLeafOrig) return;
+    fallLeafCols = fallLeafOrig.slice();
+    var TINTS = [[1.1, 0.5, 0.42], [1.08, 0.72, 0.5], [1.05, 0.95, 0.55], [0.9, 0.62, 0.46], [1.0, 0.82, 0.5], [0.85, 1.0, 0.6]];
+    allScenery.forEach(function (t, ti) {
+      var u = t.userData; if (!u.leaves) return;
+      var tint = TINTS[Math.floor(springHash(ti * 3.9 + 5) * TINTS.length)];
+      u.leaves.forEach(function (L) {
+        if (L.batch !== leafBatch) return;
+        for (var i = L.start; i < L.start + L.count; i++) {
+          var shade = fallLeafOrig[i * 3 + 1], k = shade * (0.95 + springHash(i * 1.3) * 0.2), mix = springHash(i * 0.77) < 0.12 ? 0.85 : 1;   // (a few cards a shade apart)
+          fallLeafCols[i * 3] = tint[0] * k * mix; fallLeafCols[i * 3 + 1] = tint[1] * k; fallLeafCols[i * 3 + 2] = tint[2] * k * (2 - mix);
+        }
+      });
+    });
+  })();
+  // ===== dry leaves: maple, oak and birch, each with its veins and a few freckles, for the falling leaves =====
+  var fallVeinTex = cpTex(128, 128, function (g, w, h) {
+    var gr = g.createRadialGradient(64, 70, 10, 64, 64, 80); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.75, '#f2ece2'); gr.addColorStop(1, '#a89880'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(90,60,30,0.55)'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(64, 128); g.lineTo(64, 4); g.stroke();   // (the midrib)
+    g.lineWidth = 1.3; [[-1, 0.9], [1, 0.9], [-1, 0.55], [1, 0.55], [-1, 0.3], [1, 0.3]].forEach(function (v) { g.beginPath(); g.moveTo(64, 128 * v[1]); g.quadraticCurveTo(64 + v[0] * 26, 128 * v[1] - 22, 64 + v[0] * 56, 128 * v[1] - 40); g.stroke(); });
+    g.lineWidth = 0.6; for (var k = 0; k < 40; k++) { var y = 20 + springHash(k * 3.1) * 100, sd = springHash(k) < 0.5 ? -1 : 1; g.beginPath(); g.moveTo(64 + sd * 6, y); g.lineTo(64 + sd * (14 + springHash(k * 7) * 24), y - 10); g.stroke(); }
+    for (var s = 0; s < 22; s++) { g.fillStyle = 'rgba(70,40,15,' + (0.15 + springHash(s * 5.1) * 0.25) + ')'; g.beginPath(); g.arc(springHash(s * 2.3) * w, springHash(s * 4.7) * h, 1 + springHash(s) * 2.6, 0, Math.PI * 2); g.fill(); }   // (freckles of age)
+  });
+  function fallLeafShape(P, curl) {
+    var sh = new THREE.Shape(); P.forEach(function (q, i) { if (i) sh.lineTo(q[0], q[1]); else sh.moveTo(q[0], q[1]); }); sh.closePath();
+    var g = new THREE.ShapeGeometry(sh, 3), gp = g.attributes.position, uv = g.attributes.uv;
+    for (var i = 0; i < gp.count; i++) { uv.setXY(i, gp.getX(i) + 0.5, gp.getY(i) + 0.5); gp.setZ(i, gp.getX(i) * gp.getX(i) * curl - gp.getY(i) * 0.06 + Math.sin(gp.getY(i) * 9) * 0.01); }   // (curled and a little wavy, as dry leaves are)
+    g.computeVertexNormals(); g.scale(0.12, 0.12, 0.12); return g;
+  }
+  var fallLeafGeos = [
+    fallLeafShape([[0, -0.5], [0.05, -0.2], [0.32, -0.28], [0.26, -0.1], [0.5, 0.05], [0.34, 0.1], [0.4, 0.32], [0.18, 0.22], [0.14, 0.5], [0, 0.32], [-0.14, 0.5], [-0.18, 0.22], [-0.4, 0.32], [-0.34, 0.1], [-0.5, 0.05], [-0.26, -0.1], [-0.32, -0.28], [-0.05, -0.2]], 0.3),   // (maple)
+    fallLeafShape([[0, -0.5], [0.08, -0.35], [0.2, -0.3], [0.14, -0.15], [0.28, -0.08], [0.2, 0.06], [0.32, 0.16], [0.2, 0.28], [0.26, 0.4], [0.1, 0.45], [0, 0.5], [-0.1, 0.45], [-0.26, 0.4], [-0.2, 0.28], [-0.32, 0.16], [-0.2, 0.06], [-0.28, -0.08], [-0.14, -0.15], [-0.2, -0.3], [-0.08, -0.35]], 0.4),   // (oak, with its rounded lobes)
+    fallLeafShape([[0, -0.5], [0.12, -0.32], [0.26, -0.1], [0.3, 0.1], [0.22, 0.3], [0.08, 0.46], [0, 0.5], [-0.08, 0.46], [-0.22, 0.3], [-0.3, 0.1], [-0.26, -0.1], [-0.12, -0.32]], 0.5)   // (birch: small, oval and pointed)
+  ];
+  var fallLeafGeo = fallLeafGeos[0];
+  var fallLeafMat = new THREE.MeshStandardMaterial({ map: fallVeinTex, roughness: 0.8, side: THREE.DoubleSide });
+  var FALL_COLS = [0xd8401c, 0xe86a1c, 0xf0a020, 0xe8c040, 0xb8541c, 0x9a3a1a, 0xc8781c];
+  // ===== leaves tumbling down around you =====
+  var fallDrift = fallLeafGeos.map(function (geo, gi) {
+    var N = 40, im = new THREE.InstancedMesh(geo, fallLeafMat, N), seeds = [], col = new THREE.Color();
+    for (var i = 0; i < N; i++) { var j = i * 3 + gi; seeds.push({ x: (springHash(j * 3.1 + 40) - 0.5) * 26, y: springHash(j * 5.3 + 40) * 9, z: (springHash(j * 7.7 + 40) - 0.5) * 26, s: 0.35 + springHash(j * 2.9) * 0.4, w: springHash(j * 9.1) * 6.28, spin: 1 + springHash(j * 4.4) * 2.5 }); im.setColorAt(i, col.set(FALL_COLS[j % FALL_COLS.length])); }
+    im.frustumCulled = false; im.visible = false; im.castShadow = true; scene.add(im); im.userData.seeds = seeds; return im;
+  });
+  var fdM = new THREE.Matrix4(), fdQ = new THREE.Quaternion(), fdE = new THREE.Euler(), fdV = new THREE.Vector3(), fdS = new THREE.Vector3(1, 1, 1);
+  function fallDriftMove(dt) {
+    var cx = cam.target.x, cz = cam.target.z, t = state.time;
+    fallDrift.forEach(function (im) {
+      im.userData.seeds.forEach(function (s, i) {
+        s.y -= dt * s.s; s.x += dt * (0.35 + Math.sin(t * 0.6 + s.w) * 0.4); s.z += dt * Math.cos(t * 0.45 + s.w) * 0.25;
+        var wx = cx + ((s.x % 26) + 39) % 26 - 13, wz = cz + ((s.z % 26) + 39) % 26 - 13, gy = Math.max(groundHeight(wx, wz), WATER_Y);
+        if (s.y < gy + 0.05) s.y = gy + 7 + springHash(i + t) * 3;      // (a leaf that lands is gone; a new one starts high up)
+        fdV.set(wx + Math.sin(t * 1.3 + s.w) * 0.35, s.y, wz); fdE.set(t * s.spin + s.w, t * 0.7 * s.spin, Math.sin(t * 2 + s.w) * 0.8); fdQ.setFromEuler(fdE);   // (fluttering and spinning as it falls)
+        fdM.compose(fdV, fdQ, fdS); im.setMatrixAt(i, fdM);
+      });
+      im.instanceMatrix.needsUpdate = true;
+    });
+  }
+  // ===== pumpkin patches, corn shocks and mushrooms =====
+  var FALL_PUMPKINS = [], FALL_MUSH = [], fallDecorShown = null, fallDecorT = -99, fallWasOn = null, fallMeshes = [];
+  var FALL_SHOCKS = [];
+  (function () {                                                       // (corn shocks round the edge of your farm, each with a pumpkin or two at its foot)
+    var fx = FARM_X + COLS * TILE / 2, fz = FARM_Z + ROWS * TILE / 2;
+    for (var c = 0, tries = 0; c < 7 && tries < 3000; tries++) {
+      var a = springHash(tries * 2.7 + 77) * 6.28, d = 6 + springHash(tries * 1.9 + 3) * 9, x = fx + Math.cos(a) * d, z = fz + Math.sin(a) * d;
+      if (!springFlowerSpot(x, z, 0.8) || FALL_SHOCKS.some(function (q) { return dist(q.x, q.z, x, z) < 4; })) continue;
+      c++; FALL_SHOCKS.push({ x: x, z: z, y: groundHeight(x, z), ry: springHash(c * 3.1) * 6.28, s: 0.9 + springHash(c * 1.7) * 0.25 });
+      for (var p = 0; p < 2; p++) { var pa = springHash(c * 5 + p) * 6.28, px = x + Math.cos(pa) * 0.5, pz = z + Math.sin(pa) * 0.5; if (springFlowerSpot(px, pz, 0.2)) FALL_PUMPKINS.push({ x: px, z: pz, y: groundHeight(px, pz), s: 1.3 + springHash(c * 9 + p) * 0.5, sy: 0.8 + springHash(c * 4 + p) * 0.4, rot: springHash(c + p * 7) * 6.28, col: p ? 0xf07818 : 0xe8661a, patch: 'shock' + c + '_' + p, noVine: true }); }
+    }
+  })();
+  (function () {
+    // (where: mushrooms by the feet of broadleaf trees, pumpkins out in open meadow)
+    choppable.forEach(function (t, ti) {
+      var u = t.userData; if (u.gone || !u.leafy) return;
+      var a = springHash(ti * 2.3 + 9) * 6.28, d = (u.solidR || 0.4) + 0.75 + springHash(ti * 1.7) * 0.5, x = u.base.x + Math.cos(a) * d, z = u.base.z + Math.sin(a) * d;
+      var a2 = a + 2 + springHash(ti) * 1.5, d2 = (u.solidR || 0.4) + 0.35, mx = u.base.x + Math.cos(a2) * d2, mz = u.base.z + Math.sin(a2) * d2;
+      if (springHash(ti * 5.7 + 3) < 0.22 && springFlowerSpot(mx, mz, 0.1)) {
+        var red = springHash(ti * 8.1) < 0.5, n = 3 + Math.floor(springHash(ti * 2.2) * 4);
+        for (var m = 0; m < n; m++) { var ma = springHash(ti * 3 + m * 1.9) * 6.28, mr = springHash(ti * 7 + m) * 0.22; FALL_MUSH.push({ x: mx + Math.cos(ma) * mr, z: mz + Math.sin(ma) * mr, y: groundHeight(mx, mz), red: red, s: 0.6 + springHash(ti + m * 2.7) * 0.7, tilt: (springHash(ti + m * 5.1) - 0.5) * 0.35, rot: springHash(m + ti * 1.1) * 6.28, tree: t }); }
+      }
+    });
+    for (var c = 0, tries = 0; c < 16 && tries < 4000; tries++) {
+      var cx = -ISLAND + 3 + springHash(tries * 6.7 + 909) * (ISLAND * 2 - 6), cz = -ISLAND + 3 + springHash(tries * 2.1 + 404) * (ISLAND * 2 - 6);
+      if (!springFlowerSpot(cx, cz, 1.4)) continue; c++;
+      var n2 = 4 + Math.floor(springHash(c * 3.3) * 5), patch = [];
+      for (var p = 0; p < n2; p++) {
+        var pa = springHash(c * 11 + p * 2.3) * 6.28, pr = 0.3 + springHash(c * 5 + p) * 0.9, px = cx + Math.cos(pa) * pr, pz = cz + Math.sin(pa) * pr;
+        if (!springFlowerSpot(px, pz, 0.4) || patch.some(function (q) { return dist(q.x, q.z, px, pz) < 0.6; })) continue;
+        var v = springHash(c * 9 + p * 4.1), pk = { x: px, z: pz, y: groundHeight(px, pz), s: 1.25 + springHash(c + p * 3.3) * 1.1, sy: 0.75 + springHash(c * 3 + p * 1.9) * 0.55, rot: springHash(c * 2 + p) * 6.28, col: v < 0.7 ? (v < 0.35 ? 0xf07818 : 0xe8661a) : v < 0.85 ? 0xf0e8d8 : 0xd8a040, patch: c };
+        patch.push(pk); FALL_PUMPKINS.push(pk);
+      }
+    }
+    // (a pumpkin: deep ribs, a little squat, with a dimple on top; and its gnarled, curving stem)
+    var pg = new THREE.SphereGeometry(0.16, 32, 16), pp = pg.attributes.position;
+    for (var i = 0; i < pp.count; i++) {
+      var x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), ang = Math.atan2(z, x), rr = 1 + Math.cos(ang * 10) * 0.07 - Math.pow(Math.max(0, y / 0.16), 6) * 0.25;
+      pp.setXYZ(i, x * rr, y * 0.72 - (Math.abs(y) > 0.15 ? Math.sign(y) * 0.02 : 0), z * rr);
+    }
+    pg.translate(0, 0.11, 0); pg.computeVertexNormals();
+    var stemG = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.2, 0), new THREE.Vector3(0.006, 0.24, 0), new THREE.Vector3(0.02, 0.27, 0.004), new THREE.Vector3(0.04, 0.275, 0.01)]), 8, 0.012, 6, false);
+    // (a pumpkin leaf: big, lobed and ruffled, lying out from the vine)
+    var lp = [[0, 0], [0.08, 0.04], [0.16, 0.0], [0.15, 0.08], [0.2, 0.12], [0.12, 0.15], [0.1, 0.24], [0.02, 0.17], [-0.06, 0.24], [-0.08, 0.15], [-0.16, 0.12], [-0.11, 0.08], [-0.14, 0.0], [-0.07, 0.04]];
+    var lsh = new THREE.Shape(); lp.forEach(function (q, k) { if (k) lsh.lineTo(q[0], q[1]); else lsh.moveTo(q[0], q[1]); }); lsh.closePath();
+    var pLeaf = new THREE.ShapeGeometry(lsh, 3), plp = pLeaf.attributes.position;
+    for (var j = 0; j < plp.count; j++) plp.setZ(j, Math.sin(plp.getX(j) * 40) * 0.008 + plp.getY(j) * 0.15);
+    pLeaf.rotateX(-Math.PI / 2 + 0.25); pLeaf.computeVertexNormals();
+    var leafStalk = new THREE.CylinderGeometry(0.005, 0.006, 0.14, 5); leafStalk.translate(0, 0.07, 0); leafStalk.rotateX(0.35);
+    // (mushrooms: a stem, and a cap; toadstools red with white flecks, the others brown and velvety, with pale gills beneath)
+    var spotTex = cpTex(128, 64, function (g, w, h) { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); for (var k = 0; k < 40; k++) { var sx = springHash(k * 3.3) * w, sy = springHash(k * 1.7) * h * 0.8; g.fillStyle = '#c8c8c8'; g.beginPath(); g.arc(sx, sy, 2 + springHash(k) * 3, 0, Math.PI * 2); g.fill(); } });
+    var redTex = cpTex(128, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#c81e18'); gr.addColorStop(1, '#e85030'); g.fillStyle = gr; g.fillRect(0, 0, w, h); for (var k = 0; k < 34; k++) { var sx = springHash(k * 3.3) * w, sy = springHash(k * 1.7) * h * 0.85; g.fillStyle = '#fff8ec'; g.beginPath(); g.ellipse(sx, sy, 2.4 + springHash(k) * 2.4, 1.8 + springHash(k) * 1.6, 0, 0, Math.PI * 2); g.fill(); } });
+    var capG = new THREE.SphereGeometry(0.05, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5); capG.scale(1, 0.62, 1); capG.translate(0, 0.07, 0);
+    var gillG = new THREE.CircleGeometry(0.049, 16); gillG.rotateX(Math.PI / 2); gillG.translate(0, 0.069, 0);
+    var mStemG = new THREE.CylinderGeometry(0.012, 0.016, 0.07, 8); mStemG.translate(0, 0.035, 0);
+    var pumpTex = cpTex(256, 128, function (g, w, h) {                // (the ribs: deep grooves and glossy highlights, a few pale freckles, darker round the stem)
+      for (var x = 0; x < w; x++) { var r = Math.cos(x / w * Math.PI * 2 * 10), k = 0.62 + 0.38 * Math.pow((r + 1) / 2, 0.6); g.fillStyle = 'rgb(' + Math.round(255 * k) + ',' + Math.round(250 * k) + ',' + Math.round(240 * k) + ')'; g.fillRect(x, 0, 1, h); }
+      var top = g.createLinearGradient(0, 0, 0, h * 0.3); top.addColorStop(0, 'rgba(60,40,20,0.45)'); top.addColorStop(1, 'rgba(60,40,20,0)'); g.fillStyle = top; g.fillRect(0, 0, w, h);
+      for (var s2 = 0; s2 < 140; s2++) { g.fillStyle = 'rgba(255,240,200,' + (0.2 + springHash(s2) * 0.3) + ')'; g.fillRect(springHash(s2 * 3.7) * w, springHash(s2 * 1.9) * h, 1.5, 3); }
+      for (var x2 = 0; x2 < 10; x2++) { g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect((x2 + 0.02) / 10 * w, h * 0.25, 3, h * 0.5); }
+    });
+    var tendrilGeo = (function () { var pts = []; for (var q = 0; q < 40; q++) { var a = q * 0.45; pts.push(new THREE.Vector3(Math.cos(a) * 0.03 * (1 - q / 60), 0.01 + q * 0.004, Math.sin(a) * 0.03 * (1 - q / 60) + q * 0.003)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.003, 4, false); })();
+    var mPump = new THREE.MeshStandardMaterial({ map: pumpTex, roughness: 0.45 }), mStemP = new THREE.MeshStandardMaterial({ color: 0x6a7a3a, roughness: 0.9 });
+    var mPLeaf = new THREE.MeshStandardMaterial({ color: 0x5a8a3a, roughness: 0.8, side: THREE.DoubleSide }), mVine = new THREE.MeshStandardMaterial({ color: 0x6a8a3a, roughness: 0.85 });
+    var mRedCap = new THREE.MeshStandardMaterial({ map: redTex, roughness: 0.4 }), mBrownCap = new THREE.MeshStandardMaterial({ color: 0x8a5a30, roughness: 0.85 }), mWhite = new THREE.MeshStandardMaterial({ color: 0xf2ecdc, roughness: 0.8, side: THREE.DoubleSide });
+    var reds = FALL_MUSH.filter(function (m) { return m.red; }), browns = FALL_MUSH.filter(function (m) { return !m.red; });
+    var pleaves = []; FALL_PUMPKINS.forEach(function (pk, i) { for (var l = 0; l < 3; l++) pleaves.push({ pk: pk, a: pk.rot + l * 2.1 + springHash(i * 3 + l) * 0.8, d: 0.2 + springHash(i + l * 7) * 0.2, s: 2.2 + springHash(i * 5 + l) * 0.9 }); });
+    fallMeshes = [
+      { geo: pg, m: mPump, list: FALL_PUMPKINS, part: 'pumpkin', col: function (p) { return p.col; } }, { geo: stemG, m: mStemP, list: FALL_PUMPKINS, part: 'pumpkin' },
+      { geo: pLeaf, m: mPLeaf, list: pleaves, part: 'pleaf', col: function (l) { return l.d > 0.36 ? 0xc8b048 : l.s > 1.75 ? 0x8aa040 : 0xffffff; } }, { geo: leafStalk, m: mVine, list: pleaves, part: 'pleaf' }, { geo: tendrilGeo, m: mVine, list: pleaves, part: 'pleaf' },
+      { geo: mStemG, m: mWhite, list: FALL_MUSH, part: 'mush' }, { geo: gillG, m: mWhite, list: FALL_MUSH, part: 'mush' },
+      { geo: capG, m: mRedCap, list: reds, part: 'mush' }, { geo: capG, m: mBrownCap, list: browns, part: 'mush', col: function (m) { return m.s > 1 ? 0x9a6a3a : 0x7a4a26; } },
+    ].map(function (F) {
+      F.im = new THREE.InstancedMesh(F.geo, F.m, Math.max(1, F.list.length)); F.im.castShadow = F.part !== 'pile'; F.im.receiveShadow = true; F.im.frustumCulled = false; F.im.visible = false; scene.add(F.im);
+      if (F.col) { var col = new THREE.Color(); F.list.forEach(function (r, k) { F.im.setColorAt(k, col.set(F.col(r))); }); }
+      return F;
+    });
+    // (the vines: one curling tube through each patch, joining its pumpkins)
+    var byPatch = {}; FALL_PUMPKINS.forEach(function (pk) { (byPatch[pk.patch] = byPatch[pk.patch] || []).push(pk); });
+    Object.keys(byPatch).forEach(function (k) {
+      var ps = byPatch[k]; if (ps.length < 2 || ps[0].noVine) return;
+      var pts = []; ps.forEach(function (pk, i) { pts.push(new THREE.Vector3(pk.x, pk.y + 0.03, pk.z)); if (i < ps.length - 1) { var q = ps[i + 1]; pts.push(new THREE.Vector3((pk.x + q.x) / 2 + (springHash(i * 3.3 + +k) - 0.5) * 0.4, Math.max(pk.y, q.y) + 0.03, (pk.z + q.z) / 2 + (springHash(i * 1.1 + +k) - 0.5) * 0.4)); } });
+      var vine = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 10, 0.012, 5, false), mVine); vine.castShadow = true; vine.visible = false; scene.add(vine);
+      fallMeshes.push({ vine: vine, list: ps });
+    });
+  })();
+  (function () {                                                       // (the finer things of fall: corn shocks, acorns and pinecones, and bracket fungi on the trunks)
+    var up = new THREE.Vector3(0, 1, 0);
+    function cylBetween(a, b, r0, r1, seg) {                           // (a tapering rod from point a to point b)
+      var d = new THREE.Vector3().subVectors(b, a), L = d.length(), g = new THREE.CylinderGeometry(r1, r0, L, seg || 5);
+      g.translate(0, L / 2, 0); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize()))); g.translate(a.x, a.y, a.z); return g;
+    }
+    // (a corn shock: two dozen dried stalks gathered into a teepee, tied with twine, their tassels and leaves flaring out above and drooping)
+    var stalks = [], cleaves = [];
+    for (var i = 0; i < 26; i++) {
+      var a = i / 26 * Math.PI * 2 + springHash(i * 3.3) * 0.2, rb = 0.26 + springHash(i * 1.7) * 0.1;
+      var B = new THREE.Vector3(Math.cos(a) * rb, 0, Math.sin(a) * rb), Tq = new THREE.Vector3(Math.cos(a) * 0.06, 0.78, Math.sin(a) * 0.06), Tp = new THREE.Vector3(Math.cos(a) * (0.14 + springHash(i) * 0.12), 1.45 + springHash(i * 5.1) * 0.25, Math.sin(a) * (0.14 + springHash(i) * 0.12));
+      stalks.push(cylBetween(B, Tq, 0.013, 0.011), cylBetween(Tq, Tp, 0.011, 0.005));
+      if (i % 2 === 0) {                                               // (a long dry leaf, curving out and down from part way up)
+        var lg = new THREE.PlaneGeometry(0.035, 0.42, 1, 6), lp = lg.attributes.position;
+        for (var v = 0; v < lp.count; v++) { var t = (lp.getY(v) + 0.21) / 0.42; lp.setXYZ(v, lp.getX(v) * (1 - t * 0.8), t * 0.42 - t * t * 0.3, t * t * 0.18 + Math.sin(t * 9 + i) * 0.01); }
+        lg.rotateY(-a + Math.PI / 2); lg.translate(Math.cos(a) * 0.08, 0.6 + springHash(i * 2.2) * 0.5, Math.sin(a) * 0.08); cleaves.push(lg);
+      }
+    }
+    var shockGeo = mergeSimple(stalks), shockLeafGeo = mergeSimple(cleaves);
+    var twineGeo = new THREE.TorusGeometry(0.075, 0.012, 6, 20); twineGeo.rotateX(Math.PI / 2); twineGeo.translate(0, 0.76, 0);
+    // (an acorn in its scaly cap; and a pinecone, its scales spiralling round in rings)
+    var nutGeo = new THREE.SphereGeometry(0.013, 10, 8); nutGeo.scale(1, 1.35, 1); nutGeo.translate(0, 0.0175, 0);
+    var capGeo2 = new THREE.SphereGeometry(0.0145, 10, 5, 0, Math.PI * 2, 0, Math.PI * 0.45); capGeo2.scale(1, 0.75, 1); capGeo2.translate(0, 0.026, 0);
+    var cupStalk = new THREE.CylinderGeometry(0.0018, 0.0022, 0.008, 5); cupStalk.translate(0, 0.038, 0);
+    var coneParts = [];
+    for (var ring = 0; ring < 8; ring++) for (var sc = 0; sc < 7; sc++) {
+      var ra = sc / 7 * Math.PI * 2 + ring * 0.45, rr = 0.022 * Math.sin(Math.PI * (0.15 + ring / 8 * 0.8)), sg = new THREE.ConeGeometry(0.009, 0.014, 4);
+      sg.rotateZ(-1.2); sg.rotateY(-ra); sg.translate(Math.cos(ra) * rr, ring * 0.009, Math.sin(ra) * rr); coneParts.push(sg);
+    }
+    var pineconeGeo = mergeSimple(coneParts); pineconeGeo.rotateZ(Math.PI / 2 - 0.2); pineconeGeo.translate(0.03, 0.018, 0);   // (lying on its side)
+    // (bracket fungi: three shelves stacked up the bark, each banded in rings of cream, tan and rust)
+    var bandTex = cpTex(128, 128, function (g, w, h) { for (var r = 64; r > 0; r -= 5) { var k = (r / 5) % 3; g.fillStyle = k === 0 ? '#d8b078' : k === 1 ? '#b8784a' : '#ece0c4'; g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.fill(); } });
+    var shelves = [];
+    [[0, 0.075], [0.07, 0.06], [0.13, 0.048]].forEach(function (sh) { var cg = new THREE.CylinderGeometry(sh[1], sh[1] * 0.92, 0.014, 18, 1, false, 0, Math.PI); var uv = cg.attributes.uv, cp = cg.attributes.position; for (var q = 0; q < cp.count; q++) uv.setXY(q, cp.getX(q) / (2 * sh[1]) + 0.5, cp.getZ(q) / (2 * sh[1]) + 0.5); cg.translate(0, sh[0], 0); shelves.push(cg); });
+    var bracketGeo = mergeUV(shelves);
+    // (where they go)
+    var acorns = [], cones = [], brackets = [];
+    choppable.forEach(function (t, ti) {
+      var u = t.userData; if (u.gone) return;
+      var n = u.leafy ? (springHash(ti * 2.9 + 1) < 0.4 ? 4 : 0) : (springHash(ti * 3.7 + 2) < 0.45 ? 3 : 0);
+      for (var k = 0; k < n; k++) {
+        var a = springHash(ti * 5 + k * 1.3) * 6.28, d = (u.solidR || 0.4) + 0.25 + springHash(ti + k * 2.1) * 0.6, x = u.base.x + Math.cos(a) * d, z = u.base.z + Math.sin(a) * d;
+        if (!springFlowerSpot(x, z, 0.05)) continue;
+        (u.leafy ? acorns : cones).push({ x: x, y: groundHeight(x, z), z: z, rx: u.leafy ? 1.4 + (springHash(k + ti) - 0.5) * 0.4 : 0, ry: springHash(k * 7 + ti) * 6.28, rz: 0, s: u.leafy ? 2.6 + springHash(k * 3 + ti) * 0.6 : 1.4 + springHash(k + ti * 3) * 0.6, tree: t });
+      }
+      if (u.leafy && springHash(ti * 6.1 + 4) < 0.28) {                // (shelves of fungus on the shady side of the trunk)
+        var ba = springHash(ti * 8.3) * 6.28, tr = (u.solidR || 0.4) - 0.04, bh = 0.35 + springHash(ti * 2.4) * 0.4;
+        brackets.push({ x: u.base.x + Math.cos(ba) * tr, y: u.base.y + bh, z: u.base.z + Math.sin(ba) * tr, rx: 0, ry: Math.atan2(-Math.sin(ba), Math.cos(ba)), rz: 0, s: 1.6 + springHash(ti * 3.3) * 0.6, tree: t, needStanding: true });
+      }
+    });
+    var mStalk = new THREE.MeshStandardMaterial({ color: 0xd2b070, roughness: 0.9 }), mCLeaf = new THREE.MeshStandardMaterial({ color: 0xc8a460, roughness: 0.9, side: THREE.DoubleSide }), mTwine = new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.95 });
+    var mNut = new THREE.MeshStandardMaterial({ color: 0xa8743a, roughness: 0.45 }), mCup = new THREE.MeshStandardMaterial({ color: 0x6a4a28, roughness: 0.95 }), mCone = new THREE.MeshStandardMaterial({ color: 0x7a4a26, roughness: 0.9 });
+    var mBracket = new THREE.MeshStandardMaterial({ map: bandTex, roughness: 0.85 });
+    var shockRecs = FALL_SHOCKS.map(function (s) { return { x: s.x, y: s.y, z: s.z, rx: 0, ry: s.ry, rz: 0, s: s.s }; });
+    [{ geo: shockGeo, m: mStalk, list: shockRecs }, { geo: shockLeafGeo, m: mCLeaf, list: shockRecs }, { geo: twineGeo, m: mTwine, list: shockRecs },
+     { geo: nutGeo, m: mNut, list: acorns }, { geo: capGeo2, m: mCup, list: acorns }, { geo: cupStalk, m: mCup, list: acorns }, { geo: pineconeGeo, m: mCone, list: cones },
+     { geo: bracketGeo, m: mBracket, list: brackets }
+    ].forEach(function (F) {
+      F.part = 'thing'; F.im = new THREE.InstancedMesh(F.geo, F.m, Math.max(1, F.list.length)); F.im.castShadow = true; F.im.receiveShadow = true; F.im.frustumCulled = false; F.im.visible = false; scene.add(F.im); fallMeshes.push(F);
+    });
+  })();
+  // ===== geese flying south in a V across the sky, now and then =====
+  var fallGeese = (function () {
+    var list = [], mBody = new THREE.MeshStandardMaterial({ color: 0x6a6258, roughness: 0.8 }), mBlack = new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.7 }), mWhite = new THREE.MeshStandardMaterial({ color: 0xf2eee6, roughness: 0.7 });
+    var wingG = new THREE.PlaneGeometry(0.55, 0.16); wingG.translate(0.275, 0, 0); wingG.rotateX(-Math.PI / 2);
+    for (var i = 0; i < 9; i++) {
+      var G = new THREE.Group();
+      var body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), mBody); body.scale.set(0.8, 0.75, 1.8); G.add(body);
+      var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.28, 6), mBlack); neck.rotation.x = Math.PI / 2 - 0.25; neck.position.set(0, 0.04, 0.28); G.add(neck);
+      var head = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), mBlack); head.scale.set(0.9, 0.9, 1.3); head.position.set(0, 0.075, 0.43); G.add(head);
+      var chin = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 4), mWhite); chin.position.set(0, 0.06, 0.42); chin.scale.set(1.05, 0.7, 0.8); G.add(chin);
+      var tail = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 6), mBlack); tail.rotation.x = -Math.PI / 2; tail.position.z = -0.24; G.add(tail);
+      var wings = [-1, 1].map(function (s) { var w = new THREE.Mesh(wingG, mBody); w.scale.x = s; w.position.set(s * 0.05, 0.03, 0.02); G.add(w); return w; });
+      var row = Math.ceil(i / 2), side = i === 0 ? 0 : (i % 2 ? -1 : 1);
+      G.scale.setScalar(2.4); G.visible = false; scene.add(G);
+      list.push({ g: G, wings: wings, off: new THREE.Vector3(side * row * 1.9, (springHash(i) - 0.5) * 0.6, -row * 1.6), ph: springHash(i * 3.1) * 6.28 });
+    }
+    return list;
+  })();
+  function fallGeeseMove(on) {
+    var t = state.time, cyc = (t % 150) / 150, flying = on && cyc < 0.45, p = cyc / 0.45, cx = camera.position.x, cz = camera.position.z;
+    fallGeese.forEach(function (Gs) {
+      if (Gs.g.visible !== flying) Gs.g.visible = flying;
+      if (!flying) return;
+      var lx = 120 - p * 240;                                           // (crossing from east to west, high over the island)
+      Gs.g.position.set(cx + lx + Gs.off.z * -1, 30 + Gs.off.y, cz - 55 + Gs.off.x);
+      Gs.g.rotation.set(0, -Math.PI / 2, 0);
+      var f = Math.sin(t * 5 + Gs.ph) * 0.55; Gs.wings[0].rotation.z = -f; Gs.wings[1].rotation.z = f;
+    });
+  }
+  var fpM = new THREE.Matrix4(), fpQ = new THREE.Quaternion(), fpE = new THREE.Euler(), fpV = new THREE.Vector3(), fpS = new THREE.Vector3();
+  var fallHidden = [], fallGM = new THREE.Matrix4(), fallGP = new THREE.Vector3();
+  function fallGrassUnder(spots) {                                     // (the grass blades and wildflowers under pumpkins and corn shocks tuck away, and come back after)
+    fallHidden.forEach(function (b) {
+      var t = tileMap[tileKey(Math.floor((b.p.x - FARM_X) / TILE), Math.floor((b.p.z - FARM_Z) / TILE))];
+      if (t && t.soil) { (t.grass = t.grass || []).push({ i: b.i, m: b.m, f: b.f }); return; }   // (dug into soil meanwhile: it stays tucked away with that tile)
+      if (b.f) { flowerHeads.setMatrixAt(b.i, b.m); flowerStems.setMatrixAt(b.i, b.m); } else grass.setMatrixAt(b.i, b.m);
+    });
+    fallHidden = [];
+    function hide(mesh, isF) {
+      for (var i = 0; i < mesh.count; i++) {
+        mesh.getMatrixAt(i, fallGM); if (fallGM.elements[0] === 0 && fallGM.elements[5] === 0) continue;
+        fallGP.setFromMatrixPosition(fallGM);
+        for (var k = 0; k < spots.length; k++) { var sp = spots[k]; if (Math.abs(fallGP.x - sp[0]) < sp[2] && Math.abs(fallGP.z - sp[1]) < sp[2] && dist(fallGP.x, fallGP.z, sp[0], sp[1]) < sp[2]) {
+          fallHidden.push({ i: i, m: fallGM.clone(), f: isF, p: fallGP.clone() }); mesh.setMatrixAt(i, hideM); if (isF) flowerStems.setMatrixAt(i, hideM); break; } }
+      }
+    }
+    if (spots.length) { hide(grass, false); hide(flowerHeads, true); }
+    grass.instanceMatrix.needsUpdate = true; flowerHeads.instanceMatrix.needsUpdate = flowerStems.instanceMatrix.needsUpdate = true;
+  }
+  function fallDecorPlace(show) {
+    function ok(r) { var o = r.pile || r.pk || r; if (!show || !springFlowerOK(o)) return false; var t = o.tree; if (o.needStanding) return !!t && t.userData.state === 'standing'; return !t || t.userData.state === 'standing' || t.userData.state === 'regrowing'; }
+    var key = fallMeshes.map(function (F) { return F.list.map(function (r) { return ok(r) ? 1 : 0; }).join(''); }).join('|');
+    if (key === fallDecorShown) return; fallDecorShown = key;
+    var spots = [];
+    if (show) {
+      FALL_PUMPKINS.forEach(function (pk) { if (ok(pk)) spots.push([pk.x, pk.z, 0.3 * pk.s + 0.1]); });
+      FALL_SHOCKS.forEach(function (S) { spots.push([S.x, S.z, 0.42 * S.s]); });
+    }
+    fallGrassUnder(spots);
+    fallMeshes.forEach(function (F) {
+      if (F.vine) { F.vine.visible = show && F.list.every(function (pk) { return springFlowerOK(pk); }); return; }
+      F.im.visible = show;
+      F.list.forEach(function (r, i) {
+        var k = ok(r) ? 1 : 0;
+        if (F.part === 'pumpkin') { fpV.set(r.x, r.y, r.z); fpE.set(0, r.rot, 0); fpS.set(k * r.s, k * r.s * (r.sy || 1), k * r.s); }
+        else if (F.part === 'pleaf') { var pk = r.pk; fpV.set(pk.x + Math.cos(r.a) * r.d * pk.s, pk.y + 0.005, pk.z + Math.sin(r.a) * r.d * pk.s); fpE.set(0, -r.a + Math.PI / 2, 0); fpS.setScalar(k * r.s); k = ok(pk) ? 1 : 0; fpS.setScalar(k * r.s); }
+        else if (F.part === 'mush') { fpV.set(r.x, r.y, r.z); fpE.set(r.tilt, r.rot, 0); fpS.setScalar(k * r.s); }
+        else { fpV.set(r.x, r.y, r.z); fpE.set(r.rx || 0, r.ry || 0, r.rz || 0, 'YXZ'); fpS.setScalar(k * r.s); }
+        fpQ.setFromEuler(fpE); fpM.compose(fpV, fpQ, fpS); F.im.setMatrixAt(i, fpM);
+      });
+      F.im.instanceMatrix.needsUpdate = true; if (F.im.instanceColor) F.im.instanceColor.needsUpdate = true;
+    });
+  }
+  // ===== warm, golden autumn light, and drier grass =====
+  var FALL_SKY = new THREE.Color(0x9ec2e6), FALL_SUN = new THREE.Color(0xffb468), FALL_GRASS = new THREE.Color(1.0, 0.76, 0.36), FALL_GROUND = new THREE.Color(1.0, 0.84, 0.58), FALL_MIST = new THREE.Color(0xeee0c8), FALL_FOG = [scene.fog.near, scene.fog.far];
+  var fallBaseSky = updateSky;
+  updateSky = function () {
+    var night = fallBaseSky.apply(this, arguments);
+    var mist = 0;
+    if (fallNow()) {
+      var day = Math.max(0, 1 - night * 1.6); scene.background.lerp(FALL_SKY, 0.35 * day); scene.fog.color.copy(scene.background); sun.color.lerp(FALL_SUN, 0.45 * day);
+      var hr = state.minutes / 60; mist = hr < 5 || hr > 10 ? 0 : hr < 6 ? hr - 5 : hr < 8 ? 1 : (10 - hr) / 2;   // (a golden morning mist, burning off by mid-morning)
+      scene.fog.color.lerp(FALL_MIST, 0.5 * mist);
+    }
+    scene.fog.near = FALL_FOG[0] - 30 * mist; scene.fog.far = FALL_FOG[1] - 55 * mist;
+    return night;
+  };
+  // ===== every frame =====
+  function updateFall(dt) {
+    var on = fallNow();
+    if (fallShown !== on && fallLeafCols) {                             // (the trees turn, or turn back)
+      fallShown = on; leafBatch.material.map = on ? fallLeafTex : fallGreenTex; leafBatch.material.needsUpdate = true;
+      leafBatch.instanceColor.array.set(on ? fallLeafCols : fallLeafOrig); leafBatch.instanceColor.needsUpdate = true;
+    }
+    if (on) { grassMat.color.copy(FALL_GRASS); terrain.material.color.copy(FALL_GROUND); }
+    if (on !== fallWasOn || state.time - fallDecorT > 2) { fallWasOn = on; fallDecorT = state.time; fallDecorPlace(on); }
+    var hr = state.minutes / 60, drift = on && !indoors && hr > 6 && hr < 19.5;
+    fallDrift.forEach(function (im) { if (im.visible !== drift) im.visible = drift; });
+    fallGeeseMove(on && !indoors && hr > 7 && hr < 18.5);
+    if (drift) fallDriftMove(dt);
+  }
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
@@ -7209,6 +7537,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateBoatButton();
     updateSpring(dt);
     updateSummer(dt);
+    updateFall(dt);
     updateCrops(dt, night);
     updateWorld(dt, night);
     updateEffects(dt);
