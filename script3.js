@@ -4798,7 +4798,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     put(new THREE.BoxGeometry(0.04, 0.78, 1.04), mOld, W2 - 0.15, 1.75, 1.1); put(new THREE.PlaneGeometry(0.96, 0.72), new THREE.MeshStandardMaterial({ map: chores, roughness: 0.95 }), W2 - 0.175, 1.75, 1.1, 0, -Math.PI / 2, 0).castShadow = false;
     // (lanterns on the stall posts and by the doors, and bunting along the header beam)
-    [-1.1, 1.1, -3.3, 3.3].forEach(function (x) { cpLantern(R, x, 1.9, -D2 + 1.86, fbarnInGlows); put(new THREE.BoxGeometry(0.04, 0.2, 0.04), cpmIron, x, 2.1, -D2 + 1.8); });
+    [-4.62, -2.2, 0, 2.2, 4.62].forEach(function (x) { cpLantern(R, x, 1.9, -D2 + 1.86, fbarnInGlows); put(new THREE.BoxGeometry(0.04, 0.2, 0.04), cpmIron, x, 2.1, -D2 + 1.8); });   // (on the posts between the stalls, clear of the name slates)
     [-2.0, 2.0].forEach(function (x) { cpLantern(R, x, 2.3, D2 - 0.3, fbarnInGlows); put(new THREE.BoxGeometry(0.04, 0.04, 0.2), cpmIron, x, 2.45, D2 - 0.2); });
     var flagCols = [0xf4a6c8, 0xfff0c8, 0xb8e0c8, 0xc8b8f0, 0xffc8a0, 0xa8d4f0], tri = new THREE.Shape(); tri.moveTo(-0.06, 0); tri.lineTo(0.06, 0); tri.lineTo(0, -0.14); tri.closePath();
     var tg = new THREE.ShapeGeometry(tri), bpts = []; for (var k2 = 0; k2 <= 24; k2++) { var f = k2 / 24; bpts.push(new THREE.Vector3(-4.5 + 9 * f, 2.12 - Math.sin(f * Math.PI * 4) * 0.06 - 0.02, -D2 + 1.77)); }
