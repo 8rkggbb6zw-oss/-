@@ -3154,7 +3154,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
 
   // ---------- The witchy farmhouse ----------
-  // A cosy little cottage near the top of the island: stone footing, cream walls with dark timber beams,
+  // A cozy little cottage near the top of the island: stone footing, cream walls with dark timber beams,
   // a steep purple shingled roof, a round tower with a crooked witch-hat roof, a crooked chimney puffing
   // lavender smoke, glowing windows, a round purple door, pumpkins, a broom and a bubbling cauldron
   var house = new THREE.Group(), houseStatic = new THREE.Group(), houseLive = new THREE.Group();
@@ -5749,7 +5749,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ---------- Inside the farmhouse ----------
-  // A cosy room of its own, drawn instead of the island while you're inside, so you can't see out.
+  // A cozy room of its own, drawn instead of the island while you're inside, so you can't see out.
   // It sits far away from the island (at IN_X, IN_Z) so nothing outside can be reached from in here.
   var interiorScene = new THREE.Scene();
   interiorScene.background = new THREE.Color(0x1c1228);

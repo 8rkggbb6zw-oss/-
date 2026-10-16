@@ -2743,7 +2743,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- Every frame ----------
   // ---------- Oak & Ember: the carpenter's workshop ----------
-  // A cosy log workshop at the back of the town square, its door facing the bridge, with its own stone path. Round
+  // A cozy log workshop at the back of the town square, its door facing the bridge, with its own stone path. Round
   // its porch: a workbench, sawhorses, a log pile, a stack of planks, a chopping block, sawdust and a hanging sign; a
   // stone chimney puffs smoke from the stove inside. Go in with Interact; inside, a warm workshop full of tools.
   var CARP_X = -1.5, CARP_Z = 127, CARP_TURN = Math.PI + 0.05, CARP_HW = 4.5, CARP_HD = 3.5, CARP_WALL = 2.6;
@@ -6133,7 +6133,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // counter says which season it is and how far into it you are ("Spring, Day 1" up to "Spring, Day 28", then
   // "Summer, Day 1"), and the morning a new season starts, a message says so
   var SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'], SEASON_DAYS = 28;
-  var SEASON_NEWS = ['🌸 Spring has arrived! Blossoms and fresh green shoots everywhere.', '☀ Summer has arrived! Long, warm, golden days.', '🍂 Fall has arrived! Crisp air and leaves of red and gold.', '❄ Winter has arrived! Frosty mornings and cosy evenings.'];
+  var SEASON_NEWS = ['🌸 Spring has arrived! Blossoms and fresh green shoots everywhere.', '☀ Summer has arrived! Long, warm, golden days.', '🍂 Fall has arrived! Crisp air and leaves of red and gold.', '❄ Winter has arrived! Frosty mornings and cozy evenings.'];
   function seasonOf(day) { return Math.floor((day - 1) / SEASON_DAYS) % SEASONS.length; }   // (0: Spring, 1: Summer, 2: Fall, 3: Winter)
   function seasonDayNum(day) { return (day - 1) % SEASON_DAYS + 1; }  // (1 to 28)
   function seasonDay(day) { return SEASONS[seasonOf(day)] + ', Day ' + seasonDayNum(day); }   // ("Spring, Day 1")
