@@ -630,8 +630,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
       var moon = g.kind === 'moon', duck = g.kind === 'duck', ember = g.kind === 'ember', gem = g.kind === 'gem', aur = g.kind === 'aurora', zep = g.kind === 'zephyra', lun = g.kind === 'luna', bub = g.kind === 'bubble', pri = g.kind === 'prism', lot = g.kind === 'lotus', axo = g.kind === 'axo', liz = g.kind === 'liz', tort = g.kind === 'tort', bis = g.kind === 'bison', ost = g.kind === 'ostrich', crb = g.kind === 'crab';
+      if (glimHome(g) === 2) fbarnRouteTick(g);                        // (in the barn: following its way round the feeding bench)
       if (g.wait <= 0 && g.pet <= 0) {
         if (glimHome(g) === 1) coopWander(g);                     // (in the coop: pottering about its floor)
+        else if (glimHome(g) === 2) fbarnWander(g);               // (in the barn: wandering all over it)
         else if (crb) { g.tx = -3.45 + Math.random() * 0.7; g.tz = sz - 0.8 + Math.random() * 1.1; g.wait = 2.5 + Math.random() * 5; }   // (scuttling about, then pausing to look round)
         else if (ost) { g.tx = -3.4 + Math.random() * 0.6; g.tz = sz - 0.7 + Math.random() * 0.95; g.wait = 3 + Math.random() * 6; }   // (strolling about gracefully)
         else if (bis) { g.tx = -3.35 + Math.random() * 0.45; g.tz = sz - 0.55 + Math.random() * 0.7; g.wait = 6 + Math.random() * 9; }   // (a big, calm grazer)
@@ -3998,7 +4000,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function coopWander(g) {                                             // (where it potters to next)
     if (g.eatSlot !== null && g.eatSlot !== undefined) { g.wait = 0.5; return; }
-    g.tx = -2.0 + Math.random() * 3.5; g.tz = -0.95 + Math.random() * (g.kind === 'ostrich' ? 1.9 : 2.3);
+    var n = COOP_NESTS[g.stall - COOP_STALL0], hr = state.minutes / 60, night = hr >= 20 || hr < 6, r = Math.random();
+    if (night || r < 0.15) { g.tx = n.x + (Math.random() - 0.5) * 0.2; g.tz = -1.1 + Math.random() * 0.08; g.wait = (night ? 8 : 4) + Math.random() * 6; return; }   // (settling down by its own nesting box, and roosting there at night)
+    if (r < 0.25) { g.tx = -2.25 + Math.random() * 0.3; g.tz = -0.42 + Math.random() * 0.4; }   // (the nook between the roosting ladder and the hay bale)
+    else { g.tx = -1.8 + Math.random() * 3.7; g.tz = -1.0 + Math.random() * (g.kind === 'ostrich' ? 2.0 : 2.15); }   // (anywhere across the floor, from the nesting boxes to the door, and up to the feeding bench)
     g.wait = (g.kind === 'gem' ? 1.5 : g.kind === 'ember' ? 4 : 2.5) + Math.random() * 5;
   }
   function coopEat(g) {
@@ -4889,13 +4894,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.eatSlot = null; g.eatT = 0;
   }
   function fbarnEat(g) {
-    var i = g.eatSlot; fbarn.hay[i] = false; fbarn.res[i] = null; g.eatSlot = null; g.eatT = 0;
+    var i = g.eatSlot; fbarn.hay[i] = false; fbarn.res[i] = null; g.eatSlot = null; g.eatT = 0; g.routeTo = null;
     g.fed = true; glimRefresh(g); fbarnHayShow();
     if (inFbarn) { popSound(); g.wait = 0.4; }
   }
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { fbarn.res[g.eatSlot] = null; g.eatSlot = null; } return; }
+      if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { fbarn.res[g.eatSlot] = null; g.eatSlot = null; g.routeTo = null; } return; }
       if (g.eatSlot === null || g.eatSlot === undefined) {
         var rx = fbarnToRoom(g.x, g.z)[0], best = -1, bd = 1e9;
         for (var i = 0; i < 8; i++) if (fbarn.hay[i] && !fbarn.res[i]) { var d = Math.abs(FBARN_SLOT_X[i] - rx); if (d < bd) { bd = d; best = i; } }
@@ -4904,9 +4909,43 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       if (!inFbarn) { fbarnEat(g); return; }
       var big = g.kind === 'bison' || g.kind === 'lotus' || g.kind === 'moon' || g.kind === 'aurora', spot = fbarnToFrame(FBARN_SLOT_X[g.eatSlot], big ? -0.75 : -0.5);
-      g.tx = spot[0]; g.tz = spot[1]; g.wait = 1;
+      if (g.routeTo !== 'eat' + g.eatSlot) { fbarnGo(g, [FBARN_SLOT_X[g.eatSlot], big ? -0.75 : -0.5], 0); g.routeTo = 'eat' + g.eatSlot; }   // (round the end of the bench if it's on the other side)
+      g.wait = 1;
       if (Math.hypot(g.x - spot[0], g.z - spot[1]) < 0.06) { g.face = Math.PI / 2; g.eatT += dt; if (g.eatT > 2.6) fbarnEat(g); }
     });
+  }
+  // (wandering all over the barn: out of its stall into the aisle behind the feeding bench, round either end of the
+  // bench to the open floor by the big doors, and home to its own stall again, where they all go to sleep at night.
+  // Points here are in the barn's room: x across it, z from the stalls at the back (-) to the doors at the front (+))
+  function fbarnZone(p) { return p[1] < -1.75 ? 'stall' : p[1] < 0 ? 'aisle' : 'front'; }
+  function fbarnRoute(a, b) {                                          // (the corners to walk through from a to b, ending at b)
+    var pts = [], za = fbarnZone(a), zb = fbarnZone(b);
+    if (za === 'stall' && zb === 'stall' && Math.abs(a[0] - b[0]) < 1) return [b];   // (just pottering about its own stall)
+    if (za === 'stall') { a = [a[0], -1.1]; pts.push(a); za = 'aisle'; }               // (out through the stall's opening)
+    var b2 = zb === 'stall' ? [b[0], -1.1] : b, zb2 = zb === 'stall' ? 'aisle' : zb;
+    if (za !== zb2) { var sx = a[0] + b2[0] >= 0 ? 3.55 : -3.55; if (za === 'aisle') pts.push([sx, -0.9], [sx, 0.9]); else pts.push([sx, 0.9], [sx, -0.9]); }   // (round the nearer end of the bench)
+    if (zb === 'stall') pts.push(b2);
+    pts.push(b);
+    return pts;
+  }
+  function fbarnGo(g, to, rest) {
+    var pts = fbarnRoute(fbarnToRoom(g.x, g.z), to).map(function (p) { return fbarnToFrame(p[0], p[1]); });
+    var first = pts.shift(); g.tx = first[0]; g.tz = first[1]; g.route = pts; g.restT = rest || 0; g.routeTo = null;
+  }
+  function fbarnRouteTick(g) {
+    var left = Math.hypot(g.tx - g.x, g.tz - g.z);
+    if (left < 0.05 && g.route && g.route.length) { var nx = g.route.shift(); g.tx = nx[0]; g.tz = nx[1]; left = 1; }
+    if (left > 0.05) g.wait = Math.max(g.wait, 0.3 + (g.restT || 0));  // (no new idea where to go until it gets there, then a rest)
+  }
+  function fbarnWander(g) {
+    if (g.eatSlot !== null && g.eatSlot !== undefined) { g.wait = 0.5; return; }
+    var home = -GLIM_STALLS[g.stall], hr = state.minutes / 60, night = hr >= 20 || hr < 6, r = Math.random();
+    var slow = g.kind === 'tort' || g.kind === 'bison' || g.kind === 'lotus' || g.kind === 'moon', to;
+    if (night || r < 0.2) to = [home + (Math.random() - 0.5) * 0.6, -2.35 - Math.random() * 0.6];   // (home to its own stall, and to sleep there at night)
+    else if (r < 0.6) to = [-3.9 + Math.random() * 7.3, -1.3 + Math.random() * 0.5];            // (somewhere along the aisle behind the bench)
+    else to = [-1.5 + Math.random() * 3.4, 0.8 + Math.random() * 1.15];                          // (out on the open floor by the big doors)
+    fbarnGo(g, to, ((slow ? 6 : 3) + Math.random() * (slow ? 8 : 6)) * (night ? 2 : 1));
+    g.wait = 0.3 + g.restT;
   }
   var FBARN_ACT = { moon: mooncalfAction, aurora: auroraramAction, zephyra: zephyraAction, luna: lunastraAction, bubble: sirennaAction, prism: prismaraAction, lotus: lotaraAction, axo: axoriaAction, liz: solarithAction, tort: grovellaAction, bison: nocturraAction, crab: iridelleAction };
   function fbarnCare(g) {                                              // milking, shearing, collecting, and petting (it feeds itself at the bench)
