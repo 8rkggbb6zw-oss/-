@@ -6127,6 +6127,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (ti >= 0) tilling.splice(ti, 1);
     tile.wet = false; tile.stage = 0; tile.growth = 0;
   }
+  rwGlassMat.map = siGlassTex; rwGlassMat.needsUpdate = true;         // (Fluff & Feather's round window gets its glass now that the glass is made)
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
@@ -6135,13 +6136,20 @@ EVERDAWN_PARTS.push(function (THREE) {
     return icon + ' ' + hour12 + ':' + twoDigits(minute) + ' ' + (hour < 12 ? 'AM' : 'PM');
   };
   // A tree, bush or rock you've cut down or broken doesn't get in your way again until it has grown back halfway
+  // Past halfway it gets in your way bit by bit as it grows, never all at once, and never while you're standing on it
   function markYoungScenery() {
+    function grow(sd, regrowing, k, full) {
+      var young = regrowing && k < 0.5;
+      if (regrowing && k >= 0.5) sd.r = full * Math.min(1, (k - 0.5) * 2);   // (from nothing at halfway to all of it once it's fully grown)
+      if (!young && sd.young && !indoors && !flying && Math.hypot(player.position.x - sd.x, player.position.z - sd.z) < full + 0.45) young = true;   // (you're right there: it waits until you step away)
+      sd.young = young;
+    }
     allScenery.forEach(function (t) {
       var u = t.userData, at = u.base || t.position;
       if (Math.abs(at.x - u.solid.x) > 0.5 || Math.abs(at.z - u.solid.z) > 0.5) return;   // (only the tree or bush that's really standing on this spot counts)
-      u.solid.young = u.state === 'regrowing' && u.shownK < 0.5;
+      grow(u.solid, u.state === 'regrowing', u.shownK, u.solidR);
     });
-    mineable.forEach(function (r) { r.solid.young = r.state === 'regrowing' && r.shownK < 0.5; });
+    mineable.forEach(function (r) { grow(r.solid, r.state === 'regrowing', r.shownK, r.solidR); });
   }
   function setSceneryCut(t, cutAt) {                                  // puts a tree or bush back to standing, or cut down at a given time
     var u = t.userData;

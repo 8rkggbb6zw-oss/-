@@ -5209,7 +5209,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ring, and glass that glows warm inside and catches the light
   var RW_Y = B_TOP + 1.97, RW_R = 0.28;
   apPart(new THREE.CircleGeometry(RW_R, 32), AM.warm, 0, RW_Y, B_FZ + 0.01);
-  apPart(new THREE.CircleGeometry(RW_R, 32), new THREE.MeshStandardMaterial({ map: siGlassTex, transparent: true, opacity: 0.6, roughness: 0.05, depthWrite: false }), 0, RW_Y, B_FZ + 0.035).renderOrder = 2;
+  var rwGlassMat = new THREE.MeshStandardMaterial({ transparent: true, opacity: 0.6, roughness: 0.05, depthWrite: false });   // (its glass texture is made further on, and put on in script3.js)
+  apPart(new THREE.CircleGeometry(RW_R, 32), rwGlassMat, 0, RW_Y, B_FZ + 0.035).renderOrder = 2;
   apPart(new THREE.CylinderGeometry(RW_R + 0.01, RW_R + 0.01, 0.12, 32, 1, true), AM.trim, 0, RW_Y, B_FZ - 0.02, Math.PI / 2, 0, 0);   // the depth of the opening
   apPart(new THREE.TorusGeometry(RW_R + 0.06, 0.06, 10, 36), AM.trim, 0, RW_Y, B_FZ + 0.04);
   apPart(new THREE.TorusGeometry(RW_R + 0.11, 0.018, 8, 36), AM.trim, 0, RW_Y, B_FZ + 0.06);                  // a moulded outer bead
