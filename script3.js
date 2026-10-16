@@ -7401,8 +7401,18 @@ EVERDAWN_PARTS.push(function (THREE) {
             '#include <normal_fragment_maps>',
             'vec3 roofUp = normalize((vec4(normal, 0.0) * viewMatrix).xyz);',
             'float snowPatch = snowNoise(vSnowXZ * 1.6) * 0.65 + snowNoise(vSnowXZ * 5.0) * 0.35;',   // (just a little: soft patches here and there, and a light dusting between)
-            'float roofSnow = smoothstep(0.3, 0.6, roofUp.y) * smoothstep(1.3, 1.8, vSnowY) * uSnowOn * (smoothstep(0.55, 0.72, snowPatch) * 0.9 + 0.12);',
-            'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.94, 0.97, 1.0), roofSnow);'
+            'float roofSnow = smoothstep(0.3, 0.6, roofUp.y) * smoothstep(1.3, 1.8, vSnowY) * uSnowOn * smoothstep(0.55, 0.6, snowPatch);',   // (solid patches with a soft edge: no tiles showing through)
+            'float snowLump = snowNoise(vSnowXZ * 6.0) * 0.6 + snowNoise(vSnowXZ * 14.0) * 0.3 + snowNoise(vSnowXZ * 30.0) * 0.1;',   // (lumpy: soft mounds lit on top, blue-grey in the dips)
+            'float snowLit = snowNoise(vSnowXZ * 6.0 + vec2(0.05, 0.05)) * 0.6 + snowNoise(vSnowXZ * 14.0 + vec2(0.025, 0.025)) * 0.3 + snowNoise(vSnowXZ * 30.0 + vec2(0.01, 0.01)) * 0.1;',
+            'float snowShade = clamp(0.7 + (snowLump - snowLit) * 3.0 + (snowLump - 0.5) * 0.5, 0.0, 1.0);',
+            'float snowEdge = smoothstep(0.55, 0.62, snowPatch) * (1.0 - smoothstep(0.62, 0.74, snowPatch));',   // (a little blue shadow round the edge of each patch, where it's thin)
+            'vec3 snowCol = mix(vec3(0.74, 0.8, 0.9), vec3(0.95, 0.97, 1.0), snowShade) - snowEdge * vec3(0.12, 0.08, 0.02);',
+            'diffuseColor.rgb = mix(diffuseColor.rgb, snowCol, roofSnow);',
+            'float snowL0 = snowNoise(vSnowXZ * 6.0) * 0.7 + snowNoise(vSnowXZ * 14.0) * 0.3;',   // (the snow's own lumps, tilting its surface so the light picks them out)
+            'float snowLx = snowNoise((vSnowXZ + vec2(0.03, 0.0)) * 6.0) * 0.7 + snowNoise((vSnowXZ + vec2(0.03, 0.0)) * 14.0) * 0.3;',
+            'float snowLz = snowNoise((vSnowXZ + vec2(0.0, 0.03)) * 6.0) * 0.7 + snowNoise((vSnowXZ + vec2(0.0, 0.03)) * 14.0) * 0.3;',
+            'vec3 snowTilt = (viewMatrix * vec4(-(snowLx - snowL0) * 7.0, 0.0, -(snowLz - snowL0) * 7.0, 0.0)).xyz;',
+            'normal = normalize(mix(normal, geometryNormal, roofSnow) + snowTilt * roofSnow);'
           ].join('\n'));
         };
         m.needsUpdate = true;
