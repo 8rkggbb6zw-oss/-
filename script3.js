@@ -7668,8 +7668,8 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- Music ----------
   // Soft, cozy music made on the fly, with a little magic in it: warm pad chords breathing in and out, a gentle
-  // music-box melody that wanders over them with an echo, a soft plucked harp now and then, and every so often a
-  // shimmer of high fairy chimes drifting up. It never quite repeats. By night it slows down, goes quieter and lower.
+  // music-box melody that wanders slowly over them with a soft echo, a gentle harp roll now and then, and once in a
+  // while a shimmer of high fairy chimes drifting up. It never quite repeats. By night it slows down, goes quieter and lower.
   // The ♪ Music button (or M) turns it on and off, and the game remembers which you chose
   var MUSIC_KEY = 'everdawn-music';
   var musicOn = true; try { musicOn = localStorage.getItem(MUSIC_KEY) !== 'off'; } catch (err) {}
@@ -7691,7 +7691,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     verb.buffer = ir; var wet = ac.createGain(); wet.gain.value = 0.55; verb.connect(wet); wet.connect(out);
     var dry = ac.createGain(); dry.gain.value = 0.8; dry.connect(out);
     var echo = ac.createDelay(2), fb = ac.createGain(), echoTone = ac.createBiquadFilter();   // (the music box's echo, softening each time)
-    echoTone.type = 'lowpass'; echoTone.frequency.value = 2600; fb.gain.value = 0.38;
+    echoTone.type = 'lowpass'; echoTone.frequency.value = 2400; fb.gain.value = 0.22;
     echo.connect(echoTone); echoTone.connect(fb); fb.connect(echo); echoTone.connect(verb); echoTone.connect(dry);
     var padTone = ac.createBiquadFilter(); padTone.type = 'lowpass'; padTone.frequency.value = 1100; padTone.Q.value = 0.4;
     padTone.connect(verb); padTone.connect(dry);
@@ -7730,22 +7730,22 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var k = 0; k < steps.length; k++) musBell(base + steps[k] - 12, t + k * 0.09 + Math.random() * 0.03, 0.035 * (1 - k / 14), 1.6, Math.sin(k * 1.3) * 0.8, false);
   }
   function musScheduleBar(t, night) {
-    var beat = 60 / (night ? 54 : 68), barLen = beat * 4;
+    var beat = 60 / (night ? 48 : 58), barLen = beat * 4;   // (slow and unhurried)
     var chord = MUS_PROG[mus.pass % MUS_PROG.length][mus.bar], quiet = 1 - night * 0.35;
     musPad(chord.map(function (n) { return n - (night ? 12 : 0) + 12; }).slice(1), t, barLen, 0.012 * quiet);
     musPad([chord[0]], t, barLen, 0.02 * quiet);                        // (a soft low root)
-    if (!night || Math.random() < 0.5) for (var a = 0; a < 8; a++) {    // (the harp, rippling up the chord, now and then)
-      if (Math.random() < (night ? 0.35 : 0.55)) musHarp(chord[(a % 4) + 1] + 12, t + a * beat / 2 + Math.random() * 0.02, 0.03 * quiet, (a % 2 ? 0.35 : -0.35));
+    if (mus.bar % 2 === 0 && Math.random() < (night ? 0.25 : 0.5)) for (var a = 0; a < 4; a++) {   // (the harp, rolling gently up the chord, every so often)
+      musHarp(chord[a + 1] + 12, t + a * beat * 0.5 + Math.random() * 0.02, 0.026 * quiet, (a % 2 ? 0.35 : -0.35));
     }
-    var slots = night ? [0, 2, 3] : [0, 1, 1.5, 2, 3, 3.5];              // (the music box's tune: wandering step by step over the chord)
+    var slots = night ? [0, 2] : [0, 2, 3];                             // (the music box's tune: a few unhurried notes, wandering step by step over the chord)
     slots.forEach(function (sl) {
-      if (Math.random() < (night ? 0.45 : 0.6)) {
+      if (sl === 0 ? Math.random() < 0.8 : Math.random() < (night ? 0.3 : 0.45)) {
         mus.mel = Math.max(0, Math.min(MUS_SCALE.length - 1, mus.mel + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
         var n = MUS_SCALE[mus.mel]; if (sl === 0) { var near = chord.slice(1).map(function (c) { while (c < 62) c += 12; while (c > 86) c -= 12; return c; }); n = near.reduce(function (b, c) { return Math.abs(c - n) < Math.abs(b - n) ? c : b; }, near[0]); mus.mel = Math.max(0, MUS_SCALE.indexOf(n)); if (mus.mel < 0) mus.mel = 5; }
         musBell(n + (night ? -12 : 0), t + sl * beat, (sl % 1 ? 0.05 : 0.07) * quiet, 2.4, (Math.random() - 0.5) * 0.5, true);
       }
     });
-    if (mus.bar === 3 && Math.random() < 0.6) musShimmer(t + beat * 2.5);   // (and every so often, a little sparkle of magic)
+    if (mus.bar === 3 && mus.pass % 2 === 1 && Math.random() < 0.6) musShimmer(t + beat * 2.5);   // (and every so often, a little sparkle of magic)
     mus.echo.delayTime.setValueAtTime(beat * 0.75, t);
     mus.bar = (mus.bar + 1) % 4; if (!mus.bar) mus.pass++;
     return barLen;
