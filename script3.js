@@ -6186,7 +6186,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Outdoors, the camera never ends up inside a building looking at its hollow insides: if it would, it slides in to
   // just in front of the wall it went through, and once it's clear again it eases back out. (It's inside when there's
   // a wall between you and it and a roof right over it.) Looking over a building from the far side stays as it is
-  var camRay = new THREE.Raycaster(), camDir = new THREE.Vector3(), camFrom = new THREE.Vector3(), camUp = new THREE.Vector3(0, 1, 0), camWalls = [], camWallsAt = -1, camDistNow = null, camSize = new THREE.Vector3();
+  var camMats = [], camRay = new THREE.Raycaster(), camDir = new THREE.Vector3(), camFrom = new THREE.Vector3(), camUp = new THREE.Vector3(0, 1, 0), camWalls = [], camWallsAt = -1, camDistNow = null, camSize = new THREE.Vector3();
   function camWallList() {                                             // (the big pieces of every building outside: walls, roofs, logs; not the little props, rails or glass)
     var list = [];
     [house, shopGroup, clinicGroup, barnGroup, carpGroup, coopGroup, fbarnGroup, millGroup, siloGroup].forEach(function (g) {
@@ -6195,7 +6195,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.traverse(function (o) {
         if (!o.isMesh || !o.geometry) return;
         var m = Array.isArray(o.material) ? o.material[0] : o.material;
-        if (!m || m.transparent) return;
+        if (!m || m.depthWrite === false && m.blending === THREE.AdditiveBlending) return;   // (not glows; glass and doors count, so it can't slip in through a window)
         if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
         o.getWorldScale(camSize); var bb = o.geometry.boundingBox;
         var e = [(bb.max.x - bb.min.x) * Math.abs(camSize.x), (bb.max.y - bb.min.y) * Math.abs(camSize.y), (bb.max.z - bb.min.z) * Math.abs(camSize.z)].sort(function (p, q) { return q - p; });
@@ -6203,27 +6203,34 @@ EVERDAWN_PARTS.push(function (THREE) {
       });
     });
     var houseMats = Object.keys(houseByMat).map(function (k) { return houseByMat[k].mat; });   // (the farmhouse's still parts were joined into a few meshes of their own)
-    scene.children.forEach(function (o) { if (o.isMesh && houseMats.indexOf(o.material) >= 0 && !o.material.transparent) list.push(o); });
+    scene.children.forEach(function (o) { if (o.isMesh && houseMats.indexOf(o.material) >= 0) list.push(o); });
+    camMats = [];                                                      // (every material they use, so the camera's checks can see both sides of a wall or roof)
+    list.forEach(function (o) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { if (camMats.indexOf(m) < 0) camMats.push(m); }); });
     return list;
   }
+  var camHid = false;
+  function camHideMe(on) { if (on === camHid) return; camHid = on; player.visible = !on; }
   function camFirstHit(from, dir, far) {
     camRay.set(from, dir); camRay.near = 0.05; camRay.far = far;
+    var sides = camMats.map(function (m) { var sd = m.side; m.side = THREE.DoubleSide; return sd; });   // (from inside, a wall or roof is only drawn from its outside, so check both faces)
     var hits = camRay.intersectObjects(camWalls, false);
+    camMats.forEach(function (m, i) { m.side = sides[i]; });
     for (var i = 0; i < hits.length; i++) if (hits[i].object.visible && hits[i].object.parent && hits[i].object.parent.visible !== false) return hits[i].distance;
     return -1;
   }
   function camClear(dt) {
     var want = cam.dist, fit = want;
-    if (indoors) { camDistNow = want; return want; }
+    if (indoors) { camDistNow = want; camHideMe(false); return want; }
     if (camWallsAt < 0 || state.time - camWallsAt > 2 || state.time < camWallsAt) { camWalls = camWallList(); camWallsAt = state.time; }
     camDir.set(Math.sin(cam.yaw) * Math.cos(cam.pitch), Math.sin(cam.pitch), Math.cos(cam.yaw) * Math.cos(cam.pitch));
     var out = camFirstHit(cam.target, camDir, want);                   // (the first wall or roof on the way out to the camera...)
     if (out > 0) {
       camFrom.copy(cam.target).addScaledVector(camDir, want);
-      if (camFirstHit(camFrom, camUp, 12) > 0) fit = Math.max(0.9, out - 0.25);   // (...and if there's a roof right over the camera, it's inside: bring it in front of that wall)
+      if (camFirstHit(camFrom, camUp, 12) > 0) fit = Math.max(0.25, out - 0.2);   // (...and if there's a roof right over the camera, it's inside: bring it in front of that wall, however close that is)
     }
     if (camDistNow === null || fit < camDistNow) camDistNow = fit;       // (straight in, so it's never seen poking through)
     else camDistNow += (fit - camDistNow) * (1 - Math.exp(-dt * 4));   // (and gently back out)
+    camHideMe(camDistNow < 0.75);                                      // (right up against a wall, the camera is almost in her hat: she steps out of view for a moment)
     return camDistNow;
   }
 
