@@ -2421,7 +2421,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ---- her head: a big round face, painted like an anime character ----
     var head = new THREE.Group(); head.position.set(0, 1.06, 0); chibi.add(head);   // (held a little higher, so a short neck shows beneath her chin)
     mesh(new THREE.CylinderGeometry(0.028, 0.033, 0.11, 16).translate(0, -0.2, -0.01), mSkin, head, true);   // (her neck: small and slender)
-    function face(closed) {
+    function face(closed, beam) {                                       // (beam: eyes closed and a big open-mouthed smile, for the title screen)
       return canvas(2048, 1024, function (g) {
         g.fillStyle = '#f2d1b0'; g.fillRect(0, 0, 2048, 1024);            // (warm, peachy skin)
         function X(l) { return 512 + l * 2048 / 360; } function Y(p) { return 512 - p * 1024 / 180; }
@@ -2491,10 +2491,16 @@ EVERDAWN_PARTS.push(function (THREE) {
         var nz = g.createRadialGradient(X(0.6), Y(-26), 1, X(0.6), Y(-26), 11); nz.addColorStop(0, 'rgba(200,128,104,0.7)'); nz.addColorStop(1, 'rgba(200,128,104,0)'); g.fillStyle = nz; g.beginPath(); g.ellipse(X(0.6), Y(-26), 12, 9, 0, 0, Math.PI * 2); g.fill();   // (a small, soft nose...)
         g.fillStyle = 'rgba(255,238,224,0.7)'; g.beginPath(); g.ellipse(X(-0.4), Y(-25.2), 4, 3, 0, 0, Math.PI * 2); g.fill();   // (...catching the light)
         g.strokeStyle = '#6a3a2a'; g.lineWidth = 4; g.lineCap = 'round'; g.lineJoin = 'round';   // (a tiny, sweet cat smile)
-        g.beginPath(); g.moveTo(X(-4.2), Y(-33)); g.quadraticCurveTo(X(-2.1), Y(-36), X(0), Y(-33.6)); g.quadraticCurveTo(X(2.1), Y(-36), X(4.2), Y(-33)); g.stroke();
+        if (beam) {                                                      // (a big, happy open-mouthed smile, with a little pink tongue)
+          g.beginPath(); g.moveTo(X(-6.4), Y(-31.6)); g.quadraticCurveTo(X(0), Y(-33.2), X(6.4), Y(-31.6)); g.bezierCurveTo(X(6), Y(-38.5), X(-6), Y(-38.5), X(-6.4), Y(-31.6)); g.closePath();
+          g.fillStyle = '#7a2e34'; g.fill();
+          g.save(); g.clip(); g.fillStyle = '#f08a96'; g.beginPath(); g.ellipse(X(0.4), Y(-37.4), X(3.6) - X(0), Y(0) - Y(2.2), 0, 0, Math.PI * 2); g.fill(); g.restore();
+          g.lineWidth = 4; g.stroke();
+          g.lineWidth = 3; [-1, 1].forEach(function (sd) { g.beginPath(); g.moveTo(X(sd * 6.4), Y(-31.6)); g.quadraticCurveTo(X(sd * 7.4), Y(-31.2), X(sd * 7.8), Y(-30.4)); g.stroke(); });   // (little dimples at the corners)
+        } else { g.beginPath(); g.moveTo(X(-4.2), Y(-33)); g.quadraticCurveTo(X(-2.1), Y(-36), X(0), Y(-33.6)); g.quadraticCurveTo(X(2.1), Y(-36), X(4.2), Y(-33)); g.stroke(); }
       });
     }
-    var faceOpen = face(false), faceShut = face(true), mFace = toon(0xffffff, { map: faceOpen, emissive: 0xffffff, emissiveMap: faceOpen, emissiveIntensity: 0.16 });   // (softly, evenly lit, like a drawing)
+    var faceOpen = face(false), faceShut = face(true), faceBeam = face(true, true), mFace = toon(0xffffff, { map: faceOpen, emissive: 0xffffff, emissiveMap: faceOpen, emissiveIntensity: 0.16 });   // (softly, evenly lit, like a drawing)
     mFace.gradientMap = new THREE.DataTexture(new Uint8Array([178, 178, 178, 255, 218, 218, 218, 255, 245, 245, 245, 255]), 3, 1, THREE.RGBAFormat); mFace.gradientMap.needsUpdate = true;
     function squarish(geo, amt) {                                      // (very slightly square: flatter sides, top and front, with soft, rounded corners)
       var ps = geo.attributes.position;
@@ -2732,7 +2738,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     rose(0.218, 0.055, 0.08, 1.7, 0.2); rose(0.232, 0.095, 0.0, 1.35, 1.2); rose(0.196, 0.02, 0.14, 1.2, 2.4);
 
-    return { broom: broom, rideBroom: rideBroom, chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut], phase: 0, blink: false };
+    return { broom: broom, rideBroom: rideBroom, chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut, faceBeam], phase: 0, blink: false };
   })();
   // every frame: she walks with little steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
@@ -8169,6 +8175,161 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inFbarn) { camera.updateMatrixWorld(); drawFbarnView(); }
     renderer.render(indoors ? (inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
+  // ---------- The title screen, in 3D ----------
+  // While the title screen is up, the real you floats in the dawn sky over it: your own witch, her arm raised with a
+  // wand of dark wood wound with gold, a pink ribbon and a glowing crystal with a star turning above it, magic pouring
+  // off it in sparkles. A ring of runes and soft light turns beneath her feet, and Blossom the Glimmerwing, Marina the
+  // Sirenna and Starla the Lunastra float about her, bobbing and turning. When you press Play they all go back where
+  // they belong, just as they were
+  var title3d = (function () {
+    var host = document.getElementById('evTitle'); if (!host || !window.EVERDAWN_TITLE) return null;
+    var cv = document.createElement('canvas'); cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity 1.2s ease';
+    host.insertBefore(cv, host.querySelector('.ev-ui'));
+    var R3 = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+    R3.outputEncoding = renderer.outputEncoding; R3.toneMapping = renderer.toneMapping; R3.toneMappingExposure = renderer.toneMappingExposure; R3.physicallyCorrectLights = renderer.physicallyCorrectLights;
+    var TS = new THREE.Scene(), cam3 = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
+    var skyTex = new THREE.CanvasTexture(host.querySelector('canvas')); if (renderer.outputEncoding === THREE.sRGBEncoding) skyTex.encoding = THREE.sRGBEncoding;
+    TS.background = skyTex;                                            // (the painted dawn sky, behind her)
+    TS.add(new THREE.HemisphereLight(0xfff4f8, 0x6a4a9a, 0.38));
+    var key = new THREE.DirectionalLight(0xfff6ee, 0.55); key.position.set(2.5, 4, 5); TS.add(key);
+    var rim = new THREE.DirectionalLight(0xffb0e0, 0.32); rim.position.set(-4, 2.5, -3); TS.add(rim);
+    var fillL = new THREE.PointLight(0xffe0a0, 0.3, 3); TS.add(fillL);   // (the wand's light, falling on her)
+    TS.add(new THREE.AmbientLight(0xd8c8f0, 0.08));
+    // (you, borrowed from the island for a moment)
+    var saved = { parent: player.parent, pos: player.position.clone(), rot: player.rotation.clone(), vis: player.visible, axe: axeArm.visible, body: body.rotation.clone(), bodyPos: body.position.clone(),
+      limbs: [wl.armL, wl.armR, wl.legs[0], wl.legs[1], wl.head, wl.hairBack, wl.tip].map(function (o) { return o.rotation.clone(); }), chibi: wl.chibi.position.clone(), broom: wl.broom.visible, ride: wl.rideBroom.visible };
+    var me = new THREE.Group(); TS.add(me); me.add(player);
+    player.position.set(0, 0, 0); player.rotation.set(0, 0.18, 0); player.visible = true; body.position.set(0, 0, 0); body.rotation.set(0, 0, 0);
+    axeArm.visible = false; wl.armR.visible = true; wl.broom.visible = false; wl.rideBroom.visible = false;   // (floating on her own, held up by the magic ring beneath her)
+    wl.mFace.map = wl.mFace.emissiveMap = wl.faces[2]; wl.mFace.needsUpdate = true;   // (eyes closed, smiling with joy)
+    saved.broomRot = wl.rideBroom.rotation.clone(); saved.broomPos = wl.rideBroom.position.clone(); wl.rideBroom.rotation.y += Math.PI / 2; wl.rideBroom.position.z += 0.06;
+    player.updateMatrixWorld(true); var broomBox = new THREE.Box3().setFromObject(wl.rideBroom);   // (where the broom lies, so Starla can ride on the back of it)
+    // (her wand, in her raised right hand)
+    var wand = new THREE.Group(); wand.position.set(0, -0.3, 0.02); wl.armR.add(wand);
+    var wood = new THREE.MeshToonMaterial({ color: 0x4a2c1a }), gold = new THREE.MeshStandardMaterial({ color: 0xe8b84a, metalness: 0.8, roughness: 0.3, emissive: 0x6a4410, emissiveIntensity: 0.4 });
+    var stick = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.013, 0.42, 10), wood); stick.position.y = -0.17; wand.add(stick);
+    for (var gw = 0; gw < 9; gw++) { var gr = new THREE.Mesh(new THREE.TorusGeometry(0.0125 - gw * 0.0004, 0.0026, 6, 16), gold); gr.rotation.set(Math.PI / 2 + 0.35, 0, gw * 0.7); gr.position.y = -0.02 - gw * 0.035; wand.add(gr); }
+    var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.05, 12), gold); grip.position.y = 0.0; wand.add(grip);
+    var crystalMat = new THREE.MeshPhysicalMaterial({ color: 0xc89aff, emissive: 0x8a4ae0, emissiveIntensity: 0.9, roughness: 0.05, metalness: 0.1, clearcoat: 1, transparent: true, opacity: 0.92, flatShading: true });
+    var crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.036, 0), crystalMat); crystal.scale.set(1, 1.7, 1); crystal.position.y = -0.42; wand.add(crystal);
+    var cup = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.03, 5, 1, true), gold); cup.rotation.x = Math.PI; cup.position.y = -0.38; wand.add(cup);
+    var ribMat = new THREE.MeshToonMaterial({ color: 0xff8cc6, side: THREE.DoubleSide }), ribbons = [];
+    [-1, 1].forEach(function (sd) { var rb = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.13, 1, 6), ribMat); rb.geometry.translate(0, -0.065, 0); rb.position.set(sd * 0.008, -0.33, 0.01); rb.rotation.z = sd * 0.5; wand.add(rb); ribbons.push(rb); });
+    var bow = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.005, 6, 12), ribMat); bow.position.set(0, -0.33, 0.012); wand.add(bow);
+    var starShape = new THREE.Shape(); for (var sp = 0; sp < 10; sp++) { var sr = sp % 2 ? 0.018 : 0.045, sa = sp / 10 * Math.PI * 2 + Math.PI / 2; if (sp) starShape.lineTo(Math.cos(sa) * sr, Math.sin(sa) * sr); else starShape.moveTo(Math.cos(sa) * sr, Math.sin(sa) * sr); }
+    var star = new THREE.Mesh(new THREE.ExtrudeGeometry(starShape, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 2 }), new THREE.MeshStandardMaterial({ color: 0xfff0a0, emissive: 0xffc840, emissiveIntensity: 1.2, metalness: 0.4, roughness: 0.3 }));
+    star.geometry.center(); star.position.y = -0.52; wand.add(star);
+    function glowSprite(col, size, op) { var sp2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: col, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false })); sp2.scale.set(size, size, 1); return sp2; }
+    var tipGlow = glowSprite(0xffd8a0, 0.5, 0.85); tipGlow.position.y = -0.48; wand.add(tipGlow);
+    var tipGlow2 = glowSprite(0xffffff, 0.16, 1); tipGlow2.position.y = -0.52; wand.add(tipGlow2);
+    var crysGlow = glowSprite(0xc890ff, 0.2, 0.8); crysGlow.position.y = -0.42; wand.add(crysGlow);
+    // (a ring of light and runes under her feet)
+    var ring = new THREE.Group(); ring.position.y = -0.06; me.add(ring);
+    var ringMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    [[0.42, 0.012], [0.34, 0.007], [0.5, 0.004]].forEach(function (rr) { var m = new THREE.Mesh(new THREE.RingGeometry(rr[0] - rr[1], rr[0] + rr[1], 72), ringMat); m.rotation.x = -Math.PI / 2; ring.add(m); });
+    for (var rn = 0; rn < 8; rn++) { var rs = new THREE.Mesh(new THREE.CircleGeometry(0.022, 4), ringMat); rs.rotation.x = -Math.PI / 2; var ra = rn / 8 * Math.PI * 2; rs.position.set(Math.cos(ra) * 0.38, 0, Math.sin(ra) * 0.38); ring.add(rs); }
+    var under = glowSprite(0xff9ad8, 1.3, 0.4); under.position.y = 0.05; me.add(under);
+    // (a little puff of cloud for Marina to ride)
+    var puffMat = new THREE.MeshToonMaterial({ color: 0xfff2fa, emissive: 0xffd0ec, emissiveIntensity: 0.25 });
+    function puffCloud(tint) {                                         // (a little puff of cloud for an animal to ride)
+      var c = new THREE.Group(); TS.add(c);
+      [[0, 0, 0, 0.17], [-0.15, -0.02, 0.02, 0.12], [0.15, -0.02, -0.02, 0.13], [-0.05, 0.05, -0.08, 0.12], [0.07, -0.05, 0.1, 0.11], [-0.24, -0.05, -0.02, 0.08], [0.25, -0.05, 0.03, 0.08]].forEach(function (p) {
+        var pf = new THREE.Mesh(new THREE.SphereGeometry(p[3], 20, 14), puffMat); pf.position.set(p[0], p[1] - 0.1, p[2]); pf.scale.y = 0.7; c.add(pf);
+      });
+      var cg = glowSprite(tint, 0.9, 0.3); cg.position.y = -0.08; c.add(cg); return c;
+    }
+    var cloudSeat = puffCloud(0x9ae0d0), cloudSeat2 = puffCloud(0xc8b0ff);
+    // (your three animals from Fluff & Feather's stalls, borrowed too)
+    var pets = [];
+    (abDisplay || []).forEach(function (d, k) {
+      var r = d.m.root, keep = { r: r, parent: r.parent, pos: r.position.clone(), rot: r.rotation.clone(), scl: r.scale.clone(), vis: r.visible };
+      r.visible = true; r.rotation.order = 'YXZ'; r.scale.multiplyScalar(d.kind === 'glim' ? 0.62 : d.kind === 'luna' ? 1.15 : 1.4);
+      if (d.kind === 'luna') cloudSeat2.add(r);          // (Starla, on her own little cloud)
+      else if (d.kind === 'bubble') cloudSeat.add(r);   // (Marina, on her own little cloud)
+      else TS.add(r);
+      keep.tags = []; r.traverse(function (o) { if (o.material && o.material.map && o.material.map === d.m.tagTex && o.visible) { o.visible = false; keep.tags.push(o); } });   // (no "On display" signs out here)
+      pets.push({ d: d, keep: keep, k: k, glow: (function () { var gs = glowSprite([0xff9ad8, 0x9ae0d0, 0xc8b0ff][k], 0.7, 0.22); TS.add(gs); return gs; })() });
+    });
+    // (sparkles pouring off the wand)
+    var sparks = [], sparkCols = [0xfff0b0, 0xffb0e0, 0xd0b8ff, 0xffffff, 0xa8f0ff];
+    for (var sk = 0; sk < 90; sk++) { var s3 = glowSprite(sparkCols[sk % 5], 0.06, 0); s3.userData = { life: 99 }; TS.add(s3); sparks.push(s3); }
+    var orbit = []; for (var ob = 0; ob < 18; ob++) { var o3 = glowSprite(sparkCols[ob % 5], 0.05, 0.9); TS.add(o3); orbit.push(o3); }
+    var tipW = new THREE.Vector3(), palmW = new THREE.Vector3(), t3 = 0, shown = false;
+    function size() { var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight; R3.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); R3.setSize(w, h, false); cam3.aspect = w / h; cam3.fov = w / h < 0.8 ? 40 : 28; cam3.updateProjectionMatrix(); }
+    size(); window.addEventListener('resize', size);
+    function draw(dt) {
+      t3 += dt;
+      var tall = cam3.aspect < 0.8;
+      skyTex.needsUpdate = true;
+      cam3.position.set(0, 0.95, tall ? 7 : 6.1); cam3.lookAt(0, tall ? 0.92 : 0.97, 0);
+      me.position.set(0, 0.12 + Math.sin(t3 * 1.1) * 0.05, 0);
+      wl.chibi.position.y = 0; wl.head.rotation.set(0.05, 0.12, Math.sin(t3 * 0.8) * 0.05);
+      wl.armR.rotation.set(-0.55, 0.15, -2.05 + Math.sin(t3 * 1.4) * 0.07);   // (her wand held up and out to the side, mid-spell)
+      wl.armL.rotation.set(-0.35, 0, 0.62 + Math.sin(t3 * 1.2) * 0.06);   // (her other hand held out gracefully)
+      var swing = Math.sin(t3 * 1.6) * 0.1;                               // (floating like a dancer: one leg kicked up behind her, the other pointed down, fluttering gently)
+      wl.legs[0].rotation.set(0.75 + swing, 0, -0.22); wl.legs[1].rotation.set(-0.18 - swing * 0.5, 0, 0.08);
+      wl.hairBack.rotation.x = 0.12 + Math.sin(t3 * 1.5) * 0.05; wl.tip.rotation.z = Math.sin(t3 * 1.7) * 0.06;
+      player.rotation.y = 0.12 + Math.sin(t3 * 0.4) * 0.06;               // (turned toward you)
+      me.rotation.z = Math.sin(t3 * 0.7) * 0.04; me.rotation.x = Math.sin(t3 * 0.9) * 0.03;   // (gliding, rising and dipping)
+      cloudSeat.position.set(0.5, 0.3 + Math.sin(t3 * 1.2 + 2) * 0.04, 0.42); cloudSeat2.position.set(-0.5, 0.2 + Math.sin(t3 * 1.1) * 0.04, 0.45);   // (all bunched up together: Marina and Starla on clouds tucked right against her sides) cloudSeat2.rotation.y = Math.sin(t3 * 0.45 + 1) * 0.15; cloudSeat.rotation.y = Math.sin(t3 * 0.5) * 0.15;
+      star.rotation.z += dt * 1.2; star.rotation.y = Math.sin(t3) * 0.4; crystal.rotation.y += dt * 0.8;
+      var pulse = 0.75 + Math.sin(t3 * 4) * 0.25; tipGlow.material.opacity = 0.6 + pulse * 0.3; tipGlow.scale.setScalar(0.42 + pulse * 0.14); crysGlow.material.opacity = 0.5 + pulse * 0.3;
+      ribbons.forEach(function (rb, k) { rb.rotation.z = (k ? 0.5 : -0.5) + Math.sin(t3 * 3 + k) * 0.25; rb.rotation.x = Math.sin(t3 * 2.4 + k) * 0.3; });
+      ring.rotation.y = t3 * 0.4; under.material.opacity = 0.45 + Math.sin(t3 * 2) * 0.1;
+      TS.updateMatrixWorld(true); star.getWorldPosition(tipW); fillL.position.copy(tipW); fillL.intensity = 0.22 + pulse * 0.14;
+      sparks.forEach(function (sp3) {                                    // (sparkles: born at the star, drifting out and down in curls, fading)
+        var u = sp3.userData;
+        if (u.life >= u.max || u.life === 99) { if (Math.random() < dt * 14) { u.life = 0; u.max = 1.4 + Math.random() * 1.8; sp3.position.copy(tipW); u.v = new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.2) * 0.35, (Math.random() - 0.3) * 0.4); u.a = Math.random() * 6.28; u.sz = 0.06 + Math.random() * 0.09; } else { sp3.material.opacity = 0; return; } }
+        u.life += dt; u.a += dt * 3; u.v.y -= dt * 0.12;
+        sp3.position.x += (u.v.x + Math.cos(u.a) * 0.12) * dt; sp3.position.y += u.v.y * dt; sp3.position.z += (u.v.z + Math.sin(u.a) * 0.12) * dt;
+        var f = 1 - u.life / u.max; sp3.material.opacity = f * (0.6 + 0.4 * Math.sin(u.life * 18)); sp3.scale.setScalar(u.sz * (0.5 + f));
+      });
+      orbit.forEach(function (o3, k) {                                   // (a slow halo of sparkles circling her)
+        var a = t3 * 0.6 + k / orbit.length * Math.PI * 2;
+        o3.position.set(Math.cos(a) * 0.62, 0.55 + Math.sin(a * 2 + k) * 0.18 + me.position.y, Math.sin(a) * 0.62);
+        o3.material.opacity = 0.35 + 0.45 * Math.sin(t3 * 3 + k); o3.scale.setScalar(0.035 + 0.02 * Math.sin(t3 * 2 + k));
+      });
+      pets.forEach(function (p) {                                        // (your animals, floating round her)
+        var r = p.d.m.root, k = p.k;
+        if (p.d.kind === 'glim') {                                       // (Blossom flutters round the wand)
+          var ga = t3 * 1.1; wl.armL.localToWorld(palmW.set(0, -0.3, 0.04));
+          r.position.set(palmW.x + 0.06, palmW.y + 0.02 + Math.abs(Math.sin(ga * 2)) * 0.03, palmW.z + 0.16); r.rotation.set(0.1, -0.35 + Math.sin(ga) * 0.25, Math.sin(ga * 2) * 0.12);   // (Blossom bobbing just above her open palm, like she's showing her off)
+          var m = p.d.m; if (m.wings) m.wings.forEach(function (w) { if (w.pv) w.pv.rotation.z = w.s * (0.35 + Math.sin(t3 * 22 + (w.up ? 0 : 0.5)) * 0.5); });
+        } else if (p.d.kind === 'luna' || p.d.kind === 'bubble') {           // (Starla and Marina on their clouds: just a little life in them)
+          try { (p.d.kind === 'luna' ? lunaAnimate : bubbleAnimate)(p.d, dt, t3, false); } catch (err) {}
+          if (p.d.kind === 'luna') { r.position.set(0, -0.08, 0); r.rotation.set(-0.3 + Math.sin(t3 * 1.3) * 0.05, 0.55 + Math.sin(t3 * 0.5) * 0.1, 0.06); }   // (Starla snuggled up at her side, gazing up at her)
+          else { r.position.set(0, -0.08, 0); r.rotation.set(-0.18 + Math.sin(t3 * 0.9) * 0.04, -0.55 + Math.sin(t3 * 0.6) * 0.1, -0.05); }   // (Marina snuggled up at her other side, looking up at her)
+          r.updateMatrixWorld(true); r.getWorldPosition(p.glow.position); p.glow.position.y += 0.08; return;
+        } else {
+          var side = k === 1 ? 1 : -1;
+          r.position.set(side * 0.7, 0.18 + Math.sin(t3 * 1.3 + k * 2) * 0.06 + me.position.y * 0.6, 0.25 + k * 0.05); r.rotation.set(Math.sin(t3 * 0.9 + k) * 0.05, -side * 0.45 + Math.sin(t3 * 0.5 + k) * 0.2, Math.sin(t3 * 1.1 + k) * 0.06);
+          try { (p.d.kind === 'luna' ? lunaAnimate : bubbleAnimate)(p.d, dt, t3, false); r.position.set(side * 0.7, 0.18 + Math.sin(t3 * 1.3 + k * 2) * 0.06 + me.position.y * 0.6, 0.25 + k * 0.05); } catch (err) {}
+        }
+        p.glow.position.copy(r.position); p.glow.position.y += 0.08;
+      });
+      R3.render(TS, cam3);
+      if (!shown) { shown = true; cv.style.opacity = 1; }
+    }
+    function finish() {                                                  // (Play: everyone goes back where they belong, just as they were)
+      window.removeEventListener('resize', size);
+      wl.armR.remove(wand);
+      if (saved.parent) saved.parent.add(player); else scene.add(player);
+      player.position.copy(saved.pos); player.rotation.copy(saved.rot); player.visible = saved.vis; body.rotation.copy(saved.body); body.position.copy(saved.bodyPos);
+      [wl.armL, wl.armR, wl.legs[0], wl.legs[1], wl.head, wl.hairBack, wl.tip].forEach(function (o, k) { o.rotation.copy(saved.limbs[k]); });
+      wl.mFace.map = wl.mFace.emissiveMap = wl.faces[0]; wl.mFace.needsUpdate = true; wl.blink = false;
+      wl.chibi.position.copy(saved.chibi); wl.rideBroom.rotation.copy(saved.broomRot); wl.rideBroom.position.copy(saved.broomPos); axeArm.visible = saved.axe; wl.broom.visible = saved.broom; wl.rideBroom.visible = saved.ride;
+      pets.forEach(function (p) { var kp = p.keep; kp.tags.forEach(function (o) { o.visible = true; }); (kp.parent || abRoom).add(kp.r); kp.r.position.copy(kp.pos); kp.r.rotation.copy(kp.rot); kp.r.scale.copy(kp.scl); kp.r.visible = kp.vis; });
+      setTimeout(function () { R3.dispose(); if (R3.forceContextLoss) R3.forceContextLoss(); }, 1300);
+    }
+    return { draw: draw, finish: finish };
+  })();
+  var everdawnFrame = frame;                                          // (while the title screen is up, the island waits: no time passes and nothing moves)
+  var titleFrames = 0;
+  frame = function () {
+    if (window.EVERDAWN_TITLE) { var tdt = Math.min(clock.getDelta(), 0.05); if (title3d) title3d.draw(tdt); if (titleFrames++ % 40 === 0) renderer.render(scene, camera); return; }   // (the island just ticks over now and then behind it, to get everything warmed up)
+    if (title3d) { title3d.finish(); title3d = null; }
+    everdawnFrame();
+  };
   renderer.setAnimationLoop(frame);
 
 });
@@ -8181,11 +8342,322 @@ function startGame(THREE) {
   new Function('THREE', src)(THREE);
 }
 
+// ---------- The title screen ----------
+// While the game loads, a painted dawn sky: deep violet melting into rose and peach toward the bottom, twinkling stars
+// and the odd shooting star, ribbons of aurora, a crescent moon, wisps of pink cloud, blossom petals drifting down,
+// sparkles rising and fireflies blinking. No land: once the game is built, the real you floats in front of it in 3D
+// with your wand and three of your animals (that part is made inside the game, just before it starts). The name shines
+// over it all, a vine grows along the bottom as the game loads (with little notes about what's being got ready), and
+// when it's done a big glowing Play button pops up
+var EVERDAWN_TITLE = true;
+var everdawnTitle = (function () {
+  var css = document.createElement('style');
+  css.textContent =
+    '#evTitle{position:fixed;inset:0;z-index:1000;overflow:hidden;background:#241a4a;font-family:Fredoka,system-ui,sans-serif;color:#fff;transition:opacity 1s ease,transform 1.1s ease;user-select:none;-webkit-user-select:none}' +
+    '#evTitle.gone{opacity:0;transform:scale(1.08);pointer-events:none}' +
+    '#evTitle canvas{position:absolute;inset:0;width:100%;height:100%;display:block}' +
+    '#evTitle .ev-ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:clamp(24px,7vh,70px) 16px clamp(22px,6vh,56px);box-sizing:border-box;pointer-events:none}' +
+    '#evTitle .ev-name{position:relative;text-align:center;animation:evFloat 6s ease-in-out infinite}' +
+    '#evTitle h1{margin:0;font-weight:600;font-size:clamp(48px,11vw,112px);letter-spacing:.02em;line-height:1;background:linear-gradient(180deg,#fff8e0 0%,#ffd88a 35%,#ff9ec8 70%,#c8a0ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(255,190,230,.55)) drop-shadow(0 4px 0 rgba(80,40,130,.55))}' +
+    '#evTitle .ev-sub{margin-top:10px;font-size:clamp(15px,2.6vw,21px);font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:#ffe6f4;text-shadow:0 2px 10px rgba(60,20,110,.8)}' +
+    '#evTitle .ev-star{position:absolute;color:#ffe9a8;text-shadow:0 0 12px #ffd27a;animation:evTwinkle 2.4s ease-in-out infinite}' +
+    '#evTitle .ev-bottom{display:flex;flex-direction:column;align-items:center;gap:14px;width:min(520px,92vw);pointer-events:auto}' +
+    '#evTitle .ev-load{width:100%;transition:opacity .5s,transform .5s}' +
+    '#evTitle .ev-load.done{opacity:0;transform:translateY(10px)}' +
+    '#evTitle .ev-track{position:relative;height:18px;border-radius:999px;background:rgba(30,16,60,.55);box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(255,220,250,.35);overflow:visible}' +
+    '#evTitle .ev-fill{position:absolute;left:3px;top:3px;bottom:3px;width:0;border-radius:999px;background:linear-gradient(90deg,#5fbf72,#9be07c 50%,#d6f59a);box-shadow:0 0 12px rgba(160,240,140,.7);overflow:hidden}' +
+    '#evTitle .ev-fill::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.65) 50%,transparent 70%);background-size:200% 100%;animation:evShine 1.6s linear infinite}' +
+    '#evTitle .ev-bud{position:absolute;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;left:0;font-size:22px;line-height:26px;text-align:center;filter:drop-shadow(0 0 6px #ffb3e6);transition:left .25s linear}' +
+    '#evTitle .ev-leaf{position:absolute;top:-7px;width:10px;height:7px;background:#7ed37a;border-radius:10px 0 10px 0;transform-origin:bottom left;opacity:0;transition:opacity .4s,transform .4s;transform:scale(.2) rotate(-20deg)}' +
+    '#evTitle .ev-leaf.b{top:auto;bottom:-7px;border-radius:0 10px 0 10px;transform-origin:top left}' +
+    '#evTitle .ev-leaf.on{opacity:1;transform:scale(1) rotate(-20deg)}' +
+    '#evTitle .ev-status{margin-top:12px;display:flex;justify-content:space-between;gap:12px;font-size:clamp(13px,2.2vw,16px);color:#f6e6ff;text-shadow:0 1px 6px rgba(40,10,80,.9)}' +
+    '#evTitle .ev-tip{transition:opacity .4s}' +
+    '#evTitle .ev-play{position:relative;display:none;padding:.5em 1.9em .55em;font:600 clamp(26px,5vw,40px) Fredoka,system-ui,sans-serif;letter-spacing:.06em;color:#fff;border:3px solid #ffe2a0;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#c48cff 0%,#8f5be8 55%,#7442d0 100%);box-shadow:0 6px 0 #4e2b9c,0 10px 30px rgba(120,60,220,.6),0 0 40px rgba(255,170,230,.55),inset 0 2px 0 rgba(255,255,255,.45);text-shadow:0 2px 0 rgba(60,20,120,.6);overflow:hidden;transform:scale(.2);opacity:0;transition:transform .25s}' +
+    '#evTitle .ev-play.show{display:block;animation:evPop .7s cubic-bezier(.2,1.6,.4,1) forwards,evPulse 2.6s ease-in-out .8s infinite}' +
+    '#evTitle .ev-play::before{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:evSweep 3s ease-in-out 1s infinite}' +
+    '#evTitle .ev-play:hover{filter:brightness(1.08)}#evTitle .ev-play:active{transform:translateY(4px) scale(.98)!important;box-shadow:0 2px 0 #4e2b9c,0 6px 20px rgba(120,60,220,.6)}' +
+    '#evTitle .ev-play:focus-visible{outline:3px solid #fff;outline-offset:5px}' +
+    '#evTitle .ev-hint{display:none;font-size:clamp(13px,2.2vw,15px);color:#f3e2ff;text-shadow:0 1px 6px rgba(40,10,80,.9);opacity:0;animation:evFade 1s ease .6s forwards}' +
+    '#evTitle .ev-hint.show{display:block}' +
+    '@keyframes evFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}' +
+    '@keyframes evTwinkle{0%,100%{opacity:.35;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(20deg)}}' +
+    '@keyframes evShine{from{background-position:200% 0}to{background-position:-200% 0}}' +
+    '@keyframes evPop{to{transform:scale(1);opacity:1}}' +
+    '@keyframes evPulse{0%,100%{box-shadow:0 6px 0 #4e2b9c,0 10px 30px rgba(120,60,220,.6),0 0 30px rgba(255,170,230,.45),inset 0 2px 0 rgba(255,255,255,.45)}50%{box-shadow:0 6px 0 #4e2b9c,0 10px 34px rgba(120,60,220,.7),0 0 60px rgba(255,190,240,.85),inset 0 2px 0 rgba(255,255,255,.45)}}' +
+    '@keyframes evSweep{0%,60%{left:-60%}100%{left:130%}}' +
+    '@keyframes evFade{to{opacity:1}}' +
+    '@media (prefers-reduced-motion:reduce){#evTitle *{animation-duration:0s!important;animation-iteration-count:1!important}}';
+  document.head.appendChild(css);
+  var root = document.createElement('div'); root.id = 'evTitle';
+  root.innerHTML = '<canvas></canvas><div class="ev-ui"><div class="ev-name"><span class="ev-star" style="left:-.9em;top:.1em;font-size:34px">✦</span><span class="ev-star" style="right:-.7em;top:-.3em;font-size:24px;animation-delay:.8s">✧</span><span class="ev-star" style="right:-1.2em;bottom:.4em;font-size:16px;animation-delay:1.5s">✦</span><h1>Everdawn</h1><div class="ev-sub">a cozy, magical farm</div></div>' +
+    '<div class="ev-bottom"><div class="ev-load"><div class="ev-track"><div class="ev-fill"></div><div class="ev-bud">🌸</div></div><div class="ev-status"><span class="ev-tip">Opening the gate…</span><span class="ev-pct">0%</span></div></div>' +
+    '<button type="button" class="ev-play">✦ Play ✦</button><div class="ev-hint">Press Enter or tap Play · ♪ best with sound on</div></div></div>';
+  (document.body || document.documentElement).appendChild(root);
+  var prevOverflow = document.body ? document.body.style.overflow : ''; if (document.body) document.body.style.overflow = 'hidden';
+  var cv = root.querySelector('canvas'), g = cv.getContext('2d'), track = root.querySelector('.ev-track'), fill = root.querySelector('.ev-fill'), bud = root.querySelector('.ev-bud');
+  var tipEl = root.querySelector('.ev-tip'), pctEl = root.querySelector('.ev-pct'), playBtn = root.querySelector('.ev-play'), hint = root.querySelector('.ev-hint'), load = root.querySelector('.ev-load');
+  for (var lf = 0; lf < 9; lf++) { var leaf = document.createElement('i'); leaf.className = 'ev-leaf' + (lf % 2 ? ' b' : ''); leaf.style.left = (8 + lf * 10.5) + '%'; track.appendChild(leaf); }
+  var leaves = track.querySelectorAll('.ev-leaf');
+
+  // ----- the painted scene -----
+  var W = 0, H = 0, DPR = 1, t0 = performance.now(), last = t0;
+  function rnd(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  var moonSpr = null, stars = [], clouds = [], motes = [], flies = [], petals = [], shoot = null;
+  var planetSpr = null, lanterns = [], flutters = [], gems = [];
+  var CONST = [[[0.05, 0.36], [0.1, 0.31], [0.16, 0.33], [0.2, 0.28], [0.24, 0.34], [0.19, 0.4]], [[0.76, 0.42], [0.81, 0.37], [0.87, 0.39], [0.92, 0.34], [0.9, 0.45], [0.84, 0.47]], [[0.3, 0.06], [0.34, 0.1], [0.39, 0.08]]];   // (constellations, joined up)
+  for (i = 0; i < 12; i++) lanterns.push({ x: rnd(i + 5000), y: 1.05 + rnd(i + 5100) * 1.2, z: 0.4 + rnd(i + 5200) * 0.6, sp: 0.012 + rnd(i + 5300) * 0.014, p: rnd(i + 5400) * 6.28 });
+  for (i = 0; i < 7; i++) flutters.push({ cx: [0.12, 0.88, 0.22, 0.8, 0.08, 0.92, 0.3][i], cy: [0.55, 0.6, 0.75, 0.78, 0.45, 0.4, 0.62][i], p: rnd(i + 6000) * 6.28, sp: 0.25 + rnd(i + 6100) * 0.25, hue: [190, 320, 275, 45, 160, 300, 210][i] });
+  for (i = 0; i < 6; i++) gems.push({ x: [0.06, 0.95, 0.15, 0.86, 0.04, 0.97][i], y: [0.62, 0.66, 0.84, 0.86, 0.22, 0.3][i], s: 7 + rnd(i + 7000) * 8, p: rnd(i + 7100) * 6.28, hue: [280, 190, 320, 260, 200, 330][i] });
+  for (var i = 0; i < 260; i++) stars.push({ x: rnd(i), y: Math.pow(rnd(i + 500), 1.6) * 0.62, r: 0.4 + rnd(i + 900) * 1.4, p: rnd(i + 1300) * 6.28, s: 0.6 + rnd(i + 1700) * 2.2, big: rnd(i + 2100) > 0.96 });
+  for (i = 0; i < 9; i++) clouds.push({ x: rnd(i + 40), y: [0.3, 0.42, 0.9][i % 3] + rnd(i + 60) * 0.1, w: 0.14 + rnd(i + 80) * 0.16, sp: 0.004 + rnd(i + 99) * 0.008, layer: i % 3 });
+  for (i = 0; i < 70; i++) motes.push({ x: rnd(i + 3000), y: rnd(i + 3100), r: 0.6 + rnd(i + 3200) * 1.8, sp: 0.01 + rnd(i + 3300) * 0.03, p: rnd(i + 3400) * 6.28, hue: [320, 280, 45, 190][i % 4] });
+  for (i = 0; i < 26; i++) flies.push({ x: rnd(i + 4000), y: 0.6 + rnd(i + 4100) * 0.38, p: rnd(i + 4200) * 6.28, sp: 0.3 + rnd(i + 4300) * 0.6 });
+  function resize() {
+    DPR = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  resize(); window.addEventListener('resize', resize);
+  var glowCache = {};
+  function glow(x, y, r, col, a) {                                   // (a soft round glow, from a little picture made once for each colour)
+    if (a <= 0.003 || r <= 0) return;
+    var key = col, spr = glowCache[key];
+    if (!spr) { spr = glowCache[key] = document.createElement('canvas'); spr.width = spr.height = 64; var sg = spr.getContext('2d'), gr = sg.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, col.replace('A', 1)); gr.addColorStop(0.4, col.replace('A', 0.45)); gr.addColorStop(1, col.replace('A', 0)); sg.fillStyle = gr; sg.fillRect(0, 0, 64, 64); }
+    g.globalAlpha = Math.min(1, a); g.drawImage(spr, x - r, y - r, r * 2, r * 2); g.globalAlpha = 1;
+  }
+  function cloud(x, y, w, col) {
+    g.fillStyle = col; g.beginPath();
+    for (var k = 0; k < 7; k++) { var cx = x + (k / 6 - 0.5) * w, cy = y - Math.sin(k / 6 * Math.PI) * w * 0.16, r = w * (0.12 + Math.sin(k / 6 * Math.PI) * 0.1); g.moveTo(cx + r, cy); g.arc(cx, cy, r, 0, 6.2832); }
+    g.rect(x - w / 2, y - w * 0.04, w, w * 0.1); g.fill();
+  }
+  var TAU = 6.2832;
+  function spark4(x, y, r, col) {                                    // (a little four-pointed twinkle)
+    g.fillStyle = col; g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill();
+  }
+  var isles = {};
+  function makeIsle(kind) {                                          // (a little floating island, painted once: 320 wide, its grassy top at y 200)
+    var c = document.createElement('canvas'); c.width = 320; c.height = 360; var q = c.getContext('2d'), k, N = 16, pts = [];
+    for (k = 0; k <= N; k++) { var f = k / N; pts.push([30 + 260 * f + (rnd(k + (kind === 'tree' ? 90 : 10)) - 0.5) * 10, 204 + Math.pow(Math.sin(Math.PI * Math.min(1, f * 1.05)), 0.85) * (115 + rnd(k + 30) * 40) * (k % 2 ? 0.85 : 1)]); }
+    q.beginPath(); q.moveTo(30, 200); pts.forEach(function (p) { q.lineTo(p[0], p[1]); }); q.lineTo(290, 200); q.closePath();
+    var rg = q.createLinearGradient(0, 195, 0, 345); rg.addColorStop(0, '#8a68ab'); rg.addColorStop(0.35, '#4a3474'); rg.addColorStop(1, '#1c1236'); q.fillStyle = rg; q.fill();
+    q.save(); q.clip();
+    for (k = 0; k < 6; k++) { q.strokeStyle = 'rgba(20,10,40,.35)'; q.lineWidth = 2; q.beginPath(); q.moveTo(20, 222 + k * 20); q.bezierCurveTo(110, 214 + k * 22 + rnd(k) * 12, 210, 230 + k * 18, 300, 218 + k * 21); q.stroke(); }
+    var lg = q.createLinearGradient(30, 0, 290, 0); lg.addColorStop(0, 'rgba(255,190,230,.32)'); lg.addColorStop(0.3, 'rgba(255,190,230,0)'); lg.addColorStop(0.75, 'rgba(120,200,255,0)'); lg.addColorStop(1, 'rgba(140,210,255,.22)'); q.fillStyle = lg; q.fillRect(0, 190, 320, 170);
+    q.restore();
+    for (k = 0; k < 9; k++) { var rx = 50 + k * 27 + rnd(k + 70) * 10; q.strokeStyle = 'rgba(110,190,150,.7)'; q.lineWidth = 1.6; q.beginPath(); q.moveTo(rx, 205); q.quadraticCurveTo(rx + 8, 230 + rnd(k + 5) * 20, rx + 2, 240 + rnd(k + 9) * 45); q.stroke(); }   // (hanging vines)
+    [[120, 282], [168, 318], [205, 290]].forEach(function (h, i) { var hg = q.createRadialGradient(h[0], h[1] + 6, 0, h[0], h[1] + 6, 22); hg.addColorStop(0, 'rgba(210,170,255,.7)'); hg.addColorStop(1, 'rgba(210,170,255,0)'); q.fillStyle = hg; q.fillRect(h[0] - 22, h[1] - 16, 44, 44); q.fillStyle = i % 2 ? '#ffc8ec' : '#d8b8ff'; q.beginPath(); q.moveTo(h[0] - 5, h[1]); q.lineTo(h[0] + 5, h[1]); q.lineTo(h[0], h[1] + 18); q.closePath(); q.fill(); });   // (crystals hanging underneath)
+    var gg = q.createLinearGradient(0, 186, 0, 212); gg.addColorStop(0, '#9ee0b8'); gg.addColorStop(1, '#3f8a70'); q.fillStyle = gg; q.beginPath(); q.ellipse(160, 200, 134, 17, 0, 0, TAU); q.fill();
+    for (k = 0; k < 22; k++) { q.fillStyle = '#4f9a7c'; q.beginPath(); q.arc(32 + k * 12.2, 206 + rnd(k + 40) * 3, 5 + rnd(k + 50) * 3, 0, Math.PI); q.fill(); }   // (grass spilling over the edge)
+    for (k = 0; k < 40; k++) { var tx = 45 + rnd(k + 200) * 230, ty = 192 + rnd(k + 300) * 14; q.strokeStyle = 'rgba(190,255,215,.6)'; q.lineWidth = 1; q.beginPath(); q.moveTo(tx, ty); q.lineTo(tx + 2, ty - 5); q.stroke(); }
+    for (k = 0; k < 14; k++) { q.fillStyle = ['#ffd2ec', '#fff2b0', '#c8e4ff'][k % 3]; q.beginPath(); q.arc(50 + rnd(k + 400) * 220, 194 + rnd(k + 500) * 12, 1.8, 0, TAU); q.fill(); }   // (tiny flowers)
+    if (kind === 'tower') {
+      var tg = q.createLinearGradient(146, 0, 194, 0); tg.addColorStop(0, '#e2d8f2'); tg.addColorStop(0.45, '#a89ccb'); tg.addColorStop(1, '#5a4e86'); q.fillStyle = tg;
+      q.beginPath(); q.moveTo(144, 200); q.lineTo(149, 84); q.lineTo(191, 84); q.lineTo(196, 200); q.closePath(); q.fill();
+      q.strokeStyle = 'rgba(60,40,100,.35)'; q.lineWidth = 1; for (k = 0; k < 11; k++) { var by = 92 + k * 10.5; q.beginPath(); q.moveTo(147, by); q.lineTo(193, by); q.stroke(); for (var bx = 0; bx < 4; bx++) { var xx = 152 + bx * 12 + (k % 2) * 6; q.beginPath(); q.moveTo(xx, by); q.lineTo(xx, by + 10.5); q.stroke(); } }
+      q.fillStyle = '#4a3a74'; q.fillRect(142, 80, 56, 7); for (k = 0; k < 5; k++) q.fillRect(142 + k * 12, 73, 7, 8);   // (battlements)
+      var cg2 = q.createLinearGradient(140, 0, 200, 0); cg2.addColorStop(0, '#b088ec'); cg2.addColorStop(0.5, '#7442c4'); cg2.addColorStop(1, '#3e2080'); q.fillStyle = cg2;
+      q.beginPath(); q.moveTo(138, 76); q.quadraticCurveTo(160, 60, 166, 22); q.quadraticCurveTo(170, 8, 182, 4); q.quadraticCurveTo(172, 16, 175, 30); q.quadraticCurveTo(182, 62, 202, 76); q.closePath(); q.fill();   // (a crooked witch-hat roof)
+      q.strokeStyle = '#ffd88a'; q.lineWidth = 3; q.beginPath(); q.moveTo(141, 72); q.quadraticCurveTo(170, 64, 199, 72); q.stroke();
+      q.fillStyle = '#ffe08a'; q.beginPath(); for (k = 0; k < 10; k++) { var sa = k / 10 * TAU - Math.PI / 2, sr = k % 2 ? 2.5 : 6; q[k ? 'lineTo' : 'moveTo'](182 + Math.cos(sa) * sr, 4 + Math.sin(sa) * sr); } q.closePath(); q.fill();
+      [[170, 108], [158, 146], [182, 146]].forEach(function (w) { q.fillStyle = '#3a2a5a'; q.beginPath(); q.moveTo(w[0] - 7, w[1] + 12); q.lineTo(w[0] - 7, w[1]); q.arc(w[0], w[1], 7, Math.PI, 0); q.lineTo(w[0] + 7, w[1] + 12); q.closePath(); q.fill(); q.fillStyle = '#ffd486'; q.beginPath(); q.moveTo(w[0] - 5, w[1] + 10); q.lineTo(w[0] - 5, w[1]); q.arc(w[0], w[1], 5, Math.PI, 0); q.lineTo(w[0] + 5, w[1] + 10); q.closePath(); q.fill(); q.fillStyle = '#3a2a5a'; q.fillRect(w[0] - 0.7, w[1] - 5, 1.4, 15); q.fillRect(w[0] - 5, w[1] + 3, 10, 1.4); });
+      q.fillStyle = '#5a3424'; q.beginPath(); q.moveTo(162, 200); q.lineTo(162, 182); q.arc(170, 182, 8, Math.PI, 0); q.lineTo(178, 200); q.closePath(); q.fill(); q.fillStyle = '#ffd486'; q.beginPath(); q.arc(175, 191, 1.4, 0, TAU); q.fill();
+      q.strokeStyle = '#3a2a5a'; q.lineWidth = 1.5; q.beginPath(); q.moveTo(182, 2); q.lineTo(182, -6); q.stroke();
+      [[110, 194, 13], [124, 197, 9], [218, 195, 12], [232, 198, 8]].forEach(function (b) { q.fillStyle = '#3f8466'; q.beginPath(); q.arc(b[0], b[1], b[2], Math.PI, 0); q.fill(); q.fillStyle = '#ff9ccc'; for (var m = 0; m < 4; m++) { q.beginPath(); q.arc(b[0] - b[2] * 0.6 + m * b[2] * 0.4, b[1] - b[2] * 0.5 - (m % 2) * 3, 1.8, 0, TAU); q.fill(); } });   // (flowering bushes)
+      q.strokeStyle = '#2a2040'; q.lineWidth = 2; q.beginPath(); q.moveTo(242, 198); q.lineTo(242, 172); q.stroke(); q.fillStyle = '#ffdc8a'; q.fillRect(238, 164, 8, 9);   // (a lamp post)
+    } else {
+      q.fillStyle = '#5c3e34'; q.beginPath(); q.moveTo(146, 202); q.quadraticCurveTo(156, 160, 152, 120); q.lineTo(168, 120); q.quadraticCurveTo(166, 160, 176, 202); q.closePath(); q.fill();   // (the trunk)
+      q.strokeStyle = '#5c3e34'; q.lineCap = 'round'; [[156, 132, 112, 96, 6], [164, 126, 212, 92, 6], [158, 124, 150, 74, 5], [162, 140, 196, 120, 4], [156, 146, 124, 128, 4]].forEach(function (b) { q.lineWidth = b[4]; q.beginPath(); q.moveTo(b[0], b[1]); q.quadraticCurveTo((b[0] + b[2]) / 2, b[1] - 10, b[2], b[3]); q.stroke(); });
+      var halo = q.createRadialGradient(160, 92, 10, 160, 92, 110); halo.addColorStop(0, 'rgba(255,190,230,.45)'); halo.addColorStop(1, 'rgba(255,190,230,0)'); q.fillStyle = halo; q.fillRect(40, 0, 240, 200);
+      for (k = 0; k < 70; k++) { var a2 = rnd(k + 600) * TAU, d2 = Math.sqrt(rnd(k + 700)), cx2 = 160 + Math.cos(a2) * d2 * 78, cy2 = 90 + Math.sin(a2) * d2 * 46 - (1 - d2) * 6, r2 = 9 + rnd(k + 800) * 10, sh = cy2 < 80 ? 1 : 0;
+        var bg2 = q.createRadialGradient(cx2 - r2 * 0.3, cy2 - r2 * 0.4, 1, cx2, cy2, r2); bg2.addColorStop(0, sh ? '#ffe6f4' : '#ffc4e2'); bg2.addColorStop(1, ['#f27ab4', '#e86aa8', '#ff94c8', '#d860a0'][k % 4]); q.fillStyle = bg2; q.beginPath(); q.arc(cx2, cy2, r2, 0, TAU); q.fill(); }
+      for (k = 0; k < 30; k++) { q.fillStyle = 'rgba(255,250,255,' + (0.5 + rnd(k + 900) * 0.5) + ')'; q.beginPath(); q.arc(90 + rnd(k + 950) * 140, 52 + rnd(k + 990) * 80, 1.4, 0, TAU); q.fill(); }   // (glints of light in the blossom)
+      q.fillStyle = 'rgba(255,170,215,.8)'; for (k = 0; k < 16; k++) { q.beginPath(); q.ellipse(70 + rnd(k + 1100) * 180, 196 + rnd(k + 1200) * 8, 3, 1.5, rnd(k) * 3, 0, TAU); q.fill(); }   // (fallen petals)
+      [[94, 190], [228, 192]].forEach(function (m) { q.fillStyle = '#f2e6d8'; q.fillRect(m[0] - 1.5, m[1], 3, 7); q.fillStyle = '#ff7aa8'; q.beginPath(); q.arc(m[0], m[1], 6, Math.PI, 0); q.fill(); q.fillStyle = '#fff'; q.beginPath(); q.arc(m[0] - 2, m[1] - 3, 1, 0, TAU); q.arc(m[0] + 2.5, m[1] - 2, 0.9, 0, TAU); q.fill(); });   // (little toadstools)
+    }
+    return c;
+  }
+  var whaleStars = []; for (var ws = 0; ws < 26; ws++) whaleStars.push([-0.42 + rnd(ws + 8000) * 0.86, (rnd(ws + 8100) - 0.5) * 0.14, rnd(ws + 8200) * 6.28]);
+  var isPetals = [];
+  function drawScene(now) {                                          // (the dawn sky, with no land in it: you float in front of it in 3D once the game's built)
+    var t = (now - t0) / 1000, dt = Math.min(0.05, (now - last) / 1000); last = now;
+    var sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#140f36'); sky.addColorStop(0.32, '#2e2268'); sky.addColorStop(0.58, '#6e3f98'); sky.addColorStop(0.78, '#d0789e'); sky.addColorStop(0.92, '#f6b896'); sky.addColorStop(1, '#ffdcb4');
+    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    glow(W * 0.5, H * 1.02, Math.max(W, H) * 0.7, 'rgba(255,206,160,A)', 0.6);   // (the dawn coming up from below)
+    glow(W * 0.5, H * 0.55, Math.min(W, H) * 0.55, 'rgba(255,170,230,A)', 0.18); // (a soft pink haze behind where you float)
+    for (var a = 0; a < 3; a++) {                                      // (the aurora)
+      g.beginPath(); var base = H * (0.12 + a * 0.06);
+      for (var x = -20; x <= W + 20; x += 20) { var y = base + Math.sin(x * 0.006 + t * 0.25 + a * 2) * H * 0.04 + Math.sin(x * 0.017 - t * 0.4) * H * 0.012; if (x === -20) g.moveTo(x, y); else g.lineTo(x, y); }
+      for (x = W + 20; x >= -20; x -= 20) { y = base + H * 0.11 + Math.sin(x * 0.006 + t * 0.25 + a * 2 + 0.6) * H * 0.04; g.lineTo(x, y); }
+      g.closePath(); var ag = g.createLinearGradient(0, base, 0, base + H * 0.13); ag.addColorStop(0, 'rgba(255,255,255,0)'); ag.addColorStop(0.5, ['rgba(120,255,210,.16)', 'rgba(200,140,255,.14)', 'rgba(255,150,220,.12)'][a]); ag.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = ag; g.fill();
+    }
+    stars.forEach(function (s) {                                       // (the stars, fading toward the dawn)
+      var tw = 0.45 + 0.55 * Math.sin(t * s.s + s.p), fade = 1 - s.y / 0.62 * 0.7;
+      g.fillStyle = 'rgba(255,248,235,' + (tw * fade) + ')'; g.beginPath(); g.arc(s.x * W, s.y * H, s.r, 0, TAU); g.fill();
+      if (s.big) { glow(s.x * W, s.y * H, 10, 'rgba(255,240,220,A)', tw * 0.5 * fade); spark4(s.x * W, s.y * H, 3 + tw * 5, 'rgba(255,245,230,' + (tw * 0.7 * fade) + ')'); }
+    });
+    if (!shoot && Math.random() < dt * 0.25) shoot = { x: Math.random() * W * 0.7 + W * 0.2, y: Math.random() * H * 0.25, life: 0 };   // (now and then, a shooting star)
+    if (shoot) { shoot.life += dt; var sp = shoot.life * 700, sx = shoot.x - sp, sy = shoot.y + sp * 0.35, sa = Math.max(0, 1 - shoot.life / 0.9); var sg = g.createLinearGradient(sx, sy, sx + 120, sy - 42); sg.addColorStop(0, 'rgba(255,255,255,' + sa + ')'); sg.addColorStop(1, 'rgba(255,255,255,0)'); g.strokeStyle = sg; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 120, sy - 42); g.stroke(); if (shoot.life > 0.9) shoot = null; }
+    var mx = W * 0.16, my = H * 0.17, mr = Math.min(W, H) * 0.055;       // (the crescent moon)
+    glow(mx, my, mr * 4, 'rgba(255,240,210,A)', 0.25);
+    if (!moonSpr) {
+      moonSpr = document.createElement('canvas'); moonSpr.width = moonSpr.height = 128; var mg = moonSpr.getContext('2d');
+      var mgr = mg.createRadialGradient(54, 54, 10, 64, 64, 60); mgr.addColorStop(0, '#fffaf0'); mgr.addColorStop(1, '#ffe6b8'); mg.fillStyle = mgr; mg.beginPath(); mg.arc(64, 64, 58, 0, TAU); mg.fill();
+      mg.fillStyle = 'rgba(230,200,170,.35)'; [[40, 80, 7], [52, 42, 5], [30, 58, 4]].forEach(function (c) { mg.beginPath(); mg.arc(c[0], c[1], c[2], 0, TAU); mg.fill(); });
+      mg.globalCompositeOperation = 'destination-out'; mg.beginPath(); mg.arc(94, 52, 54, 0, TAU); mg.fill();
+    }
+    g.drawImage(moonSpr, mx - mr, my - mr, mr * 2, mr * 2);
+    clouds.forEach(function (c) {                                      // (soft wisps of cloud drifting by, nearer ones faster)
+      c.x = (c.x + c.sp * dt * (0.5 + c.layer * 0.6)) % 1.3;
+      cloud((c.x - 0.15) * W, (c.layer === 2 ? 0.88 : c.y) * H, c.w * W * (1 + c.layer * 0.3), ['rgba(255,190,220,.12)', 'rgba(255,205,225,.15)', 'rgba(255,215,230,.22)'][c.layer]);
+    });
+    // ----- the magic in the sky -----
+    var px0 = W * (W < H ? 0.8 : 0.84), py0 = H * (W < H ? 0.24 : 0.2), pr = Math.min(W, H) * 0.075;   // (a ringed pastel planet)
+    if (!planetSpr) {
+      planetSpr = document.createElement('canvas'); planetSpr.width = 256; planetSpr.height = 160; var pg = planetSpr.getContext('2d');
+      pg.translate(128, 80); pg.rotate(-0.32);
+      pg.strokeStyle = 'rgba(255,220,250,.45)'; pg.lineWidth = 7; pg.beginPath(); pg.ellipse(0, 0, 112, 26, 0, Math.PI, TAU); pg.stroke();
+      pg.strokeStyle = 'rgba(200,170,255,.35)'; pg.lineWidth = 4; pg.beginPath(); pg.ellipse(0, 0, 96, 21, 0, Math.PI, TAU); pg.stroke();
+      var pgr = pg.createRadialGradient(-18, -20, 6, 0, 0, 56); pgr.addColorStop(0, '#ffe2f4'); pgr.addColorStop(0.55, '#d8a6f0'); pgr.addColorStop(1, '#7a58b8');
+      pg.fillStyle = pgr; pg.beginPath(); pg.arc(0, 0, 54, 0, TAU); pg.fill();
+      pg.save(); pg.clip(); pg.fillStyle = 'rgba(255,255,255,.12)'; [-26, -6, 16, 34].forEach(function (b, k) { pg.fillRect(-60, b, 120, 6 + k * 2); }); pg.restore();
+      pg.strokeStyle = 'rgba(255,220,250,.75)'; pg.lineWidth = 7; pg.beginPath(); pg.ellipse(0, 0, 112, 26, 0, 0, Math.PI); pg.stroke();
+      pg.strokeStyle = 'rgba(200,170,255,.6)'; pg.lineWidth = 4; pg.beginPath(); pg.ellipse(0, 0, 96, 21, 0, 0, Math.PI); pg.stroke();
+    }
+    glow(px0, py0, pr * 3.2, 'rgba(220,170,255,A)', 0.3);
+    g.globalAlpha = 0.9; g.drawImage(planetSpr, px0 - pr * 2.37, py0 - pr * 1.48 + Math.sin(t * 0.3) * 3, pr * 4.74, pr * 2.96); g.globalAlpha = 1;
+    CONST.forEach(function (c, ci) {                                   // (constellations, their lines shimmering)
+      var ca = 0.18 + 0.1 * Math.sin(t * 0.8 + ci * 2);
+      g.strokeStyle = 'rgba(210,225,255,' + ca + ')'; g.lineWidth = 1; g.beginPath();
+      c.forEach(function (q, k) { if (k) g.lineTo(q[0] * W, q[1] * H); else g.moveTo(q[0] * W, q[1] * H); }); g.stroke();
+      c.forEach(function (q, k) { var tw = 0.6 + 0.4 * Math.sin(t * 2.2 + k * 1.7 + ci); glow(q[0] * W, q[1] * H, 9, 'rgba(200,220,255,A)', tw * 0.7); spark4(q[0] * W, q[1] * H, 2.5 + tw * 3, 'rgba(240,248,255,' + tw + ')'); });
+    });
+    var WL = Math.min(W, H) * (W < H ? 0.5 : 0.36), wx = ((t * 0.011 + 0.35) % 1.5 - 0.25) * W, wy = H * (W < H ? 0.27 : 0.34) + Math.sin(t * 0.25) * H * 0.02;   // (a great whale of starlight, swimming slowly across the sky)
+    g.save(); g.translate(wx, wy); g.rotate(Math.sin(t * 0.25 + 1) * 0.04);
+    var wg = g.createLinearGradient(0, -WL * 0.12, 0, WL * 0.12); wg.addColorStop(0, 'rgba(160,200,255,.2)'); wg.addColorStop(1, 'rgba(220,170,255,.12)');
+    var fl2 = Math.sin(t * 1.1) * 0.35;
+    g.fillStyle = wg; g.strokeStyle = 'rgba(220,235,255,.35)'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(WL * 0.5, -WL * 0.01); g.bezierCurveTo(WL * 0.46, -WL * 0.12, WL * 0.1, -WL * 0.13, -WL * 0.25, -WL * 0.05); g.quadraticCurveTo(-WL * 0.4, -WL * 0.02, -WL * 0.47, WL * fl2 * 0.05);
+    g.quadraticCurveTo(-WL * 0.4, WL * 0.05, -WL * 0.2, WL * 0.07); g.bezierCurveTo(WL * 0.1, WL * 0.15, WL * 0.42, WL * 0.13, WL * 0.5, -WL * 0.01); g.fill(); g.stroke();
+    g.save(); g.translate(-WL * 0.47, WL * fl2 * 0.05); g.rotate(fl2 * 0.6); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-WL * 0.06, -WL * 0.1, -WL * 0.16, -WL * 0.11); g.quadraticCurveTo(-WL * 0.08, -WL * 0.02, 0, 0); g.quadraticCurveTo(-WL * 0.08, WL * 0.02, -WL * 0.16, WL * 0.11); g.quadraticCurveTo(-WL * 0.06, WL * 0.1, 0, 0); g.fill(); g.stroke(); g.restore();   // (the tail flukes)
+    g.save(); g.translate(WL * 0.16, WL * 0.08); g.rotate(0.5 + Math.sin(t * 1.1 + 1) * 0.25); g.beginPath(); g.ellipse(-WL * 0.06, 0, WL * 0.08, WL * 0.022, 0, 0, TAU); g.fill(); g.stroke(); g.restore();   // (a flipper)
+    g.strokeStyle = 'rgba(220,235,255,.18)'; for (var gv = 0; gv < 4; gv++) { g.beginPath(); g.moveTo(WL * 0.42, WL * (0.04 + gv * 0.018)); g.quadraticCurveTo(WL * 0.2, WL * (0.1 + gv * 0.016), WL * 0.02, WL * (0.07 + gv * 0.012)); g.stroke(); }   // (the grooves of its belly)
+    whaleStars.forEach(function (st) { var tw = 0.5 + 0.5 * Math.sin(t * 2 + st[2] * 3); g.fillStyle = 'rgba(255,250,240,' + (0.35 + 0.5 * tw) + ')'; g.beginPath(); g.arc(st[0] * WL, st[1] * WL * (1 - Math.abs(st[0]) * 0.9), 0.8 + tw, 0, TAU); g.fill(); });
+    g.strokeStyle = 'rgba(255,250,240,.3)'; g.beginPath(); whaleStars.slice(0, 7).forEach(function (st, k) { g[k ? 'lineTo' : 'moveTo'](st[0] * WL, st[1] * WL * (1 - Math.abs(st[0]) * 0.9)); }); g.stroke();   // (a constellation inside it)
+    g.restore();
+    glow(wx + WL * 0.36, wy - WL * 0.03, 8, 'rgba(255,255,255,A)', 0.8); g.fillStyle = '#fff'; g.beginPath(); g.arc(wx + WL * 0.36, wy - WL * 0.03, 1.8, 0, TAU); g.fill();   // (its kind eye)
+    for (var tr = 0; tr < 10; tr++) { var tf = tr / 10; glow(wx - WL * (0.6 + tf * 0.9), wy + Math.sin(t * 1.3 - tr * 0.7) * WL * 0.05, 6 - tf * 4, 'rgba(210,225,255,A)', 0.6 * (1 - tf)); }   // (a trail of stardust)
+    var tall2 = W < H, isz = tall2 ? W * 0.32 : Math.min(W * 0.18, H * 0.34);   // (two floating islands, far off: a little wizard's tower with a waterfall, and a blossom tree)
+    [['tower', tall2 ? 0.17 : 0.13, tall2 ? 0.34 : 0.52, 0], ['tree', tall2 ? 0.83 : 0.87, tall2 ? 0.44 : 0.56, 2]].forEach(function (il) {
+      var spr = isles[il[0]] || (isles[il[0]] = makeIsle(il[0])), sc = isz / 320, ix = il[1] * W, iy = il[2] * H + Math.sin(t * 0.5 + il[3]) * 6;
+      function P(x, y) { return [ix + (x - 160) * sc, iy + (y - 200) * sc]; }
+      glow(ix, iy + 40 * sc, 170 * sc, il[0] === 'tree' ? 'rgba(255,160,220,A)' : 'rgba(170,160,255,A)', 0.25);
+      if (il[0] === 'tower') {                                       // (the waterfall, pouring off the edge and fading into mist)
+        var wf = P(268, 204), wh = 150 * sc, wfg = g.createLinearGradient(0, wf[1], 0, wf[1] + wh); wfg.addColorStop(0, 'rgba(190,230,255,.75)'); wfg.addColorStop(1, 'rgba(190,230,255,0)');
+        g.fillStyle = wfg; g.fillRect(wf[0] - 5 * sc, wf[1], 12 * sc, wh);
+        g.fillStyle = 'rgba(255,255,255,.55)'; for (var d = 0; d < 6; d++) { var dy = ((t * 60 + d * 25) % 150) * sc; g.fillRect(wf[0] - 3 * sc + (d % 3) * 3 * sc, wf[1] + dy, 1.4, 12 * sc * (1 - dy / wh)); }
+        glow(wf[0] + sc, wf[1] + wh * 0.8, 30 * sc, 'rgba(200,235,255,A)', 0.35);
+      }
+      g.drawImage(spr, ix - 160 * sc, iy - 200 * sc, 320 * sc, 360 * sc);
+      if (il[0] === 'tower') { var fk = 0.75 + 0.25 * Math.sin(t * 7) * Math.sin(t * 3.3); [[170, 112], [158, 150], [182, 150], [242, 168]].forEach(function (w) { var wp = P(w[0], w[1]); glow(wp[0], wp[1], 16 * sc, 'rgba(255,210,120,A)', 0.7 * fk); }); }
+      else {
+        var tp = P(160, 90); glow(tp[0], tp[1], 90 * sc, 'rgba(255,190,235,A)', 0.2 + 0.08 * Math.sin(t * 1.5));
+        if (isPetals.length < 14 && Math.random() < dt * 3) isPetals.push({ x: (Math.random() - 0.5) * 140, y: 100, life: 0, r: Math.random() * 6 });
+        isPetals = isPetals.filter(function (pp) { pp.life += dt; pp.x += Math.sin(pp.life * 2 + pp.r) * 12 * dt + 6 * dt; pp.y += 16 * dt; pp.r += dt * 2; var pq = P(160 + pp.x, pp.y); g.fillStyle = 'rgba(255,180,220,' + Math.max(0, 1 - pp.life / 9) + ')'; g.beginPath(); g.ellipse(pq[0], pq[1], 2.4, 1.2, pp.r, 0, TAU); g.fill(); return pp.life < 9; });   // (petals drifting off the tree)
+      }
+    });
+    var rcx = W / 2, rcy = H * 0.47, rr = Math.min(W, H) * 0.42;      // (a great rune circle, turning slowly behind you all)
+    g.save(); g.translate(rcx, rcy); g.scale(1, 0.92); g.globalAlpha = 0.16 + 0.05 * Math.sin(t * 1.3);
+    g.strokeStyle = '#ffe2b0'; g.lineWidth = 1.5; g.beginPath(); g.arc(0, 0, rr, 0, TAU); g.stroke(); g.beginPath(); g.arc(0, 0, rr * 0.9, 0, TAU); g.stroke();
+    g.rotate(t * 0.05); g.lineWidth = 1.2;
+    for (var rk = 0; rk < 24; rk++) { var ra = rk / 24 * TAU; g.save(); g.rotate(ra); g.beginPath(); g.moveTo(0, -rr * 0.9); g.lineTo(0, -rr * (rk % 2 ? 0.94 : 0.98)); g.stroke(); if (rk % 3 === 0) { g.beginPath(); g.arc(0, -rr * 0.95, 3, 0, TAU); g.stroke(); } g.restore(); }
+    g.rotate(-t * 0.12); g.strokeStyle = '#e8c8ff'; g.beginPath();
+    for (rk = 0; rk < 7; rk++) { var sa7 = rk * 3 / 7 * TAU - Math.PI / 2; g[rk ? 'lineTo' : 'moveTo'](Math.cos(sa7) * rr * 0.86, Math.sin(sa7) * rr * 0.86); } g.closePath(); g.stroke();   // (a seven-pointed star)
+    g.beginPath(); g.arc(0, 0, rr * 0.38, 0, TAU); g.stroke();
+    g.restore(); g.globalAlpha = 1;
+    lanterns.forEach(function (l) {                                    // (sky lanterns, drifting up and away)
+      l.y -= l.sp * l.z * dt; if (l.y < -0.08) { l.y = 1.08; l.x = Math.random(); }
+      var lx = (l.x + Math.sin(t * 0.4 + l.p) * 0.012) * W, ly = l.y * H, ls = 5 + l.z * 7, fl = 0.85 + 0.15 * Math.sin(t * 9 + l.p);
+      if (Math.abs(lx - W / 2) < W * 0.16 && ly > H * 0.25 && ly < H * 0.8) return;   // (none in front of you)
+      glow(lx, ly, ls * 3.4, 'rgba(255,180,90,A)', 0.4 * fl * l.z);
+      g.fillStyle = 'rgba(255,' + Math.round(170 + 50 * fl) + ',120,' + (0.55 + 0.4 * l.z) + ')'; g.beginPath(); g.moveTo(lx - ls * 0.55, ly - ls); g.lineTo(lx + ls * 0.55, ly - ls); g.lineTo(lx + ls * 0.4, ly + ls * 0.7); g.quadraticCurveTo(lx, ly + ls * 0.9, lx - ls * 0.4, ly + ls * 0.7); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,250,220,' + (0.6 * fl) + ')'; g.beginPath(); g.arc(lx, ly + ls * 0.45, ls * 0.18, 0, TAU); g.fill();
+    });
+    gems.forEach(function (c) {                                        // (floating crystals, turning in the light)
+      var gx = c.x * W, gy = c.y * H + Math.sin(t * 0.9 + c.p) * 8, w = c.s * (0.35 + 0.65 * Math.abs(Math.cos(t * 0.7 + c.p))), hgt = c.s * 1.8;
+      glow(gx, gy, c.s * 3.2, 'hsla(' + c.hue + ',90%,75%,A)', 0.4);
+      var cg = g.createLinearGradient(gx - w, gy - hgt, gx + w, gy + hgt); cg.addColorStop(0, 'hsla(' + c.hue + ',100%,94%,.95)'); cg.addColorStop(1, 'hsla(' + c.hue + ',70%,58%,.85)');
+      g.fillStyle = cg; g.beginPath(); g.moveTo(gx, gy - hgt); g.lineTo(gx + w, gy - hgt * 0.15); g.lineTo(gx, gy + hgt); g.lineTo(gx - w, gy - hgt * 0.15); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(gx, gy - hgt); g.lineTo(gx, gy + hgt); g.stroke();
+    });
+    flutters.forEach(function (b) {                                    // (butterflies of light)
+      var bt = t * b.sp + b.p, bx = (b.cx + Math.sin(bt) * 0.06) * W, by = (b.cy + Math.sin(bt * 2) * 0.04) * H, flap = 0.25 + 0.75 * Math.abs(Math.sin(t * 11 + b.p)), ang = Math.cos(bt) * 0.4;
+      glow(bx, by, 22, 'hsla(' + b.hue + ',100%,75%,A)', 0.45);
+      g.save(); g.translate(bx, by); g.rotate(ang); g.fillStyle = 'hsla(' + b.hue + ',100%,85%,.8)';
+      [-1, 1].forEach(function (sd) { g.save(); g.scale(sd * flap, 1); g.beginPath(); g.ellipse(5, -3, 6, 4.5, -0.5, 0, TAU); g.fill(); g.beginPath(); g.ellipse(4, 3.5, 4, 3, 0.5, 0, TAU); g.fill(); g.restore(); });
+      g.fillStyle = 'rgba(255,255,255,.95)'; g.fillRect(-0.8, -4, 1.6, 8); g.restore();
+    });
+    if (petals.length < 30 && Math.random() < dt * 4) petals.push({ x: Math.random() * W, y: -10, vx: 10 + Math.random() * 25, vy: 18 + Math.random() * 18, r: Math.random() * TAU, life: 0 });   // (blossom petals drifting down)
+    petals = petals.filter(function (p) { p.life += dt; p.x += (p.vx + Math.sin(p.life * 2 + p.r) * 22) * dt; p.y += p.vy * dt; p.r += dt * 2; return p.y < H + 10; });
+    petals.forEach(function (p) { g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.scale(1, 0.5 + 0.5 * Math.abs(Math.sin(p.life * 3))); g.fillStyle = 'rgba(255,175,215,.85)'; g.beginPath(); g.ellipse(0, 0, 5, 2.6, 0, 0, TAU); g.fill(); g.restore(); });
+    motes.forEach(function (m) {                                       // (sparkles rising through the air)
+      m.y -= m.sp * dt; if (m.y < -0.02) { m.y = 1.02; m.x = Math.random(); }
+      var a = 0.35 + 0.35 * Math.sin(t * 2 + m.p), px = (m.x + Math.sin(t * 0.3 + m.p) * 0.01) * W, py = m.y * H;
+      glow(px, py, m.r * 5, 'hsla(' + m.hue + ',100%,80%,A)', a * 0.5); g.fillStyle = 'hsla(' + m.hue + ',100%,92%,' + a + ')'; g.beginPath(); g.arc(px, py, m.r, 0, TAU); g.fill();
+    });
+    flies.forEach(function (f) {                                       // (and a few fireflies, blinking)
+      var fx = (f.x + Math.sin(t * f.sp + f.p) * 0.03) * W, fy = (f.y - 0.1 + Math.cos(t * f.sp * 0.8 + f.p) * 0.02) * H, on = Math.max(0, Math.sin(t * 1.7 + f.p * 3));
+      glow(fx, fy, 14, 'rgba(230,255,150,A)', on * 0.55); g.fillStyle = 'rgba(250,255,200,' + on + ')'; g.beginPath(); g.arc(fx, fy, 1.8, 0, TAU); g.fill();
+    });
+    var vg = g.createRadialGradient(W / 2, H * 0.5, Math.min(W, H) * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(20,10,40,.45)'); g.fillStyle = vg; g.fillRect(0, 0, W, H);   // (a soft vignette)
+  }
+
+  // ----- loading, and the Play button -----
+  var shown = 0, target = 0, tipAt = 0, ready = false, alive = true;
+  var TIPS = ['Watering the moonblooms…', 'Waking the Glimmerwings…', 'Fluffing the hay…', 'Polishing the stars…', 'Lighting the lanterns…', 'Stirring the cauldron…', 'Shaking out the petals…', 'Tuning the wind chimes…'], tipN = 0;
+  function setTip(txt) { tipEl.style.opacity = 0; setTimeout(function () { tipEl.textContent = txt; tipEl.style.opacity = 1; }, 200); }
+  function loop(now) {
+    if (!alive) return;
+    drawScene(now);
+    shown += (target - shown) * 0.08; if (target - shown < 0.3) shown = target;
+    fill.style.width = 'calc(' + shown + '% - 6px)'; bud.style.left = 'calc(' + shown + '% - ' + shown * 0.06 + 'px)'; pctEl.textContent = Math.round(shown) + '%';
+    for (var k = 0; k < leaves.length; k++) leaves[k].classList.toggle('on', shown > 8 + k * 10.5 + 3);
+    if (!ready && now - tipAt > 1600) { tipAt = now; setTip(TIPS[tipN++ % TIPS.length]); }
+    if (ready && shown >= 99.5 && !playBtn.classList.contains('show')) { load.classList.add('done'); setTimeout(function () { load.style.display = 'none'; playBtn.classList.add('show'); hint.classList.add('show'); playBtn.focus(); }, 450); }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  function play() {
+    if (!ready || root.classList.contains('gone')) return;
+    window.EVERDAWN_TITLE = false; EVERDAWN_TITLE = false;
+    root.classList.add('gone'); if (document.body) document.body.style.overflow = prevOverflow;
+    var game = document.getElementById('game'); if (game) { try { game.focus(); } catch (err) {} }
+    setTimeout(function () { alive = false; root.remove(); window.removeEventListener('resize', resize); }, 1200);
+  }
+  playBtn.addEventListener('click', play);
+  window.addEventListener('keydown', function (e) { if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); play(); } }, true);
+  return {
+    progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
+    ready: function () { ready = true; target = 100; setTip('All ready!'); },
+    fail: function (msg) { setTip(msg); pctEl.textContent = ''; }
+  };
+})();
+
 (function () {
-  if (window.THREE) { startGame(window.THREE); return; }
+  function build(THREE) {                                              // (let the title screen paint first, then build the island: that takes a moment)
+    everdawnTitle.progress(55, 'Building the island…');
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      setTimeout(function () {
+        try { startGame(THREE); } catch (err) { everdawnTitle.fail('Something went wrong loading the game'); throw err; }
+        everdawnTitle.progress(85, 'Opening the gate…');
+        setTimeout(everdawnTitle.ready, 600);
+      }, 60);
+    }); });
+  }
+  if (window.THREE) { build(window.THREE); return; }
+  var creep = setInterval(function () { everdawnTitle.progress(Math.min(45, 4 + (Date.now() - creepAt) / 120)); }, 200), creepAt = Date.now();   // (fetching the 3D engine)
   var s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-  s.onload = function () { startGame(window.THREE); };
-  s.onerror = function () { showToast('Could not load the 3D engine. Check your internet connection.', 60000); };
+  s.onload = function () { clearInterval(creep); build(window.THREE); };
+  s.onerror = function () { clearInterval(creep); everdawnTitle.fail('Could not load the 3D engine. Check your internet connection.'); showToast('Could not load the 3D engine. Check your internet connection.', 60000); };
   document.head.appendChild(s);
 })();
