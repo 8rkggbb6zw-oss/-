@@ -7675,12 +7675,28 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (leave) { var left = leave.call(document); if (left && left.catch) left.catch(function () {}); }
       }
     } catch (err) { /* the browser said no: the game still fills the window */ }
-    setTimeout(resize, 50);
+    setTimeout(resize, 50); setTimeout(placeToasts, 150);
   }
   function fullscreenChanged() { if (!realFullscreen() && document.body.classList.contains('full')) setFullScreen(false); } // pressed Esc
   document.addEventListener('fullscreenchange', fullscreenChanged);
   document.addEventListener('webkitfullscreenchange', fullscreenChanged);
   btnFull.addEventListener('click', function () { setFullScreen(!document.body.classList.contains('full')); focusGame(); });
+  // In full screen the hotbar sits higher (above the phone's or tablet's home bar), so the messages and the little
+  // action buttons (Sit in the boat, Take hay...) are lifted to just above wherever the hotbar really is
+  function placeToasts() {
+    var toast = document.getElementById('toast'), bar = document.querySelector('.hotbar'), full = document.body.classList.contains('full');
+    var acts = document.querySelectorAll('.sleep-btn');
+    if (!toast || !bar || !full) { if (toast) toast.style.bottom = ''; for (var i = 0; i < acts.length; i++) acts[i].style.bottom = ''; return; }
+    var gap = toast.offsetParent ? toast.offsetParent.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 10 : 84;
+    toast.style.bottom = Math.max(84, Math.round(gap)) + 'px';
+    var actGap = Math.max(84, Math.round(gap)) + toast.offsetHeight + 12;
+    for (var j = 0; j < acts.length; j++) acts[j].style.bottom = Math.max(130, actGap) + 'px';
+  }
+  var fsBaseToast = showToast;
+  showToast = function () { var r = fsBaseToast.apply(this, arguments); placeToasts(); return r; };
+  window.addEventListener('resize', function () { setTimeout(placeToasts, 120); });
+  document.addEventListener('fullscreenchange', function () { setTimeout(placeToasts, 120); });
+  document.addEventListener('webkitfullscreenchange', function () { setTimeout(placeToasts, 120); });
   // In full screen, menus sit beside the button column when there's room, so the buttons (Bag, Teleport...) stay
   // tappable and can close the menu they opened. On a narrow screen there isn't room: the buttons fade while a menu is
   // open, and a tap anywhere outside the menu closes it instead
