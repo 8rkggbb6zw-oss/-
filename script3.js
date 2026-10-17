@@ -4239,8 +4239,17 @@ EVERDAWN_PARTS.push(function (THREE) {
   carpShopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Buildings'), carpShopBox.querySelector('.shop-card'));
   var carpTilesSync = shopCatalogue(carpShopBox); carpShopBox.classList.add('shop-wide');
   var carpShopCoins = carpShopBox.querySelector('.ship-total b'), coopBuyBtn = carpShopBox.querySelector('.coop-buy'), fbarnBuyBtn = carpShopBox.querySelector('.fbarn-buy'), millBuyBtn = carpShopBox.querySelector('.mill-buy'), siloBuyBtn = carpShopBox.querySelector('.silo-buy');
+  function carpBusy() {                                                // (what Oak & Ember are building right now, if anything: they take one job at a time)
+    if (coop.built && !siteReady(coop)) return { what: 'coop', ready: coop.start + SITE_DAYS };
+    if (fbarn.built && !siteReady(fbarn)) return { what: 'barn', ready: fbarn.start + SITE_DAYS };
+    if (mill.built && mill.stage < MILL_DAYS) return { what: 'mill', ready: mill.start + MILL_DAYS };
+    if (silo.built && !siloReady()) return { what: 'silo', ready: silo.start + SILO_DAYS };
+    return null;
+  }
+  function carpBusyNote(b) { return 'Oak & Ember are still building your ' + b.what + ': come back on ' + seasonDay(b.ready) + ' for your next one 🪚'; }
   function renderCarpShop() {
     carpShopCoins.textContent = state.coins;
+    var busy = carpBusy();
     coopBuyBtn.innerHTML = coop.built ? (siteReady(coop) ? 'Built ✓' : 'Being built: ready ' + seasonDay(coop.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + COOP_COST.toLocaleString('en-US');
     coopBuyBtn.disabled = coop.built || state.coins < COOP_COST;
     fbarnBuyBtn.innerHTML = fbarn.built ? (siteReady(fbarn) ? 'Built ✓' : 'Being built: ready ' + seasonDay(fbarn.start + SITE_DAYS)) : 'Build · <img class="coin-icon" alt=""> ' + FBARN_COST.toLocaleString('en-US');
@@ -4249,6 +4258,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     millBuyBtn.disabled = mill.built || state.coins < MILL_COST;
     siloBuyBtn.innerHTML = !silo.built ? 'Build · <img class="coin-icon" alt=""> ' + SILO_COST.toLocaleString('en-US') : !siloReady() ? 'Being built: ready ' + seasonDay(silo.start + SILO_DAYS) : 'Built ✓';
     siloBuyBtn.disabled = silo.built || state.coins < SILO_COST;
+    if (busy) [[coopBuyBtn, coop], [fbarnBuyBtn, fbarn], [millBuyBtn, mill], [siloBuyBtn, silo]].forEach(function (b) {   // (one building at a time: the rest wait until this one's done)
+      if (b[1].built) return;
+      b[0].innerHTML = 'After your ' + busy.what + ' · ' + seasonDay(busy.ready); b[0].disabled = true;
+    });
     carpTilesSync();
   }
   function atCarpCounter(margin) {                                     // standing in front of the counter, on the door side
@@ -4262,21 +4275,25 @@ EVERDAWN_PARTS.push(function (THREE) {
   carpShopBtn.addEventListener('click', function () { openCarpShop(); focusGame(); });
   coopBuyBtn.addEventListener('click', function () {
     if (coop.built) { showToast('You already have a coop', 1800); return; }
+    if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < COOP_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(COOP_SPEC);
   });
   fbarnBuyBtn.addEventListener('click', function () {
     if (fbarn.built) { showToast('You already have a barn', 1800); return; }
+    if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < FBARN_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(FBARN_SPEC);
   });
   millBuyBtn.addEventListener('click', function () {
     if (mill.built) { showToast('You already have a mill', 1800); return; }
+    if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < MILL_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(MILL_SPEC);
   });
   siloBuyBtn.addEventListener('click', function () {
     if (silo.built) { showToast('You already have a silo', 1800); return; }
+    if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < SILO_COST) { showToast('Not enough Star Coins', 1800); return; }
     closeCarpShop(); coopOpenPlacer(SILO_SPEC);
   });
@@ -4398,6 +4415,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   coopPlaceBox.querySelector('.coop-cancel').addEventListener('click', coopClosePlacer);
   coopBuildBtn.addEventListener('click', function () {
     if (!coopPick || !coopFits(coopPick[0], coopPick[1]) || placeSpec.built()) return;
+    if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < placeSpec.cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= placeSpec.cost; showCoins(true); coinSound(10);
     placeSpec.build(coopPick[0], coopPick[1]); coopClosePlacer(); spellSound(); homeMigrate(false);
