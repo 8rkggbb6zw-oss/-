@@ -7628,6 +7628,22 @@ EVERDAWN_PARTS.push(function (THREE) {
   // No lone pink lily buds poking up out of the lake: only the pads and the open flowers stay
   scene.children.filter(function (o) { return o.isMesh && o.geometry === lilyPetalGeo && o.material === lilyPink; }).forEach(function (bud) { scene.remove(bud); });
 
+  // Stamina: hitting exactly 0 is fine, you're just worn out. Only going past it, into the negatives, makes you pass out
+  useStamina = function (n) {
+    state.stamina -= n;
+    if (state.stamina < -1e-6) state.stamina = -(2 + Math.floor(Math.random() * 4));   // (overdo it, and you go a couple of points into the negatives: -2 to -5)
+    else if (state.stamina < 1e-6) state.stamina = 0;
+    if (state.stamina <= 60 && !tiredWarned) { tiredWarned = true; showToast('You\'re getting tired… eat a moonbloom or head to bed 🌙', 2600); }
+  };
+  updateStamina = function () {
+    if (ui.stamina) ui.stamina.style.width = (Math.max(0, state.stamina) / MAX_STAMINA * 100).toFixed(1) + '%';
+    var stText = Math.ceil(state.stamina - 0.001) + ' / ' + MAX_STAMINA;
+    if (ui.staminaNum) ui.staminaNum.style.color = state.stamina < 0 ? '#e0304a' : '';   // (shown in red while you're in the negatives)
+    if (ui.staminaNum && ui.staminaNum.textContent !== stText) ui.staminaNum.textContent = stText;
+    if (state.stamina < 0 && !passingOut && !sleeping) passOut();
+    updateBedtime();
+  };
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
