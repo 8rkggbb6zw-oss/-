@@ -8195,6 +8195,22 @@ EVERDAWN_PARTS.push(function (THREE) {
     var rim = new THREE.DirectionalLight(0xffb0e0, 0.32); rim.position.set(-4, 2.5, -3); TS.add(rim);
     var fillL = new THREE.PointLight(0xffe0a0, 0.3, 3); TS.add(fillL);   // (the wand's light, falling on her)
     TS.add(new THREE.AmbientLight(0xd8c8f0, 0.08));
+    try {                                                              // (a picture of your own Dawn Tree, taken once, for the floating island in the sky)
+      var shotCv = document.createElement('canvas'), SR = new THREE.WebGLRenderer({ canvas: shotCv, antialias: true, alpha: true, preserveDrawingBuffer: true });
+      SR.outputEncoding = renderer.outputEncoding; SR.toneMapping = renderer.toneMapping; SR.toneMappingExposure = renderer.toneMappingExposure; SR.physicallyCorrectLights = renderer.physicallyCorrectLights; SR.setClearColor(0x000000, 0);
+      var shotScene = new THREE.Scene(), treeParent = tree.parent || scene; shotScene.add(tree);
+      shotScene.add(new THREE.HemisphereLight(0xfff4f8, 0x6a4a9a, 0.75)); var shotKey = new THREE.DirectionalLight(0xfff0f6, 0.8); shotKey.position.set(TREE_X - 6, 10, TREE_Z + 12); shotScene.add(shotKey); shotScene.add(new THREE.AmbientLight(0xe8d8ff, 0.2));
+      tree.updateMatrixWorld(true); var tbox = new THREE.Box3();
+      tree.traverse(function (o) { if (o.isMesh && o.geometry) { if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); tbox.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld)); } });
+      var tc = tbox.getCenter(new THREE.Vector3()), tsz = tbox.getSize(new THREE.Vector3()), tw = Math.max(tsz.x, tsz.z) * 1.45, th = tsz.y * 1.7; tc.y = tbox.min.y + th * 0.5 - tsz.y * 0.05;   // (with room all round for the blossom, which hangs well beyond the branches)
+      var SW = 640, SH = Math.round(Math.min(1.6, Math.max(0.5, th / tw * 1.08)) * SW); SR.setPixelRatio(1); SR.setSize(SW, SH, false);
+      var scam = new THREE.PerspectiveCamera(24, SW / SH, 0.1, 400), fit = Math.max(th * 0.56 / Math.tan(12 * Math.PI / 180), tw * 0.56 / Math.tan(12 * Math.PI / 180) / (SW / SH));
+      scam.position.set(tc.x, tc.y + th * 0.12, tc.z + fit); scam.lookAt(tc); scam.updateMatrixWorld(true);
+      SR.render(shotScene, scam);
+      var base = new THREE.Vector3(TREE_X, 0, TREE_Z).project(scam);
+      window.EVERDAWN_TREE_IMG = { img: shotCv, bx: (base.x + 1) / 2, by: (1 - base.y) / 2, aspect: SH / SW };
+      treeParent.add(tree); SR.dispose();
+    } catch (err) { if (tree && !tree.parent) scene.add(tree); }
     // (you, borrowed from the island for a moment)
     var saved = { parent: player.parent, pos: player.position.clone(), rot: player.rotation.clone(), vis: player.visible, axe: axeArm.visible, body: body.rotation.clone(), bodyPos: body.position.clone(),
       limbs: [wl.armL, wl.armR, wl.legs[0], wl.legs[1], wl.head, wl.hairBack, wl.tip].map(function (o) { return o.rotation.clone(); }), chibi: wl.chibi.position.clone(), broom: wl.broom.visible, ride: wl.rideBroom.visible };
@@ -8435,7 +8451,7 @@ var everdawnTitle = (function () {
   var isles = {};
   function makeIsle(kind) {                                          // (a little floating island, painted once at double size: 320 wide, its grassy top at y 200, with room above for the tower's weather vane)
     var c = document.createElement('canvas'); c.width = 960; c.height = 1170; var q = c.getContext('2d'); q.scale(3, 3); q.translate(0, 30);
-    var k, j, N = 22, pts = [], sd = kind === 'tree' ? 90 : 10, tower = kind === 'tower', TX = 170;
+    var k, j, N = 22, pts = [], sd = kind === 'tower' ? 10 : 90, tower = kind === 'tower', TX = 170;
     function R(n) { return rnd(n * 1.37 + sd); }
     function rr(x, y, w, h, r) { q.beginPath(); q.moveTo(x + r, y); q.arcTo(x + w, y, x + w, y + h, r); q.arcTo(x + w, y + h, x, y + h, r); q.arcTo(x, y + h, x, y, r); q.arcTo(x, y, x + w, y, r); q.closePath(); }
     function E(x, y, rx, ry, col, rot) { q.fillStyle = col; q.beginPath(); q.ellipse(x, y, rx, ry, rot || 0, 0, TAU); q.fill(); }
@@ -8667,12 +8683,14 @@ var everdawnTitle = (function () {
       q.save(); E(TX + 15, -24.5, 3.6, 3.6, '#ffe08a'); q.globalCompositeOperation = 'destination-out'; E(TX + 16.8, -25.6, 3, 3, '#000'); q.restore();
       E(TX + 15, -8, 1, 1, '#ffd88a');
     } else {
+      if (kind === 'tree') {
       q.fillStyle = '#5c3e34'; q.beginPath(); q.moveTo(146, 202); q.quadraticCurveTo(156, 160, 152, 120); q.lineTo(168, 120); q.quadraticCurveTo(166, 160, 176, 202); q.closePath(); q.fill();   // (the trunk)
       q.strokeStyle = '#5c3e34'; q.lineCap = 'round'; [[156, 132, 112, 96, 6], [164, 126, 212, 92, 6], [158, 124, 150, 74, 5], [162, 140, 196, 120, 4], [156, 146, 124, 128, 4]].forEach(function (b) { q.lineWidth = b[4]; q.beginPath(); q.moveTo(b[0], b[1]); q.quadraticCurveTo((b[0] + b[2]) / 2, b[1] - 10, b[2], b[3]); q.stroke(); });
       var halo = q.createRadialGradient(160, 92, 10, 160, 92, 110); halo.addColorStop(0, 'rgba(255,190,230,.45)'); halo.addColorStop(1, 'rgba(255,190,230,0)'); q.fillStyle = halo; q.fillRect(40, 0, 240, 200);
       for (k = 0; k < 70; k++) { var a2 = rnd(k + 600) * TAU, d2 = Math.sqrt(rnd(k + 700)), cx2 = 160 + Math.cos(a2) * d2 * 78, cy2 = 90 + Math.sin(a2) * d2 * 46 - (1 - d2) * 6, r2 = 9 + rnd(k + 800) * 10, sh = cy2 < 80 ? 1 : 0;
         var bg2 = q.createRadialGradient(cx2 - r2 * 0.3, cy2 - r2 * 0.4, 1, cx2, cy2, r2); bg2.addColorStop(0, sh ? '#ffe6f4' : '#ffc4e2'); bg2.addColorStop(1, ['#f27ab4', '#e86aa8', '#ff94c8', '#d860a0'][k % 4]); q.fillStyle = bg2; q.beginPath(); q.arc(cx2, cy2, r2, 0, TAU); q.fill(); }
       for (k = 0; k < 30; k++) { q.fillStyle = 'rgba(255,250,255,' + (0.5 + rnd(k + 900) * 0.5) + ')'; q.beginPath(); q.arc(90 + rnd(k + 950) * 140, 52 + rnd(k + 990) * 80, 1.4, 0, TAU); q.fill(); }   // (glints of light in the blossom)
+      }
       q.fillStyle = 'rgba(255,170,215,.8)'; for (k = 0; k < 16; k++) { q.beginPath(); q.ellipse(70 + rnd(k + 1100) * 180, 196 + rnd(k + 1200) * 8, 3, 1.5, rnd(k) * 3, 0, TAU); q.fill(); }   // (fallen petals)
       [[94, 190], [228, 192]].forEach(function (m) { q.fillStyle = '#f2e6d8'; q.fillRect(m[0] - 1.5, m[1], 3, 7); q.fillStyle = '#ff7aa8'; q.beginPath(); q.arc(m[0], m[1], 6, Math.PI, 0); q.fill(); q.fillStyle = '#fff'; q.beginPath(); q.arc(m[0] - 2, m[1] - 3, 1, 0, TAU); q.arc(m[0] + 2.5, m[1] - 2, 0.9, 0, TAU); q.fill(); });   // (little toadstools)
     }
@@ -8750,7 +8768,7 @@ var everdawnTitle = (function () {
     for (var tr = 0; tr < 10; tr++) { var tf = tr / 10; glow(wx - WL * (0.6 + tf * 0.9), wy + Math.sin(t * 1.3 - tr * 0.7) * WL * 0.05, 6 - tf * 4, 'rgba(210,225,255,A)', 0.6 * (1 - tf)); }   // (a trail of stardust)
     var tall2 = W < H, TX = 170;                                       // (two floating islands, far off: a wizard's tower with its waterfall, and a blossom tree)
     [['tower', tall2 ? 0.25 : 0.16, tall2 ? 0.37 : 0.6, 0, tall2 ? W * 0.5 : Math.min(W * 0.3, H * 0.56)], ['tree', tall2 ? 0.83 : 0.87, tall2 ? 0.44 : 0.56, 2, tall2 ? W * 0.32 : Math.min(W * 0.18, H * 0.34)]].forEach(function (il) {
-      var spr = isles[il[0]] || (isles[il[0]] = makeIsle(il[0])), sc = il[4] / 320, ix = il[1] * W, iy = il[2] * H + Math.sin(t * 0.5 + il[3]) * 6, d;
+      var kind2 = il[0] === 'tree' && window.EVERDAWN_TREE_IMG ? 'treebare' : il[0], spr = isles[kind2] || (isles[kind2] = makeIsle(kind2)), sc = il[4] / 320, ix = il[1] * W, iy = il[2] * H + Math.sin(t * 0.5 + il[3]) * 6, d;
       function P(x, y) { return [ix + (x - 160) * sc, iy + (y - 200) * sc]; }
       glow(ix, iy + 40 * sc, 170 * sc, il[0] === 'tree' ? 'rgba(255,160,220,A)' : 'rgba(170,160,255,A)', 0.25);
       if (il[0] === 'tower') {
@@ -8791,6 +8809,7 @@ var everdawnTitle = (function () {
         for (d = 0; d < 9; d++) { var fa = t * (0.3 + rnd(d + 9300) * 0.3) + d * 0.7, fp = P(160 + Math.cos(fa) * (60 + rnd(d + 9400) * 80), 170 + Math.sin(fa * 1.3) * 40 - rnd(d + 9500) * 40), fo = Math.max(0, Math.sin(t * 2 + d * 1.9)); glow(fp[0], fp[1], 5 * sc, 'rgba(230,255,150,A)', fo * 0.8); }   // (fireflies)
       } else {
         var tp = P(160, 90); glow(tp[0], tp[1], 90 * sc, 'rgba(255,190,235,A)', 0.2 + 0.08 * Math.sin(t * 1.5));
+        var DT = window.EVERDAWN_TREE_IMG; if (DT) { var dtw = 330 * sc, dth = dtw * DT.aspect, db = P(160, 201); g.drawImage(DT.img, db[0] - DT.bx * dtw, db[1] - DT.by * dth, dtw, dth); }   // (your very own Dawn Tree)
         if (isPetals.length < 14 && Math.random() < dt * 3) isPetals.push({ x: (Math.random() - 0.5) * 140, y: 100, life: 0, r: Math.random() * 6 });
         isPetals = isPetals.filter(function (pp) { pp.life += dt; pp.x += Math.sin(pp.life * 2 + pp.r) * 12 * dt + 6 * dt; pp.y += 16 * dt; pp.r += dt * 2; var pq = P(160 + pp.x, pp.y); g.fillStyle = 'rgba(255,180,220,' + Math.max(0, 1 - pp.life / 9) + ')'; g.beginPath(); g.ellipse(pq[0], pq[1], 2.4, 1.2, pp.r, 0, TAU); g.fill(); return pp.life < 9; });   // (petals drifting off the tree)
       }
