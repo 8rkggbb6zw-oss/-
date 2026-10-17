@@ -7667,34 +7667,34 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
 
   // ---------- Music ----------
-  // A soft little lullaby waltz in F, made on the fly: a warm electric piano rocking gently in three, a low round bass,
-  // and over them a music-box tune that goes somewhere and comes home again. The magic is in the edges: a dreamy
-  // raised note in the harmony, a glassy shimmer that hangs in the air through the middle section, and at the end of
-  // each phrase a breath of sparkle and a few twinkling chimes. Every other time round the tune rests and the piano
-  // just rocks on its own, so it never gets busy. At night it slows down and sings an octave lower
+  // A slow, dreamy little song in G, made on the fly: soft piano chords rolled gently upward and left to ring, a low
+  // round bass, and a music-box tune of long, singing notes that drifts along and comes home. The magic is in the
+  // edges: a dreamy raised note in the harmony, a glassy shimmer through the middle, a wistful borrowed chord near the
+  // end, and a breath of sparkle with twinkling chimes at the end of each phrase. Every other time round the tune
+  // rests and a kalimba plinks quietly instead, so it never gets busy. At night it slows down and sings an octave lower
   var MUSIC_KEY = 'everdawn-music';
   var musicOn = true; try { musicOn = localStorage.getItem(MUSIC_KEY) !== 'off'; } catch (err) {}
   var mus = null;                                                      // (the mixer, made once sound is allowed)
-  // (sixteen bars, as [bass note, the chord above it, the tune: [beat, note, beats long]...])
+  // (sixteen bars of four, as [bass note, the chord above it, the tune: [beat, note, beats long]...])
   var MUS_SONG = [
-    [41, [57, 60, 64], [[0, 72, 2], [2, 69, 1]]],                 // Fmaj7
-    [38, [57, 60, 65], [[0, 74, 3]]],                             // Dm7
-    [46, [57, 62, 65], [[0, 77, 1], [1, 76, 1], [2, 74, 1]]],     // Bbmaj7
-    [48, [55, 60, 65], [[0, 72, 3]]],                             // Csus
-    [41, [57, 60, 64], [[0, 69, 1], [1, 72, 1], [2, 77, 1]]],     // Fmaj7
-    [45, [55, 60, 64], [[0, 76, 3]]],                             // Am7
-    [46, [57, 62, 64], [[0, 74, 1], [1, 76, 1], [2, 77, 1]]],     // Bbmaj7#11 (the dreamy one)
-    [48, [55, 58, 64], [[0, 74, 2], [2, 72, 1]]],                 // C7
-    [38, [57, 60, 65], [[0, 81, 2], [2, 79, 1]]],                 // Dm7
-    [46, [57, 62, 65], [[0, 77, 3]]],                             // Bbmaj7
-    [45, [57, 60, 65], [[0, 76, 1], [1, 77, 1], [2, 79, 1]]],     // F/A
-    [43, [53, 58, 62], [[0, 74, 3]]],                             // Gm7
-    [46, [55, 61, 65], [[0, 73, 2], [2, 72, 1]]],                 // Bbm6 (a little wistful)
-    [41, [57, 60, 64], [[0, 69, 3]]],                             // Fmaj7
-    [43, [53, 58, 62], [[0, 70, 1], [1, 72, 1], [2, 74, 1]]],     // Gm7
-    [48, [58, 60, 65], [[0, 72, 3]]]                              // C7sus, and home again
+    [43, [59, 62, 66], [[0, 74, 3], [3, 71, 1]]],                 // Gmaj7
+    [47, [57, 62, 66], [[0, 74, 2], [2, 76, 2]]],                 // Bm7
+    [48, [59, 64, 66], [[0, 78, 4]]],                             // Cmaj7#11 (the dreamy one)
+    [45, [57, 60, 64], [[0, 76, 2], [2, 72, 1], [3, 74, 1]]],     // Am7
+    [47, [57, 62, 66], [[0, 71, 3], [3, 74, 1]]],                 // G/B
+    [40, [55, 59, 66], [[0, 79, 2], [2, 78, 2]]],                 // Em9
+    [48, [55, 59, 64], [[0, 76, 4]]],                             // Cmaj7
+    [50, [57, 59, 64], [[0, 74, 4]]],                             // D6sus
+    [40, [55, 59, 62], [[0, 79, 2], [2, 78, 1], [3, 76, 1]]],     // Em7
+    [48, [55, 59, 62], [[0, 74, 4]]],                             // Cmaj9
+    [45, [55, 60, 64], [[0, 72, 2], [2, 76, 2]]],                 // Am7
+    [47, [57, 62, 66], [[0, 74, 4]]],                             // Bm7
+    [48, [55, 57, 63], [[0, 75, 3], [3, 74, 1]]],                 // Cm6 (a little wistful)
+    [47, [55, 59, 62], [[0, 71, 4]]],                             // G/B
+    [45, [55, 59, 64], [[0, 72, 2], [2, 71, 1], [3, 69, 1]]],     // Am9
+    [50, [57, 60, 64], [[0, 69, 2], [2, 67, 2]]]                  // D7sus, and home again
   ];
-  var MUS_TWINKLE = [77, 79, 81, 83, 84, 86, 88, 89, 91];               // (F with a raised fourth: the fairy chimes' notes)
+  var MUS_TWINKLE = [79, 81, 83, 85, 86, 88, 90, 91, 93];               // (G with a raised fourth: the fairy chimes' notes)
   function musHz(n) { return 440 * Math.pow(2, (n - 69) / 12); }
   function musNight() { var h = state.minutes / 60; return h >= 20.5 || h < 5 ? 1 : h >= 19 ? (h - 19) / 1.5 : h < 6.5 ? (6.5 - h) / 1.5 : 0; }
   function musSetup() {
@@ -7722,6 +7722,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function musBass(n, t, vol, len) { musVoice(n, t, vol, len, [[1, 1, 1], [2, 0.12, 0.5]], 0, null, 0.03); }
   function musBox(n, t, vol, pan) { musVoice(n, t, vol, 2.2, [[1, 1, 1], [2, 0.25, 0.5], [4.02, 0.06, 0.2]], pan, null, 0.005); }   // (the music box singing the tune)
   function musChime(n, t, vol, pan) { musVoice(n, t, vol, 1.8, [[1, 1, 1], [2.76, 0.18, 0.35], [5.4, 0.06, 0.15]], pan, mus.verb, 0.004); musVoice(n, t, vol * 0.4, 1.8, [[1, 1, 1]], -pan, mus.dry, 0.004); }
+  function musKalimba(n, t, vol, pan) { musVoice(n, t, vol, 1.5, [[1, 1, 1], [3.02, 0.1, 0.25], [5.9, 0.03, 0.12]], pan, null, 0.004); }   // (a soft little thumb piano)
   function musGlass(n, t, len, vol) {                                  // (a glassy shimmer, swelling slowly, with a gentle wobble)
     var o = mus.ac.createOscillator(), lfo = mus.ac.createOscillator(), lg = mus.ac.createGain(), g = mus.ac.createGain();
     o.type = 'sine'; o.frequency.value = musHz(n); lfo.frequency.value = 4.5; lg.gain.value = musHz(n) * 0.004; lfo.connect(lg); lg.connect(o.frequency);
@@ -7737,14 +7738,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var k = 0; k < 4; k++) musChime(MUS_TWINKLE[start - k], t + 0.5 + k * 0.22 + Math.random() * 0.05, vol * (1 - k * 0.15), k % 2 ? 0.6 : -0.6);
   }
   function musScheduleBar(t, night) {
-    var beat = 60 / (night ? 60 : 76), barLen = beat * 3, b = MUS_SONG[mus.bar], q = night ? 0.7 : 1;
-    var sing = mus.pass % 2 === 0;                                     // (every other time round, the tune rests and the piano rocks on its own)
-    musBass(b[0] - (night ? 12 : 0) + 12, t, 0.07 * q, barLen * 1.1);   // (the waltz: a low note on one...)
-    [1, 2].forEach(function (bt) { b[1].forEach(function (n, k) { musPiano(n, t + bt * beat + k * 0.012, (bt === 1 ? 0.028 : 0.022) * q, (k - 1) * 0.3); }); });   // (...and a soft chord on two and three)
+    var beat = 60 / (night ? 54 : 66), barLen = beat * 4, b = MUS_SONG[mus.bar], q = night ? 0.7 : 1;
+    var sing = mus.pass % 2 === 0;                                     // (every other time round, the tune rests and the kalimba plinks instead)
+    musBass(b[0] - (night ? 12 : 0) + 12, t, 0.065 * q, barLen * 1.05);   // (a low note to hold the bar...)
+    b[1].forEach(function (n, k) { musPiano(n, t + k * 0.07, 0.03 * q, (k - 1) * 0.3); });   // (...the chord, rolled gently upward on one...)
+    musPiano(b[1][1], t + beat * 2, 0.017 * q, 0.2);                    // (...and one soft note again on three)
     if (sing) b[2].forEach(function (m) { musBox(m[1] - (night ? 12 : 0), t + m[0] * beat, 0.075 * q, 0.1); });
-    else if (mus.bar % 4 === 0) musBox(b[2][0][1] - 12, t, 0.04 * q, -0.15);   // (a quiet echo of the tune's first note while it rests)
+    else if (!night || mus.bar % 2 === 0) [[0.5, 2], [2.5, 1]].forEach(function (k, j) { if (j === 0 || mus.bar % 2) musKalimba(b[1][k[1]] + 12, t + k[0] * beat, 0.04 * q, j ? 0.4 : -0.4); });
     if (mus.bar >= 8 && mus.bar < 12 && !night) musGlass(b[1][2] + 24, t, barLen, 0.008);   // (the glassy shimmer through the middle)
-    if ((mus.bar === 7 || mus.bar === 15) && (!night || mus.bar === 15)) musSparkle(t + beat * 1.5, 0.035 * q);
+    if ((mus.bar === 7 || mus.bar === 15) && (!night || mus.bar === 15)) musSparkle(t + beat * 2, 0.035 * q);
     mus.bar = (mus.bar + 1) % MUS_SONG.length; if (!mus.bar) mus.pass++;
     return barLen;
   }
