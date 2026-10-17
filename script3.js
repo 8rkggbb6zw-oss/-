@@ -830,7 +830,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   glimNameBox.className = 'inventory ship shop';
   glimNameBox.hidden = true;
   glimNameBox.innerHTML = '<div class="inv-head"><b class="glim-title">✧ Name your Glimmerwing</b></div>' +
-    '<p class="ship-hint">What would you like to call your new friend? They\'ll move into a stall here at Fluff &amp; Feather.</p>' +
+    '<p class="ship-hint glim-where">What would you like to call your new friend? They\'ll move into their new home on your farm.</p>' +
     '<div style="display:flex;gap:8px;margin:4px 0 12px"><input type="text" maxlength="14" autocomplete="off" spellcheck="false" aria-label="Name" style="flex:1;min-width:0;font:inherit;font-size:1.05rem;padding:8px 12px;border-radius:12px;border:2px solid #d9c8f0;background:#fff;color:#4a3a6a">' +
     '<button type="button" class="glim-dice" aria-label="Suggest a name" style="flex:none;padding:6px 12px">🎲</button></div>' +
     '<div class="shop-buy"><button type="button" class="glim-done">Done ✧</button></div>';
@@ -843,6 +843,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function glimStartNaming(stall, kind) {
     glimPending = { kind: kind || 'glim', stall: stall, pal: Math.floor(Math.random() * 3) };
     glimNameBox.querySelector('.glim-title').textContent = '✧ Name your ' + (kind === 'moon' ? 'Mooncalf' : kind === 'duck' ? 'Puddlewisp' : kind === 'ember' ? 'Emberwing' : kind === 'gem' ? 'Gemwren' : kind === 'aurora' ? 'Auroraram' : kind === 'zephyra' ? 'Zephyra' : kind === 'luna' ? 'Lunastra' : kind === 'bubble' ? 'Sirenna' : kind === 'prism' ? 'Prismara' : kind === 'lotus' ? 'Nymphalia' : kind === 'axo' ? 'Veilaris' : kind === 'liz' ? 'Lumora' : kind === 'tort' ? 'Amarys' : kind === 'bison' ? 'Nyxalia' : kind === 'ostrich' ? 'Celestara' : kind === 'crab' ? 'Iridelle' : 'Glimmerwing');
+    glimNameBox.querySelector('.glim-where').textContent = 'What would you like to call your new friend? They\'ll move into your ' + (stall >= FBARN_STALL0 ? 'barn' : 'coop') + ' on the farm.';
     glimNaming = true; walkTarget = null; keys = {};
     glimNameInput.value = glimSuggest(); glimNameBox.hidden = false;
     setTimeout(function () { glimNameInput.focus(); glimNameInput.select(); }, 50);
@@ -856,13 +857,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     showToast('✧ ' + name + ' has moved into ' + (g.stall >= FBARN_STALL0 ? 'your barn! Put hay on its feeding bench and pet them every day, and ' : g.stall >= COOP_STALL0 ? 'your coop! Put hay on its feeding bench and pet them every day, and ' : 'stall ' + (g.stall + 1) + '! Feed them hay and pet them every day, and ') + (g.kind === 'moon' ? 'you can milk them each morning (with a Milk Pail).' : g.kind === 'duck' ? 'they\'ll lay a Dewdrop Egg each morning.' : g.kind === 'ember' ? 'after every four days in a row they\'ll leave you a Cinder Quill.' : g.kind === 'gem' ? 'after every four days in a row they\'ll lay a Geode Egg.' : g.kind === 'aurora' ? 'after every two days in a row you can milk them for Aurora Milk (with a Milk Pail).' : g.kind === 'zephyra' ? 'after every four days in a row you can shear them for Cloud Wool (with Shears).' : g.kind === 'luna' ? 'after every two days in a row they\'ll find you a Moonpearl.' : g.kind === 'bubble' ? 'after every three days in a row they\'ll blow you a Wishbubble.' : g.kind === 'prism' ? 'after every two days in a row you can shear them for Prismsilk (with Shears).' : g.kind === 'lotus' ? 'after every two days in a row you can milk them for Moonlily Milk (with a Milk Pail).' : g.kind === 'axo' ? 'after every three days in a row you can shear them for Glimmerkelp (with Shears).' : g.kind === 'liz' ? 'after every two days in a row they\'ll shed a Sunscale for you.' : g.kind === 'tort' ? 'after every three days in a row a Starbloom will open in their garden for you to pick.' : g.kind === 'bison' ? 'after every three days in a row you can milk them for Opaline Milk (with a Milk Pail).' : g.kind === 'ostrich' ? 'after every three days in a row they\'ll lay a Dawnshell Egg.' : g.kind === 'crab' ? 'after every six days in a row they\'ll leave you a Tidelight Pearl.' : 'they\'ll lay a Glimmer Egg each morning.'), 4200);
     if (typeof renderBarnShop === 'function') renderBarnShop();
   }
-  function adoptGlimmerwing(kind) {                                  // kind: 'glim' (a Glimmerwing) or 'moon' (a Mooncalf)
-    var stall = glimFreeStall(), cost = kind === 'moon' ? MOON_COST : kind === 'duck' ? DUCK_COST : kind === 'ember' ? EMBER_COST : kind === 'gem' ? GEM_COST : kind === 'aurora' ? AURORA_COST : kind === 'zephyra' ? ZEPHYRA_COST : kind === 'luna' ? LUNA_COST : kind === 'bubble' ? BUBBLE_COST : kind === 'prism' ? PRISM_COST : kind === 'lotus' ? LOTUS_COST : kind === 'axo' ? AXO_COST : kind === 'liz' ? LIZ_COST : kind === 'tort' ? TORT_COST : kind === 'bison' ? BIS_COST : kind === 'ostrich' ? OST_COST : kind === 'crab' ? CRB_COST : GLIM_COST;
-    if (stall < 0) { showToast('All three stalls are full!', 2000); return; }
-    if (state.coins < cost) { showToast('Not enough Star Coins', 1800); return; }
-    state.coins -= cost; showCoins(true); coinSound(5);
-    closeBarnShop();
-    glimStartNaming(stall, kind);
+  function adoptGlimmerwing(kind) {                                  // (every animal you adopt goes home to your coop or your barn, never into a stall here: the coop and barn take their kinds further down)
+    showToast('Animals you adopt live in your coop or your barn, never in Fluff & Feather\'s stalls: build one at Oak & Ember 🪚', 3000);
   }
   // the chalkboard behind the counter now advertises them
   (function () {
