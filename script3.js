@@ -635,7 +635,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     if (!inBarn && !inCoop && !inFbarn) return;
     var t = state.time;
-    glimmers.forEach(function (g) {
+    (abDisplay || []).forEach(function (g) { g.m.root.visible = abDisplayFree(g); });
+    glimmers.concat((abDisplay || []).filter(abDisplayFree)).forEach(function (g) {   // (yours, and the shop's own animals on display)
       if (glimHome(g) !== (inFbarn ? 2 : inCoop ? 1 : 0)) return;      // (only the animals in the room you're in)
       var sz = GLIM_STALLS[g.stall], m = g.m;
       g.wait -= dt;
@@ -7646,6 +7647,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (state.stamina < 0 && !passingOut && !sleeping) passOut();
     updateBedtime();
   };
+
+  // ---------- Fluff & Feather's own animals, on display ----------
+  // One in each of the shop's three stalls, to show you what you could take home: Blossom, a pink Glimmerwing; Marina, a
+  // Sirenna; and Starla, a Lunastra. They belong to the shop, so they aren't yours to feed, pet or take home
+  var abDisplay = [];
+  function abDisplayFree(g) { return !glimmers.some(function (q) { return q.stall === g.stall; }); }   // (an animal of yours still in that stall from long ago comes first)
+  [['glim', 'Blossom'], ['bubble', 'Marina'], ['luna', 'Starla']].forEach(function (d, k) {
+    var g = glimAdd({ kind: d[0], name: d[1], stall: k, pal: 0 });     // (pal 0: the pink Glimmerwing)
+    glimmers.splice(glimmers.indexOf(g), 1); g.display = true; abDisplay.push(g);
+    var c = g.m.tagCv.getContext('2d'), w = 256, h = 96;               // (its little sign: its name, and that it's on display)
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = 'rgba(255,255,255,0.88)'; c.beginPath(); c.moveTo(24, 6); c.lineTo(w - 24, 6); c.quadraticCurveTo(w - 4, 6, w - 4, 26); c.lineTo(w - 4, h - 26); c.quadraticCurveTo(w - 4, h - 6, w - 24, h - 6); c.lineTo(24, h - 6); c.quadraticCurveTo(4, h - 6, 4, h - 26); c.lineTo(4, 26); c.quadraticCurveTo(4, 6, 24, 6); c.fill();
+    c.strokeStyle = '#c8a8f0'; c.lineWidth = 3; c.stroke();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#5a3d9a'; c.font = 'bold 28px Fredoka, sans-serif'; c.fillText(d[1], w / 2, 34);
+    c.fillStyle = '#a07ad0'; c.font = 'bold 17px Fredoka, sans-serif'; c.fillText('✧ On display ✧', w / 2, 66);
+    g.m.tagTex.needsUpdate = true;
+  });
 
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
