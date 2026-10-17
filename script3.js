@@ -8696,6 +8696,35 @@ var everdawnTitle = (function () {
   }
   var whaleStars = []; for (var ws = 0; ws < 26; ws++) whaleStars.push([-0.42 + rnd(ws + 8000) * 0.86, (rnd(ws + 8100) - 0.5) * 0.14, rnd(ws + 8200) * 6.28]);
   var isPetals = [];
+  var SEA = [                                                       // (the cloud sea, back to front: hazy lavender far off, rosy and bright up close)
+    { dy: -0.01, r: 0.085, v: 4, hl: '#f6e2f6', mid: '#c9a6dc', sh: '#8f74b4', hlA: '250,236,250', shA: '120,92,160', base: '#9b7cbc', rim: 'rgba(255,240,250,.45)', blur: 2 },
+    { dy: 0.06, r: 0.11, v: 8, hl: '#ffe6f2', mid: '#e8b4d4', sh: '#a87cbc', hlA: '255,238,246', shA: '150,104,170', base: '#b688c4', rim: 'rgba(255,236,230,.6)', blur: 1 },
+    { dy: 0.13, r: 0.14, v: 13, hl: '#fff6f2', mid: '#f8cadc', sh: '#c48cbc', hlA: '255,250,244', shA: '180,120,176', base: '#d39ac8', rim: 'rgba(255,240,220,.8)', blur: 0 }
+  ], seaSpr = {};
+  function makeSea(li, W0, rB) {                                     // (one band of billowing cloud, painted once, wide enough to wrap round)
+    var sl = SEA[li], h = Math.round(rB * 3.2), S = Math.min(2, window.devicePixelRatio || 1), c = document.createElement('canvas'); c.width = Math.round(W0 * S); c.height = Math.round(h * S);
+    var q = c.getContext('2d'); q.scale(S, S); var tops = [], k, j, base = rB * 1.7;
+    function R(n) { return rnd(n * 1.91 + li * 131 + 7); }
+    if (sl.blur) q.filter = 'blur(' + sl.blur + 'px)';
+    var under = q.createLinearGradient(0, base - rB * 0.2, 0, h); under.addColorStop(0, sl.mid); under.addColorStop(1, sl.base); q.fillStyle = under; q.fillRect(0, base, W0, h - base);
+    var circ = [], n = Math.ceil(W0 / (rB * 1.25));
+    for (k = 0; k < n; k++) {                                         // (each billow a heap of puffs: big ones low, smaller ones piled on top)
+      var bx = (k + R(k) * 0.5) * W0 / n, bh = 0.7 + R(k + 40) * 0.6, bw = rB * (0.9 + R(k + 80) * 0.5);
+      for (j = 0; j < 14; j++) { var u = R(k * 31 + j), lvl = j < 6 ? 0 : j < 11 ? 1 : 2, px = bx + (u - 0.5) * bw * (lvl === 0 ? 2.2 : lvl === 1 ? 1.4 : 0.8), pr = rB * (lvl === 0 ? 0.55 : lvl === 1 ? 0.42 : 0.3) * (0.75 + R(k * 31 + j + 9) * 0.5), py = base + rB * 0.25 - lvl * rB * 0.42 * bh - R(k * 31 + j + 17) * rB * 0.15; circ.push([px, py, pr]); }
+    }
+    circ.sort(function (a, b) { return b[1] - a[1]; });               // (lower puffs first, so the ones above sit over them)
+    var body = q.createLinearGradient(0, base - rB * 1.4, 0, base + rB * 0.5); body.addColorStop(0, sl.hl); body.addColorStop(0.45, sl.mid); body.addColorStop(1, sl.sh);   // (all the puffs merged into one soft mass)
+    q.fillStyle = body; q.beginPath(); circ.forEach(function (cc) { [-W0, 0, W0].forEach(function (wx) { var x = cc[0] + wx; if (x + cc[2] < 0 || x - cc[2] > W0) return; q.moveTo(x + cc[2], cc[1]); q.arc(x, cc[1], cc[2], 0, TAU); }); }); q.fill();
+    q.filter = 'none'; q.globalCompositeOperation = 'source-atop';   // (then light and shade painted softly onto it: shade beneath each puff, light on its crown)
+    circ.forEach(function (cc) { [-W0, 0, W0].forEach(function (wx) { var x = cc[0] + wx; if (x + cc[2] < 0 || x - cc[2] > W0) return;
+      var sg = q.createRadialGradient(x + cc[2] * 0.1, cc[1] + cc[2] * 0.75, 0, x + cc[2] * 0.1, cc[1] + cc[2] * 0.75, cc[2] * 0.95); sg.addColorStop(0, 'rgba(' + sl.shA + ',.42)'); sg.addColorStop(1, 'rgba(' + sl.shA + ',0)'); q.fillStyle = sg; q.fillRect(x - cc[2] * 1.2, cc[1] - cc[2] * 0.3, cc[2] * 2.4, cc[2] * 2.2);
+      var hg2 = q.createRadialGradient(x - cc[2] * 0.25, cc[1] - cc[2] * 0.45, 0, x - cc[2] * 0.25, cc[1] - cc[2] * 0.45, cc[2] * 0.85); hg2.addColorStop(0, 'rgba(' + sl.hlA + ',.75)'); hg2.addColorStop(0.6, 'rgba(' + sl.hlA + ',.25)'); hg2.addColorStop(1, 'rgba(' + sl.hlA + ',0)'); q.fillStyle = hg2; q.fillRect(x - cc[2] * 1.2, cc[1] - cc[2] * 1.4, cc[2] * 2.2, cc[2] * 2); }); });
+    var warm = q.createLinearGradient(0, 0, 0, base); warm.addColorStop(0, 'rgba(255,214,190,.35)'); warm.addColorStop(1, 'rgba(255,214,190,0)'); q.fillStyle = warm; q.fillRect(0, 0, W0, base);   // (the sunrise warming their tops)
+    q.globalCompositeOperation = 'source-over';
+    circ.forEach(function (cc, ci) { if (ci % 5 === 0 && cc[1] < base - rB * 0.3 && cc[0] > 0 && cc[0] < W0) tops.push([cc[0] - cc[2] * 0.2, cc[1] - cc[2] * 0.85]); });
+    var haze = q.createLinearGradient(0, 0, 0, h); haze.addColorStop(0, 'rgba(255,220,235,0)'); haze.addColorStop(0.7, 'rgba(255,220,235,0)'); haze.addColorStop(1, 'rgba(160,110,180,.35)'); q.fillStyle = haze; q.fillRect(0, 0, W0, h);
+    return { c: c, h: h, tops: tops.slice(0, 14) };
+  }
   var branchSpr = {};
   function makeBranch(sz, seed) {                                    // (a flowering branch, dark against the sky, thick with blossom)
     var c = document.createElement('canvas'); c.width = Math.round(sz * 1.25 * 2); c.height = sz * 2; var q = c.getContext('2d'); q.scale(2, 2); var W2 = sz * 1.25, H2 = sz, k, j;
@@ -8842,13 +8871,11 @@ var everdawnTitle = (function () {
       glow(fx, fy, 14, 'rgba(230,255,150,A)', on * 0.55); g.fillStyle = 'rgba(250,255,200,' + on + ')'; g.beginPath(); g.arc(fx, fy, 1.8, 0, TAU); g.fill();
     });
       var seaY = H * (W < H ? 0.8 : 0.79), cu = Math.min(W, H);           // (a sea of clouds far below, lit by the dawn, that everything floats above)
-      [[0, 'rgba(176,124,196,.9)', 'rgba(236,190,226,.92)', 0, 0.1, 5], [1, 'rgba(214,148,198,.95)', 'rgba(255,206,226,.96)', 0.065, 0.12, 9], [2, 'rgba(238,172,206,1)', 'rgba(255,232,236,1)', 0.13, 0.14, 14]].forEach(function (L2) {
-        var yb = seaY + H * L2[3], rB = cu * L2[4], spc = rB * 1.15, shift = t * L2[5], i0 = Math.floor(-shift / spc) - 2, n = Math.ceil(W / spc) + 4;
-        g.fillStyle = L2[1]; g.fillRect(0, yb, W, H - yb + 2);
-        var cgr = g.createLinearGradient(0, yb - rB * 1.1, 0, yb + rB * 0.4); cgr.addColorStop(0, L2[2]); cgr.addColorStop(0.55, L2[1]); cgr.addColorStop(1, L2[1]); g.fillStyle = cgr; g.beginPath();
-        for (var ci2 = i0; ci2 < i0 + n; ci2++) { var cx5 = ci2 * spc + shift + rnd(ci2 * 7.3 + L2[0] * 51) * rB * 0.3, cr5 = rB * (0.6 + rnd(ci2 * 3.1 + L2[0] * 17) * 0.4), cy5 = yb + rB * 0.2 - rnd(ci2 * 5.7 + L2[0] * 3) * rB * 0.3;   // (each billow a few soft puffs heaped together)
-          [[0, 0, 1], [-0.62, 0.22, 0.62], [0.6, 0.18, 0.7], [0.25, -0.35, 0.55]].forEach(function (pf) { var px = cx5 + pf[0] * cr5, py = cy5 + pf[1] * cr5, pr2 = cr5 * pf[2]; g.moveTo(px + pr2, py); g.arc(px, py, pr2, 0, TAU); }); }
-        g.fill();
+      SEA.forEach(function (sl, li) {
+        var yb = seaY + H * sl.dy, rB = cu * sl.r, key = Math.round(W) + 'x' + Math.round(H) + ':' + li, spr = seaSpr[key] || (seaSpr[key] = makeSea(li, W, rB)), off = (t * sl.v) % W, top = yb - rB * 1.7;
+        g.drawImage(spr.c, off - W, top, W, spr.h); g.drawImage(spr.c, off, top, W, spr.h);
+        g.fillStyle = sl.base; g.fillRect(0, top + spr.h - 1, W, H);
+        if (li === SEA.length - 1) spr.tops.forEach(function (tp2, k) { var tw = Math.max(0, Math.sin(t * 1.7 + k * 2.3)); if (tw < 0.2) return; var gx4 = (tp2[0] + off) % W; glow(gx4, top + tp2[1], 10, 'rgba(255,236,200,A)', tw * 0.6); spark4(gx4, top + tp2[1], 2 + tw * 4, 'rgba(255,250,235,' + tw + ')'); });   // (glints of sunrise on the cloud tops)
       });
       glow(W / 2, seaY + H * 0.05, Math.max(W, H) * 0.45, 'rgba(255,225,200,A)', 0.3);
       var bs = Math.min(W, H) * (W < H ? 0.42 : 0.5);                    // (blossom branches reaching in from the top corners, framing the picture)
