@@ -2,6 +2,16 @@
 // CodePen's 1 MB limit, so it now carries on here, and this file joins all three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
+  // ---------- Bushes that were handed the wrong spot ----------
+  // A dozen bushes round the farm were each given another bush's spot on the ground when they were grown, so cutting
+  // one never freed up the ground it stood on: you couldn't walk over its stump or build there. Give each its own.
+  allScenery.forEach(function (t) {
+    var u = t.userData, b = u.base;
+    if (Math.hypot(b.x - u.solid.x, b.z - u.solid.z) < 0.3) return;
+    var own = solids.filter(function (sd) { return Math.hypot(sd.x - b.x, sd.z - b.z) < 0.3 && !allScenery.some(function (q) { return q.userData.solid === sd; }) && !mineable.some(function (m) { return m.solid === sd; }); })[0];
+    if (own) { u.solid = own; u.solidR = own.r; }
+  });
+
   // ---------- Iridelle ----------
   // Little tide-spirits from the moonlit shallows, with just a whisper of the crab about them: a wide, domed shell of
   // living opal, scalloped at its rim, set with tiny pearls and traced with glowing runes; a garden of crystals, coral
