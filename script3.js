@@ -1920,7 +1920,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     o.save(); o.translate(cp[0], cp[1]);
     o.beginPath(); o.arc(0, 0, 34, 0, Math.PI * 2); o.fillStyle = 'rgba(255,255,255,0.85)'; o.fill(); o.strokeStyle = '#b89a5a'; o.lineWidth = 3; o.stroke();
     [0, 1, 2, 3].forEach(function (k) { o.save(); o.rotate(k * Math.PI / 2); o.beginPath(); o.moveTo(0, -28); o.lineTo(7, 0); o.lineTo(-7, 0); o.closePath(); o.fillStyle = k ? '#8a7aa8' : '#7b4fd6'; o.fill(); o.restore(); });
-    o.font = 'bold 16px Fredoka, sans-serif'; o.textAlign = 'center'; o.fillStyle = '#4a2f7a'; o.fillText('N', 0, -38);
+    o.font = 'bold 16px Fredoka, sans-serif'; o.textAlign = 'center'; o.textBaseline = 'middle'; o.fillStyle = '#4a2f7a';
+    [['N', 0, -45], ['E', 45, 0], ['S', 0, 45], ['W', -45, 0]].forEach(function (d) { o.fillText(d[0], d[1], d[2]); });   // (the four points of the compass)
     o.restore();
     return out;
   }
