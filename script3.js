@@ -7520,6 +7520,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (snowing) winterSnowMove(dt);
   }
 
+  // No lone pink lily buds poking up out of the lake: only the pads and the open flowers stay
+  scene.children.filter(function (o) { return o.isMesh && o.geometry === lilyPetalGeo && o.material === lilyPink; }).forEach(function (bud) { scene.remove(bud); });
+
   // The clock's little sky icons, written as codes so they always show properly, however the page is read
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
