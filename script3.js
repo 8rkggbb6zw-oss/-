@@ -5726,21 +5726,21 @@ EVERDAWN_PARTS.push(function (THREE) {
   function siteReady(o) { return o.built && o.stage >= SITE_DAYS; }
 
   // ---------- Sitting in the rowboat ----------
-  // Walk to the end of the dock and press Interact to climb into the little rowboat tied there: she sits on its back
-  // seat facing the bow, legs stretched out in front of her and hands in her lap, bobbing and rocking with the boat on
+  // Walk to the end of the dock and press Interact to climb into the little rowboat tied there: she sits on its front
+  // seat facing the stern, legs stretched out in front of her and hands in her lap, bobbing and rocking with the boat on
   // the water. Press Interact again (or try to walk, fly or teleport) to climb back out onto the dock
-  var inBoat = false, BOAT_SEAT = new THREE.Vector3(-0.35 * BOAT_L / 2, hullRise(-0.35) - 0.07 + 0.018, 0), boatSeatW = new THREE.Vector3(), boatFwd = new THREE.Vector3();
+  var inBoat = false, BOAT_SEAT = new THREE.Vector3(0.3 * BOAT_L / 2, hullRise(0.3) - 0.07 + 0.018, 0), boatSeatW = new THREE.Vector3(), boatFwd = new THREE.Vector3();
   function boatWorldPos() { boat.updateWorldMatrix(true, false); return boat.localToWorld(boatSeatW.set(0, 0, 0)); }
   function boatNear() {
     if (inBoat || indoors || flying || flyH > 0 || teleporting || sleeping) return false;
     var b = boatWorldPos();
     return onDock(player.position.x, player.position.z) && dist(player.position.x, player.position.z, b.x, b.z) < 2.6;
   }
-  function boatSeat() {                                                // (where her hips go, and which way the bow points)
+  function boatSeat() {                                                // (where her hips go, and which way she faces: back toward the stern)
     boat.updateWorldMatrix(true, false);
     var p = boat.localToWorld(boatSeatW.copy(BOAT_SEAT));
     boatFwd.set(1, 0, 0).transformDirection(boat.matrixWorld);
-    return { x: p.x, y: p.y, z: p.z, face: Math.atan2(boatFwd.x, boatFwd.z) };
+    return { x: p.x, y: p.y, z: p.z, face: Math.atan2(-boatFwd.x, -boatFwd.z) };
   }
   function boatClimbIn() {
     inBoat = true; walkTarget = null; keys = {};
