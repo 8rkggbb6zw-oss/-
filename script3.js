@@ -7667,50 +7667,64 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
 
   // ---------- Music ----------
-  // A slow, dreamy little song in G, made on the fly: soft piano chords rolled gently upward and left to ring, a low
-  // round bass, and a music-box tune of long, singing notes that drifts along and comes home. The magic is in the
-  // edges: a dreamy raised note in the harmony, a glassy shimmer through the middle, a wistful borrowed chord near the
-  // end, and a breath of sparkle with twinkling chimes at the end of each phrase. Every other time round the tune
-  // rests and a kalimba plinks quietly instead, so it never gets busy. At night it slows down and sings an octave lower
+  // "Everdawn", a cozy little song made on the fly, with a whole little band in it:
+  //   - a breathy wooden flute that sings the main tune, with a gentle vibrato
+  //   - a celesta (a music box's grown-up cousin) that takes the second tune, and twinkles answers over the flute
+  //   - soft strings that swell in under the chords, warmer in the second half
+  //   - a felt-soft piano keeping the rhythm, and a round plucked bass
+  //   - brushy, sleepy percussion: a soft heartbeat of a kick, a woodblock tick and a whisper of shaker
+  //   - a harp that ripples up the chords in the quiet parts
+  //   - and the magic: dreamy raised notes in the harmony, a glassy shimmer, and wind chimes and sparkle at the
+  //     turns between sections
+  // It goes: a quiet harp intro, then the flute's tune, the celesta's tune, the flute's tune again with the celesta
+  // answering it, and a hushed bridge with just harp, strings and chimes, before going round again (no intro the
+  // second time). Every other time round the drums take a rest. At night the drums stay away, it slows down, and the
+  // tunes sing an octave lower, like a lullaby
   var MUSIC_KEY = 'everdawn-music';
   var musicOn = true; try { musicOn = localStorage.getItem(MUSIC_KEY) !== 'off'; } catch (err) {}
   var mus = null;                                                      // (the mixer, made once sound is allowed)
-  // (sixteen bars of four, as [bass note, the chord above it, the tune: [beat, note, beats long]...])
-  var MUS_SONG = [
-    [43, [59, 62, 66], [[0, 74, 3], [3, 71, 1]]],                 // Gmaj7
-    [47, [57, 62, 66], [[0, 74, 2], [2, 76, 2]]],                 // Bm7
-    [48, [59, 64, 66], [[0, 78, 4]]],                             // Cmaj7#11 (the dreamy one)
-    [45, [57, 60, 64], [[0, 76, 2], [2, 72, 1], [3, 74, 1]]],     // Am7
-    [47, [57, 62, 66], [[0, 71, 3], [3, 74, 1]]],                 // G/B
-    [40, [55, 59, 66], [[0, 79, 2], [2, 78, 2]]],                 // Em9
-    [48, [55, 59, 64], [[0, 76, 4]]],                             // Cmaj7
-    [50, [57, 59, 64], [[0, 74, 4]]],                             // D6sus
-    [40, [55, 59, 62], [[0, 79, 2], [2, 78, 1], [3, 76, 1]]],     // Em7
-    [48, [55, 59, 62], [[0, 74, 4]]],                             // Cmaj9
-    [45, [55, 60, 64], [[0, 72, 2], [2, 76, 2]]],                 // Am7
-    [47, [57, 62, 66], [[0, 74, 4]]],                             // Bm7
-    [48, [55, 57, 63], [[0, 75, 3], [3, 74, 1]]],                 // Cm6 (a little wistful)
-    [47, [55, 59, 62], [[0, 71, 4]]],                             // G/B
-    [45, [55, 59, 64], [[0, 72, 2], [2, 71, 1], [3, 69, 1]]],     // Am9
-    [50, [57, 60, 64], [[0, 69, 2], [2, 67, 2]]]                  // D7sus, and home again
+  var MUS_CH = {                                                       // (each chord: its bass note, and the notes above it)
+    D: [38, [54, 57, 61, 64]], Bm: [35, [54, 57, 62, 66]], G: [43, [54, 59, 62, 66]], A6: [45, [54, 57, 61, 64]],
+    DF: [42, [54, 57, 61, 62]], Em: [40, [55, 59, 62, 66]], Gs: [43, [54, 59, 61, 66]], Asus: [45, [55, 57, 62, 64]],
+    Fm: [42, [52, 57, 61, 64]], Gm: [43, [52, 58, 62, 67]], A: [45, [55, 57, 61, 64]]
+  };
+  var MUS_FLUTE = [                                                    // (the flute's tune, eight bars: [beat, note, beats long])
+    [[0, 78, 1.5], [1.5, 76, 0.5], [2, 74, 2]], [[0, 73, 1], [1, 74, 1], [2, 78, 2]], [[0, 81, 3], [3, 79, 1]], [[0, 78, 2], [2, 76, 2]],
+    [[0, 74, 1.5], [1.5, 76, 0.5], [2, 78, 2]], [[0, 79, 1], [1, 78, 1], [2, 76, 2]], [[0, 78, 2], [2, 85, 2]], [[0, 83, 2], [2, 81, 2]]
   ];
-  var MUS_TWINKLE = [79, 81, 83, 85, 86, 88, 90, 91, 93];               // (G with a raised fourth: the fairy chimes' notes)
+  var MUS_CELESTA = [                                                  // (the celesta's tune, eight bars)
+    [[0, 86, 1], [1, 83, 1], [2, 78, 1], [3, 83, 1]], [[0, 85, 2], [2, 81, 2]], [[0, 83, 1], [1, 79, 1], [2, 76, 1], [3, 79, 1]], [[0, 81, 4]],
+    [[0, 78, 1], [1, 81, 1], [2, 86, 2]], [[0, 82, 2], [2, 81, 2]], [[0, 79, 1], [1, 78, 1], [2, 76, 1], [3, 73, 1]], [[0, 76, 4]]
+  ];
+  var MUS_BARS = (function () {                                        // (the whole song, bar by bar)
+    var out = [], A = ['D', 'Bm', 'G', 'A6', 'DF', 'Em', 'Gs', 'Asus'], B = ['G', 'Fm', 'Em', 'D', 'Bm', 'Gm', 'Em', 'Asus'];
+    ['D', 'Gs', 'D', 'Asus'].forEach(function (c, k) { out.push({ c: c, sec: 'intro', i: k }); });
+    A.forEach(function (c, k) { out.push({ c: c, sec: 'A', i: k }); });
+    B.forEach(function (c, k) { out.push({ c: c, sec: 'B', i: k }); });
+    A.forEach(function (c, k) { out.push({ c: k === 7 ? 'A' : c, sec: 'A2', i: k }); });
+    ['Gs', 'D', 'Gs', 'Asus'].forEach(function (c, k) { out.push({ c: c, sec: 'bridge', i: k }); });
+    return out;
+  })();
+  var MUS_LOOP = 4;                                                    // (going round again starts after the intro)
+  var MUS_TWINKLE = [81, 83, 85, 86, 88, 90, 92, 93, 95];             // (D with a raised fourth: the chimes' notes)
   function musHz(n) { return 440 * Math.pow(2, (n - 69) / 12); }
   function musNight() { var h = state.minutes / 60; return h >= 20.5 || h < 5 ? 1 : h >= 19 ? (h - 19) / 1.5 : h < 6.5 ? (6.5 - h) / 1.5 : 0; }
   function musSetup() {
     if (mus || !audioCtx) return mus;
     var ac = audioCtx, out = ac.createGain(); out.gain.value = 0; out.connect(ac.destination);
-    var verb = ac.createConvolver(), len = Math.floor(ac.sampleRate * 4), ir = ac.createBuffer(2, len, ac.sampleRate);   // (a soft, roomy reverb, made from fading noise)
+    var verb = ac.createConvolver(), len = Math.floor(ac.sampleRate * 3.8), ir = ac.createBuffer(2, len, ac.sampleRate);   // (a soft, roomy reverb, made from fading noise)
     for (var ch = 0; ch < 2; ch++) { var d = ir.getChannelData(ch); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
     verb.buffer = ir; var wet = ac.createGain(); wet.gain.value = 0.5; verb.connect(wet); wet.connect(out);
     var dry = ac.createGain(); dry.gain.value = 0.85; dry.connect(out);
-    var warm = ac.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 2200; warm.connect(dry); warm.connect(verb);   // (everything but the chimes goes through this, to keep it soft)
+    var warm = ac.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 2400; warm.connect(dry); warm.connect(verb);   // (everything tonal goes through this, to keep it soft)
+    var strings = ac.createBiquadFilter(); strings.type = 'lowpass'; strings.frequency.value = 1300; strings.Q.value = 0.5; strings.connect(warm);
+    var drums = ac.createGain(); drums.gain.value = 1; drums.connect(dry); var dv = ac.createGain(); dv.gain.value = 0.25; drums.connect(dv); dv.connect(verb);
     var nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), nd = nb.getChannelData(0); for (var k = 0; k < nd.length; k++) nd[k] = Math.random() * 2 - 1;
-    mus = { ac: ac, out: out, verb: verb, dry: dry, warm: warm, noise: nb, next: 0, bar: 0, pass: 0 };
+    mus = { ac: ac, out: out, verb: verb, dry: dry, warm: warm, strings: strings, drums: drums, noise: nb, next: 0, bar: 0, pass: 0 };
     return mus;
   }
   function musPan(node, x) { if (!mus.ac.createStereoPanner) return node; var p = mus.ac.createStereoPanner(); p.pan.value = x; node.connect(p); return p; }
-  function musVoice(n, t, vol, decay, parts, pan, dest, attack) {      // (one note: a few soft sine partials that ring and fade)
+  function musVoice(n, t, vol, decay, parts, pan, dest, attack) {      // (a note made of a few soft sine partials that ring and fade)
     parts.forEach(function (h) {
       var o = mus.ac.createOscillator(), g = mus.ac.createGain();
       o.type = 'sine'; o.frequency.value = musHz(n) * h[0]; o.detune.value = (Math.random() - 0.5) * 6;
@@ -7718,45 +7732,104 @@ EVERDAWN_PARTS.push(function (THREE) {
       o.connect(g); musPan(g, pan || 0).connect(dest || mus.warm); o.start(t); o.stop(t + decay * h[2] + 0.05);
     });
   }
-  function musPiano(n, t, vol, pan) { musVoice(n, t, vol, 2.6, [[1, 1, 1], [2, 0.18, 0.45], [3, 0.05, 0.25]], pan, null, 0.012); }   // (a warm, mellow electric piano)
-  function musBass(n, t, vol, len) { musVoice(n, t, vol, len, [[1, 1, 1], [2, 0.12, 0.5]], 0, null, 0.03); }
-  function musBox(n, t, vol, pan) { musVoice(n, t, vol, 2.2, [[1, 1, 1], [2, 0.25, 0.5], [4.02, 0.06, 0.2]], pan, null, 0.005); }   // (the music box singing the tune)
-  function musChime(n, t, vol, pan) { musVoice(n, t, vol, 1.8, [[1, 1, 1], [2.76, 0.18, 0.35], [5.4, 0.06, 0.15]], pan, mus.verb, 0.004); musVoice(n, t, vol * 0.4, 1.8, [[1, 1, 1]], -pan, mus.dry, 0.004); }
-  function musKalimba(n, t, vol, pan) { musVoice(n, t, vol, 1.5, [[1, 1, 1], [3.02, 0.1, 0.25], [5.9, 0.03, 0.12]], pan, null, 0.004); }   // (a soft little thumb piano)
+  function musNoise(t, len, type, freq, q, vol, dest, attack) {        // (a puff of filtered noise: shakers, breath and sparkle)
+    var src = mus.ac.createBufferSource(), f = mus.ac.createBiquadFilter(), g = mus.ac.createGain();
+    t += 0.0005 + Math.random() * 0.004;                               // (a hair off the beat, like a real player: and it keeps the browser from clicking)
+    src.buffer = mus.noise; f.type = type; f.frequency.value = freq; f.Q.value = q;
+    var at = attack || 0.004; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + at); g.gain.setTargetAtTime(0, t + at, Math.max(0.01, (len - at) / 4));
+    src.connect(f); f.connect(g); g.connect(dest || mus.drums); src.start(t); src.stop(t + len + 0.1);
+    return f;
+  }
+  function musFlute(n, t, len, vol, pan) {                             // (a breathy wooden flute: a soft tone that swells in, a little vibrato, and a breath at the start)
+    var ac = mus.ac, o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain(), g2 = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+    o.type = 'sine'; o2.type = 'triangle'; o.frequency.value = o2.frequency.value = musHz(n); g2.gain.value = 0.18;
+    lfo.frequency.value = 5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(musHz(n) * 0.006, t + Math.min(0.6, len * 0.6)); lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+    var end = t + len + 0.25;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.09); g.gain.setValueAtTime(vol, t + Math.max(0.1, len - 0.05)); g.gain.linearRampToValueAtTime(vol * 0.85, t + len); g.gain.exponentialRampToValueAtTime(0.0001, end);
+    o.connect(g); o2.connect(g2); g2.connect(g); musPan(g, pan || 0).connect(mus.warm);
+    [o, o2, lfo].forEach(function (x) { x.start(t); x.stop(end + 0.05); });
+    musNoise(t, 0.18, 'bandpass', musHz(n) * 2, 1.5, vol * 0.18, mus.warm, 0.03);
+  }
+  function musCelesta(n, t, vol, pan) { musVoice(n, t, vol, 2.2, [[1, 1, 1], [2, 0.3, 0.5], [4.02, 0.08, 0.2]], pan, mus.verb, 0.004); musVoice(n, t, vol * 0.5, 1.6, [[1, 1, 1]], pan, mus.warm, 0.004); }
+  function musPiano(n, t, vol, pan) { musVoice(n, t, vol, 2.2, [[1, 1, 1], [2, 0.16, 0.45], [3, 0.04, 0.25]], pan, null, 0.012); }
+  function musHarp(n, t, vol, pan) { musVoice(n, t, vol, 1.8, [[1, 1, 1], [2, 0.2, 0.4], [3, 0.06, 0.2]], pan, null, 0.003); }
+  function musBass(n, t, vol, len) { musVoice(n, t, vol, len, [[1, 1, 1], [2, 0.18, 0.4]], 0, null, 0.015); }
+  function musChime(n, t, vol, pan) { musVoice(n, t, vol, 1.8, [[1, 1, 1], [2.76, 0.18, 0.35], [5.4, 0.06, 0.15]], pan, mus.verb, 0.004); }
+  function musStrings(notes, t, len, vol) {                            // (soft strings: two gently detuned voices on each note, swelling in and out)
+    notes.forEach(function (n, k) {
+      [-7, 7].forEach(function (c) {
+        var o = mus.ac.createOscillator(), g = mus.ac.createGain();
+        o.type = 'sawtooth'; o.frequency.value = musHz(n); o.detune.value = c + (Math.random() - 0.5) * 4;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.9, len * 0.3)); g.gain.setValueAtTime(vol, t + len * 0.85); g.gain.linearRampToValueAtTime(0.0001, t + len + 0.9);
+        o.connect(g); musPan(g, (k / notes.length - 0.4) * 0.7).connect(mus.strings); o.start(t); o.stop(t + len + 1);
+      });
+    });
+  }
   function musGlass(n, t, len, vol) {                                  // (a glassy shimmer, swelling slowly, with a gentle wobble)
     var o = mus.ac.createOscillator(), lfo = mus.ac.createOscillator(), lg = mus.ac.createGain(), g = mus.ac.createGain();
     o.type = 'sine'; o.frequency.value = musHz(n); lfo.frequency.value = 4.5; lg.gain.value = musHz(n) * 0.004; lfo.connect(lg); lg.connect(o.frequency);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + len * 0.45); g.gain.linearRampToValueAtTime(0.0001, t + len + 1.2);
     o.connect(g); g.connect(mus.verb); o.start(t); lfo.start(t); o.stop(t + len + 1.3); lfo.stop(t + len + 1.3);
   }
-  function musSparkle(t, vol) {                                        // (the end of a phrase: a soft breath of sparkle, and a few chimes twinkling down)
-    var src = mus.ac.createBufferSource(), f = mus.ac.createBiquadFilter(), g = mus.ac.createGain();
-    src.buffer = mus.noise; f.type = 'bandpass'; f.Q.value = 6; f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(9000, t + 1.6);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * 0.5, t + 0.8); g.gain.linearRampToValueAtTime(0.0001, t + 1.8);
-    src.connect(f); f.connect(g); g.connect(mus.verb); src.start(t); src.stop(t + 1.9);
-    var start = 4 + Math.floor(Math.random() * 4);
-    for (var k = 0; k < 4; k++) musChime(MUS_TWINKLE[start - k], t + 0.5 + k * 0.22 + Math.random() * 0.05, vol * (1 - k * 0.15), k % 2 ? 0.6 : -0.6);
+  function musWindChimes(t, vol) {                                     // (the magic at the turns: a breath of sparkle, and wind chimes tumbling down)
+    var f = musNoise(t, 1.8, 'bandpass', 3000, 6, vol * 0.4, mus.verb, 0.8); f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(9000, t + 1.6);
+    var top = 5 + Math.floor(Math.random() * 4);
+    for (var k = 0; k < 6; k++) musChime(MUS_TWINKLE[top - k], t + 0.4 + k * 0.16 + Math.random() * 0.06, vol * (1 - k * 0.12), Math.sin(k * 2.1) * 0.7);
+  }
+  function musKick(t, vol) {                                           // (a soft heartbeat of a kick)
+    var o = mus.ac.createOscillator(), g = mus.ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+    o.connect(g); g.connect(mus.drums); o.start(t); o.stop(t + 0.35);
+  }
+  function musBlock(t, vol) {                                          // (a little wooden tick)
+    var o = mus.ac.createOscillator(), g = mus.ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(1050, t); o.frequency.linearRampToValueAtTime(900, t + 0.06);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.003); g.gain.setTargetAtTime(0, t + 0.003, 0.018);
+    o.connect(g); musPan(g, 0.25).connect(mus.drums); o.start(t); o.stop(t + 0.15);
   }
   function musScheduleBar(t, night) {
-    var beat = 60 / (night ? 54 : 66), barLen = beat * 4, b = MUS_SONG[mus.bar], q = night ? 0.7 : 1;
-    var sing = mus.pass % 2 === 0;                                     // (every other time round, the tune rests and the kalimba plinks instead)
-    musBass(b[0] - (night ? 12 : 0) + 12, t, 0.065 * q, barLen * 1.05);   // (a low note to hold the bar...)
-    b[1].forEach(function (n, k) { musPiano(n, t + k * 0.07, 0.03 * q, (k - 1) * 0.3); });   // (...the chord, rolled gently upward on one...)
-    musPiano(b[1][1], t + beat * 2, 0.017 * q, 0.2);                    // (...and one soft note again on three)
-    if (sing) b[2].forEach(function (m) { musBox(m[1] - (night ? 12 : 0), t + m[0] * beat, 0.075 * q, 0.1); });
-    else if (!night || mus.bar % 2 === 0) [[0.5, 2], [2.5, 1]].forEach(function (k, j) { if (j === 0 || mus.bar % 2) musKalimba(b[1][k[1]] + 12, t + k[0] * beat, 0.04 * q, j ? 0.4 : -0.4); });
-    if (mus.bar >= 8 && mus.bar < 12 && !night) musGlass(b[1][2] + 24, t, barLen, 0.008);   // (the glassy shimmer through the middle)
-    if ((mus.bar === 7 || mus.bar === 15) && (!night || mus.bar === 15)) musSparkle(t + beat * 2, 0.035 * q);
-    mus.bar = (mus.bar + 1) % MUS_SONG.length; if (!mus.bar) mus.pass++;
+    var beat = 60 / (night ? 64 : 78), barLen = beat * 4, bar = MUS_BARS[mus.bar], ch = MUS_CH[bar.c], q = night ? 0.7 : 1, sec = bar.sec;
+    var drums = !night && mus.pass % 2 === 0 && (sec === 'A' || sec === 'B' || sec === 'A2');   // (every other time round, the drums take a rest)
+    var lo = night ? -12 : 0, up = ch[1];
+    // the strings, under everything (fuller in the second half)
+    musStrings(up, t, barLen, (sec === 'B' || sec === 'A2' ? 0.0045 : sec === 'bridge' || sec === 'intro' ? 0.0035 : 0.003) * q);
+    // the bass: the root on one, and a step on three
+    if (sec !== 'intro') { musBass(ch[0] + 12, t, 0.07 * q, beat * 1.8); musBass(ch[0] + (bar.i % 2 ? 19 : 12), t + beat * 2, 0.05 * q, beat * 1.6); }
+    else musBass(ch[0] + 12, t, 0.05 * q, barLen);
+    // the piano, keeping a gentle rhythm in the main sections
+    if (sec === 'A' || sec === 'B' || sec === 'A2') {
+      up.forEach(function (n, k) { musPiano(n, t + k * 0.02, 0.022 * q, (k - 1.5) * 0.25); });
+      [1.5, 2.5].forEach(function (b) { up.slice(1, 3).forEach(function (n, k) { musPiano(n, t + b * beat, 0.012 * q, k ? 0.3 : -0.3); }); });
+      if (night) up.slice(0, 2).forEach(function (n) { musPiano(n, t + 3.5 * beat, 0.01, 0); });
+    }
+    // the harp, rippling up the chord in the quiet parts
+    if (sec === 'intro' || sec === 'bridge') for (var a = 0; a < 8; a++) musHarp(up[a % 4] + (a < 4 ? 0 : 12), t + a * beat * 0.5, 0.034 * q * (1 - a * 0.06), a % 2 ? 0.4 : -0.4);
+    // the tunes
+    if (sec === 'A' || sec === 'A2') MUS_FLUTE[bar.i].forEach(function (m) { musFlute(m[1] + lo, t + m[0] * beat, m[2] * beat, 0.05 * q, -0.1); });
+    if (sec === 'B') MUS_CELESTA[bar.i].forEach(function (m) { musCelesta(m[1] + lo, t + m[0] * beat, 0.09 * q, 0.15); });
+    if (sec === 'A2') musCelesta(up[2] + 24 + lo, t + beat * 2.5, 0.035 * q, 0.35);   // (the celesta answering the flute)
+    if (sec === 'bridge') musCelesta(MUS_CELESTA[bar.i * 2][0][1] + lo, t + beat * 1, 0.04 * q, 0.2);
+    // the drums
+    if (drums) {
+      musKick(t, 0.045); musKick(t + beat * 2, 0.032); if (bar.i % 4 === 3) musKick(t + beat * 3.5, 0.022);
+      musBlock(t + beat, 0.014); musBlock(t + beat * 3, 0.014);
+      for (var s8 = 0; s8 < 8; s8++) musNoise(t + s8 * beat / 2, 0.06, 'highpass', 7000, 0.7, s8 % 2 ? 0.012 : 0.006);
+    }
+    // the magic
+    if (sec === 'B' && bar.i >= 4 && !night) musGlass(up[3] + 12, t, barLen, 0.008);
+    if (sec === 'bridge') musGlass(up[3] + 12, t, barLen, 0.007 * q);
+    if (bar.i === MUS_BARS.filter(function (x) { return x.sec === sec; }).length - 1) musWindChimes(t + beat * 2, 0.04 * q);
+    mus.bar++; if (mus.bar >= MUS_BARS.length) { mus.bar = MUS_LOOP; mus.pass++; }
     return barLen;
   }
   function musTick() {
     if (!musSetup()) return;
     var ac = mus.ac, now = ac.currentTime, want = musicOn && ac.state === 'running' ? 1.5 : 0;   // (soft: a little under the game's sounds)
-    var g = mus.out.gain; g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(want, now + (want ? 2.5 : 0.6));
+    if (mus.want !== want) { mus.want = want; var g = mus.out.gain; g.cancelScheduledValues(now); g.setValueAtTime(g.value, now); g.linearRampToValueAtTime(want, now + (want ? 2.5 : 0.6)); }   // (fading in or out, only when that changes)
     if (!musicOn || ac.state !== 'running') { mus.next = 0; return; }
     if (mus.next < now) mus.next = now + 0.1;
-    mus.warm.frequency.setTargetAtTime(indoors ? 1600 : 2200, now, 1);
+    mus.warm.frequency.setTargetAtTime(indoors ? 1800 : 2400, now, 1);
     while (mus.next < now + 1.5) mus.next += musScheduleBar(mus.next, musNight() > 0.5 ? 1 : 0);
   }
   setInterval(musTick, 400);
