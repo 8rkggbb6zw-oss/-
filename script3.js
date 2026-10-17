@@ -3452,8 +3452,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   for (var cpn = 0; cpn < COOP_CAP; cpn++) COOP_NESTS.push({ x: -1.2 + cpn * 0.8, z: -1.6 });      // (and a nesting box for each animal)
   var coop = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null, start: 0, stage: -1 };
   var coopDoor = { x: 1e6, z: 1e6 }, coopGroup = null, coopGlows = [], inCoop = false;
-  function coopFront(d) { return { x: coop.x, z: coop.z + COOP_BD / 2 + d }; }
-  function coopCovers(x, z, r) { return coop.built && Math.abs(x - coop.fx) < COOP_FC * TILE / 2 + r && Math.abs(z - coop.fz) < COOP_FR * TILE / 2 + r; }
+  // (a building you've placed can be turned a quarter at a time: o.rot 0 has its door facing south, 1 east, 2 north,
+  // 3 west. These turn its own front/back/sides into directions on the farm)
+  function bRot(o) { return (o.rot || 0) * Math.PI / 2; }
+  function bOff(o, lx, lz) { var a = bRot(o), c = Math.cos(a), sn = Math.sin(a); return { x: lx * c + lz * sn, z: -lx * sn + lz * c }; }
+  function bGround(o, lx, lz) { var w = bOff(o, lx, lz); return groundHeight(o.x + w.x, o.z + w.z); }
+  function bFC(o, fc, fr) { return (o.rot || 0) % 2 ? fr : fc; }       // (how many tiles across and down it takes, once it's turned)
+  function bFR(o, fc, fr) { return (o.rot || 0) % 2 ? fc : fr; }
+  function coopFront(d) { var f = bOff(coop, 0, COOP_BD / 2 + d); return { x: coop.x + f.x, z: coop.z + f.z }; }
+  function coopCovers(x, z, r) { return coop.built && Math.abs(x - coop.fx) < bFC(coop, COOP_FC, COOP_FR) * TILE / 2 + r && Math.abs(z - coop.fz) < bFR(coop, COOP_FC, COOP_FR) * TILE / 2 + r; }
   var coopBaseSoilNear = soilNear;                                     // nothing grows back under the coop, just as nothing grows back through your soil
   soilNear = function (x, z, r) { return coopBaseSoilNear(x, z, r) || coopCovers(x, z, r); };
   function coopFreeStall() { for (var s = COOP_STALL0; s < COOP_STALL0 + COOP_CAP; s++) if (!glimmers.some(function (g) { return g.stall === s; })) return s; return -1; }
@@ -3588,8 +3595,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ===== outside: built where you choose =====
   function coopBuildOutside() {
     var G = new THREE.Group(), W2 = COOP_BW / 2, D2 = COOP_BD / 2, H = COOP_WALL; coopGlows = [];
-    G.position.set(coop.x, coop.fy, coop.z);
-    function gy(lx, lz) { return groundHeight(coop.x + lx, coop.z + lz) - coop.fy; }   // (the ground, measured from the coop's floor)
+    G.position.set(coop.x, coop.fy, coop.z); G.rotation.y = bRot(coop);
+    function gy(lx, lz) { return bGround(coop, lx, lz) - coop.fy; }   // (the ground, measured from the coop's floor)
     var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * (W2 + 0.3), gz * (D2 + 0.3)));
     var fh = -minG + 0.3;
     // (a footing of rough fieldstones, mortared, under the sill)
@@ -3974,7 +3981,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     renderer.getDrawingBufferSize(shopViewSize);
     if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
     siWindowMask.uniforms.uSize.value.copy(shopViewSize);
-    shopViewMap.makeTranslation(coop.x - COI_X, coop.fy, coop.z - COI_Z);
+    shopViewMap.makeTranslation(coop.x, coop.fy, coop.z).multiply(shopViewTmp.makeRotationY(bRot(coop))).multiply(shopViewTmp.makeTranslation(-COI_X, 0, -COI_Z));
     shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
     shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
     shopViewCam.updateMatrixWorld(true);
@@ -3992,7 +3999,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 7.5; cam.pitch = 0.9; cam.yaw = 0;
       } else {
         indoors = false; inCoop = false; scene.add(player);
-        var o = coopFront(1.6); player.position.set(o.x, 0, o.z); facing = 0;
+        var o = coopFront(1.6); player.position.set(o.x, 0, o.z); facing = bRot(coop);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
       }
       cam.target.set(player.position.x, 0.8, player.position.z);
@@ -4002,14 +4009,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ===== building it, and taking it down (when a save without one is loaded) =====
-  function coopPlace(c0, r0, start) {
+  function coopPlace(c0, r0, start, rot) {
     coopRemove();
-    coop.built = true; coop.c = c0; coop.r = r0; coop.start = start; coop.stage = siteStage(coop);   // (start: the farm day Oak & Ember started building it)
-    coop.fx = FARM_X + (c0 + COOP_FC / 2) * TILE; coop.fz = FARM_Z + (r0 + COOP_FR / 2) * TILE;
-    coop.x = coop.fx; coop.z = coop.fz - 0.45;                          // (the coop sits at the back of its patch, its ramp in front)
-    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(coop.x + gx * COOP_BW / 2, coop.z + gz * COOP_BD / 2));
+    coop.built = true; coop.c = c0; coop.r = r0; coop.start = start; coop.stage = siteStage(coop); coop.rot = rot || 0;   // (start: the farm day Oak & Ember started building it; rot: which way it faces)
+    var FC = bFC(coop, COOP_FC, COOP_FR), FR = bFR(coop, COOP_FC, COOP_FR);
+    coop.fx = FARM_X + (c0 + FC / 2) * TILE; coop.fz = FARM_Z + (r0 + FR / 2) * TILE;
+    var back = bOff(coop, 0, -0.45); coop.x = coop.fx + back.x; coop.z = coop.fz + back.z;   // (the coop sits at the back of its patch, its ramp in front)
+    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, bGround(coop, gx * COOP_BW / 2, gz * COOP_BD / 2));
     coop.fy = top + 0.2;
-    var HX = COOP_FC * TILE / 2, HZ = COOP_FR * TILE / 2;
+    var HX = FC * TILE / 2, HZ = FR * TILE / 2;
     allScenery.forEach(function (t) {                                  // (whatever was cut down here stays down: stumps and saplings are cleared away)
       var u = t.userData; if (u.gone || u.state === 'standing') return;
       if (Math.abs(u.solid.x - coop.fx) < HX + u.solidR && Math.abs(u.solid.z - coop.fz) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes());
@@ -4018,13 +4026,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (r.gone || r.state === 'whole') return;
       if (Math.abs(r.solid.x - coop.fx) < HX + r.solidR && Math.abs(r.solid.z - coop.fz) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes());
     });
-    for (var c = c0; c < c0 + COOP_FC; c++) for (var r = r0; r < r0 + COOP_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); coop.grass.push(ft); }   // (no grass poking up through the floor)
+    for (var c = c0; c < c0 + FC; c++) for (var r = r0; r < r0 + FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); coop.grass.push(ft); }   // (no grass poking up through the floor)
     [[-1.8, -1], [0, -1], [1.8, -1], [-1.8, 1], [0, 1], [1.8, 1], [-2.3, -1.5, 0.7], [2.3, -1.5, 0.7], [-2.3, 1.5, 0.7], [2.3, 1.5, 0.7], [3.1, 0, 0.5], [-2.85, 2.5, 0.35], [-1.75, 2.62, 0.45]].forEach(function (s) {   // (you bump into its walls)
-      var sd = { x: coop.x + s[0], z: coop.z + s[1], r: s[2] || 1.0 }; solids.push(sd); coop.solids.push(sd);
+      var w = bOff(coop, s[0], s[1]), sd = { x: coop.x + w.x, z: coop.z + w.z, r: s[2] || 1.0 }; solids.push(sd); coop.solids.push(sd);
     });
     coopDoor = coop.stage < SITE_DAYS ? { x: 1e6, z: 1e6 } : coopFront(0.12);   // (no way in until it's finished)
     coopGroup = coop.stage < SITE_DAYS ? siteBuild('coop', coop.stage) : coopBuildOutside();
-    if (!coop.tp) { coop.tp = { name: 'Your Coop', icon: '🐔', spot: function () { var f = coopFront(2.2); return { x: f.x, z: f.z, face: Math.PI, view: 0 }; } }; }
+    if (!coop.tp) { coop.tp = { name: 'Your Coop', icon: '🐔', spot: function () { var f = coopFront(2.2); return { x: f.x, z: f.z, face: bRot(coop) + Math.PI, view: bRot(coop) }; } }; }
     if (TELEPORTS.indexOf(coop.tp) < 0) TELEPORTS.push(coop.tp);
     flushDirty();
   }
@@ -4036,11 +4044,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = TELEPORTS.indexOf(coop.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
     coop.built = false; coopDoor = { x: 1e6, z: 1e6 };
   }
-  function coopSaveData() { return coop.built ? { c: coop.c, r: coop.r, hay: coop.hay.slice(), start: coop.start } : null; }
+  function coopSaveData() { return coop.built ? { c: coop.c, r: coop.r, rot: coop.rot || 0, hay: coop.hay.slice(), start: coop.start } : null; }
   function coopLoadData(d) {
     coopRemove();
     coop.hay = [false, false, false, false, false, false, false, false]; coop.res = [];
-    if (d) { coopPlace(d.c, d.r, d.start === undefined ? -99 : d.start); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) coop.hay[i] = !!h; }); }
+    if (d) { coopPlace(d.c, d.r, d.start === undefined ? -99 : d.start, d.rot || 0); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) coop.hay[i] = !!h; }); }
     coopAnimals().forEach(function (g) { g.eatSlot = null; });
     coopHayShow();
   }
@@ -4306,14 +4314,14 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ===== choosing where it goes: a grid of your farm =====
   var CPG_X0 = -36, CPG_Z0 = -36, CPG_SPAN = 72, CPG_S = 12;          // the area the grid shows, and how many pixels a metre
-  var coopPlacing = false, coopPick = null, coopHover = null, coopOK = {}, coopBg = null, placeSpec = null;   // (placeSpec: the building being placed: the coop or the barn)
+  var coopPlacing = false, coopPick = null, coopHover = null, coopOK = {}, coopBg = null, placeSpec = null, placeRot = 0;   // (placeSpec: the building being placed: the coop or the barn)
   var coopPlaceBox = document.createElement('div');
   coopPlaceBox.className = 'inventory ship shop shop-wide'; coopPlaceBox.hidden = true;
   coopPlaceBox.innerHTML = '<div class="inv-head"><b class="place-title">🐔 Where should your coop go?</b><button type="button" class="inv-close" aria-label="Cancel">✕</button></div>' +
-    '<p class="ship-hint place-hint">Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map). <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under your coop.</p>' +
+    '<p class="ship-hint place-hint">Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map) to start. <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under your coop.</p>' +
     '<div class="coop-map" style="height:min(52vh,420px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:#cfe8ff;position:relative;cursor:crosshair;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y"></div>' +
     '<p class="ship-hint coop-note" style="margin:8px 2px;min-height:1.3em;font-weight:600"></p>' +
-    '<div class="shop-buy"><button type="button" class="coop-cancel">Cancel</button><button type="button" class="coop-build">Build here</button></div>';
+    '<div class="shop-buy"><button type="button" class="coop-cancel">Cancel</button><button type="button" class="coop-rotate" title="Turn it (R)">⟳ Rotate</button><button type="button" class="coop-build">Build here</button></div>';
   canvas.parentNode.appendChild(coopPlaceBox);
   var coopMapBox = coopPlaceBox.querySelector('.coop-map'), coopNote = coopPlaceBox.querySelector('.coop-note'), coopBuildBtn = coopPlaceBox.querySelector('.coop-build');
   var coopCv = document.createElement('canvas'); coopCv.width = coopCv.height = CPG_SPAN * CPG_S * 2;
@@ -4334,7 +4342,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var i = 0; i < solids.length; i++) { var sd = solids[i]; if (sd.r > 0 && !clear[i] && Math.abs(sd.x - x) < sd.r + h && Math.abs(sd.z - z) < sd.r + h) return false; }   // (nothing standing in the way)
     return true;
   }
-  function coopFits(c0, r0) { for (var c = c0; c < c0 + placeSpec.fc; c++) for (var r = r0; r < r0 + placeSpec.fr; r++) if (!coopOK[c + ',' + r]) return false; return true; }
+  function placeFC() { return placeRot % 2 ? placeSpec.fr : placeSpec.fc; }   // (tiles across and down, the way it's turned)
+  function placeFR() { return placeRot % 2 ? placeSpec.fc : placeSpec.fr; }
+  function coopFits(c0, r0) { for (var c = c0; c < c0 + placeFC(); c++) for (var r = r0; r < r0 + placeFR(); r++) if (!coopOK[c + ',' + r]) return false; return true; }
   function coopDrawBg() {                                              // the farm, its soil, its trees, bushes and rocks, the house and the Dawn Tree, and the grid over it all
     if (!mapBase) mapBase = drawMapBase();
     var cv = document.createElement('canvas'); cv.width = cv.height = coopCv.width; var g = cv.getContext('2d'), K = CPG_S * 2;
@@ -4366,18 +4376,20 @@ EVERDAWN_PARTS.push(function (THREE) {
     var yp = cpgXY(player.position.x, player.position.z);              // (you, as a little purple hat)
     if (!indoors) { g.beginPath(); g.ellipse(yp[0], yp[1] + 5, 13, 5, 0, 0, Math.PI * 2); g.fillStyle = '#5b3fb0'; g.fill(); g.beginPath(); g.moveTo(yp[0] - 7, yp[1] + 4); g.lineTo(yp[0] + 3, yp[1] - 16); g.lineTo(yp[0] + 7, yp[1] + 4); g.closePath(); g.fillStyle = '#7b4fd6'; g.fill(); }
     var sel = coopPick || coopHover; if (!sel) return;
-    var ok = coopFits(sel[0], sel[1]), p = cpgXY(FARM_X + sel[0] * TILE, FARM_Z + sel[1] * TILE), w = placeSpec.fc * TILE * K, h = placeSpec.fr * TILE * K, P = placeSpec;
+    var ok = coopFits(sel[0], sel[1]), p = cpgXY(FARM_X + sel[0] * TILE, FARM_Z + sel[1] * TILE), w = placeFC() * TILE * K, h = placeFR() * TILE * K, P = placeSpec;
     g.fillStyle = ok ? 'rgba(80,200,110,' + (coopPick ? 0.5 : 0.3) + ')' : 'rgba(220,70,70,0.45)'; g.fillRect(p[0], p[1], w, h);
     g.lineWidth = coopPick ? 4 : 2; g.strokeStyle = ok ? '#2f8a4e' : '#c0392b'; g.strokeRect(p[0], p[1], w, h);
-    var bx = p[0] + w / 2, by = p[1] + (h / 2 - P.off * K);              // (the building's roof, and its door at the front)
+    g.save(); g.translate(p[0] + w / 2, p[1] + h / 2); g.rotate(-placeRot * Math.PI / 2);   // (turned the way it'll face)
+    var bx = 0, by = -P.off * K;                                       // (the building's roof, and its door at the front)
     g.fillStyle = ok ? P.roof : 'rgba(122,82,54,0.5)'; g.fillRect(bx - P.bw / 2 * K, by - P.bd / 2 * K, P.bw * K, P.bd * K);
     g.fillStyle = 'rgba(60,50,40,0.9)'; if (P.ridgeZ) g.fillRect(bx - 2, by - P.bd / 2 * K, 4, P.bd * K); else g.fillRect(bx - P.bw / 2 * K, by - 2, P.bw * K, 4);
     g.fillStyle = P.doorCol; g.fillRect(bx - P.door / 2 * K, by + P.bd / 2 * K, P.door * K, 1.0 * K);
-    g.font = 'bold 26px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(P.emoji, bx, by - P.bd / 4 * K);
+    g.restore();
+    g.font = 'bold 26px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(P.emoji, p[0] + w / 2, p[1] + h / 2);
   }
   function coopPickAt(e) {
     var rc = coopCv.getBoundingClientRect(), x = CPG_X0 + (e.clientX - rc.left) / rc.width * CPG_SPAN, z = CPG_Z0 + (e.clientY - rc.top) / rc.height * CPG_SPAN;
-    return [Math.floor((x - FARM_X) / TILE) - Math.floor(placeSpec.fc / 2), Math.floor((z - FARM_Z) / TILE) - Math.floor(placeSpec.fr / 2)];
+    return [Math.floor((x - FARM_X) / TILE) - Math.floor(placeFC() / 2), Math.floor((z - FARM_Z) / TILE) - Math.floor(placeFR() / 2)];
   }
   function coopPlacerState() {
     var ok = coopPick && coopFits(coopPick[0], coopPick[1]);
@@ -4398,7 +4410,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     coopCv.addEventListener('click', function (e) { if (dragged) { dragged = false; return; } coopPick = coopPickAt(e); coopDrawPlacer(); coopPlacerState(); });
   })();
   function coopOpenPlacer(spec) {
-    placeSpec = spec; coopPlaceBox.querySelector('.place-title').textContent = spec.title; coopPlaceBox.querySelector('.place-hint').innerHTML = spec.hint;
+    placeSpec = spec; placeRot = 0; coopPlaceBox.querySelector('.place-title').textContent = spec.title; coopPlaceBox.querySelector('.place-hint').innerHTML = spec.hint;
     var clear = solids.map(function () { return false; });             // (stumps, saplings and cleared spots don't count as in the way)
     allScenery.forEach(function (t) { var u = t.userData; if (!u.gone && u.state !== 'standing') { var i = solids.indexOf(u.solid); if (i >= 0) clear[i] = true; } });
     mineable.forEach(function (r) { if (!r.gone && r.state !== 'whole') { var i = solids.indexOf(r.solid); if (i >= 0) clear[i] = true; } });
@@ -4413,17 +4425,29 @@ EVERDAWN_PARTS.push(function (THREE) {
   function coopClosePlacer() { coopPlacing = false; coopPlaceBox.hidden = true; coopBg = null; focusGame(); }
   coopPlaceBox.querySelector('.inv-close').addEventListener('click', coopClosePlacer);
   coopPlaceBox.querySelector('.coop-cancel').addEventListener('click', coopClosePlacer);
+  function coopRotatePlacer() {                                        // (turn it a quarter, keeping it on the same spot)
+    var keep = coopPick || coopHover, cx = keep ? keep[0] + placeFC() / 2 : 0, cz = keep ? keep[1] + placeFR() / 2 : 0;
+    placeRot = (placeRot + 1) % 4;
+    if (coopPick) coopPick = [Math.round(cx - placeFC() / 2), Math.round(cz - placeFR() / 2)];
+    if (coopHover) coopHover = [Math.round(cx - placeFC() / 2), Math.round(cz - placeFR() / 2)];
+    coopDrawPlacer(); coopPlacerState();
+  }
+  coopPlaceBox.querySelector('.coop-rotate').addEventListener('click', coopRotatePlacer);
+  window.addEventListener('keydown', function (e) {                    // (R turns it too, while you're choosing a spot)
+    if (!coopPlacing || e.code !== 'KeyR' || e.repeat) return;
+    e.preventDefault(); e.stopImmediatePropagation(); coopRotatePlacer();
+  }, true);
   coopBuildBtn.addEventListener('click', function () {
     if (!coopPick || !coopFits(coopPick[0], coopPick[1]) || placeSpec.built()) return;
     if (carpBusy()) { showToast(carpBusyNote(carpBusy()), 3200); return; }
     if (state.coins < placeSpec.cost) { showToast('Not enough Star Coins', 1800); return; }
     state.coins -= placeSpec.cost; showCoins(true); coinSound(10);
-    placeSpec.build(coopPick[0], coopPick[1]); coopClosePlacer(); spellSound(); homeMigrate(false);
+    placeSpec.build(coopPick[0], coopPick[1], placeRot); coopClosePlacer(); spellSound(); homeMigrate(false);
     showToast(typeof placeSpec.done === 'function' ? placeSpec.done() : placeSpec.done, 5200);
   });
-  var PLACE_HINT_END = ' <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under it.';
-  var COOP_SPEC = { title: '🐔 Where should your coop go?', hint: 'Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: COOP_FC, fr: COOP_FR, bw: COOP_BW, bd: COOP_BD, off: 0.45, door: 1.1, roof: 'rgba(122,82,54,0.85)', doorCol: '#92b596', emoji: '🐔', cost: COOP_COST,
-    built: function () { return coop.built; }, build: function (c, r) { coop.hay = [false, false, false, false, false, false, false, false]; coop.res = []; coopPlace(c, r, farmDay()); coopHayShow(); },
+  var PLACE_HINT_END = ' Press <b>⟳ Rotate</b> (or R) to turn it. <b style="color:#2f8a4e">Green</b> means it fits; <b style="color:#c0392b">red</b> means something\'s in the way. Where a tree, bush or rock was cleared is fine, and nothing will grow back under it.';
+  var COOP_SPEC = { title: '🐔 Where should your coop go?', hint: 'Tap your farm to choose a spot. The coop takes 5 × 4 tiles, with its door facing south (down the map) to start.' + PLACE_HINT_END, fc: COOP_FC, fr: COOP_FR, bw: COOP_BW, bd: COOP_BD, off: 0.45, door: 1.1, roof: 'rgba(122,82,54,0.85)', doorCol: '#92b596', emoji: '🐔', cost: COOP_COST,
+    built: function () { return coop.built; }, build: function (c, r, rot) { coop.hay = [false, false, false, false, false, false, false, false]; coop.res = []; coopPlace(c, r, farmDay(), rot); coopHayShow(); },
     done: function () { return '🐔 Oak & Ember have started building your coop! It takes two days: it\'ll be finished on the morning of ' + seasonDay(coop.start + SITE_DAYS) + '.'; } };
   window.addEventListener('keydown', function (e) {
     if (e.code !== 'Escape') return;
@@ -4431,12 +4455,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (coopPlacing) coopClosePlacer();
   });
   function coopDrawOnMap(g, K, label) {                                // (on the world map: its brown roof with the ridge along it, and its green door)
-    var p = mapXY(coop.x, coop.z);
+    var pc = mapXY(coop.x, coop.z), p = [0, 0];
+    g.save(); g.translate(pc[0], pc[1]); g.rotate(-bRot(coop));          // (turned the way it faces)
     g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(p[0] - COOP_BW / 2 * K + 6, p[1] - COOP_BD / 2 * K + 8, COOP_BW * K, COOP_BD * K);
     g.fillStyle = '#6e5038'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1] - COOP_BD / 2 * K - 4, COOP_BW * K + 8, COOP_BD / 2 * K + 4);
     g.fillStyle = '#8a6646'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1], COOP_BW * K + 8, COOP_BD / 2 * K + 4);
     g.fillStyle = '#5a3c26'; g.fillRect(p[0] - COOP_BW / 2 * K - 4, p[1] - 2, COOP_BW * K + 8, 4);
     g.fillStyle = '#92b596'; g.fillRect(p[0] - 0.55 * K, p[1] + COOP_BD / 2 * K + 4, 1.1 * K, 0.9 * K);
+    g.restore();
     label(siteReady(coop) ? 'Coop' : 'Coop (being built)', coop.x, coop.z, COOP_BD / 2 * K + 30);
   }
 
@@ -4474,11 +4500,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   var FBARN_SLOT_X = []; for (var fbx = 0; fbx < 8; fbx++) FBARN_SLOT_X.push(-2.45 + fbx * 0.7);
   var fbarn = { built: false, c: 0, r: 0, fx: 0, fz: 0, x: 0, z: 0, fy: 0, hay: [false, false, false, false, false, false, false, false], res: [], grass: [], solids: [], tp: null, start: 0, stage: -1 };
   var fbarnDoor = { x: 1e6, z: 1e6 }, fbarnGroup = null, fbarnGlows = [], inFbarn = false;
-  var FBARN_SPEC = { title: '🐮 Where should your barn go?', hint: 'Tap your farm to choose a spot. The barn takes 8 × 7 tiles, with its big doors facing south (down the map).' + PLACE_HINT_END, fc: FBARN_FC, fr: FBARN_FR, bw: FBARN_BW, bd: FBARN_BD, off: FBARN_OFF, door: 3.0, roof: 'rgba(100,96,92,0.88)', doorCol: '#b84a3c', emoji: '🐮', ridgeZ: true, cost: FBARN_COST,
-    built: function () { return fbarn.built; }, build: function (c, r) { fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = []; fbarnPlace(c, r, farmDay()); fbarnHayShow(); },
+  var FBARN_SPEC = { title: '🐮 Where should your barn go?', hint: 'Tap your farm to choose a spot. The barn takes 8 × 7 tiles, with its big doors facing south (down the map) to start.' + PLACE_HINT_END, fc: FBARN_FC, fr: FBARN_FR, bw: FBARN_BW, bd: FBARN_BD, off: FBARN_OFF, door: 3.0, roof: 'rgba(100,96,92,0.88)', doorCol: '#b84a3c', emoji: '🐮', ridgeZ: true, cost: FBARN_COST,
+    built: function () { return fbarn.built; }, build: function (c, r, rot) { fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = []; fbarnPlace(c, r, farmDay(), rot); fbarnHayShow(); },
     done: function () { return '🐮 Oak & Ember have started building your barn! It takes two days: it\'ll be finished on the morning of ' + seasonDay(fbarn.start + SITE_DAYS) + '.'; } };
-  function fbarnFront(d) { return { x: fbarn.x, z: fbarn.z + FBARN_BD / 2 + d }; }
-  function fbarnCovers(x, z, r) { return fbarn.built && Math.abs(x - fbarn.fx) < FBARN_FC * TILE / 2 + r && Math.abs(z - fbarn.fz) < FBARN_FR * TILE / 2 + r; }
+  function fbarnFront(d) { var f = bOff(fbarn, 0, FBARN_BD / 2 + d); return { x: fbarn.x + f.x, z: fbarn.z + f.z }; }
+  function fbarnCovers(x, z, r) { return fbarn.built && Math.abs(x - fbarn.fx) < bFC(fbarn, FBARN_FC, FBARN_FR) * TILE / 2 + r && Math.abs(z - fbarn.fz) < bFR(fbarn, FBARN_FC, FBARN_FR) * TILE / 2 + r; }
   var fbarnBaseSoilNear = soilNear;                                    // (nothing grows back under the barn either)
   soilNear = function (x, z, r) { return fbarnBaseSoilNear(x, z, r) || fbarnCovers(x, z, r); };
   function fbarnFreeStall() { for (var s = FBARN_STALL0; s < FBARN_STALL0 + FBARN_CAP; s++) if (!glimmers.some(function (g) { return g.stall === s; })) return s; return -1; }
@@ -4573,8 +4599,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   var FB_SIDE = [[-FBARN_BD / 2 - 0.07, 0], [FBARN_BD / 2 + 0.07, 0], [FBARN_BD / 2 + 0.07, FBARN_WALL], [-FBARN_BD / 2 - 0.07, FBARN_WALL]];
   function fbarnBuildOutside() {
     var G = new THREE.Group(), W2 = FBARN_BW / 2, D2 = FBARN_BD / 2, H = FBARN_WALL; fbarnGlows = [];
-    G.position.set(fbarn.x, fbarn.fy, fbarn.z);
-    function gy(lx, lz) { return groundHeight(fbarn.x + lx, fbarn.z + lz) - fbarn.fy; }
+    G.position.set(fbarn.x, fbarn.fy, fbarn.z); G.rotation.y = bRot(fbarn);
+    function gy(lx, lz) { return bGround(fbarn, lx, lz) - fbarn.fy; }
     var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * (W2 + 0.3), gz * (D2 + 0.3)));
     var fh = -minG + 0.35;
     // (a footing of rough fieldstones)
@@ -4876,7 +4902,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     renderer.getDrawingBufferSize(shopViewSize);
     if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
     siWindowMask.uniforms.uSize.value.copy(shopViewSize);
-    shopViewMap.makeTranslation(fbarn.x - FBI_X, fbarn.fy, fbarn.z - FBI_Z);
+    shopViewMap.makeTranslation(fbarn.x, fbarn.fy, fbarn.z).multiply(shopViewTmp.makeRotationY(bRot(fbarn))).multiply(shopViewTmp.makeTranslation(-FBI_X, 0, -FBI_Z));
     shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
     shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
     shopViewCam.updateMatrixWorld(true);
@@ -4894,7 +4920,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 9.5; cam.pitch = 0.88; cam.yaw = 0;
       } else {
         indoors = false; inFbarn = false; scene.add(player);
-        var o = fbarnFront(1.9); player.position.set(o.x, 0, o.z); facing = 0;
+        var o = fbarnFront(1.9); player.position.set(o.x, 0, o.z); facing = bRot(fbarn);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
       }
       cam.target.set(player.position.x, 0.8, player.position.z);
@@ -4904,24 +4930,25 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   // ===== building it, and taking it down (when a save without one is loaded) =====
-  function fbarnPlace(c0, r0, start) {
+  function fbarnPlace(c0, r0, start, rot) {
     fbarnRemove();
-    fbarn.built = true; fbarn.c = c0; fbarn.r = r0; fbarn.start = start; fbarn.stage = siteStage(fbarn);   // (start: the farm day Oak & Ember started building it)
-    fbarn.fx = FARM_X + (c0 + FBARN_FC / 2) * TILE; fbarn.fz = FARM_Z + (r0 + FBARN_FR / 2) * TILE;
-    fbarn.x = fbarn.fx; fbarn.z = fbarn.fz - FBARN_OFF;
-    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(fbarn.x + gx * FBARN_BW / 2, fbarn.z + gz * FBARN_BD / 2));
+    fbarn.built = true; fbarn.c = c0; fbarn.r = r0; fbarn.start = start; fbarn.stage = siteStage(fbarn); fbarn.rot = rot || 0;   // (start: the farm day Oak & Ember started building it; rot: which way it faces)
+    var FC = bFC(fbarn, FBARN_FC, FBARN_FR), FR = bFR(fbarn, FBARN_FC, FBARN_FR);
+    fbarn.fx = FARM_X + (c0 + FC / 2) * TILE; fbarn.fz = FARM_Z + (r0 + FR / 2) * TILE;
+    var back = bOff(fbarn, 0, -FBARN_OFF); fbarn.x = fbarn.fx + back.x; fbarn.z = fbarn.fz + back.z;
+    var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, bGround(fbarn, gx * FBARN_BW / 2, gz * FBARN_BD / 2));
     fbarn.fy = top + 0.22;
-    var HX = FBARN_FC * TILE / 2, HZ = FBARN_FR * TILE / 2;
+    var HX = FC * TILE / 2, HZ = FR * TILE / 2;
     allScenery.forEach(function (t) { var u = t.userData; if (u.gone || u.state === 'standing') return; if (Math.abs(u.solid.x - fbarn.fx) < HX + u.solidR && Math.abs(u.solid.z - fbarn.fz) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes()); });
     mineable.forEach(function (r) { if (r.gone || r.state === 'whole') return; if (Math.abs(r.solid.x - fbarn.fx) < HX + r.solidR && Math.abs(r.solid.z - fbarn.fz) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes()); });
-    for (var c = c0; c < c0 + FBARN_FC; c++) for (var r = r0; r < r0 + FBARN_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); fbarn.grass.push(ft); }
+    for (var c = c0; c < c0 + FC; c++) for (var r = r0; r < r0 + FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); fbarn.grass.push(ft); }
     var sl = [[-3.6, 2.85, 0.6], [3.6, 2.85, 0.6], [-3.45, 3.6 + 0.8, 0.6], [2.75, 3.6 + 0.85, 0.75], [4.05, 3.6 + 0.8, 0.45]];
     for (var sx = -3.5; sx <= 3.51; sx += 1.4) for (var sz = -2.4; sz <= 2.41; sz += 1.6) sl.push([sx, sz, 1.15]);
     [-1, 1].forEach(function (s) { [-2.9, 0, 2.9].forEach(function (z) { sl.push([s * 4.1, z, 0.7]); }); });
-    sl.forEach(function (s) { var sd = { x: fbarn.x + s[0], z: fbarn.z + s[1], r: s[2] }; solids.push(sd); fbarn.solids.push(sd); });
+    sl.forEach(function (s) { var w = bOff(fbarn, s[0], s[1]), sd = { x: fbarn.x + w.x, z: fbarn.z + w.z, r: s[2] }; solids.push(sd); fbarn.solids.push(sd); });
     fbarnDoor = fbarn.stage < SITE_DAYS ? { x: 1e6, z: 1e6 } : fbarnFront(0.15);   // (no way in until it's finished)
     fbarnGroup = fbarn.stage < SITE_DAYS ? siteBuild('fbarn', fbarn.stage) : fbarnBuildOutside();
-    if (!fbarn.tp) fbarn.tp = { name: 'Your Barn', icon: '🐮', spot: function () { var f = fbarnFront(2.6); return { x: f.x, z: f.z, face: Math.PI, view: 0 }; } };
+    if (!fbarn.tp) fbarn.tp = { name: 'Your Barn', icon: '🐮', spot: function () { var f = fbarnFront(2.6); return { x: f.x, z: f.z, face: bRot(fbarn) + Math.PI, view: bRot(fbarn) }; } };
     if (TELEPORTS.indexOf(fbarn.tp) < 0) TELEPORTS.push(fbarn.tp);
     flushDirty();
   }
@@ -4933,11 +4960,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = TELEPORTS.indexOf(fbarn.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
     fbarn.built = false; fbarnDoor = { x: 1e6, z: 1e6 };
   }
-  function fbarnSaveData() { return fbarn.built ? { c: fbarn.c, r: fbarn.r, hay: fbarn.hay.slice(), start: fbarn.start } : null; }
+  function fbarnSaveData() { return fbarn.built ? { c: fbarn.c, r: fbarn.r, rot: fbarn.rot || 0, hay: fbarn.hay.slice(), start: fbarn.start } : null; }
   function fbarnLoadData(d) {
     fbarnRemove();
     fbarn.hay = [false, false, false, false, false, false, false, false]; fbarn.res = [];
-    if (d) { fbarnPlace(d.c, d.r, d.start === undefined ? -99 : d.start); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) fbarn.hay[i] = !!h; }); }
+    if (d) { fbarnPlace(d.c, d.r, d.start === undefined ? -99 : d.start, d.rot || 0); if (d.hay) d.hay.forEach(function (h, i) { if (i < 8) fbarn.hay[i] = !!h; }); }
     fbarnAnimals().forEach(function (g) { g.eatSlot = null; });
     fbarnHayShow();
   }
@@ -5087,13 +5114,15 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ===== on the world map, and every frame =====
   function fbarnDrawOnMap(g, K, label) {                               // (its grey gambrel roof with the ridge down the middle, the cupola, and its red doors)
-    var p = mapXY(fbarn.x, fbarn.z), hw = FBARN_BW / 2 * K + 6, hd = FBARN_BD / 2 * K + 6;
+    var pc = mapXY(fbarn.x, fbarn.z), p = [0, 0], hw = FBARN_BW / 2 * K + 6, hd = FBARN_BD / 2 * K + 6;
+    g.save(); g.translate(pc[0], pc[1]); g.rotate(-bRot(fbarn));         // (turned the way it faces)
     g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(p[0] - hw + 8, p[1] - hd + 10, hw * 2, hd * 2);
     g.fillStyle = '#5a5654'; g.fillRect(p[0] - hw, p[1] - hd, hw, hd * 2); g.fillStyle = '#6e6a66'; g.fillRect(p[0], p[1] - hd, hw, hd * 2);
     g.fillStyle = '#7c7874'; g.fillRect(p[0] - hw * 0.62, p[1] - hd, hw * 0.62, hd * 2); g.fillStyle = '#8a8682'; g.fillRect(p[0], p[1] - hd, hw * 0.62, hd * 2);
     g.fillStyle = '#3e3430'; g.fillRect(p[0] - 2, p[1] - hd, 4, hd * 2);
     g.fillStyle = '#b84a3c'; g.fillRect(p[0] - 9, p[1] - 9, 18, 18); g.fillStyle = '#f6efe2'; g.fillRect(p[0] - 9, p[1] - 9, 18, 3);
     g.fillStyle = '#b84a3c'; g.fillRect(p[0] - 1.5 * K, p[1] + hd, 3 * K, 6); g.fillStyle = '#f6efe2'; g.fillRect(p[0] - 1, p[1] + hd, 2, 6);
+    g.restore();
     label(siteReady(fbarn) ? 'Barn' : 'Barn (being built)', fbarn.x, fbarn.z, hd + 30);
   }
   var fbarnBaseInteract = interact;
@@ -5145,8 +5174,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   var millBaseSoilNear = soilNear;                                     // (nothing grows back under the mill either)
   soilNear = function (x, z, r) { return millBaseSoilNear(x, z, r) || millCovers(x, z, r); };
   function millStage() { return !mill.built ? -1 : Math.min(MILL_DAYS, farmDay() - mill.start); }   // 0: just started, 1: half built, 2: finished
-  var MILL_SPEC = { title: '🌾 Where should your mill go?', hint: 'Tap your farm to choose a spot. The mill takes 4 × 4 tiles, with its door facing south (down the map).' + PLACE_HINT_END, fc: MILL_FC, fr: MILL_FR, bw: 3.6, bd: 3.6, off: 0, door: 0.9, roof: 'rgba(240,232,214,0.9)', doorCol: '#7a5236', emoji: '🌾', cost: MILL_COST,
-    built: function () { return mill.built; }, build: function (c, r) { millPlace(c, r, farmDay()); },
+  var MILL_SPEC = { title: '🌾 Where should your mill go?', hint: 'Tap your farm to choose a spot. The mill takes 4 × 4 tiles, with its door facing south (down the map) to start.' + PLACE_HINT_END, fc: MILL_FC, fr: MILL_FR, bw: 3.6, bd: 3.6, off: 0, door: 0.9, roof: 'rgba(240,232,214,0.9)', doorCol: '#7a5236', emoji: '🌾', cost: MILL_COST,
+    built: function () { return mill.built; }, build: function (c, r, rot) { millPlace(c, r, farmDay(), rot); },
     done: function () { return '🌾 Oak & Ember have started building your mill! It takes two days: it\'ll be finished on the morning of ' + seasonDay(mill.start + MILL_DAYS) + '.'; } };
 
   // ===== what it's made of =====
@@ -5187,8 +5216,8 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ===== building it: a building site, then half built, then finished =====
   function millBuildModel(stage) {
-    var G = new THREE.Group(); G.position.set(mill.x, mill.fy, mill.z); millGlows = []; millSails = null; millFan = null;
-    function gy(lx, lz) { return groundHeight(mill.x + lx, mill.z + lz) - mill.fy; }
+    var G = new THREE.Group(); G.position.set(mill.x, mill.fy, mill.z); G.rotation.y = bRot(mill); millGlows = []; millSails = null; millFan = null;
+    function gy(lx, lz) { return bGround(mill, lx, lz) - mill.fy; }
     var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * 2, gz * 2));
     // (the stone base: two storeys of fieldstone, an octagon, with an arched door and little windows)
     var baseH = 1.6;
@@ -5283,9 +5312,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     scene.add(G);
     return G;
   }
-  function millPlace(c0, r0, start) {
+  function millPlace(c0, r0, start, rot) {
     millRemove();
-    mill.built = true; mill.c = c0; mill.r = r0; mill.start = start;
+    mill.built = true; mill.c = c0; mill.r = r0; mill.start = start; mill.rot = rot || 0;
     mill.x = FARM_X + (c0 + MILL_FC / 2) * TILE; mill.z = FARM_Z + (r0 + MILL_FR / 2) * TILE;
     var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(mill.x + gx * 2, mill.z + gz * 2));
     mill.fy = top + 0.05;
@@ -5293,9 +5322,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     allScenery.forEach(function (t) { var u = t.userData; if (u.gone || u.state === 'standing') return; if (Math.abs(u.solid.x - mill.x) < HX + u.solidR && Math.abs(u.solid.z - mill.z) < HZ + u.solidR) setSceneryCut(t, u.state === 'regrowing' ? u.felledAt : gameMinutes()); });
     mineable.forEach(function (r) { if (r.gone || r.state === 'whole') return; if (Math.abs(r.solid.x - mill.x) < HX + r.solidR && Math.abs(r.solid.z - mill.z) < HZ + r.solidR) setRockBroken(r, r.state === 'regrowing' ? r.brokeAt : gameMinutes()); });
     for (var c = c0; c < c0 + MILL_FC; c++) for (var r = r0; r < r0 + MILL_FR; r++) { var ft = { x: FARM_X + (c + 0.5) * TILE, z: FARM_Z + (r + 0.5) * TILE }; coverGrass(ft); mill.grass.push(ft); }
-    [[0, 0, 2.45], [-2.05, -1.9, 0.5], [2.0, -1.85, 0.5]].forEach(function (s) { var sd = { x: mill.x + s[0], z: mill.z + s[1], r: s[2] }; solids.push(sd); mill.solids.push(sd); });
+    [[0, 0, 2.45], [-2.05, -1.9, 0.5], [2.0, -1.85, 0.5]].forEach(function (s) { var w = bOff(mill, s[0], s[1]), sd = { x: mill.x + w.x, z: mill.z + w.z, r: s[2] }; solids.push(sd); mill.solids.push(sd); });
     mill.stage = millStage(); millGroup = millBuildModel(mill.stage);
-    if (!mill.tp) mill.tp = { name: 'Your Mill', icon: '🌾', spot: function () { return { x: mill.x, z: mill.z + 3.6, face: Math.PI, view: 0 }; } };
+    if (!mill.tp) mill.tp = { name: 'Your Mill', icon: '🌾', spot: function () { var f = bOff(mill, 0, 3.6); return { x: mill.x + f.x, z: mill.z + f.z, face: bRot(mill) + Math.PI, view: bRot(mill) }; } };
     if (TELEPORTS.indexOf(mill.tp) < 0) TELEPORTS.push(mill.tp);
     flushDirty();
   }
@@ -5307,13 +5336,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ti = TELEPORTS.indexOf(mill.tp); if (ti >= 0) TELEPORTS.splice(ti, 1);
     mill.built = false; mill.stage = -1;
   }
-  function millSaveData() { return mill.built ? { c: mill.c, r: mill.r, start: mill.start } : null; }
-  function millLoadData(d) { millRemove(); if (d) millPlace(d.c, d.r, d.start); }
+  function millSaveData() { return mill.built ? { c: mill.c, r: mill.r, rot: mill.rot || 0, start: mill.start } : null; }
+  function millLoadData(d) { millRemove(); if (d) millPlace(d.c, d.r, d.start, d.rot || 0); }
   function millDrawOnMap(g, K, label) {                                // (on the world map: its octagon, and its sails, once it's finished)
-    var p = mapXY(mill.x, mill.z), r = 2.4 * K;
+    var pc = mapXY(mill.x, mill.z), p = [0, 0], r = 2.4 * K;
+    g.save(); g.translate(pc[0], pc[1]); g.rotate(-bRot(mill));           // (turned the way it faces)
     g.beginPath(); for (var k = 0; k < 8; k++) { var a = (k + 0.5) / 8 * Math.PI * 2; g.lineTo(p[0] + Math.sin(a) * r, p[1] + Math.cos(a) * r); } g.closePath(); g.fillStyle = mill.stage === 2 ? '#e8e0cc' : '#c8a878'; g.fill(); g.strokeStyle = '#7a5236'; g.lineWidth = 2; g.stroke();
     g.beginPath(); g.arc(p[0], p[1], 1.1 * K, 0, Math.PI * 2); g.fillStyle = mill.stage === 2 ? '#5a6a5e' : '#a07850'; g.fill();
     if (mill.stage === 2) { g.strokeStyle = '#4a3626'; g.lineWidth = 5; [[-1, -1], [1, 1], [-1, 1], [1, -1]].forEach(function (d) { g.beginPath(); g.moveTo(p[0], p[1] + 1.5 * K); g.lineTo(p[0] + d[0] * 3 * K, p[1] + 1.5 * K + d[1] * 0.4 * K); g.stroke(); }); }
+    g.restore();
     label(mill.stage === 2 ? 'Mill' : 'Mill (being built)', mill.x, mill.z, 2.4 * K + 28);
   }
   function updateMill(dt, night) {
@@ -5361,8 +5392,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   soilNear = function (x, z, r) { return siloBaseSoilNear(x, z, r) || siloCovers(x, z, r); };
   function siloStage() { return !silo.built ? -1 : Math.min(SILO_DAYS, farmDay() - silo.start); }   // 0: just started, 1: half built, 2: finished
   function siloReady() { return silo.built && silo.stage >= SILO_DAYS; }
-  var SILO_SPEC = { title: '🌾 Where should your silo go?', hint: 'Tap your farm to choose a spot. The silo takes 3 × 3 tiles, with its hay chute facing south (down the map).' + PLACE_HINT_END, fc: SILO_FC, fr: SILO_FR, bw: 2.7, bd: 2.7, off: 0, door: 0.7, roof: 'rgba(200,206,214,0.92)', doorCol: '#8a6040', emoji: '🌾', cost: SILO_COST,
-    built: function () { return silo.built; }, build: function (c, r) { silo.hay = 0; siloPlace(c, r, farmDay()); },
+  var SILO_SPEC = { title: '🌾 Where should your silo go?', hint: 'Tap your farm to choose a spot. The silo takes 3 × 3 tiles, with its hay chute facing south (down the map) to start.' + PLACE_HINT_END, fc: SILO_FC, fr: SILO_FR, bw: 2.7, bd: 2.7, off: 0, door: 0.7, roof: 'rgba(200,206,214,0.92)', doorCol: '#8a6040', emoji: '🌾', cost: SILO_COST,
+    built: function () { return silo.built; }, build: function (c, r, rot) { silo.hay = 0; siloPlace(c, r, farmDay(), rot); },
     done: function () { return '🌾 Oak & Ember have started building your silo! It takes two days: it\'ll be finished on the morning of ' + seasonDay(silo.start + SILO_DAYS) + '.'; } };
 
   // ===== what it's made of =====
@@ -5397,9 +5428,9 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ===== building it: a building site, then half built, then finished =====
   function siloBuildModel(stage) {
-    var G = new THREE.Group(); G.position.set(silo.x, silo.fy, silo.z); siloGlows = []; siloGauge = null; siloTuft = null;
+    var G = new THREE.Group(); G.position.set(silo.x, silo.fy, silo.z); G.rotation.y = bRot(silo); siloGlows = []; siloGauge = null; siloTuft = null;
     var R = SILO_R;
-    function gy(lx, lz) { return groundHeight(silo.x + lx, silo.z + lz) - silo.fy; }
+    function gy(lx, lz) { return bGround(silo, lx, lz) - silo.fy; }
     function on(a, r, y) { return [Math.sin(a) * r, y, Math.cos(a) * r]; }   // (a point round the silo, at angle a from the front)
     var minG = 99; for (var k = 0; k < 12; k++) { var a0 = k / 12 * Math.PI * 2; minG = Math.min(minG, gy(Math.sin(a0) * (R + 0.4), Math.cos(a0) * (R + 0.4))); }
     var fh = -minG + 0.12;
@@ -5512,9 +5543,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (siloTuft) siloTuft.visible = silo.hay > 0;
     siloHopperTufts.forEach(function (t) { t.visible = siloReady() && silo.hay > 0; });
   }
-  function siloPlace(c0, r0, start) {
+  function siloPlace(c0, r0, start, rot) {
     siloRemove();
-    silo.built = true; silo.c = c0; silo.r = r0; silo.start = start;
+    silo.built = true; silo.c = c0; silo.r = r0; silo.start = start; silo.rot = rot || 0;
     silo.x = FARM_X + (c0 + SILO_FC / 2) * TILE; silo.z = FARM_Z + (r0 + SILO_FR / 2) * TILE;
     var top = -9; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) top = Math.max(top, groundHeight(silo.x + gx * 1.4, silo.z + gz * 1.4));
     silo.fy = top + 0.05;
@@ -5533,8 +5564,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     silo.grass.forEach(uncoverGrass); silo.grass = [];
     silo.built = false; silo.stage = -1;
   }
-  function siloSaveData() { return silo.built ? { c: silo.c, r: silo.r, start: silo.start, hay: silo.hay } : null; }
-  function siloLoadData(d) { siloRemove(); silo.hay = 0; if (d) { silo.hay = Math.max(0, Math.min(SILO_CAP, d.hay | 0)); siloPlace(d.c, d.r, d.start === undefined ? -99 : d.start); } siloShowHay(); }
+  function siloSaveData() { return silo.built ? { c: silo.c, r: silo.r, rot: silo.rot || 0, start: silo.start, hay: silo.hay } : null; }
+  function siloLoadData(d) { siloRemove(); silo.hay = 0; if (d) { silo.hay = Math.max(0, Math.min(SILO_CAP, d.hay | 0)); siloPlace(d.c, d.r, d.start === undefined ? -99 : d.start, d.rot || 0); } siloShowHay(); }
 
   // ===== filling it, and taking hay out at the hoppers =====
   function siloNear() { return silo.built && !indoors && !flying && dist(player.position.x, player.position.z, silo.x, silo.z) < SILO_R + 1.35; }
@@ -5636,12 +5667,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     return c.toDataURL();
   }
   function siloDrawOnMap(g, K, label) {                                // (on the world map: its round silver dome, seen from above)
-    var p = mapXY(silo.x, silo.z), r = (SILO_R + 0.1) * K;
+    var pc = mapXY(silo.x, silo.z), p = [0, 0], r = (SILO_R + 0.1) * K;
+    g.save(); g.translate(pc[0], pc[1]); g.rotate(-bRot(silo));           // (turned the way it faces)
     g.beginPath(); g.arc(p[0] + 5, p[1] + 7, r, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fill();
     g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); var dg = g.createRadialGradient(p[0] - r * 0.3, p[1] - r * 0.3, 2, p[0], p[1], r); dg.addColorStop(0, siloReady() ? '#f2f5f8' : '#e0c090'); dg.addColorStop(1, siloReady() ? '#8a929c' : '#a07850'); g.fillStyle = dg; g.fill();
     g.strokeStyle = siloReady() ? '#b8564a' : '#7a5236'; g.lineWidth = 3; g.stroke();
     if (siloReady()) { g.strokeStyle = 'rgba(80,90,100,0.4)'; g.lineWidth = 1.2; for (var k = 0; k < 8; k++) { var a = k / 8 * Math.PI * 2; g.beginPath(); g.moveTo(p[0] + Math.cos(a) * 3, p[1] + Math.sin(a) * 3); g.lineTo(p[0] + Math.cos(a) * r, p[1] + Math.sin(a) * r); g.stroke(); } }
     g.fillStyle = '#8a6040'; g.fillRect(p[0] - 0.35 * K, p[1] + r, 0.7 * K, 0.7 * K);
+    g.restore();
     label(siloReady() ? 'Silo · ' + silo.hay + '/' + SILO_CAP + ' hay' : 'Silo (being built)', silo.x, silo.z, r + 26);
   }
   var siloBaseInteract = interact;
@@ -5677,8 +5710,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function siteBuild(kind, stage) {                                    // (the building site for your coop or barn, as far as it's got)
     var coopK = kind === 'coop', o = coopK ? coop : fbarn, W = coopK ? COOP_BW : FBARN_BW, D = coopK ? COOP_BD : FBARN_BD, H = coopK ? COOP_WALL : FBARN_WALL, apron = coopK ? 0.95 : 1.6;
-    var G = new THREE.Group(); G.position.set(o.x, o.fy, o.z);
-    function gy(lx, lz) { return groundHeight(o.x + lx, o.z + lz) - o.fy; }
+    var G = new THREE.Group(); G.position.set(o.x, o.fy, o.z); G.rotation.y = bRot(o);
+    function gy(lx, lz) { return bGround(o, lx, lz) - o.fy; }
     var minG = 99; for (var gx = -1; gx <= 1; gx++) for (var gz = -1; gz <= 1; gz++) minG = Math.min(minG, gy(gx * (W / 2 + 0.3), gz * (D / 2 + 0.3)));
     var fh = -minG + 0.3;
     cpPart(new THREE.BoxGeometry(W + 0.2, fh, D + 0.2), mlmStone, 0, -fh / 2, 0, 0, 0, 0, G);   // (the footing, and the floor laid on it)
