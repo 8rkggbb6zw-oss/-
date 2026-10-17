@@ -6141,13 +6141,57 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateCamera(dt) {
     camGoal.set(player.position.x, 0.8 + flyH, player.position.z);
     cam.target.lerp(camGoal, 1 - Math.exp(-dt * 6));
-    var flat = Math.cos(cam.pitch) * cam.dist;
+    var d = camClear(dt);                                              // (outdoors, it comes in in front of a wall or roof rather than going through it)
+    var flat = Math.cos(cam.pitch) * d;
     camera.position.set(
       cam.target.x + Math.sin(cam.yaw) * flat,
-      cam.target.y + Math.sin(cam.pitch) * cam.dist,
+      cam.target.y + Math.sin(cam.pitch) * d,
       cam.target.z + Math.cos(cam.yaw) * flat
     );
     camera.lookAt(cam.target);
+  }
+  // Outdoors, the camera never ends up inside a building looking at its hollow insides: if it would, it slides in to
+  // just in front of the wall it went through, and once it's clear again it eases back out. (It's inside when there's
+  // a wall between you and it and a roof right over it.) Looking over a building from the far side stays as it is
+  var camRay = new THREE.Raycaster(), camDir = new THREE.Vector3(), camFrom = new THREE.Vector3(), camUp = new THREE.Vector3(0, 1, 0), camWalls = [], camWallsAt = -1, camDistNow = null, camSize = new THREE.Vector3();
+  function camWallList() {                                             // (the big pieces of every building outside: walls, roofs, logs; not the little props, rails or glass)
+    var list = [];
+    [house, shopGroup, clinicGroup, barnGroup, carpGroup, coopGroup, fbarnGroup, millGroup, siloGroup].forEach(function (g) {
+      if (!g || !g.parent) return;
+      g.updateMatrixWorld(true);
+      g.traverse(function (o) {
+        if (!o.isMesh || !o.geometry) return;
+        var m = Array.isArray(o.material) ? o.material[0] : o.material;
+        if (!m || m.transparent) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        o.getWorldScale(camSize); var bb = o.geometry.boundingBox;
+        var e = [(bb.max.x - bb.min.x) * Math.abs(camSize.x), (bb.max.y - bb.min.y) * Math.abs(camSize.y), (bb.max.z - bb.min.z) * Math.abs(camSize.z)].sort(function (p, q) { return q - p; });
+        if (e[1] >= 0.3) list.push(o);                                 // (at least as wide as a log both ways)
+      });
+    });
+    var houseMats = Object.keys(houseByMat).map(function (k) { return houseByMat[k].mat; });   // (the farmhouse's still parts were joined into a few meshes of their own)
+    scene.children.forEach(function (o) { if (o.isMesh && houseMats.indexOf(o.material) >= 0 && !o.material.transparent) list.push(o); });
+    return list;
+  }
+  function camFirstHit(from, dir, far) {
+    camRay.set(from, dir); camRay.near = 0.05; camRay.far = far;
+    var hits = camRay.intersectObjects(camWalls, false);
+    for (var i = 0; i < hits.length; i++) if (hits[i].object.visible && hits[i].object.parent && hits[i].object.parent.visible !== false) return hits[i].distance;
+    return -1;
+  }
+  function camClear(dt) {
+    var want = cam.dist, fit = want;
+    if (indoors) { camDistNow = want; return want; }
+    if (camWallsAt < 0 || state.time - camWallsAt > 2 || state.time < camWallsAt) { camWalls = camWallList(); camWallsAt = state.time; }
+    camDir.set(Math.sin(cam.yaw) * Math.cos(cam.pitch), Math.sin(cam.pitch), Math.cos(cam.yaw) * Math.cos(cam.pitch));
+    var out = camFirstHit(cam.target, camDir, want);                   // (the first wall or roof on the way out to the camera...)
+    if (out > 0) {
+      camFrom.copy(cam.target).addScaledVector(camDir, want);
+      if (camFirstHit(camFrom, camUp, 12) > 0) fit = Math.max(0.9, out - 0.25);   // (...and if there's a roof right over the camera, it's inside: bring it in front of that wall)
+    }
+    if (camDistNow === null || fit < camDistNow) camDistNow = fit;       // (straight in, so it's never seen poking through)
+    else camDistNow += (fit - camDistNow) * (1 - Math.exp(-dt * 4));   // (and gently back out)
+    return camDistNow;
   }
 
   // ---------- Saving and loading ----------
