@@ -8217,6 +8217,8 @@ var everdawnTitle = (function () {
     '#evTitle .ev-play:focus-visible{outline:3px solid #fff;outline-offset:5px}' +
     '#evTitle .ev-hint{display:none;font-size:clamp(13px,2.2vw,15px);color:#f3e2ff;text-shadow:0 1px 6px rgba(40,10,80,.9);opacity:0;animation:evFade 1s ease .6s forwards}' +
     '#evTitle .ev-hint.show{display:block}' +
+    '#evTitle .ev-music{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:3;padding:.45em .9em;font:500 14px Fredoka,system-ui,sans-serif;color:#fff;background:rgba(40,20,80,.45);border:1.5px solid rgba(255,220,250,.55);border-radius:999px;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}' +
+    '#evTitle .ev-music:hover{background:rgba(70,40,120,.6)}#evTitle .ev-music:focus-visible{outline:2px solid #fff;outline-offset:3px}' +
     '@keyframes evFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}' +
     '@keyframes evTwinkle{0%,100%{opacity:.35;transform:scale(.7) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(20deg)}}' +
     '@keyframes evShine{from{background-position:200% 0}to{background-position:-200% 0}}' +
@@ -8719,8 +8721,79 @@ var everdawnTitle = (function () {
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+  // ----- the title music: "The Witch's Waltz-Step", a cute, sneaky little tune in D minor -----
+  // A music-box celesta sings the tune over bouncy plucked strings (bass on 1 and 3, a pluck of the chord on 2 and 4,
+  // like tiptoeing), with a woodblock going tick-tock like a clock and a whisper of shaker. In the second part a hollow,
+  // woody clarinet takes the tune and the celesta twinkles answers; then the first tune comes back with a glockenspiel
+  // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. Every part ends with a sparkle of
+  // magic running up the scale. It all fades away when you press Play. Browsers only allow sound after a tap or a
+  // key, so it starts on your first one, and the ♪ button in the corner turns it on or off (and remembers)
+  var titleMusic = (function () {
+    var KEY = 'everdawn-title-music', want = true; try { want = localStorage.getItem(KEY) !== 'off'; } catch (err) {}
+    var ac = null, out = null, verb = null, timer = 0, next = 0, bar = 0, done = false, BPM = 116, SPB = 60 / BPM;
+    var CH = { Dm: [38, [50, 53, 57]], Gm: [43, [50, 55, 58]], A7: [45, [49, 55, 57]], Bb: [46, [50, 53, 58]], F: [41, [48, 53, 57]], C: [36, [48, 52, 55]], Eo: [40, [46, 52, 55]] };
+    var A = [['Dm', [[0, 74, 0.5], [0.5, 73, 0.5], [1, 74, 1], [2, 69, 1], [3, 65, 1]]], ['Dm', [[0, 67, 0.5], [0.5, 69, 0.5], [1, 70, 1], [2, 69, 2]]], ['Gm', [[0, 70, 0.5], [0.5, 72, 0.5], [1, 74, 1], [2, 70, 1], [3, 67, 1]]], ['A7', [[0, 69, 1], [1, 73, 1], [2, 76, 2]]],
+             ['Dm', [[0, 77, 0.5], [0.5, 76, 0.5], [1, 74, 1], [2, 73, 1], [3, 74, 1]]], ['Bb', [[0, 70, 1], [1, 74, 1], [2, 77, 2]]], ['Eo', [[0, 79, 0.5], [0.5, 77, 0.5], [1, 76, 1], [2, 73, 1], [3, 70, 1]]], ['A7', [[0, 69, 1], [1, 73, 0.5], [1.5, 76, 0.5], [2, 74, 2]]]];
+    var B = [['F', [[0, 65, 1.5], [1.5, 67, 0.5], [2, 69, 2]]], ['C', [[0, 67, 1], [1, 64, 1], [2, 60, 2]]], ['Dm', [[0, 62, 1.5], [1.5, 65, 0.5], [2, 69, 1], [3, 74, 1]]], ['A7', [[0, 73, 3], [3, 69, 1]]],
+             ['Bb', [[0, 70, 1.5], [1.5, 69, 0.5], [2, 67, 1], [3, 65, 1]]], ['Gm', [[0, 67, 1.5], [1.5, 65, 0.5], [2, 62, 2]]], ['Eo', [[0, 64, 1], [1, 67, 1], [2, 70, 1], [3, 73, 1]]], ['A7', [[0, 76, 2], [2, 73, 1], [3, 69, 1]]]];
+    var BR = [['Dm', [[0, 74, 2], [2, 77, 2]]], ['Bb', [[0, 74, 4]]], ['Gm', [[0, 70, 2], [2, 73, 2]]], ['A7', [[0, 76, 4]]]];
+    var SONG = []; A.forEach(function (b) { SONG.push({ part: 'A', b: b }); }); B.forEach(function (b) { SONG.push({ part: 'B', b: b }); }); A.forEach(function (b) { SONG.push({ part: 'A2', b: b }); }); BR.forEach(function (b) { SONG.push({ part: 'BR', b: b }); });
+    function hz(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+    function at(t0, beat) { var f = beat - Math.floor(beat); return t0 + (Math.floor(beat) + (Math.abs(f - 0.5) < 0.01 ? 0.6 : f)) * SPB; }   // (lightly swung)
+    function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+    function osc(type, f, t, end, dest, detune) { var o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (detune) o.detune.value = detune; o.connect(dest); o.start(t); o.stop(end); return o; }
+    function voice(gain, wet) { var g = ac.createGain(); g.connect(out); if (wet) { var s = ac.createGain(); s.gain.value = wet; g.connect(s); s.connect(verb); } return g; }
+    function celesta(t, n, len, v) { var g = voice(1, 0.45); env(g, t, 0.004, 0.16 * v, 0.9 + len * SPB * 0.5); osc('sine', hz(n), t, t + 2.4, g); var g2 = voice(1, 0.3); env(g2, t, 0.002, 0.05 * v, 0.25); osc('sine', hz(n) * 4, t, t + 0.4, g2); var g3 = voice(1, 0.3); env(g3, t, 0.003, 0.03 * v, 0.5); osc('triangle', hz(n) * 2, t, t + 0.7, g3); }
+    function glock(t, n, v) { var g = voice(1, 0.5); env(g, t, 0.002, 0.07 * v, 0.7); osc('sine', hz(n + 12), t, t + 1, g); var g2 = voice(1, 0.4); env(g2, t, 0.001, 0.025 * v, 0.15); osc('sine', hz(n + 12) * 2.76, t, t + 0.25, g2); }
+    function pizz(t, n, v) { var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(hz(n) * 6, t); lp.frequency.exponentialRampToValueAtTime(hz(n) * 1.5, t + 0.18); var g = voice(1, 0.18); lp.connect(g); env(g, t, 0.003, 0.2 * v, 0.28); osc('triangle', hz(n), t, t + 0.4, lp); osc('sawtooth', hz(n), t, t + 0.3, lp, 4); }
+    function clarinet(t, n, len, v) { var e = t + len * SPB * 0.95, lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1300; lp.Q.value = 2; var g = voice(1, 0.35); lp.connect(g);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07 * v, t + 0.06); g.gain.setValueAtTime(0.07 * v, Math.max(t + 0.07, e - 0.08)); g.gain.exponentialRampToValueAtTime(0.0001, e + 0.12);
+      var o = osc('square', hz(n), t, e + 0.2, lp), vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 5; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(hz(n) * 0.006, t + 0.4); vib.connect(vg); vg.connect(o.frequency); vib.start(t); vib.stop(e + 0.2); }
+    function theremin(t, n, len, prev) { var e = t + len * SPB, g = voice(1, 0.6); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.2); g.gain.setValueAtTime(0.06, e - 0.25); g.gain.exponentialRampToValueAtTime(0.0001, e + 0.05);
+      var o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(hz(prev || n), t); o.frequency.exponentialRampToValueAtTime(hz(n), t + 0.28); o.connect(g);
+      var vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 6.2; vg.gain.value = hz(n) * 0.014; vib.connect(vg); vg.connect(o.frequency); o.start(t); o.stop(e + 0.1); vib.start(t); vib.stop(e + 0.1); }
+    function noise(t, len, type, f, v) { var nb = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate), d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; var s = ac.createBufferSource(); s.buffer = nb; var fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = 1.2; var g = voice(1, 0.1); env(g, t, 0.003, v, len); s.connect(fl); fl.connect(g); s.start(t); s.stop(t + len + 0.05); }
+    function block(t, hi) { var g = voice(1, 0.15); env(g, t, 0.001, 0.09, 0.07); osc('sine', hi ? 1250 : 940, t, t + 0.12, g); }
+    function sparkle(t) { [74, 76, 77, 79, 81, 82, 85, 86].forEach(function (n, i) { celesta(t + i * SPB / 8, n, 0.25, 0.6); if (i % 2) glock(t + i * SPB / 8, n, 0.5); }); noise(t, 0.6, 'highpass', 7000, 0.02); }
+    function playBar(t0, s, idx) {
+      var ch = CH[s.b[0]], part = s.part, bridge = part === 'BR', last = idx === 7 || (bridge && idx === 27);
+      pizz(at(t0, 0), ch[0], 1); if (!bridge) { ch[1].forEach(function (n) { pizz(at(t0, 1), n, 0.42); }); pizz(at(t0, 2), ch[0] + 7, 0.85); ch[1].forEach(function (n) { pizz(at(t0, 3), n, 0.42); }); }   // (oom-pah, on tiptoe)
+      else pizz(at(t0, 2), ch[0] + 7, 0.7);
+      if (!bridge) { block(at(t0, 1), true); block(at(t0, 3), false); for (var sh = 0; sh < 4; sh++) noise(at(t0, sh + 0.5), 0.06, 'highpass', 6500, 0.018); }
+      var prev = null;
+      s.b[1].forEach(function (nt) { var t = at(t0, nt[0]);
+        if (part === 'A' || part === 'A2') { celesta(t, nt[1], nt[2], 1); if (part === 'A2') glock(t, nt[1], 0.8); }
+        else if (part === 'B') clarinet(t, nt[1] - 12 + 12, nt[2], 1);
+        else { theremin(t, nt[1], nt[2], prev); prev = nt[1]; } });
+      if (part === 'B' && idx % 2 === 1) ch[1].concat([ch[1][0] + 12]).forEach(function (n, i) { celesta(at(t0, 2.5) + i * SPB / 4, n + 24, 0.25, 0.55); });   // (the celesta answering)
+      if (bridge) [0, 1.5, 3].forEach(function (b, i) { glock(at(t0, b), ch[1][i % 3] + 12, 0.35); });
+      if ((idx + 1) % 8 === 0 || idx === SONG.length - 1) sparkle(at(t0, 3));
+    }
+    function tick() { if (!ac || done) return; var now = ac.currentTime; if (next < now) next = now + 0.1;
+      while (next < now + 0.7) { playBar(next, SONG[bar % SONG.length], bar % SONG.length); next += 4 * SPB; bar++; } }
+    function start() {
+      if (done || !want) return; var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      if (!ac) { ac = new AC(); out = ac.createGain(); out.gain.value = 0; var comp = ac.createDynamicsCompressor(); out.connect(comp); comp.connect(ac.destination);
+        verb = ac.createConvolver(); var len = Math.floor(ac.sampleRate * 2.4), ir = ac.createBuffer(2, len, ac.sampleRate); for (var c = 0; c < 2; c++) { var d = ir.getChannelData(c); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); } verb.buffer = ir; var vg = ac.createGain(); vg.gain.value = 0.5; verb.connect(vg); vg.connect(comp);
+        timer = setInterval(tick, 120); }
+      if (ac.state === 'suspended') ac.resume();
+      out.gain.cancelScheduledValues(ac.currentTime); out.gain.setValueAtTime(out.gain.value, ac.currentTime); out.gain.linearRampToValueAtTime(0.9, ac.currentTime + 1.2); tick();
+    }
+    function silence(t) { if (!ac) return; out.gain.cancelScheduledValues(ac.currentTime); out.gain.setValueAtTime(out.gain.value, ac.currentTime); out.gain.linearRampToValueAtTime(0, ac.currentTime + t); }
+    function toggle() { if (want && !done && (!ac || ac.state !== 'running')) { start(); return want; }   // (the very first press just starts it)
+      want = !want; try { localStorage.setItem(KEY, want ? 'on' : 'off'); } catch (err) {} if (want) start(); else silence(0.5); return want; }
+    function stop() { if (done) return; done = true; silence(1.4); setTimeout(function () { clearInterval(timer); if (ac) ac.close(); }, 1700); }
+    function first(e) { if (e && e.target && e.target.classList && e.target.classList.contains('ev-music')) return; start(); ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.removeEventListener(ev, first, true); }); }
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { window.addEventListener(ev, first, true); });
+    document.addEventListener('visibilitychange', function () { if (ac && !done) { if (document.hidden) ac.suspend(); else if (want) ac.resume(); } });
+    return { toggle: toggle, stop: stop, on: function () { return want; } };
+  })();
+  var musBtn = document.createElement('button'); musBtn.type = 'button'; musBtn.className = 'ev-music';
+  function musLabel() { musBtn.textContent = titleMusic.on() ? '♪ Music: On' : '♪ Music: Off'; musBtn.setAttribute('aria-pressed', titleMusic.on() ? 'true' : 'false'); }
+  musLabel(); root.appendChild(musBtn); musBtn.addEventListener('click', function (e) { e.stopPropagation(); titleMusic.toggle(); musLabel(); });
   function play() {
     if (!ready || root.classList.contains('gone')) return;
+    titleMusic.stop(); musBtn.style.display = 'none';
     window.EVERDAWN_TITLE = false; EVERDAWN_TITLE = false;
     root.classList.add('gone'); if (document.body) document.body.style.overflow = prevOverflow;
     var game = document.getElementById('game'); if (game) { try { game.focus(); } catch (err) {} }
