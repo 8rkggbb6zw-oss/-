@@ -7422,10 +7422,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.needsUpdate = true;
   });
   // ===== the Dawn Tree in winter: snow lying on its blossom =====
-  // Snow lies thick on the Dawn Tree's blossom, heaviest on top of each cluster but over the flowers all the way
-  // round, so you see it from underneath too, and the hanging strands are frosted along their tops; under the snow its
-  // pink glow dims. (Its trunk, branches and roots already take snow wherever they face the sky, with everything else
-  // up high.) It all melts away with the rest of the snow when Spring comes
+  // The Dawn Tree keeps its pink blossom through Winter; snow just lies on top of it. Each card of blossom near the top
+  // of its cluster takes a cap of solid snow over the part of it that faces the sky (the higher up the cluster, the
+  // more of the card is covered), with a lumpy edge, and the snow doesn't glow pink. Cards lower down and underneath
+  // stay as they are, and the hanging strands are just frosted where they hang from. It all melts away with the rest
+  // of the snow when Spring comes
   (function () {
     var nCards = blossomCards.count, up = new Float32Array(blossomCards.instanceMatrix.count), m4 = new THREE.Matrix4(), cp = new THREE.Vector3(), cq = new THREE.Quaternion(), cs = new THREE.Vector3();
     for (var i = 0; i < nCards; i++) {                                 // (how high up its own cluster each card sits: the higher, the more snow)
@@ -7439,10 +7440,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       m.onBeforeCompile = function (shader) {
         if (before) before.call(this, shader);
         shader.uniforms.uSnowOn = winterSnowOn;
-        shader.vertexShader = (strand ? '' : 'attribute float snowUp;\n') + 'varying float vSnowUp;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (strand ? 'vSnowUp = 0.6;' : 'vSnowUp = snowUp;'));
-        shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowUp;\n' + shader.fragmentShader
-          .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowAmt = uSnowOn * ' + (strand ? 'smoothstep(0.7, 0.98, vUv.y) * 0.85' : '(0.55 + 0.45 * smoothstep(-0.7, 0.35, vSnowUp)) * (0.7 + 0.3 * smoothstep(0.2, 0.8, vUv.y))') + ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.98, 1.0), snowAmt * 0.92);')
-          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - snowAmt * 0.85;');
+        shader.vertexShader = (strand ? '' : 'attribute float snowUp;\n') + 'varying float vSnowUp;\nvarying float vSnowH;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
+          (strand ? 'vSnowUp = 0.0; vSnowH = 0.0;' : 'vSnowUp = snowUp; vSnowH = ((instanceMatrix * vec4(position, 1.0)).y - instanceMatrix[3].y) / length(instanceMatrix[0].xyz);'));   // (how far up this bit of the card is, in the world)
+        shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowUp;\nvarying float vSnowH;\n' + shader.fragmentShader
+          .replace('#include <color_fragment>', '#include <color_fragment>\nfloat snowAmt = uSnowOn * ' + (strand
+            ? 'smoothstep(0.84, 0.96, vUv.y) * 0.8'
+            : 'smoothstep(0.05, 0.35, vSnowUp) * smoothstep(0.0, 0.08, vSnowH * 1.4 + (vSnowUp - 0.6) * 0.7 + 0.06 * sin(vUv.x * 23.0) + 0.04 * sin(vUv.x * 47.0 + 1.7))') +
+            ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.98, 1.0), snowAmt);\nif (diffuseColor.a > 0.3) diffuseColor.a = mix(diffuseColor.a, 1.0, snowAmt);')   // (the snow is solid, not see-through)
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - snowAmt;');
       };
       m.customProgramCacheKey = function () { return strand ? 'dawnStrandSnow' : 'dawnBlossomSnow'; };
       m.needsUpdate = true;
