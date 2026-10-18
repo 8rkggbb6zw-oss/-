@@ -6249,7 +6249,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inCoop) { var coo = coopFront(1.8); px = coo.x; pz = coo.z; } // and your coop
     if (inFbarn) { var fbo = fbarnFront(2.0); px = fbo.x; pz = fbo.z; } // and your barn
     var data = {
-      v: 1, savedAt: Date.now(),
+      v: 1, savedAt: Date.now(), name: saveName,                      // (the name you gave this save)
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
@@ -7728,6 +7728,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var data = null;
     try { data = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (err) { data = null; }
     if (!data || data.v !== 1) { showToast('No saved game yet', 2200); return; }
+    saveName = data.name || '';                                       // (keeping its name for the next save)
     // the clock, mana and harvests
     state.mana = data.state.mana; state.harvest = data.state.harvest;
     state.stamina = data.state.stamina === undefined ? MAX_STAMINA : Math.min(MAX_STAMINA, data.state.stamina);
@@ -7796,9 +7797,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   // where your game was always saved, so an old save turns up there). A slot with a game in it is loaded the moment
   // the title screen has gone; an empty one starts a new game there and saves it straight away, so it's waiting for
   // you next time. Once you're playing, your game also saves itself whenever you leave or close the page
-  var afterTitle = null, slotPicked = false;
-  window.everdawnPickSlot = function (n, fresh) {
-    SAVE_KEY = 'everdawn-save-' + n; slotPicked = true;
+  var afterTitle = null, slotPicked = false, saveName = '';
+  window.everdawnPickSlot = function (n, fresh, name) {
+    SAVE_KEY = 'everdawn-save-' + n; slotPicked = true; if (fresh) saveName = name || '';
     try { localStorage.setItem('everdawn-last-slot', String(n)); } catch (err) {}
     afterTitle = function () { saveLoadSafely(fresh ? 'save' : 'load', fresh ? function () { saveGame(true); } : loadGame); };
   };
@@ -8266,6 +8267,10 @@ var everdawnTitle = (function () {
     '#evTitle .ev-sask{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:16px;border:2px solid #ff9ab8;background:rgba(120,30,70,.55);font-size:16px}' +
     '#evTitle .ev-sask button{padding:.3em .9em;font:600 15px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:999px;cursor:pointer;background:rgba(255,255,255,.12);margin-left:6px}#evTitle .ev-sask .yes{background:#d8507c;border-color:#ffb0c8}' +
     '#evTitle .ev-back{display:block;margin:12px auto 0;padding:.4em 1.8em;font:600 17px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid #ffe2a0;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
+    '#evTitle .ev-sname{flex:1;display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;border:2px solid #ffe2a0;background:rgba(60,30,110,.7)}#evTitle .ev-sname label{font-size:17px;font-weight:600;color:#ffe9b8}' +
+    '#evTitle .ev-sname input{box-sizing:border-box;width:100%;padding:.5em .8em;font:500 17px Fredoka,system-ui,sans-serif;color:#3a2270;border:2px solid #ffd27a;border-radius:12px;background:#fff8ee;outline:none}#evTitle .ev-sname input:focus{box-shadow:0 0 0 3px rgba(255,158,203,.6)}' +
+    '#evTitle .ev-sname span{display:flex;gap:8px;justify-content:flex-end}#evTitle .ev-sname button{padding:.35em 1.2em;font:600 16px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:999px;cursor:pointer;background:rgba(255,255,255,.12)}' +
+    '#evTitle .ev-sname .go{background:linear-gradient(180deg,#ff9ecb,#d8609c);border-color:#ffe2a0}#evTitle .ev-sname .go:disabled{opacity:.45;cursor:default}#evTitle .ev-sname button:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-sethead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}' +
     '#evTitle .ev-sethead h2{margin:0;flex:1}' +
     '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
@@ -8871,7 +8876,7 @@ var everdawnTitle = (function () {
     if (d) {
       var day = d.state.day || 1, when = WDAYS[(day - 1) % 7] + ' · ' + SEAS[Math.floor((day - 1) / 28) % 4] + ', Day ' + ((day - 1) % 28 + 1);
       var saved = d.savedAt ? 'Saved ' + new Date(d.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-      row.innerHTML = '<button type="button" class="ev-sbtn"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>' + esc(when) + (n === lastSlot() ? '<span class="ev-last">Last played</span>' : '') + '</b>' +
+      row.innerHTML = '<button type="button" class="ev-sbtn"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>' + esc(d.name || when) + (n === lastSlot() ? '<span class="ev-last">Last played</span>' : '') + '</b>' + (d.name ? '<span>' + esc(when) + '</span>' : '') +
         '<span>🪙 ' + (d.state.coins || 0) + ' coins · 🌾 ' + (d.state.harvest || 0) + ' harvested</span>' + (saved ? '<i>' + esc(saved) + '</i>' : '') + '</span></button>' +
         '<button type="button" class="ev-sdel" aria-label="Delete the game in slot ' + n + '" title="Delete">🗑</button>';
       row.querySelector('.ev-sbtn').addEventListener('click', function () { pickSlot(n, false); });
@@ -8883,7 +8888,7 @@ var everdawnTitle = (function () {
       });
     } else {
       row.innerHTML = '<button type="button" class="ev-sbtn empty"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>✦ New Game</b><span>An empty slot</span></span></button>';
-      row.querySelector('.ev-sbtn').addEventListener('click', function () { pickSlot(n, true); });
+      row.querySelector('.ev-sbtn').addEventListener('click', function () { nameSlot(n, row); });
     }
     return row;
   }
@@ -8894,7 +8899,19 @@ var everdawnTitle = (function () {
     var ls = lastSlot(), first = slist.children[(ls >= 1 && ls <= 5 ? ls : 1) - 1].querySelector('.ev-sbtn'); if (first) first.focus();
   }
   function closeSlots() { slots.classList.remove('open'); btnRow.style.visibility = ''; hint.style.visibility = ''; playBtn.focus(); }
-  function pickSlot(n, fresh) { if (window.everdawnPickSlot) window.everdawnPickSlot(n, fresh); slots.classList.remove('open'); play(); }
+  function pickSlot(n, fresh, name) { if (window.everdawnPickSlot) window.everdawnPickSlot(n, fresh, name); slots.classList.remove('open'); play(); }
+  var naming = null;
+  function nameSlot(n, row) {                                          // (a new game has to be named before it starts)
+    row.innerHTML = '<div class="ev-sname"><label for="evName' + n + '">Name your save</label><input id="evName' + n + '" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="e.g. Moonpetal Farm">' +
+      '<span><button type="button" class="go" disabled>Start</button><button type="button" class="no">Cancel</button></span></div>';
+    var inp = row.querySelector('input'), go = row.querySelector('.go');
+    function cancel() { naming = null; var back = slotRow(n); slist.replaceChild(back, row); back.querySelector('.ev-sbtn').focus(); }
+    function start() { var nm = inp.value.replace(/\s+/g, ' ').trim(); if (!nm) { inp.focus(); return; } naming = null; pickSlot(n, true, nm); }
+    inp.addEventListener('input', function () { go.disabled = !inp.value.trim(); });
+    inp.addEventListener('keydown', function (e) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); start(); } else if (e.key === 'Escape') { e.preventDefault(); cancel(); } });   // (typing a name never reaches the game's own keys)
+    go.addEventListener('click', start); row.querySelector('.no').addEventListener('click', cancel);
+    naming = cancel; inp.focus();
+  }
   slots.querySelector('.ev-back').addEventListener('click', closeSlots);
   slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
   // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
@@ -8931,7 +8948,7 @@ var everdawnTitle = (function () {
   optBtn.addEventListener('click', openSettings);
   playBtn.addEventListener('click', openSlots);
   window.addEventListener('keydown', function (e) {
-    if (slots.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSlots(); } return; }
+    if (slots.classList.contains('open')) { if (e.target && e.target.tagName === 'INPUT') return; if (e.code === 'Escape') { e.preventDefault(); if (naming) naming(); else closeSlots(); } return; }
     if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !(e.target && e.target.type === 'range')) { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
     if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
