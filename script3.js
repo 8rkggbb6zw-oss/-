@@ -8248,6 +8248,12 @@ var everdawnTitle = (function () {
     '#evTitle .ev-sask{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:16px;border:2px solid #ff9ab8;background:rgba(120,30,70,.55);font-size:16px}' +
     '#evTitle .ev-sask button{padding:.3em .9em;font:600 15px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:999px;cursor:pointer;background:rgba(255,255,255,.12);margin-left:6px}#evTitle .ev-sask .yes{background:#d8507c;border-color:#ffb0c8}' +
     '#evTitle .ev-back{display:block;margin:12px auto 0;padding:.4em 1.8em;font:600 17px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid #ffe2a0;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
+    '#evTitle .ev-sethead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}' +
+    '#evTitle .ev-sethead h2{margin:0;flex:1}' +
+    '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
+    '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
+    '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
+    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}' +
     '#evTitle .ev-btns{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2.5vw,18px);flex-wrap:nowrap;width:max-content;max-width:96vw}' +
     '#evTitle .ev-opt{display:none;padding:.55em 1.2em;font:600 clamp(16px,3vw,21px) Fredoka,system-ui,sans-serif;letter-spacing:.04em;color:#fff;border:2px solid rgba(255,226,160,.85);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 4px 0 #3e2580,0 8px 20px rgba(60,20,120,.45),inset 0 2px 0 rgba(255,255,255,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;animation:evFade .6s ease .3s forwards}' +
     '#evTitle .ev-opt.show{display:inline-block}#evTitle .ev-opt:hover{filter:brightness(1.1)}#evTitle .ev-opt:active{transform:translateY(3px);box-shadow:0 1px 0 #3e2580,0 4px 12px rgba(60,20,120,.45)}#evTitle .ev-opt:focus-visible{outline:3px solid #fff;outline-offset:4px}' +
@@ -8866,9 +8872,30 @@ var everdawnTitle = (function () {
   function pickSlot(n, fresh) { if (window.everdawnPickSlot) window.everdawnPickSlot(n, fresh); slots.classList.remove('open'); play(); }
   slots.querySelector('.ev-back').addEventListener('click', closeSlots);
   slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
+  // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
+  var SET_PAGES = [{ name: 'Game' }], setPage = 0;
+  var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
+  sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
+    '<div class="ev-dots"></div><div class="ev-setbody"></div><button type="button" class="ev-back">Done</button></div>';
+  root.appendChild(sett);
+  var setTitle = sett.querySelector('h2'), setPrev = sett.querySelector('.prev'), setNext = sett.querySelector('.next'), setDots = sett.querySelector('.ev-dots'), setBody = sett.querySelector('.ev-setbody');
+  function showSetPage(i) {
+    setPage = Math.max(0, Math.min(SET_PAGES.length - 1, i)); var pg = SET_PAGES[setPage];
+    setTitle.textContent = '✦ ' + pg.name + ' ✦'; setBody.innerHTML = ''; if (pg.build) pg.build(setBody);
+    setPrev.disabled = setPage === 0; setNext.disabled = setPage === SET_PAGES.length - 1;
+    setDots.innerHTML = SET_PAGES.map(function (p, k) { return '<i' + (k === setPage ? ' class="on"' : '') + '></i>'; }).join('');
+  }
+  function openSettings() { if (!ready || root.classList.contains('gone')) return; showSetPage(setPage); sett.classList.add('open'); btnRow.style.visibility = 'hidden'; hint.style.visibility = 'hidden'; sett.querySelector('.ev-back').focus(); }
+  function closeSettings() { sett.classList.remove('open'); btnRow.style.visibility = ''; hint.style.visibility = ''; optBtn.focus(); }
+  setPrev.addEventListener('click', function () { showSetPage(setPage - 1); });
+  setNext.addEventListener('click', function () { showSetPage(setPage + 1); });
+  sett.querySelector('.ev-back').addEventListener('click', closeSettings);
+  sett.addEventListener('click', function (e) { if (e.target === sett) closeSettings(); });
+  optBtn.addEventListener('click', openSettings);
   playBtn.addEventListener('click', openSlots);
   window.addEventListener('keydown', function (e) {
-    if (slots.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSlots(); } return; }   // (in the slot list, Enter just presses whichever slot you're on)
+    if (slots.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSlots(); } return; }
+    if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
     if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
