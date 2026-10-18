@@ -7833,6 +7833,47 @@ EVERDAWN_PARTS.push(function (THREE) {
   document.getElementById('btnSave').addEventListener('click', function () { saveLoadSafely('save', saveGame); focusGame(); });
   document.getElementById('btnLoad').addEventListener('click', function () { saveLoadSafely('load', loadGame); focusGame(); });
 
+  // ---------- The fireplace in the house, in real gray brick ----------
+  // The piers, the arch, the hearth and the chimney breast are laid in gray brick: each brick its own shade of gray
+  // (some cooler, some warmer, a few dark), with worn, chipped edges and a little speckle, set in pale mortar that sits
+  // back from the bricks, so the light catches their edges. The bricks are laid by their real size, so they're the same
+  // size on every face, in courses that run level all the way round, each course offset by half a brick
+  (function () {
+    var BW = 0.22, BH = 0.075, TW = BW * 4, TH = BH * 4;               // (a brick, and one picture of 4 x 4 of them)
+    function brickPaint(bump) {
+      var cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; var g = cv.getContext('2d'), r, c, k;
+      g.fillStyle = bump ? '#202020' : '#b9b6b1'; g.fillRect(0, 0, 512, 256);   // (the mortar)
+      if (!bump) for (k = 0; k < 900; k++) { g.fillStyle = 'rgba(' + (Math.random() < 0.5 ? '90,88,86' : '220,218,212') + ',.25)'; g.fillRect(Math.random() * 512, Math.random() * 256, 1.5, 1.5); }
+      for (r = 0; r < 4; r++) for (c = -1; c < 5; c++) {
+        var x = c * 128 + (r % 2) * 64 + 5, y = r * 64 + 5, w = 118, h = 54, sd = Math.sin(r * 12.9 + c * 78.2) * 43758.5, rr = sd - Math.floor(sd);
+        if (bump) { g.fillStyle = '#d8d8d8'; } else {
+          var base = 108 + Math.floor(rr * 46) - (rr > 0.9 ? 40 : 0), tint = Math.floor((rr * 7) % 3) - 1;   // (each brick its own gray, a few cooler, a few warmer, now and then a dark one)
+          g.fillStyle = 'rgb(' + (base + tint * 5) + ',' + (base + 1) + ',' + (base - tint * 6 + 3) + ')';
+        }
+        g.beginPath(); g.moveTo(x + 3, y); g.lineTo(x + w - 2, y + 1); g.lineTo(x + w, y + 4); g.lineTo(x + w - 1, y + h - 2); g.lineTo(x + w - 4, y + h); g.lineTo(x + 2, y + h - 1); g.lineTo(x, y + h - 4); g.lineTo(x + 1, y + 3); g.closePath(); g.fill();   // (a brick, its corners a little worn)
+        if (bump) continue;
+        var gr = g.createLinearGradient(x, y, x, y + h); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(0.25, 'rgba(255,255,255,0)'); gr.addColorStop(0.8, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gr; g.fillRect(x, y, w, h);   // (light on its top edge, shade along its bottom)
+        for (k = 0; k < 140; k++) { g.fillStyle = 'rgba(' + (Math.random() < 0.55 ? '60,58,58' : '235,233,228') + ',' + (0.15 + Math.random() * 0.25) + ')'; g.fillRect(x + Math.random() * w, y + Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 1.5); }   // (speckle in the clay)
+        for (k = 0; k < 3; k++) { var ex = x + Math.random() * w, ey = Math.random() < 0.5 ? y : y + h - 3; g.fillStyle = '#9d9a95'; g.beginPath(); g.arc(ex, ey + 1.5, 2 + Math.random() * 3, 0, Math.PI * 2); g.fill(); }   // (little chips out of its edges)
+      }
+      var t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (!bump && renderer.outputEncoding === THREE.sRGBEncoding) t.encoding = THREE.sRGBEncoding; return t;
+    }
+    R.stone.map = brickPaint(false); R.stone.bumpMap = brickPaint(true); R.stone.bumpScale = 0.025; R.stone.color.set(0xffffff); R.stone.roughness = 0.92; R.stone.needsUpdate = true;
+    var n = new THREE.Vector3(), wp = new THREE.Vector3();
+    room.traverse(function (o) {                                       // (lay the bricks by their real size: each face takes them flat on, from wherever it is in the room)
+      if (!o.isMesh || o.material !== R.stone) return;
+      o.updateMatrixWorld(true); var g = o.geometry, pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv, nm = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+      for (var i = 0; i < pos.count; i++) {
+        wp.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); n.fromBufferAttribute(nor, i).applyMatrix3(nm).normalize();
+        var ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+        if (ay > ax && ay > az) uv.setXY(i, wp.x / TW, wp.z / TH);        // (tops and undersides)
+        else if (ax > az) uv.setXY(i, wp.z / TW, wp.y / TH);              // (faces turned sideways)
+        else uv.setXY(i, wp.x / TW, wp.y / TH);                           // (faces looking into the room)
+      }
+      uv.needsUpdate = true;
+    });
+  })();
+
   // ---------- Save slots ----------
   // The title screen has five save slots. Picking one decides which slot the Save and Load buttons use (slot 1 is
   // where your game was always saved, so an old save turns up there). A slot with a game in it is loaded the moment
