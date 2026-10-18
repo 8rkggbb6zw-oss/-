@@ -7422,10 +7422,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     m.needsUpdate = true;
   });
   // ===== the Dawn Tree in winter: snow lying on its blossom =====
-  // Each little cluster of blossom on the Dawn Tree takes snow on the side that faces the sky, heaped over the upper
-  // part of the flowers, and the hanging strands are frosted along their tops; under the snow its pink glow dims a
-  // little. Its trunk, branches and roots take snow wherever they face the sky, like the other trees. It all melts
-  // away with the rest of the snow when Spring comes
+  // Snow lies thick on the Dawn Tree's blossom, heaviest on top of each cluster but over the flowers all the way
+  // round, so you see it from underneath too, and the hanging strands are frosted along their tops; under the snow its
+  // pink glow dims. (Its trunk, branches and roots already take snow wherever they face the sky, with everything else
+  // up high.) It all melts away with the rest of the snow when Spring comes
   (function () {
     var nCards = blossomCards.count, up = new Float32Array(blossomCards.instanceMatrix.count), m4 = new THREE.Matrix4(), cp = new THREE.Vector3(), cq = new THREE.Quaternion(), cs = new THREE.Vector3();
     for (var i = 0; i < nCards; i++) {                                 // (how high up its own cluster each card sits: the higher, the more snow)
@@ -7441,26 +7441,13 @@ EVERDAWN_PARTS.push(function (THREE) {
         shader.uniforms.uSnowOn = winterSnowOn;
         shader.vertexShader = (strand ? '' : 'attribute float snowUp;\n') + 'varying float vSnowUp;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' + (strand ? 'vSnowUp = 0.6;' : 'vSnowUp = snowUp;'));
         shader.fragmentShader = 'uniform float uSnowOn;\nvarying float vSnowUp;\n' + shader.fragmentShader
-          .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowAmt = uSnowOn * smoothstep(-0.25, 0.45, vSnowUp) * ' + (strand ? 'smoothstep(0.78, 0.98, vUv.y) * 0.8' : '(0.4 + 0.6 * smoothstep(0.25, 0.85, vUv.y))') + ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.95, 0.97, 1.0), snowAmt * 0.9);')
-          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - snowAmt * 0.75;');
+          .replace('#include <map_fragment>', '#include <map_fragment>\nfloat snowAmt = uSnowOn * ' + (strand ? 'smoothstep(0.7, 0.98, vUv.y) * 0.85' : '(0.55 + 0.45 * smoothstep(-0.7, 0.35, vSnowUp)) * (0.7 + 0.3 * smoothstep(0.2, 0.8, vUv.y))') + ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.98, 1.0), snowAmt * 0.92);')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - snowAmt * 0.85;');
       };
       m.customProgramCacheKey = function () { return strand ? 'dawnStrandSnow' : 'dawnBlossomSnow'; };
       m.needsUpdate = true;
     }
     snowOnBlossom(blossomMat, false); snowOnBlossom(strandMat, true);
-    var barkBefore = dawnBarkMat.onBeforeCompile;                      // (and on the trunk, branches and roots)
-    dawnBarkMat.onBeforeCompile = function (shader) {
-      if (barkBefore) barkBefore.call(this, shader);
-      shader.uniforms.uSnowOn = winterSnowOn;
-      shader.fragmentShader = 'uniform float uSnowOn;\n' + shader.fragmentShader.replace('#include <normal_fragment_maps>', [
-        '#include <normal_fragment_maps>',
-        'vec3 snowUp = normalize((vec4(normal, 0.0) * viewMatrix).xyz);',
-        'float snowAmt = smoothstep(0.2, 0.6, snowUp.y) * uSnowOn;',
-        'diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.96, 1.0), snowAmt); totalEmissiveRadiance *= 1.0 - snowAmt * 0.6;'
-      ].join('\n'));
-    };
-    dawnBarkMat.customProgramCacheKey = function () { return 'dawnBarkSnow'; };
-    dawnBarkMat.needsUpdate = true;
   })();
   var winterGreenNeedle = needleBatch.material.map, winterShown = null;
   // ===== a snowy island: the ground and the grass =====
