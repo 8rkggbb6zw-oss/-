@@ -6240,8 +6240,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---------- Saving and loading ----------
   // Your game is kept in this browser (localStorage): your bag, the time and day, mana, harvests,
   // the garden, which trees, bushes and rocks are cut down and when, and where you're standing
-  var SAVE_KEY = 'everdawn-save-1';
-  function saveGame() {
+  var SAVE_KEY = 'everdawn-save-1';                                    // (slot 1: the save slot you pick on the title screen changes this)
+  function saveGame(quiet) {
     var px = player.position.x, pz = player.position.z;
     if (indoors) { px = OUT_DOOR_X; pz = OUT_DOOR_Z + 1.0; }          // saved inside the house? you'll load in at the front door
     if (inShop) { var so = shopFront(2.0); px = so.x; pz = so.z; }    // saved inside the shop? you'll load in outside its door
@@ -6251,7 +6251,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inCoop) { var coo = coopFront(1.8); px = coo.x; pz = coo.z; } // and your coop
     if (inFbarn) { var fbo = fbarnFront(2.0); px = fbo.x; pz = fbo.z; } // and your barn
     var data = {
-      v: 1,
+      v: 1, savedAt: Date.now(),
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
       player: { x: px, z: pz, facing: facing },
@@ -6271,7 +6271,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-      showToast('Game saved ✦');
+      if (!quiet) showToast('Game saved ✦');
     } catch (err) {
       showToast('Could not save here (this browser blocks saving)', 3000);
     }
@@ -7793,6 +7793,21 @@ EVERDAWN_PARTS.push(function (THREE) {
   document.getElementById('btnSave').addEventListener('click', function () { saveLoadSafely('save', saveGame); focusGame(); });
   document.getElementById('btnLoad').addEventListener('click', function () { saveLoadSafely('load', loadGame); focusGame(); });
 
+  // ---------- Save slots ----------
+  // The title screen has five save slots. Picking one decides which slot the Save and Load buttons use (slot 1 is
+  // where your game was always saved, so an old save turns up there). A slot with a game in it is loaded the moment
+  // the title screen has gone; an empty one starts a new game there and saves it straight away, so it's waiting for
+  // you next time. Once you're playing, your game also saves itself whenever you leave or close the page
+  var afterTitle = null, slotPicked = false;
+  window.everdawnPickSlot = function (n, fresh) {
+    SAVE_KEY = 'everdawn-save-' + n; slotPicked = true;
+    try { localStorage.setItem('everdawn-last-slot', String(n)); } catch (err) {}
+    afterTitle = function () { saveLoadSafely(fresh ? 'save' : 'load', fresh ? function () { saveGame(true); } : loadGame); };
+  };
+  function autoSave() { if (slotPicked && !window.EVERDAWN_TITLE) { try { saveGame(true); } catch (err) {} } }
+  window.addEventListener('pagehide', autoSave);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) autoSave(); });
+
   // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
   // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
   // is built on) turns the keyboard off in its full screen, silently dropping every letter and number key (only the
@@ -8165,6 +8180,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   frame = function () {
     if (window.EVERDAWN_TITLE) { var tdt = Math.min(clock.getDelta(), 0.05); if (title3d) title3d.draw(tdt); if (titleFrames++ % 40 === 0) renderer.render(scene, camera); return; }   // (the island just ticks over now and then behind it, to get everything warmed up)
     if (title3d) { title3d.finish(); title3d = null; }
+    if (afterTitle) { var at = afterTitle; afterTitle = null; at(); }   // (then into the save slot you picked)
     everdawnFrame();
   };
   renderer.setAnimationLoop(frame);
@@ -8217,6 +8233,21 @@ var everdawnTitle = (function () {
     '#evTitle .ev-play:focus-visible{outline:3px solid #fff;outline-offset:5px}' +
     '#evTitle .ev-hint{display:none;font-size:clamp(13px,2.2vw,15px);color:#f3e2ff;text-shadow:0 1px 6px rgba(40,10,80,.9);opacity:0;animation:evFade 1s ease .6s forwards}' +
     '#evTitle .ev-hint.show{display:block}' +
+    '#evTitle .ev-slots{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(20,10,45,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}' +
+    '#evTitle .ev-slots.open{display:flex;animation:evFade .3s ease forwards}' +
+    '#evTitle .ev-scard{width:min(520px,100%);max-height:calc(100% - 8px);overflow:auto;box-sizing:border-box;padding:20px 18px 16px;border-radius:24px;border:2.5px solid #ffe2a0;background:linear-gradient(180deg,rgba(100,64,170,.94),rgba(58,34,112,.96));box-shadow:0 18px 50px rgba(10,0,30,.6),inset 0 2px 0 rgba(255,255,255,.25);color:#fff;font-family:Fredoka,system-ui,sans-serif}' +
+    '#evTitle .ev-scard h2{margin:0 0 14px;text-align:center;font-size:clamp(22px,4.5vw,28px);font-weight:600;color:#ffe9b8;text-shadow:0 2px 8px rgba(255,170,230,.5)}' +
+    '#evTitle .ev-slot{display:flex;align-items:stretch;gap:8px;margin:0 0 10px}' +
+    '#evTitle .ev-sbtn{flex:1;display:flex;align-items:center;gap:12px;min-width:0;padding:10px 14px;text-align:left;font:inherit;color:#fff;border:2px solid rgba(255,220,250,.35);border-radius:16px;cursor:pointer;background:rgba(30,15,65,.55);transition:background .15s,border-color .15s,transform .1s}' +
+    '#evTitle .ev-sbtn:hover{background:rgba(120,80,200,.55);border-color:#ffe2a0}#evTitle .ev-sbtn:active{transform:scale(.98)}#evTitle .ev-sbtn:focus-visible,#evTitle .ev-sdel:focus-visible,#evTitle .ev-back:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
+    '#evTitle .ev-snum{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600;color:#4e2b9c;background:linear-gradient(180deg,#fff2c8,#ffd27a);box-shadow:0 2px 0 #b8892e}' +
+    '#evTitle .ev-sbtn.empty .ev-snum{color:#fff;background:rgba(255,255,255,.12);box-shadow:none;border:2px dashed rgba(255,220,250,.45)}' +
+    '#evTitle .ev-stxt{min-width:0;display:flex;flex-direction:column;gap:2px}#evTitle .ev-stxt b{font-size:17px;font-weight:600}#evTitle .ev-stxt span{font-size:14px;color:#f0e2ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '#evTitle .ev-stxt i{font-style:normal;font-size:12px;color:#ffd6f0;opacity:.85}#evTitle .ev-last{margin-left:6px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;color:#4e2b9c;background:#ffd27a;vertical-align:2px}' +
+    '#evTitle .ev-sdel{flex:none;width:46px;font-size:18px;color:#fff;border:2px solid rgba(255,220,250,.3);border-radius:14px;cursor:pointer;background:rgba(30,15,65,.55)}#evTitle .ev-sdel:hover{background:rgba(200,70,110,.6)}' +
+    '#evTitle .ev-sask{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-radius:16px;border:2px solid #ff9ab8;background:rgba(120,30,70,.55);font-size:16px}' +
+    '#evTitle .ev-sask button{padding:.3em .9em;font:600 15px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,255,255,.6);border-radius:999px;cursor:pointer;background:rgba(255,255,255,.12);margin-left:6px}#evTitle .ev-sask .yes{background:#d8507c;border-color:#ffb0c8}' +
+    '#evTitle .ev-back{display:block;margin:12px auto 0;padding:.4em 1.8em;font:600 17px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid #ffe2a0;border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
     '#evTitle .ev-btns{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2.5vw,18px);flex-wrap:nowrap;width:max-content;max-width:96vw}' +
     '#evTitle .ev-opt{display:none;padding:.55em 1.2em;font:600 clamp(16px,3vw,21px) Fredoka,system-ui,sans-serif;letter-spacing:.04em;color:#fff;border:2px solid rgba(255,226,160,.85);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 4px 0 #3e2580,0 8px 20px rgba(60,20,120,.45),inset 0 2px 0 rgba(255,255,255,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;animation:evFade .6s ease .3s forwards}' +
     '#evTitle .ev-opt.show{display:inline-block}#evTitle .ev-opt:hover{filter:brightness(1.1)}#evTitle .ev-opt:active{transform:translateY(3px);box-shadow:0 1px 0 #3e2580,0 4px 12px rgba(60,20,120,.45)}#evTitle .ev-opt:focus-visible{outline:3px solid #fff;outline-offset:4px}' +
@@ -8795,8 +8826,50 @@ var everdawnTitle = (function () {
     var game = document.getElementById('game'); if (game) { try { game.focus(); } catch (err) {} }
     setTimeout(function () { alive = false; root.remove(); window.removeEventListener('resize', resize); }, 1200);
   }
-  playBtn.addEventListener('click', play);
-  window.addEventListener('keydown', function (e) { if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); play(); } }, true);
+  // ----- the save slots: Play opens a list of five; pick one with a game in it to carry on, or an empty one to start anew -----
+  var SEAS = ['Spring', 'Summer', 'Fall', 'Winter'], WDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  var slots = document.createElement('div'); slots.className = 'ev-slots'; slots.setAttribute('role', 'dialog'); slots.setAttribute('aria-modal', 'true'); slots.setAttribute('aria-label', 'Choose a save slot');
+  slots.innerHTML = '<div class="ev-scard"><h2>✦ Choose a Save ✦</h2><div class="ev-slist"></div><button type="button" class="ev-back">Back</button></div>';
+  root.appendChild(slots);
+  var slist = slots.querySelector('.ev-slist'), btnRow = root.querySelector('.ev-btns');
+  function readSlot(n) { try { var d = JSON.parse(localStorage.getItem('everdawn-save-' + n)); return d && d.v === 1 && d.state ? d : null; } catch (err) { return null; } }
+  function lastSlot() { try { return parseInt(localStorage.getItem('everdawn-last-slot'), 10) || 0; } catch (err) { return 0; } }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function slotRow(n) {
+    var d = readSlot(n), row = document.createElement('div'); row.className = 'ev-slot';
+    if (d) {
+      var day = d.state.day || 1, when = WDAYS[(day - 1) % 7] + ' · ' + SEAS[Math.floor((day - 1) / 28) % 4] + ', Day ' + ((day - 1) % 28 + 1);
+      var saved = d.savedAt ? 'Saved ' + new Date(d.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      row.innerHTML = '<button type="button" class="ev-sbtn"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>' + esc(when) + (n === lastSlot() ? '<span class="ev-last">Last played</span>' : '') + '</b>' +
+        '<span>🪙 ' + (d.state.coins || 0) + ' coins · 🌾 ' + (d.state.harvest || 0) + ' harvested</span>' + (saved ? '<i>' + esc(saved) + '</i>' : '') + '</span></button>' +
+        '<button type="button" class="ev-sdel" aria-label="Delete the game in slot ' + n + '" title="Delete">🗑</button>';
+      row.querySelector('.ev-sbtn').addEventListener('click', function () { pickSlot(n, false); });
+      row.querySelector('.ev-sdel').addEventListener('click', function () {   // (asking first: a deleted game can't come back)
+        row.innerHTML = '<div class="ev-sask"><span>Delete the game in slot ' + n + '?</span><span><button type="button" class="yes">Delete</button><button type="button" class="no">Keep it</button></span></div>';
+        row.querySelector('.yes').addEventListener('click', function () { try { localStorage.removeItem('everdawn-save-' + n); } catch (err) {} var fresh = slotRow(n); slist.replaceChild(fresh, row); fresh.querySelector('.ev-sbtn').focus(); });
+        row.querySelector('.no').addEventListener('click', function () { var back = slotRow(n); slist.replaceChild(back, row); back.querySelector('.ev-sbtn').focus(); });
+        row.querySelector('.no').focus();
+      });
+    } else {
+      row.innerHTML = '<button type="button" class="ev-sbtn empty"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>✦ New Game</b><span>An empty slot</span></span></button>';
+      row.querySelector('.ev-sbtn').addEventListener('click', function () { pickSlot(n, true); });
+    }
+    return row;
+  }
+  function openSlots() {
+    if (!ready || root.classList.contains('gone')) return;
+    slist.innerHTML = ''; for (var n = 1; n <= 5; n++) slist.appendChild(slotRow(n));
+    slots.classList.add('open'); btnRow.style.visibility = 'hidden'; hint.style.visibility = 'hidden';
+    var ls = lastSlot(), first = slist.children[(ls >= 1 && ls <= 5 ? ls : 1) - 1].querySelector('.ev-sbtn'); if (first) first.focus();
+  }
+  function closeSlots() { slots.classList.remove('open'); btnRow.style.visibility = ''; hint.style.visibility = ''; playBtn.focus(); }
+  function pickSlot(n, fresh) { if (window.everdawnPickSlot) window.everdawnPickSlot(n, fresh); slots.classList.remove('open'); play(); }
+  slots.querySelector('.ev-back').addEventListener('click', closeSlots);
+  slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
+  playBtn.addEventListener('click', openSlots);
+  window.addEventListener('keydown', function (e) {
+    if (slots.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSlots(); } return; }   // (in the slot list, Enter just presses whichever slot you're on)
+    if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
     ready: function () { ready = true; target = 100; setTip('All ready!'); },
