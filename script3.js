@@ -8724,7 +8724,7 @@ var everdawnTitle = (function () {
   // ----- the title music: "The Witch's Waltz-Step", a cute, sneaky little tune in D minor -----
   // A music-box celesta sings the tune over bouncy plucked strings (bass on 1 and 3, a pluck of the chord on 2 and 4,
   // like tiptoeing), with a woodblock going tick-tock like a clock and a whisper of shaker. In the second part a hollow,
-  // woody clarinet takes the tune and the celesta twinkles answers; then the first tune comes back with a glockenspiel
+  // woody clarinet takes the tune; then the first tune comes back with a glockenspiel
   // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. It all fades away when you press
   // Play. Browsers only allow sound after a tap or a key, so it starts on your first one, and the ♪ button in the
   // corner turns it on or off (and remembers)
@@ -8764,8 +8764,6 @@ var everdawnTitle = (function () {
         if (part === 'A' || part === 'A2') { celesta(t, nt[1], nt[2], 1); if (part === 'A2') glock(t, nt[1], 0.8); }
         else if (part === 'B') clarinet(t, nt[1] - 12 + 12, nt[2], 1);
         else { theremin(t, nt[1], nt[2], prev); prev = nt[1]; } });
-      if (part === 'B' && idx % 2 === 1) ch[1].concat([ch[1][0] + 12]).forEach(function (n, i) { celesta(at(t0, 2.5) + i * SPB / 4, n + 24, 0.25, 0.55); });   // (the celesta answering)
-      if (bridge) [0, 1.5, 3].forEach(function (b, i) { glock(at(t0, b), ch[1][i % 3] + 12, 0.35); });
     }
     function tick() { if (!ac || done) return; var now = ac.currentTime; if (next < now) next = now + 0.1;
       while (next < now + 0.7) { playBar(next, SONG[bar % SONG.length], bar % SONG.length); next += 4 * SPB; bar++; } }
