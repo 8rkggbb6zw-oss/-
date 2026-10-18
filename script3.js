@@ -8723,7 +8723,7 @@ var everdawnTitle = (function () {
   requestAnimationFrame(loop);
   // ----- the title music: "The Witch's Waltz-Step", a cute, sneaky little tune in D minor -----
   // A music-box celesta sings the tune over bouncy plucked strings (bass on 1 and 3, a pluck of the chord on 2 and 4,
-  // like tiptoeing), with a woodblock going tick-tock like a clock and a whisper of shaker. In the second part a hollow,
+  // like tiptoeing), with a whisper of shaker. In the second part a hollow,
   // woody clarinet takes the tune; then the first tune comes back with a glockenspiel
   // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. It all fades away when you press
   // Play. Browsers only allow sound after a tap or a key, so it starts on your first one, and the ♪ button in the
@@ -8753,12 +8753,11 @@ var everdawnTitle = (function () {
       var o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(hz(prev || n), t); o.frequency.exponentialRampToValueAtTime(hz(n), t + 0.28); o.connect(g);
       var vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 6.2; vg.gain.value = hz(n) * 0.014; vib.connect(vg); vg.connect(o.frequency); o.start(t); o.stop(e + 0.1); vib.start(t); vib.stop(e + 0.1); }
     function noise(t, len, type, f, v) { var nb = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate), d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; var s = ac.createBufferSource(); s.buffer = nb; var fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = 1.2; var g = voice(1, 0.1); env(g, t, 0.003, v, len); s.connect(fl); fl.connect(g); s.start(t); s.stop(t + len + 0.05); }
-    function block(t, hi) { var g = voice(1, 0.15); env(g, t, 0.001, 0.09, 0.07); osc('sine', hi ? 1250 : 940, t, t + 0.12, g); }
     function playBar(t0, s, idx) {
       var ch = CH[s.b[0]], part = s.part, bridge = part === 'BR', last = idx === 7 || (bridge && idx === 27);
       pizz(at(t0, 0), ch[0], 1); if (!bridge) { ch[1].forEach(function (n) { pizz(at(t0, 1), n, 0.42); }); pizz(at(t0, 2), ch[0] + 7, 0.85); ch[1].forEach(function (n) { pizz(at(t0, 3), n, 0.42); }); }   // (oom-pah, on tiptoe)
       else pizz(at(t0, 2), ch[0] + 7, 0.7);
-      if (!bridge) { block(at(t0, 1), true); block(at(t0, 3), false); for (var sh = 0; sh < 4; sh++) noise(at(t0, sh + 0.5), 0.06, 'highpass', 6500, 0.018); }
+      if (!bridge) { for (var sh = 0; sh < 4; sh++) noise(at(t0, sh + 0.5), 0.06, 'highpass', 6500, 0.018); }
       var prev = null;
       s.b[1].forEach(function (nt) { var t = at(t0, nt[0]);
         if (part === 'A' || part === 'A2') { celesta(t, nt[1], nt[2], 1); if (part === 'A2') glock(t, nt[1], 0.8); }
