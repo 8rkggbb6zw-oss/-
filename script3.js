@@ -8234,7 +8234,7 @@ var everdawnTitle = (function () {
   var root = document.createElement('div'); root.id = 'evTitle';
   root.innerHTML = '<canvas></canvas><div class="ev-ui"><div class="ev-name"><span class="ev-star" style="left:-.9em;top:.1em;font-size:34px">✦</span><span class="ev-star" style="right:-.7em;top:-.3em;font-size:24px;animation-delay:.8s">✧</span><span class="ev-star" style="right:-1.2em;bottom:.4em;font-size:16px;animation-delay:1.5s">✦</span><h1>Everdawn</h1><div class="ev-sub">a cozy, magical farm</div></div>' +
     '<div class="ev-bottom"><div class="ev-load"><div class="ev-track"><div class="ev-fill"></div><div class="ev-bud">🌸</div></div><div class="ev-status"><span class="ev-tip">Opening the gate…</span><span class="ev-pct">0%</span></div></div>' +
-    '<div class="ev-btns"><button type="button" class="ev-play">✦ Play ✦</button><button type="button" class="ev-opt"><span aria-hidden="true">⚙</span> Options</button></div><div class="ev-hint">Press Enter or tap Play</div></div></div>';
+    '<div class="ev-btns"><button type="button" class="ev-play">✦ Play ✦</button><button type="button" class="ev-opt"><span aria-hidden="true">⚙</span> Settings</button></div><div class="ev-hint">Press Enter or tap Play</div></div></div>';
   (document.body || document.documentElement).appendChild(root);
   var prevOverflow = document.body ? document.body.style.overflow : ''; if (document.body) document.body.style.overflow = 'hidden';
   var cv = root.querySelector('canvas'), g = cv.getContext('2d'), track = root.querySelector('.ev-track'), fill = root.querySelector('.ev-fill'), bud = root.querySelector('.ev-bud');
