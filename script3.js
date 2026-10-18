@@ -7931,6 +7931,61 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { setMove(localStorage.getItem(MOVE_KEY)); } catch (err) {}
   window.everdawnSetMove = function (type) { setMove(type); try { localStorage.setItem(MOVE_KEY, type === 'jog' ? 'jog' : 'walk'); } catch (err) {} };
 
+  // ---------- Storage Drag & Drop, set in Settings ----------
+  // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
+  // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
+  // it across into the bin (and drag it from the bin back over your bag to take it out), with a copy of it following
+  // your finger and the side you can drop on lighting up. It's remembered
+  var STORE_KEY = 'everdawn-storage-drag', storeDrag = false, shipHintEl = shipBox.querySelector('.ship-hint'), shipHintTap = shipHintEl.textContent;
+  try { storeDrag = localStorage.getItem(STORE_KEY) === 'on'; } catch (err) {}
+  function storeHint() { shipHintEl.textContent = storeDrag ? 'Press and hold something in your bag, then drag it into the bin. Drag it from the bin back over your bag to take it out. Everything in the bin sells at 6 am tomorrow.' : shipHintTap; }
+  storeHint();
+  window.everdawnSetStorageDrag = function (on) { storeDrag = !!on; storeHint(); try { localStorage.setItem(STORE_KEY, on ? 'on' : 'off'); } catch (err) {} if (!shipBox.hidden) renderShip(); };
+  [shipBagGrid, shipBinGrid].forEach(function (grid) {               // (while it's on, a plain tap doesn't move anything)
+    grid.addEventListener('click', function (e) { if (storeDrag && e.target !== grid) { e.stopPropagation(); e.preventDefault(); } }, true);
+  });
+  var storeDragging = null;                                            // { from: 'bag' or 'bin', i, id, x, y, ghost, el }
+  function storeIndex(grid, el) { while (el && el.parentNode !== grid) el = el.parentNode; return el ? Array.prototype.indexOf.call(grid.children, el) : -1; }
+  function storeOver(x, y, grid) { var r = grid.parentNode.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; }
+  function storeClear() { shipBagGrid.parentNode.classList.remove('store-drop'); shipBinGrid.parentNode.classList.remove('store-drop'); }
+  [[shipBagGrid, 'bag'], [shipBinGrid, 'bin']].forEach(function (pair) {
+    pair[0].addEventListener('pointerdown', function (e) {
+      if (!storeDrag) return;
+      var i = storeIndex(pair[0], e.target), el = pair[0].children[i];
+      if (i < 0 || !el || el.tagName !== 'BUTTON') return;
+      var it = pair[1] === 'bag' ? bag[i] : shipBin[i]; if (!it) return;
+      e.preventDefault();
+      storeDragging = { from: pair[1], i: i, id: it.id, x: e.clientX, y: e.clientY, ghost: null, el: el };
+    });
+  });
+  window.addEventListener('pointermove', function (e) {
+    var d = storeDragging; if (!d) return;
+    if (!d.ghost) {
+      if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 6) return;
+      d.ghost = document.createElement('div'); d.ghost.className = 'drag-ghost'; d.ghost.appendChild(itemPicture(d.id)); document.body.appendChild(d.ghost);
+      d.el.classList.add('dragging');
+    }
+    d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px';
+    var target = d.from === 'bag' ? shipBinGrid : shipBagGrid; storeClear();
+    if (storeOver(e.clientX, e.clientY, target)) target.parentNode.classList.add('store-drop');
+  });
+  function storeEnd(e, cancel) {
+    var d = storeDragging; if (!d) return; storeDragging = null; storeClear();
+    if (d.ghost) document.body.removeChild(d.ghost); d.el.classList.remove('dragging');
+    if (cancel || !d.ghost) return;
+    if (d.from === 'bag' && storeOver(e.clientX, e.clientY, shipBinGrid)) {
+      var it = bag[d.i]; if (it && (isTool(it.id) || !ITEMS[it.id].price)) { showToast('Tools can\'t go in the shipping bin', 1800); return; }
+      shipItem(d.i);
+    } else if (d.from === 'bin' && storeOver(e.clientX, e.clientY, shipBagGrid)) unshipItem(d.i);
+  }
+  window.addEventListener('pointerup', function (e) { storeEnd(e, false); });
+  window.addEventListener('pointercancel', function (e) { storeEnd(e, true); });
+  (function () { var css = document.createElement('style');            // (the side you can drop on lights up, and the slots don't scroll the page while you drag)
+    css.textContent = '.ship .ship-cols > div { border-radius: 14px; transition: box-shadow .15s, background .15s; } .ship .ship-cols > div.store-drop { background: rgba(255,210,240,.25); box-shadow: 0 0 0 3px #ffd27a inset; } .ship.store-drag .slot { touch-action: none; }';
+    document.head.appendChild(css); })();
+  var storeBaseRender = renderShip;
+  renderShip = function () { storeBaseRender(); shipBox.classList.toggle('store-drag', storeDrag); };
+
   // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
   // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
   // is built on) turns the keyboard off in its full screen, silently dropping every letter and number key (only the
@@ -9024,13 +9079,20 @@ var everdawnTitle = (function () {
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
-    var segBtns = body.querySelectorAll('.ev-seg button');
+    var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var sb = 0; sb < segBtns.length; sb++) segBtns[sb].addEventListener('click', function () {   // (Movement Type: Walk or Jog)
       mv = this.getAttribute('data-m'); showMove(); try { localStorage.setItem('everdawn-move', mv); } catch (err) {} if (window.everdawnSetMove) window.everdawnSetMove(mv); });
     showMove();
+    var sd = 'off'; try { if (localStorage.getItem('everdawn-storage-drag') === 'on') sd = 'on'; } catch (err) {}   // (Storage Drag & Drop: Disabled or Enabled)
+    var sdBtns = body.querySelectorAll('.ev-seg button[data-s]');
+    function showStore() { for (var b = 0; b < sdBtns.length; b++) { var on = sdBtns[b].getAttribute('data-s') === sd; sdBtns[b].classList.toggle('on', on); sdBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb2 = 0; sb2 < sdBtns.length; sb2++) sdBtns[sb2].addEventListener('click', function () {
+      sd = this.getAttribute('data-s'); showStore(); try { localStorage.setItem('everdawn-storage-drag', sd); } catch (err) {} if (window.everdawnSetStorageDrag) window.everdawnSetStorageDrag(sd === 'on'); });
+    showStore();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
