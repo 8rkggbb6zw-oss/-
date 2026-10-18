@@ -8723,7 +8723,7 @@ var everdawnTitle = (function () {
   requestAnimationFrame(loop);
   // ----- the title music: "The Witch's Waltz-Step", a cute, sneaky little tune in D minor -----
   // A music-box celesta sings the tune over bouncy plucked strings (bass on 1 and 3, a pluck of the chord on 2 and 4,
-  // like tiptoeing), with a whisper of shaker. In the second part a hollow,
+  // like tiptoeing). In the second part a hollow,
   // woody clarinet takes the tune; then the first tune comes back with a glockenspiel
   // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. It all fades away when you press
   // Play. Browsers only allow sound after a tap or a key, so it starts on your first one, and the ♪ button in the
@@ -8743,21 +8743,19 @@ var everdawnTitle = (function () {
     function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
     function osc(type, f, t, end, dest, detune) { var o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (detune) o.detune.value = detune; o.connect(dest); o.start(t); o.stop(end); return o; }
     function voice(gain, wet) { var g = ac.createGain(); g.connect(out); if (wet) { var s = ac.createGain(); s.gain.value = wet; g.connect(s); s.connect(verb); } return g; }
-    function celesta(t, n, len, v) { var g = voice(1, 0.45); env(g, t, 0.004, 0.16 * v, 0.9 + len * SPB * 0.5); osc('sine', hz(n), t, t + 2.4, g); var g2 = voice(1, 0.3); env(g2, t, 0.002, 0.05 * v, 0.25); osc('sine', hz(n) * 4, t, t + 0.4, g2); var g3 = voice(1, 0.3); env(g3, t, 0.003, 0.03 * v, 0.5); osc('triangle', hz(n) * 2, t, t + 0.7, g3); }
-    function glock(t, n, v) { var g = voice(1, 0.5); env(g, t, 0.002, 0.07 * v, 0.7); osc('sine', hz(n + 12), t, t + 1, g); var g2 = voice(1, 0.4); env(g2, t, 0.001, 0.025 * v, 0.15); osc('sine', hz(n + 12) * 2.76, t, t + 0.25, g2); }
-    function pizz(t, n, v) { var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(hz(n) * 6, t); lp.frequency.exponentialRampToValueAtTime(hz(n) * 1.5, t + 0.18); var g = voice(1, 0.18); lp.connect(g); env(g, t, 0.003, 0.2 * v, 0.28); osc('triangle', hz(n), t, t + 0.4, lp); osc('sawtooth', hz(n), t, t + 0.3, lp, 4); }
+    function celesta(t, n, len, v) { var g = voice(1, 0.45); env(g, t, 0.012, 0.16 * v, 0.9 + len * SPB * 0.5); osc('sine', hz(n), t, t + 2.4, g); var g2 = voice(1, 0.3); env(g2, t, 0.012, 0.035 * v, 0.25); osc('sine', hz(n) * 4, t, t + 0.4, g2); var g3 = voice(1, 0.3); env(g3, t, 0.012, 0.03 * v, 0.5); osc('triangle', hz(n) * 2, t, t + 0.7, g3); }
+    function glock(t, n, v) { var g = voice(1, 0.5); env(g, t, 0.01, 0.07 * v, 0.7); osc('sine', hz(n + 12), t, t + 1, g); var g2 = voice(1, 0.4); env(g2, t, 0.01, 0.015 * v, 0.15); osc('sine', hz(n + 12) * 2.76, t, t + 0.25, g2); }
+    function pizz(t, n, v) { var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(hz(n) * 6, t); lp.frequency.exponentialRampToValueAtTime(hz(n) * 1.5, t + 0.18); var g = voice(1, 0.18); lp.connect(g); env(g, t, 0.014, 0.2 * v, 0.3); osc('triangle', hz(n), t, t + 0.45, lp); }   // (a soft, round pluck, with no click at the start)
     function clarinet(t, n, len, v) { var e = t + len * SPB * 0.95, lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1300; lp.Q.value = 2; var g = voice(1, 0.35); lp.connect(g);
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07 * v, t + 0.06); g.gain.setValueAtTime(0.07 * v, Math.max(t + 0.07, e - 0.08)); g.gain.exponentialRampToValueAtTime(0.0001, e + 0.12);
       var o = osc('square', hz(n), t, e + 0.2, lp), vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 5; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(hz(n) * 0.006, t + 0.4); vib.connect(vg); vg.connect(o.frequency); vib.start(t); vib.stop(e + 0.2); }
     function theremin(t, n, len, prev) { var e = t + len * SPB, g = voice(1, 0.6); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.2); g.gain.setValueAtTime(0.06, e - 0.25); g.gain.exponentialRampToValueAtTime(0.0001, e + 0.05);
       var o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(hz(prev || n), t); o.frequency.exponentialRampToValueAtTime(hz(n), t + 0.28); o.connect(g);
       var vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 6.2; vg.gain.value = hz(n) * 0.014; vib.connect(vg); vg.connect(o.frequency); o.start(t); o.stop(e + 0.1); vib.start(t); vib.stop(e + 0.1); }
-    function noise(t, len, type, f, v) { var nb = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate), d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; var s = ac.createBufferSource(); s.buffer = nb; var fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = 1.2; var g = voice(1, 0.1); env(g, t, 0.003, v, len); s.connect(fl); fl.connect(g); s.start(t); s.stop(t + len + 0.05); }
     function playBar(t0, s, idx) {
       var ch = CH[s.b[0]], part = s.part, bridge = part === 'BR', last = idx === 7 || (bridge && idx === 27);
       pizz(at(t0, 0), ch[0], 1); if (!bridge) { ch[1].forEach(function (n) { pizz(at(t0, 1), n, 0.42); }); pizz(at(t0, 2), ch[0] + 7, 0.85); ch[1].forEach(function (n) { pizz(at(t0, 3), n, 0.42); }); }   // (oom-pah, on tiptoe)
       else pizz(at(t0, 2), ch[0] + 7, 0.7);
-      if (!bridge) { for (var sh = 0; sh < 4; sh++) noise(at(t0, sh + 0.5), 0.06, 'highpass', 6500, 0.018); }
       var prev = null;
       s.b[1].forEach(function (nt) { var t = at(t0, nt[0]);
         if (part === 'A' || part === 'A2') { celesta(t, nt[1], nt[2], 1); if (part === 'A2') glock(t, nt[1], 0.8); }
