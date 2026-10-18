@@ -7974,6 +7974,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { setMove(localStorage.getItem(MOVE_KEY)); } catch (err) {}
   window.everdawnSetMove = function (type) { setMove(type); try { localStorage.setItem(MOVE_KEY, type === 'jog' ? 'jog' : 'walk'); } catch (err) {} };
 
+  // ---------- Game time speed, set by the "Game Time Speed" slider in Settings ----------
+  // 50% is the usual pace (every 10 in-game minutes take 11 real seconds); 100% makes time on the island go twice as
+  // fast, and everything in between scales smoothly. It's remembered
+  var TIME_KEY = 'everdawn-time-speed', BASE_MINUTES_PER_SECOND = GAME_MINUTES_PER_SECOND;
+  function setTimeSpeed(pct) { pct = THREE.MathUtils.clamp(pct, 50, 100); GAME_MINUTES_PER_SECOND = BASE_MINUTES_PER_SECOND * pct / 50; }
+  try { var timeSaved = parseFloat(localStorage.getItem(TIME_KEY)); if (timeSaved >= 50 && timeSaved <= 100) setTimeSpeed(timeSaved); } catch (err) {}
+  window.everdawnSetTimeSpeed = function (pct) { setTimeSpeed(pct); try { localStorage.setItem(TIME_KEY, String(THREE.MathUtils.clamp(pct, 50, 100))); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -9119,9 +9127,11 @@ var everdawnTitle = (function () {
   slots.querySelector('.ev-back').addEventListener('click', closeSlots);
   slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
   // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
+  function timeNow() { try { var t = parseFloat(localStorage.getItem('everdawn-time-speed')); if (t >= 50 && t <= 100) return t; } catch (err) {} return 50; }
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
-  var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you)
+  var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
+      '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
@@ -9139,6 +9149,9 @@ var everdawnTitle = (function () {
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
+    var ti = body.querySelector('#evTime'), tp = body.querySelector('#evTimePct'); ti.value = timeNow();   // (Game Time Speed: 50% is the usual pace, 100% twice as fast)
+    function showTime() { tp.textContent = Math.round(parseFloat(ti.value)) + '%'; } showTime();
+    ti.addEventListener('input', function () { showTime(); var t = parseFloat(ti.value); try { localStorage.setItem('everdawn-time-speed', String(t)); } catch (err) {} if (window.everdawnSetTimeSpeed) window.everdawnSetTimeSpeed(t); });
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
