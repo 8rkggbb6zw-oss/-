@@ -8725,9 +8725,9 @@ var everdawnTitle = (function () {
   // A music-box celesta sings the tune over bouncy plucked strings (bass on 1 and 3, a pluck of the chord on 2 and 4,
   // like tiptoeing), with a woodblock going tick-tock like a clock and a whisper of shaker. In the second part a hollow,
   // woody clarinet takes the tune and the celesta twinkles answers; then the first tune comes back with a glockenspiel
-  // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. Every part ends with a sparkle of
-  // magic running up the scale. It all fades away when you press Play. Browsers only allow sound after a tap or a
-  // key, so it starts on your first one, and the ♪ button in the corner turns it on or off (and remembers)
+  // doubling it, and a short spooky-cute bridge where a theremin glides and swoops. It all fades away when you press
+  // Play. Browsers only allow sound after a tap or a key, so it starts on your first one, and the ♪ button in the
+  // corner turns it on or off (and remembers)
   var titleMusic = (function () {
     var KEY = 'everdawn-title-music', want = true; try { want = localStorage.getItem(KEY) !== 'off'; } catch (err) {}
     var ac = null, out = null, verb = null, timer = 0, next = 0, bar = 0, done = false, BPM = 116, SPB = 60 / BPM;
@@ -8754,7 +8754,6 @@ var everdawnTitle = (function () {
       var vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 6.2; vg.gain.value = hz(n) * 0.014; vib.connect(vg); vg.connect(o.frequency); o.start(t); o.stop(e + 0.1); vib.start(t); vib.stop(e + 0.1); }
     function noise(t, len, type, f, v) { var nb = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate), d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; var s = ac.createBufferSource(); s.buffer = nb; var fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = 1.2; var g = voice(1, 0.1); env(g, t, 0.003, v, len); s.connect(fl); fl.connect(g); s.start(t); s.stop(t + len + 0.05); }
     function block(t, hi) { var g = voice(1, 0.15); env(g, t, 0.001, 0.09, 0.07); osc('sine', hi ? 1250 : 940, t, t + 0.12, g); }
-    function sparkle(t) { [74, 76, 77, 79, 81, 82, 85, 86].forEach(function (n, i) { celesta(t + i * SPB / 8, n, 0.25, 0.6); if (i % 2) glock(t + i * SPB / 8, n, 0.5); }); noise(t, 0.6, 'highpass', 7000, 0.02); }
     function playBar(t0, s, idx) {
       var ch = CH[s.b[0]], part = s.part, bridge = part === 'BR', last = idx === 7 || (bridge && idx === 27);
       pizz(at(t0, 0), ch[0], 1); if (!bridge) { ch[1].forEach(function (n) { pizz(at(t0, 1), n, 0.42); }); pizz(at(t0, 2), ch[0] + 7, 0.85); ch[1].forEach(function (n) { pizz(at(t0, 3), n, 0.42); }); }   // (oom-pah, on tiptoe)
@@ -8767,7 +8766,6 @@ var everdawnTitle = (function () {
         else { theremin(t, nt[1], nt[2], prev); prev = nt[1]; } });
       if (part === 'B' && idx % 2 === 1) ch[1].concat([ch[1][0] + 12]).forEach(function (n, i) { celesta(at(t0, 2.5) + i * SPB / 4, n + 24, 0.25, 0.55); });   // (the celesta answering)
       if (bridge) [0, 1.5, 3].forEach(function (b, i) { glock(at(t0, b), ch[1][i % 3] + 12, 0.35); });
-      if ((idx + 1) % 8 === 0 || idx === SONG.length - 1) sparkle(at(t0, 3));
     }
     function tick() { if (!ac || done) return; var now = ac.currentTime; if (next < now) next = now + 0.1;
       while (next < now + 0.7) { playBar(next, SONG[bar % SONG.length], bar % SONG.length); next += 4 * SPB; bar++; } }
