@@ -8217,6 +8217,9 @@ var everdawnTitle = (function () {
     '#evTitle .ev-play:focus-visible{outline:3px solid #fff;outline-offset:5px}' +
     '#evTitle .ev-hint{display:none;font-size:clamp(13px,2.2vw,15px);color:#f3e2ff;text-shadow:0 1px 6px rgba(40,10,80,.9);opacity:0;animation:evFade 1s ease .6s forwards}' +
     '#evTitle .ev-hint.show{display:block}' +
+    '#evTitle .ev-btns{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2.5vw,18px);flex-wrap:nowrap;width:max-content;max-width:96vw}' +
+    '#evTitle .ev-opt{display:none;padding:.55em 1.2em;font:600 clamp(16px,3vw,21px) Fredoka,system-ui,sans-serif;letter-spacing:.04em;color:#fff;border:2px solid rgba(255,226,160,.85);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 4px 0 #3e2580,0 8px 20px rgba(60,20,120,.45),inset 0 2px 0 rgba(255,255,255,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;animation:evFade .6s ease .3s forwards}' +
+    '#evTitle .ev-opt.show{display:inline-block}#evTitle .ev-opt:hover{filter:brightness(1.1)}#evTitle .ev-opt:active{transform:translateY(3px);box-shadow:0 1px 0 #3e2580,0 4px 12px rgba(60,20,120,.45)}#evTitle .ev-opt:focus-visible{outline:3px solid #fff;outline-offset:4px}' +
     '#evTitle .ev-music{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:3;padding:.45em .9em;font:500 14px Fredoka,system-ui,sans-serif;color:#fff;background:rgba(40,20,80,.45);border:1.5px solid rgba(255,220,250,.55);border-radius:999px;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}' +
     '#evTitle .ev-music:hover{background:rgba(70,40,120,.6)}#evTitle .ev-music:focus-visible{outline:2px solid #fff;outline-offset:3px}' +
     '@keyframes evFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}' +
@@ -8231,11 +8234,11 @@ var everdawnTitle = (function () {
   var root = document.createElement('div'); root.id = 'evTitle';
   root.innerHTML = '<canvas></canvas><div class="ev-ui"><div class="ev-name"><span class="ev-star" style="left:-.9em;top:.1em;font-size:34px">✦</span><span class="ev-star" style="right:-.7em;top:-.3em;font-size:24px;animation-delay:.8s">✧</span><span class="ev-star" style="right:-1.2em;bottom:.4em;font-size:16px;animation-delay:1.5s">✦</span><h1>Everdawn</h1><div class="ev-sub">a cozy, magical farm</div></div>' +
     '<div class="ev-bottom"><div class="ev-load"><div class="ev-track"><div class="ev-fill"></div><div class="ev-bud">🌸</div></div><div class="ev-status"><span class="ev-tip">Opening the gate…</span><span class="ev-pct">0%</span></div></div>' +
-    '<button type="button" class="ev-play">✦ Play ✦</button><div class="ev-hint">Press Enter or tap Play</div></div></div>';
+    '<div class="ev-btns"><button type="button" class="ev-play">✦ Play ✦</button><button type="button" class="ev-opt"><span aria-hidden="true">⚙</span> Options</button></div><div class="ev-hint">Press Enter or tap Play</div></div></div>';
   (document.body || document.documentElement).appendChild(root);
   var prevOverflow = document.body ? document.body.style.overflow : ''; if (document.body) document.body.style.overflow = 'hidden';
   var cv = root.querySelector('canvas'), g = cv.getContext('2d'), track = root.querySelector('.ev-track'), fill = root.querySelector('.ev-fill'), bud = root.querySelector('.ev-bud');
-  var tipEl = root.querySelector('.ev-tip'), pctEl = root.querySelector('.ev-pct'), playBtn = root.querySelector('.ev-play'), hint = root.querySelector('.ev-hint'), load = root.querySelector('.ev-load');
+  var tipEl = root.querySelector('.ev-tip'), pctEl = root.querySelector('.ev-pct'), playBtn = root.querySelector('.ev-play'), optBtn = root.querySelector('.ev-opt'), hint = root.querySelector('.ev-hint'), load = root.querySelector('.ev-load');
   for (var lf = 0; lf < 9; lf++) { var leaf = document.createElement('i'); leaf.className = 'ev-leaf' + (lf % 2 ? ' b' : ''); leaf.style.left = (8 + lf * 10.5) + '%'; track.appendChild(leaf); }
   var leaves = track.querySelectorAll('.ev-leaf');
 
@@ -8717,7 +8720,7 @@ var everdawnTitle = (function () {
     fill.style.width = 'calc(' + shown + '% - 6px)'; bud.style.left = 'calc(' + shown + '% - ' + shown * 0.06 + 'px)'; pctEl.textContent = Math.round(shown) + '%';
     for (var k = 0; k < leaves.length; k++) leaves[k].classList.toggle('on', shown > 8 + k * 10.5 + 3);
     if (!ready && now - tipAt > 1600) { tipAt = now; setTip(TIPS[tipN++ % TIPS.length]); }
-    if (ready && shown >= 99.5 && !playBtn.classList.contains('show')) { load.classList.add('done'); setTimeout(function () { load.style.display = 'none'; playBtn.classList.add('show'); hint.classList.add('show'); playBtn.focus(); }, 450); }
+    if (ready && shown >= 99.5 && !playBtn.classList.contains('show')) { load.classList.add('done'); setTimeout(function () { load.style.display = 'none'; playBtn.classList.add('show'); optBtn.classList.add('show'); hint.classList.add('show'); playBtn.focus(); }, 450); }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
@@ -8793,7 +8796,7 @@ var everdawnTitle = (function () {
     setTimeout(function () { alive = false; root.remove(); window.removeEventListener('resize', resize); }, 1200);
   }
   playBtn.addEventListener('click', play);
-  window.addEventListener('keydown', function (e) { if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); play(); } }, true);
+  window.addEventListener('keydown', function (e) { if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); play(); } }, true);
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
     ready: function () { ready = true; target = 100; setTip('All ready!'); },
