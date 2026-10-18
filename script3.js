@@ -7881,6 +7881,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   // house's front), with the house itself left out of the way, and the window panes show that picture. So you see the
   // real time of day and weather, the season, your farm and garden, and the sky going dark at night
   var houseViewMap = new THREE.Matrix4().makeTranslation(HOUSE_X, 0, HOUSE_Z).multiply(new THREE.Matrix4().makeRotationY(HOUSE_TURN)).multiply(new THREE.Matrix4().makeTranslation(-IN_X, 0, -IN_Z));
+  var houseJoined = scene.children.filter(function (o) {             // (the house's walls and roof, joined into a few big meshes that sit right in the island)
+    if (!o.isMesh || !o.geometry) return false; if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); var c = o.geometry.boundingBox.getCenter(new THREE.Vector3());
+    return Math.abs(c.x - HOUSE_X) < 6 && Math.abs(c.z - HOUSE_Z) < 5 && Object.keys(houseMats).some(function (k) { return houseMats[k] === o.material; });
+  });
   function drawHouseView() {
     renderer.getDrawingBufferSize(shopViewSize);
     if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
@@ -7888,13 +7892,60 @@ EVERDAWN_PARTS.push(function (THREE) {
     shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
     shopViewCam.matrix.multiplyMatrices(houseViewMap, camera.matrixWorld);
     shopViewCam.updateMatrixWorld(true);
-    house.visible = false;                                             // (you're inside it, so its own outside walls stay out of the way)
+    house.visible = false; houseJoined.forEach(function (o) { o.visible = false; });   // (you're inside it, so its own outside walls stay out of the way)
     renderer.setRenderTarget(shopViewTarget);
     renderer.render(scene, shopViewCam);
     renderer.setRenderTarget(null);
-    house.visible = true;
+    house.visible = true; houseJoined.forEach(function (o) { o.visible = true; });
   }
   room.traverse(function (o) { if (o.isMesh && o.material === paneMat) { o.material = siWindowMask; o.castShadow = o.receiveShadow = false; } });   // (the panes show the view)
+  // The windows match inside and out: the front of the house has two square windows either side of the door and a round
+  // one toward each end, so the room's front wall (the door wall) gets them too, the square ones as arched windows with
+  // curtains like the others in here, and the round ones in round frames; and the room's back wall has an arched window,
+  // so the back of the house gets one to match. They all look out on the real island
+  function houseWindowIn(wall, x) {                                    // (an arched window like the others in the room: frame, glazing bars, deep sill, curtains)
+    var wg = new THREE.Group(); wg.position.set(x, 1.85, 0.02); inWalls[wall].g.add(wg);
+    var outer = winArch(WIN_W + 0.16, WIN_H + 0.16, ARCH + 0.06); outer.holes.push(winArch(WIN_W, WIN_H, ARCH));
+    iPart(new THREE.ExtrudeGeometry(outer, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 }), winFrame, 0, 0, 0, 0, 0, 0, wg);
+    iPart(new THREE.ShapeGeometry(winArch(WIN_W, WIN_H, ARCH)), siWindowMask, 0, 0, 0.005, 0, 0, 0, wg).castShadow = false;
+    iPart(new THREE.BoxGeometry(0.035, WIN_H + ARCH * 0.3, 0.04), winFrame, 0, 0.04, 0.04, 0, 0, 0, wg);
+    [-0.18, 0.18].forEach(function (by) { iPart(new THREE.BoxGeometry(WIN_W, 0.035, 0.04), winFrame, 0, by, 0.04, 0, 0, 0, wg); });
+    iPart(new THREE.BoxGeometry(WIN_W + 0.36, 0.06, 0.2), winFrame, 0, -WIN_H / 2 - 0.1, 0.1, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(WIN_W + 0.2, 0.08, 0.05), winFrame, 0, -WIN_H / 2 - 0.16, 0.04, 0, 0, 0, wg);
+    var ROD_Y = WIN_H / 2 + ARCH * 0.35 + 0.18, ROD_W = WIN_W + 0.6;
+    iPart(new THREE.CylinderGeometry(0.018, 0.018, ROD_W, 8), R.gold, 0, ROD_Y, 0.16, 0, 0, Math.PI / 2, wg);
+    [-1, 1].forEach(function (sd) {
+      iPart(new THREE.SphereGeometry(0.04, 10, 8), R.gold, sd * ROD_W / 2, ROD_Y, 0.16, 0, 0, 0, wg);
+      iPart(new THREE.BoxGeometry(0.03, 0.03, 0.14), R.gold, sd * (ROD_W / 2 - 0.1), ROD_Y, 0.09, 0, 0, 0, wg);
+      var CW = 0.34, CH = ROD_Y + WIN_H / 2 + 0.3, cg = new THREE.PlaneGeometry(CW, CH, 16, 24), cp = cg.attributes.position;
+      for (var ci = 0; ci < cp.count; ci++) {
+        var u = cp.getX(ci) / CW + 0.5, v = 1 - (cp.getY(ci) / CH + 0.5), tie = 0.62, gather = v < tie ? 1 - 0.55 * Math.pow(v / tie, 1.6) : 0.45 + 0.4 * Math.pow((v - tie) / (1 - tie), 0.8);
+        cp.setXYZ(ci, (u - 0.5) * CW * gather - sd * (1 - gather) * 0.1, cp.getY(ci), Math.sin(u * Math.PI * 6) * 0.025 * (0.6 + gather * 0.5));
+      }
+      cg.computeVertexNormals();
+      var cx = sd * (WIN_W / 2 + 0.12);
+      iPart(cg, curtainMat, cx, ROD_Y - CH / 2, 0.13, 0, 0, 0, wg);
+      iPart(new THREE.TorusGeometry(0.06, 0.016, 6, 14), R.gold, cx - sd * 0.08, ROD_Y - CH * 0.62, 0.16, 0, Math.PI / 2, 0, wg);
+      for (var rr = 0; rr < 4; rr++) iPart(new THREE.TorusGeometry(0.026, 0.006, 5, 10), R.gold, cx + (rr - 1.5) * 0.08, ROD_Y, 0.16, 0, Math.PI / 2, 0, wg);
+    });
+    var vg = new THREE.PlaneGeometry(ROD_W - 0.1, 0.2, 30, 3), vp = vg.attributes.position;
+    for (var vi = 0; vi < vp.count; vi++) { var vx = vp.getX(vi), vy = vp.getY(vi); vp.setXYZ(vi, vx, vy + (vy < -0.05 ? -0.04 * Math.abs(Math.sin(vx * Math.PI / 0.27)) : 0), Math.sin(vx * 40) * 0.015); }
+    vg.computeVertexNormals();
+    iPart(vg, curtainMat, 0, ROD_Y - 0.06, 0.18, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(ROD_W - 0.1, 0.025, 0.02), curtainLining, 0, ROD_Y + 0.04, 0.18, 0, 0, 0, wg);
+  }
+  function houseRoundIn(wall, x) {                                     // (a round window: the view, in a round painted frame with a cross of glazing bars and a little ledge)
+    var wg = new THREE.Group(); wg.position.set(x, 1.85, 0.02); inWalls[wall].g.add(wg);
+    iPart(new THREE.CircleGeometry(0.34, 24), siWindowMask, 0, 0, 0.005, 0, 0, 0, wg).castShadow = false;
+    iPart(new THREE.TorusGeometry(0.37, 0.06, 8, 28), winFrame, 0, 0, 0.03, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.035, 0.68, 0.035), winFrame, 0, 0, 0.03, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.68, 0.035, 0.035), winFrame, 0, 0, 0.03, 0, 0, 0, wg);
+    iPart(new THREE.BoxGeometry(0.62, 0.05, 0.16), winFrame, 0, -0.46, 0.08, 0, 0, 0, wg);
+  }
+  houseWindowIn('S', -1.55); houseWindowIn('S', 1.55);                // (the front wall: the door wall, seen from inside, so the outside's left is in here on the right)
+  houseRoundIn('S', -2.95); houseRoundIn('S', 2.95);
+  windowAt(1.05, FOOT_H + 1.35, -FRONT - 0.02, Math.PI);              // (and outside, a window in the back wall where the room's back window is)
+  house.add(houseStatic.children[houseStatic.children.length - 1]);  // (the house's other still parts were joined up long ago, so this one goes straight on the house)
 
   // ---------- Save slots ----------
   // The title screen has five save slots. Picking one decides which slot the Save and Load buttons use (slot 1 is
