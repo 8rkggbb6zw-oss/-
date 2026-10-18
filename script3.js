@@ -7983,6 +7983,29 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { var timeSaved = parseFloat(localStorage.getItem(TIME_KEY)); if (timeSaved >= 50 && timeSaved <= 100) setTimeSpeed(timeSaved); } catch (err) {}
   window.everdawnSetTimeSpeed = function (pct) { setTimeSpeed(pct); try { localStorage.setItem(TIME_KEY, String(THREE.MathUtils.clamp(pct, 50, 100))); } catch (err) {} };
 
+  // ---------- Quest HUD, set by "Display Quest HUD" in Settings: Show or Hide ----------
+  // A little scroll in the top-left corner of the game listing the quests you're on. There are no quests yet, so for
+  // now it just says so; later, quests go in the quests list and renderQuestHud() draws them. Show is the usual
+  // setting; Hide takes it away completely. It's remembered
+  var QUEST_KEY = 'everdawn-quest-hud', quests = [], questShow = true;   // (each quest: { name, step }, where step is a short line on what to do next)
+  try { questShow = localStorage.getItem(QUEST_KEY) !== 'hide'; } catch (err) {}
+  var questStyle = document.createElement('style');
+  questStyle.textContent = '.quest-hud{position:absolute;left:18px;top:18px;z-index:3;max-width:min(240px,42%);padding:8px 12px 9px;border-radius:14px;background:rgba(255,255,255,0.78);' +
+    'box-shadow:0 4px 14px rgba(120,80,190,0.3),inset 0 0 0 2px #fff;color:#4a3570;font-size:.85rem;line-height:1.35;pointer-events:none}' +
+    '.quest-hud[hidden]{display:none}.quest-hud b{display:block;font-size:.95rem;color:#7b4fd6;margin-bottom:3px}.quest-hud ul{margin:0;padding:0;list-style:none}' +
+    '.quest-hud li{margin-top:4px}.quest-hud li span{display:block;font-size:.78rem;opacity:.8}.quest-hud .none{opacity:.7;font-style:italic}';
+  document.head.appendChild(questStyle);
+  var questHud = document.createElement('div'); questHud.className = 'quest-hud'; questHud.setAttribute('aria-label', 'Quests');
+  canvas.parentNode.appendChild(questHud);
+  function renderQuestHud() {
+    questHud.innerHTML = '<b>📜 Quests</b>' + (quests.length ? '<ul></ul>' : '<div class="none">No quests yet</div>');
+    var ul = questHud.querySelector('ul');
+    quests.forEach(function (q) { var li = document.createElement('li'); li.textContent = '✦ ' + q.name; if (q.step) { var sp = document.createElement('span'); sp.textContent = q.step; li.appendChild(sp); } ul.appendChild(li); });
+    questHud.hidden = !questShow;
+  }
+  renderQuestHud();
+  window.everdawnSetQuestHud = function (show) { questShow = !!show; questHud.hidden = !questShow; try { localStorage.setItem(QUEST_KEY, show ? 'show' : 'hide'); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -9134,7 +9157,8 @@ var everdawnTitle = (function () {
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evQuestL">Display Quest HUD</span><div class="ev-seg" role="group" aria-labelledby="evQuestL"><button type="button" data-q="show">Show</button><button type="button" data-q="hide">Hide</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9147,6 +9171,12 @@ var everdawnTitle = (function () {
     for (var sb2 = 0; sb2 < sdBtns.length; sb2++) sdBtns[sb2].addEventListener('click', function () {
       sd = this.getAttribute('data-s'); showStore(); try { localStorage.setItem('everdawn-storage-drag', sd); } catch (err) {} if (window.everdawnSetStorageDrag) window.everdawnSetStorageDrag(sd === 'on'); });
     showStore();
+    var qh = 'show'; try { if (localStorage.getItem('everdawn-quest-hud') === 'hide') qh = 'hide'; } catch (err) {}   // (Display Quest HUD: Show or Hide)
+    var qhBtns = body.querySelectorAll('.ev-seg button[data-q]');
+    function showQuest() { for (var b = 0; b < qhBtns.length; b++) { var on = qhBtns[b].getAttribute('data-q') === qh; qhBtns[b].classList.toggle('on', on); qhBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb3 = 0; sb3 < qhBtns.length; sb3++) qhBtns[sb3].addEventListener('click', function () {
+      qh = this.getAttribute('data-q'); showQuest(); try { localStorage.setItem('everdawn-quest-hud', qh); } catch (err) {} if (window.everdawnSetQuestHud) window.everdawnSetQuestHud(qh === 'show'); });
+    showQuest();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
