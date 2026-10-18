@@ -7874,6 +7874,28 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
   })();
 
+  // ---------- The farmhouse windows look out on the real island ----------
+  // Like the windows at the shops, the two arched windows in your house now show the actual outside instead of a
+  // painted twilight sky: each frame while you're home, the island is drawn from the spot outside that matches where
+  // you're standing in the room (the room's middle lined up with the middle of the house, its door wall with the
+  // house's front), with the house itself left out of the way, and the window panes show that picture. So you see the
+  // real time of day and weather, the season, your farm and garden, and the sky going dark at night
+  var houseViewMap = new THREE.Matrix4().makeTranslation(HOUSE_X, 0, HOUSE_Z).multiply(new THREE.Matrix4().makeRotationY(HOUSE_TURN)).multiply(new THREE.Matrix4().makeTranslation(-IN_X, 0, -IN_Z));
+  function drawHouseView() {
+    renderer.getDrawingBufferSize(shopViewSize);
+    if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
+    siWindowMask.uniforms.uSize.value.copy(shopViewSize);
+    shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    shopViewCam.matrix.multiplyMatrices(houseViewMap, camera.matrixWorld);
+    shopViewCam.updateMatrixWorld(true);
+    house.visible = false;                                             // (you're inside it, so its own outside walls stay out of the way)
+    renderer.setRenderTarget(shopViewTarget);
+    renderer.render(scene, shopViewCam);
+    renderer.setRenderTarget(null);
+    house.visible = true;
+  }
+  room.traverse(function (o) { if (o.isMesh && o.material === paneMat) { o.material = siWindowMask; o.castShadow = o.receiveShadow = false; } });   // (the panes show the view)
+
   // ---------- Save slots ----------
   // The title screen has five save slots. Picking one decides which slot the Save and Load buttons use (slot 1 is
   // where your game was always saved, so an old save turns up there). A slot with a game in it is loaded the moment
@@ -8104,6 +8126,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cullScene();
     var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || coopPlacing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
+    if (indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn) { camera.updateMatrixWorld(); drawHouseView(); }   // (your own house: its windows look out too)
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
