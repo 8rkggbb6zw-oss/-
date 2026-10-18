@@ -7806,6 +7806,18 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.addEventListener('pagehide', autoSave);
   document.addEventListener('visibilitychange', function () { if (document.hidden) autoSave(); });
 
+  // ---------- Camera zoom, set by the "Adjust Camera Zoom" slider in Settings ----------
+  // You can't zoom with the mouse wheel or by pinching; instead the slider sets how far the camera sits from you
+  // (6 close up to 26 far away), and it's remembered. Inside a building the camera keeps its own distance, and yours
+  // comes back when you step outside
+  var ZOOM_KEY = 'everdawn-zoom';
+  try { var zoomSaved = parseFloat(localStorage.getItem(ZOOM_KEY)); if (zoomSaved >= 6 && zoomSaved <= 26) cam.dist = zoomSaved; } catch (err) {}
+  window.everdawnSetZoom = function (d) {
+    d = THREE.MathUtils.clamp(d, 6, 26);
+    if (indoors) { if (outsideCam) outsideCam.dist = d; } else cam.dist = d;
+    try { localStorage.setItem(ZOOM_KEY, String(d)); } catch (err) {}
+  };
+
   // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
   // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
   // is built on) turns the keyboard off in its full screen, silently dropping every letter and number key (only the
@@ -8252,6 +8264,9 @@ var everdawnTitle = (function () {
     '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
     '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}' +
+    '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
+    '#evTitle .ev-srow label{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-range{display:flex;align-items:center;gap:10px;font-size:14px;color:#f0e2ff}' +
+    '#evTitle .ev-range input{flex:1;min-width:0;height:28px;accent-color:#ff9ecb;cursor:pointer}#evTitle .ev-range input:focus-visible{outline:2px solid #fff;outline-offset:3px;border-radius:6px}' +
     '#evTitle .ev-btns{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2.5vw,18px);flex-wrap:nowrap;width:max-content;max-width:96vw}' +
     '#evTitle .ev-opt{display:none;padding:.55em 1.2em;font:600 clamp(16px,3vw,21px) Fredoka,system-ui,sans-serif;letter-spacing:.04em;color:#fff;border:2px solid rgba(255,226,160,.85);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 4px 0 #3e2580,0 8px 20px rgba(60,20,120,.45),inset 0 2px 0 rgba(255,255,255,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;animation:evFade .6s ease .3s forwards}' +
     '#evTitle .ev-opt.show{display:inline-block}#evTitle .ev-opt:hover{filter:brightness(1.1)}#evTitle .ev-opt:active{transform:translateY(3px);box-shadow:0 1px 0 #3e2580,0 4px 12px rgba(60,20,120,.45)}#evTitle .ev-opt:focus-visible{outline:3px solid #fff;outline-offset:4px}' +
@@ -8871,7 +8886,12 @@ var everdawnTitle = (function () {
   slots.querySelector('.ev-back').addEventListener('click', closeSlots);
   slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
   // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
-  var SET_PAGES = [{ name: 'Game' }], setPage = 0;
+  function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
+  var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you)
+    body.innerHTML = '<div class="ev-srow"><label for="evZoom">Adjust Camera Zoom</label><div class="ev-range"><span>Far</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>Close</span></div></div>';
+    var zi = body.querySelector('#evZoom'); zi.value = 26 - zoomNow();
+    zi.addEventListener('input', function () { var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
+  } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
     '<div class="ev-dots"></div><div class="ev-setbody"></div><button type="button" class="ev-back">Done</button></div>';
@@ -8893,7 +8913,7 @@ var everdawnTitle = (function () {
   playBtn.addEventListener('click', openSlots);
   window.addEventListener('keydown', function (e) {
     if (slots.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSlots(); } return; }
-    if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
+    if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !(e.target && e.target.type === 'range')) { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
     if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
