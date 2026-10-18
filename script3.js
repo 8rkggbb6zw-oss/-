@@ -7425,8 +7425,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   // The Dawn Tree keeps its pink blossom through Winter; snow just lies on top of it. Each card of blossom near the top
   // of its cluster takes a cap of solid snow over the part of it that faces the sky (the higher up the cluster, the
   // more of the card is covered), with a lumpy edge, and the snow doesn't glow pink. Cards lower down and underneath
-  // stay as they are, and the hanging strands are just frosted where they hang from. It all melts away with the rest
-  // of the snow when Spring comes
+  // stay as they are, and the hanging strands are just frosted where they hang from. All Winter the blossom is drawn
+  // solid rather than softly see-through at its edges, which against the white snow would make it look washed out.
+  // It all goes back to normal when Spring comes
   (function () {
     var nCards = blossomCards.count, up = new Float32Array(blossomCards.instanceMatrix.count), m4 = new THREE.Matrix4(), cp = new THREE.Vector3(), cq = new THREE.Quaternion(), cs = new THREE.Vector3();
     for (var i = 0; i < nCards; i++) {                                 // (how high up its own cluster each card sits: the higher, the more snow)
@@ -7446,7 +7447,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           .replace('#include <color_fragment>', '#include <color_fragment>\nfloat snowAmt = uSnowOn * ' + (strand
             ? 'smoothstep(0.84, 0.96, vUv.y) * 0.8'
             : 'smoothstep(0.05, 0.35, vSnowUp) * smoothstep(0.0, 0.08, vSnowH * 1.4 + (vSnowUp - 0.6) * 0.7 + 0.06 * sin(vUv.x * 23.0) + 0.04 * sin(vUv.x * 47.0 + 1.7))') +
-            ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.98, 1.0), snowAmt);\nif (diffuseColor.a > 0.3) diffuseColor.a = mix(diffuseColor.a, 1.0, snowAmt);')   // (the snow is solid, not see-through)
+            ';\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96, 0.98, 1.0), snowAmt);\nif (uSnowOn > 0.5 && diffuseColor.a > 0.3) diffuseColor.a = 1.0;')   // (in Winter the blossom and its snow are solid, so the white snow on the ground never shows through them)
           .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - snowAmt;');
       };
       m.customProgramCacheKey = function () { return strand ? 'dawnStrandSnow' : 'dawnBlossomSnow'; };
