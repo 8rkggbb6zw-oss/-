@@ -2741,7 +2741,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // every frame: she walks with little steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
     var t = state.time, w = wl;
-    w.phase += dt * (moving ? 10 : 0);
+    w.phase += dt * (moving ? 10 * SPEED / 4.4 : 0);                     // (quicker steps when you jog)
     var step = moving ? Math.sin(w.phase) : 0;
     w.legs[0].rotation.x = step * 0.45; w.legs[1].rotation.x = -step * 0.45;
     w.armL.rotation.x = -step * 0.35; w.armR.rotation.x = step * 0.35; w.armR.visible = !axeArm.visible;   // (her own right arm, unless she's holding a tool in it)
@@ -7818,6 +7818,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     try { localStorage.setItem(ZOOM_KEY, String(d)); } catch (err) {}
   };
 
+  // ---------- Movement type, set in Settings: Walk or Jog ----------
+  // Walking is your usual pace; jogging is a little quicker (about a third faster), with quicker steps to match.
+  // It's remembered. Flying on your broom stays the same either way
+  var WALK_SPEED = SPEED, JOG_SPEED = SPEED * 1.35, MOVE_KEY = 'everdawn-move';
+  function setMove(type) { SPEED = type === 'jog' ? JOG_SPEED : WALK_SPEED; }
+  try { setMove(localStorage.getItem(MOVE_KEY)); } catch (err) {}
+  window.everdawnSetMove = function (type) { setMove(type); try { localStorage.setItem(MOVE_KEY, type === 'jog' ? 'jog' : 'walk'); } catch (err) {} };
+
   // Full screen: the game fills the whole screen. On computers and Android it also asks the browser for its own full
   // screen, which hides the browser bars. On an iPad or iPhone it never does: there, Safari (which every iPad browser
   // is built on) turns the keyboard off in its full screen, silently dropping every letter and number key (only the
@@ -8265,7 +8273,11 @@ var everdawnTitle = (function () {
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
     '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}' +
     '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
-    '#evTitle .ev-srow label{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-range{display:flex;align-items:center;gap:10px;font-size:14px;color:#f0e2ff}' +
+    '#evTitle .ev-srow label,#evTitle .ev-srow .ev-lbl{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-srow+.ev-srow{padding-top:12px}' +
+    '#evTitle .ev-seg{display:inline-flex;align-self:flex-start;border:2px solid #ffe2a0;border-radius:999px;overflow:hidden;background:rgba(30,15,60,.6)}' +
+    '#evTitle .ev-seg button{padding:.35em 1.5em;font:600 16px Fredoka,system-ui,sans-serif;color:#f0e2ff;border:0;background:transparent;cursor:pointer}#evTitle .ev-seg button+button{border-left:2px solid rgba(255,226,160,.5)}' +
+    '#evTitle .ev-seg button.on{color:#fff;background:linear-gradient(180deg,#ff9ecb,#d8609c)}#evTitle .ev-seg button:focus-visible{outline:3px solid #fff;outline-offset:-3px}' +
+    '#evTitle .ev-range{display:flex;align-items:center;gap:10px;font-size:14px;color:#f0e2ff}' +
     '#evTitle .ev-range input{flex:1;min-width:0;height:28px;accent-color:#ff9ecb;cursor:pointer}#evTitle .ev-range input:focus-visible{outline:2px solid #fff;outline-offset:3px;border-radius:6px}' +
     '#evTitle .ev-btns{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2.5vw,18px);flex-wrap:nowrap;width:max-content;max-width:96vw}' +
     '#evTitle .ev-opt{display:none;padding:.55em 1.2em;font:600 clamp(16px,3vw,21px) Fredoka,system-ui,sans-serif;letter-spacing:.04em;color:#fff;border:2px solid rgba(255,226,160,.85);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 4px 0 #3e2580,0 8px 20px rgba(60,20,120,.45),inset 0 2px 0 rgba(255,255,255,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;animation:evFade .6s ease .3s forwards}' +
@@ -8888,7 +8900,14 @@ var everdawnTitle = (function () {
   // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you)
-    body.innerHTML = '<div class="ev-srow"><label for="evZoom">Adjust Camera Zoom</label><div class="ev-range"><span>Far</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>Close</span></div></div>';
+    body.innerHTML = '<div class="ev-srow"><label for="evZoom">Adjust Camera Zoom</label><div class="ev-range"><span>Far</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>Close</span></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>';
+    var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
+    var segBtns = body.querySelectorAll('.ev-seg button');
+    function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb = 0; sb < segBtns.length; sb++) segBtns[sb].addEventListener('click', function () {   // (Movement Type: Walk or Jog)
+      mv = this.getAttribute('data-m'); showMove(); try { localStorage.setItem('everdawn-move', mv); } catch (err) {} if (window.everdawnSetMove) window.everdawnSetMove(mv); });
+    showMove();
     var zi = body.querySelector('#evZoom'); zi.value = 26 - zoomNow();
     zi.addEventListener('input', function () { var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
   } }], setPage = 0;
