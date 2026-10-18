@@ -8006,6 +8006,26 @@ EVERDAWN_PARTS.push(function (THREE) {
   renderQuestHud();
   window.everdawnSetQuestHud = function (show) { questShow = !!show; questHud.hidden = !questShow; try { localStorage.setItem(QUEST_KEY, show ? 'show' : 'hide'); } catch (err) {} };
 
+  // ---------- Typewriter Effect, set in Settings: Disabled or Enabled ----------
+  // For what people say when you talk to them. Disabled (the usual way): their words appear all at once. Enabled: they
+  // appear a letter at a time, like being typed out. There's no one to talk to yet; when there is, their dialogue is
+  // shown with typeText(el, text, done), which follows this setting and hands back a function that finishes the text
+  // straight away (for tapping to skip). It's remembered
+  var TYPE_KEY = 'everdawn-typewriter', typewriter = false, TYPE_PER_SECOND = 40;
+  try { typewriter = localStorage.getItem(TYPE_KEY) === 'on'; } catch (err) {}
+  function typeText(el, text, done) {
+    var timer = 0, start = Date.now();
+    function finish() { clearInterval(timer); el.textContent = text; if (done) { var d = done; done = null; d(); } }
+    if (!typewriter) { finish(); return finish; }
+    el.textContent = '';
+    timer = setInterval(function () {                                   // (letters by the clock, so a busy moment never slows the typing down)
+      var shown = Math.floor((Date.now() - start) / 1000 * TYPE_PER_SECOND);
+      if (shown >= text.length) finish(); else el.textContent = text.slice(0, shown);
+    }, 1000 / TYPE_PER_SECOND);
+    return finish;
+  }
+  window.everdawnSetTypewriter = function (on) { typewriter = !!on; try { localStorage.setItem(TYPE_KEY, on ? 'on' : 'off'); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -9158,7 +9178,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evMoveL">Movement Type</span><div class="ev-seg" role="group" aria-labelledby="evMoveL"><button type="button" data-m="walk">Walk</button><button type="button" data-m="jog">Jog</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evQuestL">Display Quest HUD</span><div class="ev-seg" role="group" aria-labelledby="evQuestL"><button type="button" data-q="show">Show</button><button type="button" data-q="hide">Hide</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evQuestL">Display Quest HUD</span><div class="ev-seg" role="group" aria-labelledby="evQuestL"><button type="button" data-q="show">Show</button><button type="button" data-q="hide">Hide</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evTypeL">Typewriter Effect</span><div class="ev-seg" role="group" aria-labelledby="evTypeL"><button type="button" data-t="off">Disabled</button><button type="button" data-t="on">Enabled</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9177,6 +9198,12 @@ var everdawnTitle = (function () {
     for (var sb3 = 0; sb3 < qhBtns.length; sb3++) qhBtns[sb3].addEventListener('click', function () {
       qh = this.getAttribute('data-q'); showQuest(); try { localStorage.setItem('everdawn-quest-hud', qh); } catch (err) {} if (window.everdawnSetQuestHud) window.everdawnSetQuestHud(qh === 'show'); });
     showQuest();
+    var tw = 'off'; try { if (localStorage.getItem('everdawn-typewriter') === 'on') tw = 'on'; } catch (err) {}   // (Typewriter Effect: Disabled or Enabled)
+    var twBtns = body.querySelectorAll('.ev-seg button[data-t]');
+    function showType() { for (var b = 0; b < twBtns.length; b++) { var on = twBtns[b].getAttribute('data-t') === tw; twBtns[b].classList.toggle('on', on); twBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb4 = 0; sb4 < twBtns.length; sb4++) twBtns[sb4].addEventListener('click', function () {
+      tw = this.getAttribute('data-t'); showType(); try { localStorage.setItem('everdawn-typewriter', tw); } catch (err) {} if (window.everdawnSetTypewriter) window.everdawnSetTypewriter(tw === 'on'); });
+    showType();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
