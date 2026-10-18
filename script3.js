@@ -9118,6 +9118,7 @@ var everdawnTitle = (function () {
   playBtn.addEventListener('click', openSlots);
   window.addEventListener('keydown', function (e) {
     if (slots.classList.contains('open')) { if (e.target && e.target.tagName === 'INPUT') return; if (e.code === 'Escape') { e.preventDefault(); if (naming) naming(); else closeSlots(); } return; }
+    if (sett.classList.contains('open') && e.target && e.target.type === 'range' && /^Arrow|^Home$|^End$|^Page/.test(e.key)) { e.stopPropagation(); return; }   // (arrow keys on a slider move the slider, and never reach the game behind)
     if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !(e.target && e.target.type === 'range')) { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
     if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
