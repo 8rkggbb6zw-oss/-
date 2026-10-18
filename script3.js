@@ -2220,7 +2220,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   ui.btnAct.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // no long-press menu on phones
   ui.btnSpell.addEventListener('click', function () { castSpell(); focusGame(); });
 
-  // ---------- Mouse / touch: drag to turn, pinch or scroll to zoom, tap to walk ----------
+  // ---------- Mouse / touch: drag to turn, tap to walk (no zooming) ----------
   var pointers = {}, drag = null, pinch = 0;
   var raycaster = new THREE.Raycaster();
   var ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -2246,8 +2246,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var list = pointerList();
     if (list.length === 2) {
       var d = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
-      if (pinch > 0) cam.dist = THREE.MathUtils.clamp(cam.dist * pinch / d, indoors ? 5 : 6, indoors ? 10 : 26);
-      pinch = d;
+      pinch = d;                                                     // (two fingers don't zoom: the camera stays at its own distance from you)
       return;
     }
     if (!drag) return;
@@ -2288,8 +2287,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
 
   canvas.addEventListener('wheel', function (e) {
-    e.preventDefault();
-    cam.dist = THREE.MathUtils.clamp(cam.dist * (1 + e.deltaY * 0.001), indoors ? 5 : 6, indoors ? 10 : 26);
+    e.preventDefault();                                              // (scrolling doesn't zoom either; it just doesn't scroll the page)
   }, { passive: false });
 
   // ---------- You: a little chibi witch ----------
