@@ -6267,12 +6267,26 @@ EVERDAWN_PARTS.push(function (THREE) {
       mill: millSaveData(),                                           // your mill: where it is, and the day Oak & Ember started on it
       silo: siloSaveData()                                            // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
     };
+    var before = null; try { before = localStorage.getItem(SAVE_KEY); } catch (err) {}   // (what was in the slot until now, in case it's a day to keep as a backup)
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      keepBackup(before, data.state.day);
       if (!quiet) showToast('Game saved ✦');
     } catch (err) {
       showToast('Could not save here (this browser blocks saving)', 3000);
     }
+  }
+  // Day backups: when you save on a new day, the last save from the day before is kept as a backup of that slot (the
+  // three most recent days are kept). With "Show Backup" set to Yes in Settings, the title screen lets you go back to
+  // one of them. Backups are always kept, so turning it on later still finds them
+  var BACKUPS_KEPT = 3;
+  function keepBackup(raw, today) {
+    var old = null; try { old = JSON.parse(raw); } catch (err) {}
+    if (!old || old.v !== 1 || !old.state || !(old.state.day < today)) return;
+    var key = SAVE_KEY + '-backups', list = [];
+    try { list = JSON.parse(localStorage.getItem(key)) || []; } catch (err) {}
+    list = [old].concat(list.filter(function (b) { return b && b.state && b.state.day !== old.state.day; })).slice(0, BACKUPS_KEPT);
+    while (list.length) { try { localStorage.setItem(key, JSON.stringify(list)); return; } catch (err) { list.pop(); } }   // (short of room? keep fewer)
   }
   function clearTile(tile) {
     if (tile.crop) { scene.remove(tile.crop); tile.crop = null; }
@@ -8560,7 +8574,7 @@ var everdawnTitle = (function () {
     '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
     '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
-    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
+    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
     '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
     '#evTitle .ev-lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}#evTitle .ev-lrow output{font-size:17px;font-weight:600;color:#ffd6f0;min-width:3.2em;text-align:right}' +
     '#evTitle .ev-srow label,#evTitle .ev-srow .ev-lbl{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-srow+.ev-srow{padding-top:12px}' +
@@ -9163,11 +9177,13 @@ var everdawnTitle = (function () {
       var saved = d.savedAt ? 'Saved ' + new Date(d.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
       row.innerHTML = '<button type="button" class="ev-sbtn"><span class="ev-snum">' + n + '</span><span class="ev-stxt"><b>' + esc(d.name || when) + (n === lastSlot() ? '<span class="ev-last">Last played</span>' : '') + '</b>' + (d.name ? '<span>' + esc(when) + '</span>' : '') +
         '<span>🪙 ' + (d.state.coins || 0) + ' coins · 🌾 ' + (d.state.harvest || 0) + ' harvested</span>' + (saved ? '<i>' + esc(saved) + '</i>' : '') + '</span></button>' +
+        (showBackups() && readBackups(n).length ? '<button type="button" class="ev-sdel ev-sbak" aria-label="Backups of the game in slot ' + n + '" title="Backups">⟲</button>' : '') +
         '<button type="button" class="ev-sdel" aria-label="Delete the game in slot ' + n + '" title="Delete">🗑</button>';
       row.querySelector('.ev-sbtn').addEventListener('click', function () { pickSlot(n, false); });
-      row.querySelector('.ev-sdel').addEventListener('click', function () {   // (asking first: a deleted game can't come back)
+      var bakBtn = row.querySelector('.ev-sbak'); if (bakBtn) bakBtn.addEventListener('click', function () { backupList(n, row); });
+      row.querySelector('.ev-sdel:not(.ev-sbak)').addEventListener('click', function () {   // (asking first: a deleted game can't come back)
         row.innerHTML = '<div class="ev-sask"><span>Delete the game in slot ' + n + '?</span><span><button type="button" class="yes">Delete</button><button type="button" class="no">Keep it</button></span></div>';
-        row.querySelector('.yes').addEventListener('click', function () { try { localStorage.removeItem('everdawn-save-' + n); } catch (err) {} var fresh = slotRow(n); slist.replaceChild(fresh, row); fresh.querySelector('.ev-sbtn').focus(); });
+        row.querySelector('.yes').addEventListener('click', function () { try { localStorage.removeItem('everdawn-save-' + n); localStorage.removeItem('everdawn-save-' + n + '-backups'); } catch (err) {} var fresh = slotRow(n); slist.replaceChild(fresh, row); fresh.querySelector('.ev-sbtn').focus(); });
         row.querySelector('.no').addEventListener('click', function () { var back = slotRow(n); slist.replaceChild(back, row); back.querySelector('.ev-sbtn').focus(); });
         row.querySelector('.no').focus();
       });
@@ -9176,6 +9192,34 @@ var everdawnTitle = (function () {
       row.querySelector('.ev-sbtn').addEventListener('click', function () { nameSlot(n, row); });
     }
     return row;
+  }
+  // ----- day backups ("Show Backup" set to Yes in Settings): a ⟲ button on a slot lists the backups of earlier days -----
+  function showBackups() { try { return localStorage.getItem('everdawn-show-backup') === 'yes'; } catch (err) { return false; } }
+  function readBackups(n) { try { return (JSON.parse(localStorage.getItem('everdawn-save-' + n + '-backups')) || []).filter(function (b) { return b && b.v === 1 && b.state; }); } catch (err) { return []; } }
+  function dayName(day) { return WDAYS[(day - 1) % 7] + ' · ' + SEAS[Math.floor((day - 1) / 28) % 4] + ', Day ' + ((day - 1) % 28 + 1); }
+  function backupList(n, row) {
+    var list = readBackups(n);
+    function back() { var fresh = slotRow(n); slist.replaceChild(fresh, row); fresh.querySelector('.ev-sbtn').focus(); }
+    row.innerHTML = '<div class="ev-sname ev-bk"><label>Backups of slot ' + n + '</label>' + list.map(function (b, i) {
+      var saved = b.savedAt ? 'Saved ' + new Date(b.savedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      return '<button type="button" class="ev-sbtn" data-i="' + i + '"><span class="ev-stxt"><b>' + esc(dayName(b.state.day || 1)) + '</b><span>🪙 ' + (b.state.coins || 0) + ' coins · 🌾 ' + (b.state.harvest || 0) + ' harvested</span>' + (saved ? '<i>' + esc(saved) + '</i>' : '') + '</span></button>';
+    }).join('') + '<span><button type="button" class="no">Back</button></span></div>';
+    row.querySelector('.no').addEventListener('click', back);
+    Array.prototype.forEach.call(row.querySelectorAll('.ev-bk .ev-sbtn'), function (btn) {
+      btn.addEventListener('click', function () {                      // (asking first: it takes the slot back to that day)
+        var b = list[+btn.getAttribute('data-i')];
+        row.innerHTML = '<div class="ev-sask"><span>Go back to ' + esc(dayName(b.state.day || 1)) + '? Your game now becomes a backup.</span><span><button type="button" class="yes">Restore</button><button type="button" class="no">Cancel</button></span></div>';
+        row.querySelector('.no').addEventListener('click', function () { backupList(n, row); });
+        row.querySelector('.yes').addEventListener('click', function () {
+          var now = readSlot(n), rest = list.filter(function (x) { return x !== b; });
+          if (now) rest = [now].concat(rest.filter(function (x) { return x.state.day !== now.state.day; }));
+          try { localStorage.setItem('everdawn-save-' + n, JSON.stringify(b)); localStorage.setItem('everdawn-save-' + n + '-backups', JSON.stringify(rest.slice(0, 3))); } catch (err) {}
+          pickSlot(n, false);                                           // (and straight into the game, back on that day)
+        });
+        row.querySelector('.yes').focus();
+      });
+    });
+    var first = row.querySelector('.ev-bk .ev-sbtn'); if (first) first.focus();
   }
   function openSlots() {
     if (!ready || root.classList.contains('gone')) return;
@@ -9211,7 +9255,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><span class="ev-lbl" id="evTypeL">Typewriter Effect</span><div class="ev-seg" role="group" aria-labelledby="evTypeL"><button type="button" data-t="off">Disabled</button><button type="button" data-t="on">Enabled</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evTileL">Tile Highlight While Moving</span><div class="ev-seg" role="group" aria-labelledby="evTileL"><button type="button" data-h="off">Disabled</button><button type="button" data-h="on">Enabled</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evCombatL">Combat Mode</span><div class="ev-seg" role="group" aria-labelledby="evCombatL"><button type="button" data-c="default">Default</button><button type="button" data-c="passive">Passive</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evCombatL">Combat Mode</span><div class="ev-seg" role="group" aria-labelledby="evCombatL"><button type="button" data-c="default">Default</button><button type="button" data-c="passive">Passive</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evBakL">Show Backup</span><div class="ev-seg" role="group" aria-labelledby="evBakL"><button type="button" data-k="no">No</button><button type="button" data-k="yes">Yes</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9254,6 +9299,12 @@ var everdawnTitle = (function () {
     for (var sb7 = 0; sb7 < cmBtns.length; sb7++) cmBtns[sb7].addEventListener('click', function () {
       cm = this.getAttribute('data-c'); showCombat(); try { localStorage.setItem('everdawn-combat-mode', cm); } catch (err) {} if (window.everdawnSetCombatMode) window.everdawnSetCombatMode(cm === 'passive'); });
     showCombat();
+    var bk = showBackups() ? 'yes' : 'no';                               // (Show Backup: No or Yes; Yes puts a ⟲ Backups button on save slots that have them)
+    var bkBtns = body.querySelectorAll('.ev-seg button[data-k]');
+    function showBak() { for (var b = 0; b < bkBtns.length; b++) { var on = bkBtns[b].getAttribute('data-k') === bk; bkBtns[b].classList.toggle('on', on); bkBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb8 = 0; sb8 < bkBtns.length; sb8++) bkBtns[sb8].addEventListener('click', function () {
+      bk = this.getAttribute('data-k'); showBak(); try { localStorage.setItem('everdawn-show-backup', bk); } catch (err) {} });
+    showBak();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
