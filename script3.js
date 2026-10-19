@@ -8580,17 +8580,27 @@ var everdawnTitle = (function () {
   function volumeNow() { try { var v = parseInt(localStorage.getItem('everdawn-master-volume'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
   function applyVolume(v) { masterGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
   // SFX Volume, on the Audio page: 0 to 10, starting at 5. It scales just the sound effects (everything the game plays
-  // as you do things, and the sounds of the island around you), on top of Master Volume; the music isn't touched.
+  // as you do things and touch things), on top of Master Volume; the music and the ambient sounds aren't touched.
   // It's remembered
   var sfxGains = [];
   function sfxNow() { try { var v = parseInt(localStorage.getItem('everdawn-sfx-volume'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
   function applySfx(v) { sfxGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
+  // Ambient Volume, on the Audio page: 0 to 10, starting at 5. It scales the background sounds of the island and its
+  // weather, on top of Master Volume. There aren't any yet; when there are, each one is marked as ambient before it's
+  // sent to the speakers (node.evAmbient = true; node.connect(ctx.destination)) and it follows this. It's remembered
+  var ambientGains = [];
+  function ambientNow() { try { var v = parseInt(localStorage.getItem('everdawn-ambient-volume'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
+  function applyAmbient(v) { ambientGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
   if (window.AudioNode && window.AudioDestinationNode) (function () {   // (anything heading for the speakers goes through the knob instead)
     var plain = AudioNode.prototype.connect;
     AudioNode.prototype.connect = function (to) {
       if (to instanceof AudioDestinationNode && !this.evMaster) {
         var ctx = to.context;
         if (!ctx.evMaster) { ctx.evMaster = ctx.createGain(); ctx.evMaster.evMaster = true; ctx.evMaster.gain.value = volumeNow() / 5; plain.call(ctx.evMaster, to); masterGains.push(ctx.evMaster); }
+        if (this.evAmbient) {                                          // (background and weather sounds go through the Ambient knob first)
+          if (!ctx.evAmb) { ctx.evAmb = ctx.createGain(); ctx.evAmb.gain.value = ambientNow() / 5; plain.call(ctx.evAmb, ctx.evMaster); ambientGains.push(ctx.evAmb); }
+          return plain.apply(this, [ctx.evAmb].concat(Array.prototype.slice.call(arguments, 1)));
+        }
         if (!ctx.evMusic && !ctx.evSfx) { ctx.evSfx = ctx.createGain(); ctx.evSfx.gain.value = sfxNow() / 5; plain.call(ctx.evSfx, ctx.evMaster); sfxGains.push(ctx.evSfx); }   // (sound effects go through the SFX knob first)
         return plain.apply(this, [ctx.evMusic ? ctx.evMaster : ctx.evSfx].concat(Array.prototype.slice.call(arguments, 1)));
       }
@@ -9436,7 +9446,7 @@ var everdawnTitle = (function () {
     for (var bb = 0; bb < bdBtns.length; bb++) bdBtns[bb].addEventListener('click', function () {
       bd = this.getAttribute('data-b'); showBold(); try { localStorage.setItem('everdawn-bold-text', bd); } catch (err) {} applyBold(bd === 'on'); });
     showBold();
-  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, and the sound effects on their own)
+  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, the sound effects, and the background sounds)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evVol">Master Volume</label><output for="evVol" id="evVolNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evVol" min="0" max="10" step="1"><span>10</span></div></div>';
     var vi = body.querySelector('#evVol'), vn = body.querySelector('#evVolNum'); vi.value = volumeNow();   // (Master Volume: 0 to 10, 5 is the usual)
     function showVol() { vn.textContent = vi.value; } showVol();
@@ -9445,6 +9455,10 @@ var everdawnTitle = (function () {
     var si = body.querySelector('#evSfx'), sn = body.querySelector('#evSfxNum'); si.value = sfxNow();   // (SFX Volume: 0 to 10, 5 is the usual)
     function showSfx() { sn.textContent = si.value; } showSfx();
     si.addEventListener('input', function () { showSfx(); try { localStorage.setItem('everdawn-sfx-volume', si.value); } catch (err) {} applySfx(+si.value); });
+    body.insertAdjacentHTML('beforeend', '<div class="ev-srow"><div class="ev-lrow"><label for="evAmb">Ambient Volume</label><output for="evAmb" id="evAmbNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evAmb" min="0" max="10" step="1"><span>10</span></div></div>');
+    var ai = body.querySelector('#evAmb'), an2 = body.querySelector('#evAmbNum'); ai.value = ambientNow();   // (Ambient Volume: 0 to 10, 5 is the usual)
+    function showAmb() { an2.textContent = ai.value; } showAmb();
+    ai.addEventListener('input', function () { showAmb(); try { localStorage.setItem('everdawn-ambient-volume', ai.value); } catch (err) {} applyAmbient(+ai.value); });
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
