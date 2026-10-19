@@ -579,6 +579,40 @@ EVERDAWN_PARTS.push(function (THREE) {
     return g;
   }
   function glimFreeStall() { for (var s = 0; s < 3; s++) if (!glimmers.some(function (g) { return g.stall === s; })) return s; return -1; }
+  // ===== Glimmerwing sounds =====
+  // A Glimmerwing is a little glowing moth-creature, so it sings in tiny, bright, chime-like trills, with the soft
+  // whirr of its wings: a happy rising trill and a flutter when you pet it, a sparkly chime when you collect its egg,
+  // a soft little trill once it's fed and petted, a sad two-note peep when it's hungry, a few nibbles when it eats, and
+  // now and then a little chirp of its own while you're in the coop with it (fewer at night, and softer the further
+  // away it is). They're pet sounds, so they follow Pet Sound in Settings
+  var glimFlutterBuf = null;
+  function glimSound(kind, loud) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(), v = loud === undefined ? 1 : loud;
+    out.gain.value = v; out.evPet = true; out.connect(ac.destination);
+    function note(hz, at, len, vol, glide) {                           // (one bright, bell-like note: a pure tone with a faint shimmer above it)
+      [[1, 1], [2.76, 0.18]].forEach(function (h) {
+        var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
+        o.frequency.setValueAtTime(hz * h[0], now + at); if (glide) o.frequency.exponentialRampToValueAtTime(hz * h[0] * glide, now + at + len);
+        g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol * h[1], now + at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, now + at + len);
+        o.connect(g); g.connect(out); o.start(now + at); o.stop(now + at + len + 0.02);
+      });
+    }
+    function flutter(at, len, vol) {                                   // (its wings: a soft, quick whirr)
+      if (!glimFlutterBuf) { glimFlutterBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.8), ac.sampleRate); var d = glimFlutterBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+      src.buffer = glimFlutterBuf; f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.9;
+      lfo.frequency.value = 26; lg.gain.value = vol * 0.5; lfo.connect(lg); lg.connect(g.gain);   // (the wingbeats)
+      g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol * 0.5, now + at + 0.06); g.gain.linearRampToValueAtTime(0.0001, now + at + len);
+      src.connect(f); f.connect(g); g.connect(out); src.start(now + at, 0, len + 0.05); lfo.start(now + at); lfo.stop(now + at + len + 0.05);
+    }
+    if (kind === 'pet') { [1320, 1480, 1760, 1980, 2350].forEach(function (hz, i) { note(hz, i * 0.07, 0.16, 0.07, 1.04); }); flutter(0.05, 0.55, 0.09); }
+    else if (kind === 'egg') { [2640, 2090, 2350, 3135].forEach(function (hz, i) { note(hz, i * 0.09, 0.5, 0.06); }); }
+    else if (kind === 'content') { note(1480, 0, 0.18, 0.06, 1.05); note(1980, 0.12, 0.26, 0.06, 1.03); }
+    else if (kind === 'hungry') { note(1320, 0, 0.22, 0.05, 0.94); note(1100, 0.2, 0.32, 0.05, 0.9); }
+    else if (kind === 'eat') { for (var k = 0; k < 4; k++) note(2900 + Math.random() * 300, k * 0.11, 0.04, 0.035); note(1760, 0.5, 0.2, 0.05, 1.06); }
+    else if (kind === 'chirp') { var base = 1500 + Math.random() * 600, n = 2 + Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) note(base * (1 + 0.12 * (c % 2)), c * 0.08, 0.1, 0.05, 1.08); if (Math.random() < 0.35) flutter(0.1, 0.3, 0.06); }
+  }
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -740,24 +774,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.kind === 'tort') { grovellaAction(g, wx, wz); return; }
     if (g.egg) {                                                       // collect its egg
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
-      addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound(); glimSound('egg');
       showToast('You collected a Glimmer Egg from ' + g.name + '! ✧', 2200);
       return;
     }
     if (!g.fed) {                                                      // feed it a bundle of hay
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them 🌾', 2600); return; }
-      g.fed = true; glimRefresh(g); popSound(); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
+      g.fed = true; glimRefresh(g); popSound(); glimSound('eat'); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
       showToast(g.name + ' munches happily on the hay 🌾' + (g.petted ? ' An egg tomorrow morning!' : ' Now give them a pet!'), 2400);
       return;
     }
     if (!g.petted) {                                                   // pet it
       g.petted = true; glimRefresh(g); g.pet = 1.4;
       g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
-      glimHeartBurst(g.x, 0.5, g.z); popSound();
+      glimHeartBurst(g.x, 0.5, g.z); popSound(); glimSound('pet');
       showToast(g.name + ' coos and flutters their wings 💜 An egg tomorrow morning!', 2400);
       return;
     }
-    g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z);
+    g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z); glimSound('content');
     showToast(g.name + ' is fed, petted and happy ✧ Come back tomorrow!', 2000);
   }
   function mooncalfAction(g, wx, wz) {                               // milking, feeding and petting a Mooncalf
@@ -4130,10 +4164,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   function coopEat(g) {
     var i = g.eatSlot; coop.hay[i] = false; coop.res[i] = null; g.eatSlot = null; g.eatT = 0;
     g.fed = true; glimRefresh(g); coopHayShow();
-    if (inCoop) { popSound(); g.wait = 0.8 + Math.random(); }
+    if (inCoop) { popSound(); if (g.kind === 'glim') glimSound('eat', glimNear(g)); g.wait = 0.8 + Math.random(); }
   }
   function updateCoopFeeding(dt) {                                     // a hungry animal goes to the nearest bundle on the bench and eats it
     coopAnimals().forEach(function (g) {
+      if (inCoop && g.kind === 'glim') {                               // (a Glimmerwing chirps to itself now and then)
+        if (g.chirpT === undefined) g.chirpT = 3 + Math.random() * 8;
+        g.chirpT -= dt;
+        if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 25 : 7) + Math.random() * (night ? 30 : 12); glimSound('chirp', glimNear(g) * (night ? 0.5 : 1)); }
+      }
       if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { coop.res[g.eatSlot] = null; g.eatSlot = null; } return; }
       if (g.eatSlot === null || g.eatSlot === undefined) {
         var best = -1, bd = 1e9;
@@ -4147,21 +4186,22 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (Math.hypot(g.x - sx, g.z - sz) < 0.06) { g.face = Math.PI / 2; g.eatT += dt; if (g.eatT > 2.4) coopEat(g); }
     });
   }
+  function glimNear(g) { var d = Math.hypot(player.position.x - (COI_X + g.x), player.position.z - (COI_Z + g.z)); return Math.max(0.25, Math.min(1, 1.6 / (d + 0.6))); }   // (softer the further it is from you)
   function coopCare(g) {                                               // collecting what it gave you, and petting it (it feeds itself at the bench)
     var wx = COI_X + g.x, wz = COI_Z + g.z, glim = g.kind === 'glim';
     if (g.egg && glim) {
       if (!roomFor(['glimmerEgg'])) { bagFull(); return; }
-      addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      addItem('glimmerEgg', 1); g.egg = false; glimRefresh(g); popSound(); glimSound('egg');
       showToast('You collected a Glimmer Egg from ' + g.name + '! ✧', 2200); return;
     }
     if (g.egg || (g.fed && !glim)) { (g.kind === 'duck' ? puddlewispAction : g.kind === 'ember' ? emberwingAction : g.kind === 'gem' ? gemwrenAction : celestaraAction)(g, wx, wz); return; }
     if (!g.petted) {
       g.petted = true; glimRefresh(g); g.pet = 1.4; g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
-      glimHeartBurst(g.x, g.kind === 'ostrich' ? 0.75 : 0.55, g.z); popSound();
+      glimHeartBurst(g.x, g.kind === 'ostrich' ? 0.75 : 0.55, g.z); popSound(); if (glim) glimSound('pet');
       showToast(g.fed ? g.name + ' coos and flutters their wings 💜 An egg tomorrow morning!' : g.name + ' loves the attention 💜 Put hay on the feeding bench so they can eat too!', 2600); return;
     }
-    if (!g.fed) { showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400); return; }
-    g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z);
+    if (!g.fed) { if (glim) glimSound('hungry'); showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400); return; }
+    g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z); if (glim) glimSound('content');
     showToast(g.name + ' is fed, petted and happy ✧ Come back tomorrow!', 2000);
   }
   function coopBenchAction() {
