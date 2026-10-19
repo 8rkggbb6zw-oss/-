@@ -2738,11 +2738,48 @@ EVERDAWN_PARTS.push(function (THREE) {
 
     return { broom: broom, rideBroom: rideBroom, chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut, faceBeam], phase: 0, blink: false };
   })();
+  // ===== footsteps =====
+  // A soft footstep each time a foot comes down as she walks, made on the fly like the game's other sounds and played
+  // as a sound effect (so it follows SFX Volume). It sounds like what she's walking on: a swish through the grass, a
+  // dull scuff on the dirt path, a hollow knock on wood (floors indoors, the dock, the porch, the bridges), a crisp tap
+  // on the town's stone paths, and a crunch in Winter's snow. The two feet sound a touch different
+  var stepNoise = null;
+  function footSurface() {
+    var x = player.position.x, z = player.position.z;
+    if (indoors || onDock(x, z) || porchHeight(x, z) > 0 || onBridge(x, z) || onBridge2(x, z)) return 'wood';
+    if (stonePathDist(x, z) < SP_W) return 'stone';
+    if (winterNow()) return 'snow';
+    return pathDist(x, z) < PATH_W ? 'dirt' : 'grass';
+  }
+  function footstep(foot) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    if (!stepNoise) {                                                  // (a short burst of noise to shape every step from, made once)
+      stepNoise = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.25), audioCtx.sampleRate);
+      var d = stepNoise.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    var kind = footSurface(), now = audioCtx.currentTime, tune = foot ? 1.08 : 0.94;
+    var S = { grass: [1700, 0.7, 0.07, 0.09], dirt: [650, 0.9, 0.06, 0.13], wood: [900, 1.6, 0.05, 0.16], stone: [2600, 1.4, 0.035, 0.12], snow: [3000, 0.5, 0.12, 0.13] }[kind];   // ([filter pitch, sharpness, how long, how loud])
+    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
+    src.buffer = stepNoise; src.playbackRate.value = kind === 'snow' ? 0.8 + Math.random() * 0.3 : 1;
+    f.type = kind === 'dirt' ? 'lowpass' : 'bandpass'; f.frequency.value = S[0] * tune; f.Q.value = S[1];
+    gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(S[3], now + 0.006); gain.gain.exponentialRampToValueAtTime(0.0001, now + S[2]);
+    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
+    src.start(now, Math.random() * 0.1, S[2] + 0.02);
+    if (kind === 'wood') {                                             // (wood: a little hollow knock under the step)
+      var o = audioCtx.createOscillator(), og = audioCtx.createGain();
+      o.frequency.setValueAtTime(150 * tune, now); o.frequency.exponentialRampToValueAtTime(90, now + 0.06);
+      og.gain.setValueAtTime(0.12, now); og.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+      o.connect(og); og.connect(audioCtx.destination); o.start(now); o.stop(now + 0.08);
+    }
+  }
   // every frame: she walks with little steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
     var t = state.time, w = wl;
     w.phase += dt * (moving ? 10 * SPEED / 4.4 : 0);                     // (quicker steps when you jog)
     var step = moving ? Math.sin(w.phase) : 0;
+    var stepN = Math.floor(w.phase / Math.PI);                         // (each half of the walk cycle, a foot comes down: a footstep)
+    if (moving && !flying && !inBoat && stepN !== w.lastStep) footstep(stepN % 2);
+    w.lastStep = stepN;
     w.legs[0].rotation.x = step * 0.45; w.legs[1].rotation.x = -step * 0.45;
     w.armL.rotation.x = -step * 0.35; w.armR.rotation.x = step * 0.35; w.armR.visible = !axeArm.visible;   // (her own right arm, unless she's holding a tool in it)
     w.chibi.position.y = moving ? Math.abs(Math.sin(w.phase)) * 0.03 : Math.sin(t * 2) * 0.004;
