@@ -728,59 +728,55 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
   }
   // ===== Gemwren sounds =====
-  // A Gemwren is a plump little quail-like ground bird, cozy and round, so it coos and burbles softly, low and warm,
-  // with gentle little clucks, the patter of its quick little feet and a fluffy rustle of feathers. It fluffs up with
-  // a rustle and gives a happy, rolling burble when you pet it; a pleased run of soft clucks and a coo when you collect
-  // its Geode Egg; busy pecks and a contented cluck when it eats; a slow, low, wistful coo when it's hungry; a soft,
-  // settled burble once it's fed and petted; and now and then a coo, a few murmuring clucks or a patter of feet of its
-  // own while you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
+  // A Gemwren's feathers are like the inside of a hollow geode, so its voice sounds like breath blown across a hollow
+  // stone: soft, breathy, ocarina-like whistles that play little tunes, with the dry rattle of tumbling pebbles and
+  // gemstones as it fluffs up and shuffles about. A rattle of gems and a happy rising "hoo-wee" when you pet it; a
+  // rattle and a bright three-note tune when you collect its Geode Egg; busy pecks and a tiny whistle when it eats; a
+  // slow, breathy, falling whistle when it's hungry; one soft whistle with a little lift once it's fed and petted;
+  // and now and then a little whistled tune, a soft hoot or a rattle of pebbles of its own while you're in the coop.
+  // They're pet sounds, so they follow Pet Sound in Settings
   var gemNoiseBuf = null;
   function gemSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
-    if (!gemNoiseBuf) { gemNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.5), ac.sampleRate); var d = gemNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    function coo(at, hz, len, vol, to, roll) {                         // (a soft, low coo: a round, mellow tone that swells and glides to hz * to; roll makes it burble)
-      var o = ac.createOscillator(), o2 = ac.createOscillator(), o2g = ac.createGain(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
-      o.type = 'sine'; o2.type = 'triangle'; o2g.gain.value = 0.3;
-      vol *= roll ? 0.55 : 0.85;                                       // (as loud as the other pets: a burble swells louder, so it starts softer)
-      [[o, 1], [o2, 2]].forEach(function (p) { p[0].frequency.setValueAtTime(hz * p[1] * 0.94, t0); p[0].frequency.linearRampToValueAtTime(hz * p[1] * 1.04, t0 + len * 0.3); p[0].frequency.linearRampToValueAtTime(hz * p[1] * (to || 0.9), t0 + len); });
-      f.type = 'lowpass'; f.frequency.value = hz * 3;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.3); g.gain.linearRampToValueAtTime(vol * 0.7, t0 + len * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      if (roll) { var rl = ac.createOscillator(), rg = ac.createGain(); rl.frequency.value = roll; rg.gain.value = vol * 0.55; rl.connect(rg); rg.connect(g.gain); rl.start(t0); rl.stop(t0 + len + 0.05); }
-      o.connect(f); o2.connect(o2g); o2g.connect(f); f.connect(g); g.connect(out);
-      [o, o2].forEach(function (n) { n.start(t0); n.stop(t0 + len + 0.05); });
+    if (!gemNoiseBuf) { gemNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.0), ac.sampleRate); var d = gemNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    function whistle(at, hz, len, vol, to) {                           // (one ocarina note: a pure, hollow tone with breath in it, easing in, a gentle waver, gliding to hz * to)
+      var t0 = now + at, o = ac.createOscillator(), g = ac.createGain(), vib = ac.createOscillator(), vg = ac.createGain();
+      var br = ac.createBufferSource(), bf = ac.createBiquadFilter(), bg = ac.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(hz * 0.97, t0); o.frequency.linearRampToValueAtTime(hz, t0 + 0.05); o.frequency.exponentialRampToValueAtTime(hz * (to || 1), t0 + len);
+      vib.frequency.value = 5; vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(hz * 0.01, t0 + len); vib.connect(vg); vg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.06, len * 0.35)); g.gain.setValueAtTime(vol * 0.9, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      br.buffer = gemNoiseBuf; bf.type = 'bandpass'; bf.frequency.value = hz; bf.Q.value = 6;   // (the breath across the stone)
+      bg.gain.setValueAtTime(0.0001, t0); bg.gain.linearRampToValueAtTime(vol * 1.6, t0 + 0.03); bg.gain.exponentialRampToValueAtTime(vol * 0.5, t0 + len * 0.5); bg.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(g); g.connect(out); br.connect(bf); bf.connect(bg); bg.connect(out);
+      o.start(t0); o.stop(t0 + len + 0.03); vib.start(t0); vib.stop(t0 + len + 0.03); br.start(t0, Math.random() * 0.5, len + 0.03);
     }
-    function cluck(at, hz, vol) {                                      // (a soft little cluck: a short, throaty "bk")
-      var o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at; o.type = 'sawtooth';
-      o.frequency.setValueAtTime(hz * 1.2, t0); o.frequency.exponentialRampToValueAtTime(hz, t0 + 0.06);
-      f.type = 'bandpass'; f.frequency.value = hz * 3; f.Q.value = 3;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * 5, t0 + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);   // (the narrow filter takes a lot away: made up for here)
-      o.connect(f); f.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.1);
+    function rattle(at, len, vol, n) {                                 // (pebbles and gemstones tumbling: dry little clicks, close together)
+      for (var k = 0; k < n; k++) {
+        var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + (k / n) * len + Math.random() * len / n; o.type = 'square';
+        o.frequency.value = 2400 + Math.random() * 3200;
+        g.gain.setValueAtTime(vol * (0.5 + Math.random() * 0.5), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.012 + Math.random() * 0.01);
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.03);
+      }
     }
-    function tap(at, vol, hz) {                                        // (a little foot, or beak, on the straw)
+    function tap(at, vol, hz) {                                        // (its beak on the straw)
       var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
       src.buffer = gemNoiseBuf; f.type = 'bandpass'; f.frequency.value = hz || 2200; f.Q.value = 1.5;
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
-      src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random() * 0.4, 0.04);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random() * 0.8, 0.04);
     }
-    function rustle(at, len, vol) {                                    // (fluffing up its feathers)
-      var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
-      src.buffer = gemNoiseBuf; f.type = 'lowpass'; f.frequency.value = 1800;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      src.connect(f); f.connect(g); g.connect(out); src.start(t0, 0, len + 0.02);
-    }
-    var hz = 440;                                                      // (its voice: low and warm)
-    if (kind === 'pet') { rustle(0, 0.32, 0.1); coo(0.22, hz, 0.5, 0.12, 1.0, 14); }
-    else if (kind === 'egg') { cluck(0, hz, 0.06); cluck(0.12, hz * 1.05, 0.06); cluck(0.24, hz * 1.1, 0.06); coo(0.38, hz * 1.1, 0.4, 0.11, 0.95); }
-    else if (kind === 'content') { coo(0, hz, 0.45, 0.11, 0.92, 11); }
-    else if (kind === 'hungry') { coo(0, hz * 0.9, 0.65, 0.1, 0.75); }
-    else if (kind === 'eat') { for (var k = 0; k < 7; k++) tap(k * 0.075 + Math.random() * 0.02, 0.18, 1800); cluck(0.6, hz, 0.06); }
+    var N = [988, 1109, 1245, 1480, 1661, 1976];                       // (its notes: a gentle, open scale, so its little tunes always sound sweet)
+    if (kind === 'pet') { rattle(0, 0.28, 0.06, 12); whistle(0.25, N[1], 0.18, 0.09); whistle(0.42, N[4], 0.35, 0.1, 1.02); }   // (hoo-WEE)
+    else if (kind === 'egg') { rattle(0, 0.22, 0.055, 9); whistle(0.22, N[2], 0.14, 0.09); whistle(0.36, N[3], 0.14, 0.09); whistle(0.5, N[5], 0.4, 0.1); }
+    else if (kind === 'content') { whistle(0, N[2], 0.35, 0.09, 1.06); }
+    else if (kind === 'hungry') { whistle(0, N[3], 0.6, 0.08, 0.75); }
+    else if (kind === 'eat') { for (var k = 0; k < 7; k++) tap(k * 0.075 + Math.random() * 0.02, 0.18, 1800); whistle(0.6, N[4], 0.16, 0.07); }
     else if (kind === 'chirp') {
-      var r = Math.random(), f0 = hz * (0.92 + Math.random() * 0.16);
-      if (r < 0.35) coo(0, f0, 0.4 + Math.random() * 0.2, 0.1, 0.9, Math.random() < 0.5 ? 12 : 0);
-      else if (r < 0.65) { var n = 2 + Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) cluck(c * 0.14, f0 * (1 + 0.04 * c), 0.05); }   // (murmuring clucks)
-      else { for (var t = 0; t < 8; t++) tap(t * 0.06, 0.12, 2600); }   // (a patter of feet as it scurries)
+      var r = Math.random();
+      if (r < 0.45) { var n = 2 + Math.floor(Math.random() * 2), st = Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) whistle(c * 0.17, N[st + c + (c && Math.random() < 0.5 ? 1 : 0)], c === n - 1 ? 0.3 : 0.15, 0.08); }   // (a little whistled tune)
+      else if (r < 0.75) whistle(0, N[0] * 0.75, 0.32, 0.08, 0.92);   // (a soft, low hoot)
+      else rattle(0, 0.3, 0.06, 10);                                   // (a rattle of pebbles as it shuffles about)
     }
   }
   function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
