@@ -726,30 +726,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
   }
   // ===== Gemwren sounds =====
-  // A Gemwren is a plump little quail-like ground bird with feathers like the inside of a geode and a gem on its plume,
-  // so it has a bright, bouncy three-note "chi-ca-wee" of a call and quick little chips, the patter of its scurrying
-  // feet, and the tinkle of crystal: it fluffs up round with a rustle, calls happily and its gems tinkle when you pet
-  // it; a cascade of crystal tinkles when you collect its Geode Egg; busy, quick pecks when it eats; two small, sad
-  // "pip"s when it's hungry; a happy chip-chirp once it's fed and petted; and now and then a call, a few chips, a
-  // patter of feet or a glint of crystal of its own while you're in the coop. They're pet sounds, so they follow Pet
-  // Sound in Settings
+  // A Gemwren's feathers are like the inside of a geode and its plume is tipped with a gem, so its voice is made of
+  // crystal: little musical, bell-like chirps that ring like glass, with the patter of its quick little feet. A happy
+  // rising run of crystal chirps when you pet it; a sparkling cascade when you collect its Geode Egg; busy pecks and
+  // a bright chirp when it eats; two soft, low, falling chimes when it's hungry; two sweet chirps once it's fed and
+  // petted; and now and then a three-note crystal call, a single chime or a patter of feet of its own while you're in
+  // the coop. They're pet sounds, so they follow Pet Sound in Settings
   var gemNoiseBuf = null;
   function gemSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
     if (!gemNoiseBuf) { gemNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.5), ac.sampleRate); var d = gemNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    function chip(at, hz, len, vol, to) {                              // (a short, bright bird note sliding from hz to hz * to)
-      var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at; o.type = 'triangle';
-      o.frequency.setValueAtTime(hz, t0); o.frequency.exponentialRampToValueAtTime(hz * (to || 1), t0 + len);
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.02);
-    }
-    function tinkle(at, hz, vol) {                                     // (a glint of crystal: a bright, ringing little bell)
-      [[1, 1], [2.4, 0.4], [3.9, 0.2]].forEach(function (h) {
-        var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at; o.type = 'sine'; o.frequency.value = hz * h[0];
-        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * h[1], t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4 / h[0] + 0.1);
-        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.6);
+    function chime(at, hz, ring, vol, lift) {                          // (one crystal chirp: a bell-like tone with glassy overtones, flicking up in pitch as it starts, then ringing away)
+      [[1, 1], [2.76, 0.35], [5.4, 0.12]].forEach(function (h) {
+        var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at; o.type = 'sine';
+        o.frequency.setValueAtTime(hz * h[0] * (lift ? 0.85 : 1), t0); o.frequency.exponentialRampToValueAtTime(hz * h[0], t0 + 0.03);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * h[1], t0 + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t0 + ring / Math.sqrt(h[0]));
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + ring + 0.05);
       });
     }
     function tap(at, vol, hz) {                                        // (a little foot, or beak, on the straw)
@@ -758,25 +752,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
       src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random() * 0.4, 0.04);
     }
-    function rustle(at, len, vol) {                                    // (fluffing up its feathers)
-      var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
-      src.buffer = gemNoiseBuf; f.type = 'lowpass'; f.frequency.value = 1800;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      src.connect(f); f.connect(g); g.connect(out); src.start(t0, 0, len + 0.02);
-    }
-    function call(at, hz, vol) { chip(at, hz, 0.06, vol, 1.1); chip(at + 0.09, hz * 0.85, 0.06, vol, 1.05); chip(at + 0.19, hz * 1.2, 0.13, vol, 1.25); }   // (chi-ca-WEE!)
-    var hz = 2100;
-    if (kind === 'pet') { rustle(0, 0.3, 0.1); call(0.2, hz, 0.1); tinkle(0.5, 3300, 0.05); tinkle(0.6, 4200, 0.04); }
-    else if (kind === 'egg') { [3000, 3800, 3400, 4500, 5100].forEach(function (f2, i) { tinkle(i * 0.07, f2, 0.05); }); }
-    else if (kind === 'content') { chip(0, hz, 0.06, 0.09, 1.15); chip(0.1, hz * 1.2, 0.09, 0.09, 1.2); tinkle(0.2, 4000, 0.03); }
-    else if (kind === 'hungry') { chip(0, hz * 0.9, 0.12, 0.08, 0.85); chip(0.28, hz * 0.78, 0.16, 0.08, 0.8); }
-    else if (kind === 'eat') { for (var k = 0; k < 7; k++) tap(k * 0.075 + Math.random() * 0.02, 0.18, 1800); chip(0.6, hz, 0.07, 0.08, 1.15); }
+    var N = [1760, 1976, 2217, 2637, 2960, 3520];                      // (its notes: a bright, sweet scale, so its chirps always sound pretty together)
+    if (kind === 'pet') { [0, 1, 2, 3, 5].forEach(function (n, i) { chime(i * 0.08, N[n], 0.35, 0.07, true); }); }
+    else if (kind === 'egg') { [5, 3, 4, 2, 3, 5].forEach(function (n, i) { chime(i * 0.07, N[n] * 1.5, 0.5, 0.05); }); }
+    else if (kind === 'content') { chime(0, N[2], 0.3, 0.07, true); chime(0.12, N[4], 0.4, 0.07, true); }
+    else if (kind === 'hungry') { chime(0, N[2] * 0.75, 0.45, 0.06); chime(0.32, N[0] * 0.75, 0.55, 0.06); }
+    else if (kind === 'eat') { for (var k = 0; k < 7; k++) tap(k * 0.075 + Math.random() * 0.02, 0.18, 1800); chime(0.6, N[3], 0.3, 0.06, true); }
     else if (kind === 'chirp') {
       var r = Math.random();
-      if (r < 0.35) call(0, hz * (0.95 + Math.random() * 0.1), 0.09);
-      else if (r < 0.6) { for (var c = 0; c < 3; c++) chip(c * 0.12, hz * (1 + Math.random() * 0.1), 0.05, 0.08, 1.1); }
-      else if (r < 0.85) { for (var t = 0; t < 8; t++) tap(t * 0.06, 0.12, 2600); }   // (a patter of feet as it scurries)
-      else tinkle(0, 3500 + Math.random() * 1500, 0.05);
+      if (r < 0.4) { chime(0, N[1], 0.22, 0.06, true); chime(0.1, N[0], 0.22, 0.06, true); chime(0.2, N[3], 0.4, 0.06, true); }   // (its crystal "chi-ca-wee")
+      else if (r < 0.7) chime(0, N[Math.floor(Math.random() * N.length)], 0.4, 0.06, true);
+      else { for (var t = 0; t < 8; t++) tap(t * 0.06, 0.12, 2600); }   // (a patter of feet as it scurries)
     }
   }
   function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
