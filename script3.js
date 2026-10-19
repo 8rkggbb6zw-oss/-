@@ -8627,7 +8627,7 @@ var everdawnTitle = (function () {
     '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
     '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
-    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
+    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}#evTitle .ev-empty{margin:24px 0;text-align:center;font-size:16px;color:#f0e2ff;opacity:.75}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
     '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
     '#evTitle .ev-lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}#evTitle .ev-lrow output{font-size:17px;font-weight:600;color:#ffd6f0;min-width:3.2em;text-align:right}' +
     '#evTitle .ev-srow label,#evTitle .ev-srow .ev-lbl{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-srow+.ev-srow{padding-top:12px}' +
@@ -9297,7 +9297,7 @@ var everdawnTitle = (function () {
   }
   slots.querySelector('.ev-back').addEventListener('click', closeSlots);
   slots.addEventListener('click', function (e) { if (e.target === slots) closeSlots(); });
-  // ----- the Settings panel: pages you flip through with the arrows (just "Game" for now, with nothing on it yet) -----
+  // ----- the Settings panel: pages you flip through with the arrows (Game, then Display) -----
   function timeNow() { try { var t = parseFloat(localStorage.getItem('everdawn-time-speed')); if (t >= 50 && t <= 100) return t; } catch (err) {} return 50; }
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
@@ -9379,6 +9379,8 @@ var everdawnTitle = (function () {
     var ti = body.querySelector('#evTime'), tp = body.querySelector('#evTimePct'); ti.value = timeNow();   // (Game Time Speed: 50% is the usual pace, 100% twice as fast)
     function showTime() { tp.textContent = Math.round(parseFloat(ti.value)) + '%'; } showTime();
     ti.addEventListener('input', function () { showTime(); var t = parseFloat(ti.value); try { localStorage.setItem('everdawn-time-speed', String(t)); } catch (err) {} if (window.everdawnSetTimeSpeed) window.everdawnSetTimeSpeed(t); });
+  } }, { name: 'Display', build: function (body) {                     // (Display: nothing on it yet)
+    body.innerHTML = '<p class="ev-empty">No display settings yet.</p>';
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
