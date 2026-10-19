@@ -898,7 +898,61 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'eat') munching(4, 0.07);
     else if (kind === 'chirp') { boops(0, Math.random() < 0.6 ? 0 : 1); if (Math.random() < 0.5) chimes(0.3, 2, 0.018); }
   }
-  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); else if (g.kind === 'moon') moonSound(kind, loud); else if (g.kind === 'aurora') auroraSound(kind, loud); else if (g.kind === 'zephyra') zephSound(kind, loud); }   // (the right voice for each kind of pet)
+  // ===== Lunastra sounds =====
+  // A Lunastra sounds like a sleepy raccoon kit under the stars: soft, drowsy purring trills (the happy sound real
+  // raccoons make) and little chirps, in a long, sleepy night echo, with a few twinkles of starlight. A purr and a
+  // rising chirp when you pet it; two purrs and more starlight when it gives you its Moonpearl; soft munching as it
+  // eats; two soft, falling chirps when it's hungry; a little purr and chirp once it's fed and petted; and now and
+  // then a purr of its own while you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function lunaSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = null; function noise() { if (!nbuf) { nbuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate); var d = nbuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } return nbuf; }
+    function echo(wet, secs) {                                         // (a long, sleepy night echo)
+      var c = ac.createConvolver(), n = Math.floor(ac.sampleRate * secs), ir = ac.createBuffer(2, n, ac.sampleRate);
+      for (var ch = 0; ch < 2; ch++) { var d = ir.getChannelData(ch); for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+      c.buffer = ir; var w = ac.createGain(), inp = ac.createGain(); w.gain.value = wet; inp.connect(out); inp.connect(c); c.connect(w); w.connect(out); return inp;
+    }
+    var night = echo(0.5, 1.8);
+    function chirp(at, hz, len, vol, shape) {                          // (a kit's chirp: a quick, slightly raspy squeak, falling when it's sad or lifting when it's happy)
+      var t0 = now + at, o = ac.createOscillator(), f = ac.createBiquadFilter(), rasp = ac.createGain(), r = ac.createOscillator(), rg = ac.createGain(), g = ac.createGain(); o.type = 'sawtooth';
+      var a = shape === 'down' ? 1.15 : 0.85, m = shape === 'down' ? 1.0 : 1.12, b = shape === 'down' ? 0.8 : shape === 'up' ? 1.2 : 0.95;
+      o.frequency.setValueAtTime(hz * a, t0); o.frequency.linearRampToValueAtTime(hz * m, t0 + len * 0.4); o.frequency.exponentialRampToValueAtTime(hz * b, t0 + len);
+      f.type = 'bandpass'; f.frequency.value = hz * 1.1; f.Q.value = 2.2;
+      rasp.gain.value = 0.75; r.frequency.value = 70; rg.gain.value = 0.25; r.connect(rg); rg.connect(rasp.gain);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.012); g.gain.setValueAtTime(vol, t0 + len * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(f); f.connect(rasp); rasp.connect(g); g.connect(night); o.start(t0); r.start(t0); o.stop(t0 + len + 0.02); r.stop(t0 + len + 0.02);
+    }
+    function purr(at, len) {                                           // (a soft, drowsy, purring trill)
+      var t0 = now + at, o = ac.createOscillator(), f = ac.createBiquadFilter(), l = ac.createOscillator(), lg = ac.createGain(), am = ac.createGain(), g = ac.createGain(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(340, t0); o.frequency.exponentialRampToValueAtTime(357, t0 + len);
+      f.type = 'lowpass'; f.frequency.value = 1360; l.frequency.value = 26; lg.gain.value = 0.5; am.gain.value = 0.5; l.connect(lg); lg.connect(am.gain);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.066, t0 + len * 0.2); g.gain.setValueAtTime(0.066, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(f); f.connect(am); am.connect(g); g.connect(night); o.start(t0); l.start(t0); o.stop(t0 + len + 0.02); l.stop(t0 + len + 0.02);
+    }
+    function sound(at, mood) {                                         // (mood: 1 happy, 0 just chatting, -1 sad)
+      if (mood < 0) { chirp(at, 2000, 0.3, 0.17, 'down'); chirp(at + 0.4, 1850, 0.35, 0.17, 'down'); return; }
+      purr(at, mood > 0 ? 0.6 : 0.4); chirp(at + (mood > 0 ? 0.62 : 0.42), 2200, 0.1, 0.14, mood > 0 ? 'up' : '');
+    }
+    function twinkle(at, n, vol) {                                     // (a few twinkles of starlight)
+      var STARS = [1568, 1760, 2093, 2349, 2637, 3136, 3520];
+      for (var i = 0; i < n; i++) { var hz = STARS[Math.floor(Math.random() * STARS.length)], t0 = now + at + i * 0.08 + Math.random() * 0.03;
+        [1, 2.76, 5.4].forEach(function (m, k) { var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = hz * m;
+          g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * [1, 0.3, 0.12][k], t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6 * [1, 0.5, 0.3][k]);
+          o.connect(g); g.connect(night); o.start(t0); o.stop(t0 + 0.62); }); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    if (kind === 'pet') { sound(0, 1); twinkle(0.8, 3, 0.017); }
+    else if (kind === 'egg') { sound(0, 0); sound(0.5, 1); twinkle(1.2, 4, 0.017); }
+    else if (kind === 'content') sound(0, 0);
+    else if (kind === 'hungry') { sound(0, -1); sound(0.7, -1); }
+    else if (kind === 'eat') munching(4, 0.07);
+    else if (kind === 'chirp') { sound(0, Math.random() < 0.65 ? 0 : 1); if (Math.random() < 0.4) twinkle(0.5, 2, 0.015); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); else if (g.kind === 'moon') moonSound(kind, loud); else if (g.kind === 'aurora') auroraSound(kind, loud); else if (g.kind === 'zephyra') zephSound(kind, loud); else if (g.kind === 'luna') lunaSound(kind, loud); }   // (the right voice for each kind of pet)
   emberwingAction = (function (base) {                                 // (looking after an Emberwing: the sound to go with what happened)
     return function (g) {
       var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
@@ -941,6 +995,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       return r;
     };
   })(zephyraAction);
+  lunastraAction = (function (base) {                                  // (looking after a Lunastra: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      lunaSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if the pearl couldn't be taken: a full bag)
+      return r;
+    };
+  })(lunastraAction);
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -5423,7 +5484,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra')) {   // (a Mooncalf, an Auroraram or a Zephyra makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna')) {   // (a Mooncalf, an Auroraram, a Zephyra or a Lunastra makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
