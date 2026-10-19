@@ -2805,7 +2805,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     w.head.rotation.z = moving ? Math.sin(w.phase) * 0.04 : Math.sin(t * 0.8) * 0.03;
     w.hairBack.rotation.x = moving ? 0.12 + Math.sin(w.phase * 2) * 0.03 : Math.sin(t * 1.3) * 0.03;
     w.tip.rotation.z = Math.sin(t * 1.7) * 0.04 + (moving ? Math.sin(w.phase) * 0.05 : 0);
-    w.broom.visible = !flying; w.rideBroom.visible = flying;
+    w.broom.visible = false; w.rideBroom.visible = flying;              // (her broom only appears when she's flying on it, not carried at her side)
     if (flying) {                                                      // (on her broom: sitting astride it, knees bent, both hands on the handle in front of her, hair streaming back)
       w.legs[0].rotation.set(-1.1, 0, 0.18); w.legs[1].rotation.set(-1.1, 0, -0.18); w.legs[0].userData.shin.rotation.x = w.legs[1].userData.shin.rotation.x = 0;
       w.chibi.rotation.set(0, 0, 0);
