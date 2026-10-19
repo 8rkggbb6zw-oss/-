@@ -746,7 +746,70 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'eat') { for (var k = 0; k < 3; k++) prr(k * 0.15, hz * 1.1, 0.08, 0.07, 1.05); }
     else if (kind === 'chirp') { var n = 1 + Math.floor(Math.random() * 2); for (var c = 0; c < n; c++) prr(c * 0.3, hz * (0.95 + Math.random() * 0.2), 0.2 + Math.random() * 0.1, 0.09, Math.random() < 0.6 ? 1.15 : 0.9); }
   }
-  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); }   // (the right voice for each kind of pet)
+  // ===== Mooncalf sounds =====
+  // A Mooncalf moos like a real young calf, sweet and soft, and each moo floats away in a dreamy, starry-night echo.
+  // The moo is built the way a real one is: a voice buzzing pulse by pulse with a real throat's little wobbles, through
+  // a long cow's throat (much longer than ours, which is what makes it sound like a cow), starting as a closed-mouth
+  // "mmm" and opening into "mooo" as the pitch climbs. A happy moo that lifts at the end when you pet it; a short moo
+  // and a happy one when you milk it; soft munching as it eats; two slow, falling moos when it's hungry; a short moo
+  // once it's fed and petted; and now and then a moo of its own while you're in the barn. They're pet sounds, so they
+  // follow Pet Sound in Settings
+  function moonSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = null; function noise() { if (!nbuf) { nbuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); var d = nbuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } return nbuf; }
+    function lerp(pts, t, k) { for (var i = 1; i < pts.length; i++) if (t <= pts[i][0]) { var a = pts[i - 1], b = pts[i], u = (t - a[0]) / Math.max(1e-6, b[0] - a[0]); return a[k] + (b[k] - a[k]) * u; } return pts[pts.length - 1][k]; }
+    function throat(len, hz, plan, rasp, breath) {                     // (a real throat's buzz, pulse by pulse, with the little wobbles a real voice has)
+      var sr = ac.sampleRate, n = Math.floor(sr * len), buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0), ph = 0, amp = 1, jit = 1, odd = false, prev = 0, drift = 0;
+      for (var i = 0; i < n; i++) {
+        var t = i / n; drift += (Math.random() - 0.5) * 0.002; drift *= 0.999;
+        ph += hz * lerp(plan, t, 2) * jit * (1 + drift) / sr;
+        if (ph >= 1) { ph -= 1; jit = 1 + (Math.random() - 0.5) * 0.03; odd = !odd; amp = (1 + (Math.random() - 0.5) * 0.15) * (odd ? 1 - rasp : 1); }
+        var g = ph < 0.45 ? 0.5 * (1 - Math.cos(Math.PI * ph / 0.45)) : ph < 0.62 ? Math.cos(Math.PI / 2 * (ph - 0.45) / 0.17) : 0;
+        var v = g * amp, dv = v - prev; prev = v; d[i] = dv * sr * 0.00075 + (Math.random() - 0.5) * breath * g;   // (the same strength at any sample rate)
+      }
+      return buf;
+    }
+    function moo(at, hz, len, vol, plan, dest) {
+      // plan: [[time 0..1, how open the mouth is 0..1, x hz], ...]
+      var t0 = now + at, s = ac.createBufferSource(), mouth = ac.createGain(), nose = ac.createBiquadFilter(), noseG = ac.createGain(), g = ac.createGain(), sp = 343 / (4 * 0.29);   // (a young calf's throat, 29cm)
+      s.buffer = throat(len, hz, plan, 0.05, 0.15);
+      [0, 1, 2, 3, 4].forEach(function (k) {                           // (the throat's ringing notes, rising as the mouth opens)
+        var open = sp * (2 * k + 1) * (k === 0 ? 1.7 : k === 1 ? 1.12 : 1), shut = sp * (2 * k + 1) * 0.8;
+        var f = ac.createBiquadFilter(), fg = ac.createGain(); f.type = 'bandpass'; f.Q.value = Math.max(2.5, Math.min(14, open / 80)); fg.gain.value = [1, 0.75, 0.5, 0.32, 0.2][k] * 3;
+        for (var j = 0; j <= 24; j++) { var tt = j / 24, o = lerp(plan, tt, 1), fr = shut + (open - shut) * o; if (j === 0) f.frequency.setValueAtTime(fr, t0); else f.frequency.linearRampToValueAtTime(fr, t0 + len * tt); }
+        s.connect(f); f.connect(fg); fg.connect(mouth);
+      });
+      nose.type = 'lowpass'; nose.frequency.value = Math.min(350, sp * 1.3); nose.Q.value = 2; s.connect(nose); nose.connect(noseG);   // (the "mmm" through its nose)
+      for (var j = 0; j <= 24; j++) { var tt = j / 24, o = lerp(plan, tt, 1), at2 = t0 + len * tt;
+        if (j === 0) { mouth.gain.setValueAtTime(0.05 + o, at2); noseG.gain.setValueAtTime(2.2 * (1 - o * 0.75), at2); } else { mouth.gain.linearRampToValueAtTime(0.05 + o, at2); noseG.gain.linearRampToValueAtTime(2.2 * (1 - o * 0.75), at2); } }
+      mouth.connect(g); noseG.connect(g);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.12, len * 0.15)); g.gain.setValueAtTime(vol, t0 + len * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      g.connect(dest); s.start(t0);
+    }
+    function echo(wet, secs) {                                         // (a soft, dreamy, starry-night echo)
+      var c = ac.createConvolver(), n = Math.floor(ac.sampleRate * secs), ir = ac.createBuffer(2, n, ac.sampleRate);
+      for (var ch = 0; ch < 2; ch++) { var d = ir.getChannelData(ch); for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+      c.buffer = ir; var w = ac.createGain(), inp = ac.createGain(); w.gain.value = wet; inp.connect(out); inp.connect(c); c.connect(w); w.connect(out); return inp;
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    var hz = 225;
+    var MOO = [[0, 0, 0.84], [0.28, 0.1, 0.96], [0.5, 1, 1.07], [0.75, 0.8, 1.02], [1, 0.2, 0.86]];      // (an ordinary moo)
+    var HAPPY = [[0, 0, 0.86], [0.3, 0.2, 0.97], [0.55, 1, 1.05], [0.85, 0.8, 1.14], [1, 0.3, 1.1]];    // (lifting at the end)
+    var SAD = [[0, 0, 0.9], [0.25, 0.1, 0.97], [0.45, 0.9, 1], [0.7, 0.6, 0.88], [1, 0.1, 0.72]];       // (falling away)
+    var SHORT = [[0, 0, 0.88], [0.3, 1, 1.04], [0.7, 0.7, 1], [1, 0.2, 0.88]];
+    if (kind === 'eat') { munching(4, 0.08); return; }
+    var d = echo(0.45, 1.6);
+    if (kind === 'pet') moo(0, hz, 0.9, 0.044, HAPPY, d);
+    else if (kind === 'egg') { moo(0, hz, 0.5, 0.044, SHORT, d); moo(0.6, hz * 1.1, 0.95, 0.044, HAPPY, d); }
+    else if (kind === 'content') moo(0, hz * 1.05, 0.55, 0.04, SHORT, d);
+    else if (kind === 'hungry') { moo(0, hz, 0.95, 0.044, SAD, d); moo(1.1, hz * 0.94, 1.05, 0.044, SAD, d); }
+    else if (kind === 'chirp') { var long = Math.random() < 0.5; moo(0, hz * (0.96 + Math.random() * 0.1), long ? 0.85 : 0.55, 0.04, long ? MOO : SHORT, d); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); else if (g.kind === 'moon') moonSound(kind, loud); }   // (the right voice for each kind of pet)
   emberwingAction = (function (base) {                                 // (looking after an Emberwing: the sound to go with what happened)
     return function (g) {
       var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
@@ -768,6 +831,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       return r;
     };
   })(celestaraAction);
+  mooncalfAction = (function (base) {                                  // (looking after a Mooncalf: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      moonSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be milked: no pail, or a full bag)
+      return r;
+    };
+  })(mooncalfAction);
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -5245,10 +5315,16 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnEat(g) {
     var i = g.eatSlot; fbarn.hay[i] = false; fbarn.res[i] = null; g.eatSlot = null; g.eatT = 0; g.routeTo = null;
     g.fed = true; glimRefresh(g); fbarnHayShow();
-    if (inFbarn) { popSound(); g.wait = 0.4; }
+    if (inFbarn) { popSound(); petSound(g, 'eat', fbarnNear(g)); g.wait = 0.4; }
   }
+  function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
+      if (inFbarn && g.kind === 'moon') {                              // (a Mooncalf moos now and then, and less at night)
+        if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
+        g.chirpT -= dt;
+        if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
+      }
       if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { fbarn.res[g.eatSlot] = null; g.eatSlot = null; g.routeTo = null; } return; }
       if (g.eatSlot === null || g.eatSlot === undefined) {
         var rx = fbarnToRoom(g.x, g.z)[0], best = -1, bd = 1e9;
@@ -5303,10 +5379,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.egg || g.fed) { FBARN_ACT[g.kind](g, wx, wz); return; }
     if (!g.petted) {
       g.petted = true; glimRefresh(g); g.pet = 1.4; g.face = Math.atan2(pf[0] - g.x, pf[1] - g.z);
-      glimHeartBurst(g.x, g.kind === 'bison' || g.kind === 'lotus' ? 1.3 : 0.85, g.z); popSound();
+      glimHeartBurst(g.x, g.kind === 'bison' || g.kind === 'lotus' ? 1.3 : 0.85, g.z); popSound(); petSound(g, 'pet');
       showToast(g.name + ' loves the attention 💜 Put hay on the feeding bench so they can eat too!', 2600); return;
     }
-    showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400);
+    petSound(g, 'hungry'); showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400);
   }
   function fbarnBenchAction() {
     var i = fbarn.hay.indexOf(false);
