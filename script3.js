@@ -809,7 +809,58 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'hungry') { moo(0, hz, 0.95, 0.044, SAD, d); moo(1.1, hz * 0.94, 1.05, 0.044, SAD, d); }
     else if (kind === 'chirp') { var long = Math.random() < 0.5; moo(0, hz * (0.96 + Math.random() * 0.1), long ? 0.85 : 0.55, 0.04, long ? MOO : SHORT, d); }
   }
-  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); else if (g.kind === 'moon') moonSound(kind, loud); }   // (the right voice for each kind of pet)
+  // ===== Auroraram sounds =====
+  // An Auroraram bleats like a real ram made cute. The voice is built from a real ram's: its pitch rising into the
+  // bleat, the fast, wobbly quiver all sheep have, and a bright, open-mouthed "baaa" that rings strongest around
+  // 1,000 Hz, just made a little higher and smaller, shorter, and softer, with less gravel. A happy bleat that lifts
+  // at the end when you pet it; a short bleat and a happy one when you milk it; soft munching as it eats; two slow,
+  // falling bleats when it's hungry; a short bleat once it's fed and petted; and now and then a bleat of its own
+  // while you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function auroraSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = null; function noise() { if (!nbuf) { nbuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); var d = nbuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } return nbuf; }
+    function lerp(pts, t, k) { for (var i = 1; i < pts.length; i++) if (t <= pts[i][0]) { var a = pts[i - 1], b = pts[i], u = (t - a[0]) / Math.max(1e-6, b[0] - a[0]); return a[k] + (b[k] - a[k]) * u; } return pts[pts.length - 1][k]; }
+    function throat(len, hz, plan) {                                   // (a throat's buzz, pulse by pulse, with a real voice's little wobbles and a bleat's quick quiver)
+      var sr = ac.sampleRate, n = Math.floor(sr * len), buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0), ph = 0, amp = 1, jit = 1, odd = false, prev = 0, drift = 0;
+      for (var i = 0; i < n; i++) {
+        var t = i / n, qv = Math.sin(2 * Math.PI * 13 * i / sr); drift += (Math.random() - 0.5) * 0.002; drift *= 0.999;
+        ph += hz * lerp(plan, t, 2) * jit * (1 + drift + 0.03 * qv) / sr;
+        if (ph >= 1) { ph -= 1; jit = 1 + (Math.random() - 0.5) * 0.03; odd = !odd; amp = (1 + (Math.random() - 0.5) * 0.15) * (odd ? 0.9 : 1); }
+        var g = ph < 0.45 ? 0.5 * (1 - Math.cos(Math.PI * ph / 0.45)) : ph < 0.62 ? Math.cos(Math.PI / 2 * (ph - 0.45) / 0.17) : 0;
+        var v = g * amp * (1 - 0.5 * (0.5 + 0.5 * qv)), dv = v - prev; prev = v; d[i] = dv * sr * 0.00075 + (Math.random() - 0.5) * 0.4 * g;   // (the same strength at any sample rate)
+      }
+      return buf;
+    }
+    function bleat(at, hz, len, vol, plan) {                           // (plan: [[time 0..1, how open the mouth is 0..1, x hz], ...])
+      var t0 = now + at, s = ac.createBufferSource(), mouth = ac.createGain(), hp = ac.createBiquadFilter(), g = ac.createGain();
+      s.buffer = throat(len, hz, plan);
+      [[560, 5, 0.12], [1020, 8, 1], [1850, 8, 0.18], [2450, 9, 0.45], [3300, 9, 0.12]].forEach(function (p) {   // (where it rings: [Hz, sharpness, strength])
+        var f = ac.createBiquadFilter(), fg = ac.createGain(); f.type = 'bandpass'; f.Q.value = p[1]; fg.gain.value = p[2] * 6;
+        for (var j = 0; j <= 24; j++) { var tt = j / 24, fr = p[0] * 1.12 * (0.78 + 0.22 * lerp(plan, tt, 1)); if (j === 0) f.frequency.setValueAtTime(fr, t0); else f.frequency.linearRampToValueAtTime(fr, t0 + len * tt); }
+        s.connect(f); f.connect(fg); fg.connect(mouth);
+      });
+      hp.type = 'highpass'; hp.frequency.value = 500; hp.Q.value = 0.7; mouth.connect(hp); hp.connect(g);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.06, len * 0.1)); g.gain.setValueAtTime(vol, t0 + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      g.connect(out); s.start(t0);
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = noise(); f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    var hz = 300;
+    var RB = [[0, 0.3, 0.88], [0.12, 1, 0.9], [0.45, 1, 1.0], [0.85, 0.95, 1.02], [1, 0.6, 0.97]];      // (a bleat: rising, then holding)
+    var HB = [[0, 0.3, 0.9], [0.12, 1, 0.93], [0.5, 1, 1.0], [0.85, 1, 1.1], [1, 0.7, 1.12]];           // (a happy bleat, lifting at the end)
+    var SB = [[0, 0.3, 0.92], [0.12, 1, 0.95], [0.5, 0.9, 0.92], [1, 0.5, 0.78]];                       // (a sad bleat, falling away)
+    var QB = [[0, 0.3, 0.9], [0.15, 1, 0.96], [0.7, 1, 1.0], [1, 0.6, 0.96]];                           // (a short bleat)
+    if (kind === 'pet') bleat(0, hz, 0.8, 0.03, HB);
+    else if (kind === 'egg') { bleat(0, hz, 0.45, 0.03, QB); bleat(0.55, hz * 1.08, 0.85, 0.024, HB); }
+    else if (kind === 'content') bleat(0, hz * 1.04, 0.5, 0.027, QB);
+    else if (kind === 'hungry') { bleat(0, hz, 0.9, 0.03, SB); bleat(1.05, hz * 0.94, 1.0, 0.03, SB); }
+    else if (kind === 'eat') munching(4, 0.08);
+    else if (kind === 'chirp') { var long = Math.random() < 0.5; bleat(0, hz * (0.96 + Math.random() * 0.08), long ? 0.8 : 0.5, 0.027, long ? RB : QB); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); else if (g.kind === 'moon') moonSound(kind, loud); else if (g.kind === 'aurora') auroraSound(kind, loud); }   // (the right voice for each kind of pet)
   emberwingAction = (function (base) {                                 // (looking after an Emberwing: the sound to go with what happened)
     return function (g) {
       var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
@@ -838,6 +889,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       return r;
     };
   })(mooncalfAction);
+  auroraramAction = (function (base) {                                 // (looking after an Auroraram: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      auroraSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be milked: no pail, or a full bag)
+      return r;
+    };
+  })(auroraramAction);
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -5320,7 +5378,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && g.kind === 'moon') {                              // (a Mooncalf moos now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora')) {     // (a Mooncalf moos and an Auroraram bleats now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
