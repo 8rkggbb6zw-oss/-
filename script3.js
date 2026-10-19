@@ -723,7 +723,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'eat') { for (var k = 0; k < 6; k++) peep(k * 0.09, hz * (0.95 + Math.random() * 0.1), 0.05, 0.06, 1); }
     else if (kind === 'chirp') { var n = 1 + Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) peep(c * 0.12, hz * (0.95 + Math.random() * 0.12), 0.09, 0.08, c === n - 1 ? 0 : 1); }
   }
-  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
+  // ===== Celestara sounds =====
+  // A Celestara chirrups: rolling little "prrrt" trills, like a happy quail. Two rising chirrups when you pet it;
+  // two quick ones and a long, bright, rising one when you collect its Dawnshell Egg; short little chirrups as it
+  // eats; two slow, falling ones when it's hungry; one cheerful chirrup once it's fed and petted; and now and then a
+  // chirrup or two of its own while you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
+  function celSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    function prr(at, hz, len, vol, to) {                               // (a tone that flutters on and off quickly, sliding up or down)
+      var o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), am = ac.createGain(), g = ac.createGain(), t0 = now + at; o.type = 'triangle';
+      o.frequency.setValueAtTime(hz, t0); o.frequency.exponentialRampToValueAtTime(hz * (to || 1.15), t0 + len);
+      lfo.frequency.value = 32; lg.gain.value = 0.5; am.gain.value = 0.5; lfo.connect(lg); lg.connect(am.gain);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.02); g.gain.setValueAtTime(vol, t0 + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(am); am.connect(g); g.connect(out); o.start(t0); lfo.start(t0); o.stop(t0 + len + 0.02); lfo.stop(t0 + len + 0.02);
+    }
+    var hz = 1100;
+    if (kind === 'pet') { prr(0, hz, 0.22, 0.1, 1.2); prr(0.3, hz * 1.15, 0.3, 0.1, 1.25); }
+    else if (kind === 'egg') { prr(0, hz, 0.14, 0.1, 1.1); prr(0.2, hz * 1.1, 0.14, 0.1, 1.1); prr(0.4, hz * 1.25, 0.36, 0.1, 1.3); }
+    else if (kind === 'content') prr(0, hz * 1.1, 0.24, 0.09, 1.15);
+    else if (kind === 'hungry') { prr(0, hz, 0.3, 0.09, 0.8); prr(0.42, hz * 0.9, 0.36, 0.09, 0.78); }
+    else if (kind === 'eat') { for (var k = 0; k < 3; k++) prr(k * 0.15, hz * 1.1, 0.08, 0.07, 1.05); }
+    else if (kind === 'chirp') { var n = 1 + Math.floor(Math.random() * 2); for (var c = 0; c < n; c++) prr(c * 0.3, hz * (0.95 + Math.random() * 0.2), 0.2 + Math.random() * 0.1, 0.09, Math.random() < 0.6 ? 1.15 : 0.9); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); else if (g.kind === 'gem') gemSound(kind, loud); else if (g.kind === 'ostrich') celSound(kind, loud); }   // (the right voice for each kind of pet)
   emberwingAction = (function (base) {                                 // (looking after an Emberwing: the sound to go with what happened)
     return function (g) {
       var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
@@ -738,6 +761,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       return r;
     };
   })(gemwrenAction);
+  celestaraAction = (function (base) {                                 // (looking after a Celestara: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      celSound(egg && !g.egg ? 'egg' : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : !g.egg && fed && petted ? 'content' : null);
+      return r;
+    };
+  })(celestaraAction);
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -4293,7 +4323,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function updateCoopFeeding(dt) {                                     // a hungry animal goes to the nearest bundle on the bench and eats it
     coopAnimals().forEach(function (g) {
-      if (inCoop && (g.kind === 'glim' || g.kind === 'duck' || g.kind === 'ember' || g.kind === 'gem')) {   // (each coop bird makes its own little sounds now and then)
+      if (inCoop && (g.kind === 'glim' || g.kind === 'duck' || g.kind === 'ember' || g.kind === 'gem' || g.kind === 'ostrich')) {   // (each coop bird makes its own little sounds now and then)
         if (g.chirpT === undefined) g.chirpT = 3 + Math.random() * 8;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 25 : 7) + Math.random() * (night ? 30 : 12); petSound(g, 'chirp', glimNear(g) * (night ? 0.5 : 1)); }
