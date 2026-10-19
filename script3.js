@@ -6174,7 +6174,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var camGoal = new THREE.Vector3();
   function updateCamera(dt) {
     camGoal.set(player.position.x, 0.8 + flyH, player.position.z);
-    cam.target.lerp(camGoal, 1 - Math.exp(-dt * 6));
+    cam.target.lerp(camGoal, calmMotion ? 1 : 1 - Math.exp(-dt * 6));   // ("Enable Excessive Animations" set to No: the camera stays right with you, never trailing or swooping)
     var d = camClear(dt);                                              // (outdoors, it comes in in front of a wall or roof rather than going through it)
     var flat = Math.cos(cam.pitch) * d;
     camera.position.set(
@@ -8111,6 +8111,16 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.everdawnSetJealousy = function (on) { jealousyOn = !!on; try { localStorage.setItem(JEALOUSY_KEY, on ? 'yes' : 'no'); } catch (err) {} };
 
+  // ---------- Enable Excessive Animations, set in Settings: No or Yes ----------
+  // Yes (the usual way): everything moves as it always has. No: the motion that can make some people feel sick is cut
+  // out. The camera stays locked on you instead of trailing behind and catching up (so it never sweeps across the
+  // island after a teleport or a door), and the title screen and top bar keep still: no floating logo, light sweeps,
+  // pulsing glows, twinkling stars or bouncing coin counter. It's remembered
+  var MOTION_KEY = 'everdawn-excessive-anim', calmMotion = false;
+  try { calmMotion = localStorage.getItem(MOTION_KEY) === 'no'; } catch (err) {}
+  document.documentElement.classList.toggle('ev-calm', calmMotion);
+  window.everdawnSetExcessiveAnim = function (on) { calmMotion = !on; document.documentElement.classList.toggle('ev-calm', calmMotion); try { localStorage.setItem(MOTION_KEY, on ? 'yes' : 'no'); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -8563,6 +8573,7 @@ function startGame(THREE) {
 // when it's done a big glowing Play button pops up
 var EVERDAWN_TITLE = true;
 var everdawnTitle = (function () {
+  try { document.documentElement.classList.toggle('ev-calm', localStorage.getItem('everdawn-excessive-anim') === 'no'); } catch (err) {}   // ("Enable Excessive Animations": No keeps the title screen still)
   var css = document.createElement('style');
   css.textContent =
     '#evTitle{position:fixed;inset:0;z-index:1000;overflow:hidden;background:#241a4a;font-family:Fredoka,system-ui,sans-serif;color:#fff;transition:opacity 1s ease,transform 1.1s ease;user-select:none;-webkit-user-select:none}' +
@@ -8637,7 +8648,8 @@ var everdawnTitle = (function () {
     '@keyframes evPulse{0%,100%{box-shadow:0 6px 0 #4e2b9c,0 10px 30px rgba(120,60,220,.6),0 0 30px rgba(255,170,230,.45),inset 0 2px 0 rgba(255,255,255,.45)}50%{box-shadow:0 6px 0 #4e2b9c,0 10px 34px rgba(120,60,220,.7),0 0 60px rgba(255,190,240,.85),inset 0 2px 0 rgba(255,255,255,.45)}}' +
     '@keyframes evSweep{0%,60%{left:-60%}100%{left:130%}}' +
     '@keyframes evFade{to{opacity:1}}' +
-    '@media (prefers-reduced-motion:reduce){#evTitle *{animation-duration:0s!important;animation-iteration-count:1!important}}';
+    '@media (prefers-reduced-motion:reduce){#evTitle *{animation-duration:0s!important;animation-iteration-count:1!important}}' +
+    'html.ev-calm #evTitle *,html.ev-calm #evTitle *::before,html.ev-calm #evTitle *::after,html.ev-calm .spark,html.ev-calm .coins{animation-duration:0s!important;animation-iteration-count:1!important}';   // ("Enable Excessive Animations" set to No: all of it keeps still)
   document.head.appendChild(css);
   var root = document.createElement('div'); root.id = 'evTitle';
   root.innerHTML = '<canvas></canvas><div class="ev-ui"><div class="ev-name"><span class="ev-star" style="left:-.9em;top:.1em;font-size:34px">✦</span><span class="ev-star" style="right:-.7em;top:-.3em;font-size:24px;animation-delay:.8s">✧</span><span class="ev-star" style="right:-1.2em;bottom:.4em;font-size:16px;animation-delay:1.5s">✦</span><h1>Everdawn</h1><div class="ev-sub">a cozy, magical farm</div></div>' +
@@ -9299,7 +9311,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evCombatL">Combat Mode</span><div class="ev-seg" role="group" aria-labelledby="evCombatL"><button type="button" data-c="default">Default</button><button type="button" data-c="passive">Passive</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evBakL">Show Backup</span><div class="ev-seg" role="group" aria-labelledby="evBakL"><button type="button" data-k="no">No</button><button type="button" data-k="yes">Yes</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evJealL">Enable Jealousy</span><div class="ev-seg" role="group" aria-labelledby="evJealL"><button type="button" data-j="no">No</button><button type="button" data-j="yes">Yes</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evJealL">Enable Jealousy</span><div class="ev-seg" role="group" aria-labelledby="evJealL"><button type="button" data-j="no">No</button><button type="button" data-j="yes">Yes</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evAnimL">Enable Excessive Animations</span><div class="ev-seg" role="group" aria-labelledby="evAnimL"><button type="button" data-a="no">No</button><button type="button" data-a="yes">Yes</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9354,6 +9367,12 @@ var everdawnTitle = (function () {
     for (var sb9 = 0; sb9 < jlBtns.length; sb9++) jlBtns[sb9].addEventListener('click', function () {
       jl = this.getAttribute('data-j'); showJeal(); try { localStorage.setItem('everdawn-jealousy', jl); } catch (err) {} if (window.everdawnSetJealousy) window.everdawnSetJealousy(jl === 'yes'); });
     showJeal();
+    var an = 'yes'; try { if (localStorage.getItem('everdawn-excessive-anim') === 'no') an = 'no'; } catch (err) {}   // (Enable Excessive Animations: No or Yes)
+    var anBtns = body.querySelectorAll('.ev-seg button[data-a]');
+    function showAnim() { for (var b = 0; b < anBtns.length; b++) { var on = anBtns[b].getAttribute('data-a') === an; anBtns[b].classList.toggle('on', on); anBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb10 = 0; sb10 < anBtns.length; sb10++) anBtns[sb10].addEventListener('click', function () {
+      an = this.getAttribute('data-a'); showAnim(); document.documentElement.classList.toggle('ev-calm', an === 'no'); try { localStorage.setItem('everdawn-excessive-anim', an); } catch (err) {} if (window.everdawnSetExcessiveAnim) window.everdawnSetExcessiveAnim(an === 'yes'); });
+    showAnim();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
