@@ -613,6 +613,49 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'eat') { for (var k = 0; k < 4; k++) note(2900 + Math.random() * 300, k * 0.11, 0.04, 0.035); note(1760, 0.5, 0.2, 0.05, 1.06); }
     else if (kind === 'chirp') { var base = 1500 + Math.random() * 600, n = 2 + Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) note(base * (1 + 0.12 * (c % 2)), c * 0.08, 0.1, 0.05, 1.08); if (Math.random() < 0.35) flutter(0.1, 0.3, 0.06); }
   }
+  // ===== Puddlewisp sounds =====
+  // A Puddlewisp is a plump little pond creature, a sort of starry duck, so it quacks: soft, round, cute little
+  // quacks, with the flap of its wings and the bloop of water drops (it's all moonlit pond water and dewdrops). Two
+  // happy quacks, a flap and a sprinkle of drops when you pet it; a run of dewdrop bloops when you collect its egg;
+  // quick little dabbling quacks when it eats; a slow, sad pair of quacks when it's hungry; a single happy quack once
+  // it's fed and petted; and now and then a quack, a double quack or a little drip of its own while you're in the
+  // coop. They're pet sounds, so they follow Pet Sound in Settings
+  var duckNoiseBuf = null;
+  function duckSound(kind, loud) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
+    out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    function quack(at, hz, len, vol) {                                 // (a reedy little voice through a "beak": a buzzy tone, shaped by a nasal formant, falling in pitch)
+      var o = ac.createOscillator(), f = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), g = ac.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(hz * 1.15, now + at); o.frequency.exponentialRampToValueAtTime(hz * 0.8, now + at + len);
+      f.type = 'bandpass'; f.frequency.value = hz * 2.6; f.Q.value = 4; f2.type = 'lowpass'; f2.frequency.value = 2600;
+      vol *= 2.6;                                                      // (the beak's filter takes a lot away: made up for here)
+      g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol, now + at + 0.015); g.gain.setValueAtTime(vol, now + at + len * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, now + at + len);
+      o.connect(f); f.connect(f2); f2.connect(g); g.connect(out); o.start(now + at); o.stop(now + at + len + 0.02);
+    }
+    function bloop(at, hz, vol) {                                      // (a water drop: a quick upward sweep)
+      var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
+      o.frequency.setValueAtTime(hz * 0.45, now + at); o.frequency.exponentialRampToValueAtTime(hz, now + at + 0.06);
+      g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol, now + at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.12);
+      o.connect(g); g.connect(out); o.start(now + at); o.stop(now + at + 0.14);
+    }
+    function flap(at, n, vol) {                                        // (its wings: a few soft, feathery whumps)
+      if (!duckNoiseBuf) { duckNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.3), ac.sampleRate); var d = duckNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+      for (var k = 0; k < n; k++) {
+        var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at + k * 0.085;
+        src.buffer = duckNoiseBuf; f.type = 'lowpass'; f.frequency.value = 1300;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+        src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random() * 0.2, 0.09);
+      }
+    }
+    if (kind === 'pet') { quack(0, 620, 0.13, 0.09); quack(0.17, 700, 0.15, 0.09); flap(0.1, 5, 0.1); bloop(0.38, 1500, 0.05); bloop(0.47, 1900, 0.04); }
+    else if (kind === 'egg') { [1300, 1700, 1500, 2100].forEach(function (hz, i) { bloop(i * 0.1, hz, 0.07); }); }
+    else if (kind === 'content') { quack(0, 660, 0.15, 0.08); bloop(0.18, 1700, 0.04); }
+    else if (kind === 'hungry') { quack(0, 520, 0.22, 0.07); quack(0.3, 440, 0.28, 0.07); }
+    else if (kind === 'eat') { for (var k2 = 0; k2 < 4; k2++) quack(k2 * 0.11, 640 + Math.random() * 80, 0.06, 0.05); bloop(0.5, 1400, 0.04); }
+    else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -821,24 +864,24 @@ EVERDAWN_PARTS.push(function (THREE) {
   function puddlewispAction(g, wx, wz) {                             // collecting its egg, feeding and petting a Puddlewisp
     if (g.egg) {
       if (!roomFor(['dewdropEgg'])) { bagFull(); return; }
-      addItem('dewdropEgg', 1); g.egg = false; glimRefresh(g); popSound();
+      addItem('dewdropEgg', 1); g.egg = false; glimRefresh(g); popSound(); duckSound('egg');
       showToast('You collected a Dewdrop Egg from ' + g.name + '! \ud83d\udca7\u2727', 2200);
       return;
     }
     if (!g.fed) {
       if (!takeItem('hay', 1)) { showToast(g.name + ' is hungry! Buy hay at the counter to feed them \ud83c\udf3e', 2600); return; }
-      g.fed = true; glimRefresh(g); popSound(); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
+      g.fed = true; glimRefresh(g); popSound(); duckSound('eat'); g.pet = 0.9; g.face = Math.atan2(-3.7 - g.x, GLIM_STALLS[g.stall] + 1.0 - g.z);
       showToast(g.name + ' nibbles the hay with happy little quacks \ud83c\udf3e' + (g.petted ? ' An egg tomorrow morning!' : ' Now give them a pet!'), 2400);
       return;
     }
     if (!g.petted) {
       g.petted = true; glimRefresh(g); g.pet = 1.6;
       g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
-      glimHeartBurst(g.x, 0.6, g.z); popSound();
+      glimHeartBurst(g.x, 0.6, g.z); popSound(); duckSound('pet');
       showToast(g.name + ' ruffles their starry feathers and flaps happily \ud83d\udc9c An egg tomorrow morning!', 2400);
       return;
     }
-    g.pet = 1.0; glimHeartBurst(g.x, 0.6, g.z);
+    g.pet = 1.0; glimHeartBurst(g.x, 0.6, g.z); duckSound('content');
     showToast(g.name + ' is fed, petted and happy \u2727 Come back tomorrow!', 2000);
   }
   var glimBaseInteract = interact;                                   // pressing Interact near a stall looks after its Glimmerwing
@@ -4164,14 +4207,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   function coopEat(g) {
     var i = g.eatSlot; coop.hay[i] = false; coop.res[i] = null; g.eatSlot = null; g.eatT = 0;
     g.fed = true; glimRefresh(g); coopHayShow();
-    if (inCoop) { popSound(); if (g.kind === 'glim') glimSound('eat', glimNear(g)); g.wait = 0.8 + Math.random(); }
+    if (inCoop) { popSound(); petSound(g, 'eat', glimNear(g)); g.wait = 0.8 + Math.random(); }
   }
   function updateCoopFeeding(dt) {                                     // a hungry animal goes to the nearest bundle on the bench and eats it
     coopAnimals().forEach(function (g) {
-      if (inCoop && g.kind === 'glim') {                               // (a Glimmerwing chirps to itself now and then)
+      if (inCoop && (g.kind === 'glim' || g.kind === 'duck')) {        // (a Glimmerwing chirps, and a Puddlewisp quacks, to itself now and then)
         if (g.chirpT === undefined) g.chirpT = 3 + Math.random() * 8;
         g.chirpT -= dt;
-        if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 25 : 7) + Math.random() * (night ? 30 : 12); glimSound('chirp', glimNear(g) * (night ? 0.5 : 1)); }
+        if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 25 : 7) + Math.random() * (night ? 30 : 12); petSound(g, 'chirp', glimNear(g) * (night ? 0.5 : 1)); }
       }
       if (g.fed) { if (g.eatSlot !== null && g.eatSlot !== undefined) { coop.res[g.eatSlot] = null; g.eatSlot = null; } return; }
       if (g.eatSlot === null || g.eatSlot === undefined) {
@@ -4197,10 +4240,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (g.egg || (g.fed && !glim)) { (g.kind === 'duck' ? puddlewispAction : g.kind === 'ember' ? emberwingAction : g.kind === 'gem' ? gemwrenAction : celestaraAction)(g, wx, wz); return; }
     if (!g.petted) {
       g.petted = true; glimRefresh(g); g.pet = 1.4; g.face = Math.atan2(player.position.x - wx, player.position.z - wz);
-      glimHeartBurst(g.x, g.kind === 'ostrich' ? 0.75 : 0.55, g.z); popSound(); if (glim) glimSound('pet');
+      glimHeartBurst(g.x, g.kind === 'ostrich' ? 0.75 : 0.55, g.z); popSound(); petSound(g, 'pet');
       showToast(g.fed ? g.name + ' coos and flutters their wings 💜 An egg tomorrow morning!' : g.name + ' loves the attention 💜 Put hay on the feeding bench so they can eat too!', 2600); return;
     }
-    if (!g.fed) { if (glim) glimSound('hungry'); showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400); return; }
+    if (!g.fed) { petSound(g, 'hungry'); showToast(g.name + ' is hungry! Put hay on the feeding bench 🌾', 2400); return; }
     g.pet = 0.8; glimHeartBurst(g.x, 0.5, g.z); if (glim) glimSound('content');
     showToast(g.name + ' is fed, petted and happy ✧ Come back tomorrow!', 2000);
   }
