@@ -668,7 +668,62 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'eat') { for (var k2 = 0; k2 < 4; k2++) quack(k2 * 0.11, 640 + Math.random() * 80, 0.06, 0.05); bloop(0.5, 1400, 0.04); }
     else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
   }
-  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
+  // ===== Emberwing sounds =====
+  // An Emberwing is a proud, fiery bird with a crown of little flames and a train it raises into a blazing fan, so it
+  // has a bright, proud little "kee-arr" of a call, with the crackle of its flames and a whoosh of fire when it fans
+  // its train: a whoosh, a crackle and a proud call when you pet it (it spreads its fan for you), a warm crackle and a
+  // pleased chirrup when you pick up its Cinder Quill, quick pecks when it eats, two short, falling calls when it's
+  // hungry, a pleased chirrup once it's fed and petted, and now and then a call, a chirrup or a little crackle of its
+  // own while you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
+  var emberNoiseBuf = null;
+  function emberSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
+    out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.2), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    function call(at, hz, len, vol, drop) {                            // (one bright, reedy bird note, gliding from hz down by drop)
+      var o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
+      o.type = 'square'; o.frequency.setValueAtTime(hz, t0); o.frequency.exponentialRampToValueAtTime(hz * (drop || 1), t0 + len);
+      vol *= 2.6;                                                      // (the filter takes a lot away: made up for here)
+      f.type = 'bandpass'; f.frequency.value = hz * 1.6; f.Q.value = 2.5;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.012); g.gain.setValueAtTime(vol, t0 + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(f); f.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.02);
+    }
+    function crackle(at, len, vol, n) {                                // (its flames: little snaps and pops, scattered)
+      for (var k = 0; k < n; k++) {
+        var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at + Math.random() * len, l = 0.008 + Math.random() * 0.02;
+        src.buffer = emberNoiseBuf; f.type = 'highpass'; f.frequency.value = 1500 + Math.random() * 2500;
+        g.gain.setValueAtTime(vol * (0.4 + Math.random() * 0.6), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + l);
+        src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random(), l + 0.01);
+      }
+    }
+    function whoosh(at, len, vol) {                                    // (a soft rush of fire as its fan opens)
+      var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
+      src.buffer = emberNoiseBuf; f.type = 'bandpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(400, t0); f.frequency.exponentialRampToValueAtTime(1800, t0 + len * 0.6);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t0, 0, len + 0.05);
+    }
+    function peck(at, vol) {                                           // (a beak tapping: a short, woody tock)
+      var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at; o.type = 'triangle';
+      o.frequency.setValueAtTime(1800, t0); o.frequency.exponentialRampToValueAtTime(700, t0 + 0.03);
+      g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.05);
+    }
+    if (kind === 'pet') { whoosh(0, 0.55, 0.12); crackle(0.05, 0.6, 0.12, 9); call(0.3, 1500, 0.07, 0.07); call(0.39, 1250, 0.24, 0.07, 0.72); }   // (kee-arr!)
+    else if (kind === 'egg') { crackle(0, 0.45, 0.12, 8); call(0.2, 1300, 0.06, 0.06, 1.1); call(0.28, 1450, 0.1, 0.06, 1.05); }
+    else if (kind === 'content') { call(0, 1300, 0.06, 0.06, 1.1); call(0.08, 1450, 0.1, 0.06, 1.05); crackle(0.05, 0.25, 0.08, 3); }
+    else if (kind === 'hungry') { call(0, 1200, 0.16, 0.06, 0.8); call(0.26, 1000, 0.22, 0.06, 0.75); }
+    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); call(0.55, 1350, 0.08, 0.05, 1.08); }
+    else if (kind === 'chirp') { var r = Math.random(); if (r < 0.35) { call(0, 1500, 0.06, 0.06); call(0.09, 1250, 0.2, 0.06, 0.72); } else if (r < 0.7) { call(0, 1300, 0.06, 0.05, 1.1); call(0.08, 1450, 0.1, 0.05, 1.05); } else crackle(0, 0.5, 0.1, 6); }
+  }
+  function petSound(g, kind, loud) { if (g.kind === 'glim') glimSound(kind, loud); else if (g.kind === 'duck') duckSound(kind, loud); else if (g.kind === 'ember') emberSound(kind, loud); }   // (the right voice for each kind of pet; the others don't have sounds yet)
+  emberwingAction = (function (base) {                                 // (looking after an Emberwing: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      emberSound(egg && !g.egg ? 'egg' : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : !g.egg && fed && petted ? 'content' : null);
+      return r;
+    };
+  })(emberwingAction);
   // hearts that float up when you pet one
   var glimHearts = [];
   function glimHeartBurst(x, y, z) {
@@ -4224,7 +4279,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function updateCoopFeeding(dt) {                                     // a hungry animal goes to the nearest bundle on the bench and eats it
     coopAnimals().forEach(function (g) {
-      if (inCoop && (g.kind === 'glim' || g.kind === 'duck')) {        // (a Glimmerwing chirps, and a Puddlewisp quacks, to itself now and then)
+      if (inCoop && (g.kind === 'glim' || g.kind === 'duck' || g.kind === 'ember')) {   // (a Glimmerwing coos, a Puddlewisp quacks and an Emberwing calls, to itself now and then)
         if (g.chirpT === undefined) g.chirpT = 3 + Math.random() * 8;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 25 : 7) + Math.random() * (night ? 30 : 12); petSound(g, 'chirp', glimNear(g) * (night ? 0.5 : 1)); }
