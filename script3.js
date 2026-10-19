@@ -8657,12 +8657,22 @@ var everdawnTitle = (function () {
   var musicGains = [];
   function musicNow() { try { var v = parseInt(localStorage.getItem('everdawn-music-volume'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
   function applyMusic(v) { musicGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
+  // Pet Sound, on the Audio page: 0 to 10, starting at 5. It scales the noises your farm pets make, on top of Master
+  // Volume. They don't make any yet; when they do, each noise is marked as a pet sound before it's sent to the speakers
+  // (node.evPet = true; node.connect(ctx.destination)) and it follows this. It's remembered
+  var petGains = [];
+  function petNow() { try { var v = parseInt(localStorage.getItem('everdawn-pet-sound'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
+  function applyPet(v) { petGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
   if (window.AudioNode && window.AudioDestinationNode) (function () {   // (anything heading for the speakers goes through the knob instead)
     var plain = AudioNode.prototype.connect;
     AudioNode.prototype.connect = function (to) {
       if (to instanceof AudioDestinationNode && !this.evMaster) {
         var ctx = to.context;
         if (!ctx.evMaster) { ctx.evMaster = ctx.createGain(); ctx.evMaster.evMaster = true; ctx.evMaster.gain.value = volumeNow() / 5; plain.call(ctx.evMaster, to); masterGains.push(ctx.evMaster); }
+        if (this.evPet) {                                              // (the farm pets' noises go through the Pet Sound knob first)
+          if (!ctx.evPetG) { ctx.evPetG = ctx.createGain(); ctx.evPetG.gain.value = petNow() / 5; plain.call(ctx.evPetG, ctx.evMaster); petGains.push(ctx.evPetG); }
+          return plain.apply(this, [ctx.evPetG].concat(Array.prototype.slice.call(arguments, 1)));
+        }
         if (this.evAmbient) {                                          // (background and weather sounds go through the Ambient knob first)
           if (!ctx.evAmb) { ctx.evAmb = ctx.createGain(); ctx.evAmb.gain.value = ambientNow() / 5; plain.call(ctx.evAmb, ctx.evMaster); ambientGains.push(ctx.evAmb); }
           return plain.apply(this, [ctx.evAmb].concat(Array.prototype.slice.call(arguments, 1)));
@@ -9516,7 +9526,7 @@ var everdawnTitle = (function () {
     for (var bb = 0; bb < bdBtns.length; bb++) bdBtns[bb].addEventListener('click', function () {
       bd = this.getAttribute('data-b'); showBold(); try { localStorage.setItem('everdawn-bold-text', bd); } catch (err) {} applyBold(bd === 'on'); });
     showBold();
-  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, the sound effects, the background sounds, her footsteps and the music)
+  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, the sound effects, the background sounds, her footsteps, the music and the pets)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evVol">Master Volume</label><output for="evVol" id="evVolNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evVol" min="0" max="10" step="1"><span>10</span></div></div>';
     var vi = body.querySelector('#evVol'), vn = body.querySelector('#evVolNum'); vi.value = volumeNow();   // (Master Volume: 0 to 10, 5 is the usual)
     function showVol() { vn.textContent = vi.value; } showVol();
@@ -9538,6 +9548,10 @@ var everdawnTitle = (function () {
     var mi = body.querySelector('#evMus'), mn = body.querySelector('#evMusNum'); mi.value = musicNow();   // (Music Volume: 0 to 10, 5 is the usual)
     function showMus() { mn.textContent = mi.value; } showMus();
     mi.addEventListener('input', function () { showMus(); try { localStorage.setItem('everdawn-music-volume', mi.value); } catch (err) {} applyMusic(+mi.value); });
+    body.insertAdjacentHTML('beforeend', '<div class="ev-srow"><div class="ev-lrow"><label for="evPet">Pet Sound</label><output for="evPet" id="evPetNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evPet" min="0" max="10" step="1"><span>10</span></div></div>');
+    var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
+    function showPet() { pn.textContent = pi.value; } showPet();
+    pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
