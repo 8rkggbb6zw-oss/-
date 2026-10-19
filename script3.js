@@ -670,42 +670,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
   }
   // ===== Emberwing sounds =====
-  // An Emberwing has the voice of a little phoenix: a grand, ringing, musical cry that soars up and rings out with a
-  // soft echo, with warm embers shimmering around it, the crackle of its flames and a whoosh of fire when it fans its
-  // train. A whoosh, a crackle and a soaring two-part cry when you pet it (it spreads its fan for you); a crackle and
-  // a ringing two-note call when you pick up its Cinder Quill; quick pecks and a bright ringing note when it eats; a
-  // low, mournful, falling cry when it's hungry; a short, gentle ringing cry once it's fed and petted; and now and
-  // then a cry, a two-note call or a crackle of embers of its own while you're in the coop. They're pet sounds, so
-  // they follow Pet Sound in Settings
+  // An Emberwing's voice is made of fire itself: little calls shaped out of flickering, hissing flame that rise and
+  // fall like a bird's, crackling as they go, with the crackle of its flames and a whoosh of fire when it fans its
+  // train. A whoosh, a crackle and a bright, rising two-part flame call when you pet it (it spreads its fan for you);
+  // a crackle and a rising flame call when you pick up its Cinder Quill; quick pecks and a little flicker when it
+  // eats; a low, sputtering, falling call, like a flame burning down, when it's hungry; a short, bright flicker of a
+  // call once it's fed and petted; and now and then a flame call, a quick "fwip-fwip" or a crackle of its own while
+  // you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
   var emberNoiseBuf = null;
   function emberSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
     if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.2), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    var echo = ac.createDelay(1), fb = ac.createGain(), wet = ac.createGain();   // (a soft echo, so its cry rings out)
-    echo.delayTime.value = 0.17; fb.gain.value = 0.32; wet.gain.value = 0.4;
-    echo.connect(fb); fb.connect(echo); echo.connect(wet); wet.connect(out);
-    function cry(at, hz, len, vol, to) {                               // (one ringing cry: a rich, bright tone that soars up into its note, swells and rings with a widening shimmer, then glides toward hz * to)
-      var t0 = now + at, g = ac.createGain(), f = ac.createBiquadFilter(), vib = ac.createOscillator(), vg = ac.createGain();
-      vol *= 0.6;                                                      // (as loud as the other pets)
-      f.type = 'lowpass'; f.frequency.value = hz * 4; f.Q.value = 1.2;
-      vib.frequency.value = 5.5; vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(hz * 0.025, t0 + len * 0.7); vib.connect(vg);
-      [[1, 'triangle', 1], [2, 'sine', 0.45], [3, 'sine', 0.2]].forEach(function (h) {
-        var o = ac.createOscillator(), og = ac.createGain(); o.type = h[1]; og.gain.value = h[2];
-        o.frequency.setValueAtTime(hz * h[0] * 0.8, t0); o.frequency.exponentialRampToValueAtTime(hz * h[0] * 1.04, t0 + len * 0.22); o.frequency.exponentialRampToValueAtTime(hz * h[0] * (to || 1), t0 + len);
-        var vgh = ac.createGain(); vgh.gain.value = h[0]; vg.connect(vgh); vgh.connect(o.frequency);
-        o.connect(og); og.connect(f); o.start(t0); o.stop(t0 + len + 0.05);
-      });
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.25); g.gain.setValueAtTime(vol * 0.85, t0 + len * 0.65); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      f.connect(g); g.connect(out); g.connect(echo); vib.start(t0); vib.stop(t0 + len + 0.05);
-    }
-    function embers(at, len, vol, n) {                                 // (warm embers shimmering: soft, high glints scattered about)
-      for (var k = 0; k < n; k++) {
-        var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + Math.random() * len; o.type = 'sine'; o.frequency.value = 2600 + Math.random() * 2600;
-        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
-        o.connect(g); g.connect(out); g.connect(echo); o.start(t0); o.stop(t0 + 0.3);
-      }
+    function flame(at, hz, len, vol, to, sputter) {                    // (one flame call: hissing fire tuned to a note by a narrow resonance that glides from hz to hz * to, flickering as it burns; sputter makes it gutter out)
+      var t0 = now + at, src = ac.createBufferSource(), f = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), g = ac.createGain(), fl = ac.createGain();
+      src.buffer = emberNoiseBuf; f.type = 'bandpass'; f.Q.value = 14; f2.type = 'bandpass'; f2.Q.value = 9;
+      f.frequency.setValueAtTime(hz * 0.85, t0); f.frequency.exponentialRampToValueAtTime(hz * 1.05, t0 + len * 0.25); f.frequency.exponentialRampToValueAtTime(hz * (to || 1), t0 + len);
+      f2.frequency.setValueAtTime(hz * 1.7, t0); f2.frequency.exponentialRampToValueAtTime(hz * 2.1 * (to || 1), t0 + len);   // (a brighter second "tongue" of flame above)
+      vol *= 6;                                                        // (the narrow resonance takes a lot away: made up for here)
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.2); g.gain.setValueAtTime(vol * 0.8, t0 + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      for (var k = 0, step = 0.012; k * step < len; k++) fl.gain.setValueAtTime(sputter ? (Math.random() < 0.35 ? 0.15 : 0.6 + Math.random() * 0.4) : 0.6 + Math.random() * 0.4, t0 + k * step);   // (the flicker)
+      src.connect(f); src.connect(f2); var f2g = ac.createGain(); f2g.gain.value = 0.45; f.connect(fl); f2.connect(f2g); f2g.connect(fl); fl.connect(g); g.connect(out);
+      src.start(t0, Math.random() * 0.4, len + 0.05);
     }
     function crackle(at, len, vol, n) {                                // (its flames: little snaps and pops, scattered)
       for (var k = 0; k < n; k++) {
@@ -727,17 +714,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
       o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.05);
     }
-    var hz = 880;                                                      // (its voice: a clear, ringing note)
-    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.09, 8); cry(0.3, hz, 0.25, 0.09, 1.05); cry(0.55, hz * 1.335, 0.7, 0.1, 0.95); embers(0.5, 0.7, 0.025, 6); }   // (a soaring two-part cry: up a fourth)
-    else if (kind === 'egg') { crackle(0, 0.45, 0.07, 7); cry(0.2, hz, 0.25, 0.08); cry(0.42, hz * 1.5, 0.5, 0.09, 0.98); embers(0.3, 0.5, 0.025, 5); }   // (a ringing call, up a fifth)
-    else if (kind === 'content') { cry(0, hz * 1.12, 0.45, 0.08, 0.97); embers(0.1, 0.3, 0.02, 3); }
-    else if (kind === 'hungry') { cry(0, hz * 0.9, 0.75, 0.08, 0.7); }
-    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); cry(0.55, hz * 1.2, 0.3, 0.07, 1.02); }
+    var hz = 1300;                                                     // (where its flame-voice sits)
+    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.1, 9); flame(0.3, hz * 0.9, 0.2, 0.09, 1.1); flame(0.52, hz * 1.2, 0.4, 0.1, 1.25); crackle(0.55, 0.4, 0.07, 4); }
+    else if (kind === 'egg') { crackle(0, 0.45, 0.08, 7); flame(0.22, hz, 0.35, 0.09, 1.3); }
+    else if (kind === 'content') { flame(0, hz * 1.1, 0.25, 0.08, 1.15); crackle(0.05, 0.25, 0.06, 3); }
+    else if (kind === 'hungry') { flame(0, hz * 0.85, 0.6, 0.08, 0.6, true); }
+    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); flame(0.55, hz, 0.18, 0.07, 1.15); }
     else if (kind === 'chirp') {
-      var r = Math.random(), f0 = hz * (0.95 + Math.random() * 0.1);
-      if (r < 0.4) cry(0, f0, 0.5 + Math.random() * 0.2, 0.08, 0.95);
-      else if (r < 0.75) { cry(0, f0, 0.22, 0.08); cry(0.25, f0 * 1.5, 0.45, 0.08, 0.97); }   // (a two-note call)
-      else { crackle(0, 0.5, 0.08, 6); embers(0.05, 0.5, 0.02, 4); }
+      var r = Math.random(), f0 = hz * (0.9 + Math.random() * 0.2);
+      if (r < 0.4) flame(0, f0, 0.3 + Math.random() * 0.15, 0.08, Math.random() < 0.5 ? 1.25 : 0.85);
+      else if (r < 0.7) { flame(0, f0, 0.09, 0.08, 1.3); flame(0.13, f0 * 1.1, 0.1, 0.08, 1.3); }   // (fwip-fwip)
+      else crackle(0, 0.5, 0.09, 7);
     }
   }
   // ===== Gemwren sounds =====
