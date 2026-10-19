@@ -8573,6 +8573,23 @@ function startGame(THREE) {
 // when it's done a big glowing Play button pops up
 var EVERDAWN_TITLE = true;
 var everdawnTitle = (function () {
+  // Master Volume, on the Audio page: 0 to 10, starting at 5 (everything as loud as it's always been). Every sound in
+  // the game, and the title music, passes through one volume knob on its way to the speakers, so this scales them all:
+  // 0 is silent and 10 is twice as loud. It's remembered
+  var masterGains = [];
+  function volumeNow() { try { var v = parseInt(localStorage.getItem('everdawn-master-volume'), 10); if (v >= 0 && v <= 10) return v; } catch (err) {} return 5; }
+  function applyVolume(v) { masterGains.forEach(function (g) { g.gain.setTargetAtTime(v / 5, g.context.currentTime, 0.02); }); }
+  if (window.AudioNode && window.AudioDestinationNode) (function () {   // (anything heading for the speakers goes through the knob instead)
+    var plain = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (to) {
+      if (to instanceof AudioDestinationNode && !this.evMaster) {
+        var ctx = to.context;
+        if (!ctx.evMaster) { ctx.evMaster = ctx.createGain(); ctx.evMaster.evMaster = true; ctx.evMaster.gain.value = volumeNow() / 5; plain.call(ctx.evMaster, to); masterGains.push(ctx.evMaster); }
+        return plain.apply(this, [ctx.evMaster].concat(Array.prototype.slice.call(arguments, 1)));
+      }
+      return plain.apply(this, arguments);
+    };
+  })();
   try { document.documentElement.classList.toggle('ev-calm', localStorage.getItem('everdawn-excessive-anim') === 'no'); } catch (err) {}   // ("Enable Excessive Animations": No keeps the title screen still)
   var css = document.createElement('style');
   css.textContent =
@@ -8627,7 +8644,7 @@ var everdawnTitle = (function () {
     '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
     '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
-    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}html.ev-bright #game,html.ev-bright #evTitle canvas{filter:brightness(var(--ev-bright,1))}#evTitle .ev-empty{margin:24px 0;text-align:center;font-size:16px;color:#f0e2ff;opacity:.75}#evTitle .ev-dlg-sample{margin:4px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,248,238,.95);color:#3a2270;font-size:var(--ev-dialogue-size,17px);font-weight:var(--ev-dialogue-weight,400);line-height:1.4}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
+    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}html.ev-bright #game,html.ev-bright #evTitle canvas{filter:brightness(var(--ev-bright,1))}#evTitle .ev-dlg-sample{margin:4px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,248,238,.95);color:#3a2270;font-size:var(--ev-dialogue-size,17px);font-weight:var(--ev-dialogue-weight,400);line-height:1.4}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
     '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
     '#evTitle .ev-lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}#evTitle .ev-lrow output{font-size:17px;font-weight:600;color:#ffd6f0;min-width:3.2em;text-align:right}' +
     '#evTitle .ev-srow label,#evTitle .ev-srow .ev-lbl{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-srow+.ev-srow{padding-top:12px}' +
@@ -9412,8 +9429,11 @@ var everdawnTitle = (function () {
     for (var bb = 0; bb < bdBtns.length; bb++) bdBtns[bb].addEventListener('click', function () {
       bd = this.getAttribute('data-b'); showBold(); try { localStorage.setItem('everdawn-bold-text', bd); } catch (err) {} applyBold(bd === 'on'); });
     showBold();
-  } }, { name: 'Audio', build: function (body) {                       // (Audio: nothing on it yet)
-    body.innerHTML = '<p class="ev-empty">No audio settings yet.</p>';
+  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is)
+    body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evVol">Master Volume</label><output for="evVol" id="evVolNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evVol" min="0" max="10" step="1"><span>10</span></div></div>';
+    var vi = body.querySelector('#evVol'), vn = body.querySelector('#evVolNum'); vi.value = volumeNow();   // (Master Volume: 0 to 10, 5 is the usual)
+    function showVol() { vn.textContent = vi.value; } showVol();
+    vi.addEventListener('input', function () { showVol(); try { localStorage.setItem('everdawn-master-volume', vi.value); } catch (err) {} applyVolume(+vi.value); });
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
