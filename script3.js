@@ -670,27 +670,42 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
   }
   // ===== Emberwing sounds =====
-  // An Emberwing has a sweet, warm voice for so fiery a bird: soft, rolling trills like a little songbird, with the
-  // crackle of its flames and a whoosh of fire when it fans its train. A whoosh, a crackle and a warm, rising trill
-  // when you pet it (it spreads its fan for you); a warm crackle and a happy little trill when you pick up its Cinder
-  // Quill; quick pecks when it eats; a slow, soft, falling trill when it's hungry; a gentle trill once it's fed and
-  // petted; and now and then a trill, a soft two-note song or a little crackle of its own while you're in the coop.
-  // They're pet sounds, so they follow Pet Sound in Settings
+  // An Emberwing has the voice of a little phoenix: a grand, ringing, musical cry that soars up and rings out with a
+  // soft echo, with warm embers shimmering around it, the crackle of its flames and a whoosh of fire when it fans its
+  // train. A whoosh, a crackle and a soaring two-part cry when you pet it (it spreads its fan for you); a crackle and
+  // a ringing two-note call when you pick up its Cinder Quill; quick pecks and a bright ringing note when it eats; a
+  // low, mournful, falling cry when it's hungry; a short, gentle ringing cry once it's fed and petted; and now and
+  // then a cry, a two-note call or a crackle of embers of its own while you're in the coop. They're pet sounds, so
+  // they follow Pet Sound in Settings
   var emberNoiseBuf = null;
   function emberSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
     if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.2), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    function trill(at, hz, len, vol, to, rate) {                       // (a soft, warm, rolling trill: a round tone, fluttering quickly in loudness, gliding from hz to hz * to)
-      var o = ac.createOscillator(), o2 = ac.createOscillator(), o2g = ac.createGain(), g = ac.createGain(), am = ac.createOscillator(), amg = ac.createGain(), t0 = now + at;
-      o.type = 'sine'; o2.type = 'triangle'; o2g.gain.value = 0.2;     // (a touch of warmth above)
-      vol *= 0.75;                                                     // (as loud as the other pets)
-      [[o, 1], [o2, 2]].forEach(function (p) { p[0].frequency.setValueAtTime(hz * p[1], t0); p[0].frequency.exponentialRampToValueAtTime(hz * p[1] * (to || 1), t0 + len); });
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * 0.6, t0 + Math.min(0.05, len * 0.3)); g.gain.setValueAtTime(vol * 0.6, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      am.frequency.value = rate || 20; amg.gain.value = vol * 0.4; am.connect(amg); amg.connect(g.gain);   // (the roll of the trill)
-      o.connect(g); o2.connect(o2g); o2g.connect(g); g.connect(out);
-      [o, o2, am].forEach(function (n) { n.start(t0); n.stop(t0 + len + 0.03); });
+    var echo = ac.createDelay(1), fb = ac.createGain(), wet = ac.createGain();   // (a soft echo, so its cry rings out)
+    echo.delayTime.value = 0.17; fb.gain.value = 0.32; wet.gain.value = 0.4;
+    echo.connect(fb); fb.connect(echo); echo.connect(wet); wet.connect(out);
+    function cry(at, hz, len, vol, to) {                               // (one ringing cry: a rich, bright tone that soars up into its note, swells and rings with a widening shimmer, then glides toward hz * to)
+      var t0 = now + at, g = ac.createGain(), f = ac.createBiquadFilter(), vib = ac.createOscillator(), vg = ac.createGain();
+      vol *= 0.6;                                                      // (as loud as the other pets)
+      f.type = 'lowpass'; f.frequency.value = hz * 4; f.Q.value = 1.2;
+      vib.frequency.value = 5.5; vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(hz * 0.025, t0 + len * 0.7); vib.connect(vg);
+      [[1, 'triangle', 1], [2, 'sine', 0.45], [3, 'sine', 0.2]].forEach(function (h) {
+        var o = ac.createOscillator(), og = ac.createGain(); o.type = h[1]; og.gain.value = h[2];
+        o.frequency.setValueAtTime(hz * h[0] * 0.8, t0); o.frequency.exponentialRampToValueAtTime(hz * h[0] * 1.04, t0 + len * 0.22); o.frequency.exponentialRampToValueAtTime(hz * h[0] * (to || 1), t0 + len);
+        var vgh = ac.createGain(); vgh.gain.value = h[0]; vg.connect(vgh); vgh.connect(o.frequency);
+        o.connect(og); og.connect(f); o.start(t0); o.stop(t0 + len + 0.05);
+      });
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.25); g.gain.setValueAtTime(vol * 0.85, t0 + len * 0.65); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      f.connect(g); g.connect(out); g.connect(echo); vib.start(t0); vib.stop(t0 + len + 0.05);
+    }
+    function embers(at, len, vol, n) {                                 // (warm embers shimmering: soft, high glints scattered about)
+      for (var k = 0; k < n; k++) {
+        var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + Math.random() * len; o.type = 'sine'; o.frequency.value = 2600 + Math.random() * 2600;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+        o.connect(g); g.connect(out); g.connect(echo); o.start(t0); o.stop(t0 + 0.3);
+      }
     }
     function crackle(at, len, vol, n) {                                // (its flames: little snaps and pops, scattered)
       for (var k = 0; k < n; k++) {
@@ -712,17 +727,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
       o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.05);
     }
-    var hz = 1050;                                                     // (its voice: warm and mellow)
-    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.1, 8); trill(0.3, hz, 0.45, 0.12, 1.3, 22); }
-    else if (kind === 'egg') { crackle(0, 0.45, 0.07, 7); trill(0.22, hz * 1.1, 0.3, 0.11, 1.2, 24); }
-    else if (kind === 'content') { trill(0, hz, 0.32, 0.11, 1.12, 20); crackle(0.05, 0.25, 0.06, 3); }
-    else if (kind === 'hungry') { trill(0, hz * 0.95, 0.42, 0.1, 0.78, 14); }
-    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); trill(0.55, hz * 1.05, 0.22, 0.1, 1.12, 22); }
+    var hz = 880;                                                      // (its voice: a clear, ringing note)
+    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.09, 8); cry(0.3, hz, 0.25, 0.09, 1.05); cry(0.55, hz * 1.335, 0.7, 0.1, 0.95); embers(0.5, 0.7, 0.025, 6); }   // (a soaring two-part cry: up a fourth)
+    else if (kind === 'egg') { crackle(0, 0.45, 0.07, 7); cry(0.2, hz, 0.25, 0.08); cry(0.42, hz * 1.5, 0.5, 0.09, 0.98); embers(0.3, 0.5, 0.025, 5); }   // (a ringing call, up a fifth)
+    else if (kind === 'content') { cry(0, hz * 1.12, 0.45, 0.08, 0.97); embers(0.1, 0.3, 0.02, 3); }
+    else if (kind === 'hungry') { cry(0, hz * 0.9, 0.75, 0.08, 0.7); }
+    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); cry(0.55, hz * 1.2, 0.3, 0.07, 1.02); }
     else if (kind === 'chirp') {
-      var r = Math.random(), f0 = hz * (0.92 + Math.random() * 0.16);
-      if (r < 0.4) trill(0, f0, 0.3 + Math.random() * 0.15, 0.1, 1.15, 18 + Math.random() * 8);
-      else if (r < 0.75) { trill(0, f0, 0.2, 0.1, 1.05, 20); trill(0.26, f0 * 1.19, 0.26, 0.1, 0.95, 20); }   // (a soft two-note song)
-      else crackle(0, 0.5, 0.09, 6);
+      var r = Math.random(), f0 = hz * (0.95 + Math.random() * 0.1);
+      if (r < 0.4) cry(0, f0, 0.5 + Math.random() * 0.2, 0.08, 0.95);
+      else if (r < 0.75) { cry(0, f0, 0.22, 0.08); cry(0.25, f0 * 1.5, 0.45, 0.08, 0.97); }   // (a two-note call)
+      else { crackle(0, 0.5, 0.08, 6); embers(0.05, 0.5, 0.02, 4); }
     }
   }
   // ===== Gemwren sounds =====
