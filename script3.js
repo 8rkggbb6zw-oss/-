@@ -8627,7 +8627,7 @@ var everdawnTitle = (function () {
     '#evTitle .ev-pg{flex:none;width:42px;height:42px;font:600 24px Fredoka,system-ui,sans-serif;line-height:1;color:#fff;border:2px solid #ffe2a0;border-radius:50%;cursor:pointer;background:linear-gradient(180deg,rgba(150,110,220,.75),rgba(90,55,160,.8));box-shadow:0 3px 0 #3e2580}' +
     '#evTitle .ev-pg:disabled{opacity:.3;cursor:default;box-shadow:none}#evTitle .ev-pg:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '#evTitle .ev-dots{display:flex;justify-content:center;gap:7px;margin:0 0 12px}#evTitle .ev-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,220,250,.3)}#evTitle .ev-dots i.on{background:#ffd27a}' +
-    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}html.ev-bright #game,html.ev-bright #evTitle canvas{filter:brightness(var(--ev-bright,1))}#evTitle .ev-dlg-sample{margin:4px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,248,238,.95);color:#3a2270;font-size:var(--ev-dialogue-size,17px);line-height:1.4}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
+    '#evTitle .ev-setbody{min-height:clamp(160px,32vh,280px);border-radius:16px;border:2px solid rgba(255,220,250,.25);background:rgba(30,15,65,.45)}#evTitle .ev-bk .ev-sbtn{flex:none}html.ev-bright #game,html.ev-bright #evTitle canvas{filter:brightness(var(--ev-bright,1))}#evTitle .ev-dlg-sample{margin:4px 0 0;padding:10px 14px;border-radius:14px;background:rgba(255,248,238,.95);color:#3a2270;font-size:var(--ev-dialogue-size,17px);font-weight:var(--ev-dialogue-weight,400);line-height:1.4}#evTitle .ev-srow.ev-tog{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}#evTitle .ev-tog .ev-lbl{flex:1;min-width:0}#evTitle .ev-tog .ev-seg{align-self:center;flex:none}@media (max-width:520px){#evTitle .ev-tog .ev-lbl{font-size:16px}#evTitle .ev-tog .ev-seg button{padding:.35em .8em;font-size:14px}}#evTitle .ev-sbak{font-size:20px}#evTitle .ev-sett .ev-scard{display:flex;flex-direction:column;overflow:hidden}#evTitle .ev-sett .ev-scard>*{flex:none}#evTitle .ev-sett .ev-scard>.ev-setbody{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}' +
     '#evTitle .ev-setbody{box-sizing:border-box;padding:14px 16px}#evTitle .ev-srow{display:flex;flex-direction:column;gap:8px;padding:6px 2px 12px;border-bottom:1px solid rgba(255,220,250,.18)}' +
     '#evTitle .ev-lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}#evTitle .ev-lrow output{font-size:17px;font-weight:600;color:#ffd6f0;min-width:3.2em;text-align:right}' +
     '#evTitle .ev-srow label,#evTitle .ev-srow .ev-lbl{font-size:18px;font-weight:600;color:#ffe9b8}#evTitle .ev-srow+.ev-srow{padding-top:12px}' +
@@ -9310,6 +9310,11 @@ var everdawnTitle = (function () {
   function textSizeNow() { try { var t = parseInt(localStorage.getItem('everdawn-text-size'), 10); if (t >= 80 && t <= 150) return t; } catch (err) {} return 100; }
   function applyTextSize(t) { document.documentElement.style.setProperty('--ev-dialogue-size', (17 * t / 100) + 'px'); }
   applyTextSize(textSizeNow());
+  // Bold Text, on the Display page: On puts everything the townsfolk say in bold; Off (to start) leaves it as normal
+  // text. Their dialogue box uses font-weight: var(--ev-dialogue-weight). It's remembered
+  function boldNow() { try { return localStorage.getItem('everdawn-bold-text') === 'on'; } catch (err) { return false; } }
+  function applyBold(on) { document.documentElement.style.setProperty('--ev-dialogue-weight', on ? '700' : '400'); }
+  applyBold(boldNow());
   function timeNow() { try { var t = parseFloat(localStorage.getItem('everdawn-time-speed')); if (t >= 50 && t <= 100) return t; } catch (err) {} return 50; }
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
@@ -9391,7 +9396,7 @@ var everdawnTitle = (function () {
     var ti = body.querySelector('#evTime'), tp = body.querySelector('#evTimePct'); ti.value = timeNow();   // (Game Time Speed: 50% is the usual pace, 100% twice as fast)
     function showTime() { tp.textContent = Math.round(parseFloat(ti.value)) + '%'; } showTime();
     ti.addEventListener('input', function () { showTime(); var t = parseFloat(ti.value); try { localStorage.setItem('everdawn-time-speed', String(t)); } catch (err) {} if (window.everdawnSetTimeSpeed) window.everdawnSetTimeSpeed(t); });
-  } }, { name: 'Display', build: function (body) {                     // (Display: how bright the game looks, and how big the dialogue is)
+  } }, { name: 'Display', build: function (body) {                     // (Display: how bright the game looks, and how big and bold the dialogue is)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evBright">Brightness</label><output for="evBright" id="evBrightNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evBright" min="0" max="12" step="1"><span>12</span></div></div>';
     var bi = body.querySelector('#evBright'), bn = body.querySelector('#evBrightNum'); bi.value = brightNow();   // (Brightness: 0 to 12, 6 in the middle is the usual look)
     function showBright() { bn.textContent = bi.value; } showBright();
@@ -9401,6 +9406,12 @@ var everdawnTitle = (function () {
     var ts = body.querySelector('#evText'), tsp = body.querySelector('#evTextPct'); ts.value = textSizeNow();   // (Text Size: 80% to 150%, with a sample line that changes as you slide)
     function showTextSize() { tsp.textContent = ts.value + '%'; } showTextSize();
     ts.addEventListener('input', function () { showTextSize(); try { localStorage.setItem('everdawn-text-size', ts.value); } catch (err) {} applyTextSize(+ts.value); });
+    body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evBoldL">Bold Text</span><div class="ev-seg" role="group" aria-labelledby="evBoldL"><button type="button" data-b="on">On</button><button type="button" data-b="off">Off</button></div></div>');
+    var bd = boldNow() ? 'on' : 'off', bdBtns = body.querySelectorAll('.ev-seg button[data-b]');   // (Bold Text: On or Off; the sample line above shows it)
+    function showBold() { for (var b = 0; b < bdBtns.length; b++) { var on = bdBtns[b].getAttribute('data-b') === bd; bdBtns[b].classList.toggle('on', on); bdBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var bb = 0; bb < bdBtns.length; bb++) bdBtns[bb].addEventListener('click', function () {
+      bd = this.getAttribute('data-b'); showBold(); try { localStorage.setItem('everdawn-bold-text', bd); } catch (err) {} applyBold(bd === 'on'); });
+    showBold();
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
