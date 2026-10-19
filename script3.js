@@ -8045,6 +8045,16 @@ EVERDAWN_PARTS.push(function (THREE) {
   ui.clock.textContent = clockText(state.minutes);
   window.everdawnSetHourFormat = function (is24) { clock24 = !!is24; ui.clock.textContent = clockText(state.minutes); try { localStorage.setItem(CLOCK_KEY, is24 ? '24' : '12'); } catch (err) {} };
 
+  // ---------- Combat Mode, set in Settings: Default or Passive ----------
+  // Default: a monster comes for you as soon as you step within its detection range. Passive: monsters leave you be
+  // when you walk near them, and only turn hostile once you've struck them first. There are no monsters yet; when
+  // there are, each one asks monsterWillAttack(m, dist) whether to go for you (dist: how far you are from it), and is
+  // marked m.provoked = true when you hit it. It's remembered
+  var COMBAT_KEY = 'everdawn-combat-mode', combatPassive = false, MONSTER_DETECT = 6;   // (how close you can get before a monster notices you, unless it has its own m.detect)
+  try { combatPassive = localStorage.getItem(COMBAT_KEY) === 'passive'; } catch (err) {}
+  function monsterWillAttack(m, dist) { return !!m.provoked || (!combatPassive && dist < (m.detect || MONSTER_DETECT)); }
+  window.everdawnSetCombatMode = function (passive) { combatPassive = !!passive; try { localStorage.setItem(COMBAT_KEY, passive ? 'passive' : 'default'); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -9200,7 +9210,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><span class="ev-lbl" id="evQuestL">Display Quest HUD</span><div class="ev-seg" role="group" aria-labelledby="evQuestL"><button type="button" data-q="show">Show</button><button type="button" data-q="hide">Hide</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evTypeL">Typewriter Effect</span><div class="ev-seg" role="group" aria-labelledby="evTypeL"><button type="button" data-t="off">Disabled</button><button type="button" data-t="on">Enabled</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evTileL">Tile Highlight While Moving</span><div class="ev-seg" role="group" aria-labelledby="evTileL"><button type="button" data-h="off">Disabled</button><button type="button" data-h="on">Enabled</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evCombatL">Combat Mode</span><div class="ev-seg" role="group" aria-labelledby="evCombatL"><button type="button" data-c="default">Default</button><button type="button" data-c="passive">Passive</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9237,6 +9248,12 @@ var everdawnTitle = (function () {
     for (var sb6 = 0; sb6 < hfBtns.length; sb6++) hfBtns[sb6].addEventListener('click', function () {
       hf = this.getAttribute('data-f'); showHourFmt(); try { localStorage.setItem('everdawn-hour-format', hf); } catch (err) {} if (window.everdawnSetHourFormat) window.everdawnSetHourFormat(hf === '24'); });
     showHourFmt();
+    var cm = 'default'; try { if (localStorage.getItem('everdawn-combat-mode') === 'passive') cm = 'passive'; } catch (err) {}   // (Combat Mode: Default or Passive)
+    var cmBtns = body.querySelectorAll('.ev-seg button[data-c]');
+    function showCombat() { for (var b = 0; b < cmBtns.length; b++) { var on = cmBtns[b].getAttribute('data-c') === cm; cmBtns[b].classList.toggle('on', on); cmBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb7 = 0; sb7 < cmBtns.length; sb7++) cmBtns[sb7].addEventListener('click', function () {
+      cm = this.getAttribute('data-c'); showCombat(); try { localStorage.setItem('everdawn-combat-mode', cm); } catch (err) {} if (window.everdawnSetCombatMode) window.everdawnSetCombatMode(cm === 'passive'); });
+    showCombat();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
