@@ -8069,6 +8069,48 @@ EVERDAWN_PARTS.push(function (THREE) {
   function monsterWillAttack(m, dist) { return !!m.provoked || (!combatPassive && dist < (m.detect || MONSTER_DETECT)); }
   window.everdawnSetCombatMode = function (passive) { combatPassive = !!passive; try { localStorage.setItem(COMBAT_KEY, passive ? 'passive' : 'default'); } catch (err) {} };
 
+  // ---------- Enable Jealousy, set in Settings: No or Yes ----------
+  // No (the usual way): none of this happens. Yes: romance can cause drama. There are no townsfolk yet; when there are,
+  // each dateable one is a romance record like { name, gender, dateable: true, hearts, dating, spouse, lastTalkDay }
+  // and the game tells jealousyEvent() what you just did:
+  //   'date'      you start dating someone while already dating (or married to) someone else
+  //   'chat'      you talk to, or give a gift to, another single dateable townsperson while you're with someone
+  //   'gift'      married, you give a gift to a romance candidate of the same gender as your spouse
+  //   'tenHeart'  you watch a 10-heart event, once you've seen them for at least four different dateable townsfolk
+  // Drama gives the people you're with the "Cold Shoulder": they're upset and won't talk to you for a while (3 days, or
+  // 7 for a spouse), their hearts drop back to 8, and hearts 9 and 10 stay locked until you give them a Locket again
+  // and re-watch their 10-heart event. A spouse you haven't talked to for a while also gets sad, then starts to
+  // question the relationship (spouseMood). It's remembered
+  var JEALOUSY_KEY = 'everdawn-jealousy', jealousyOn = false, DRAMA_CHANCE = 0.25, COLD_DAYS = 3, COLD_DAYS_SPOUSE = 7;   // (DRAMA_CHANCE: how likely a chat or gift is to be noticed)
+  try { jealousyOn = localStorage.getItem(JEALOUSY_KEY) === 'yes'; } catch (err) {}
+  var romance = [], tenHeartSeen = {};                                  // (all the dateable townsfolk, and whose 10-heart events you've watched)
+  function partnersOf(except) { return romance.filter(function (r) { return (r.dating || r.spouse) && r !== except; }); }
+  function coldShoulder(r) {                                           // (upset: no talking for a while, back down to 8 hearts, 9 and 10 locked)
+    r.coldUntil = state.day + (r.spouse ? COLD_DAYS_SPOUSE : COLD_DAYS);
+    r.hearts = Math.min(r.hearts || 0, 8); r.heartsLocked = true; r.locketBack = false;
+  }
+  function jealousyEvent(kind, who) {                                  // (returns the townsfolk who got upset, if any)
+    if (!jealousyOn) return [];
+    var partners = partnersOf(who), spouse = romance.filter(function (r) { return r.spouse; })[0], drama = false;
+    if (kind === 'date') drama = partners.length > 0;
+    else if (kind === 'chat') drama = partners.length > 0 && who && who.dateable && !who.dating && !who.spouse && Math.random() < DRAMA_CHANCE;
+    else if (kind === 'gift') drama = !!spouse && who && who !== spouse && who.dateable && who.gender === spouse.gender && Math.random() < DRAMA_CHANCE;
+    else if (kind === 'tenHeart') { if (who) tenHeartSeen[who.name] = true; drama = Object.keys(tenHeartSeen).length >= 4 && partners.length > 0; }
+    if (!drama) return [];
+    partners.forEach(coldShoulder);
+    return partners;
+  }
+  function canTalkTo(r) { return !jealousyOn || !(r.coldUntil > state.day); }   // (no talking while they're giving you the cold shoulder)
+  function maxHearts(r) { return jealousyOn && r.heartsLocked ? 8 : 10; }
+  function locketGiven(r) { if (r.heartsLocked) r.locketBack = true; }   // (a Locket again: then their 10-heart event, re-watched, unlocks hearts 9 and 10)
+  function tenHeartRewatched(r) { if (r.heartsLocked && r.locketBack) { r.heartsLocked = false; r.locketBack = false; } }
+  function spouseMood(r) {                                             // ('happy', 'sad' after 3 days without a word, 'questioning' after 7)
+    if (!jealousyOn || !r.spouse || r.lastTalkDay === undefined) return 'happy';
+    var since = state.day - r.lastTalkDay;
+    return since >= 7 ? 'questioning' : since >= 3 ? 'sad' : 'happy';
+  }
+  window.everdawnSetJealousy = function (on) { jealousyOn = !!on; try { localStorage.setItem(JEALOUSY_KEY, on ? 'yes' : 'no'); } catch (err) {} };
+
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
   // spot, and tap it in the bin to take it back out. Enabled: tapping does nothing; you press and hold an item and drag
@@ -9256,7 +9298,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><span class="ev-lbl" id="evTileL">Tile Highlight While Moving</span><div class="ev-seg" role="group" aria-labelledby="evTileL"><button type="button" data-h="off">Disabled</button><button type="button" data-h="on">Enabled</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evCombatL">Combat Mode</span><div class="ev-seg" role="group" aria-labelledby="evCombatL"><button type="button" data-c="default">Default</button><button type="button" data-c="passive">Passive</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evBakL">Show Backup</span><div class="ev-seg" role="group" aria-labelledby="evBakL"><button type="button" data-k="no">No</button><button type="button" data-k="yes">Yes</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evBakL">Show Backup</span><div class="ev-seg" role="group" aria-labelledby="evBakL"><button type="button" data-k="no">No</button><button type="button" data-k="yes">Yes</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evJealL">Enable Jealousy</span><div class="ev-seg" role="group" aria-labelledby="evJealL"><button type="button" data-j="no">No</button><button type="button" data-j="yes">Yes</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9305,6 +9348,12 @@ var everdawnTitle = (function () {
     for (var sb8 = 0; sb8 < bkBtns.length; sb8++) bkBtns[sb8].addEventListener('click', function () {
       bk = this.getAttribute('data-k'); showBak(); try { localStorage.setItem('everdawn-show-backup', bk); } catch (err) {} });
     showBak();
+    var jl = 'no'; try { if (localStorage.getItem('everdawn-jealousy') === 'yes') jl = 'yes'; } catch (err) {}   // (Enable Jealousy: No or Yes)
+    var jlBtns = body.querySelectorAll('.ev-seg button[data-j]');
+    function showJeal() { for (var b = 0; b < jlBtns.length; b++) { var on = jlBtns[b].getAttribute('data-j') === jl; jlBtns[b].classList.toggle('on', on); jlBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb9 = 0; sb9 < jlBtns.length; sb9++) jlBtns[sb9].addEventListener('click', function () {
+      jl = this.getAttribute('data-j'); showJeal(); try { localStorage.setItem('everdawn-jealousy', jl); } catch (err) {} if (window.everdawnSetJealousy) window.everdawnSetJealousy(jl === 'yes'); });
+    showJeal();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
