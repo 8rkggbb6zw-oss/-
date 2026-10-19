@@ -670,25 +670,27 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
   }
   // ===== Emberwing sounds =====
-  // An Emberwing is a proud, fiery bird with a crown of little flames and a train it raises into a blazing fan, so it
-  // has a bright, proud little "kee-arr" of a call, with the crackle of its flames and a whoosh of fire when it fans
-  // its train: a whoosh, a crackle and a proud call when you pet it (it spreads its fan for you), a warm crackle and a
-  // pleased chirrup when you pick up its Cinder Quill, quick pecks when it eats, two short, falling calls when it's
-  // hungry, a pleased chirrup once it's fed and petted, and now and then a call, a chirrup or a little crackle of its
-  // own while you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
+  // An Emberwing has a sweet, warm voice for so fiery a bird: soft, rolling trills like a little songbird, with the
+  // crackle of its flames and a whoosh of fire when it fans its train. A whoosh, a crackle and a warm, rising trill
+  // when you pet it (it spreads its fan for you); a warm crackle and a happy little trill when you pick up its Cinder
+  // Quill; quick pecks when it eats; a slow, soft, falling trill when it's hungry; a gentle trill once it's fed and
+  // petted; and now and then a trill, a soft two-note song or a little crackle of its own while you're in the coop.
+  // They're pet sounds, so they follow Pet Sound in Settings
   var emberNoiseBuf = null;
   function emberSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
     if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.2), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    function call(at, hz, len, vol, drop) {                            // (one bright, reedy bird note, gliding from hz down by drop)
-      var o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
-      o.type = 'square'; o.frequency.setValueAtTime(hz, t0); o.frequency.exponentialRampToValueAtTime(hz * (drop || 1), t0 + len);
-      vol *= 2.6;                                                      // (the filter takes a lot away: made up for here)
-      f.type = 'bandpass'; f.frequency.value = hz * 1.6; f.Q.value = 2.5;
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.012); g.gain.setValueAtTime(vol, t0 + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      o.connect(f); f.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.02);
+    function trill(at, hz, len, vol, to, rate) {                       // (a soft, warm, rolling trill: a round tone, fluttering quickly in loudness, gliding from hz to hz * to)
+      var o = ac.createOscillator(), o2 = ac.createOscillator(), o2g = ac.createGain(), g = ac.createGain(), am = ac.createOscillator(), amg = ac.createGain(), t0 = now + at;
+      o.type = 'sine'; o2.type = 'triangle'; o2g.gain.value = 0.2;     // (a touch of warmth above)
+      vol *= 0.75;                                                     // (as loud as the other pets)
+      [[o, 1], [o2, 2]].forEach(function (p) { p[0].frequency.setValueAtTime(hz * p[1], t0); p[0].frequency.exponentialRampToValueAtTime(hz * p[1] * (to || 1), t0 + len); });
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * 0.6, t0 + Math.min(0.05, len * 0.3)); g.gain.setValueAtTime(vol * 0.6, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      am.frequency.value = rate || 20; amg.gain.value = vol * 0.4; am.connect(amg); amg.connect(g.gain);   // (the roll of the trill)
+      o.connect(g); o2.connect(o2g); o2g.connect(g); g.connect(out);
+      [o, o2, am].forEach(function (n) { n.start(t0); n.stop(t0 + len + 0.03); });
     }
     function crackle(at, len, vol, n) {                                // (its flames: little snaps and pops, scattered)
       for (var k = 0; k < n; k++) {
@@ -710,12 +712,18 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
       o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.05);
     }
-    if (kind === 'pet') { whoosh(0, 0.55, 0.12); crackle(0.05, 0.6, 0.12, 9); call(0.3, 1500, 0.07, 0.07); call(0.39, 1250, 0.24, 0.07, 0.72); }   // (kee-arr!)
-    else if (kind === 'egg') { crackle(0, 0.45, 0.12, 8); call(0.2, 1300, 0.06, 0.06, 1.1); call(0.28, 1450, 0.1, 0.06, 1.05); }
-    else if (kind === 'content') { call(0, 1300, 0.06, 0.06, 1.1); call(0.08, 1450, 0.1, 0.06, 1.05); crackle(0.05, 0.25, 0.08, 3); }
-    else if (kind === 'hungry') { call(0, 1200, 0.16, 0.06, 0.8); call(0.26, 1000, 0.22, 0.06, 0.75); }
-    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); call(0.55, 1350, 0.08, 0.05, 1.08); }
-    else if (kind === 'chirp') { var r = Math.random(); if (r < 0.35) { call(0, 1500, 0.06, 0.06); call(0.09, 1250, 0.2, 0.06, 0.72); } else if (r < 0.7) { call(0, 1300, 0.06, 0.05, 1.1); call(0.08, 1450, 0.1, 0.05, 1.05); } else crackle(0, 0.5, 0.1, 6); }
+    var hz = 1050;                                                     // (its voice: warm and mellow)
+    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.1, 8); trill(0.3, hz, 0.45, 0.12, 1.3, 22); }
+    else if (kind === 'egg') { crackle(0, 0.45, 0.07, 7); trill(0.22, hz * 1.1, 0.3, 0.11, 1.2, 24); }
+    else if (kind === 'content') { trill(0, hz, 0.32, 0.11, 1.12, 20); crackle(0.05, 0.25, 0.06, 3); }
+    else if (kind === 'hungry') { trill(0, hz * 0.95, 0.42, 0.1, 0.78, 14); }
+    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); trill(0.55, hz * 1.05, 0.22, 0.1, 1.12, 22); }
+    else if (kind === 'chirp') {
+      var r = Math.random(), f0 = hz * (0.92 + Math.random() * 0.16);
+      if (r < 0.4) trill(0, f0, 0.3 + Math.random() * 0.15, 0.1, 1.15, 18 + Math.random() * 8);
+      else if (r < 0.75) { trill(0, f0, 0.2, 0.1, 1.05, 20); trill(0.26, f0 * 1.19, 0.26, 0.1, 0.95, 20); }   // (a soft two-note song)
+      else crackle(0, 0.5, 0.09, 6);
+    }
   }
   // ===== Gemwren sounds =====
   // A Gemwren is a plump little quail-like ground bird with feathers like the inside of a geode and a gem on its plume,
