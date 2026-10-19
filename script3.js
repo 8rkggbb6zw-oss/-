@@ -2738,6 +2738,13 @@ EVERDAWN_PARTS.push(function (THREE) {
 
     return { broom: broom, rideBroom: rideBroom, chibi: chibi, legs: legs, armL: armL, armR: armR, head: head, hairBack: hairBack, tip: tip, mFace: mFace, faces: [faceOpen, faceShut, faceBeam], phase: 0, blink: false };
   })();
+  // (knees: each leg is split at the knee, the boot and everything on it hanging from a joint just above its cuff, so
+  // the walk can bend it)
+  wl.legs.forEach(function (leg) {
+    var shin = new THREE.Group(); shin.position.y = -0.1; leg.userData.shin = shin;
+    leg.children.slice(1).forEach(function (c) { shin.add(c); c.position.y += 0.1; });   // (all but the stocking, which stays with the thigh)
+    leg.add(shin);
+  });
   // ===== footsteps =====
   // A soft footstep each time a foot comes down as she walks, made on the fly like the game's other sounds and played
   // as a sound effect (so it follows SFX Volume, with Footsteps Volume on top). It sounds like what she's walking on:
@@ -2775,23 +2782,33 @@ EVERDAWN_PARTS.push(function (THREE) {
       o.connect(og); og.connect(audioCtx.destination); o.start(now); o.stop(now + 0.08);
     }
   }
-  // every frame: she walks with little steps and swinging arms, her hair and hat swaying, and blinks now and then
+  // every frame: she walks with real steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
     var t = state.time, w = wl;
     w.phase += dt * (moving ? 10 * SPEED / 4.4 : 0);                     // (quicker steps when you jog)
-    var step = moving ? Math.sin(w.phase) : 0;
-    var stepN = Math.floor(w.phase / Math.PI);                         // (each half of the walk cycle, a foot comes down: a footstep)
+    var stepN = Math.floor((w.phase + Math.PI / 2) / Math.PI);         // (each time a foot reaches out in front and comes down: a footstep)
     if (moving && !flying && !inBoat && stepN !== w.lastStep) footstep(stepN % 2);
     w.lastStep = stepN;
-    w.legs[0].rotation.x = step * 0.45; w.legs[1].rotation.x = -step * 0.45;
-    w.armL.rotation.x = -step * 0.35; w.armR.rotation.x = step * 0.35; w.armR.visible = !axeArm.visible;   // (her own right arm, unless she's holding a tool in it)
-    w.chibi.position.y = moving ? Math.abs(Math.sin(w.phase)) * 0.03 : Math.sin(t * 2) * 0.004;
+    // (a real walk: each leg swings forward from the hip with its knee bending to lift the boot clear, reaches out and
+    // plants, then straightens and pushes back under her as the other one swings through; her arms swing the opposite
+    // way to her legs, and she rises a little as each leg passes beneath her, with a small twist and sway of her hips)
+    var ease = 1 - Math.exp(-dt * 12), fwd = [0, 0];
+    for (var k = 0; k < 2; k++) {
+      var ph = w.phase + k * Math.PI, leg = w.legs[k], shin = leg.userData.shin;
+      fwd[k] = moving ? Math.sin(ph) : 0;                              // (how far forward this leg is, -1 to 1)
+      var hip = -fwd[k] * 0.55, knee = moving ? 0.08 + Math.max(0, Math.cos(ph)) * 0.9 : 0;   // (the knee bends as the leg swings forward)
+      leg.rotation.x += (hip - leg.rotation.x) * (moving ? 1 : ease); shin.rotation.x += (knee - shin.rotation.x) * (moving ? 1 : ease);
+    }
+    w.armL.rotation.x = fwd[1] * 0.5; w.armR.rotation.x = fwd[0] * 0.5; w.armR.visible = !axeArm.visible;   // (her own right arm, unless she's holding a tool in it)
+    w.chibi.position.y = moving ? Math.abs(Math.cos(w.phase)) * 0.022 : Math.sin(t * 2) * 0.004;
+    w.chibi.rotation.set(moving ? 0.05 : w.chibi.rotation.x * (1 - ease), moving ? Math.sin(w.phase) * 0.07 : w.chibi.rotation.y * (1 - ease), moving ? Math.sin(w.phase) * 0.025 : w.chibi.rotation.z * (1 - ease));
     w.head.rotation.z = moving ? Math.sin(w.phase) * 0.04 : Math.sin(t * 0.8) * 0.03;
     w.hairBack.rotation.x = moving ? 0.12 + Math.sin(w.phase * 2) * 0.03 : Math.sin(t * 1.3) * 0.03;
     w.tip.rotation.z = Math.sin(t * 1.7) * 0.04 + (moving ? Math.sin(w.phase) * 0.05 : 0);
     w.broom.visible = !flying; w.rideBroom.visible = flying;
     if (flying) {                                                      // (on her broom: sitting astride it, knees bent, both hands on the handle in front of her, hair streaming back)
-      w.legs[0].rotation.set(-1.1, 0, 0.18); w.legs[1].rotation.set(-1.1, 0, -0.18);
+      w.legs[0].rotation.set(-1.1, 0, 0.18); w.legs[1].rotation.set(-1.1, 0, -0.18); w.legs[0].userData.shin.rotation.x = w.legs[1].userData.shin.rotation.x = 0;
+      w.chibi.rotation.set(0, 0, 0);
       w.armL.rotation.x = -1.05; w.armR.rotation.x = -1.05; w.armR.visible = !axeArm.visible;
       w.chibi.position.y = Math.sin(t * 2.2) * 0.012;
       w.hairBack.rotation.x = 0.1 + Math.min(1, flySpeed) * 0.22 + Math.sin(t * 6) * 0.025;
@@ -5861,7 +5878,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     hatStar.rotation.y += dt * 2;
     witchLook(dt, false);
     var w = wl, t = state.time;                                        // (sitting: legs stretched out in front, hands resting in her lap, broom laid down)
-    w.legs[0].rotation.set(-1.42, 0, 0.1); w.legs[1].rotation.set(-1.42, 0, -0.1);
+    w.legs[0].rotation.set(-1.42, 0, 0.1); w.legs[1].rotation.set(-1.42, 0, -0.1); w.legs[0].userData.shin.rotation.x = w.legs[1].userData.shin.rotation.x = 0; w.chibi.rotation.set(0, 0, 0);   // (straight-legged)
     w.armL.rotation.x = -0.55; w.armR.rotation.x = -0.55;
     w.chibi.position.y = 0; w.broom.visible = false;
     w.head.rotation.z = Math.sin(t * 0.6) * 0.05;                       // (looking about, enjoying the water)
@@ -6056,8 +6073,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       body.rotation.x = -flySpeed * 0.12;                              // (and a little forward as she picks up speed)
     } else {
       body.rotation.x = 0;
-    body.position.y = moving ? Math.abs(Math.sin(state.time * 11)) * 0.09 : body.position.y * 0.8;
-    body.rotation.z = moving ? Math.sin(state.time * 11) * 0.06 : body.rotation.z * 0.8;
+    body.position.y *= 0.8; body.rotation.z *= 0.8;                    // (her walk does its own rising and swaying now: see witchLook)
     }
     hatStar.rotation.y += dt * 2;
     witchLook(dt, moving);
@@ -8088,7 +8104,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   // It's remembered
   var TILE_HL_KEY = 'everdawn-tile-highlight', tileHighlightOff = false;
   try { tileHighlightOff = localStorage.getItem(TILE_HL_KEY) === 'off'; } catch (err) {}
-  cursor.material.depthTest = false; cursor.renderOrder = 5;          // (drawn on top of the grass and bushes, so it never gets lost among them)
+  cursor.material.depthTest = false; cursor.renderOrder = 5;          // (drawn on top of the grass and bushes, so it never gets lost among them...)
+  player.traverse(function (o) {                                       // (...but never over her: she's drawn after it, so she stays in front)
+    if (!o.isMesh) return; o.renderOrder = 6;
+    [].concat(o.material).forEach(function (m) { if (m && !m.transparent) { m.transparent = true; m.needsUpdate = true; } });
+  });
   window.everdawnSetTileHighlight = function (on) { tileHighlightOff = !on; if (!on) cursor.visible = false; try { localStorage.setItem(TILE_HL_KEY, on ? 'on' : 'off'); } catch (err) {} };
 
   // ---------- Game Time Hour Format, set in Settings: AM/PM or 24 Hour ----------
@@ -8528,7 +8548,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       wl.armR.rotation.set(-0.55, 0.15, -2.05 + Math.sin(t3 * 1.4) * 0.07);   // (her wand held up and out to the side, mid-spell)
       wl.armL.rotation.set(-0.35, 0, 0.62 + Math.sin(t3 * 1.2) * 0.06);   // (her other hand held out gracefully)
       var swing = Math.sin(t3 * 1.6) * 0.1;                               // (floating like a dancer: one leg kicked up behind her, the other pointed down, fluttering gently)
-      wl.legs[0].rotation.set(0.75 + swing, 0, -0.22); wl.legs[1].rotation.set(-0.18 - swing * 0.5, 0, 0.08);
+      wl.legs[0].rotation.set(0.75 + swing, 0, -0.22); wl.legs[1].rotation.set(-0.18 - swing * 0.5, 0, 0.08); wl.legs[0].userData.shin.rotation.x = wl.legs[1].userData.shin.rotation.x = 0; wl.chibi.rotation.set(0, 0, 0);
       wl.hairBack.rotation.x = 0.12 + Math.sin(t3 * 1.5) * 0.05; wl.tip.rotation.z = Math.sin(t3 * 1.7) * 0.06;
       player.rotation.y = 0.12 + Math.sin(t3 * 0.4) * 0.06;               // (turned toward you)
       me.rotation.z = Math.sin(t3 * 0.7) * 0.04; me.rotation.x = Math.sin(t3 * 0.9) * 0.03;   // (gliding, rising and dipping)
