@@ -2740,10 +2740,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   // ===== footsteps =====
   // A soft footstep each time a foot comes down as she walks, made on the fly like the game's other sounds and played
-  // as a sound effect (so it follows SFX Volume). It sounds like what she's walking on: a swish through the grass, a
-  // dull scuff on the dirt path, a hollow knock on wood (floors indoors, the dock, the porch, the bridges), a crisp tap
-  // on the town's stone paths, and a crunch in Winter's snow. The two feet sound a touch different
-  var stepNoise = null;
+  // as a sound effect (so it follows SFX Volume, with Footsteps Volume on top). It sounds like what she's walking on:
+  // a swish through the grass, a dull scuff on the dirt path, a hollow knock on wood (floors indoors, the dock, the
+  // porch, the bridges), a crisp tap on the town's stone paths, and a crunch in Winter's snow. The two feet sound a
+  // touch different
+  var stepNoise = null, footVol = 1;                                  // (footVol: "Footsteps Volume" in Settings, 0 to 10 with 5 the usual, as 0 to 2)
+  try { var fvSaved = parseInt(localStorage.getItem('everdawn-footsteps-volume'), 10); if (fvSaved >= 0 && fvSaved <= 10) footVol = fvSaved / 5; } catch (err) {}
+  window.everdawnSetFootsteps = function (v) { footVol = v / 5; };
   function footSurface() {
     var x = player.position.x, z = player.position.z;
     if (indoors || onDock(x, z) || porchHeight(x, z) > 0 || onBridge(x, z) || onBridge2(x, z)) return 'wood';
@@ -2752,7 +2755,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     return pathDist(x, z) < PATH_W ? 'dirt' : 'grass';
   }
   function footstep(foot) {
-    if (!audioCtx || audioCtx.state !== 'running') return;
+    if (!audioCtx || audioCtx.state !== 'running' || footVol <= 0) return;
     if (!stepNoise) {                                                  // (a short burst of noise to shape every step from, made once)
       stepNoise = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.25), audioCtx.sampleRate);
       var d = stepNoise.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -2762,13 +2765,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
     src.buffer = stepNoise; src.playbackRate.value = kind === 'snow' ? 0.8 + Math.random() * 0.3 : 1;
     f.type = kind === 'dirt' ? 'lowpass' : 'bandpass'; f.frequency.value = S[0] * tune; f.Q.value = S[1];
-    gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(S[3], now + 0.006); gain.gain.exponentialRampToValueAtTime(0.0001, now + S[2]);
+    gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(S[3] * footVol, now + 0.006); gain.gain.exponentialRampToValueAtTime(0.0001, now + S[2]);
     src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
     src.start(now, Math.random() * 0.1, S[2] + 0.02);
     if (kind === 'wood') {                                             // (wood: a little hollow knock under the step)
       var o = audioCtx.createOscillator(), og = audioCtx.createGain();
       o.frequency.setValueAtTime(150 * tune, now); o.frequency.exponentialRampToValueAtTime(90, now + 0.06);
-      og.gain.setValueAtTime(0.12, now); og.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+      og.gain.setValueAtTime(0.12 * footVol, now); og.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
       o.connect(og); og.connect(audioCtx.destination); o.start(now); o.stop(now + 0.08);
     }
   }
@@ -9483,7 +9486,7 @@ var everdawnTitle = (function () {
     for (var bb = 0; bb < bdBtns.length; bb++) bdBtns[bb].addEventListener('click', function () {
       bd = this.getAttribute('data-b'); showBold(); try { localStorage.setItem('everdawn-bold-text', bd); } catch (err) {} applyBold(bd === 'on'); });
     showBold();
-  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, the sound effects, and the background sounds)
+  } }, { name: 'Audio', build: function (body) {                       // (Audio: how loud everything is, the sound effects, the background sounds and her footsteps)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evVol">Master Volume</label><output for="evVol" id="evVolNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evVol" min="0" max="10" step="1"><span>10</span></div></div>';
     var vi = body.querySelector('#evVol'), vn = body.querySelector('#evVolNum'); vi.value = volumeNow();   // (Master Volume: 0 to 10, 5 is the usual)
     function showVol() { vn.textContent = vi.value; } showVol();
@@ -9496,6 +9499,11 @@ var everdawnTitle = (function () {
     var ai = body.querySelector('#evAmb'), an2 = body.querySelector('#evAmbNum'); ai.value = ambientNow();   // (Ambient Volume: 0 to 10, 5 is the usual)
     function showAmb() { an2.textContent = ai.value; } showAmb();
     ai.addEventListener('input', function () { showAmb(); try { localStorage.setItem('everdawn-ambient-volume', ai.value); } catch (err) {} applyAmbient(+ai.value); });
+    body.insertAdjacentHTML('beforeend', '<div class="ev-srow"><div class="ev-lrow"><label for="evFoot">Footsteps Volume</label><output for="evFoot" id="evFootNum"></output></div><div class="ev-range"><span>0</span><input type="range" id="evFoot" min="0" max="10" step="1"><span>10</span></div></div>');
+    var fi = body.querySelector('#evFoot'), fn2 = body.querySelector('#evFootNum'), fv = 5;   // (Footsteps Volume: 0 to 10, 5 is the usual)
+    try { var fs = parseInt(localStorage.getItem('everdawn-footsteps-volume'), 10); if (fs >= 0 && fs <= 10) fv = fs; } catch (err) {}
+    fi.value = fv; function showFoot() { fn2.textContent = fi.value; } showFoot();
+    fi.addEventListener('input', function () { showFoot(); try { localStorage.setItem('everdawn-footsteps-volume', fi.value); } catch (err) {} if (window.everdawnSetFootsteps) window.everdawnSetFootsteps(+fi.value); });
   } }], setPage = 0;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
