@@ -7709,6 +7709,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   clockText = function (totalMinutes) {
     var hour = Math.floor(totalMinutes / 60), minute = Math.floor((totalMinutes % 60) / 10) * 10;
     var icon = hour >= 5 && hour < 8 ? '\u263C' : hour >= 8 && hour < 17 ? '\u2600' : hour >= 17 && hour < 20 ? '\u263E' : '\u2605';
+    if (clock24) return icon + ' ' + twoDigits(hour) + ':' + twoDigits(minute);   // ("Game Time Hour Format" set to 24 Hour: 13:00 rather than 1:00 PM)
     var hour12 = hour % 12 === 0 ? 12 : hour % 12;
     return icon + ' ' + hour12 + ':' + twoDigits(minute) + ' ' + (hour < 12 ? 'AM' : 'PM');
   };
@@ -8034,6 +8035,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   var TILE_HL_KEY = 'everdawn-tile-highlight', tileHighlightOff = false;
   try { tileHighlightOff = localStorage.getItem(TILE_HL_KEY) === 'off'; } catch (err) {}
   window.everdawnSetTileHighlight = function (on) { tileHighlightOff = !on; if (!on) cursor.visible = false; try { localStorage.setItem(TILE_HL_KEY, on ? 'on' : 'off'); } catch (err) {} };
+
+  // ---------- Game Time Hour Format, set in Settings: AM/PM or 24 Hour ----------
+  // AM/PM (the usual way) shows the clock as 1:00 PM; 24 Hour shows it as 13:00 (and 6:00 AM as 06:00). It changes the
+  // clock straight away, and it's remembered
+  var CLOCK_KEY = 'everdawn-hour-format', clock24 = false;
+  try { clock24 = localStorage.getItem(CLOCK_KEY) === '24'; } catch (err) {}
+  ui.clock.textContent = clockText(state.minutes);
+  window.everdawnSetHourFormat = function (is24) { clock24 = !!is24; ui.clock.textContent = clockText(state.minutes); try { localStorage.setItem(CLOCK_KEY, is24 ? '24' : '12'); } catch (err) {} };
 
   // ---------- Storage Drag & Drop, set in Settings ----------
   // Disabled (the usual way): tap something in your bag and the whole stack goes into the shipping bin's first open
@@ -9189,7 +9198,8 @@ var everdawnTitle = (function () {
       '<div class="ev-srow"><span class="ev-lbl" id="evStoreL">Storage Drag &amp; Drop</span><div class="ev-seg" role="group" aria-labelledby="evStoreL"><button type="button" data-s="off">Disabled</button><button type="button" data-s="on">Enabled</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evQuestL">Display Quest HUD</span><div class="ev-seg" role="group" aria-labelledby="evQuestL"><button type="button" data-q="show">Show</button><button type="button" data-q="hide">Hide</button></div></div>' +
       '<div class="ev-srow"><span class="ev-lbl" id="evTypeL">Typewriter Effect</span><div class="ev-seg" role="group" aria-labelledby="evTypeL"><button type="button" data-t="off">Disabled</button><button type="button" data-t="on">Enabled</button></div></div>' +
-      '<div class="ev-srow"><span class="ev-lbl" id="evTileL">Tile Highlight While Moving</span><div class="ev-seg" role="group" aria-labelledby="evTileL"><button type="button" data-h="off">Disabled</button><button type="button" data-h="on">Enabled</button></div></div>';
+      '<div class="ev-srow"><span class="ev-lbl" id="evTileL">Tile Highlight While Moving</span><div class="ev-seg" role="group" aria-labelledby="evTileL"><button type="button" data-h="off">Disabled</button><button type="button" data-h="on">Enabled</button></div></div>' +
+      '<div class="ev-srow"><span class="ev-lbl" id="evHourL">Game Time Hour Format</span><div class="ev-seg" role="group" aria-labelledby="evHourL"><button type="button" data-f="12">AM/PM</button><button type="button" data-f="24">24 Hour</button></div></div>';
     var mv = 'walk'; try { if (localStorage.getItem('everdawn-move') === 'jog') mv = 'jog'; } catch (err) {}
     var segBtns = body.querySelectorAll('.ev-seg button[data-m]');
     function showMove() { for (var b = 0; b < segBtns.length; b++) { var on = segBtns[b].getAttribute('data-m') === mv; segBtns[b].classList.toggle('on', on); segBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -9220,6 +9230,12 @@ var everdawnTitle = (function () {
     for (var sb5 = 0; sb5 < thBtns.length; sb5++) thBtns[sb5].addEventListener('click', function () {
       th = this.getAttribute('data-h'); showTileHl(); try { localStorage.setItem('everdawn-tile-highlight', th); } catch (err) {} if (window.everdawnSetTileHighlight) window.everdawnSetTileHighlight(th === 'on'); });
     showTileHl();
+    var hf = '12'; try { if (localStorage.getItem('everdawn-hour-format') === '24') hf = '24'; } catch (err) {}   // (Game Time Hour Format: AM/PM or 24 Hour)
+    var hfBtns = body.querySelectorAll('.ev-seg button[data-f]');
+    function showHourFmt() { for (var b = 0; b < hfBtns.length; b++) { var on = hfBtns[b].getAttribute('data-f') === hf; hfBtns[b].classList.toggle('on', on); hfBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var sb6 = 0; sb6 < hfBtns.length; sb6++) hfBtns[sb6].addEventListener('click', function () {
+      hf = this.getAttribute('data-f'); showHourFmt(); try { localStorage.setItem('everdawn-hour-format', hf); } catch (err) {} if (window.everdawnSetHourFormat) window.everdawnSetHourFormat(hf === '24'); });
+    showHourFmt();
     var zi = body.querySelector('#evZoom'), zp = body.querySelector('#evZoomPct'); zi.value = 26 - zoomNow();
     function showPct() { zp.textContent = Math.round(parseFloat(zi.value) * 5) + '%'; } showPct();   // (0% is as far out as it goes, 100% as close in)
     zi.addEventListener('input', function () { showPct(); var d = 26 - parseFloat(zi.value); try { localStorage.setItem('everdawn-zoom', String(d)); } catch (err) {} if (window.everdawnSetZoom) window.everdawnSetZoom(d); });
