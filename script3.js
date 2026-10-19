@@ -670,43 +670,44 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'chirp') { var r = Math.random(), hz2 = 580 + Math.random() * 140; if (r < 0.45) quack(0, hz2, 0.13, 0.07); else if (r < 0.8) { quack(0, hz2, 0.1, 0.07); quack(0.14, hz2 * 1.08, 0.12, 0.07); } else bloop(0, 1300 + Math.random() * 600, 0.05); }
   }
   // ===== Emberwing sounds =====
-  // An Emberwing's voice is made of fire itself: little calls shaped out of flickering, hissing flame that rise and
-  // fall like a bird's, crackling as they go, with the crackle of its flames and a whoosh of fire when it fans its
-  // train. A whoosh, a crackle and a bright, rising two-part flame call when you pet it (it spreads its fan for you);
-  // a crackle and a rising flame call when you pick up its Cinder Quill; quick pecks and a little flicker when it
-  // eats; a low, sputtering, falling call, like a flame burning down, when it's hungry; a short, bright flicker of a
-  // call once it's fed and petted; and now and then a flame call, a quick "fwip-fwip" or a crackle of its own while
-  // you're in the coop. They're pet sounds, so they follow Pet Sound in Settings
+  // An Emberwing is all warmth, like a hearth on a cold night, so it sounds cozy rather than fiery: a deep, contented
+  // purr, soft breathy chuffs (the friendly puff of breath a big cat gives to say hello) and warm, plucked notes like
+  // a thumb piano when it's especially happy. Two friendly chuffs, a long happy purr and two warm plucks when you pet
+  // it; a little rising run of plucks and a purr when you pick up its Cinder Quill; quick pecks and a short purr when
+  // it eats; a slow, low, sighing chuff and a low falling pluck when it's hungry; a short, contented purr once it's
+  // fed and petted; and now and then a purr, a chuff-chuff or a few soft plucked notes of its own while you're in the
+  // coop. They're pet sounds, so they follow Pet Sound in Settings
   var emberNoiseBuf = null;
   function emberSound(kind, loud) {
     if (!kind || !audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain();
     out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
-    if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.2), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
-    function flame(at, hz, len, vol, to, sputter) {                    // (one flame call: hissing fire tuned to a note by a narrow resonance that glides from hz to hz * to, flickering as it burns; sputter makes it gutter out)
-      var t0 = now + at, src = ac.createBufferSource(), f = ac.createBiquadFilter(), f2 = ac.createBiquadFilter(), g = ac.createGain(), fl = ac.createGain();
-      src.buffer = emberNoiseBuf; f.type = 'bandpass'; f.Q.value = 14; f2.type = 'bandpass'; f2.Q.value = 9;
-      f.frequency.setValueAtTime(hz * 0.85, t0); f.frequency.exponentialRampToValueAtTime(hz * 1.05, t0 + len * 0.25); f.frequency.exponentialRampToValueAtTime(hz * (to || 1), t0 + len);
-      f2.frequency.setValueAtTime(hz * 1.7, t0); f2.frequency.exponentialRampToValueAtTime(hz * 2.1 * (to || 1), t0 + len);   // (a brighter second "tongue" of flame above)
-      vol *= 6;                                                        // (the narrow resonance takes a lot away: made up for here)
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.2); g.gain.setValueAtTime(vol * 0.8, t0 + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      for (var k = 0, step = 0.012; k * step < len; k++) fl.gain.setValueAtTime(sputter ? (Math.random() < 0.35 ? 0.15 : 0.6 + Math.random() * 0.4) : 0.6 + Math.random() * 0.4, t0 + k * step);   // (the flicker)
-      src.connect(f); src.connect(f2); var f2g = ac.createGain(); f2g.gain.value = 0.45; f.connect(fl); f2.connect(f2g); f2g.connect(fl); fl.connect(g); g.connect(out);
-      src.start(t0, Math.random() * 0.4, len + 0.05);
+    if (!emberNoiseBuf) { emberNoiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 1.6), ac.sampleRate); var d = emberNoiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    function purr(at, len, vol) {                                      // (a deep, rumbling purr: a low, buzzy tone and a breathy rumble, pulsing quickly, swelling as it breathes in and out)
+      var t0 = now + at, o = ac.createOscillator(), f = ac.createBiquadFilter(), src = ac.createBufferSource(), nf = ac.createBiquadFilter(), ng = ac.createGain(), g = ac.createGain(), pulse = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 82 + Math.random() * 10; f.type = 'lowpass'; f.frequency.value = 520;
+      src.buffer = emberNoiseBuf; nf.type = 'lowpass'; nf.frequency.value = 380; ng.gain.value = 0.9;
+      lfo.frequency.value = 23; lg.gain.value = 0.5; pulse.gain.value = 0.5; lfo.connect(lg); lg.connect(pulse.gain);   // (the pulsing of the purr)
+      vol *= 2.2;                                                      // (low sounds come across quieter: made up for here)
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.15, len * 0.25));
+      for (var b2 = 0.5; b2 < len - 0.2; b2 += 0.5) { g.gain.linearRampToValueAtTime(vol * 0.7, t0 + b2); g.gain.linearRampToValueAtTime(vol, t0 + b2 + 0.25); }   // (breathing in and out)
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(f); f.connect(pulse); src.connect(nf); nf.connect(ng); ng.connect(pulse); pulse.connect(g); g.connect(out);
+      o.start(t0); o.stop(t0 + len + 0.05); lfo.start(t0); lfo.stop(t0 + len + 0.05); src.start(t0, Math.random() * 0.2, len + 0.05);
     }
-    function crackle(at, len, vol, n) {                                // (its flames: little snaps and pops, scattered)
-      for (var k = 0; k < n; k++) {
-        var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at + Math.random() * len, l = 0.008 + Math.random() * 0.02;
-        src.buffer = emberNoiseBuf; f.type = 'highpass'; f.frequency.value = 1500 + Math.random() * 2500;
-        g.gain.setValueAtTime(vol * (0.4 + Math.random() * 0.6), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + l);
-        src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random(), l + 0.01);
-      }
+    function chuff(at, vol) {                                          // (a soft, friendly puff of breath through the nose)
+      var t0 = now + at, src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = emberNoiseBuf; f.type = 'bandpass'; f.frequency.setValueAtTime(900, t0); f.frequency.exponentialRampToValueAtTime(500, t0 + 0.12); f.Q.value = 1.2;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+      src.connect(f); f.connect(g); g.connect(out); src.start(t0, Math.random(), 0.16);
     }
-    function whoosh(at, len, vol) {                                    // (a soft rush of fire as its fan opens)
-      var src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + at;
-      src.buffer = emberNoiseBuf; f.type = 'bandpass'; f.Q.value = 0.8; f.frequency.setValueAtTime(400, t0); f.frequency.exponentialRampToValueAtTime(1800, t0 + len * 0.6);
-      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
-      src.connect(f); f.connect(g); g.connect(out); src.start(t0, 0, len + 0.05);
+    function pluck(at, hz, vol) {                                      // (a warm plucked note, like a thumb piano: a soft click, then a round tone ringing away)
+      var t0 = now + at;
+      [[1, 1, 0.9], [3.02, 0.12, 0.25], [5.9, 0.04, 0.1]].forEach(function (h) {
+        var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = hz * h[0];
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * h[1], t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + h[2]);
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + h[2] + 0.05);
+      });
     }
     function peck(at, vol) {                                           // (a beak tapping: a short, woody tock)
       var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at; o.type = 'triangle';
@@ -714,17 +715,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.04);
       o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.05);
     }
-    var hz = 1300;                                                     // (where its flame-voice sits)
-    if (kind === 'pet') { whoosh(0, 0.55, 0.11); crackle(0.05, 0.6, 0.1, 9); flame(0.3, hz * 0.9, 0.2, 0.09, 1.1); flame(0.52, hz * 1.2, 0.4, 0.1, 1.25); crackle(0.55, 0.4, 0.07, 4); }
-    else if (kind === 'egg') { crackle(0, 0.45, 0.08, 7); flame(0.22, hz, 0.35, 0.09, 1.3); }
-    else if (kind === 'content') { flame(0, hz * 1.1, 0.25, 0.08, 1.15); crackle(0.05, 0.25, 0.06, 3); }
-    else if (kind === 'hungry') { flame(0, hz * 0.85, 0.6, 0.08, 0.6, true); }
-    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); flame(0.55, hz, 0.18, 0.07, 1.15); }
+    var N = [523, 587, 659, 784, 880, 1047];                           // (its plucked notes: a warm, simple scale, so they always sound cozy together)
+    if (kind === 'pet') { chuff(0, 0.12); chuff(0.2, 0.1); purr(0.38, 1.0, 0.045); pluck(0.5, N[2], 0.075); pluck(0.68, N[4], 0.075); }
+    else if (kind === 'egg') { pluck(0, N[0], 0.085); pluck(0.12, N[2], 0.085); pluck(0.24, N[3], 0.085); pluck(0.36, N[5], 0.085); purr(0.45, 0.6, 0.04); }
+    else if (kind === 'content') { purr(0, 0.7, 0.055); }
+    else if (kind === 'hungry') { chuff(0, 0.11); pluck(0.18, N[2] * 0.75, 0.09); pluck(0.42, N[0] * 0.75, 0.09); }
+    else if (kind === 'eat') { for (var p = 0; p < 4; p++) peck(p * 0.12 + Math.random() * 0.03, 0.12); purr(0.5, 0.5, 0.045); }
     else if (kind === 'chirp') {
-      var r = Math.random(), f0 = hz * (0.9 + Math.random() * 0.2);
-      if (r < 0.4) flame(0, f0, 0.3 + Math.random() * 0.15, 0.08, Math.random() < 0.5 ? 1.25 : 0.85);
-      else if (r < 0.7) { flame(0, f0, 0.09, 0.08, 1.3); flame(0.13, f0 * 1.1, 0.1, 0.08, 1.3); }   // (fwip-fwip)
-      else crackle(0, 0.5, 0.09, 7);
+      var r = Math.random();
+      if (r < 0.4) purr(0, 0.6 + Math.random() * 0.5, 0.05);
+      else if (r < 0.7) { chuff(0, 0.11); chuff(0.18, 0.09); }
+      else { var st = Math.floor(Math.random() * 3), n = 2 + Math.floor(Math.random() * 2); for (var c = 0; c < n; c++) pluck(c * 0.16, N[st + c], 0.09); }   // (a few soft notes)
     }
   }
   // ===== Gemwren sounds =====
