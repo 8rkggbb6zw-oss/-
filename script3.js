@@ -580,23 +580,29 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function glimFreeStall() { for (var s = 0; s < 3; s++) if (!glimmers.some(function (g) { return g.stall === s; })) return s; return -1; }
   // ===== Glimmerwing sounds =====
-  // A Glimmerwing is a little glowing moth-creature, so it sings in tiny, bright, chime-like trills, with the soft
-  // whirr of its wings: a happy rising trill and a flutter when you pet it, a sparkly chime when you collect its egg,
-  // a soft little trill once it's fed and petted, a sad two-note peep when it's hungry, a few nibbles when it eats, and
-  // now and then a little chirp of its own while you're in the coop with it (fewer at night, and softer the further
+  // A Glimmerwing coos, soft and warm like a little dove, with the gentle whirr of its wings: a happy coo-coo and a
+  // flutter when you pet it, a pleased rolling coo when you collect its egg, soft burbling coos when it eats, a slow,
+  // low, plaintive coo when it's hungry, one contented coo once it's fed and petted, and now and then a coo, a
+  // coo-roo or a sleepy murmur of its own while you're in the coop with it (fewer at night, and softer the further
   // away it is). They're pet sounds, so they follow Pet Sound in Settings
   var glimFlutterBuf = null;
   function glimSound(kind, loud) {
     if (!audioCtx || audioCtx.state !== 'running') return;
     var ac = audioCtx, now = ac.currentTime, out = ac.createGain(), v = loud === undefined ? 1 : loud;
     out.gain.value = v; out.evPet = true; out.connect(ac.destination);
-    function note(hz, at, len, vol, glide) {                           // (one bright, bell-like note: a pure tone with a faint shimmer above it)
-      [[1, 1], [2.76, 0.18]].forEach(function (h) {
-        var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
-        o.frequency.setValueAtTime(hz * h[0], now + at); if (glide) o.frequency.exponentialRampToValueAtTime(hz * h[0] * glide, now + at + len);
-        g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol * h[1], now + at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, now + at + len);
-        o.connect(g); g.connect(out); o.start(now + at); o.stop(now + at + len + 0.02);
+    function coo(at, hz, len, vol, rise, roll) {                       // (one soft coo: a round, breathy tone that swells and rises a little, then falls away; roll gives it a burbling "rrr")
+      var o = ac.createOscillator(), o2 = ac.createOscillator(), o2g = ac.createGain(), f = ac.createBiquadFilter(), g = ac.createGain(), vib = ac.createOscillator(), vg = ac.createGain(), t0 = now + at;
+      o.type = 'sine'; o2.type = 'triangle'; o2g.gain.value = 0.25;   // (a little warmth an octave up)
+      vol *= 0.55;                                                     // (as loud as the other pets)
+      [[o, 1], [o2, 2]].forEach(function (p) {
+        p[0].frequency.setValueAtTime(hz * p[1] * 0.92, t0); p[0].frequency.linearRampToValueAtTime(hz * p[1] * (rise || 1.08), t0 + len * 0.35); p[0].frequency.linearRampToValueAtTime(hz * p[1] * 0.86, t0 + len);
       });
+      vib.frequency.value = 6; vg.gain.value = hz * 0.012; vib.connect(vg); vg.connect(o.frequency);   // (a gentle wobble in its voice)
+      f.type = 'lowpass'; f.frequency.value = hz * 3; f.Q.value = 0.7;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + len * 0.3); g.gain.linearRampToValueAtTime(vol * 0.7, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      if (roll) { var rl = ac.createOscillator(), rg = ac.createGain(); rl.frequency.value = roll; rg.gain.value = vol * 0.5; rl.connect(rg); rg.connect(g.gain); rl.start(t0); rl.stop(t0 + len + 0.05); }
+      o.connect(f); o2.connect(o2g); o2g.connect(f); f.connect(g); g.connect(out);
+      [o, o2, vib].forEach(function (n) { n.start(t0); n.stop(t0 + len + 0.05); });
     }
     function flutter(at, len, vol) {                                   // (its wings: a soft, quick whirr)
       if (!glimFlutterBuf) { glimFlutterBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.8), ac.sampleRate); var d = glimFlutterBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
@@ -606,12 +612,19 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.gain.setValueAtTime(0.0001, now + at); g.gain.linearRampToValueAtTime(vol * 0.5, now + at + 0.06); g.gain.linearRampToValueAtTime(0.0001, now + at + len);
       src.connect(f); f.connect(g); g.connect(out); src.start(now + at, 0, len + 0.05); lfo.start(now + at); lfo.stop(now + at + len + 0.05);
     }
-    if (kind === 'pet') { [1320, 1480, 1760, 1980, 2350].forEach(function (hz, i) { note(hz, i * 0.07, 0.16, 0.07, 1.04); }); flutter(0.05, 0.55, 0.09); }
-    else if (kind === 'egg') { [2640, 2090, 2350, 3135].forEach(function (hz, i) { note(hz, i * 0.09, 0.5, 0.06); }); }
-    else if (kind === 'content') { note(1480, 0, 0.18, 0.06, 1.05); note(1980, 0.12, 0.26, 0.06, 1.03); }
-    else if (kind === 'hungry') { note(1320, 0, 0.22, 0.05, 0.94); note(1100, 0.2, 0.32, 0.05, 0.9); }
-    else if (kind === 'eat') { for (var k = 0; k < 4; k++) note(2900 + Math.random() * 300, k * 0.11, 0.04, 0.035); note(1760, 0.5, 0.2, 0.05, 1.06); }
-    else if (kind === 'chirp') { var base = 1500 + Math.random() * 600, n = 2 + Math.floor(Math.random() * 3); for (var c = 0; c < n; c++) note(base * (1 + 0.12 * (c % 2)), c * 0.08, 0.1, 0.05, 1.08); if (Math.random() < 0.35) flutter(0.1, 0.3, 0.06); }
+    var hz = 560;                                                      // (its voice: a soft, highish coo, for a small creature)
+    if (kind === 'pet') { coo(0, hz, 0.28, 0.13, 1.12); coo(0.32, hz * 1.12, 0.36, 0.13, 1.15); flutter(0.1, 0.55, 0.08); }
+    else if (kind === 'egg') { coo(0, hz * 1.05, 0.5, 0.13, 1.14, 18); flutter(0.25, 0.35, 0.06); }
+    else if (kind === 'content') { coo(0, hz, 0.42, 0.12, 1.06); }
+    else if (kind === 'hungry') { coo(0, hz * 0.85, 0.5, 0.11, 1.02); coo(0.58, hz * 0.78, 0.6, 0.1, 1.0); }
+    else if (kind === 'eat') { coo(0, hz * 0.95, 0.22, 0.09, 1.05, 22); coo(0.26, hz, 0.22, 0.09, 1.05, 22); coo(0.52, hz * 1.05, 0.3, 0.1, 1.1); }
+    else if (kind === 'chirp') {
+      var r = Math.random(), p = hz * (0.94 + Math.random() * 0.12);
+      if (r < 0.45) coo(0, p, 0.34, 0.1, 1.08);
+      else if (r < 0.8) { coo(0, p, 0.22, 0.1, 1.06); coo(0.25, p * 0.9, 0.4, 0.1, 1.04, 16); }   // (coo-roo)
+      else coo(0, p * 0.9, 0.55, 0.08, 1.02, 20);                     // (a sleepy murmur)
+      if (Math.random() < 0.25) flutter(0.15, 0.3, 0.05);
+    }
   }
   // ===== Puddlewisp sounds =====
   // A Puddlewisp is a plump little pond creature, a sort of starry duck, so it quacks: soft, round, cute little
