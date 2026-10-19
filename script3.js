@@ -6129,8 +6129,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 
     // Highlight the tile in front of you
     var tile = targetTile();
-    if (tile && !tile.soil && heldItem() !== 'hoe') tile = null; // on plain grass, only show where you'd dig when you're holding the hoe
-    if (tileHighlightOff) tile = null;                                 // ("Tile Highlight While Moving" set to Disabled in Settings: no marker at all)
+    if (tileHighlightOff) tile = null;                                 // ("Tile Highlight While Moving" in Settings: Enabled marks the tile in front of you wherever you go, Disabled shows no marker at all)
     cursor.visible = !!tile;
     if (tile) {
       cursor.position.x = tile.x;
@@ -8029,11 +8028,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetTypewriter = function (on) { typewriter = !!on; try { localStorage.setItem(TYPE_KEY, on ? 'on' : 'off'); } catch (err) {} };
 
   // ---------- Tile Highlight While Moving, set in Settings: Disabled or Enabled ----------
-  // Enabled (the usual way): the glowing square marker shows the tile in front of you as you move about the farm, so you
-  // can see what you'd water, plant or dig. Disabled: there's no marker on the ground at all, for a cleaner screen.
+  // Enabled (the usual way): the glowing square marker shows the tile in front of you as you move about, on any open
+  // ground, so you can see what you'd water, plant or dig. Disabled: there's no marker on the ground at all, for a
+  // cleaner screen.
   // It's remembered
   var TILE_HL_KEY = 'everdawn-tile-highlight', tileHighlightOff = false;
   try { tileHighlightOff = localStorage.getItem(TILE_HL_KEY) === 'off'; } catch (err) {}
+  cursor.material.depthTest = false; cursor.renderOrder = 5;          // (drawn on top of the grass and bushes, so it never gets lost among them)
   window.everdawnSetTileHighlight = function (on) { tileHighlightOff = !on; if (!on) cursor.visible = false; try { localStorage.setItem(TILE_HL_KEY, on ? 'on' : 'off'); } catch (err) {} };
 
   // ---------- Game Time Hour Format, set in Settings: AM/PM or 24 Hour ----------
