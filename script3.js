@@ -7251,6 +7251,21 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { setMove(localStorage.getItem(MOVE_KEY)); } catch (err) {}
   window.everdawnSetMove = function (type) { setMove(type); try { localStorage.setItem(MOVE_KEY, type === 'jog' ? 'jog' : 'walk'); } catch (err) {} };
 
+  // ---------- Sprinting: hold Shift ----------
+  // Hold Shift while you walk or jog to sprint: about two-thirds faster again, with quicker steps (and footsteps) to
+  // match. Not on your broom or in the boat
+  var sprintHeld = false;
+  window.addEventListener('keydown', function (e) { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') sprintHeld = true; });
+  window.addEventListener('keyup', function (e) { if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') sprintHeld = false; });
+  window.addEventListener('blur', function () { sprintHeld = false; });
+  updatePlayer = (function (base) {
+    return function (dt) {
+      if (!sprintHeld || flying || inBoat) return base.apply(this, arguments);
+      var s = SPEED; SPEED = s * 1.7;
+      try { return base.apply(this, arguments); } finally { SPEED = s; }
+    };
+  })(updatePlayer);
+
   // ---------- Game time speed, set by the "Game Time Speed" slider in Settings ----------
   // 50% is the usual pace (every 10 in-game minutes take 11 real seconds); 100% makes time on the island go twice as
   // fast, and everything in between scales smoothly. It's remembered
