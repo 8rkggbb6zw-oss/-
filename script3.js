@@ -1227,23 +1227,25 @@ EVERDAWN_PARTS.push(function (THREE) {
   // holding (chopping, mining, trimming, tilling, planting, placing or eating it), and holding it keeps the axe,
   // pickaxe or trimmers going. E does nothing once neither is E, and Space then only flies you up on your broom. The
   // Interact button shows the Interact key, and tapping it still does everything
-  var interactKey = null, useKey = null, upKey = null;
-  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; } catch (err) {}
+  var interactKey = null, useKey = null, upKey = null, downKey = null;
+  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; downKey = localStorage.getItem('everdawn-move-down') || null; } catch (err) {}
   function isInteractKey(code) { return interactKey ? code === interactKey : code === 'KeyE' || code === 'Space'; }
   function isUseKey(code) { return useKey ? code === useKey : code === 'KeyE' || code === 'Space'; }
   function showInteractKey() { var k = ui.btnAct.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
   window.everdawnSetInteract = function (code) { interactKey = code || null; keys = {}; showInteractKey(); };
   window.everdawnSetUseKey = function (code) { useKey = code || null; keys = {}; };
-  // Move Up is W or the Up Arrow to start; on the Mouse & Keyboard page it can be a key of your own instead (then W
-  // and the Up Arrow don't move you up)
+  // Move Up is W or the Up Arrow to start, and Move Down is S or the Down Arrow; on the Mouse & Keyboard page either
+  // can be a key of your own instead (then its usual keys don't move you that way)
   window.everdawnSetMoveUp = function (code) { upKey = code || null; keys = {}; };
+  window.everdawnSetMoveDown = function (code) { downKey = code || null; keys = {}; };
   function upHeld() { return upKey ? !!keys[upKey] : !!(keys.KeyW || keys.ArrowUp); }
+  function downHeld() { return downKey ? !!keys[downKey] : !!(keys.KeyS || keys.ArrowDown); }
   showInteractKey();
   var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
   heldItem = (function (base) { return function () { return handsFree ? null : base.apply(this, arguments); }; })(heldItem);
   window.addEventListener('keydown', function (e) {
     var isI = isInteractKey(e.code), isU = isUseKey(e.code);
-    if (GAME_KEYS.indexOf(e.code) === -1 && !isI && !isU && e.code !== upKey) return;
+    if (GAME_KEYS.indexOf(e.code) === -1 && !isI && !isU && e.code !== upKey && e.code !== downKey) return;
     e.preventDefault();
     keys[e.code] = true;
     walkTarget = null;
@@ -5018,7 +5020,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   updatePlayer = function (dt) {
     if (inBoat && (indoors || teleporting || sleeping || player.parent !== scene)) inBoat = false;   // (carried home, or whisked away some other way)
     if (!inBoat) return boatBaseUpdatePlayer(dt);
-    var tryWalk = upHeld() || keys.KeyA || keys.KeyS || keys.KeyD || keys.ArrowDown || keys.ArrowLeft || keys.ArrowRight || walkTarget;
+    var tryWalk = upHeld() || downHeld() || keys.KeyA || keys.KeyD || keys.ArrowLeft || keys.ArrowRight || walkTarget;
     if (tryWalk) { walkTarget = null; boatClimbOut(); return boatBaseUpdatePlayer(dt); }   // (walking off: she steps back onto the dock)
     var s = boatSeat();
     facing = s.face; player.rotation.y = facing;
@@ -5137,7 +5139,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
   }
   function updatePlayer(dt) {
-    var forward = (upHeld() ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+    var forward = (upHeld() ? 1 : 0) - (downHeld() ? 1 : 0);
     var side = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
     // Movement is relative to where the camera is looking
     var mx = -Math.sin(cam.yaw) * forward + Math.cos(cam.yaw) * side;
@@ -8749,11 +8751,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, and move you up)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, and move you up and down)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evKeyL' + n + '">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:110px"></button></div></div>');
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
