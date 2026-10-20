@@ -5832,7 +5832,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var bv = 0, bp = sunBackGeo.attributes.position, buv = sunBackGeo.attributes.uv; bv < bp.count; bv++) buv.setXY(bv, 0.5 - bp.getX(bv) / 0.24, 0.5 + bp.getY(bv) / 0.24);   // (the seed spiral laid flat across it)
     var sunPetalGeo = mergeSimple(sunPetals);
     var bract = new THREE.Shape(); bract.moveTo(0, 0); bract.quadraticCurveTo(0.02, 0.04, 0, 0.075); bract.quadraticCurveTo(-0.02, 0.04, 0, 0);
-    var bracts = []; for (var bi = 0; bi < 14; bi++) { var bg = new THREE.ShapeGeometry(bract, 3); bg.translate(0, 0.07, 0); bg.rotateX(-0.6); bg.rotateZ(bi / 14 * Math.PI * 2 + 0.11); bg.translate(0, 0, -0.03); bracts.push(bg); }
+    var bracts = []; for (var bi = 0; bi < 14; bi++) { var bg = new THREE.ShapeGeometry(bract, 3); bg.translate(0, 0.112, 0); bg.rotateX(-0.6); bg.rotateZ(bi / 14 * Math.PI * 2 + 0.11); bg.translate(0, 0, -0.012); bracts.push(bg); }   // (green bracts round the rim, peeping out behind the petals, not over the seeds)
     var bractGeo = mergeSimple(bracts);
     // (a poppy: two outer and two inner petals, broad, cupped and crinkled like tissue, each with a dark blotch at its base
     // and fine veins; in the middle a green seed pod with its ridged crown, ringed by dark stamens. Some are still nodding buds)
@@ -6795,9 +6795,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ===== cool, silvery winter light =====
   var WINTER_SKY = new THREE.Color(0xc4d6ea), WINTER_SUN = new THREE.Color(0xdde8ff);
   // ===== ice round the pond's edge in winter =====
-  // In Winter a ring of ice creeps in from the pond's shore, about a third of the way to the middle, with a wobbly
-  // edge, frosty white patches, faint cracks and a bright rim where it meets the open water; the middle stays open,
-  // rippling and blue. (Each point on the water knows how far out from the middle it is, 0 to 1 at the shore)
+  // In Winter a ring of ice creeps in from the pond's shore, about a third of the way to the middle, with a ragged
+  // edge: thin, glassy, clear ice near the open water, mirroring the sky with the dark water showing through, thin
+  // white cracks and tiny trapped bubbles, getting thicker, cloudier and whiter toward the shore, with drifts of snow
+  // blown onto it; the middle stays open, rippling and blue. (Each point on the water knows how far out from the middle it is, 0 to 1 at the shore)
   (function () {
     var RINGS = 30, SEG = 128, n = water.geometry.attributes.position.count, ring = new Float32Array(n);
     for (var i = 1; i < n; i++) ring[i] = (Math.floor((i - 1) / SEG) + 1) / RINGS;
@@ -6806,19 +6807,25 @@ EVERDAWN_PARTS.push(function (THREE) {
     waterMat.vertexShader = waterMat.vertexShader.replace('varying float vDepth;', 'varying float vDepth;\nattribute float ring;\nvarying float vRing;').replace('  vDepth = depth;', '  vDepth = depth;\n  vRing = ring;');
     waterMat.fragmentShader = waterMat.fragmentShader.replace('varying float vDepth;', 'varying float vDepth;\nvarying float vRing;\nuniform float uIce;\nfloat iceN(vec2 q) { return 0.5 * sin(q.x * 1.3 + sin(q.y * 0.7) * 2.0) + 0.35 * sin(q.y * 1.7 + sin(q.x * 0.9) * 2.3) + 0.15 * sin((q.x - q.y) * 2.9 + sin(q.x * 1.1)); }').replace('  gl_FragColor = vec4(col, alpha);', [
       '  if (uIce > 0.0) {',
-      '    float wob = 0.05 * sin(p.x * 1.7 + p.y * 0.9) + 0.03 * sin(p.y * 3.7 - p.x * 2.9) + 0.015 * sin(p.x * 6.1 - p.y * 5.3);',   // (a wobbly, natural edge)
+      '    float wob = 0.05 * sin(p.x * 1.7 + p.y * 0.9) + 0.03 * sin(p.y * 3.7 - p.x * 2.9) + 0.015 * sin(p.x * 6.1 - p.y * 5.3) + 0.01 * iceN(p * 9.0);',   // (a ragged, natural edge)
       '    float e = vRing + wob - (1.0 - 0.36 * uIce);',
-      '    float iceAmt = smoothstep(0.0, 0.025, e);',
-      '    float fr = 0.5 + 0.5 * iceN(p * 2.3 + 7.0);',   // (soft, frosty patches)
-      '    float crack = smoothstep(0.05, 0.0, abs(iceN(p * 0.9))) * 0.8 + smoothstep(0.04, 0.0, abs(iceN(p * 1.7 + 3.1))) * 0.5;',   // (a few faint cracks wandering across it)
-      '    vec3 ice = mix(vec3(0.74, 0.86, 0.93), vec3(0.95, 0.98, 1.0), fr * 0.5 + smoothstep(0.0, 0.25, e) * 0.35);',
-      '    ice = mix(ice, vec3(0.58, 0.74, 0.86), clamp(crack, 0.0, 1.0) * 0.45);',
-      '    float ifres = 0.04 + 0.96 * pow(1.0 - max(v.y, 0.0), 5.0);',
-      '    ice = mix(ice, uSky, ifres * 0.3) + uSunColor * pow(max(dot(vec3(0.0, 1.0, 0.0), normalize(uSunDir + v)), 0.0), 60.0) * 0.35;',
+      '    float iceAmt = smoothstep(0.0, 0.008, e);',
+      '    float ifres = 0.04 + 0.96 * pow(1.0 - max(v.y, 0.0), 5.0);',   // (ice is flat and glassy: it mirrors the sky)
+      '    vec3 under = mix(uShallow, uDeep, smoothstep(0.0, 0.9, vDepth)) * 0.7;',
+      '    vec3 ice = mix(under, uSky, 0.2 + ifres * 0.65);',   // (thin, clear "black" ice near the open water: you see the dark water through it)
+      '    float frost = clamp(smoothstep(0.0, 0.32, e) * 0.75 + iceN(p * 1.1 + 3.0) * 0.35, 0.0, 1.0);',   // (thicker, cloudier, whiter toward the shore, in patches)
+      '    ice = mix(ice, mix(vec3(0.8, 0.88, 0.94), vec3(0.92, 0.96, 0.99), 0.5 + 0.5 * iceN(p * 4.3 + 1.0)), frost);',
+      '    float crack = smoothstep(0.018, 0.0, abs(iceN(p * 0.8))) + smoothstep(0.014, 0.0, abs(iceN(p * 1.9 + 3.1))) * 0.6;',   // (thin white fracture lines)
+      '    ice = mix(ice, vec3(0.9, 0.95, 1.0), clamp(crack, 0.0, 1.0) * mix(0.75, 0.35, frost));',
+      '    vec2 bc = floor(p * 14.0); float bub = step(0.982, fract(sin(dot(bc, vec2(12.9898, 78.233))) * 43758.5)) * smoothstep(0.35, 0.0, length(fract(p * 14.0) - 0.5));',   // (tiny trapped air bubbles)
+      '    ice += bub * 0.25 * (1.0 - frost);',
+      '    float drift = smoothstep(0.62, 0.8, 0.5 + 0.5 * iceN(p * 0.6 + 11.0) + e * 1.2);',   // (drifts of snow blown onto it near the shore)
+      '    ice = mix(ice, vec3(0.97, 0.985, 1.0), drift);',
+      '    ice += uSunColor * (pow(max(dot(vec3(0.0, 1.0, 0.0), normalize(uSunDir + v)), 0.0), 400.0) * 1.4 + pow(max(dot(vec3(0.0, 1.0, 0.0), normalize(uSunDir + v)), 0.0), 30.0) * 0.08) * (1.0 - drift);',
       '    ice *= mix(1.0, 0.6, uNight);',
-      '    float rim = smoothstep(0.03, 0.0, abs(e - 0.012));',   // (the bright edge of the ice)
-      '    col = mix(col, ice, iceAmt); alpha = mix(alpha, 0.96, iceAmt);',
-      '    col = mix(col, vec3(0.97, 0.99, 1.0) * mix(1.0, 0.6, uNight), rim * 0.5); alpha = max(alpha, rim * 0.85);',
+      '    float rim = smoothstep(0.012, 0.0, abs(e - 0.006));',   // (a thin, pale lip where the ice ends)
+      '    col = mix(col, ice, iceAmt); alpha = mix(alpha, mix(0.9, 0.98, max(frost, drift)), iceAmt);',
+      '    col = mix(col, vec3(0.85, 0.92, 0.97) * mix(1.0, 0.6, uNight), rim * 0.5); alpha = max(alpha, rim * 0.8);',
       '  }',
       '  gl_FragColor = vec4(col, alpha);'].join('\n'));
   })();
