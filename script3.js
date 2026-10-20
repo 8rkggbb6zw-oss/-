@@ -5827,6 +5827,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       pg2.rotateZ((pj + pr2 * 0.5) / 22 * Math.PI * 2 + (springHash(pj * 7.1) - 0.5) * 0.08); pg2.translate(0, 0, -0.004 - pr2 * 0.01); sunPetals.push(pg2);
     }
     var rimGeo = new THREE.TorusGeometry(0.118, 0.012, 6, 40);
+    var sunBackGeo = new THREE.SphereGeometry(0.13, 28, 6, 0, Math.PI * 2, 0, Math.PI * 0.32);   // (the back of the head: a shallow green dome, so it isn't hollow seen from behind)
+    sunBackGeo.scale(1, 0.45, 1); sunBackGeo.rotateX(-Math.PI / 2); sunBackGeo.translate(0, 0, 0.027);
     var sunPetalGeo = mergeSimple(sunPetals);
     var bract = new THREE.Shape(); bract.moveTo(0, 0); bract.quadraticCurveTo(0.02, 0.04, 0, 0.075); bract.quadraticCurveTo(-0.02, 0.04, 0, 0);
     var bracts = []; for (var bi = 0; bi < 14; bi++) { var bg = new THREE.ShapeGeometry(bract, 3); bg.translate(0, 0.07, 0); bg.rotateX(-0.6); bg.rotateZ(bi / 14 * Math.PI * 2 + 0.11); bg.translate(0, 0, -0.03); bracts.push(bg); }
@@ -5908,7 +5910,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     summerFlowerMesh = [
       { geo: thickGeo, m: mStem, list: suns, part: 'stem' }, { geo: stemGeo, m: mStem, list: thin, part: 'stem' },
       { geo: sLeafGeo, m: mSunLeaf, list: SUMMER_LEAVES, part: 'sunleaf' },
-      { geo: discGeo, m: mDisc, list: suns, part: 'disc' }, { geo: rimGeo, m: mHead, list: suns, part: 'rim', col: function () { return 0x6a4a1c; } }, { geo: bractGeo, m: mSunLeaf, list: suns, part: 'bracts' }, { geo: sunPetalGeo, m: mHead, list: suns, part: 'sunpetals', col: function (f) { return f.v < 0.7 ? 0xf6c428 : 0xf0a020; } },
+      { geo: discGeo, m: mDisc, list: suns, part: 'disc' }, { geo: rimGeo, m: mHead, list: suns, part: 'rim', col: function () { return 0x6a4a1c; } }, { geo: sunBackGeo, m: mSunLeaf, list: suns, part: 'sunback' }, { geo: bractGeo, m: mSunLeaf, list: suns, part: 'bracts' }, { geo: sunPetalGeo, m: mHead, list: suns, part: 'sunpetals', col: function (f) { return f.v < 0.7 ? 0xf6c428 : 0xf0a020; } },
       { geo: poppyGeo, m: mPoppy, list: poppyOpen, part: 'poppy', col: function (f) { return f.v < 0.55 ? 0xe8281c : f.v < 0.7 ? 0xf0402a : 0xf26a3a; } },
       { geo: poppyPodGeo, m: mHead, list: poppyOpen, part: 'poppypod', col: function () { return 0x8aa86a; } }, { geo: poppyStamGeo, m: mHead, list: poppyOpen, part: 'poppystam', col: function () { return 0x2a1e26; } },
       { geo: poppyBudGeo, m: mStem, list: poppyBuds, part: 'poppybud' },
@@ -5935,7 +5937,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         else if (F.part === 'sunleaf') { sfV.set(0, f.h * rec.at, 0).applyQuaternion(sfQ).add(sfB); sfE.set(0, rec.a, -0.35); sfQ.setFromEuler(sfE); sfS.setScalar(k * rec.s); }
         else {
           sfV.set(0, f.h, 0).applyQuaternion(sfQ).add(sfB);
-          if (F.part === 'disc' || F.part === 'sunpetals' || F.part === 'bracts' || F.part === 'rim') { sfE.set(0.12, f.rot, 0); sfQ.setFromEuler(sfE); sfS.setScalar(k * (0.9 + f.v * 0.3)); }   // (sunflowers turn their faces toward the sun)
+          if (F.part === 'disc' || F.part === 'sunpetals' || F.part === 'bracts' || F.part === 'rim' || F.part === 'sunback') { sfE.set(0.12, f.rot, 0); sfQ.setFromEuler(sfE); sfS.setScalar(k * (0.9 + f.v * 0.3)); }   // (sunflowers turn their faces toward the sun)
           else if (F.part === 'lav' || F.part === 'lavtop') { sfV.set(0, f.h - 0.13, 0).applyQuaternion(sfQ).add(sfB); sfS.setScalar(k * 1.15); }
           else if (F.part === 'lavleaf') { sfV.copy(sfB); sfE.set(0.75 + f.v * 0.5, f.rot + 0.4, 0, 'YXZ'); sfQ.setFromEuler(sfE); sfS.setScalar(k * (0.8 + f.v * 0.4)); }   // (narrow leaves splaying out at its foot)
           else if (F.part === 'poppybud') { sfE.set(f.tilt + 0.95, f.rot, 0); sfQ.setFromEuler(sfE); sfS.setScalar(k * 1.5); }   // (a bud nodding on its hooked stem)
@@ -6673,22 +6675,23 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (!springFlowerSpot(x, z, 0.8) || WINTER_MEN.some(function (q) { return dist(q.x, q.z, x, z) < 6; })) continue;
       c++; var G = new THREE.Group(), y = groundHeight(x, z); G.position.set(x, y, z); G.rotation.y = Math.atan2(HOUSE_X - x, HOUSE_Z + 12 - z) + Math.PI + (springHash(c) - 0.5) * 0.8; winterMenGroup.add(G); WINTER_MEN.push({ x: x, z: z });
       var mScarf = new THREE.MeshStandardMaterial({ color: SCARVES[c % 4], roughness: 0.9 }), mStripe = new THREE.MeshStandardMaterial({ color: 0xf6f0e4, roughness: 0.9 });
-      [[0.34, 0.3], [0.25, 0.84], [0.18, 1.22]].forEach(function (b, k) { var m = cpPart(new THREE.SphereGeometry(b[0], 20, 14), mSnow, 0, b[1], 0, 0, 0, 0, G); m.scale.set(1, k === 0 ? 0.88 : 0.92, 1); });
+      [[0.34, 0.3], [0.25, 0.74], [0.18, 1.066]].forEach(function (b, k) { var m = cpPart(new THREE.SphereGeometry(b[0], 20, 14), mSnow, 0, b[1], 0, 0, 0, 0, G); m.scale.set(1, k === 0 ? 0.88 : 0.92, 1); });   // (three balls packed snugly into each other)
       cpPart(new THREE.CylinderGeometry(0.36, 0.42, 0.06, 20), mSnow, 0, 0.03, 0, 0, 0, 0, G);   // (packed snow round its foot)
-      [-1, 1].forEach(function (s) { cpPart(new THREE.SphereGeometry(0.022, 8, 6), mCoal, s * 0.06, 1.27, 0.16, 0, 0, 0, G); });   // (coal eyes)
-      for (var m = 0; m < 5; m++) { var a = -0.55 + m * 0.275; cpPart(new THREE.SphereGeometry(0.013, 6, 4), mCoal, Math.sin(a) * 0.12, 1.16 - Math.cos(a) * 0.035, 0.155, 0, 0, 0, G); }   // (a smile)
-      cpPart(new THREE.ConeGeometry(0.03, 0.17, 10), mCarrot, 0, 1.22, 0.25, Math.PI / 2, 0, 0, G);   // (carrot nose)
-      [0.95, 0.78, 0.62].forEach(function (yy) { cpPart(new THREE.SphereGeometry(0.03, 8, 6), mCoal, 0, yy, 0.24 - Math.abs(yy - 0.8) * 0.2, 0, 0, 0, G); });   // (buttons)
+      [-1, 1].forEach(function (s) { cpPart(new THREE.SphereGeometry(0.022, 8, 6), mCoal, s * 0.06, 1.116, 0.16, 0, 0, 0, G); });   // (coal eyes)
+      for (var m = 0; m < 5; m++) { var a = -0.55 + m * 0.275; cpPart(new THREE.SphereGeometry(0.013, 6, 4), mCoal, Math.sin(a) * 0.12, 1.024 - Math.cos(a) * 0.035, 0.158, 0, 0, 0, G); }   // (a smile)
+      cpPart(new THREE.ConeGeometry(0.03, 0.17, 10), mCarrot, 0, 1.066, 0.25, Math.PI / 2, 0, 0, G);   // (carrot nose)
+      [0.86, 0.74, 0.62].forEach(function (yy) { cpPart(new THREE.SphereGeometry(0.03, 8, 6), mCoal, 0, yy, 0.25 * Math.sqrt(1 - Math.pow((yy - 0.74) / 0.23, 2)) - 0.008, 0, 0, 0, G); });   // (buttons, pressed into the front of its middle)
       [-1, 1].forEach(function (s) {                                   // (stick arms, with little forked twigs at the ends)
-        var arm = new THREE.Group(); arm.position.set(s * 0.22, 0.92, 0); arm.rotation.z = s * (0.7 + springHash(c * 3 + s) * 0.4); G.add(arm);
+        var arm = new THREE.Group(); arm.position.set(s * 0.22, 0.8, 0); arm.rotation.z = s * (0.7 + springHash(c * 3 + s) * 0.4); G.add(arm);
         cpPart(new THREE.CylinderGeometry(0.012, 0.016, 0.5, 6), mStick, 0, 0.25, 0, 0, 0, 0, arm);
         [-0.5, 0.5].forEach(function (f) { cpPart(new THREE.CylinderGeometry(0.006, 0.008, 0.12, 5), mStick, f * 0.04, 0.5, 0, 0, 0, f, arm); });
       });
-      cpPart(new THREE.TorusGeometry(0.18, 0.045, 8, 22), mScarf, 0, 1.06, 0, Math.PI / 2, 0, 0, G);   // (a striped scarf, with its tail hanging)
-      for (var st = 0; st < 3; st++) cpPart(new THREE.BoxGeometry(0.09, 0.02, 0.025), mStripe, 0.12, 0.92 - st * 0.07, 0.15, 0, 0, 0.1, G);
-      cpPart(new THREE.BoxGeometry(0.09, 0.26, 0.025), mScarf, 0.12, 0.88, 0.14, 0, 0, 0.1, G);
-      if (c % 2) { cpPart(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), mHat, 0, 1.37, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 18), mHat, 0, 1.47, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.131, 0.131, 0.04, 18), mScarf, 0, 1.4, 0, 0, 0, 0, G); }   // (a top hat with a band)
-      else { cpPart(new THREE.SphereGeometry(0.17, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mScarf, 0, 1.3, 0, 0, 0, 0, G); cpPart(new THREE.TorusGeometry(0.165, 0.03, 6, 20), mStripe, 0, 1.31, 0, Math.PI / 2, 0, 0, G); cpPart(new THREE.SphereGeometry(0.055, 10, 8), mStripe, 0, 1.48, 0, 0, 0, 0, G); }   // (or a bobble hat)
+      cpPart(new THREE.TorusGeometry(0.15, 0.045, 8, 22), mScarf, 0, 0.92, 0, Math.PI / 2, 0, 0, G);   // (a striped scarf snug round its neck, with its tail hanging down its front)
+      var tail = new THREE.Group(); tail.position.set(0.1, 0.84, 0.177); tail.rotation.set(-0.57, 0, 0.1); G.add(tail);
+      cpPart(new THREE.BoxGeometry(0.09, 0.2, 0.025), mScarf, 0, 0, 0, 0, 0, 0, tail);
+      for (var st = 0; st < 3; st++) cpPart(new THREE.BoxGeometry(0.09, 0.02, 0.025), mStripe, 0, 0.03 - st * 0.055, 0.006, 0, 0, 0, tail);
+      if (c % 2) { cpPart(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), mHat, 0, 1.216, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 18), mHat, 0, 1.316, 0, 0, 0, 0, G); cpPart(new THREE.CylinderGeometry(0.131, 0.131, 0.04, 18), mScarf, 0, 1.246, 0, 0, 0, 0, G); }   // (a top hat with a band)
+      else { cpPart(new THREE.SphereGeometry(0.17, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), mScarf, 0, 1.146, 0, 0, 0, 0, G); cpPart(new THREE.TorusGeometry(0.165, 0.03, 6, 20), mStripe, 0, 1.156, 0, Math.PI / 2, 0, 0, G); cpPart(new THREE.SphereGeometry(0.055, 10, 8), mStripe, 0, 1.326, 0, 0, 0, 0, G); }   // (or a bobble hat)
     }
   })();
   // ===== snow on the roofs: on everything up high that faces the sky (roofs, chimneys, lamp tops, the tops of big rocks) =====
