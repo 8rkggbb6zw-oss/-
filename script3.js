@@ -4228,6 +4228,66 @@ EVERDAWN_PARTS.push(function (THREE) {
     barnTilesSync();
   };
 
+  // ===== choosing your new animal's colour at Fluff & Feather =====
+  // Every animal at Fluff & Feather comes in three colours. "Surprise colour" adopts one at the usual price in a colour
+  // picked at random; "Pick colour" costs 1,500 Star Coins more and lets you choose which of the three you get first
+  var PICK_COST = 1500, pickKind = null;
+  var PICK_PALS = { glim: [GLIM_PALS, 'fur', 'glow'], duck: [DUCK_PALS, 'mid', 'breast'], ember: [EMBER_PALS, 'mid', 'tip'], gem: [GEM_PALS, 'mid', 'gem'], ostrich: [OST_PALS, 'body', 'plume'],
+    moon: [MOON_PALS, 'coat', 'ribbon'], aurora: [AURORA_PALS, 'coat2', 'glow'], zephyra: [ZEPHYRA_PALS, 'low', 'gold'], luna: [LUNA_PALS, 'fur', 'nebula'], bubble: [BUBBLE_PALS, 'back', 'fin'],
+    prism: [PRISM_PALS], lotus: [LOTUS_PALS, 'back', 'petal'], axo: [AXO_PALS, 'back', 'gill'], liz: [LIZ_PALS, 'back', 'frill'], tort: [TORT_PALS, 'shell', 'bloom'], bison: [BIS_PALS, 'coat', 'mane'], crab: [CRB_PALS, 'shell', 'rim'] };
+  function pickCss(c) { if (c && c.length !== undefined && typeof c !== 'string') c = c[c.length - 1]; return typeof c === 'number' ? '#' + ('00000' + c.toString(16)).slice(-6) : c; }
+  function pickSwatch(kind, i) {                                       // (a little round swatch of that colour: its main colour, and its accent)
+    var P = PICK_PALS[kind], p = P[0][i];
+    if (kind === 'prism') return 'conic-gradient(' + [0, 0.25, 0.5, 0.75, 1].map(function (t) { return 'hsl(' + Math.round((p.hue + t * p.hueSpan) * 360) + ',' + Math.round(p.sat * 100) + '%,' + Math.round(p.light * 100) + '%)'; }).join(',') + ')';
+    return 'linear-gradient(135deg,' + pickCss(p[P[1]]) + ' 55%,' + pickCss(p[P[2]]) + ' 55%)';
+  }
+  function pickCost(kind) { return (COOP_KINDS.indexOf(kind) >= 0 ? coopKindCost(kind) : fbarnKindCost(kind)) + PICK_COST; }
+  var pickBox = document.createElement('div'); pickBox.className = 'inventory ship shop'; pickBox.hidden = true;
+  pickBox.innerHTML = '<div class="inv-head"><b class="pick-title">🎨 Pick a colour</b><button type="button" class="inv-close" aria-label="Close">✕</button></div>' +
+    '<p class="ship-hint pick-hint"></p><div class="pick-row" style="display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px"></div>';
+  canvas.parentNode.appendChild(pickBox);
+  function closePick(back) { pickBox.hidden = true; pickKind = null; glimNaming = false; if (back) openBarnShop(); else focusGame(); }
+  pickBox.querySelector('.inv-close').addEventListener('click', function () { closePick(true); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && pickKind) closePick(true); });
+  function openPick(kind) {
+    var name = COOP_NAMES[kind] || FBARN_NAMES[kind], row = pickBox.querySelector('.pick-row');
+    pickKind = kind; closeBarnShop(); glimNaming = true; walkTarget = null; keys = {};
+    pickBox.querySelector('.pick-title').textContent = '🎨 Pick a colour for your ' + name;
+    pickBox.querySelector('.pick-hint').innerHTML = 'Choosing costs 1,500 Star Coins more: <img class="coin-icon" alt=""> ' + pickCost(kind).toLocaleString('en-US') + ' in all.';
+    row.innerHTML = '';
+    PICK_PALS[kind][0].forEach(function (p, i) {
+      var b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'flex:1 1 30%;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px';
+      b.innerHTML = '<span style="width:58px;height:58px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(60,40,90,.3);background:' + pickSwatch(kind, i) + '"></span><span>' + p.name + '</span>';
+      b.addEventListener('click', function () { closePick(false); adoptGlimmerwing(kind, i); });
+      row.appendChild(b);
+    });
+    paintCoinIcons(pickBox); pickBox.hidden = false;
+  }
+  var pickBaseAdopt = adoptGlimmerwing;
+  adoptGlimmerwing = function (kind, pal) {                            // (pal: the colour you chose, or nothing for a surprise)
+    if (pal === undefined) return pickBaseAdopt(kind);
+    if (state.coins < pickCost(kind)) { showToast('Not enough Star Coins', 1800); return; }
+    pickBaseAdopt(kind);
+    if (glimNaming && glimPending && glimPending.kind === kind) { glimPending.pal = pal; state.coins -= PICK_COST; showCoins(true); }   // (adopted: it's the colour you picked, for the extra 1,500)
+  };
+  var PICK_BTNS = [[glimAdoptBtn, 'glim'], [duckAdoptBtn, 'duck'], [emberAdoptBtn, 'ember'], [gemAdoptBtn, 'gem'], [ostAdoptBtn, 'ostrich'], [moonAdoptBtn, 'moon'], [auroraAdoptBtn, 'aurora'], [zephyraAdoptBtn, 'zephyra'],
+    [lunaAdoptBtn, 'luna'], [bubbleAdoptBtn, 'bubble'], [prismAdoptBtn, 'prism'], [lotusAdoptBtn, 'lotus'], [axoAdoptBtn, 'axo'], [lizAdoptBtn, 'liz'], [tortAdoptBtn, 'tort'], [bisAdoptBtn, 'bison'], [crbAdoptBtn, 'crab']].map(function (b) {
+    var pb = document.createElement('button'); pb.type = 'button';
+    pb.addEventListener('click', function () { openPick(b[1]); });
+    b[0].parentNode.insertBefore(pb, b[0].nextSibling); b[0].parentNode.style.flexWrap = 'wrap';
+    return [b[0], b[1], pb];
+  });
+  var pickBarnRender = renderBarnShop;
+  renderBarnShop = function () {
+    pickBarnRender();
+    PICK_BTNS.forEach(function (b) {
+      var open = b[0].innerHTML.indexOf('Adopt · ') === 0;             // (only once it could be adopted: there's a home with room for it)
+      if (open) b[0].innerHTML = b[0].innerHTML.replace('Adopt · ', '🎲 Surprise colour · ');
+      b[2].hidden = !open; b[2].innerHTML = '🎨 Pick colour · <img class="coin-icon" alt=""> ' + pickCost(b[1]).toLocaleString('en-US'); b[2].disabled = !open || state.coins < pickCost(b[1]);
+    });
+    barnTilesSync();
+  };
+
   // ===== on the world map, and every frame =====
   function fbarnDrawOnMap(g, K, label) {                               // (its grey gambrel roof with the ridge down the middle, the cupola, and its red doors)
     var pc = mapXY(fbarn.x, fbarn.z), p = [0, 0], hw = FBARN_BW / 2 * K + 6, hd = FBARN_BD / 2 * K + 6;
