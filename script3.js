@@ -2,9 +2,58 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ===== Nyxalia sounds =====
+  // ===== Iridelle sounds =====
   // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
-  // plays the right voice for each kind, are near the end of script2.js.) A Nyxalia snuffles like a big, gentle beast
+  // plays the right voice for each kind, are near the end of script2.js.) An Iridelle chirps like a real hermit crab:
+  // a quick, croaky little "krrrk", a run of tiny scrapes about 65 a second around 2,700 Hz, rising a little in the
+  // middle, then a few happy "tik-tik-tik" taps of its crystal pincers. Two chirps and clicks when you pet it; a chirp,
+  // then two more and clicks when you take its Tidelight Pearl; soft munching as it eats; two slow, low chirps that
+  // slide down when it's hungry; a chirp and clicks once it's fed and petted; and now and then a chirp of its own while
+  // you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function crabSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = nbuf.getChannelData(0); for (var ni = 0; ni < nd.length; ni++) nd[ni] = Math.random() * 2 - 1;
+    function env() { var g = ac.createGain(); g.gain.value = 0; return g; }   // (silent until told otherwise, so nothing clicks as it starts)
+    var nk = Math.sqrt(ac.sampleRate / 24000);                         // (so the taps are just as loud whatever rate the sound card runs at)
+    function burst(t0, hz, Q, vol, len) {                              // (a tiny ringing tap of noise)
+      var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = env(); s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = hz; f.Q.value = Q;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * nk, t0 + 0.0015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + len + 0.005);
+    }
+    function rasp(at, n, rate, hz, sad) {                              // (one chirp, "krrrk": a quick run of tiny scrapes; sad ones are slower and slide down. Returns how long it takes)
+      for (var i = 0; i < n; i++) burst(now + at + i / rate * (0.9 + Math.random() * 0.2), hz * (sad ? 1 - i / n * 0.2 : 1 + Math.sin(i / n * Math.PI) * 0.12), 6, (sad ? 0.4 : 0.28) * (0.25 + 0.75 * Math.sin((i + 0.5) / n * Math.PI)), 0.012);
+      return n / rate;
+    }
+    function clicks(at) {                                              // (three quick taps of its crystal pincers, "tik-tik-tik")
+      for (var i = 0; i < 3; i++) { var t0 = now + at + i * 0.075 + Math.random() * 0.02, hz = 3800 + Math.random() * 1400; burst(t0, hz, 9, 0.157, 0.03); burst(t0, hz * 1.62, 9, 0.094, 0.03); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = env(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    function V(at, m) {                                                // (a chirp: happy is two, sad is one slow, low one; then clicks unless it's sad)
+      if (m < 0) { rasp(at, 7, 30, 1900, true); return; }
+      if (m > 0) { var a = rasp(at, 9, 65, 2700); rasp(at + a + 0.12, 11, 70, 2900); } else rasp(at, 9, 65, 2700);
+      clicks(at + 0.35);
+    }
+    if (kind === 'pet') V(0, 1);
+    else if (kind === 'egg') { V(0, 0); V(0.6, 1); }
+    else if (kind === 'content') V(0, 0);
+    else if (kind === 'hungry') { V(0, -1); V(0.9, -1); }
+    else if (kind === 'eat') munching(4, 0.05);
+    else if (kind === 'chirp') V(0, Math.random() < 0.65 ? 0 : 1);
+  }
+  iridelleAction = (function (base) {                                  // (looking after an Iridelle: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      crabSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if the pearl couldn't be taken: a full bag)
+      return r;
+    };
+  })(iridelleAction);
+
+  // ===== Nyxalia sounds =====
+  // A Nyxalia snuffles like a big, gentle beast
   // sniffing your hand: each snuffle built like a real snort, quick little flaps of the nose, about 50 a second and a
   // bit uneven, ringing through a snout measured from a real one, but slower and deeper, then a sprinkle of twinkling
   // stars. Two quick snuffles and stars when you pet it; a snuffle and two more when you milk it for Opaline Milk; soft
@@ -4047,7 +4096,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort' || g.kind === 'bison')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort' || g.kind === 'bison' || g.kind === 'crab')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
