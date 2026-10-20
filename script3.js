@@ -2,9 +2,64 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ===== Amarys sounds =====
+  // ===== Nyxalia sounds =====
   // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
-  // plays the right voice for each kind, are near the end of script2.js.) An Amarys sneezes like a real little turtle,
+  // plays the right voice for each kind, are near the end of script2.js.) A Nyxalia snuffles like a big, gentle beast
+  // sniffing your hand: each snuffle built like a real snort, quick little flaps of the nose, about 50 a second and a
+  // bit uneven, ringing through a snout measured from a real one, but slower and deeper, then a sprinkle of twinkling
+  // stars. Two quick snuffles and stars when you pet it; a snuffle and two more when you milk it for Opaline Milk; soft
+  // munching as it eats; two slow, low snuffles, twice, when it's hungry; a snuffle once it's fed and petted; and now
+  // and then a snuffle of its own while you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function bisonSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = nbuf.getChannelData(0); for (var ni = 0; ni < nd.length; ni++) nd[ni] = Math.random() * 2 - 1;
+    function env() { var g = ac.createGain(); g.gain.value = 0; return g; }   // (silent until told otherwise, so nothing clicks as it starts)
+    var SNOUT = [-2.23142, 2.49093, -1.98929, 1.28008, -0.73534, 0.31941, -0.16405, 0.30127, -0.6302, 0.61933, -0.33353, 0.16593, -0.2846, 0.30495, -0.20078, 0.16008, -0.08104, 0.03997];   // (how a real snout rings, measured from a real snort)
+    function snuffle(at, scale, rate) {                                // (one snuffle; scale below 1 is slower and deeper. Returns how long it takes)
+      var SR = 24000, len = 0.12, n = Math.floor(SR * len), buf = ac.createBuffer(1, n, SR * scale), d = buf.getChannelData(0), y = new Float64Array(SNOUT.length), next = 0;
+      for (var i = 0; i < n; i++) { var t = i / n, e = (Math.random() - 0.5) * 0.06;
+        if (i >= next) { e += 0.5 + Math.random() * 0.5; next = i + SR / rate * (0.92 + Math.random() * 0.16); }   // (the next flap of the nose)
+        var v = e; for (var k = 0; k < SNOUT.length; k++) v -= SNOUT[k] * y[k];
+        for (var k2 = SNOUT.length - 1; k2 > 0; k2--) y[k2] = y[k2 - 1]; y[0] = v;
+        d[i] = v * (t < 0.08 ? t / 0.08 : t < 0.55 ? 1 : Math.pow(1 - (t - 0.55) / 0.45, 1.5)) * 0.02; }
+      var s = ac.createBufferSource(), hp = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 90 * scale; g.gain.value = 1.8;
+      s.connect(hp); hp.connect(g); g.connect(out); s.start(now + at);
+      return len / scale;
+    }
+    var STARS = [1568, 1760, 2093, 2349, 2637, 3136, 3520];
+    function twinkle(at, n, vol) {                                     // (a few tiny twinkles of starlight)
+      for (var j = 0; j < n; j++) { var hz = STARS[Math.floor(Math.random() * STARS.length)], t0 = now + at + j * 0.08 + Math.random() * 0.03;
+        [1, 2.76, 5.4].forEach(function (m, i) { var o = ac.createOscillator(), g = env(); o.type = 'sine'; o.frequency.value = hz * m;
+          g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * [1, 0.3, 0.12][i], t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6 * [1, 0.5, 0.3][i]);
+          o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.62); }); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = env(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    function V(at, m) {                                                // (a snuffle: happy is two quick ones, sad is two slow, low ones)
+      if (m < 0) { var a = snuffle(at, 0.8, 40); snuffle(at + a + 0.25, 0.76, 38); }
+      else if (m > 0) { var b = snuffle(at, 0.9, 50); snuffle(at + b + 0.1, 0.95, 54); }
+      else snuffle(at, 0.9, 50);
+    }
+    if (kind === 'pet') { V(0, 1); twinkle(0.5, 3, 0.018); }
+    else if (kind === 'egg') { V(0, 0); V(0.75, 1); twinkle(1.0, 4, 0.016); }
+    else if (kind === 'content') { V(0, 0); twinkle(0.3, 2, 0.016); }
+    else if (kind === 'hungry') { V(0, -1); V(1.0, -1); }
+    else if (kind === 'eat') munching(4, 0.04);
+    else if (kind === 'chirp') { V(0, Math.random() < 0.65 ? 0 : 1); if (Math.random() < 0.5) twinkle(0.35, 2, 0.016); }
+  }
+  nocturraAction = (function (base) {                                  // (looking after a Nyxalia: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      bisonSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be milked: no pail, or a full bag)
+      return r;
+    };
+  })(nocturraAction);
+
+  // ===== Amarys sounds =====
+  // An Amarys sneezes like a real little turtle,
   // built from a real turtle's sneeze: a faint, squeaky in-breath around 1,300 Hz, then a bright little "tchoo!", a
   // puff of breath about a tenth of a second long with a tiny squeak riding on it that rises and falls, then a sprinkle
   // of sparkles. A sneeze and sparkles when you pet it; a sneeze and a quick second one when you pick its Starbloom;
@@ -3992,7 +4047,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort' || g.kind === 'bison')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
