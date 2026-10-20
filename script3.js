@@ -5827,8 +5827,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       pg2.rotateZ((pj + pr2 * 0.5) / 22 * Math.PI * 2 + (springHash(pj * 7.1) - 0.5) * 0.08); pg2.translate(0, 0, -0.004 - pr2 * 0.01); sunPetals.push(pg2);
     }
     var rimGeo = new THREE.TorusGeometry(0.118, 0.012, 6, 40);
-    var sunBackGeo = new THREE.SphereGeometry(0.13, 28, 6, 0, Math.PI * 2, 0, Math.PI * 0.32);   // (the back of the head: a shallow green dome, so it isn't hollow seen from behind)
+    var sunBackGeo = new THREE.SphereGeometry(0.13, 28, 6, 0, Math.PI * 2, 0, Math.PI * 0.32);   // (the back of the head: a shallow dome of brown seeds too, so the middle is brown from every side)
     sunBackGeo.scale(1, 0.45, 1); sunBackGeo.rotateX(-Math.PI / 2); sunBackGeo.translate(0, 0, 0.027);
+    for (var bv = 0, bp = sunBackGeo.attributes.position, buv = sunBackGeo.attributes.uv; bv < bp.count; bv++) buv.setXY(bv, 0.5 - bp.getX(bv) / 0.24, 0.5 + bp.getY(bv) / 0.24);   // (the seed spiral laid flat across it)
     var sunPetalGeo = mergeSimple(sunPetals);
     var bract = new THREE.Shape(); bract.moveTo(0, 0); bract.quadraticCurveTo(0.02, 0.04, 0, 0.075); bract.quadraticCurveTo(-0.02, 0.04, 0, 0);
     var bracts = []; for (var bi = 0; bi < 14; bi++) { var bg = new THREE.ShapeGeometry(bract, 3); bg.translate(0, 0.07, 0); bg.rotateX(-0.6); bg.rotateZ(bi / 14 * Math.PI * 2 + 0.11); bg.translate(0, 0, -0.03); bracts.push(bg); }
@@ -5910,7 +5911,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     summerFlowerMesh = [
       { geo: thickGeo, m: mStem, list: suns, part: 'stem' }, { geo: stemGeo, m: mStem, list: thin, part: 'stem' },
       { geo: sLeafGeo, m: mSunLeaf, list: SUMMER_LEAVES, part: 'sunleaf' },
-      { geo: discGeo, m: mDisc, list: suns, part: 'disc' }, { geo: rimGeo, m: mHead, list: suns, part: 'rim', col: function () { return 0x6a4a1c; } }, { geo: sunBackGeo, m: mSunLeaf, list: suns, part: 'sunback' }, { geo: bractGeo, m: mSunLeaf, list: suns, part: 'bracts' }, { geo: sunPetalGeo, m: mHead, list: suns, part: 'sunpetals', col: function (f) { return f.v < 0.7 ? 0xf6c428 : 0xf0a020; } },
+      { geo: discGeo, m: mDisc, list: suns, part: 'disc' }, { geo: rimGeo, m: mHead, list: suns, part: 'rim', col: function () { return 0x6a4a1c; } }, { geo: sunBackGeo, m: mDisc, list: suns, part: 'sunback' }, { geo: bractGeo, m: mSunLeaf, list: suns, part: 'bracts' }, { geo: sunPetalGeo, m: mHead, list: suns, part: 'sunpetals', col: function (f) { return f.v < 0.7 ? 0xf6c428 : 0xf0a020; } },
       { geo: poppyGeo, m: mPoppy, list: poppyOpen, part: 'poppy', col: function (f) { return f.v < 0.55 ? 0xe8281c : f.v < 0.7 ? 0xf0402a : 0xf26a3a; } },
       { geo: poppyPodGeo, m: mHead, list: poppyOpen, part: 'poppypod', col: function () { return 0x8aa86a; } }, { geo: poppyStamGeo, m: mHead, list: poppyOpen, part: 'poppystam', col: function () { return 0x2a1e26; } },
       { geo: poppyBudGeo, m: mStem, list: poppyBuds, part: 'poppybud' },
