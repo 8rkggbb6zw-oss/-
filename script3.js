@@ -1227,8 +1227,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // holding (chopping, mining, trimming, tilling, planting, placing or eating it), and holding it keeps the axe,
   // pickaxe or trimmers going. E does nothing once neither is E, and Space then only flies you up on your broom. The
   // Interact button shows the Interact key, and tapping it still does everything
-  var interactKey = null, useKey = null, upKey = null, downKey = null, rightKey = null, leftKey = null;
-  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; downKey = localStorage.getItem('everdawn-move-down') || null; rightKey = localStorage.getItem('everdawn-move-right') || null; leftKey = localStorage.getItem('everdawn-move-left') || null; } catch (err) {}
+  var interactKey = null, useKey = null, upKey = null, downKey = null, rightKey = null, leftKey = null, spellKey = null;
+  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; downKey = localStorage.getItem('everdawn-move-down') || null; rightKey = localStorage.getItem('everdawn-move-right') || null; leftKey = localStorage.getItem('everdawn-move-left') || null; spellKey = localStorage.getItem('everdawn-spell-key') || null; } catch (err) {}
   function isInteractKey(code) { return interactKey ? code === interactKey : code === 'KeyE' || code === 'Space'; }
   function isUseKey(code) { return useKey ? code === useKey : code === 'KeyE' || code === 'Space'; }
   function showInteractKey() { var k = ui.btnAct.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
@@ -1245,12 +1245,17 @@ EVERDAWN_PARTS.push(function (THREE) {
   function downHeld() { return downKey ? !!keys[downKey] : !!(keys.KeyS || keys.ArrowDown); }
   function rightHeld() { return rightKey ? !!keys[rightKey] : !!(keys.KeyD || keys.ArrowRight); }
   function leftHeld() { return leftKey ? !!keys[leftKey] : !!(keys.KeyA || keys.ArrowLeft); }
+  // Spell Casting is Q to start; on the Mouse & Keyboard page it can be a key of your own instead (then Q does nothing).
+  // The Dawn Bloom button shows whichever key it is
+  function showSpellKey() { var k = ui.btnSpell.querySelector('kbd'); if (k) k.textContent = spellKey ? everdawnKeyName(spellKey) : 'Q'; }
+  window.everdawnSetSpellKey = function (code) { spellKey = code || null; keys = {}; showSpellKey(); };
+  showSpellKey();
   showInteractKey();
   var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
   heldItem = (function (base) { return function () { return handsFree ? null : base.apply(this, arguments); }; })(heldItem);
   window.addEventListener('keydown', function (e) {
     var isI = isInteractKey(e.code), isU = isUseKey(e.code);
-    if (GAME_KEYS.indexOf(e.code) === -1 && !isI && !isU && e.code !== upKey && e.code !== downKey && e.code !== rightKey && e.code !== leftKey) return;
+    if (GAME_KEYS.indexOf(e.code) === -1 && !isI && !isU && e.code !== upKey && e.code !== downKey && e.code !== rightKey && e.code !== leftKey && e.code !== spellKey) return;
     e.preventDefault();
     keys[e.code] = true;
     walkTarget = null;
@@ -1258,7 +1263,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (isI && isU) interact();                                        // (the same key: one press does whichever fits, as always)
     else if (isI) { handsFree = true; try { interact(); } finally { handsFree = false; } }
     else if (isU && heldItem()) interact();                            // (Use Tool/Place Item: only when you're holding something)
-    if (e.code === 'KeyQ') castSpell();
+    if (spellKey ? e.code === spellKey : e.code === 'KeyQ') castSpell();
   });
   updateTrees = (function (base) {                                     // (holding a key keeps a tool going only if it's the Use Tool/Place Item key)
     return function (dt) {
@@ -8756,11 +8761,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, and move you about)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, and cast spells)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
