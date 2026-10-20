@@ -6524,18 +6524,20 @@ EVERDAWN_PARTS.push(function (THREE) {
   // light goes cool and silvery, and a few snowmen stand about in their scarves and hats
   function winterNow() { return seasonOf(state.day) === 3; }
   // ===== snow-laden pines =====
-  var winterNeedleTex = paintTexture(256, 128, function (g) {          // (pine needles, with snow heaped along the branch and lying over them)
-    for (var i = 0; i < 420; i++) {
-      var t = Math.random(), x = 6 + t * 240, y = 64 + t * t * 14, reach = (44 - t * 26) * (0.5 + Math.random() * 0.5), side = Math.random() < 0.5 ? -1 : 1;
-      g.strokeStyle = 'hsl(' + (140 + Math.random() * 20) + ',' + (24 + Math.random() * 14) + '%,' + (20 + Math.random() * 16) + '%)'; g.lineWidth = 1.6;
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 6 + Math.random() * 12, y + side * reach); g.stroke();
+  var winterNeedleTex = paintTexture(256, 128, function (g) {          // (the snow lying on a pine spray: soft, lumpy cushions along the branch, thinning toward the tips, with needle tips poking out at the edges)
+    for (var pass = 0; pass < 2; pass++) for (var k = 0; k < 90; k++) {   // (a shadowy blue-grey base, then bright, rounded lumps over it)
+      var t = Math.pow(Math.random(), 0.8), x = 6 + t * 232, y = 64 + t * t * 14 + (Math.random() - 0.5) * (46 - t * 30), r = (19 - t * 11) * (0.6 + Math.random() * 0.5) * (pass ? 1 : 1.15);
+      var gr = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+      if (pass) { gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, '#f3f7fe'); gr.addColorStop(1, '#d6e1f0'); } else { gr.addColorStop(0, '#cbd8ea'); gr.addColorStop(1, '#b6c6dc'); }
+      g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r, r * 0.8, Math.random() * 3, 0, Math.PI * 2); g.fill();
     }
-    g.strokeStyle = '#4a3828'; g.lineWidth = 3; g.beginPath(); g.moveTo(2, 64); g.quadraticCurveTo(128, 68, 252, 78); g.stroke();
-    for (var k = 0; k < 70; k++) {                                     // (soft heaps of snow, thickest along the branch, thinning toward the tips)
-      var t2 = Math.random(), x3 = 8 + t2 * 236, y3 = 64 + t2 * t2 * 14 + (Math.random() - 0.5) * (50 - t2 * 30), r = (16 - t2 * 9) * (0.6 + Math.random() * 0.5);
-      var gr = g.createRadialGradient(x3 - r * 0.3, y3 - r * 0.3, 1, x3, y3, r); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.7, '#eef4fc'); gr.addColorStop(1, 'rgba(200,218,240,0.85)');
-      g.fillStyle = gr; g.beginPath(); g.ellipse(x3, y3, r, r * 0.75, 0, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'destination-out'; g.lineWidth = 1.8;  // (needle tips poking out through the edges of the snow)
+    for (var i = 0; i < 260; i++) {
+      var t2 = Math.random(), x2 = 6 + t2 * 240, y2 = 64 + t2 * t2 * 14, reach = (44 - t2 * 26) * (0.5 + Math.random() * 0.5), side = Math.random() < 0.5 ? -1 : 1, dx = 6 + Math.random() * 12;
+      g.beginPath(); g.moveTo(x2 + dx * 0.55, y2 + side * reach * 0.55); g.lineTo(x2 + dx, y2 + side * reach); g.stroke();
     }
+    g.globalCompositeOperation = 'source-atop'; g.fillStyle = '#ffffff';   // (a few glints of sparkle)
+    for (var sp = 0; sp < 60; sp++) g.fillRect(Math.random() * 256, Math.random() * 128, 1, 1);
   });
   var winterSnowOn = { value: 0 };                                    // (snow lying along the tops of the trunks, branches and roots: wherever the bark faces the sky)
   [barkMat, pineBarkMat, rootMat, pineRootMat].forEach(function (m) {
@@ -6586,7 +6588,27 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     snowOnBlossom(blossomMat, false); snowOnBlossom(strandMat, true);
   })();
-  var winterGreenNeedle = needleBatch.material.map, winterShown = null;
+  // ===== snow lying on the pines =====
+  // In Winter snow lies on top of every pine spray, only on the side that faces the sky, so seen from below the
+  // branches are still green, and it can spill a little past the needles at the edges
+  (function () {
+    var m = needleBatch.material, before = m.onBeforeCompile;
+    m.onBeforeCompile = function (shader) {
+      if (before) before.call(this, shader);
+      shader.uniforms.uSnowOn = winterSnowOn; shader.uniforms.uSnowMap = { value: winterNeedleTex };
+      shader.vertexShader = 'varying float vSnowUp;\n' + shader.vertexShader.replace('gl_Position = projectionMatrix * mvPosition;', 'gl_Position = projectionMatrix * mvPosition;\n' +
+        'vSnowUp = normalize(cross((modelMatrix * instanceMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz, (modelMatrix * instanceMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz)).y;');   // (how much this spray's top faces the sky)
+      shader.fragmentShader = 'uniform float uSnowOn;\nuniform sampler2D uSnowMap;\nvarying float vSnowUp;\n' + shader.fragmentShader.replace('#include <alphamap_fragment>', [
+        'vec4 snow = texture2D(uSnowMap, vUv);',
+        'float snowAmt = snow.a * uSnowOn * smoothstep(0.05, 0.35, gl_FrontFacing ? vSnowUp : -vSnowUp);',   // (only on the side we see if it's the top)
+        'diffuseColor.rgb = mix(diffuseColor.rgb, snow.rgb, snowAmt);',
+        'diffuseColor.a = max(diffuseColor.a, snowAmt);',
+        '#include <alphamap_fragment>'].join('\n'));
+    };
+    m.customProgramCacheKey = function () { return 'pineSnow'; };
+    m.needsUpdate = true;
+  })();
+  var winterShown = null;
   // ===== a snowy island: the ground and the grass =====
   var winterSnowTex, winterSnowBump;
   (function () {                                                       // (snow: built from layers of soft, seamless noise, so it has gentle drifts with blue shadows
@@ -6812,7 +6834,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (winterShown !== on) {                                          // (the snow comes, or melts away)
       winterShown = on;
       leafBatch.visible = !on; winterSnowOn.value = on ? 1 : 0;                                         // (the broadleaf trees and bushes lose their leaves; the pines keep theirs)
-      needleBatch.material.map = on ? winterNeedleTex : winterGreenNeedle; needleBatch.material.needsUpdate = true;
       terrain.material.map = on ? winterSnowTex : winterGround.map; terrain.material.bumpMap = on ? winterSnowBump : winterGround.bump; terrain.material.bumpScale = on ? 0.06 : winterGround.bumpScale; terrain.material.roughness = on ? 0.82 : winterGround.rough; terrain.material.vertexColors = !on; terrain.material.needsUpdate = true;
       grassMat.vertexColors = !on; grassMat.needsUpdate = true;
       winterBury(on); if (on) { winterRoofPatch(); winterRoofT = state.time; }
