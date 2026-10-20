@@ -6772,6 +6772,34 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   // ===== cool, silvery winter light =====
   var WINTER_SKY = new THREE.Color(0xc4d6ea), WINTER_SUN = new THREE.Color(0xdde8ff);
+  // ===== ice round the pond's edge in winter =====
+  // In Winter a ring of ice creeps in from the pond's shore, about a third of the way to the middle, with a wobbly
+  // edge, frosty white patches, faint cracks and a bright rim where it meets the open water; the middle stays open,
+  // rippling and blue. (Each point on the water knows how far out from the middle it is, 0 to 1 at the shore)
+  (function () {
+    var RINGS = 30, SEG = 128, n = water.geometry.attributes.position.count, ring = new Float32Array(n);
+    for (var i = 1; i < n; i++) ring[i] = (Math.floor((i - 1) / SEG) + 1) / RINGS;
+    water.geometry.setAttribute('ring', new THREE.Float32BufferAttribute(ring, 1));
+    waterUniforms.uIce = { value: 0 };
+    waterMat.vertexShader = waterMat.vertexShader.replace('varying float vDepth;', 'varying float vDepth;\nattribute float ring;\nvarying float vRing;').replace('  vDepth = depth;', '  vDepth = depth;\n  vRing = ring;');
+    waterMat.fragmentShader = waterMat.fragmentShader.replace('varying float vDepth;', 'varying float vDepth;\nvarying float vRing;\nuniform float uIce;\nfloat iceN(vec2 q) { return 0.5 * sin(q.x * 1.3 + sin(q.y * 0.7) * 2.0) + 0.35 * sin(q.y * 1.7 + sin(q.x * 0.9) * 2.3) + 0.15 * sin((q.x - q.y) * 2.9 + sin(q.x * 1.1)); }').replace('  gl_FragColor = vec4(col, alpha);', [
+      '  if (uIce > 0.0) {',
+      '    float wob = 0.05 * sin(p.x * 1.7 + p.y * 0.9) + 0.03 * sin(p.y * 3.7 - p.x * 2.9) + 0.015 * sin(p.x * 6.1 - p.y * 5.3);',   // (a wobbly, natural edge)
+      '    float e = vRing + wob - (1.0 - 0.36 * uIce);',
+      '    float iceAmt = smoothstep(0.0, 0.025, e);',
+      '    float fr = 0.5 + 0.5 * iceN(p * 2.3 + 7.0);',   // (soft, frosty patches)
+      '    float crack = smoothstep(0.05, 0.0, abs(iceN(p * 0.9))) * 0.8 + smoothstep(0.04, 0.0, abs(iceN(p * 1.7 + 3.1))) * 0.5;',   // (a few faint cracks wandering across it)
+      '    vec3 ice = mix(vec3(0.74, 0.86, 0.93), vec3(0.95, 0.98, 1.0), fr * 0.5 + smoothstep(0.0, 0.25, e) * 0.35);',
+      '    ice = mix(ice, vec3(0.58, 0.74, 0.86), clamp(crack, 0.0, 1.0) * 0.45);',
+      '    float ifres = 0.04 + 0.96 * pow(1.0 - max(v.y, 0.0), 5.0);',
+      '    ice = mix(ice, uSky, ifres * 0.3) + uSunColor * pow(max(dot(vec3(0.0, 1.0, 0.0), normalize(uSunDir + v)), 0.0), 60.0) * 0.35;',
+      '    ice *= mix(1.0, 0.6, uNight);',
+      '    float rim = smoothstep(0.03, 0.0, abs(e - 0.012));',   // (the bright edge of the ice)
+      '    col = mix(col, ice, iceAmt); alpha = mix(alpha, 0.96, iceAmt);',
+      '    col = mix(col, vec3(0.97, 0.99, 1.0) * mix(1.0, 0.6, uNight), rim * 0.5); alpha = max(alpha, rim * 0.85);',
+      '  }',
+      '  gl_FragColor = vec4(col, alpha);'].join('\n'));
+  })();
   var winterBaseSky = updateSky;
   updateSky = function () {
     var night = winterBaseSky.apply(this, arguments);
@@ -6790,6 +6818,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       winterBury(on); if (on) { winterRoofPatch(); winterRoofT = state.time; }
       winterMenGroup.visible = on;
     }
+    waterUniforms.uIce.value += ((on ? 1 : 0) - waterUniforms.uIce.value) * Math.min(1, dt * 0.5);   // (the ice creeps in, or melts back, over a few seconds)
     if (on) {
       if (state.time - winterRoofT > 4) { winterRoofT = state.time; winterRoofPatch(); }   // (and on anything built since, like a new coop or barn)
       grassMat.color.copy(WINTER_GRASS); terrain.material.color.setRGB(1, 1, 1);
