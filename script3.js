@@ -7251,7 +7251,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { setMove(localStorage.getItem(MOVE_KEY)); } catch (err) {}
   window.everdawnSetMove = function (type) { setMove(type); try { localStorage.setItem(MOVE_KEY, type === 'jog' ? 'jog' : 'walk'); } catch (err) {} };
 
-  // ---------- Sprinting: hold Shift; and Strafe: hold Ctrl ----------
+  // ---------- Sprinting: hold Shift; and Strafe: hold C ----------
   // Hold Shift while you walk or jog to sprint: about two-thirds faster again, with quicker steps (and footsteps) to
   // match. Not on your broom or in the boat. On the Mouse & Keyboard page Sprint can be a key of your own instead (then
   // Shift doesn't sprint)
@@ -7260,11 +7260,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetSprintKey = function (code) { sprintKey = code || null; sprintHeld = false; };
   window.addEventListener('keydown', function (e) { if (isSprintKey(e.code)) sprintHeld = true; });
   window.addEventListener('keyup', function (e) { if (isSprintKey(e.code)) sprintHeld = false; });
-  // Strafe: hold Ctrl to slow right down (to a bit under half your pace, with slower steps) for precise control, to
-  // line yourself up just where you want to be. It wins over sprinting if you hold both
+  // Strafe: hold C to slow right down (to a bit under half your pace, with slower steps) for precise control, to line
+  // yourself up just where you want to be. It wins over sprinting if you hold both
   var strafeHeld = false;
-  window.addEventListener('keydown', function (e) { if (e.code === 'ControlLeft' || e.code === 'ControlRight') strafeHeld = true; });
-  window.addEventListener('keyup', function (e) { if (e.code === 'ControlLeft' || e.code === 'ControlRight') strafeHeld = false; });
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyC') strafeHeld = true; });
+  window.addEventListener('keyup', function (e) { if (e.code === 'KeyC') strafeHeld = false; });
   window.addEventListener('blur', function () { sprintHeld = false; strafeHeld = false; });
   updatePlayer = (function (base) {
     return function (dt) {
