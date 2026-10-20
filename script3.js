@@ -2,6 +2,54 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
+  // ===== Prismara sounds =====
+  // (New animals' sounds start here, at the top of script3.js, where there's room; the earlier ones, and petSound,
+  // which plays the right voice for each kind, are near the end of script2.js.) A Prismara bleats like a real lamb,
+  // built from a real lamb's bleat: a smooth, high voice around 375 Hz, rising a touch and falling at the end, whose
+  // loudness flutters about 14 times a second (that gentle "eh-eh-eh"), ringing through a lamb's throat (its shape
+  // measured from the real bleat). A happy bleat that lifts at the end when you pet it; a short bleat and a happy one
+  // when you shear its Prismsilk; soft munching as it eats; two slow, falling bleats when it's hungry; a short bleat
+  // once it's fed and petted; and now and then a bleat of its own while you're in the barn. They're pet sounds, so
+  // they follow Pet Sound in Settings
+  function prismSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var THROAT = [-0.61336, 1.07034, -0.54169, 0.59115, -0.40563, 0.64813, -0.26226, 0.74609, -0.05792, 0.62427, -0.05902, 0.33439, -0.15369, 0.23972, -0.07307, 0.2198, 0.21648, 0.11512, 0.11492, 0.06558];   // (how a real lamb's throat rings, measured from a real bleat)
+    function lerp(pts, t) { for (var i = 1; i < pts.length; i++) if (t <= pts[i][0]) { var a = pts[i - 1], b = pts[i]; return a[1] + (b[1] - a[1]) * (t - a[0]) / Math.max(1e-6, b[0] - a[0]); } return pts[pts.length - 1][1]; }
+    function bleat(at, hz, len, pitch) {                               // (one bleat; pitch: [[time 0..1, x hz], ...]. Returns how long it lasts)
+      var SR = 24000, n = Math.floor(SR * len), buf = ac.createBuffer(1, n, SR), d = buf.getChannelData(0), y = new Float64Array(THROAT.length), ph = 0, fph = 0;
+      for (var i = 0; i < n; i++) { var t = i / n, f = hz * lerp(pitch, t) * (1 + 0.008 * Math.sin(2 * Math.PI * 12.5 * i / SR));
+        ph += f * (1 + (Math.random() - 0.5) * 0.01) / SR; fph += 14 * (1 + (Math.random() - 0.5) * 0.1) / SR;
+        var e = (Math.random() - 0.5) * 0.12; if (ph >= 1) { ph -= 1; e += 1; }   // (a sharp pulse each time the throat snaps shut, and a little breath)
+        var v = e; for (var k = 0; k < THROAT.length; k++) v -= THROAT[k] * y[k];
+        for (var k2 = THROAT.length - 1; k2 > 0; k2--) y[k2] = y[k2 - 1]; y[0] = v;
+        d[i] = v * (t < 0.1 ? t / 0.1 : t < 0.82 ? 1 : Math.pow((1 - t) / 0.18, 1.5)) * (1 - 0.6 * (0.5 - 0.5 * Math.cos(2 * Math.PI * fph))) * 0.09; }   // (swelling, fluttering and fading)
+      var s = ac.createBufferSource(), hp = ac.createBiquadFilter(); s.buffer = buf; hp.type = 'highpass'; hp.frequency.value = 500; hp.Q.value = 0.9;
+      s.connect(hp); hp.connect(out); s.start(now + at);
+      return len;
+    }
+    function munching(n, vol) {
+      var buf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), d = buf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = buf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    var hz = 372;
+    var PB = [[0, 0.97], [0.6, 1.0], [0.88, 1.02], [1, 0.96]], PH = [[0, 0.92], [0.3, 0.99], [0.8, 1.04], [1, 1.1]], PS = [[0, 0.98], [0.4, 0.96], [1, 0.8]], PQ = [[0, 0.93], [0.3, 1.0], [1, 0.97]];   // (an ordinary bleat, a happy one, a sad one, a short one)
+    if (kind === 'pet') bleat(0, hz, 0.585, PH);
+    else if (kind === 'egg') { var a = bleat(0, hz, 0.312, PQ); bleat(a + 0.1, hz * 1.06, 0.585, PH); }
+    else if (kind === 'content') bleat(0, hz * 1.03, 0.351, PQ);
+    else if (kind === 'hungry') { var b = bleat(0, hz, 0.663, PS); bleat(b + 0.18, hz * 0.95, 0.741, PS); }
+    else if (kind === 'eat') munching(4, 0.06);
+    else if (kind === 'chirp') { var long = Math.random() < 0.5; bleat(0, hz * (0.97 + Math.random() * 0.06), long ? 0.585 : 0.351, long ? PB : PQ); }
+  }
+  prismaraAction = (function (base) {                                  // (looking after a Prismara: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      prismSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be sheared: no shears, or a full bag)
+      return r;
+    };
+  })(prismaraAction);
+
   // ---------- Fluff & Feather's counter: step up to it inside the barn to buy hay (and, one day, animals) ----------
   var HAY_COST = 12;                                                   // Star Coins a bundle (it sells back for less)
   ITEMS.hay.info = 'A bundle of sweet hay. Buy it at Fluff & Feather, or find it trimming bushes (they have a 50% chance of dropping some).';
@@ -3697,7 +3745,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble')) {   // (a Mooncalf, an Auroraram, a Zephyra, a Lunastra or a Sirenna makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
