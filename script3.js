@@ -2,9 +2,90 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
+  // ===== Nymphalia sounds =====
+  // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
+  // plays the right voice for each kind, are near the end of script2.js.) A Nymphalia burbles like a gentle water spirit: soft, bubbly rumbles, like a big friendly creature's voice heard
+  // through pond water (a wavering, rumbly voice, muffled and wobbling as if through water, with bubbles rising), with
+  // water droplets plinking into the pond, all in a dreamy echo. A happy burble and droplets when you pet it; two
+  // burbles and more droplets when you milk it; soft munching as it eats; two lower, slower burbles when it's hungry; a
+  // little burble and a couple of droplets once it's fed and petted; and now and then a burble of its own while you're
+  // in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function lotusSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = nbuf.getChannelData(0); for (var ni = 0; ni < nd.length; ni++) nd[ni] = Math.random() * 2 - 1;
+    var PLAN = [[0, 0.2, 0.95], [0.5, 0.5, 1.08], [1, 0.2, 0.9]];      // (how open its mouth is, and its pitch, through a burble: [time 0..1, open 0..1, x hz])
+    function lerp(t, k) { for (var i = 1; i < PLAN.length; i++) if (t <= PLAN[i][0]) { var a = PLAN[i - 1], b = PLAN[i], u = (t - a[0]) / (b[0] - a[0]); return a[k] + (b[k] - a[k]) * u; } return PLAN[PLAN.length - 1][k]; }
+    function echo() {                                                  // (a soft, dreamy echo)
+      var c = ac.createConvolver(), n = Math.floor(ac.sampleRate * 1.6), ir = ac.createBuffer(2, n, ac.sampleRate);
+      for (var ch = 0; ch < 2; ch++) { var d = ir.getChannelData(ch); for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+      c.buffer = ir; var w = ac.createGain(), inp = ac.createGain(); w.gain.value = 0.45; inp.connect(out); inp.connect(c); c.connect(w); w.connect(out); return inp;
+    }
+    var pond = echo();
+    function voice(at, hz, len, vol, dest) {                           // (a big, gentle creature's rumbly voice: a throat buzzing pulse by pulse, wavering 11 times a second, through its mouth and nose)
+      var sr = ac.sampleRate, n = Math.floor(sr * len), buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0), ph = 0, amp = 1, jit = 1, odd = false, prev = 0, drift = 0;
+      for (var i = 0; i < n; i++) { var t = i / n, qv = Math.sin(2 * Math.PI * 11 * i / sr); drift += (Math.random() - 0.5) * 0.002; drift *= 0.999;
+        ph += hz * lerp(t, 2) * jit * (1 + drift + 0.05 * qv) / sr;
+        if (ph >= 1) { ph -= 1; jit = 1 + (Math.random() - 0.5) * 0.03; odd = !odd; amp = (1 + (Math.random() - 0.5) * 0.15) * (odd ? 0.7 : 1); }
+        var g = ph < 0.45 ? 0.5 * (1 - Math.cos(Math.PI * ph / 0.45)) : ph < 0.62 ? Math.cos(Math.PI / 2 * (ph - 0.45) / 0.17) : 0;
+        var v = g * amp * (1 - 0.6 * (0.5 + 0.5 * qv)), dv = v - prev; prev = v; d[i] = dv * sr * 0.00075 + (Math.random() - 0.5) * 0.4 * g; }   // (the same strength at any sample rate)
+      var t0 = now + at, s = ac.createBufferSource(), mouth = ac.createGain(), nose = ac.createBiquadFilter(), noseG = ac.createGain(), env = ac.createGain(), sp = 343;   // (a big throat, 25cm)
+      s.buffer = buf;
+      [0, 1, 2, 3, 4].forEach(function (k) {                           // (the throat's ringing notes, rising as the mouth opens)
+        var open = sp * (2 * k + 1) * (k === 0 ? 1.7 : k === 1 ? 1.12 : 1), shut = sp * (2 * k + 1) * 0.8;
+        var f = ac.createBiquadFilter(), fg = ac.createGain(); f.type = 'bandpass'; f.Q.value = Math.max(2.5, Math.min(14, open / 80)); fg.gain.value = [1, 0.75, 0.5, 0.32, 0.2][k] * 3;
+        for (var j = 0; j <= 24; j++) { var tt = j / 24, fr = shut + (open - shut) * lerp(tt, 1); if (j === 0) f.frequency.setValueAtTime(fr, t0); else f.frequency.linearRampToValueAtTime(fr, t0 + len * tt); }
+        s.connect(f); f.connect(fg); fg.connect(mouth);
+      });
+      nose.type = 'lowpass'; nose.frequency.value = 350; nose.Q.value = 2; s.connect(nose); nose.connect(noseG);
+      for (var j = 0; j <= 24; j++) { var tt = j / 24, o = lerp(tt, 1), at2 = t0 + len * tt;
+        if (j === 0) { mouth.gain.setValueAtTime(0.05 + o, at2); noseG.gain.setValueAtTime(2.2 * (1 - o * 0.75), at2); } else { mouth.gain.linearRampToValueAtTime(0.05 + o, at2); noseG.gain.linearRampToValueAtTime(2.2 * (1 - o * 0.75), at2); } }
+      mouth.connect(env); noseG.connect(env);
+      env.gain.setValueAtTime(0.0001, t0); env.gain.linearRampToValueAtTime(vol, t0 + Math.min(0.12, len * 0.15)); env.gain.setValueAtTime(vol, t0 + len * 0.75); env.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      env.connect(dest); s.start(t0);
+    }
+    function bubbles(at, n, vol) {                                     // (little bubbles rising and blipping)
+      for (var i = 0; i < n; i++) { var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + i * 0.07 + Math.random() * 0.05, f = 500 + Math.random() * 700; o.type = 'sine';
+        o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 2.6, t0 + 0.06);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+        o.connect(g); g.connect(pond); o.start(t0); o.stop(t0 + 0.08); }
+    }
+    function burble(at, hz, len) {                                     // (a bubbly, burbling rumble: the voice muffled and wobbling as if through water, and bubbles)
+      var f = ac.createBiquadFilter(), w = ac.createOscillator(), wg = ac.createGain(), t0 = now + at; f.type = 'lowpass'; f.frequency.value = 900; f.Q.value = 6;
+      w.frequency.value = 9; wg.gain.value = 500; w.connect(wg); wg.connect(f.frequency); w.start(t0); w.stop(t0 + len + 0.1); f.connect(pond);
+      voice(at, hz, len, 0.0486, f); bubbles(at + len * 0.3, 3, 0.0284);
+    }
+    function drips(at, n, vol) {                                       // (water droplets plinking into the pond)
+      for (var i = 0; i < n; i++) { var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + i * 0.14 + Math.random() * 0.06, f = 900 + Math.random() * 900; o.type = 'sine';
+        o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 2.2, t0 + 0.04);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+        o.connect(g); g.connect(pond); o.start(t0); o.stop(t0 + 0.2); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    function sound(at, mood) {                                         // (mood: 1 happy, 0 just chatting, -1 sad)
+      if (mood < 0) { burble(at, 150, 0.6); burble(at + 0.7, 135, 0.6); return; }
+      burble(at, mood > 0 ? 175 : 160, mood > 0 ? 0.55 : 0.4);
+    }
+    if (kind === 'pet') { sound(0, 1); drips(0.6, 3, 0.0324); }
+    else if (kind === 'egg') { sound(0, 0); sound(0.6, 1); drips(1.1, 3, 0.0324); }
+    else if (kind === 'content') { sound(0, 0); drips(0.45, 2, 0.0284); }
+    else if (kind === 'hungry') { sound(0, -1); sound(0.8, -1); }
+    else if (kind === 'eat') munching(4, 0.06);
+    else if (kind === 'chirp') { sound(0, Math.random() < 0.65 ? 0 : 1); if (Math.random() < 0.6) drips(0.45, 2, 0.0284); }
+  }
+  lotaraAction = (function (base) {                                    // (looking after a Nymphalia: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      lotusSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be milked: no pail, or a full bag)
+      return r;
+    };
+  })(lotaraAction);
+
   // ===== Prismara sounds =====
-  // (New animals' sounds start here, at the top of script3.js, where there's room; the earlier ones, and petSound,
-  // which plays the right voice for each kind, are near the end of script2.js.) A Prismara bleats like a real lamb,
+  // A Prismara bleats like a real lamb,
   // built from a real lamb's bleat: a smooth, high voice around 375 Hz, rising a touch and falling at the end, whose
   // loudness flutters about 14 times a second (that gentle "eh-eh-eh"), ringing through a lamb's throat (its shape
   // measured from the real bleat). A happy bleat that lifts at the end when you pet it; a short bleat and a happy one
@@ -3745,7 +3826,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
