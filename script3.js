@@ -2,9 +2,67 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ===== Lumora sounds =====
+  // ===== Amarys sounds =====
   // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
-  // plays the right voice for each kind, are near the end of script2.js.) A Lumora chirps like a real crested gecko,
+  // plays the right voice for each kind, are near the end of script2.js.) An Amarys sneezes like a real little turtle,
+  // built from a real turtle's sneeze: a faint, squeaky in-breath around 1,300 Hz, then a bright little "tchoo!", a
+  // puff of breath about a tenth of a second long with a tiny squeak riding on it that rises and falls, then a sprinkle
+  // of sparkles. A sneeze and sparkles when you pet it; a sneeze and a quick second one when you pick its Starbloom;
+  // soft munching as it eats; two little sad squeaks when it's hungry; a quick sneeze once it's fed and petted; and
+  // now and then a sneeze or a squeak of its own while you're in the barn. They're pet sounds, so they follow Pet
+  // Sound in Settings
+  function tortSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), nd = nbuf.getChannelData(0); for (var ni = 0; ni < nd.length; ni++) nd[ni] = Math.random() * 2 - 1;
+    function env() { var g = ac.createGain(); g.gain.value = 0; return g; }   // (silent until told otherwise, so nothing clicks as it starts)
+    function sneeze(at, size, noPre) {                                 // (one sneeze; size above 1 is a smaller turtle; noPre skips the in-breath. Returns how long it takes)
+      var t0 = now + at, s = size * 1.08, vol = 0.021;
+      if (!noPre) { var p = ac.createOscillator(), pg = env(); p.type = 'sine'; p.frequency.setValueAtTime(1320 * s, t0); p.frequency.linearRampToValueAtTime(1240 * s, t0 + 0.13);   // (the squeaky in-breath)
+        pg.gain.setValueAtTime(0.0001, t0); pg.gain.linearRampToValueAtTime(vol * 0.12, t0 + 0.03); pg.gain.setValueAtTime(vol * 0.12, t0 + 0.1); pg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.15);
+        p.connect(pg); pg.connect(out); p.start(t0); p.stop(t0 + 0.16); t0 += 0.15; }
+      var n = ac.createBufferSource(), hp = ac.createBiquadFilter(), g = env(); n.buffer = nbuf; hp.type = 'highpass'; hp.frequency.value = 3900 * s; hp.Q.value = 1;   // (the "tchoo": a bright puff of breath)
+      [[4200, 2.5, 0.9], [5200, 2.5, 0.6], [6600, 2, 0.8], [8400, 1.5, 1.4]].forEach(function (b) { var f = ac.createBiquadFilter(), fg = ac.createGain(); f.type = 'bandpass'; f.frequency.value = b[0] * s; f.Q.value = b[1]; fg.gain.value = b[2] * 2.2; n.connect(f); f.connect(fg); fg.connect(hp); });
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.008); g.gain.setValueAtTime(vol, t0 + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+      hp.connect(g); g.connect(out); n.start(t0, Math.random() * 0.5); n.stop(t0 + 0.13);
+      [[1, 1], [2, 0.2]].forEach(function (h) { var o = ac.createOscillator(), og = env(); o.type = 'sine';   // (the tiny squeak riding on it)
+        o.frequency.setValueAtTime(900 * s * h[0], t0); o.frequency.exponentialRampToValueAtTime(1550 * s * h[0], t0 + 0.04); o.frequency.exponentialRampToValueAtTime(1000 * s * h[0], t0 + 0.12);
+        og.gain.setValueAtTime(0.0001, t0); og.gain.linearRampToValueAtTime(vol * 0.16 * h[1], t0 + 0.01); og.gain.setValueAtTime(vol * 0.16 * h[1], t0 + 0.045); og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.13);
+        o.connect(og); og.connect(out); o.start(t0); o.stop(t0 + 0.14); });
+      return (noPre ? 0 : 0.15) + 0.13;
+    }
+    function squeak(at, size, down) {                                  // (just the little squeak on its own, sliding down when it's sad)
+      var o = ac.createOscillator(), g = env(), t0 = now + at, s = size * 1.08; o.type = 'sine'; o.frequency.setValueAtTime(1320 * s, t0); o.frequency.exponentialRampToValueAtTime((down ? 1000 : 1240) * s, t0 + 0.2);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.088, t0 + 0.03); g.gain.setValueAtTime(0.088, t0 + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.25);
+    }
+    function sparkles(at, len, vol) {                                  // (a tiny sprinkle of sparkles)
+      var n = Math.floor(len * 26);
+      for (var i = 0; i < n; i++) { var o = ac.createOscillator(), g = env(), t0 = now + at + i / 26 + Math.random() * 0.02; o.type = 'sine'; o.frequency.value = 3000 + Math.random() * 4500;
+        var v = vol * 2 * (1 - i / n * 0.6); g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(v, t0 + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.13); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = env(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    if (kind === 'pet') { sneeze(0, 1); sparkles(0.32, 0.35, 0.008); }
+    else if (kind === 'egg') { var a = sneeze(0, 1); sneeze(a + 0.15, 1.08, true); sparkles(0.6, 0.45, 0.008); }
+    else if (kind === 'content') { sneeze(0, 1.04, true); sparkles(0.15, 0.25, 0.007); }
+    else if (kind === 'hungry') { squeak(0, 1, true); squeak(0.45, 0.95, true); }
+    else if (kind === 'eat') munching(4, 0.06);
+    else if (kind === 'chirp') { if (Math.random() < 0.6) sneeze(0, 0.97 + Math.random() * 0.06, Math.random() < 0.5); else squeak(0, 1); if (Math.random() < 0.5) sparkles(0.3, 0.25, 0.007); }
+  }
+  grovellaAction = (function (base) {                                  // (looking after an Amarys: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      tortSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if the Starbloom couldn't be picked: a full bag)
+      return r;
+    };
+  })(grovellaAction);
+
+  // ===== Lumora sounds =====
+  // A Lumora chirps like a real crested gecko,
   // built from a real one's chirps: each a tiny "tsip" about 50 thousandths of a second long, holding high a moment
   // then dropping quickly from about 5,200 to 2,900 Hz and getting louder as it falls, with a fainter upper tone and a
   // breath of air, in soft little runs, each chirp a bit longer and louder than the last; then a tiny sprinkle of sunny
@@ -3934,7 +3992,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz' || g.kind === 'tort')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
