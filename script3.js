@@ -2,9 +2,63 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ===== Nymphalia sounds =====
+  // ===== Veilaris sounds =====
   // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
-  // plays the right voice for each kind, are near the end of script2.js.) A Nymphalia burbles like a gentle water spirit: soft, bubbly rumbles, like a big friendly creature's voice heard
+  // plays the right voice for each kind, are near the end of script2.js.) A Veilaris sings softly, like a spirit of
+  // the spring: a low, gliding "oooo", gently wavering, in a dreamy echo, with bubbles rising. A happy song that swoops
+  // up when you pet it; a little song and a happy one when you shear its Glimmerkelp; soft munching and a gulp of air
+  // as it eats; two low songs sinking away when it's hungry; a little song once it's fed and petted; and now and then
+  // a song of its own while you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function veilSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var c = ac.createConvolver(), n = Math.floor(ac.sampleRate * 1.6), ir = ac.createBuffer(2, n, ac.sampleRate), spring = ac.createGain(), wet = ac.createGain();   // (a soft, dreamy echo)
+    for (var ch = 0; ch < 2; ch++) { var d = ir.getChannelData(ch); for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); }
+    c.buffer = ir; wet.gain.value = 0.4; spring.connect(out); spring.connect(c); c.connect(wet); wet.connect(out);
+    function song(at, pts, len) {                                      // (a soft, gliding "oooo": pts are [time 0..1, hz] it glides through)
+      var o = ac.createOscillator(), o2 = ac.createOscillator(), g2 = ac.createGain(), v = ac.createOscillator(), vg = ac.createGain(), g = ac.createGain(), t0 = now + at; o.type = 'sine'; o2.type = 'sine'; g2.gain.value = 0.25;
+      pts.forEach(function (p, i) { if (i === 0) { o.frequency.setValueAtTime(p[1], t0); o2.frequency.setValueAtTime(p[1] * 2, t0); } else { o.frequency.exponentialRampToValueAtTime(p[1], t0 + len * p[0]); o2.frequency.exponentialRampToValueAtTime(p[1] * 2, t0 + len * p[0]); } });
+      v.frequency.value = 5; vg.gain.value = pts[0][1] * 0.015; v.connect(vg); vg.connect(o.frequency);   // (a gentle waver)
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.0624, t0 + len * 0.3); g.gain.setValueAtTime(0.0624, t0 + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      o.connect(g); o2.connect(g2); g2.connect(g); g.connect(spring); o.start(t0); o2.start(t0); v.start(t0); o.stop(t0 + len + 0.02); o2.stop(t0 + len + 0.02); v.stop(t0 + len + 0.02);
+    }
+    function sound(at, mood) {                                         // (mood: 1 happy, 0 just chatting, -1 sad)
+      if (mood < 0) song(at, [[0, 300], [0.5, 270], [1, 210]], 0.8);
+      else if (mood > 0) song(at, [[0, 240], [0.4, 330], [0.8, 300], [1, 360]], 0.8);
+      else song(at, [[0, 260], [0.5, 310], [1, 280]], 0.6);
+    }
+    function bubble(at, vol) {                                         // (a little bubble rising and blipping)
+      var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at, f = 500 + Math.random() * 700; o.type = 'sine';
+      o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 2.6, t0 + 0.06);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+      o.connect(g); g.connect(spring); o.start(t0); o.stop(t0 + 0.08);
+    }
+    function bubbles(at, count, vol) { for (var i = 0; i < count; i++) bubble(at + i * 0.07 + Math.random() * 0.05, vol); }
+    function eating() {                                                // (soft munching, then a gulp of air)
+      var buf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = buf.getChannelData(0); for (var i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      for (var k = 0; k < 3; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = buf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(0.06, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+      var o = ac.createOscillator(), og = ac.createGain(), t1 = now + 0.55; o.type = 'sine'; o.frequency.setValueAtTime(420, t1); o.frequency.exponentialRampToValueAtTime(160, t1 + 0.09);
+      og.gain.setValueAtTime(0.0001, t1); og.gain.linearRampToValueAtTime(0.047, t1 + 0.005); og.gain.exponentialRampToValueAtTime(0.0001, t1 + 0.09); o.connect(og); og.connect(spring); o.start(t1); o.stop(t1 + 0.11);
+      bubble(0.6, 0.028);
+    }
+    if (kind === 'pet') { sound(0, 1); bubbles(0.55, 4, 0.0312); }
+    else if (kind === 'egg') { sound(0, 0); sound(0.55, 1); bubbles(0.9, 5, 0.0312); }
+    else if (kind === 'content') sound(0, 0);
+    else if (kind === 'hungry') { sound(0, -1); sound(0.75, -1); }
+    else if (kind === 'eat') eating();
+    else if (kind === 'chirp') { sound(0, Math.random() < 0.65 ? 0 : 1); if (Math.random() < 0.6) bubbles(0.35, 2 + Math.floor(Math.random() * 2), 0.0234); }
+  }
+  axoriaAction = (function (base) {                                    // (looking after a Veilaris: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      veilSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if it couldn't be sheared: no shears, or a full bag)
+      return r;
+    };
+  })(axoriaAction);
+
+  // ===== Nymphalia sounds =====
+  // A Nymphalia burbles like a gentle water spirit: soft, bubbly rumbles, like a big friendly creature's voice heard
   // through pond water (a wavering, rumbly voice, muffled and wobbling as if through water, with bubbles rising), with
   // water droplets plinking into the pond, all in a dreamy echo. A happy burble and droplets when you pet it; two
   // burbles and more droplets when you milk it; soft munching as it eats; two lower, slower burbles when it's hungry; a
@@ -3826,7 +3880,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
