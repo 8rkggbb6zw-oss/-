@@ -1783,10 +1783,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
   // ===== footsteps =====
   // A soft footstep each time a foot comes down as she walks, made on the fly like the game's other sounds and played
-  // as a sound effect (so it follows SFX Volume, with Footsteps Volume on top). It sounds like what she's walking on:
-  // a swish through the grass, a dull scuff on the dirt path, a hollow knock on wood (floors indoors, the dock, the
-  // porch, the bridges), a crisp tap on the town's stone paths, and a crunch in Winter's snow. The two feet sound a
-  // touch different
+  // as a sound effect (so it follows SFX Volume, with Footsteps Volume on top). Each is built like a real footstep: a
+  // soft thump of the heel, then the toe rolling down a moment later, and it sounds like what she's walking on: a
+  // rustle of grass, a gritty scuff on the dirt path, a hollow knock that rings a little on wood (floors indoors, the
+  // dock, the porch, the bridges), a crisp click with a tiny echo on the town's stone paths, and a crunch in Winter's
+  // snow. The two feet sound a touch different
   var stepNoise = null, footVol = 1;                                  // (footVol: "Footsteps Volume" in Settings, 0 to 10 with 5 the usual, as 0 to 2)
   try { var fvSaved = parseInt(localStorage.getItem('everdawn-footsteps-volume'), 10); if (fvSaved >= 0 && fvSaved <= 10) footVol = fvSaved / 5; } catch (err) {}
   window.everdawnSetFootsteps = function (v) { footVol = v / 5; };
@@ -1799,24 +1800,34 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function footstep(foot) {
     if (!audioCtx || audioCtx.state !== 'running' || footVol <= 0) return;
-    if (!stepNoise) {                                                  // (a short burst of noise to shape every step from, made once)
-      stepNoise = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.25), audioCtx.sampleRate);
+    var ac = audioCtx;
+    if (!stepNoise) {                                                  // (a second of noise to shape every step from, made once)
+      stepNoise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
       var d = stepNoise.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    var kind = footSurface(), now = audioCtx.currentTime, tune = foot ? 1.08 : 0.94;
-    var S = { grass: [1700, 0.7, 0.07, 0.09], dirt: [650, 0.9, 0.06, 0.13], wood: [900, 1.6, 0.05, 0.16], stone: [2600, 1.4, 0.035, 0.12], snow: [3000, 0.5, 0.12, 0.13] }[kind];   // ([filter pitch, sharpness, how long, how loud])
-    var src = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), gain = audioCtx.createGain();
-    src.buffer = stepNoise; src.playbackRate.value = kind === 'snow' ? 0.8 + Math.random() * 0.3 : 1;
-    f.type = kind === 'dirt' ? 'lowpass' : 'bandpass'; f.frequency.value = S[0] * tune; f.Q.value = S[1];
-    gain.gain.setValueAtTime(0.0001, now); gain.gain.linearRampToValueAtTime(S[3] * footVol, now + 0.006); gain.gain.exponentialRampToValueAtTime(0.0001, now + S[2]);
-    src.connect(f); f.connect(gain); gain.connect(audioCtx.destination);
-    src.start(now, Math.random() * 0.1, S[2] + 0.02);
-    if (kind === 'wood') {                                             // (wood: a little hollow knock under the step)
-      var o = audioCtx.createOscillator(), og = audioCtx.createGain();
-      o.frequency.setValueAtTime(150 * tune, now); o.frequency.exponentialRampToValueAtTime(90, now + 0.06);
-      og.gain.setValueAtTime(0.12 * footVol, now); og.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
-      o.connect(og); og.connect(audioCtx.destination); o.start(now); o.stop(now + 0.08);
+    var kind = footSurface(), t = ac.currentTime, tune = foot ? 1.04 : 0.96, G = 0.06, nk = Math.sqrt(ac.sampleRate / 44100);
+    var out = ac.createGain(); out.gain.value = 0.32 * footVol; out.connect(ac.destination);
+    function env(at, vol, atk, dec) { var g = ac.createGain(); g.gain.value = 0; g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(vol, at + atk); g.gain.exponentialRampToValueAtTime(0.0001, at + atk + dec); return g; }
+    function hiss(at, type, hz, Q, vol, atk, dec) {                    // (a little burst of shaped noise)
+      var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = env(at, vol * nk, atk, dec); s.buffer = stepNoise; f.type = type; f.frequency.value = hz; f.Q.value = Q;
+      s.connect(f); f.connect(g); g.connect(out); s.start(at, Math.random() * 0.6); s.stop(at + atk + dec + 0.02);
     }
+    function thump(at, hz, vol, dec) {                                 // (the soft, low thud of the foot landing)
+      var o = ac.createOscillator(), g = env(at, vol, 0.003, dec); o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 0.6, at + dec);
+      o.connect(g); g.connect(out); o.start(at); o.stop(at + dec + 0.02);
+    }
+    function grains(at, len, n, hz, Q, vol) {                          // (lots of tiny ticks: blades of grass, grit, snow crystals)
+      for (var i = 0; i < n; i++) { var u = Math.random(); hiss(at + Math.pow(u, 1.6) * len, 'bandpass', hz * (0.7 + Math.random() * 0.6), Q, vol * (0.4 + Math.random() * 0.6) * (1 - u * 0.6), 0.0008, 0.002 + Math.random() * 0.005); }
+    }
+    function ring(at, fs, vol, dec) {                                  // (the boards ringing a little)
+      fs.forEach(function (f, k) { var o = ac.createOscillator(), g = env(at, vol / (k + 1), 0.002, dec / (1 + k * 0.5)); o.frequency.value = f; o.connect(g); g.connect(out); o.start(at); o.stop(at + dec + 0.02); });
+    }
+    if (kind === 'grass') { thump(t, 85 * tune, 0.22, 0.05); grains(t, 0.12, 16, 3600 * tune, 1.5, 0.05); hiss(t, 'bandpass', 2600 * tune, 0.8, 0.045, 0.01, 0.09); grains(t + G, 0.08, 9, 4200 * tune, 1.5, 0.035); }
+    else if (kind === 'dirt') { thump(t, 80 * tune, 0.32, 0.06); hiss(t, 'lowpass', 900 * tune, 0.7, 0.12, 0.004, 0.06); grains(t + 0.005, 0.06, 9, 2300 * tune, 2, 0.045); hiss(t + G, 'lowpass', 1200 * tune, 0.7, 0.06, 0.004, 0.04); grains(t + G, 0.04, 4, 2600 * tune, 2, 0.03); }
+    else if (kind === 'wood') { thump(t, 115 * tune, 0.36, 0.07); ring(t, [185 * tune, 420 * tune, 770 * tune], 0.06, 0.1); hiss(t, 'bandpass', 1300 * tune, 1.2, 0.08, 0.002, 0.035); ring(t + G, [205 * tune, 460 * tune], 0.03, 0.07); hiss(t + G, 'bandpass', 1600 * tune, 1.2, 0.04, 0.002, 0.025); }
+    else if (kind === 'stone') [[0, 1], [0.028, 0.22]].forEach(function (e) {   // (the click, then its tiny echo)
+      hiss(t + e[0], 'bandpass', 3200 * tune, 1.5, 0.15 * e[1], 0.001, 0.03); thump(t + e[0], 125 * tune, 0.18 * e[1], 0.03); hiss(t + G * 0.8 + e[0], 'bandpass', 4000 * tune, 1.5, 0.07 * e[1], 0.001, 0.02); });
+    else { thump(t, 70 * tune, 0.18, 0.08); grains(t, 0.16, 42, 1900 * tune, 1.2, 0.07); hiss(t, 'lowpass', 2400 * tune, 0.7, 0.045, 0.01, 0.14); grains(t + G, 0.1, 18, 2300 * tune, 1.2, 0.05); }   // (snow)
   }
   // every frame: she walks with real steps and swinging arms, her hair and hat swaying, and blinks now and then
   function witchLook(dt, moving) {
