@@ -6520,7 +6520,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- Winter on the island ----------
   // While it's Winter: snow lies over the whole island, the broadleaf trees and bushes stand bare with snow along their
-  // branches, the pines are heavy with snow, the grass pokes up pale and frosted, snowflakes drift down all day, the
+  // branches, the pines are heavy with snow, the grass is buried, snowflakes drift down all day, the
   // light goes cool and silvery, and a few snowmen stand about in their scarves and hats
   function winterNow() { return seasonOf(state.day) === 3; }
   // ===== snow-laden pines =====
@@ -6651,7 +6651,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   var winterGround = { map: terrain.material.map, bump: terrain.material.bumpMap, bumpScale: terrain.material.bumpScale, rough: terrain.material.roughness };
   var WINTER_GRASS = new THREE.Color(0.78, 0.72, 0.52), winterBuried = [], winterBM = new THREE.Matrix4(), winterBP = new THREE.Vector3();
-  function winterBury(on) {                                            // (most of the grass and all the wildflowers lie buried under the snow; a few dry tufts poke through)
+  function winterBury(on) {                                            // (the grass and all the wildflowers lie buried under the snow)
     winterBuried.forEach(function (b) {
       if (b.mesh === grass || b.mesh === flowerHeads) { var t = tileMap[tileKey(Math.floor((b.p.x - FARM_X) / TILE), Math.floor((b.p.z - FARM_Z) / TILE))]; if (t && t.soil) { (t.grass = t.grass || []).push({ i: b.i, m: b.m, f: b.mesh === flowerHeads }); return; } }   // (dug into soil meanwhile: it stays tucked away with that tile)
       b.mesh.setMatrixAt(b.i, b.m); if (b.mesh === flowerHeads) flowerStems.setMatrixAt(b.i, b.m);
@@ -6666,7 +6666,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
     });
     [grass, isle2Grass, isle3Grass, flowerHeads, flowerStems].forEach(function (m) { m.instanceMatrix.needsUpdate = true; });
-    litterMat.visible = !on;
+    litterMat.visible = !on; grassMat.visible = !on;                   // (not a tuft of grass pokes through)
   }
   // ===== snowflakes =====
   var winterSnow = (function () {
