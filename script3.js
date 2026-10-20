@@ -1220,30 +1220,41 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---------- Keyboard ----------
   var keys = {};
   var GAME_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'Space', 'KeyQ'];
-  // Interact is E or Space to start. On the Mouse & Keyboard settings page you can give it a key of your own instead:
-  // then that key interacts (and keeps the axe, pickaxe or trimmers going while you hold it), E does nothing, and
-  // Space only flies you up on your broom. The Interact button shows whichever key it is
-  var interactKey = null; try { interactKey = localStorage.getItem('everdawn-interact') || null; } catch (err) {}
+  // Interact, and Use Tool/Place Item, are both E or Space to start, and then one press does whichever fits: going
+  // through a door, opening a shop, petting, or using what you're holding. On the Mouse & Keyboard settings page
+  // either can have a key of your own instead, and then they're separate: Interact does everything but use what's in
+  // your hand (doors, shops, animals, the bin, picking and watering), and Use Tool/Place Item only uses what you're
+  // holding (chopping, mining, trimming, tilling, planting, placing or eating it), and holding it keeps the axe,
+  // pickaxe or trimmers going. E does nothing once neither is E, and Space then only flies you up on your broom. The
+  // Interact button shows the Interact key, and tapping it still does everything
+  var interactKey = null, useKey = null;
+  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; } catch (err) {}
   function isInteractKey(code) { return interactKey ? code === interactKey : code === 'KeyE' || code === 'Space'; }
+  function isUseKey(code) { return useKey ? code === useKey : code === 'KeyE' || code === 'Space'; }
   function showInteractKey() { var k = ui.btnAct.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
-  window.everdawnSetInteract = function (code) { interactKey = code || null; keys = {}; actionHeld = false; showInteractKey(); };
+  window.everdawnSetInteract = function (code) { interactKey = code || null; keys = {}; showInteractKey(); };
+  window.everdawnSetUseKey = function (code) { useKey = code || null; keys = {}; };
   showInteractKey();
+  var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
+  heldItem = (function (base) { return function () { return handsFree ? null : base.apply(this, arguments); }; })(heldItem);
   window.addEventListener('keydown', function (e) {
-    if (GAME_KEYS.indexOf(e.code) === -1 && e.code !== interactKey) return;
+    var isI = isInteractKey(e.code), isU = isUseKey(e.code);
+    if (GAME_KEYS.indexOf(e.code) === -1 && !isI && !isU) return;
     e.preventDefault();
     keys[e.code] = true;
-    if (interactKey && e.code === interactKey) actionHeld = true;
     walkTarget = null;
     if (e.repeat) return;
-    if (isInteractKey(e.code)) interact();
+    if (isI && isU) interact();                                        // (the same key: one press does whichever fits, as always)
+    else if (isI) { handsFree = true; try { interact(); } finally { handsFree = false; } }
+    else if (isU && heldItem()) interact();                            // (Use Tool/Place Item: only when you're holding something)
     if (e.code === 'KeyQ') castSpell();
   });
-  window.addEventListener('keyup', function (e) { if (interactKey && e.code === interactKey) actionHeld = false; });
-  updateTrees = (function (base) {                                     // (holding E or Space keeps a tool going only while they're the Interact keys)
+  updateTrees = (function (base) {                                     // (holding a key keeps a tool going only if it's the Use Tool/Place Item key)
     return function (dt) {
-      if (!interactKey) return base.apply(this, arguments);
-      var ke = keys.KeyE, ks = keys.Space; keys.KeyE = keys.Space = false;
-      try { return base.apply(this, arguments); } finally { keys.KeyE = ke; keys.Space = ks; }
+      if (!useKey && !interactKey) return base.apply(this, arguments);
+      var ke = keys.KeyE, ks = keys.Space, ah = actionHeld;
+      actionHeld = ah || (useKey ? !!keys[useKey] : !!(ke || ks)); keys.KeyE = keys.Space = false;
+      try { return base.apply(this, arguments); } finally { keys.KeyE = ke; keys.Space = ks; actionHeld = ah; }
     };
   })(updateTrees);
   window.addEventListener('keydown', function (e) { // I opens and closes the bag, Escape closes it
@@ -8734,23 +8745,29 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which key interacts)
-    body.innerHTML = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evInterL">Interact</span><div class="ev-seg" role="group" aria-labelledby="evInterL"><button type="button" data-i="std">E/Space-bar</button><button type="button" data-i="own" aria-label="Your own key" style="min-width:110px"></button></div></div>';
-    var ik = ''; try { ik = localStorage.getItem('everdawn-interact') || ''; } catch (err) {}   // (Interact: E/Space-bar, or a key of your own: tap the second button, then press the key)
-    var ikBtns = body.querySelectorAll('.ev-seg button[data-i]');
-    function showInteract() {
-      var own = !!ik || keyGrab; ikBtns[0].classList.toggle('on', !own); ikBtns[0].setAttribute('aria-pressed', own ? 'false' : 'true'); ikBtns[1].classList.toggle('on', own); ikBtns[1].setAttribute('aria-pressed', own ? 'true' : 'false');
-      ikBtns[1].textContent = keyGrab ? 'Press a key…' : ik ? everdawnKeyName(ik) : '';
-    }
-    function setInteract(code) { ik = code; try { if (ik) localStorage.setItem('everdawn-interact', ik); else localStorage.removeItem('everdawn-interact'); } catch (err) {} if (window.everdawnSetInteract) window.everdawnSetInteract(ik || null); showInteract(); }
-    function grab(e) {                                                 // (the next key pressed becomes Interact; Escape changes nothing)
-      e.preventDefault(); e.stopImmediatePropagation(); window.removeEventListener('keydown', grab, true); keyGrab = false;
-      if (e.code === 'Escape' || !e.code) showInteract(); else setInteract(e.code);
-    }
-    keyGrabStop = function () { if (keyGrab) { window.removeEventListener('keydown', grab, true); keyGrab = false; showInteract(); } };   // (leaving the page, or tapping E/Space-bar, stops waiting for a key)
-    ikBtns[0].addEventListener('click', function () { keyGrabStop(); setInteract(''); });
-    ikBtns[1].addEventListener('click', function () { if (keyGrab) return; keyGrab = true; showInteract(); window.addEventListener('keydown', grab, true); });
-    showInteract();
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, and use your tools and place items)
+    body.innerHTML = '';
+    var stops = [];
+    keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey']].forEach(function (row, n) {
+      body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evKeyL' + n + '">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">E/Space-bar</button><button type="button" aria-label="Your own key" style="min-width:110px"></button></div></div>');
+      var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (E/Space-bar, or a key of your own: tap the second button, then press the key)
+      try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
+      function show() {
+        var own = !!code || waiting; btns[0].classList.toggle('on', !own); btns[0].setAttribute('aria-pressed', own ? 'false' : 'true'); btns[1].classList.toggle('on', own); btns[1].setAttribute('aria-pressed', own ? 'true' : 'false');
+        btns[1].textContent = waiting ? 'Press a key…' : code ? everdawnKeyName(code) : '';
+      }
+      function set(c) { code = c; try { if (code) localStorage.setItem(row[1], code); else localStorage.removeItem(row[1]); } catch (err) {} if (window[row[2]]) window[row[2]](code || null); show(); }
+      function grab(e) {                                               // (the next key pressed is the one; Escape changes nothing)
+        e.preventDefault(); e.stopImmediatePropagation(); stop();
+        if (e.code && e.code !== 'Escape') set(e.code);
+      }
+      function stop() { if (!waiting) return; window.removeEventListener('keydown', grab, true); waiting = false; keyGrab = false; show(); }
+      stops.push(stop);
+      btns[0].addEventListener('click', function () { stop(); set(''); });
+      btns[1].addEventListener('click', function () { if (waiting) return; keyGrabStop(); waiting = true; keyGrab = true; show(); window.addEventListener('keydown', grab, true); });
+      show();
+    });
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
   sett.innerHTML = '<div class="ev-scard"><div class="ev-sethead"><button type="button" class="ev-pg prev" aria-label="Previous page">‹</button><h2></h2><button type="button" class="ev-pg next" aria-label="Next page">›</button></div>' +
