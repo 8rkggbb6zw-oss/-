@@ -2,9 +2,63 @@
 // three parts back together and starts it
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ===== Veilaris sounds =====
+  // ===== Lumora sounds =====
   // (New animals' sounds go here, at the top of script3.js, where there's room; the earlier ones, and petSound, which
-  // plays the right voice for each kind, are near the end of script2.js.) A Veilaris sings softly, like a spirit of
+  // plays the right voice for each kind, are near the end of script2.js.) A Lumora chirps like a real crested gecko,
+  // built from a real one's chirps: each a tiny "tsip" about 50 thousandths of a second long, holding high a moment
+  // then dropping quickly from about 5,200 to 2,900 Hz and getting louder as it falls, with a fainter upper tone and a
+  // breath of air, in soft little runs, each chirp a bit longer and louder than the last; then a tiny sprinkle of sunny
+  // sparkles. A run of three and sparkles when you pet it; two runs and more sparkles when it gives you its Sunscale;
+  // soft munching as it eats; two slow, lower chirps when it's hungry; two chirps once it's fed and petted; and now
+  // and then a little run of its own while you're in the barn. They're pet sounds, so they follow Pet Sound in Settings
+  function lizSound(kind, loud) {
+    if (!kind || !audioCtx || audioCtx.state !== 'running') return;
+    var ac = audioCtx, now = ac.currentTime, out = ac.createGain(); out.gain.value = loud === undefined ? 1 : loud; out.evPet = true; out.connect(ac.destination);
+    var nbuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), nd = nbuf.getChannelData(0); for (var ni = 0; ni < nd.length; ni++) nd[ni] = Math.random() * 2 - 1;
+    function chirp(at, len, vol, size) {                               // (one "tsip"; size above 1 is a smaller, higher gecko)
+      var t0 = now + at, top = 5200 * size, bot = 2900 * size;
+      [[1, 1], [1.3, 0.65]].forEach(function (p) {                     // (the chirp, and its fainter upper tone)
+        var o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
+        o.frequency.setValueAtTime(top * p[0], t0); o.frequency.linearRampToValueAtTime(top * 0.94 * p[0], t0 + len * 0.3); o.frequency.exponentialRampToValueAtTime(bot * p[0], t0 + len * 0.5);   // (holding high a moment, then dropping)
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol * p[1] * 0.55, t0 + 0.004); g.gain.linearRampToValueAtTime(vol * p[1], t0 + len * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + len + 0.02);
+      });
+      var s = ac.createBufferSource(), f = ac.createBiquadFilter(), ng = ac.createGain(); s.buffer = nbuf; f.type = 'bandpass'; f.Q.value = 2;   // (a breath of air along with it)
+      f.frequency.setValueAtTime(top, t0); f.frequency.exponentialRampToValueAtTime(bot * 0.8, t0 + len * 0.6);
+      ng.gain.setValueAtTime(0.0001, t0); ng.gain.linearRampToValueAtTime(vol * 1.2, t0 + len * 0.5); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+      s.connect(f); f.connect(ng); ng.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + len + 0.02);
+    }
+    function run(at, n, size, gap, first) {                            // (a run of chirps, each a little longer and louder than the last; returns how long it takes)
+      for (var i = 0; i < n; i++) { var k = n > 1 ? i / (n - 1) : 1; chirp(at + i * gap, (first || 0.035) + 0.025 * k, 0.05 * (0.6 + 0.4 * k), size); }
+      return n * gap;
+    }
+    function sparkles(at, len, vol) {                                  // (a tiny sprinkle of sunny sparkles)
+      var n = Math.floor(len * 26);
+      for (var i = 0; i < n; i++) { var o = ac.createOscillator(), g = ac.createGain(), t0 = now + at + i / 26 + Math.random() * 0.02; o.type = 'sine'; o.frequency.value = 3000 + Math.random() * 4500;
+        var v = vol * 2 * (1 - i / n * 0.6); g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(v, t0 + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+        o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + 0.13); }
+    }
+    function munching(n, vol) {
+      for (var k = 0; k < n; k++) { var s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain(), t0 = now + k * 0.16 + Math.random() * 0.03; s.buffer = nbuf; f.type = 'bandpass'; f.frequency.value = 1800; f.Q.value = 1.5;
+        g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08); s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + 0.1); }
+    }
+    if (kind === 'pet') { run(0, 3, 1, 0.18); sparkles(0.6, 0.35, 0.008); }
+    else if (kind === 'egg') { var a = run(0, 2, 1, 0.2); run(a + 0.15, 3, 1.04, 0.18); sparkles(1.1, 0.45, 0.008); }
+    else if (kind === 'content') { run(0, 2, 1, 0.2); sparkles(0.4, 0.25, 0.007); }
+    else if (kind === 'hungry') run(0, 2, 0.92, 0.38, 0.06);
+    else if (kind === 'eat') munching(4, 0.06);
+    else if (kind === 'chirp') { run(0, 1 + Math.floor(Math.random() * 3), 0.98 + Math.random() * 0.04, 0.2); if (Math.random() < 0.5) sparkles(0.45, 0.25, 0.007); }
+  }
+  solarithAction = (function (base) {                                  // (looking after a Lumora: the sound to go with what happened)
+    return function (g) {
+      var egg = g.egg, fed = g.fed, petted = g.petted, r = base.apply(this, arguments);
+      lizSound(egg ? (g.egg ? null : 'egg') : !fed && g.fed ? 'eat' : !petted && g.petted ? 'pet' : !fed ? 'hungry' : fed && petted ? 'content' : null);   // (no sound if the Sunscale couldn't be taken: a full bag)
+      return r;
+    };
+  })(solarithAction);
+
+  // ===== Veilaris sounds =====
+  // A Veilaris sings softly, like a spirit of
   // the spring: a low, gliding "oooo", gently wavering, in a dreamy echo, with bubbles rising. A happy song that swoops
   // up when you pet it; a little song and a happy one when you shear its Glimmerkelp; soft munching and a gulp of air
   // as it eats; two low songs sinking away when it's hungry; a little song once it's fed and petted; and now and then
@@ -3880,7 +3934,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function fbarnNear(g) { var r = fbarnToRoom(g.x, g.z), d = Math.hypot(player.position.x - FBI_X - r[0], player.position.z - FBI_Z - r[1]); return Math.max(0.25, Math.min(1, 2.2 / (d + 0.8))); }   // (softer the further it is from you)
   function updateFbarnFeeding(dt) {                                    // a hungry animal walks out of its stall to the nearest bundle on the bench, and eats it
     fbarnAnimals().forEach(function (g) {
-      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
+      if (inFbarn && (g.kind === 'moon' || g.kind === 'aurora' || g.kind === 'zephyra' || g.kind === 'luna' || g.kind === 'bubble' || g.kind === 'prism' || g.kind === 'lotus' || g.kind === 'axo' || g.kind === 'liz')) {   // (each barn animal with a voice makes its sounds now and then, and less at night)
         if (g.chirpT === undefined) g.chirpT = 4 + Math.random() * 10;
         g.chirpT -= dt;
         if (g.chirpT <= 0) { var hr = state.minutes / 60, night = hr >= 20 || hr < 6; g.chirpT = (night ? 35 : 12) + Math.random() * (night ? 40 : 18); petSound(g, 'chirp', fbarnNear(g) * (night ? 0.5 : 1)); }
