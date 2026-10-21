@@ -8041,6 +8041,63 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.everdawnSetTypewriter = function (on) { typewriter = !!on; try { localStorage.setItem(TYPE_KEY, on ? 'on' : 'off'); } catch (err) {} };
 
+  // ---------- Dialogue, and the key that moves it along ----------
+  // When someone has something to say, showDialogue(name, lines, done) opens a box at the bottom of the screen with
+  // their name and the first line (typed out if the Typewriter Effect is on, at the Text Size and Bold Text from
+  // Settings). Advance Dialogue (E or Space to start; on the Mouse & Keyboard page it can be a key of your own), a
+  // click or tap anywhere, or the Next button moves it along: while a line is still typing it shows the whole line,
+  // otherwise it goes on to the next one, and after the last line the box closes and done() is called. While it's
+  // open you stay where you are. There's no one to talk to yet, so nothing opens it for now
+  var advanceKey = null; try { advanceKey = localStorage.getItem('everdawn-advance-key') || null; } catch (err) {}
+  window.everdawnSetAdvanceKey = function (code) { advanceKey = code || null; };
+  function isAdvanceKey(code) { return advanceKey ? code === advanceKey : code === 'KeyE' || code === 'Space'; }
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-dlg{position:absolute;inset:0;z-index:8;display:flex;align-items:flex-end;justify-content:center;padding:12px;box-sizing:border-box;cursor:pointer;border-radius:inherit}' +
+    '.ev-dlg[hidden]{display:none}' +
+    '.ev-dlgbox{position:relative;width:min(640px,100%);box-sizing:border-box;padding:14px 18px 12px;border-radius:20px;border:2.5px solid #ffe2a0;background:linear-gradient(180deg,#6440aa,#3a2270);box-shadow:0 10px 30px rgba(10,0,30,.5),inset 0 2px 0 rgba(255,255,255,.25);color:#fff;font-family:Fredoka,system-ui,sans-serif}' +
+    '.ev-dlgname{position:absolute;top:-16px;left:18px;padding:3px 14px;border-radius:999px;font-size:15px;font-weight:600;color:#4e2b9c;background:linear-gradient(180deg,#fff2c8,#ffd27a);box-shadow:0 2px 0 #b8892e}' +
+    '.ev-dlgname:empty{display:none}' +
+    '.ev-dlgtext{min-height:3em;margin:6px 0 8px;font-size:var(--ev-dialogue-size,17px);font-weight:var(--ev-dialogue-weight,400);line-height:1.45;white-space:pre-wrap}' +
+    '.ev-dlgnext{display:block;margin-left:auto;padding:.3em 1em;font:600 15px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,226,160,.8);border-radius:999px;cursor:pointer;background:linear-gradient(180deg,#ff9ecb,#d8609c)}' +
+    '.ev-dlgnext:focus-visible{outline:3px solid #fff;outline-offset:2px}' +
+    '.ev-dlgnext.typing{opacity:.55}';
+    document.head.appendChild(st); })();
+  var dlg = document.createElement('div'); dlg.className = 'ev-dlg'; dlg.hidden = true;
+  dlg.innerHTML = '<div class="ev-dlgbox" role="dialog" aria-live="polite"><span class="ev-dlgname"></span><div class="ev-dlgtext"></div><button type="button" class="ev-dlgnext"></button></div>';
+  canvas.parentNode.appendChild(dlg);
+  var dlgName = dlg.querySelector('.ev-dlgname'), dlgText = dlg.querySelector('.ev-dlgtext'), dlgNext = dlg.querySelector('.ev-dlgnext');
+  var dlgLines = [], dlgAt = 0, dlgDone = null, dlgFinish = null, dlgTyping = false;
+  function dialogueOpen() { return !dlg.hidden; }
+  function dlgNextLabel() {
+    var k = advanceKey ? everdawnKeyName(advanceKey) : 'E';
+    dlgNext.innerHTML = (dlgAt < dlgLines.length - 1 ? 'Next ▸' : 'Close ✕') + ' <kbd>' + k + '</kbd>';
+    dlgNext.classList.toggle('typing', dlgTyping);
+  }
+  function dlgShowLine() {
+    dlgTyping = true; dlgNextLabel();
+    dlgFinish = typeText(dlgText, dlgLines[dlgAt], function () { dlgTyping = false; dlgNextLabel(); });
+  }
+  function showDialogue(name, lines, done) {
+    dlgLines = (Array.isArray(lines) ? lines : [lines]).map(String); if (!dlgLines.length) { if (done) done(); return; }
+    dlgAt = 0; dlgDone = done || null; walkTarget = null; keys = {};
+    dlgName.textContent = name || ''; dlg.hidden = false; dlgShowLine();
+  }
+  function advanceDialogue() {
+    if (!dialogueOpen()) return;
+    if (dlgTyping) { if (dlgFinish) dlgFinish(); return; }              // (still typing: show the whole line first)
+    if (++dlgAt < dlgLines.length) { dlgShowLine(); return; }
+    dlg.hidden = true; dlgText.textContent = ''; keys = {};
+    var d = dlgDone; dlgDone = null; if (d) d();
+  }
+  dlg.addEventListener('pointerdown', function (e) { e.stopPropagation(); });   // (a tap on the box doesn't walk you anywhere)
+  dlg.addEventListener('click', function (e) { e.stopPropagation(); advanceDialogue(); focusGame(); });
+  window.addEventListener('keydown', function (e) {                    // (caught first: while someone's talking, keys don't walk you off or do anything else)
+    if (!dialogueOpen() || (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) return;
+    if (e.code === 'Escape') return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (isAdvanceKey(e.code) && !e.repeat) advanceDialogue();
+  }, true);
+
   // ---------- Tile Highlight While Moving, set in Settings: Disabled or Enabled ----------
   // Enabled (the usual way): the glowing square marker shows the tile in front of you as you move about, on any open
   // ground, so you can see what you'd water, plant or dig. Disabled: there's no marker on the ground at all, for a
@@ -9506,7 +9563,7 @@ var everdawnTitle = (function () {
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
     var KEY_SECTIONS = { 'Interact': 'Gameplay', 'Confirm': 'Menu' };                  // (a little label over the row each section starts at)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E/Space-bar']].forEach(function (row, n) {
       if (KEY_SECTIONS[row[0]]) body.insertAdjacentHTML('beforeend', '<div class="ev-ksec">' + KEY_SECTIONS[row[0]] + '</div>');
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
