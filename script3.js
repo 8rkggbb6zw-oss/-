@@ -659,7 +659,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     slot.setAttribute('data-slot', i);
     if (bag[i]) {
       slot.appendChild(itemPicture(bag[i].id));
-      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail' || bag[i].id === 'shears'; // tools don't show a count
+      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail' || bag[i].id === 'shears' || bag[i].id === 'fishingRod'; // tools don't show a count
       slot.setAttribute('aria-label', ITEMS[bag[i].id].name + (isTool ? '' : ', ' + bag[i].count));
       if (!isTool) {
         var count = document.createElement('span');
@@ -5550,6 +5550,165 @@ EVERDAWN_PARTS.push(function (THREE) {
   function showSleepKey() { var k = sleepBtn.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
   window.everdawnSetInteract = (function (base) { return function () { var r = base.apply(this, arguments); showSleepKey(); return r; }; })(window.everdawnSetInteract);
   showSleepKey();
+  // ===== the fishing rod =====
+  // A Fishing Rod for your bag (new games start with one, and older saves are given one). Hold it and press Interact
+  // (E or Space, or your own Interact key, or the Use Tool key, or tap Interact) to cast: she draws the rod back and
+  // flicks it, and the bobber sails out a few steps ahead. If it lands in the lake or the sea it floats there, bobbing,
+  // with little rings spreading round it, until you press Interact again to reel it back in. If it lands on dry ground
+  // (or on the ice round the pond in winter) the line reels itself straight back in. (No fish to catch yet)
+  ITEMS.fishingRod = { name: 'Fishing Rod', icon: '🎣', fill: 88, info: 'Hold it and press Interact to cast your line into the lake or the sea, and press Interact again to reel it back in. Keep it in your bag; it never wears out.' };
+  ITEMS.fishingRod.img = glimCanvas(96, 96, function (g) {           // a slender wooden rod with a cork grip and a little reel, its line hanging down to a bobber
+    g.lineCap = 'round';
+    g.strokeStyle = '#6a3e1e'; g.lineWidth = 4.5; g.beginPath(); g.moveTo(24, 74); g.lineTo(82, 10); g.stroke();
+    g.strokeStyle = '#a8703c'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(24, 74); g.lineTo(82, 10); g.stroke();
+    g.strokeStyle = '#d8a868'; g.lineWidth = 9; g.beginPath(); g.moveTo(10, 90); g.lineTo(26, 72); g.stroke();   // the cork grip
+    g.strokeStyle = '#9a7ad8'; g.lineWidth = 9; g.lineCap = 'butt'; g.beginPath(); g.moveTo(25, 73.5); g.lineTo(28.5, 69.5); g.stroke();   // a lavender wrap above it
+    g.fillStyle = '#b8c0cc'; g.beginPath(); g.arc(36, 70, 7, 0, Math.PI * 2); g.fill();                           // the reel
+    g.fillStyle = '#7a8494'; g.beginPath(); g.arc(36, 70, 3, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(90,80,110,0.85)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(82, 10); g.quadraticCurveTo(84, 36, 72, 58); g.stroke();   // the line
+    g.fillStyle = '#ff4d6d'; g.beginPath(); g.arc(72, 64, 7, Math.PI, 0); g.fill();                              // the bobber: red over white
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(72, 64, 7, 0, Math.PI); g.fill();
+    g.strokeStyle = 'rgba(60,40,60,0.5)'; g.lineWidth = 1; g.beginPath(); g.arc(72, 64, 7, 0, Math.PI * 2); g.stroke();
+  }).toDataURL();
+  isTool = (function (base) { return function (id) { return id === 'fishingRod' || base(id); }; })(isTool);   // (no count, and it can't be sold or thrown away)
+  var ROD_LEN = 1.3;
+  pickupModel = (function (base) {
+    return function (item) {
+      if (item !== 'fishingRod') return base.apply(this, arguments);
+      var g = new THREE.Group(), palm = new THREE.Group(), r = new THREE.Group();
+      palm.rotation.x = 1.05; palm.position.y = 0.08; g.add(palm);    // (undoes the arm's angle)
+      r.rotation.x = 0.87; palm.add(r);                                // the rod points out ahead of her and up
+      var wood = new THREE.MeshStandardMaterial({ color: 0x8a5630, roughness: 0.6 });
+      var pole = new THREE.CylinderGeometry(0.007, 0.018, ROD_LEN, 8); pole.translate(0, ROD_LEN / 2 - 0.2, 0);
+      var m = new THREE.Mesh(pole, wood); m.castShadow = true; r.add(m);
+      var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0xd8a868, roughness: 0.9 })); grip.position.y = -0.06; r.add(grip);
+      var wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.04, 10), new THREE.MeshStandardMaterial({ color: 0x9a7ad8, roughness: 0.5 })); wrap.position.y = 0.11; r.add(wrap);
+      var steel = new THREE.MeshStandardMaterial({ color: 0xb8c0cc, metalness: 0.7, roughness: 0.3 });
+      var reel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 16), steel); reel.rotation.z = Math.PI / 2; reel.position.set(0, 0.16, 0.06); r.add(reel);
+      var foot = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.05, 0.03), steel); foot.position.set(0, 0.16, 0.03); r.add(foot);
+      [0.45, 0.7, 0.92].forEach(function (y) { var ring = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0025, 4, 10), steel); ring.position.set(0, y, 0.022); r.add(ring); });   // the line's guide rings
+      var tip = new THREE.Object3D(); tip.name = 'rodTip'; tip.position.y = ROD_LEN - 0.2; r.add(tip);
+      return g;
+    };
+  })(pickupModel);
+  function rodInHand() { return !!(bag[selectedSlot] && bag[selectedSlot].id === 'fishingRod'); }   // (read straight from the bag: the Interact key on its own still casts it)
+  if (!bagCount('fishingRod')) addItem('fishingRod', 1);              // (a new game starts with one)
+  loadGame = (function (base) {
+    return function () {
+      var r = base.apply(this, arguments);
+      if (!bagCount('fishingRod') && addItem('fishingRod', 1)) showToast('🎣 You have a new Fishing Rod in your bag! Hold it and press Interact by the water to cast', 3600);
+      return r;
+    };
+  })(loadGame);
+  // the bobber, its line and the little rings it makes on the water
+  var bobber = new THREE.Group();
+  (function () {
+    var top = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness: 0.35 }));
+    var bot = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 }));
+    var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 6), new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness: 0.4 })); stem.position.y = 0.095;
+    top.castShadow = bot.castShadow = true; bobber.add(top, bot, stem);
+  })();
+  bobber.visible = false; scene.add(bobber);
+  var ROD_SEG = 24, rodLineGeo = new THREE.BufferGeometry();
+  rodLineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((ROD_SEG + 1) * 3), 3));
+  var rodLine = new THREE.Line(rodLineGeo, new THREE.LineBasicMaterial({ color: 0xf6f2ff, transparent: true, opacity: 0.85 }));
+  rodLine.frustumCulled = false; rodLine.visible = false; scene.add(rodLine);
+  var rodRipples = [0, 1, 2].map(function () {
+    var m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 9; scene.add(m); return m;
+  });
+  function rodRipple() { var m = rodRipples.reduce(function (a, b) { return b.userData.t > a.userData.t ? b : a; }); m.userData.t = 0; m.position.set(bobber.position.x, rod.waterY + 0.012, bobber.position.z); m.visible = true; }
+  // where the water is: the lake (not its frozen edge in winter) and the open sea round the islands. Gives the
+  // height of the surface there, or null on dry land
+  function rodWater(x, z) {
+    if (inLake(x, z)) return waterUniforms.uIce && waterUniforms.uIce.value > 0.5 && WATER_Y - groundHeight(x, z) < 0.14 ? null : WATER_Y;
+    if (islandR(x, z) < ISLAND * 1.04 || onIsle2(x, z, -ISLE2 * 0.04) || onIsle3(x, z, -ISLE3 * 0.04)) return null;
+    if (Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + 0.3 && z > BRIDGE_Z0 - 2 && z < BRIDGE_Z1 + 2) return null;   // (the bridges)
+    if (Math.abs(z - BRIDGE2_Z) < BRIDGE_W / 2 + 0.3 && x < -(BRIDGE_Z0 - 2) && x > -(BRIDGE_Z1 + 2)) return null;
+    return sea.position.y;
+  }
+  function rodGround(x, z) {                                           // how high dry ground (or a bridge) is, for a bobber that misses the water
+    if (Math.abs(x - BRIDGE_X) < BRIDGE_W / 2 + 0.3 && z > BRIDGE_Z0 - 2 && z < BRIDGE_Z1 + 2) return bridgeY(z);
+    if (Math.abs(z - BRIDGE2_Z) < BRIDGE_W / 2 + 0.3 && x < -(BRIDGE_Z0 - 2) && x > -(BRIDGE_Z1 + 2)) return bridgeY(-x);
+    return islandR(x, z) < ISLAND * 1.04 ? Math.max(groundHeight(x, z), WATER_Y) : 0;
+  }
+  // sounds: the swish of a cast, the plip of the bobber, a soft thud on the ground, the tick of the reel
+  function rodSound(kind) {
+    if (!audioCtx) return;
+    if (kind === 'cast') { hissBurst(0.4, 'bandpass', 2400, 1.4, 0.1, 0.06, 0.26); slideTone('sine', 900, 1500, 0.03, 0.22); }
+    else if (kind === 'plop') { slideTone('sine', 620, 190, 0.16, 0.12); hissBurst(0.3, 'lowpass', 1400, 0.7, 0.1, 0.005, 0.22, 0.02); }
+    else if (kind === 'thud') hissBurst(0.12, 'lowpass', 520, 1, 0.12, 0.003, 0.08);
+    else if (kind === 'reel') for (var i = 0; i < 9; i++) hissBurst(0.03, 'highpass', 4200, 1, 0.05, 0.002, 0.018, i * 0.045);
+  }
+  var rod = { state: 'idle', t: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), waterY: null, rip: 0 }, rodTipW = new THREE.Vector3();
+  var ROD_WIND = 0.22, ROD_FLY = 0.65, ROD_REEL = 0.5;
+  function rodTip() {
+    var tip = heldItemGrp.getObjectByName('rodTip');
+    if (!tip) return null;
+    tip.updateWorldMatrix(true, false);
+    return tip.getWorldPosition(rodTipW);
+  }
+  function rodClear() { rod.state = 'idle'; bobber.visible = rodLine.visible = false; }
+  function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
+  function castLine() { rod.state = 'wind'; rod.t = 0; walkTarget = null; }
+  function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !inBoat && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
+  interact = (function (base) {
+    return function () {
+      if (rod.state === 'fly' || rod.state === 'float' || rod.state === 'land') { rodReel(); return; }   // (line out: Interact reels it back in)
+      if (rod.state !== 'idle') return;
+      if (rodCanCast()) { castLine(); return; }
+      return base.apply(this, arguments);
+    };
+  })(interact);
+  updateTrees = (function (base) {
+    return function (dt) {
+      var r = base.apply(this, arguments);
+      rodRipples.forEach(function (m) { if (!m.visible) return; m.userData.t += dt; var a = m.userData.t / 1.8; if (a >= 1) { m.visible = false; return; } m.scale.setScalar(0.08 + a * 0.55); m.material.opacity = 0.55 * (1 - a); });   // (the rings spread out and fade)
+      if (rod.state === 'idle') return r;
+      if (!rodInHand() || indoors || flying || inBoat || teleporting || sleeping) { rodClear(); return r; }   // (put away, or off somewhere: the line goes with it)
+      rod.t += dt;
+      var tip = rodTip(); if (!tip) { rodClear(); return r; }
+      var armX = 4.95;                                                 // the arm held out, the rod raised over the water
+      if (rod.state === 'wind') {
+        var w = Math.min(1, rod.t / ROD_WIND); armX = 5.23 + (3.1 - 5.23) * (1 - (1 - w) * (1 - w));   // draw the rod back over her shoulder
+        if (rod.t >= ROD_WIND) {                                       // and flick it: off goes the bobber
+          var d = 5.4 + Math.random() * 0.8, lx = player.position.x + Math.sin(facing) * d, lz = player.position.z + Math.cos(facing) * d;
+          rod.waterY = rodWater(lx, lz);
+          rod.to.set(lx, rod.waterY !== null ? rod.waterY + 0.02 : rodGround(lx, lz) + 0.05, lz);
+          rod.from.copy(tip); bobber.position.copy(tip); bobber.visible = rodLine.visible = true;
+          rod.state = 'fly'; rod.t = 0; rodSound('cast');
+        }
+      } else if (rod.state === 'fly') {
+        var k = Math.min(1, rod.t / ROD_FLY); armX = 3.1 + (4.95 - 3.1) * Math.min(1, rod.t / 0.12);
+        bobber.position.lerpVectors(rod.from, rod.to, k); bobber.position.y += Math.sin(k * Math.PI) * 1.4;
+        if (k >= 1) {
+          rod.t = 0;
+          if (rod.waterY !== null) { rod.state = 'float'; rod.rip = 0; rodSound('plop'); burst(rod.to.x, rod.waterY + 0.05, rod.to.z, 0xd8f0ff, 10, 0.9, 1.2, -3); rodRipple(); }
+          else { rod.state = 'land'; rodSound('thud'); burst(rod.to.x, rod.to.y, rod.to.z, 0xd8c8a8, 5, 0.5, 0.5, -3); }
+        }
+      } else if (rod.state === 'float') {
+        bobber.position.set(rod.to.x, rod.waterY + 0.015 + Math.sin(rod.t * 2.6) * 0.012, rod.to.z);
+        bobber.rotation.z = Math.sin(rod.t * 1.7) * 0.08; bobber.rotation.x = Math.sin(rod.t * 2.1 + 1) * 0.06;
+        rod.rip += dt; if (rod.rip > 1.6) { rod.rip = 0; rodRipple(); }
+        if (dist(player.position.x, player.position.z, rod.to.x, rod.to.z) > 14) rodReel();   // (walked off too far: it reels in)
+      } else if (rod.state === 'land') {
+        if (rod.t > 0.4) rodReel();                                    // missed the water: it reels itself back in
+      } else if (rod.state === 'reel') {
+        var q = Math.min(1, rod.t / ROD_REEL), e = q * q * (3 - 2 * q);
+        bobber.position.lerpVectors(rod.from, tip, e); bobber.position.y += Math.sin(q * Math.PI) * 0.5;
+        bobber.rotation.set(0, 0, 0); armX = 4.95 - Math.sin(q * Math.PI) * 0.3;
+        if (q >= 1) { rodClear(); return r; }
+      }
+      axeArm.rotation.x = armX;
+      var p = rodLineGeo.attributes.position.array, b = bobber.position, sag = rod.state === 'float' ? 0.5 : rod.state === 'land' ? 0.25 : 0.06;
+      for (var i = 0; i <= ROD_SEG; i++) {                             // the line droops between the tip and the bobber
+        var s = i / ROD_SEG;
+        p[i * 3] = tip.x + (b.x - tip.x) * s; p[i * 3 + 1] = tip.y + (b.y + 0.04 - tip.y) * s - sag * 4 * s * (1 - s) * Math.min(1, dist(tip.x, tip.z, b.x, b.z) / 4); p[i * 3 + 2] = tip.z + (b.z - tip.z) * s;
+      }
+      rodLineGeo.attributes.position.needsUpdate = true;
+      return r;
+    };
+  })(updateTrees);
   (function () {                                                       // (a Fly button beside the others, for tapping)
     var row = document.querySelector('.controls'); if (!row) return;
     var b = document.createElement('button'); b.id = 'btnFly'; b.type = 'button'; b.innerHTML = '🧹 Fly <kbd>B</kbd>';
