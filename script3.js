@@ -5581,6 +5581,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // with little rings spreading round it, until you press Interact again to reel it back in. If it lands on dry ground
   // (or on the ice round the pond in winter) the line reels itself straight back in. (No fish to catch yet)
   // Sitting in the rowboat with the rod in hand, Interact casts too (walk, or tap the boat button, to climb out)
+  // Hold the cast key (or hold the Interact button) and a little bar over her head fills up: let go to cast. A quick
+  // tap only flicks the bobber a couple of steps out; hold until the bar is full and it sails far out over the water
   // It's a magical rod: a pale moonwood shaft wound with a glowing ribbon, a violet grip, golden rings and a star on
   // its reel, and a softly glowing crystal at its tip. Its line shimmers, and the bobber is a little moonstone with a
   // golden star on top that trails sparkles as it flies and makes glowing rings on the water
@@ -5701,29 +5703,49 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (rod.state === 'float' && Math.random() < dt * 1.2) sparkle(bobber.position.x, bobber.position.y + 0.1, bobber.position.z, 0xe0d0ff, 0.3, 0.4);
   }
   var rod = { state: 'idle', t: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), waterY: null, rip: 0 }, rodTipW = new THREE.Vector3();
-  var ROD_WIND = 0.22, ROD_FLY = 0.65, ROD_REEL = 0.5;
+  var ROD_WIND = 0.22, ROD_REEL = 0.5, ROD_CHARGE = 1.1, ROD_NEAR = 2, ROD_FAR = 13;   // (how long the bar takes to fill, and how far a tap and a full bar cast)
+  var rodBar = document.createElement('div'), rodBarFill = document.createElement('i');
+  rodBar.className = 'rod-bar'; rodBar.setAttribute('aria-hidden', 'true'); rodBar.appendChild(rodBarFill); canvas.parentNode.appendChild(rodBar);
+  (function () {
+    var st = document.createElement('style');
+    st.textContent = '.rod-bar{position:absolute;left:0;top:0;width:96px;height:14px;margin:-7px 0 0 -48px;box-sizing:border-box;border-radius:9px;background:rgba(40,20,70,.6);border:2px solid #fff6ff;box-shadow:0 0 8px rgba(255,180,240,.6);overflow:hidden;pointer-events:none;opacity:0;transition:opacity .15s,box-shadow .15s;z-index:5}' +
+      '.rod-bar.on{opacity:1}.rod-bar i{display:block;height:100%;width:0;border-radius:7px;background:linear-gradient(90deg,#ff9ad8,#ffd56a,#9ae8ff)}.rod-bar.full{box-shadow:0 0 16px #ffe08a,0 0 5px #fff}';
+    document.head.appendChild(st);
+  })();
+  function rodBarOff() { rodBar.classList.remove('on', 'full'); }
   function rodTip() {
     var tip = heldItemGrp.getObjectByName('rodTip');
     if (!tip) return null;
     tip.updateWorldMatrix(true, false);
     return tip.getWorldPosition(rodTipW);
   }
-  function rodClear() { rod.state = 'idle'; bobber.visible = rodLine.visible = false; }
-  function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
-  function castLine() { rod.state = 'wind'; rod.t = 0; rod.armX = 0; walkTarget = null; }
+  function rodClear() { rod.state = 'idle'; bobber.visible = rodLine.visible = false; rodBarOff(); }
+  function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'charge' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
+  function castLine(power) { rod.state = 'wind'; rod.t = 0; rod.armX = 0; rod.power = power; walkTarget = null; }
+  function rodCharge(key) { rod.state = 'charge'; rod.t = 0; rod.armX = 0; rod.key = key; walkTarget = null; rodBarFill.style.width = '0%'; rodBar.classList.add('on'); }   // (holding: the bar fills)
+  function rodLetGo() {                                                // (let go: she finishes drawing the rod back from where it is, then flicks it)
+    if (rod.state !== 'charge') return;
+    var pw = Math.min(1, rod.t / ROD_CHARGE);
+    rod.state = 'wind'; rod.power = pw; rod.t = ROD_WIND * pw; rodBarOff();
+  }
+  window.addEventListener('keyup', function (e) { if (rod.state === 'charge' && e.code === rod.key) rodLetGo(); });
+  window.addEventListener('blur', rodLetGo);
+  ui.btnAct.addEventListener('pointerdown', function (e) { if (e.button === 0 && rod.state === 'idle' && rodCanCast()) rodCharge('pointer'); });   // (holding the Interact button works the same)
+  window.addEventListener('pointerup', function () { if (rod.key === 'pointer') rodLetGo(); });
+  window.addEventListener('pointercancel', function () { if (rod.key === 'pointer') rodLetGo(); });
   function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
   window.addEventListener('keydown', function (e) {                    // (your own Cast/Cut key)
     if (!rodKey || e.code !== rodKey || e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
     e.preventDefault();
     if (rod.state === 'fly' || rod.state === 'float' || rod.state === 'land') rodReel();
-    else if (rod.state === 'idle' && rodCanCast()) castLine();
+    else if (rod.state === 'idle' && rodCanCast()) rodCharge(e.code);
   });
   interact = (function (base) {
     return function () {
       var ev = window.event; if (rodKey && ev && ev.type === 'keydown') return base.apply(this, arguments);   // (a key of your own casts it, so keys do their usual jobs)
       if (rod.state === 'fly' || rod.state === 'float' || rod.state === 'land') { rodReel(); return; }   // (line out: Interact reels it back in)
       if (rod.state !== 'idle') return;
-      if (rodCanCast()) { castLine(); return; }
+      if (rodCanCast()) { if (ev && ev.type === 'keydown') rodCharge(ev.code); else castLine(0.4); return; }   // (a key held down charges the cast)
       return base.apply(this, arguments);
     };
   })(interact);
@@ -5738,18 +5760,21 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (rod.armX) axeArm.rotation.x = rod.armX;                       // (her arm where it was last frame, so the tip is where it's drawn)
       var tip = rodTip(); if (!tip) { rodClear(); return r; }
       var armX = 4.95;                                                 // the arm held out, the rod raised over the water
-      if (rod.state === 'wind') {
+      if (rod.state === 'charge') {
+        var pw = Math.min(1, rod.t / ROD_CHARGE); armX = 5.23 + (3.1 - 5.23) * (1 - (1 - pw) * (1 - pw));   // drawing the rod back as the bar fills
+        rodBarFill.style.width = (pw * 100).toFixed(1) + '%'; rodBar.classList.toggle('full', pw >= 1);
+      } else if (rod.state === 'wind') {
         var w = Math.min(1, rod.t / ROD_WIND); armX = 5.23 + (3.1 - 5.23) * (1 - (1 - w) * (1 - w));   // draw the rod back over her shoulder
         if (rod.t >= ROD_WIND) {                                       // and flick it: off goes the bobber
-          var d = 5.4 + Math.random() * 0.8, lx = player.position.x + Math.sin(facing) * d, lz = player.position.z + Math.cos(facing) * d;
+          var d = ROD_NEAR + (ROD_FAR - ROD_NEAR) * (rod.power || 0) + Math.random() * 0.4, lx = player.position.x + Math.sin(facing) * d, lz = player.position.z + Math.cos(facing) * d;
           rod.waterY = rodWater(lx, lz);
           rod.to.set(lx, rod.waterY !== null ? rod.waterY + 0.02 : rodGround(lx, lz) + 0.05, lz);
           rod.from.copy(tip); bobber.position.copy(tip); bobber.visible = rodLine.visible = true;
-          rod.state = 'fly'; rod.t = 0; rodSound('cast');
+          rod.dist = d; rod.fly = 0.4 + d * 0.045; rod.arc = 0.5 + d * 0.13; rod.state = 'fly'; rod.t = 0; rodSound('cast');   // (a longer cast flies longer and higher)
         }
       } else if (rod.state === 'fly') {
-        var k = Math.min(1, rod.t / ROD_FLY); armX = 3.1 + (4.95 - 3.1) * Math.min(1, rod.t / 0.12);
-        bobber.position.lerpVectors(rod.from, rod.to, k); bobber.position.y += Math.sin(k * Math.PI) * 1.4;
+        var k = Math.min(1, rod.t / rod.fly); armX = 3.1 + (4.95 - 3.1) * Math.min(1, rod.t / 0.12);
+        bobber.position.lerpVectors(rod.from, rod.to, k); bobber.position.y += Math.sin(k * Math.PI) * rod.arc;
         sparkle(bobber.position.x, bobber.position.y, bobber.position.z, [0xffb8f0, 0x9ae8ff, 0xffe08a][Math.floor(Math.random() * 3)], 0.15, 0.1);   // (a trail of sparkles behind it)
         if (k >= 1) {
           rod.t = 0;
@@ -5760,7 +5785,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         bobber.position.set(rod.to.x, rod.waterY + 0.015 + Math.sin(rod.t * 2.6) * 0.012, rod.to.z);
         bobber.rotation.z = Math.sin(rod.t * 1.7) * 0.08; bobber.rotation.x = Math.sin(rod.t * 2.1 + 1) * 0.06;
         rod.rip += dt; if (rod.rip > 1.6) { rod.rip = 0; rodRipple(); }
-        if (dist(player.position.x, player.position.z, rod.to.x, rod.to.z) > 14) rodReel();   // (walked off too far: it reels in)
+        if (dist(player.position.x, player.position.z, rod.to.x, rod.to.z) > rod.dist + 6) rodReel();   // (walked off too far: it reels in)
       } else if (rod.state === 'land') {
         if (rod.t > 0.4) rodReel();                                    // missed the water: it reels itself back in
       } else if (rod.state === 'reel') {
@@ -5783,7 +5808,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     rodLineGeo.attributes.position.needsUpdate = true;
   }
   renderer.render = (function (base) {
-    return function (sc, cam) { if (sc === scene && cam === camera && rodLine.visible) rodDrawLine(); return base.apply(this, arguments); };
+    return function (sc, cam) {
+      if (sc === scene && cam === camera) {
+        if (rodLine.visible) rodDrawLine();
+        if (rod.state === 'charge') {                                  // (the bar floats over her head)
+          var v = rodTipW.set(player.position.x, player.position.y + 2.1, player.position.z).project(camera);
+          rodBar.style.left = (canvas.offsetLeft + (v.x + 1) / 2 * canvas.clientWidth).toFixed(1) + 'px'; rodBar.style.top = (canvas.offsetTop + (1 - v.y) / 2 * canvas.clientHeight).toFixed(1) + 'px';
+        }
+      }
+      return base.apply(this, arguments);
+    };
   })(renderer.render);
   (function () {                                                       // (a Fly button beside the others, for tapping)
     var row = document.querySelector('.controls'); if (!row) return;
