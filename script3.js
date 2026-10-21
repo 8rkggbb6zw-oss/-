@@ -8116,6 +8116,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var pauseBtn = document.createElement('button'); pauseBtn.type = 'button'; pauseBtn.id = 'btnPause'; function showPauseKey() { pauseBtn.innerHTML = '⏸ Pause <kbd>' + everdawnKeyName(pauseKey || 'KeyP') + '</kbd>'; }
   showPauseKey(); window.everdawnSetPauseKey = function (code) { pauseKey = code || null; showPauseKey(); };
   var controlsRow = document.querySelector('.controls'); if (controlsRow) controlsRow.appendChild(pauseBtn);
+  ['btnSave', 'btnLoad'].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = 'none'; });   // (saving and loading are on the pause menu now)
   function somethingOpen() {                                           // (Escape closes these first; it only pauses when none is open)
     return (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || carpShopOpen || coopPlacing || pickKind || glimNaming ||
       dialogueOpen() || cutscenePlaying() || sleeping || teleporting;
@@ -8218,10 +8219,20 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), the clock
-  // stops and the island waits, just as when the game is paused; closing it lets time carry on
+  // stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
+  // standing still like this, or the game is paused, the time at the top blinks red (steady red with Excessive
+  // Animation off)
+  (function () { var st = document.createElement('style'); st.textContent =
+    '@keyframes evTimeBlink{0%,100%{color:#e0284f}50%{color:inherit}}' +
+    'body.ev-time-stopped #clock{color:#e0284f;animation:evTimeBlink 1s steps(1,end) infinite}' +
+    '.ev-calm body.ev-time-stopped #clock{animation:none}@media (prefers-reduced-motion:reduce){body.ev-time-stopped #clock{animation:none}}';
+    document.head.appendChild(st); })();
+  var timeStopped = false;
   var screenBaseFrame = frame;
   frame = function () {
-    if (bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE) { clock.getDelta(); renderer.render(scene, camera); return; }
+    var screen = bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE, stopped = screen || gamePaused;
+    if (stopped !== timeStopped) { timeStopped = stopped; document.body.classList.toggle('ev-time-stopped', stopped); }
+    if (screen) { clock.getDelta(); renderer.render(scene, camera); return; }
     return screenBaseFrame.apply(this, arguments);
   };
 
