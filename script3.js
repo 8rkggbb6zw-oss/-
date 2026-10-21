@@ -5427,7 +5427,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     inBoat = true; walkTarget = null; keys = {};
     var s = boatSeat(); facing = s.face; popSound();
     burst(s.x, s.y - 0.1, s.z, 0xbfe6ff, 12, 1.2, 1.4, -2);               // (a little splash as the boat dips)
-    showToast('🛶 You climb into the rowboat and settle on its seat. Press Interact to climb back out.', 3200);
+    showToast(rodInHand() ? '🛶 You climb into the rowboat and settle on its seat. With your Fishing Rod in hand, Interact casts your line: walk to climb back out.' : '🛶 You climb into the rowboat and settle on its seat. Press Interact to climb back out.', 3200);
   }
   function boatClimbOut(quiet) {
     if (!inBoat) return;
@@ -5472,7 +5472,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   var boatBtnText = '';
   function updateBoatButton() {
     var txt = inBoat ? '🛶 Climb out of the boat' : boatNear() ? '🛶 Sit in the boat' : '';
-    if (txt !== boatBtnText) { boatBtnText = txt; if (txt) boatBtn.innerHTML = txt + ' <kbd>E</kbd>'; }
+    if (txt && !(inBoat && rodInHand() && !rodKey)) txt += ' <kbd>E</kbd>';   // (with the Fishing Rod in hand E casts it, so tapping here is the way out)
+    if (txt !== boatBtnText) { boatBtnText = txt; if (txt) boatBtn.innerHTML = txt; }
     var show = !!txt;
     if (boatBtn.classList.contains('show') !== show) boatBtn.classList.toggle('show', show);
   }
@@ -5561,6 +5562,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // flicks it, and the bobber sails out a few steps ahead. If it lands in the lake or the sea it floats there, bobbing,
   // with little rings spreading round it, until you press Interact again to reel it back in. If it lands on dry ground
   // (or on the ice round the pond in winter) the line reels itself straight back in. (No fish to catch yet)
+  // Sitting in the rowboat with the rod in hand, Interact casts too (walk, or tap the boat button, to climb out)
   // It's a magical rod: a pale moonwood shaft wound with a glowing ribbon, a violet grip, golden rings and a star on
   // its reel, and a softly glowing crystal at its tip. Its line shimmers, and the bobber is a little moonstone with a
   // golden star on top that trails sparkles as it flies and makes glowing rings on the water
@@ -5691,7 +5693,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function rodClear() { rod.state = 'idle'; bobber.visible = rodLine.visible = false; }
   function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
   function castLine() { rod.state = 'wind'; rod.t = 0; rod.armX = 0; walkTarget = null; }
-  function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !inBoat && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
+  function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
   window.addEventListener('keydown', function (e) {                    // (your own Cast/Cut key)
     if (!rodKey || e.code !== rodKey || e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
     e.preventDefault();
@@ -5713,7 +5715,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       rodRipples.forEach(function (m) { if (!m.visible) return; m.userData.t += dt; var a = m.userData.t / 1.8; if (a >= 1) { m.visible = false; return; } m.scale.setScalar(0.08 + a * 0.55); m.material.opacity = 0.7 * (1 - a); });   // (the rings spread out and fade)
       rodShimmer(dt);
       if (rod.state === 'idle') return r;
-      if (!rodInHand() || indoors || flying || inBoat || teleporting || sleeping) { rodClear(); return r; }   // (put away, or off somewhere: the line goes with it)
+      if (!rodInHand() || indoors || flying || teleporting || sleeping) { rodClear(); return r; }   // (put away, or off somewhere: the line goes with it)
       rod.t += dt;
       if (rod.armX) axeArm.rotation.x = rod.armX;                       // (her arm where it was last frame, so the tip is where it's drawn)
       var tip = rodTip(); if (!tip) { rodClear(); return r; }
