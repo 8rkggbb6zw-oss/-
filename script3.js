@@ -867,7 +867,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (mapPage) showMapPage(false);                             // closing it always goes back to the bag page next time
   }
   // ---------- World map: a second page in the bag ----------
-  // Press "Next ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
+  // Press "Map ›" in the bag to see a map of both islands. Scroll it (or drag it) to look around. It shows your house,
   // the Dawn Tree, the lake and dock, your crops, the shipping bin, the bridge, Whimsy & Bloom, every standing tree,
   // bush and rock, and you, as a little witch's hat, which moves along with you while the map is open
   var MAP_X0 = -142, MAP_X1 = 47, MAP_Z0 = -42, MAP_Z1 = 168, MAP_S = 6;   // the area it covers, and how many pixels per step
@@ -875,7 +875,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var mapPage = false, mapBase = null, mapTimer = null, mapFollow = true;
   var mapHead = bagUi.box ? bagUi.box.querySelector('.inv-head b') : null;
   var mapBtn = document.createElement('button');
-  mapBtn.type = 'button'; mapBtn.className = 'inv-close map-btn'; mapBtn.textContent = 'Next ›';
+  mapBtn.type = 'button'; mapBtn.className = 'inv-close map-btn'; mapBtn.textContent = 'Map ›';
   mapBtn.style.cssText = 'margin-left:auto;margin-right:8px;';
   if (bagUi.close) bagUi.close.parentNode.insertBefore(mapBtn, bagUi.close);
   var mapBox = document.createElement('div');
@@ -1137,7 +1137,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
     for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
     mapBox.style.display = on ? 'block' : 'none'; mapKey.style.display = on ? 'flex' : 'none';
-    mapBtn.textContent = on ? '‹ Bag' : 'Next ›';
+    mapBtn.textContent = on ? '‹ Bag' : 'Map ›';
     if (mapHead) mapHead.textContent = on ? '🗺️ World Map' : '🎒 Bag';
     if (mapTimer) { clearInterval(mapTimer); mapTimer = null; }
     if (on) {
