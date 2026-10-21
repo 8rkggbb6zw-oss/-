@@ -1366,8 +1366,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // holding (chopping, mining, trimming, tilling, planting, placing or eating it), and holding it keeps the axe,
   // pickaxe or trimmers going. E does nothing once neither is E, and Space then only flies you up on your broom. The
   // Interact button shows the Interact key, and tapping it still does everything
-  var interactKey = null, useKey = null, upKey = null, downKey = null, rightKey = null, leftKey = null, spellKey = null;
-  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; downKey = localStorage.getItem('everdawn-move-down') || null; rightKey = localStorage.getItem('everdawn-move-right') || null; leftKey = localStorage.getItem('everdawn-move-left') || null; spellKey = localStorage.getItem('everdawn-spell-key') || null; } catch (err) {}
+  var interactKey = null, useKey = null, upKey = null, downKey = null, rightKey = null, leftKey = null, spellKey = null, bagKey = null;
+  try { interactKey = localStorage.getItem('everdawn-interact') || null; useKey = localStorage.getItem('everdawn-use-key') || null; upKey = localStorage.getItem('everdawn-move-up') || null; downKey = localStorage.getItem('everdawn-move-down') || null; rightKey = localStorage.getItem('everdawn-move-right') || null; leftKey = localStorage.getItem('everdawn-move-left') || null; spellKey = localStorage.getItem('everdawn-spell-key') || null; bagKey = localStorage.getItem('everdawn-bag-key') || null; } catch (err) {}
   function isInteractKey(code) { return interactKey ? code === interactKey : code === 'KeyE' || code === 'Space'; }
   function isUseKey(code) { return useKey ? code === useKey : code === 'KeyE' || code === 'Space'; }
   function showInteractKey() { var k = ui.btnAct.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
@@ -1389,6 +1389,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   function showSpellKey() { var k = ui.btnSpell.querySelector('kbd'); if (k) k.textContent = spellKey ? everdawnKeyName(spellKey) : 'Q'; }
   window.everdawnSetSpellKey = function (code) { spellKey = code || null; keys = {}; showSpellKey(); };
   showSpellKey();
+  // The bag (the Inventory Screen) opens with I to start; on the Mouse & Keyboard page that can be a key of your own
+  // instead (then I does nothing). The Bag button shows whichever key it is
+  function showBagKey() { var k = bagUi.open && bagUi.open.querySelector('kbd'); if (k) k.textContent = bagKey ? everdawnKeyName(bagKey) : 'I'; }
+  window.everdawnSetBagKey = function (code) { bagKey = code || null; showBagKey(); };
+  showBagKey();
   showInteractKey();
   var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
   heldItem = (function (base) { return function () { return handsFree ? null : base.apply(this, arguments); }; })(heldItem);
@@ -1414,7 +1419,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   })(updateTrees);
   window.addEventListener('keydown', function (e) { // I opens and closes the bag, Escape closes it
     if (e.repeat) return;
-    if (e.code === 'KeyI') toggleBag();
+    if (e.code === (bagKey || 'KeyI')) toggleBag();
     if (e.code === 'KeyR') nextRow();
     if (e.code === 'Tab') { e.preventDefault(); stepSlot(e.shiftKey ? -1 : 1); } // Tab steps to your next item, Shift+Tab goes back
     // number keys 1-4 pick that slot in the hotbar's current row (pressing it again unselects it)
@@ -8927,11 +8932,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, and open your quests and crafting)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, and open your quests, crafting and bag)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
