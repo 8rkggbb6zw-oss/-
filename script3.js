@@ -6156,11 +6156,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inCarp) { var cpo = carpFront(1.8); px = cpo.x; pz = cpo.z; } // and Oak & Ember
     if (inCoop) { var coo = coopFront(1.8); px = coo.x; pz = coo.z; } // and your coop
     if (inFbarn) { var fbo = fbarnFront(2.0); px = fbo.x; pz = fbo.z; } // and your barn
+    if (inBoat) { var dko = dock.localToWorld(new THREE.Vector3(DOCK_LEN - 0.7, 0, 0.35)); px = dko.x; pz = dko.z; }   // sitting in the rowboat? stand at the end of the dock (and climb back in when loaded)
     var data = {
       v: 1, savedAt: Date.now(), name: saveName,                      // (the name you gave this save)
       state: { mana: state.mana, stamina: state.stamina, harvest: state.harvest, coins: state.coins, minutes: state.minutes, day: state.day, petalDay: state.petalDay },
       bag: bag, selectedSlot: selectedSlot, hotRow: hotRow,
-      player: { x: px, z: pz, facing: facing },
+      player: { x: px, z: pz, facing: facing, boat: inBoat && !indoors },
       shipBin: shipBin,
       farm: tiles.filter(function (t) { return t.soil; }).map(function (t) { return { c: t.c, r: t.r, crop: !!t.crop, stage: t.stage || 0, growth: t.growth || 0, wet: !!t.wet }; }),
       scenery: allScenery.map(function (t) {                          // when each tree or bush was cut (null = standing)
@@ -7787,8 +7788,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     walkTarget = null;
     doorArmed = false;                                                // don't walk straight into the house if you saved by the door
+    inBoat = false;                                                   // (whatever you were doing before loading, you're out of the boat...)
     player.position.set(data.player.x, 0, data.player.z);
     facing = data.player.facing;
+    body.position.set(0, 0, 0); body.rotation.set(0, 0, 0);
+    if (data.player.boat) { inBoat = true; facing = boatSeat().face; }   // (...unless you saved sitting in it: then you're back on its seat)
     cam.target.set(player.position.x, 0.8, player.position.z);
     popSound();
     showToast('Game loaded ✦');
