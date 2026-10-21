@@ -1298,11 +1298,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   // After the Crafting Screen, "Relationships ›" turns to a page with everyone in town: their picture, their name and
   // 10 big hearts, in two rows of five. The hearts start grey and fill in red from the left, a sliver at a time, as you become friends: the
   // more you talk to them and give them gifts, the more of each heart turns red. Press H to open it straight away from
-  // anywhere, and H again to close it. There are no townsfolk yet. When there are, add each one with
+  // anywhere, and H again to close it (on the Mouse & Keyboard page that can be a key of your own instead). There are
+  // no townsfolk yet. When there are, add each one with
   // addTownsperson({ name, pic }) (pic: a picture's address, or a canvas to draw them from), and give them friendship
   // with addFriendship(name, how many hearts: 0.1 for a chat, say, or 0.25 for a gift they like). Their hearts are
   // kept in your save (and someone giving you the cold shoulder can't go past 8 while hearts 9 and 10 are locked)
-  var townsfolk = [], relPage = false, relSaved = {};
+  var townsfolk = [], relPage = false, relSaved = {}, relKey = null; try { relKey = localStorage.getItem('everdawn-rel-key') || null; } catch (err) {}
   function townsperson(name) { for (var i = 0; i < townsfolk.length; i++) if (townsfolk[i].name === name) return townsfolk[i]; return null; }
   function addTownsperson(t) {                                         // (someone new in town: on the Relationship Screen from now on)
     if (townsperson(t.name)) return townsperson(t.name);
@@ -1320,7 +1321,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   if (bagUi.close) bagUi.close.parentNode.insertBefore(relBtn, bagUi.close);
   var relBox = document.createElement('div');
   relBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fff4f8,#f6ecff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
-  var relHint = document.createElement('p'); relHint.className = 'inv-info'; relHint.style.display = 'none'; relHint.textContent = 'Press H to see your friends any time.';
+  var relHint = document.createElement('p'); relHint.className = 'inv-info'; relHint.style.display = 'none';
+  function showRelKey() { relHint.textContent = 'Press ' + everdawnKeyName(relKey || 'KeyH') + ' to see your friends any time.'; }
+  window.everdawnSetRelKey = function (code) { relKey = code || null; showRelKey(); };
+  showRelKey();
   if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(relBox, craftHint.nextSibling); bagUi.grid.parentNode.insertBefore(relHint, relBox.nextSibling); }
   var HEART_PATH = 'M12 21.3l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5L12 21.3z';
   function heartSvg(fill, k) {                                         // (one heart: grey, with the part you've earned in red, filling from the left)
@@ -1371,7 +1375,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
     showRelPage(true);
   }
-  window.addEventListener('keydown', function (e) { if (e.code === 'KeyH' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openRelationships(); });
+  window.addEventListener('keydown', function (e) { if (e.code === (relKey || 'KeyH') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openRelationships(); });
 
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
@@ -9020,11 +9024,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, and open your quests, crafting, bag and map)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, and open your quests, crafting, bag, map and friends)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
