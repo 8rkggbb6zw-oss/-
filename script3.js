@@ -5527,6 +5527,22 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     return interactOnFoot.apply(this, arguments);
   };
+  // ----- going to bed with Interact -----
+  // Stand by your bed and press Interact (E or Space, or your own Interact key, or tap the Interact or Sleep button) to
+  // go to sleep. Z doesn't put you to bed any more. The Sleep button shows your Interact key
+  var sleepAsk = false;
+  goToSleep = (function (base) {                                       // (Z on its own does nothing now)
+    return function () { var ev = window.event; if (!sleepAsk && ev && ev.type === 'keydown' && ev.code === 'KeyZ') return; return base.apply(this, arguments); };
+  })(goToSleep);
+  interact = (function (base) {
+    return function () {
+      if (nearBed() && !sleeping && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) { sleepAsk = true; try { goToSleep(); } finally { sleepAsk = false; } return; }
+      return base.apply(this, arguments);
+    };
+  })(interact);
+  function showSleepKey() { var k = sleepBtn.querySelector('kbd'); if (k) k.textContent = interactKey ? everdawnKeyName(interactKey) : 'E'; }
+  window.everdawnSetInteract = (function (base) { return function () { var r = base.apply(this, arguments); showSleepKey(); return r; }; })(window.everdawnSetInteract);
+  showSleepKey();
   (function () {                                                       // (a Fly button beside the others, for tapping)
     var row = document.querySelector('.controls'); if (!row) return;
     var b = document.createElement('button'); b.id = 'btnFly'; b.type = 'button'; b.innerHTML = '🧹 Fly <kbd>B</kbd>';
