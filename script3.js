@@ -1211,11 +1211,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   // After the Quest Screen, "Crafting ›" turns to a page of the recipes you've unlocked. Each shows what it makes and
   // what it needs, with how many of each you have (green once you've enough), and a Craft button that lights up when
   // you've got everything and room in your bag: crafting takes the ingredients out of your bag and puts what you made
-  // in it. Press K to open it straight away from anywhere, and K again to close it. There are no recipes yet. To add
+  // in it. Press K to open it straight away from anywhere, and K again to close it (on the Mouse & Keyboard page that
+  // can be a key of your own instead). There are no recipes yet. To add
   // one, put it in CRAFT_RECIPES as { id, makes: an item's id, count: how many it makes, needs: { item id: how many } },
   // and unlock it with unlockRecipe(id) (or give it unlocked: true to know it from the start). The recipes you've
   // unlocked are kept in your save
-  var CRAFT_RECIPES = [], craftKnown = [], craftPage = false;
+  var CRAFT_RECIPES = [], craftKnown = [], craftPage = false, craftKey = null; try { craftKey = localStorage.getItem('everdawn-craft-key') || null; } catch (err) {}
   function recipeById(id) { for (var i = 0; i < CRAFT_RECIPES.length; i++) if (CRAFT_RECIPES[i].id === id) return CRAFT_RECIPES[i]; return null; }
   function craftItemName(id) { return ITEMS[id] ? ITEMS[id].name : id; }
   function craftItemIcon(id) { return ITEMS[id] && ITEMS[id].icon ? ITEMS[id].icon : '✦'; }
@@ -1244,7 +1245,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   if (bagUi.close) bagUi.close.parentNode.insertBefore(craftBtn, bagUi.close);
   var craftBox = document.createElement('div');
   craftBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fff8ec,#eef6ff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
-  var craftHint = document.createElement('p'); craftHint.className = 'inv-info'; craftHint.style.display = 'none'; craftHint.textContent = 'Press K to open crafting any time.';
+  var craftHint = document.createElement('p'); craftHint.className = 'inv-info'; craftHint.style.display = 'none';
+  function showCraftKey() { craftHint.textContent = 'Press ' + everdawnKeyName(craftKey || 'KeyK') + ' to open crafting any time.'; }
+  window.everdawnSetCraftKey = function (code) { craftKey = code || null; showCraftKey(); };
+  showCraftKey();
   if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(craftBox, questHint.nextSibling); bagUi.grid.parentNode.insertBefore(craftHint, craftBox.nextSibling); }
   function renderCraftPage() {
     var list = craftRecipes();
@@ -1288,7 +1292,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
     showCraftPage(true);
   }
-  window.addEventListener('keydown', function (e) { if (e.code === 'KeyK' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openCrafting(); });
+  window.addEventListener('keydown', function (e) { if (e.code === (craftKey || 'KeyK') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openCrafting(); });
 
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
@@ -8923,11 +8927,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe and open your quests)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, and open your quests and crafting)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
