@@ -8041,6 +8041,45 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.everdawnSetTypewriter = function (on) { typewriter = !!on; try { localStorage.setItem(TYPE_KEY, on ? 'on' : 'off'); } catch (err) {} };
 
+  // ---------- Cutscenes and events, and the key that skips them ----------
+  // When a cutscene or event plays, it calls startCutscene(skip) as it begins and endCutscene() when it's over. While
+  // it plays, a Skip button shows at the top right, you can't walk off or open anything, and the Skip Events key (N to
+  // start; on the Mouse & Keyboard page it can be a key of your own) or tapping Skip ends it straight away: anyone
+  // talking stops mid-sentence, and skip() is called to jump to how things are left at the end. There are no
+  // cutscenes yet, so nothing starts one for now
+  var skipKey = null; try { skipKey = localStorage.getItem('everdawn-skip-key') || null; } catch (err) {}
+  function isSkipKey(code) { return code === (skipKey || 'KeyN'); }
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-cut{position:absolute;inset:0;z-index:7;border-radius:inherit}.ev-cut[hidden],.ev-skip[hidden]{display:none}' +
+    '.ev-skip{position:absolute;top:12px;right:12px;z-index:9;padding:.35em 1em;font:600 15px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,226,160,.8);border-radius:999px;cursor:pointer;background:rgba(58,34,112,.85);box-shadow:0 4px 14px rgba(10,0,30,.4)}' +
+    '.ev-skip:hover{background:rgba(100,64,170,.95)}.ev-skip:focus-visible{outline:3px solid #fff;outline-offset:2px}';
+    document.head.appendChild(st); })();
+  var cutCover = document.createElement('div'); cutCover.className = 'ev-cut'; cutCover.hidden = true;   // (taps on the game don't walk you anywhere)
+  var skipBtn = document.createElement('button'); skipBtn.type = 'button'; skipBtn.className = 'ev-skip'; skipBtn.hidden = true;
+  canvas.parentNode.appendChild(cutCover); canvas.parentNode.appendChild(skipBtn);
+  var cutscene = null;
+  function showSkipKey() { skipBtn.innerHTML = 'Skip ⏭ <kbd>' + everdawnKeyName(skipKey || 'KeyN') + '</kbd>'; }
+  window.everdawnSetSkipKey = function (code) { skipKey = code || null; showSkipKey(); };
+  showSkipKey();
+  function cutscenePlaying() { return !!cutscene; }
+  function startCutscene(skip) { cutscene = { skip: skip || null }; walkTarget = null; keys = {}; cutCover.hidden = skipBtn.hidden = false; }
+  function endCutscene() { cutscene = null; cutCover.hidden = skipBtn.hidden = true; keys = {}; }
+  function skipCutscene() {
+    if (!cutscene) return;
+    var skip = cutscene.skip; endCutscene();
+    if (dialogueOpen()) { dlgDone = null; if (dlgFinish) dlgFinish(); dlg.hidden = true; dlgText.textContent = ''; }   // (anyone talking stops)
+    if (skip) skip();
+  }
+  cutCover.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  skipBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  skipBtn.addEventListener('click', function (e) { e.stopPropagation(); skipCutscene(); focusGame(); });
+  window.addEventListener('keydown', function (e) {                    // (caught first: the Skip key always skips, and other keys do nothing)
+    if (!cutscene || (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'))) return;
+    if (isSkipKey(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) skipCutscene(); return; }
+    if (dialogueOpen() || e.code === 'Escape') return;                 // (someone talking: the dialogue keys still move it along)
+    e.preventDefault(); e.stopImmediatePropagation();
+  }, true);
+
   // ---------- Dialogue, and the key that moves it along ----------
   // When someone has something to say, showDialogue(name, lines, done) opens a box at the bottom of the screen with
   // their name and the first line (typed out if the Typewriter Effect is on, at the Text Size and Bold Text from
@@ -9564,7 +9603,7 @@ var everdawnTitle = (function () {
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
     var KEY_SECTIONS = { 'Interact': 'Gameplay', 'Confirm': 'Menu' };                  // (a little label over the row each section starts at)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Skip Events', 'everdawn-skip-key', 'everdawnSetSkipKey', 'N'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
       if (KEY_SECTIONS[row[0]]) body.insertAdjacentHTML('beforeend', '<div class="ev-ksec">' + KEY_SECTIONS[row[0]] + '</div>');
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
