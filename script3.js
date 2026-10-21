@@ -1654,6 +1654,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetMooringKey = function (code) { mooringKey = code || null; };
   function callMooring() { showToast('🌙 The Moonstone Mooring only answers underwater', 2200); }
   window.addEventListener('keydown', function (e) { if (e.code === (mooringKey || 'KeyX') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) callMooring(); });
+  // Cast/Cut fishing rod is E or Space (Interact) to start; on the Mouse & Keyboard page it can be a key of your own
+  // instead. Then that key casts the line and reels it back in, and E, Space and Interact go back to their usual jobs
+  // (tapping the Interact button still works the rod)
+  var rodKey = null; try { rodKey = localStorage.getItem('everdawn-rod-key') || null; } catch (err) {}
+  window.everdawnSetRodKey = function (code) { rodKey = code || null; };
   showBagKey();
   showInteractKey();
   var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
@@ -5687,8 +5692,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
   function castLine() { rod.state = 'wind'; rod.t = 0; rod.armX = 0; walkTarget = null; }
   function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !inBoat && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
+  window.addEventListener('keydown', function (e) {                    // (your own Cast/Cut key)
+    if (!rodKey || e.code !== rodKey || e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
+    e.preventDefault();
+    if (rod.state === 'fly' || rod.state === 'float' || rod.state === 'land') rodReel();
+    else if (rod.state === 'idle' && rodCanCast()) castLine();
+  });
   interact = (function (base) {
     return function () {
+      var ev = window.event; if (rodKey && ev && ev.type === 'keydown') return base.apply(this, arguments);   // (a key of your own casts it, so keys do their usual jobs)
       if (rod.state === 'fly' || rod.state === 'float' || rod.state === 'land') { rodReel(); return; }   // (line out: Interact reels it back in)
       if (rod.state !== 'idle') return;
       if (rodCanCast()) { castLine(); return; }
@@ -9421,7 +9433,7 @@ var everdawnTitle = (function () {
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
