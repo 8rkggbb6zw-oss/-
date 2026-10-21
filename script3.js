@@ -5556,19 +5556,33 @@ EVERDAWN_PARTS.push(function (THREE) {
   // flicks it, and the bobber sails out a few steps ahead. If it lands in the lake or the sea it floats there, bobbing,
   // with little rings spreading round it, until you press Interact again to reel it back in. If it lands on dry ground
   // (or on the ice round the pond in winter) the line reels itself straight back in. (No fish to catch yet)
+  // It's a magical rod: a pale moonwood shaft wound with a glowing ribbon, a violet grip, golden rings and a star on
+  // its reel, and a softly glowing crystal at its tip. Its line shimmers, and the bobber is a little moonstone with a
+  // golden star on top that trails sparkles as it flies and makes glowing rings on the water
   ITEMS.fishingRod = { name: 'Fishing Rod', icon: '🎣', fill: 88, info: 'Hold it and press Interact to cast your line into the lake or the sea, and press Interact again to reel it back in. Keep it in your bag; it never wears out.' };
-  ITEMS.fishingRod.img = glimCanvas(96, 96, function (g) {           // a slender wooden rod with a cork grip and a little reel, its line hanging down to a bobber
+  ITEMS.fishingRod.img = glimCanvas(96, 96, function (g) {           // a moonwood rod wound with a glowing ribbon, a crystal at its tip and a moonstone bobber
+    function star(x, y, R, r, n) { g.beginPath(); for (var k = 0; k < n * 2; k++) { var a = k * Math.PI / n - Math.PI / 2, d = k % 2 ? r : R; g[k ? 'lineTo' : 'moveTo'](x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); }
     g.lineCap = 'round';
-    g.strokeStyle = '#6a3e1e'; g.lineWidth = 4.5; g.beginPath(); g.moveTo(24, 74); g.lineTo(82, 10); g.stroke();
-    g.strokeStyle = '#a8703c'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(24, 74); g.lineTo(82, 10); g.stroke();
-    g.strokeStyle = '#d8a868'; g.lineWidth = 9; g.beginPath(); g.moveTo(10, 90); g.lineTo(26, 72); g.stroke();   // the cork grip
-    g.strokeStyle = '#9a7ad8'; g.lineWidth = 9; g.lineCap = 'butt'; g.beginPath(); g.moveTo(25, 73.5); g.lineTo(28.5, 69.5); g.stroke();   // a lavender wrap above it
-    g.fillStyle = '#b8c0cc'; g.beginPath(); g.arc(36, 70, 7, 0, Math.PI * 2); g.fill();                           // the reel
-    g.fillStyle = '#7a8494'; g.beginPath(); g.arc(36, 70, 3, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(90,80,110,0.85)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(82, 10); g.quadraticCurveTo(84, 36, 72, 58); g.stroke();   // the line
-    g.fillStyle = '#ff4d6d'; g.beginPath(); g.arc(72, 64, 7, Math.PI, 0); g.fill();                              // the bobber: red over white
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(72, 64, 7, 0, Math.PI); g.fill();
-    g.strokeStyle = 'rgba(60,40,60,0.5)'; g.lineWidth = 1; g.beginPath(); g.arc(72, 64, 7, 0, Math.PI * 2); g.stroke();
+    var sg = g.createLinearGradient(24, 74, 80, 12); sg.addColorStop(0, '#b8a4e0'); sg.addColorStop(1, '#f4eeff');
+    g.strokeStyle = '#7a62b0'; g.lineWidth = 5; g.beginPath(); g.moveTo(24, 74); g.lineTo(79, 14); g.stroke();   // the moonwood shaft
+    g.strokeStyle = sg; g.lineWidth = 3; g.beginPath(); g.moveTo(24, 74); g.lineTo(79, 14); g.stroke();
+    g.strokeStyle = '#ff9ad8'; g.lineWidth = 2; g.shadowColor = '#ff9ad8'; g.shadowBlur = 4;                      // the glowing ribbon wound round it
+    for (var t = 0; t < 1; t += 0.14) { var x0 = 30 + t * 40, y0 = 67 - t * 44; g.beginPath(); g.moveTo(x0 - 3, y0 - 3); g.lineTo(x0 + 3, y0 + 3); g.stroke(); }
+    g.shadowBlur = 0;
+    g.strokeStyle = '#5a3d9a'; g.lineWidth = 9; g.beginPath(); g.moveTo(11, 89); g.lineTo(26, 72); g.stroke();   // the violet grip
+    g.fillStyle = '#ffd56a'; g.beginPath(); g.arc(10, 90, 4, 0, Math.PI * 2); g.fill();                         // its golden end cap
+    g.fillStyle = '#ffd56a'; g.beginPath(); g.arc(36, 70, 7.5, 0, Math.PI * 2); g.fill();                         // the golden reel, with a star on it
+    g.fillStyle = '#fff6d0'; star(36, 70, 5.5, 2.3, 5); g.fill();
+    g.strokeStyle = 'rgba(255,214,245,0.95)'; g.lineWidth = 1.4; g.shadowColor = '#ffb8f0'; g.shadowBlur = 3;      // the shimmering line
+    g.beginPath(); g.moveTo(80, 12); g.quadraticCurveTo(84, 38, 72, 57); g.stroke(); g.shadowBlur = 0;
+    var cg = g.createRadialGradient(80, 12, 0, 80, 12, 14); cg.addColorStop(0, 'rgba(170,240,255,0.9)'); cg.addColorStop(1, 'rgba(170,240,255,0)');
+    g.fillStyle = cg; g.beginPath(); g.arc(80, 12, 14, 0, Math.PI * 2); g.fill();                                  // the crystal's glow
+    g.fillStyle = '#c8f6ff'; g.beginPath(); g.moveTo(80, 3); g.lineTo(85, 12); g.lineTo(80, 20); g.lineTo(75, 12); g.closePath(); g.fill();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(80, 5); g.lineTo(82, 11); g.lineTo(78, 11); g.closePath(); g.fill();
+    var bg = g.createRadialGradient(69, 61, 1, 72, 64, 9); bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.5, '#e8dcff'); bg.addColorStop(1, '#a890e8');
+    g.fillStyle = 'rgba(216,200,255,0.45)'; g.beginPath(); g.arc(72, 65, 11, 0, Math.PI * 2); g.fill();            // the moonstone bobber, glowing
+    g.fillStyle = bg; g.beginPath(); g.arc(72, 65, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffd56a'; star(72, 56, 4.5, 1.9, 5); g.fill();                                                  // with a golden star on top
   }).toDataURL();
   isTool = (function (base) { return function (id) { return id === 'fishingRod' || base(id); }; })(isTool);   // (no count, and it can't be sold or thrown away)
   var ROD_LEN = 1.3;
@@ -5578,15 +5592,23 @@ EVERDAWN_PARTS.push(function (THREE) {
       var g = new THREE.Group(), palm = new THREE.Group(), r = new THREE.Group();
       palm.rotation.x = 1.05; palm.position.y = 0.08; g.add(palm);    // (undoes the arm's angle)
       r.rotation.x = 0.87; palm.add(r);                                // the rod points out ahead of her and up
-      var wood = new THREE.MeshStandardMaterial({ color: 0x8a5630, roughness: 0.6 });
-      var pole = new THREE.CylinderGeometry(0.007, 0.018, ROD_LEN, 8); pole.translate(0, ROD_LEN / 2 - 0.2, 0);
-      var m = new THREE.Mesh(pole, wood); m.castShadow = true; r.add(m);
-      var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.3, 10), new THREE.MeshStandardMaterial({ color: 0xd8a868, roughness: 0.9 })); grip.position.y = -0.06; r.add(grip);
-      var wrap = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.04, 10), new THREE.MeshStandardMaterial({ color: 0x9a7ad8, roughness: 0.5 })); wrap.position.y = 0.11; r.add(wrap);
-      var steel = new THREE.MeshStandardMaterial({ color: 0xb8c0cc, metalness: 0.7, roughness: 0.3 });
-      var reel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 16), steel); reel.rotation.z = Math.PI / 2; reel.position.set(0, 0.16, 0.06); r.add(reel);
-      var foot = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.05, 0.03), steel); foot.position.set(0, 0.16, 0.03); r.add(foot);
-      [0.45, 0.7, 0.92].forEach(function (y) { var ring = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0025, 4, 10), steel); ring.position.set(0, y, 0.022); r.add(ring); });   // the line's guide rings
+      var moonwood = new THREE.MeshStandardMaterial({ color: 0xe4dcf6, roughness: 0.35, metalness: 0.15, emissive: 0x6a5aa0, emissiveIntensity: 0.18 });
+      var gold = new THREE.MeshStandardMaterial({ color: 0xffd56a, metalness: 0.85, roughness: 0.25, emissive: 0x6a4a10, emissiveIntensity: 0.3 });
+      var pole = new THREE.CylinderGeometry(0.007, 0.018, ROD_LEN, 10); pole.translate(0, ROD_LEN / 2 - 0.2, 0);
+      var m = new THREE.Mesh(pole, moonwood); m.castShadow = true; r.add(m);
+      var helix = new THREE.Curve(); helix.getPoint = function (t, o) { var y = 0.14 + t * 0.72, a = t * Math.PI * 2 * 6, rad = 0.019 - t * 0.008; return (o || new THREE.Vector3()).set(Math.cos(a) * rad, y, Math.sin(a) * rad); };
+      r.add(new THREE.Mesh(new THREE.TubeGeometry(helix, 160, 0.0035, 5, false), new THREE.MeshBasicMaterial({ color: 0xff9ad8 })));   // a glowing ribbon wound up the shaft
+      var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0x5a3d9a, roughness: 0.8 })); grip.position.y = -0.06; r.add(grip);
+      var cap = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 8), gold); cap.position.y = -0.21; r.add(cap);
+      [0.09, 0.115].forEach(function (y) { var band = new THREE.Mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.012, 12), gold); band.position.y = y; r.add(band); });
+      var reel = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 20), gold); reel.rotation.z = Math.PI / 2; reel.position.set(0, 0.16, 0.06); r.add(reel);
+      var st = new THREE.Shape(); for (var k = 0; k < 10; k++) { var sa = k * Math.PI / 5, sd = k % 2 ? 0.014 : 0.034; st[k ? 'lineTo' : 'moveTo'](Math.sin(sa) * sd, Math.cos(sa) * sd); }
+      var face = new THREE.Mesh(new THREE.ShapeGeometry(st), new THREE.MeshBasicMaterial({ color: 0xfff2c0, side: THREE.DoubleSide })); face.rotation.y = Math.PI / 2; face.position.set(0.019, 0.16, 0.06); r.add(face);   // a star on the reel
+      var foot = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.05, 0.03), gold); foot.position.set(0, 0.16, 0.03); r.add(foot);
+      [0.45, 0.7, 0.92].forEach(function (y) { var ring = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.0028, 6, 12), gold); ring.position.set(0, y, 0.022); r.add(ring); });   // the line's golden guide rings
+      var crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.03, 0), new THREE.MeshStandardMaterial({ color: 0xc8f6ff, emissive: 0x6ad8ff, emissiveIntensity: 0.9, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.92 }));
+      crystal.scale.set(0.8, 1.5, 0.8); crystal.position.y = ROD_LEN - 0.2 + 0.035; crystal.name = 'rodCrystal'; r.add(crystal);   // a glowing crystal at the tip
+      var glow = holdGlow(0x9ae8ff, 0.3, ROD_LEN - 0.2 + 0.035); glow.name = 'rodGlow'; r.add(glow);
       var tip = new THREE.Object3D(); tip.name = 'rodTip'; tip.position.y = ROD_LEN - 0.2; r.add(tip);
       return g;
     };
@@ -5602,19 +5624,21 @@ EVERDAWN_PARTS.push(function (THREE) {
   })(loadGame);
   // the bobber, its line and the little rings it makes on the water
   var bobber = new THREE.Group();
-  (function () {
-    var top = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness: 0.35 }));
-    var bot = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 }));
-    var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 6), new THREE.MeshStandardMaterial({ color: 0xff4d6d, roughness: 0.4 })); stem.position.y = 0.095;
-    top.castShadow = bot.castShadow = true; bobber.add(top, bot, stem);
+  (function () {                                                       // a little moonstone, with a golden star on top and a soft glow
+    var stone = new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 16), new THREE.MeshPhysicalMaterial({ color: 0xf2eaff, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, emissive: 0xa890e8, emissiveIntensity: 0.35 }));
+    stone.castShadow = true; bobber.add(stone);
+    var st = new THREE.Shape(); for (var k = 0; k < 10; k++) { var sa = k * Math.PI / 5, sd = k % 2 ? 0.02 : 0.048; st[k ? 'lineTo' : 'moveTo'](Math.sin(sa) * sd, Math.cos(sa) * sd); }
+    var star = new THREE.Mesh(new THREE.ExtrudeGeometry(st, { depth: 0.014, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 }), new THREE.MeshStandardMaterial({ color: 0xffd56a, metalness: 0.7, roughness: 0.25, emissive: 0x8a6010, emissiveIntensity: 0.5 }));
+    star.position.set(0, 0.11, -0.007); star.name = 'bobStar'; bobber.add(star);
+    bobber.add(holdGlow(0xd8c0ff, 0.6, 0.02));
   })();
   bobber.visible = false; scene.add(bobber);
   var ROD_SEG = 24, rodLineGeo = new THREE.BufferGeometry();
   rodLineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((ROD_SEG + 1) * 3), 3));
-  var rodLine = new THREE.Line(rodLineGeo, new THREE.LineBasicMaterial({ color: 0xf6f2ff, transparent: true, opacity: 0.85 }));
+  var rodLine = new THREE.Line(rodLineGeo, new THREE.LineBasicMaterial({ color: 0xffd6f5, transparent: true, opacity: 0.95 }));
   rodLine.frustumCulled = false; rodLine.visible = false; scene.add(rodLine);
   var rodRipples = [0, 1, 2].map(function () {
-    var m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+    var m = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 40), new THREE.MeshBasicMaterial({ color: 0xd8c8ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
     m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 9; scene.add(m); return m;
   });
   function rodRipple() { var m = rodRipples.reduce(function (a, b) { return b.userData.t > a.userData.t ? b : a; }); m.userData.t = 0; m.position.set(bobber.position.x, rod.waterY + 0.012, bobber.position.z); m.visible = true; }
@@ -5640,6 +5664,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (kind === 'thud') hissBurst(0.12, 'lowpass', 520, 1, 0.12, 0.003, 0.08);
     else if (kind === 'reel') for (var i = 0; i < 9; i++) hissBurst(0.03, 'highpass', 4200, 1, 0.05, 0.002, 0.018, i * 0.045);
   }
+  var rodSpark = 0;
+  function rodShimmer(dt) {                                            // the crystal at the tip pulses and gives off the odd sparkle; the bobber's star turns
+    var cr = rodInHand() && heldItemGrp.getObjectByName('rodCrystal'); if (!cr) return;
+    var t = state.time, gl = heldItemGrp.getObjectByName('rodGlow');
+    cr.rotation.y = t * 1.5; cr.material.emissiveIntensity = 0.7 + Math.sin(t * 3) * 0.3;
+    if (gl) { gl.material.opacity = 0.35 + Math.sin(t * 3) * 0.12; }
+    var bs = bobber.getObjectByName('bobStar'); if (bs) bs.rotation.y = t * 1.2;
+    rodSpark += dt;
+    if (rodSpark > 0.35) { rodSpark = 0; cr.updateWorldMatrix(true, false); var w = cr.getWorldPosition(rodTipW); sparkle(w.x, w.y, w.z, Math.random() < 0.5 ? 0x9ae8ff : 0xffb8f0, 0.25, 0.25); }
+    if (rod.state === 'float' && Math.random() < dt * 1.2) sparkle(bobber.position.x, bobber.position.y + 0.1, bobber.position.z, 0xe0d0ff, 0.3, 0.4);
+  }
   var rod = { state: 'idle', t: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), waterY: null, rip: 0 }, rodTipW = new THREE.Vector3();
   var ROD_WIND = 0.22, ROD_FLY = 0.65, ROD_REEL = 0.5;
   function rodTip() {
@@ -5663,7 +5698,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   updateTrees = (function (base) {
     return function (dt) {
       var r = base.apply(this, arguments);
-      rodRipples.forEach(function (m) { if (!m.visible) return; m.userData.t += dt; var a = m.userData.t / 1.8; if (a >= 1) { m.visible = false; return; } m.scale.setScalar(0.08 + a * 0.55); m.material.opacity = 0.55 * (1 - a); });   // (the rings spread out and fade)
+      rodRipples.forEach(function (m) { if (!m.visible) return; m.userData.t += dt; var a = m.userData.t / 1.8; if (a >= 1) { m.visible = false; return; } m.scale.setScalar(0.08 + a * 0.55); m.material.opacity = 0.7 * (1 - a); });   // (the rings spread out and fade)
+      rodShimmer(dt);
       if (rod.state === 'idle') return r;
       if (!rodInHand() || indoors || flying || inBoat || teleporting || sleeping) { rodClear(); return r; }   // (put away, or off somewhere: the line goes with it)
       rod.t += dt;
@@ -5681,9 +5717,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       } else if (rod.state === 'fly') {
         var k = Math.min(1, rod.t / ROD_FLY); armX = 3.1 + (4.95 - 3.1) * Math.min(1, rod.t / 0.12);
         bobber.position.lerpVectors(rod.from, rod.to, k); bobber.position.y += Math.sin(k * Math.PI) * 1.4;
+        sparkle(bobber.position.x, bobber.position.y, bobber.position.z, [0xffb8f0, 0x9ae8ff, 0xffe08a][Math.floor(Math.random() * 3)], 0.15, 0.1);   // (a trail of sparkles behind it)
         if (k >= 1) {
           rod.t = 0;
-          if (rod.waterY !== null) { rod.state = 'float'; rod.rip = 0; rodSound('plop'); burst(rod.to.x, rod.waterY + 0.05, rod.to.z, 0xd8f0ff, 10, 0.9, 1.2, -3); rodRipple(); }
+          if (rod.waterY !== null) { rod.state = 'float'; rod.rip = 0; rodSound('plop'); burst(rod.to.x, rod.waterY + 0.05, rod.to.z, 0xd8f0ff, 10, 0.9, 1.2, -3); for (var sp = 0; sp < 10; sp++) sparkle(rod.to.x, rod.waterY + 0.08, rod.to.z, sp % 2 ? 0xe0d0ff : 0xffb8f0, 0.8, 0.8); rodRipple(); }
           else { rod.state = 'land'; rodSound('thud'); burst(rod.to.x, rod.to.y, rod.to.z, 0xd8c8a8, 5, 0.5, 0.5, -3); }
         }
       } else if (rod.state === 'float') {
