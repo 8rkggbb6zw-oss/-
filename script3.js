@@ -1155,6 +1155,54 @@ EVERDAWN_PARTS.push(function (THREE) {
   if (bagUi.close) bagUi.close.addEventListener('click', function () { toggleBag(false); focusGame(); });
   renderBag();
 
+  // ---------- The Quest Screen: the bag's third page ----------
+  // After the World Map, "Quests ›" turns to a page listing every quest you're on, each with what to do next (and,
+  // when a quest has them, a few words about it, how far along you are and what you'll get). Press J to open it
+  // straight away from anywhere, and J again to close it. There are no quests yet, so for now it just says so
+  var questPage = false;
+  var questBtn = document.createElement('button');
+  questBtn.type = 'button'; questBtn.className = 'inv-close map-btn'; questBtn.textContent = 'Quests ›'; questBtn.style.cssText = 'margin-right:8px;display:none;';
+  if (bagUi.close) bagUi.close.parentNode.insertBefore(questBtn, bagUi.close);
+  var questBox = document.createElement('div');
+  questBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fff8ec,#f6ecff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
+  var questHint = document.createElement('p'); questHint.className = 'inv-info'; questHint.style.display = 'none'; questHint.textContent = 'Press J to open your quests any time.';
+  if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(questBox, mapKey.nextSibling); bagUi.grid.parentNode.insertBefore(questHint, questBox.nextSibling); }
+  function renderQuestPage() {                                         // (each quest: { name, step, and if it has them: desc, have, need, reward })
+    var list = typeof quests !== 'undefined' ? quests : [];
+    questBox.innerHTML = '';
+    if (!list.length) { questBox.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#7b4fd6;gap:6px"><div style="font-size:2rem">📜</div><b>No quests yet</b><span style="font-size:.85rem;opacity:.75;max-width:260px">When you take on a quest, it\'ll be listed here with what to do next.</span></div>'; return; }
+    list.forEach(function (q) {
+      var card = document.createElement('div'); card.style.cssText = 'background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(90,60,140,.15)';
+      var t = document.createElement('b'); t.style.cssText = 'display:block;color:#7b4fd6'; t.textContent = '✦ ' + q.name; card.appendChild(t);
+      function line(text, css) { var p = document.createElement('div'); p.style.cssText = 'font-size:.85rem;margin-top:3px;' + (css || ''); p.textContent = text; card.appendChild(p); }
+      if (q.desc) line(q.desc, 'opacity:.75');
+      if (q.step) line('Next: ' + q.step);
+      if (q.need) line('Progress: ' + Math.min(q.have || 0, q.need) + ' / ' + q.need, 'color:#5a8a5e;font-weight:600');
+      if (q.reward) line('Reward: ' + q.reward, 'color:#b07a20');
+      questBox.appendChild(card);
+    });
+  }
+  function showQuestPage(on) {
+    if (on && mapPage) showMapPage(false);
+    questPage = on;
+    if (bagUi.grid) bagUi.grid.style.display = on ? 'none' : '';
+    if (bagUi.info) bagUi.info.style.display = on ? 'none' : '';
+    var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
+    for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
+    questBox.style.display = questHint.style.display = on ? '' : 'none';
+    if (on) { renderQuestPage(); mapBtn.textContent = '‹ Map'; questBtn.style.display = 'none'; if (mapHead) mapHead.textContent = '📜 Quests'; }
+  }
+  showMapPage = (function (base) {                                     // (turning to the bag or the map always leaves the quest page; "Quests ›" shows on the map)
+    return function (on) { if (questPage) showQuestPage(false); base.apply(this, arguments); questBtn.style.display = on ? '' : 'none'; };
+  })(showMapPage);
+  questBtn.addEventListener('click', function () { showQuestPage(true); focusGame(); });
+  function openQuests() {
+    if (bagUi.box && !bagUi.box.hidden && questPage) { toggleBag(false); return; }   // (pressing J again closes it)
+    if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
+    showQuestPage(true);
+  }
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyJ' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openQuests(); });
+
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
   // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
