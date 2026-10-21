@@ -7261,10 +7261,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.addEventListener('keydown', function (e) { if (isSprintKey(e.code)) sprintHeld = true; });
   window.addEventListener('keyup', function (e) { if (isSprintKey(e.code)) sprintHeld = false; });
   // Strafe: hold C to slow right down (to a bit under half your pace, with slower steps) for precise control, to line
-  // yourself up just where you want to be. It wins over sprinting if you hold both
-  var strafeHeld = false;
-  window.addEventListener('keydown', function (e) { if (e.code === 'KeyC') strafeHeld = true; });
-  window.addEventListener('keyup', function (e) { if (e.code === 'KeyC') strafeHeld = false; });
+  // yourself up just where you want to be. It wins over sprinting if you hold both. On the Mouse & Keyboard page Strafe
+  // can be a key of your own instead (then C doesn't strafe)
+  var strafeHeld = false, strafeKey = null; try { strafeKey = localStorage.getItem('everdawn-strafe-key') || null; } catch (err) {}
+  window.everdawnSetStrafeKey = function (code) { strafeKey = code || null; strafeHeld = false; };
+  window.addEventListener('keydown', function (e) { if (e.code === (strafeKey || 'KeyC')) strafeHeld = true; });
+  window.addEventListener('keyup', function (e) { if (e.code === (strafeKey || 'KeyC')) strafeHeld = false; });
   window.addEventListener('blur', function () { sprintHeld = false; strafeHeld = false; });
   updatePlayer = (function (base) {
     return function (dt) {
@@ -8784,11 +8786,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, and sprint)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint and strafe)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
