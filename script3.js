@@ -5685,7 +5685,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function rodClear() { rod.state = 'idle'; bobber.visible = rodLine.visible = false; }
   function rodReel(quiet) { if (rod.state === 'idle' || rod.state === 'wind' || rod.state === 'reel') return; rod.from.copy(bobber.position); rod.state = 'reel'; rod.t = 0; if (!quiet) rodSound('reel'); }
-  function castLine() { rod.state = 'wind'; rod.t = 0; walkTarget = null; }
+  function castLine() { rod.state = 'wind'; rod.t = 0; rod.armX = 0; walkTarget = null; }
   function rodCanCast() { return rodInHand() && !indoors && !flying && flyH <= 0 && !inBoat && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
   interact = (function (base) {
     return function () {
@@ -5703,6 +5703,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (rod.state === 'idle') return r;
       if (!rodInHand() || indoors || flying || inBoat || teleporting || sleeping) { rodClear(); return r; }   // (put away, or off somewhere: the line goes with it)
       rod.t += dt;
+      if (rod.armX) axeArm.rotation.x = rod.armX;                       // (her arm where it was last frame, so the tip is where it's drawn)
       var tip = rodTip(); if (!tip) { rodClear(); return r; }
       var armX = 4.95;                                                 // the arm held out, the rod raised over the water
       if (rod.state === 'wind') {
@@ -5736,16 +5737,22 @@ EVERDAWN_PARTS.push(function (THREE) {
         bobber.rotation.set(0, 0, 0); armX = 4.95 - Math.sin(q * Math.PI) * 0.3;
         if (q >= 1) { rodClear(); return r; }
       }
-      axeArm.rotation.x = armX;
-      var p = rodLineGeo.attributes.position.array, b = bobber.position, sag = rod.state === 'float' ? 0.5 : rod.state === 'land' ? 0.25 : 0.06;
-      for (var i = 0; i <= ROD_SEG; i++) {                             // the line droops between the tip and the bobber
-        var s = i / ROD_SEG;
-        p[i * 3] = tip.x + (b.x - tip.x) * s; p[i * 3 + 1] = tip.y + (b.y + 0.04 - tip.y) * s - sag * 4 * s * (1 - s) * Math.min(1, dist(tip.x, tip.z, b.x, b.z) / 4); p[i * 3 + 2] = tip.z + (b.z - tip.z) * s;
-      }
-      rodLineGeo.attributes.position.needsUpdate = true;
+      axeArm.rotation.x = rod.armX = armX;
       return r;
     };
   })(updateTrees);
+  function rodDrawLine() {                                             // the line droops from the rod's tip to the bobber
+    var tip = rodTip(); if (!tip) return;                              // (where the tip is right now, as the frame is drawn, so the line stays fixed to it)
+    var p = rodLineGeo.attributes.position.array, b = bobber.position, sag = rod.state === 'float' ? 0.5 : rod.state === 'land' ? 0.25 : 0.06;
+    for (var i = 0; i <= ROD_SEG; i++) {
+      var s = i / ROD_SEG;
+      p[i * 3] = tip.x + (b.x - tip.x) * s; p[i * 3 + 1] = tip.y + (b.y + 0.04 - tip.y) * s - sag * 4 * s * (1 - s) * Math.min(1, dist(tip.x, tip.z, b.x, b.z) / 4); p[i * 3 + 2] = tip.z + (b.z - tip.z) * s;
+    }
+    rodLineGeo.attributes.position.needsUpdate = true;
+  }
+  renderer.render = (function (base) {
+    return function (sc, cam) { if (sc === scene && cam === camera && rodLine.visible) rodDrawLine(); return base.apply(this, arguments); };
+  })(renderer.render);
   (function () {                                                       // (a Fly button beside the others, for tapping)
     var row = document.querySelector('.controls'); if (!row) return;
     var b = document.createElement('button'); b.id = 'btnFly'; b.type = 'button'; b.innerHTML = '🧹 Fly <kbd>B</kbd>';
