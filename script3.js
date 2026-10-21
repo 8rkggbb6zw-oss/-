@@ -8080,6 +8080,87 @@ EVERDAWN_PARTS.push(function (THREE) {
     e.preventDefault(); e.stopImmediatePropagation();
   }, true);
 
+  // ---------- The pause menu ----------
+  // Escape (or your Cancel key) pauses the game when nothing else is open, and so does the Pause button. While it's
+  // paused, time stands still: the clock, the crops, the animals, everything waits, and keys and taps don't reach the
+  // game. The pause menu has Resume Game, Save, Load, Settings and Return to Title. Escape again resumes. Returning to
+  // the title screen saves your game first, then starts the page afresh at the title
+  var gamePaused = false;
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-pause{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;border-radius:inherit;background:rgba(20,10,45,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}' +
+    '.ev-pause[hidden]{display:none}' +
+    '.ev-pcard{width:min(320px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:18px 18px 16px;border-radius:24px;border:2.5px solid #ffe2a0;background:linear-gradient(180deg,#6440aa,#3a2270);box-shadow:0 18px 50px rgba(10,0,30,.6),inset 0 2px 0 rgba(255,255,255,.25);color:#fff;font-family:Fredoka,system-ui,sans-serif;display:flex;flex-direction:column;gap:9px;text-align:center}' +
+    '.ev-pcard h2{margin:0;font-size:26px;font-weight:600;color:#ffe9b8;text-shadow:0 2px 8px rgba(255,170,230,.5)}' +
+    '.ev-pwhen{margin:-4px 0 4px;font-size:14px;color:#f0e2ff}' +
+    '.ev-pcard button{padding:.55em 1em;font:600 17px Fredoka,system-ui,sans-serif;color:#fff;border:2px solid rgba(255,220,250,.35);border-radius:16px;cursor:pointer;background:rgba(30,15,65,.55);transition:background .15s,border-color .15s}' +
+    '.ev-pcard button:hover{background:rgba(120,80,200,.55);border-color:#ffe2a0}' +
+    '.ev-pcard button:focus-visible{outline:3px solid #fff;outline-offset:2px}' +
+    '.ev-pcard .ev-presume{color:#4e2b9c;border-color:#ffe2a0;background:linear-gradient(180deg,#fff2c8,#ffd27a)}.ev-pcard .ev-presume:hover{background:linear-gradient(180deg,#fff7dc,#ffdc93)}' +
+    '.ev-pcard .ev-pyes{background:linear-gradient(180deg,#ff9ecb,#d8609c);border-color:#ffe2a0}' +
+    '.ev-pask{display:flex;flex-direction:column;gap:9px}.ev-pask[hidden],.ev-pmain[hidden]{display:none}.ev-pmain{display:flex;flex-direction:column;gap:9px}' +
+    '.ev-pask p{margin:0 0 4px;font-size:16px;line-height:1.4}' +
+    '.ev-pnote{min-height:1.3em;margin:0;font-size:14px;color:#c9f5d4}' +
+    'body.ev-paused .controls{pointer-events:none;opacity:.55}';
+    document.head.appendChild(st); })();
+  var pauseBox = document.createElement('div'); pauseBox.className = 'ev-pause'; pauseBox.hidden = true;
+  pauseBox.innerHTML = '<div class="ev-pcard" role="dialog" aria-modal="true" aria-labelledby="evPauseT"><h2 id="evPauseT">✦ Paused ✦</h2><p class="ev-pwhen"></p>' +
+    '<div class="ev-pmain"><button type="button" class="ev-presume">▶ Resume Game</button><button type="button" data-p="save">💾 Save</button><button type="button" data-p="load">📂 Load</button>' +
+    '<button type="button" data-p="settings">⚙ Settings</button><button type="button" data-p="title">🏠 Return to Title</button></div>' +
+    '<div class="ev-pask" hidden><p>Go back to the title screen? Your game will be saved first.</p><button type="button" class="ev-pyes">🏠 Return to Title</button><button type="button" data-p="stay">Stay</button></div>' +
+    '<p class="ev-pnote" aria-live="polite"></p></div>';
+  canvas.parentNode.appendChild(pauseBox);
+  var pauseMain = pauseBox.querySelector('.ev-pmain'), pauseAsk = pauseBox.querySelector('.ev-pask'), pauseNote = pauseBox.querySelector('.ev-pnote'), pauseNoteTimer = 0;
+  var pauseBtn = document.createElement('button'); pauseBtn.type = 'button'; pauseBtn.id = 'btnPause'; pauseBtn.innerHTML = '⏸ Pause <kbd>Esc</kbd>';
+  var controlsRow = document.querySelector('.controls'); if (controlsRow) controlsRow.appendChild(pauseBtn);
+  function somethingOpen() {                                           // (Escape closes these first; it only pauses when none is open)
+    return (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || carpShopOpen || coopPlacing || pickKind || glimNaming ||
+      dialogueOpen() || cutscenePlaying() || sleeping || teleporting;
+  }
+  function pauseGame() {
+    if (gamePaused || window.EVERDAWN_TITLE) return;
+    gamePaused = true; walkTarget = null; keys = {};
+    pauseBox.querySelector('.ev-pwhen').textContent = clockText(state.minutes) + ' · ' + weekdayOf(state.day) + ' · ' + seasonDay(state.day);
+    pauseMain.hidden = false; pauseAsk.hidden = true; pauseNote.textContent = '';
+    pauseBox.hidden = false; document.body.classList.add('ev-paused');
+    pauseBox.querySelector('.ev-presume').focus();
+  }
+  function resumeGame() {
+    if (!gamePaused) return;
+    gamePaused = false; keys = {}; pauseBox.hidden = true; document.body.classList.remove('ev-paused');
+    clock.getDelta(); focusGame();                                     // (no time piles up while it was paused)
+  }
+  function pauseSay(txt) { pauseNote.textContent = txt; clearTimeout(pauseNoteTimer); pauseNoteTimer = setTimeout(function () { pauseNote.textContent = ''; }, 2500); }
+  pauseBtn.addEventListener('click', function () { if (!somethingOpen()) pauseGame(); });
+  pauseBox.querySelector('.ev-presume').addEventListener('click', resumeGame);
+  pauseBox.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  pauseBox.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var what = e.target.closest && e.target.closest('[data-p]'); what = what && what.getAttribute('data-p');
+    if (what === 'save') saveLoadSafely('save', function () { saveGame(true); pauseSay('Game saved ✦'); });
+    else if (what === 'load') saveLoadSafely('load', function () { loadGame(); resumeGame(); });
+    else if (what === 'settings') { if (window.everdawnOpenSettings && window.everdawnOpenSettings(function () { pauseBox.hidden = false; pauseBox.querySelector('[data-p="settings"]').focus(); })) pauseBox.hidden = true; }
+    else if (what === 'title') { pauseMain.hidden = true; pauseAsk.hidden = false; pauseBox.querySelector('.ev-pyes').focus(); }
+    else if (what === 'stay') { pauseAsk.hidden = true; pauseMain.hidden = false; pauseBox.querySelector('[data-p="title"]').focus(); }
+  });
+  pauseBox.querySelector('.ev-pyes').addEventListener('click', function () {
+    saveLoadSafely('save', function () { if (slotPicked) saveGame(true); });
+    location.reload();                                                 // (the page starts afresh, at the title screen)
+  });
+  window.addEventListener('keydown', function (e) {                    // (caught first, before the game's own keys)
+    if (window.EVERDAWN_TITLE || e.defaultPrevented || (window.everdawnSettingsOpen && window.everdawnSettingsOpen())) return;   // (Escape that just closed Settings, or anything while it's open)
+    if (!gamePaused) {
+      if (e.code === 'Escape' && !e.repeat && !somethingOpen()) { e.preventDefault(); e.stopImmediatePropagation(); pauseGame(); }
+      return;
+    }
+    if (e.code === 'Escape') { e.preventDefault(); if (!pauseAsk.hidden) { pauseAsk.hidden = true; pauseMain.hidden = false; } else resumeGame(); }
+    e.stopImmediatePropagation();                                      // (paused: no key reaches the game; Tab, Enter and Space still work the menu's buttons)
+  }, true);
+  var pauseBaseFrame = frame;                                          // (paused: nothing moves and the clock stands still, but the picture is still drawn)
+  frame = function () {
+    if (gamePaused) { clock.getDelta(); renderer.render(scene, camera); return; }
+    return pauseBaseFrame.apply(this, arguments);
+  };
+
   // ---------- Dialogue, and the key that moves it along ----------
   // When someone has something to say, showDialogue(name, lines, done) opens a box at the bottom of the screen with
   // their name and the first line (typed out if the Typewriter Effect is on, at the Text Size and Bold Text from
@@ -8736,7 +8817,7 @@ var everdawnTitle = (function () {
   var css = document.createElement('style');
   css.textContent =
     '#evTitle{position:fixed;inset:0;z-index:1000;overflow:hidden;background:#241a4a;font-family:Fredoka,system-ui,sans-serif;color:#fff;transition:opacity 1s ease,transform 1.1s ease;user-select:none;-webkit-user-select:none}' +
-    '#evTitle.gone{opacity:0;transform:scale(1.08);pointer-events:none}' +
+    '#evTitle.gone{opacity:0;transform:scale(1.08);pointer-events:none}#evTitle.ingame{background:transparent;transition:none;transform:none}' +
     '#evTitle canvas{position:absolute;inset:0;width:100%;height:100%;display:block}' +
     '#evTitle .ev-ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:clamp(24px,7vh,70px) 16px clamp(22px,6vh,56px);box-sizing:border-box;pointer-events:none}' +
     '#evTitle .ev-name{position:relative;text-align:center;animation:evFloat 6s ease-in-out infinite}' +
@@ -9373,7 +9454,10 @@ var everdawnTitle = (function () {
     window.EVERDAWN_TITLE = false; EVERDAWN_TITLE = false;
     root.classList.add('gone'); if (document.body) document.body.style.overflow = prevOverflow;
     var game = document.getElementById('game'); if (game) { try { game.focus(); } catch (err) {} }
-    setTimeout(function () { alive = false; root.remove(); window.removeEventListener('resize', resize); }, 1200);
+    setTimeout(function () {                                           // (the title screen goes, all but its Settings panel, which the pause menu opens)
+      alive = false; Array.prototype.slice.call(root.children).forEach(function (c) { if (c !== sett) c.remove(); });
+      root.classList.add('ingame'); window.removeEventListener('resize', resize);
+    }, 1200);
   }
   // ----- the save slots: Play opens a list of five; pick one with a game in it to carry on, or an empty one to start anew -----
   var SEAS = ['Spring', 'Summer', 'Fall', 'Winter'], WDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -9637,7 +9721,17 @@ var everdawnTitle = (function () {
     setDots.innerHTML = SET_PAGES.map(function (p, k) { return '<i' + (k === setPage ? ' class="on"' : '') + '></i>'; }).join('');
   }
   function openSettings() { if (!ready || root.classList.contains('gone')) return; showSetPage(setPage); sett.classList.add('open'); btnRow.style.visibility = 'hidden'; hint.style.visibility = 'hidden'; sett.querySelector('.ev-back').focus(); }
-  function closeSettings() { if (keyGrabStop) keyGrabStop(); sett.classList.remove('open'); btnRow.style.visibility = ''; hint.style.visibility = ''; optBtn.focus(); }
+  function closeSettings() {
+    if (keyGrabStop) keyGrabStop(); sett.classList.remove('open');
+    if (root.classList.contains('ingame')) { root.classList.add('gone'); var back = settBack; settBack = null; if (back) back(); return; }   // (opened from the pause menu: back to it)
+    btnRow.style.visibility = ''; hint.style.visibility = ''; optBtn.focus();
+  }
+  var settBack = null;                                                // Settings from the pause menu, once you're playing (back() is called when it closes)
+  window.everdawnOpenSettings = function (back) {
+    if (!root.classList.contains('ingame')) return false;
+    settBack = back || null; root.classList.remove('gone'); showSetPage(setPage); sett.classList.add('open'); sett.querySelector('.ev-back').focus(); return true;
+  };
+  window.everdawnSettingsOpen = function () { return sett.classList.contains('open'); };
   setPrev.addEventListener('click', function () { showSetPage(setPage - 1); });
   setNext.addEventListener('click', function () { showSetPage(setPage + 1); });
   sett.querySelector('.ev-back').addEventListener('click', closeSettings);
@@ -9649,7 +9743,7 @@ var everdawnTitle = (function () {
     if (slots.classList.contains('open')) { if (e.target && e.target.tagName === 'INPUT') return; if (e.code === 'Escape') { e.preventDefault(); if (naming) naming(); else closeSlots(); } return; }
     if (sett.classList.contains('open') && e.target && e.target.type === 'range' && /^Arrow|^Home$|^End$|^Page/.test(e.key)) { e.stopPropagation(); return; }   // (arrow keys on a slider move the slider, and never reach the game behind)
     if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !(e.target && e.target.type === 'range')) { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
-    if (e.target === optBtn) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
+    if (e.target === optBtn || root.classList.contains('ingame')) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
     ready: function () { ready = true; target = 100; setTip('All ready!'); },
