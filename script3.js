@@ -1377,6 +1377,33 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.addEventListener('keydown', function (e) { if (e.code === (relKey || 'KeyH') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openRelationships(); });
 
+  // ----- the bag's page buttons -----
+  // The page buttons ("‹ Quests", "Relationships ›" and so on) sit together beside the ✕, and never squash smaller
+  // than their words. When they won't fit beside the title, they move onto a row of their own under it, the way back
+  // on the left and the way on to the right, with the ✕ staying up in the corner
+  (function () {
+    var head = bagUi.box && bagUi.box.querySelector('.inv-head'); if (!head || !bagUi.close) return;
+    var nav = document.createElement('span'); nav.className = 'bag-nav';
+    head.insertBefore(nav, bagUi.close);
+    [mapBtn, questBtn, craftBtn, relBtn].forEach(function (b) { b.style.marginLeft = b.style.marginRight = ''; nav.appendChild(b); });
+    var st = document.createElement('style');
+    st.textContent = '#inventory .inv-head{flex-wrap:wrap;row-gap:8px}#inventory .inv-head b{flex:1 0 auto;white-space:nowrap}' +
+      '#inventory .bag-nav{display:flex;gap:8px;margin:0 8px 0 auto}#inventory .bag-nav .inv-close{flex:none}' +
+      '#inventory .inv-head.nav2 .bag-nav{order:3;flex-basis:100%;margin:0;justify-content:flex-end}#inventory .inv-head.nav2 .bag-nav .back{margin-right:auto}';
+    document.head.appendChild(st);
+    var title = head.querySelector('b'), queued = false;
+    function fit() {                                                   // (does it all fit on one row? if not, the buttons get a row of their own)
+      queued = false; if (bagUi.box.hidden) return;
+      [mapBtn, questBtn, craftBtn, relBtn].forEach(function (b) { b.classList.toggle('back', b.textContent.charAt(0) === '‹'); });
+      head.classList.remove('nav2');
+      if (nav.offsetTop > title.offsetTop + 6 || bagUi.close.offsetTop > title.offsetTop + 6) head.classList.add('nav2');
+    }
+    function soon() { if (!queued) { queued = true; requestAnimationFrame(fit); } }
+    new MutationObserver(soon).observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style', 'hidden'] });
+    new MutationObserver(soon).observe(bagUi.box, { attributes: true, attributeFilter: ['hidden'] });
+    window.addEventListener('resize', soon);
+  })();
+
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
   // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
