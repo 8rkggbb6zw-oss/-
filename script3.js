@@ -1296,7 +1296,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 
   // ---------- The Relationship Screen: the bag's fifth page ----------
   // After the Crafting Screen, "Relationships ›" turns to a page with everyone in town: their picture, their name and
-  // 10 hearts. The hearts start grey and fill in red from the left, a sliver at a time, as you become friends: the
+  // 10 big hearts, in two rows of five. The hearts start grey and fill in red from the left, a sliver at a time, as you become friends: the
   // more you talk to them and give them gifts, the more of each heart turns red. Press H to open it straight away from
   // anywhere, and H again to close it. There are no townsfolk yet. When there are, add each one with
   // addTownsperson({ name, pic }) (pic: a picture's address, or a canvas to draw them from), and give them friendship
@@ -1325,7 +1325,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var HEART_PATH = 'M12 21.3l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5L12 21.3z';
   function heartSvg(fill, k) {                                         // (one heart: grey, with the part you've earned in red, filling from the left)
     var w = Math.round(Math.max(0, Math.min(1, fill)) * 24 * 100) / 100;
-    return '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" style="flex:none"><defs><clipPath id="relC' + k + '"><rect x="0" y="0" width="' + w + '" height="24"/></clipPath></defs>' +
+    return '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" style="display:block"><defs><clipPath id="relC' + k + '"><rect x="0" y="0" width="' + w + '" height="24"/></clipPath></defs>' +
       '<path d="' + HEART_PATH + '" fill="#d4d0d8"/><path d="' + HEART_PATH + '" fill="#e8384f" clip-path="url(#relC' + k + ')"/></svg>';
   }
   var relClip = 0;
@@ -1334,12 +1334,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!townsfolk.length) { relBox.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#7b4fd6;gap:6px"><div style="font-size:2rem">💞</div><b>No one to befriend yet</b><span style="font-size:.85rem;opacity:.75;max-width:260px">When you meet the townsfolk, they\'ll be here with their hearts. Talk to them and give them gifts to fill their hearts in.</span></div>'; return; }
     townsfolk.forEach(function (p) {
       var card = document.createElement('div'); card.style.cssText = 'background:#fff;border-radius:12px;padding:8px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(90,60,140,.15);display:flex;gap:12px;align-items:center';
-      var pic = document.createElement('div'); pic.style.cssText = 'flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#efe6ff;display:flex;align-items:center;justify-content:center;font:700 1.4rem Fredoka,sans-serif;color:#7b4fd6;box-shadow:0 0 0 2px #fff,0 0 0 4px #e0d0f8';
+      var pic = document.createElement('div'); pic.style.cssText = 'flex:none;width:64px;height:64px;border-radius:50%;overflow:hidden;background:#efe6ff;display:flex;align-items:center;justify-content:center;font:700 1.4rem Fredoka,sans-serif;color:#7b4fd6;box-shadow:0 0 0 2px #fff,0 0 0 4px #e0d0f8';
       var src = typeof p.pic === 'string' ? p.pic : p.pic && p.pic.toDataURL ? p.pic.toDataURL() : null;
       if (src) { var im = document.createElement('img'); im.src = src; im.alt = ''; im.style.cssText = 'width:100%;height:100%;object-fit:cover'; pic.appendChild(im); } else pic.textContent = p.name.charAt(0);
       var info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0';
       var nm = document.createElement('b'); nm.style.cssText = 'display:block;color:#7b4fd6;margin-bottom:3px'; nm.textContent = p.name; info.appendChild(nm);
-      var hs = document.createElement('div'); hs.style.cssText = 'display:flex;gap:1px'; hs.setAttribute('aria-label', (Math.floor(p.hearts * 10) / 10) + ' of 10 hearts');
+      var hs = document.createElement('div'); hs.style.cssText = 'display:grid;grid-template-columns:repeat(5,max-content);gap:2px 4px';   // (two rows of five big hearts) hs.setAttribute('aria-label', (Math.floor(p.hearts * 10) / 10) + ' of 10 hearts');
       var html = ''; for (var h = 0; h < 10; h++) html += heartSvg(p.hearts - h, relClip++); hs.innerHTML = html; info.appendChild(hs);
       card.appendChild(pic); card.appendChild(info); relBox.appendChild(card);
     });
