@@ -1207,6 +1207,89 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.addEventListener('keydown', function (e) { if (e.code === (questKey || 'KeyJ') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openQuests(); });
 
+  // ---------- The Crafting Screen: the bag's fourth page ----------
+  // After the Quest Screen, "Crafting ›" turns to a page of the recipes you've unlocked. Each shows what it makes and
+  // what it needs, with how many of each you have (green once you've enough), and a Craft button that lights up when
+  // you've got everything and room in your bag: crafting takes the ingredients out of your bag and puts what you made
+  // in it. Press K to open it straight away from anywhere, and K again to close it. There are no recipes yet. To add
+  // one, put it in CRAFT_RECIPES as { id, makes: an item's id, count: how many it makes, needs: { item id: how many } },
+  // and unlock it with unlockRecipe(id) (or give it unlocked: true to know it from the start). The recipes you've
+  // unlocked are kept in your save
+  var CRAFT_RECIPES = [], craftKnown = [], craftPage = false;
+  function recipeById(id) { for (var i = 0; i < CRAFT_RECIPES.length; i++) if (CRAFT_RECIPES[i].id === id) return CRAFT_RECIPES[i]; return null; }
+  function craftItemName(id) { return ITEMS[id] ? ITEMS[id].name : id; }
+  function craftItemIcon(id) { return ITEMS[id] && ITEMS[id].icon ? ITEMS[id].icon : '✦'; }
+  function unlockRecipe(id) {                                          // (a new recipe: it's on the Crafting Screen from now on)
+    if (craftKnown.indexOf(id) >= 0) return; craftKnown.push(id);
+    var r = recipeById(id); if (r) showToast('📖 New recipe: ' + craftItemName(r.makes), 2400);
+    if (craftPage) renderCraftPage();
+  }
+  function craftRecipes() { return CRAFT_RECIPES.filter(function (r) { return r.unlocked || craftKnown.indexOf(r.id) >= 0; }); }
+  function craftHave(r) { for (var k in r.needs) if (bagCount(k) < r.needs[k]) return false; return true; }
+  function craftRoom(r) {                                              // (room for what you'd make: its stack, an empty slot, or a slot the ingredients would free up)
+    if (roomFor([r.makes])) return true;
+    for (var k in r.needs) if (bagCount(k) === r.needs[k]) return true;
+    return false;
+  }
+  function craft(r) {
+    if (!craftHave(r)) { showToast('You need more ingredients', 1800); return; }
+    if (!craftRoom(r)) { bagFull(); return; }
+    for (var k in r.needs) takeItem(k, r.needs[k]);
+    addItem(r.makes, r.count || 1); popSound();
+    showToast('✨ Crafted ' + ((r.count || 1) > 1 ? (r.count || 1) + ' ' : '') + craftItemName(r.makes) + ' ' + craftItemIcon(r.makes), 2000);
+    renderCraftPage();
+  }
+  var craftBtn = document.createElement('button');
+  craftBtn.type = 'button'; craftBtn.className = 'inv-close map-btn'; craftBtn.textContent = 'Crafting ›'; craftBtn.style.cssText = 'margin-right:8px;display:none;';
+  if (bagUi.close) bagUi.close.parentNode.insertBefore(craftBtn, bagUi.close);
+  var craftBox = document.createElement('div');
+  craftBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fff8ec,#eef6ff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
+  var craftHint = document.createElement('p'); craftHint.className = 'inv-info'; craftHint.style.display = 'none'; craftHint.textContent = 'Press K to open crafting any time.';
+  if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(craftBox, questHint.nextSibling); bagUi.grid.parentNode.insertBefore(craftHint, craftBox.nextSibling); }
+  function renderCraftPage() {
+    var list = craftRecipes();
+    craftBox.innerHTML = '';
+    if (!list.length) { craftBox.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#7b4fd6;gap:6px"><div style="font-size:2rem">🛠️</div><b>No recipes yet</b><span style="font-size:.85rem;opacity:.75;max-width:260px">When you unlock a crafting recipe, it\'ll be here, ready to make whenever you have what it needs.</span></div>'; return; }
+    list.forEach(function (r) {
+      var card = document.createElement('div'); card.style.cssText = 'background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(90,60,140,.15);display:flex;gap:10px;align-items:center';
+      var info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0';
+      var t = document.createElement('b'); t.style.cssText = 'display:block;color:#7b4fd6'; t.textContent = craftItemIcon(r.makes) + ' ' + craftItemName(r.makes) + ((r.count || 1) > 1 ? ' ×' + r.count : ''); info.appendChild(t);
+      Object.keys(r.needs).forEach(function (k) {
+        var have = bagCount(k), ok = have >= r.needs[k], p = document.createElement('div');
+        p.style.cssText = 'font-size:.82rem;margin-top:2px;color:' + (ok ? '#4a8a4e' : '#a84a3c'); p.textContent = craftItemIcon(k) + ' ' + craftItemName(k) + ': ' + have + ' / ' + r.needs[k]; info.appendChild(p);
+      });
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Craft'; b.style.cssText = 'flex:none;padding:7px 14px';
+      b.disabled = !craftHave(r) || !craftRoom(r); if (b.disabled) { b.style.opacity = '.45'; b.style.cursor = 'default'; }   // (faded while you can't make it yet)
+      b.addEventListener('click', function () { craft(r); focusGame(); });
+      card.appendChild(info); card.appendChild(b); craftBox.appendChild(card);
+    });
+  }
+  function showCraftPage(on) {
+    if (on) { if (mapPage) showMapPage(false); if (questPage) showQuestPage(false); }
+    craftPage = on;
+    if (bagUi.grid) bagUi.grid.style.display = on ? 'none' : '';
+    if (bagUi.info) bagUi.info.style.display = on ? 'none' : '';
+    var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
+    for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
+    craftBox.style.display = craftHint.style.display = on ? '' : 'none';
+    mapBtn.style.display = on ? 'none' : '';                           // (here the way back is "‹ Quests")
+    questBtn.textContent = on ? '‹ Quests' : 'Quests ›'; if (on) { questBtn.style.display = ''; craftBtn.style.display = 'none'; }
+    if (on) { renderCraftPage(); if (mapHead) mapHead.textContent = '🛠️ Crafting'; }
+  }
+  showQuestPage = (function (base) {                                   // ("Crafting ›" shows on the Quest Screen)
+    return function (on) { if (on && craftPage) showCraftPage(false); base.apply(this, arguments); craftBtn.style.display = on ? '' : 'none'; };
+  })(showQuestPage);
+  showMapPage = (function (base) {
+    return function (on) { if (craftPage) showCraftPage(false); base.apply(this, arguments); craftBtn.style.display = 'none'; };
+  })(showMapPage);
+  craftBtn.addEventListener('click', function () { showCraftPage(true); focusGame(); });
+  function openCrafting() {
+    if (bagUi.box && !bagUi.box.hidden && craftPage) { toggleBag(false); return; }   // (pressing K again closes it)
+    if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
+    showCraftPage(true);
+  }
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyK' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openCrafting(); });
+
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
   // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
@@ -5535,7 +5618,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       coop: coopSaveData(),                                           // your coop: where it stands, and the hay on its bench
       fbarn: fbarnSaveData(),                                         // and the same for your barn
       mill: millSaveData(),                                           // your mill: where it is, and the day Oak & Ember started on it
-      silo: siloSaveData()                                            // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
+      silo: siloSaveData(),                                           // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
+      recipes: craftKnown.slice()                                     // the crafting recipes you've unlocked
     };
     var before = null; try { before = localStorage.getItem(SAVE_KEY); } catch (err) {}   // (what was in the slot until now, in case it's a day to keep as a backup)
     try {
@@ -7127,6 +7211,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     fbarnLoadData(data.fbarn || null);                                // your barn (likewise)
     millLoadData(data.mill || null);                                  // and your mill
     siloLoadData(data.silo || null);                                  // and your silo, with its hay
+    craftKnown = Array.isArray(data.recipes) ? data.recipes.slice() : [];   // and the crafting recipes you've unlocked (none in older saves)
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
