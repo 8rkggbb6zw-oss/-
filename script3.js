@@ -5703,7 +5703,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (rod.state === 'float' && Math.random() < dt * 1.2) sparkle(bobber.position.x, bobber.position.y + 0.1, bobber.position.z, 0xe0d0ff, 0.3, 0.4);
   }
   var rod = { state: 'idle', t: 0, from: new THREE.Vector3(), to: new THREE.Vector3(), waterY: null, rip: 0 }, rodTipW = new THREE.Vector3();
-  var ROD_WIND = 0.22, ROD_REEL = 0.5, ROD_CHARGE = 1.1, ROD_NEAR = 2, ROD_FAR = 13;   // (how long the bar takes to fill, and how far a tap and a full bar cast)
+  var ROD_WIND = 0.22, ROD_REEL = 0.5, ROD_CHARGE = 1.1, ROD_NEAR = 2, ROD_FAR = 8;   // (how long the bar takes to fill, and how far a tap and a full bar cast)
   var rodBar = document.createElement('div'), rodBarFill = document.createElement('i');
   rodBar.className = 'rod-bar'; rodBar.setAttribute('aria-hidden', 'true'); rodBar.appendChild(rodBarFill); canvas.parentNode.appendChild(rodBar);
   (function () {
