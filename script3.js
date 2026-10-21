@@ -8165,15 +8165,20 @@ EVERDAWN_PARTS.push(function (THREE) {
     return pauseBaseFrame.apply(this, arguments);
   };
 
-  // ---------- Switch Next Tab ----------
-  // A right click to start; on the Mouse & Keyboard page it can be a key of your own instead (then a right click does
-  // nothing). With the bag open it turns to the next page: Bag, World Map, Quests, Crafting, Relationships, Skills,
-  // and then back to the Bag. In Settings it turns to the next page, and after the last one comes the first
-  var tabKey = null; try { tabKey = localStorage.getItem('everdawn-tab-key') || null; } catch (err) {}
+  // ---------- Switch Next Tab and Switch Previous Tab ----------
+  // With the bag open, Switch Next Tab turns to the next page: Bag, World Map, Quests, Crafting, Relationships, Skills,
+  // and then back to the Bag; Switch Previous Tab goes the other way. In Settings they turn to the next or previous
+  // page, round from the last to the first. Switch Next Tab is a left click on an empty part of the screen to start
+  // (not on an item, a button or the map); on the Mouse & Keyboard page it can be a key of your own instead (then a
+  // click doesn't turn the page). Switch Previous Tab has no click of its own: it works once you give it a key
+  var tabKey = null, tabPrevKey = null; try { tabKey = localStorage.getItem('everdawn-tab-key') || null; tabPrevKey = localStorage.getItem('everdawn-tab-prev-key') || null; } catch (err) {}
   window.everdawnSetTabKey = function (code) { tabKey = code || null; };
+  window.everdawnSetTabPrevKey = function (code) { tabPrevKey = code || null; };
+  function settingsUp() { return !!(window.everdawnSettingsOpen && window.everdawnSettingsOpen()); }
+  function bagUp() { return !!(bagUi.box && !bagUi.box.hidden && !gamePaused); }
   function nextTab() {
-    if (window.everdawnSettingsOpen && window.everdawnSettingsOpen()) { window.everdawnSettingsNextPage(); return true; }
-    if (gamePaused || !bagUi.box || bagUi.box.hidden) return false;
+    if (settingsUp()) { window.everdawnSettingsNextPage(); return true; }
+    if (!bagUp()) return false;
     if (skillPage) showMapPage(false);                                 // (Skills: round to the Bag again)
     else if (relPage) showSkillPage(true);
     else if (craftPage) showRelPage(true);
@@ -8182,15 +8187,43 @@ EVERDAWN_PARTS.push(function (THREE) {
     else showMapPage(true);
     return true;
   }
-  window.addEventListener('contextmenu', function (e) {                // (a right click, while the bag or Settings is open: no menu pops up, the page turns)
-    if (tabKey || !((window.everdawnSettingsOpen && window.everdawnSettingsOpen()) || (bagUi.box && !bagUi.box.hidden && !gamePaused))) return;
-    e.preventDefault(); nextTab();
-  }, true);
+  function prevTab() {
+    if (settingsUp()) { window.everdawnSettingsPrevPage(); return true; }
+    if (!bagUp()) return false;
+    if (skillPage) showRelPage(true);
+    else if (relPage) showCraftPage(true);
+    else if (craftPage) showQuestPage(true);
+    else if (questPage) showMapPage(true);
+    else if (mapPage) showMapPage(false);
+    else showSkillPage(true);                                          // (the Bag: round to Skills)
+    return true;
+  }
+  var TAB_CLICKABLE = 'button, a, input, select, textarea, label, canvas, svg, [draggable="true"], [role="button"], [tabindex], .ev-seg, .ev-slot';
+  window.addEventListener('click', function (e) {                      // (a left click on an empty part of the bag or Settings: the next page)
+    if (tabKey || e.button !== 0) return;
+    var t = e.target; if (!t || !t.closest) return;
+    var inSett = settingsUp() && t.closest('.ev-sett .ev-scard'), inBag = bagUp() && bagUi.box.contains(t);
+    if (!inSett && !inBag) return;
+    if (t.closest(TAB_CLICKABLE)) return;
+    for (var el = t; el && el !== document.body; el = el.parentElement) if (getComputedStyle(el).cursor === 'pointer') return;   // (anything that's there to be clicked)
+    var sel = window.getSelection && window.getSelection(); if (sel && !sel.isCollapsed) return;   // (picking out some text)
+    nextTab();
+  });
   window.addEventListener('keydown', function (e) {
-    if (!tabKey || e.code !== tabKey || e.repeat || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing())) return;
+    if (e.repeat || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing())) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-    if (nextTab()) { e.preventDefault(); e.stopImmediatePropagation(); }
+    var go = tabKey && e.code === tabKey ? nextTab : tabPrevKey && e.code === tabPrevKey ? prevTab : null;
+    if (go && go()) { e.preventDefault(); e.stopImmediatePropagation(); }
   }, true);
+
+  // ---------- Time stands still while a screen is open ----------
+  // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), the clock
+  // stops and the island waits, just as when the game is paused; closing it lets time carry on
+  var screenBaseFrame = frame;
+  frame = function () {
+    if (bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE) { clock.getDelta(); renderer.render(scene, camera); return; }
+    return screenBaseFrame.apply(this, arguments);
+  };
 
   // ---------- Dialogue, and the key that moves it along ----------
   // When someone has something to say, showDialogue(name, lines, done) opens a box at the bottom of the screen with
@@ -9718,7 +9751,7 @@ var everdawnTitle = (function () {
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
     var KEY_SECTIONS = { 'Interact': 'Gameplay', 'Confirm': 'Menu' };                  // (a little label over the row each section starts at)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Skip Events', 'everdawn-skip-key', 'everdawnSetSkipKey', 'N'], ['Open Pause Menu', 'everdawn-pause-key', 'everdawnSetPauseKey', 'P'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Next Tab', 'everdawn-tab-key', 'everdawnSetTabKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Right mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 1 20.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Skip Events', 'everdawn-skip-key', 'everdawnSetSkipKey', 'N'], ['Open Pause Menu', 'everdawn-pause-key', 'everdawnSetPauseKey', 'P'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Next Tab', 'everdawn-tab-key', 'everdawnSetTabKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Previous Tab', 'everdawn-tab-prev-key', 'everdawnSetTabPrevKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
       if (KEY_SECTIONS[row[0]]) body.insertAdjacentHTML('beforeend', '<div class="ev-ksec">' + KEY_SECTIONS[row[0]] + '</div>');
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
@@ -9764,6 +9797,7 @@ var everdawnTitle = (function () {
   };
   window.everdawnSettingsOpen = function () { return sett.classList.contains('open'); };
   window.everdawnSettingsNextPage = function () { showSetPage((setPage + 1) % SET_PAGES.length); };   // (Switch Next Tab: after the last page comes the first)
+  window.everdawnSettingsPrevPage = function () { showSetPage((setPage + SET_PAGES.length - 1) % SET_PAGES.length); };   // (Switch Previous Tab: before the first comes the last)
   setPrev.addEventListener('click', function () { showSetPage(setPage - 1); });
   setNext.addEventListener('click', function () { showSetPage(setPage + 1); });
   sett.querySelector('.ev-back').addEventListener('click', closeSettings);
