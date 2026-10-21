@@ -1644,6 +1644,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetBagKey = function (code) { bagKey = code || null; showBagKey(); };
   // R shows your hotbar's next row to start; on the Mouse & Keyboard page that can be a key of your own instead
   window.everdawnSetRowKey = function (code) { rowKey = code || null; };
+  // 1 to 4 pick that slot in the hotbar's row to start; on the Mouse & Keyboard page each can be a key of your own
+  var slotKeys = [1, 2, 3, 4].map(function (n) { try { return localStorage.getItem('everdawn-slot' + n + '-key') || null; } catch (err) { return null; } });
+  [1, 2, 3, 4].forEach(function (n) { window['everdawnSetSlot' + n + 'Key'] = function (code) { slotKeys[n - 1] = code || null; }; });
   showBagKey();
   showInteractKey();
   var handsFree = false;                                               // (true while Interact runs on its own: nothing in your hand gets used)
@@ -1674,7 +1677,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.code === (rowKey || 'KeyR')) nextRow();
     if (e.code === 'Tab') { e.preventDefault(); stepSlot(e.shiftKey ? -1 : 1); } // Tab steps to your next item, Shift+Tab goes back
     // number keys 1-4 pick that slot in the hotbar's current row (pressing it again unselects it)
-    var num = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(e.code);
+    var num = slotKeys.map(function (k, n) { return k || 'Digit' + (n + 1); }).indexOf(e.code);
     if (num >= 0) {
       var pick = hotRow * ROW_SIZE + num;
       selectedSlot = selectedSlot === pick ? -1 : pick;
@@ -9188,11 +9191,11 @@ var everdawnTitle = (function () {
     var pi = body.querySelector('#evPet'), pn = body.querySelector('#evPetNum'); pi.value = petNow();   // (Pet Sound: 0 to 10, 5 is the usual)
     function showPet() { pn.textContent = pi.value; } showPet();
     pi.addEventListener('input', function () { showPet(); try { localStorage.setItem('everdawn-pet-sound', pi.value); } catch (err) {} applyPet(+pi.value); });
-  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, open your quests, crafting, bag, map, friends and skills, and flip the hotbar)
+  } }, { name: 'Mouse & Keyboard', build: function (body) {          // (Mouse & Keyboard: which keys interact, use your tools and place items, move you about, cast spells, sprint, strafe, open your quests, crafting, bag, map, friends and skills, flip the hotbar and pick its slots)
     body.innerHTML = '';
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4']].forEach(function (row, n) {
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
       try { code = localStorage.getItem(row[1]) || ''; } catch (err) {}
