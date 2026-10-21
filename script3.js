@@ -1294,6 +1294,85 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   window.addEventListener('keydown', function (e) { if (e.code === (craftKey || 'KeyK') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openCrafting(); });
 
+  // ---------- The Relationship Screen: the bag's fifth page ----------
+  // After the Crafting Screen, "Relationships ›" turns to a page with everyone in town: their picture, their name and
+  // 10 hearts. The hearts start grey and fill in red from the left, a sliver at a time, as you become friends: the
+  // more you talk to them and give them gifts, the more of each heart turns red. Press H to open it straight away from
+  // anywhere, and H again to close it. There are no townsfolk yet. When there are, add each one with
+  // addTownsperson({ name, pic }) (pic: a picture's address, or a canvas to draw them from), and give them friendship
+  // with addFriendship(name, how many hearts: 0.1 for a chat, say, or 0.25 for a gift they like). Their hearts are
+  // kept in your save (and someone giving you the cold shoulder can't go past 8 while hearts 9 and 10 are locked)
+  var townsfolk = [], relPage = false, relSaved = {};
+  function townsperson(name) { for (var i = 0; i < townsfolk.length; i++) if (townsfolk[i].name === name) return townsfolk[i]; return null; }
+  function addTownsperson(t) {                                         // (someone new in town: on the Relationship Screen from now on)
+    if (townsperson(t.name)) return townsperson(t.name);
+    var p = { name: t.name, pic: t.pic || null, hearts: relSaved[t.name] || 0 }; townsfolk.push(p);
+    if (relPage) renderRelPage(); return p;
+  }
+  function addFriendship(name, n) {
+    var p = townsperson(name); if (!p) return;
+    var rr = romance.filter(function (x) { return x.name === name; })[0], cap = rr ? maxHearts(rr) : 10;
+    p.hearts = Math.max(0, Math.min(cap, p.hearts + n)); if (rr) rr.hearts = p.hearts;
+    if (relPage) renderRelPage();
+  }
+  var relBtn = document.createElement('button');
+  relBtn.type = 'button'; relBtn.className = 'inv-close map-btn'; relBtn.textContent = 'Relationships ›'; relBtn.style.cssText = 'margin-right:8px;display:none;';
+  if (bagUi.close) bagUi.close.parentNode.insertBefore(relBtn, bagUi.close);
+  var relBox = document.createElement('div');
+  relBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fff4f8,#f6ecff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
+  var relHint = document.createElement('p'); relHint.className = 'inv-info'; relHint.style.display = 'none'; relHint.textContent = 'Press H to see your friends any time.';
+  if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(relBox, craftHint.nextSibling); bagUi.grid.parentNode.insertBefore(relHint, relBox.nextSibling); }
+  var HEART_PATH = 'M12 21.3l-1.4-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.6 11.5L12 21.3z';
+  function heartSvg(fill, k) {                                         // (one heart: grey, with the part you've earned in red, filling from the left)
+    var w = Math.round(Math.max(0, Math.min(1, fill)) * 24 * 100) / 100;
+    return '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" style="flex:none"><defs><clipPath id="relC' + k + '"><rect x="0" y="0" width="' + w + '" height="24"/></clipPath></defs>' +
+      '<path d="' + HEART_PATH + '" fill="#d4d0d8"/><path d="' + HEART_PATH + '" fill="#e8384f" clip-path="url(#relC' + k + ')"/></svg>';
+  }
+  var relClip = 0;
+  function renderRelPage() {
+    relBox.innerHTML = '';
+    if (!townsfolk.length) { relBox.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#7b4fd6;gap:6px"><div style="font-size:2rem">💞</div><b>No one to befriend yet</b><span style="font-size:.85rem;opacity:.75;max-width:260px">When you meet the townsfolk, they\'ll be here with their hearts. Talk to them and give them gifts to fill their hearts in.</span></div>'; return; }
+    townsfolk.forEach(function (p) {
+      var card = document.createElement('div'); card.style.cssText = 'background:#fff;border-radius:12px;padding:8px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(90,60,140,.15);display:flex;gap:12px;align-items:center';
+      var pic = document.createElement('div'); pic.style.cssText = 'flex:none;width:52px;height:52px;border-radius:50%;overflow:hidden;background:#efe6ff;display:flex;align-items:center;justify-content:center;font:700 1.4rem Fredoka,sans-serif;color:#7b4fd6;box-shadow:0 0 0 2px #fff,0 0 0 4px #e0d0f8';
+      var src = typeof p.pic === 'string' ? p.pic : p.pic && p.pic.toDataURL ? p.pic.toDataURL() : null;
+      if (src) { var im = document.createElement('img'); im.src = src; im.alt = ''; im.style.cssText = 'width:100%;height:100%;object-fit:cover'; pic.appendChild(im); } else pic.textContent = p.name.charAt(0);
+      var info = document.createElement('div'); info.style.cssText = 'flex:1;min-width:0';
+      var nm = document.createElement('b'); nm.style.cssText = 'display:block;color:#7b4fd6;margin-bottom:3px'; nm.textContent = p.name; info.appendChild(nm);
+      var hs = document.createElement('div'); hs.style.cssText = 'display:flex;gap:1px'; hs.setAttribute('aria-label', (Math.floor(p.hearts * 10) / 10) + ' of 10 hearts');
+      var html = ''; for (var h = 0; h < 10; h++) html += heartSvg(p.hearts - h, relClip++); hs.innerHTML = html; info.appendChild(hs);
+      card.appendChild(pic); card.appendChild(info); relBox.appendChild(card);
+    });
+  }
+  function showRelPage(on) {
+    if (on) { if (mapPage) showMapPage(false); if (questPage) showQuestPage(false); if (craftPage) showCraftPage(false); }
+    relPage = on;
+    if (bagUi.grid) bagUi.grid.style.display = on ? 'none' : '';
+    if (bagUi.info) bagUi.info.style.display = on ? 'none' : '';
+    var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
+    for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
+    relBox.style.display = relHint.style.display = on ? '' : 'none';
+    craftBtn.textContent = on ? '‹ Crafting' : 'Crafting ›';           // (here the way back is "‹ Crafting")
+    if (on) { mapBtn.style.display = questBtn.style.display = relBtn.style.display = 'none'; craftBtn.style.display = ''; renderRelPage(); if (mapHead) mapHead.textContent = '💞 Relationships'; }
+    else mapBtn.style.display = '';
+  }
+  showCraftPage = (function (base) {                                   // ("Relationships ›" shows on the Crafting Screen)
+    return function (on) { if (on && relPage) showRelPage(false); base.apply(this, arguments); relBtn.style.display = on ? '' : 'none'; };
+  })(showCraftPage);
+  showQuestPage = (function (base) {
+    return function (on) { if (on && relPage) showRelPage(false); base.apply(this, arguments); relBtn.style.display = 'none'; };
+  })(showQuestPage);
+  showMapPage = (function (base) {
+    return function (on) { if (relPage) showRelPage(false); base.apply(this, arguments); relBtn.style.display = 'none'; };
+  })(showMapPage);
+  relBtn.addEventListener('click', function () { showRelPage(true); focusGame(); });
+  function openRelationships() {
+    if (bagUi.box && !bagUi.box.hidden && relPage) { toggleBag(false); return; }   // (pressing H again closes it)
+    if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
+    showRelPage(true);
+  }
+  window.addEventListener('keydown', function (e) { if (e.code === 'KeyH' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openRelationships(); });
+
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
   // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
@@ -5634,7 +5713,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       fbarn: fbarnSaveData(),                                         // and the same for your barn
       mill: millSaveData(),                                           // your mill: where it is, and the day Oak & Ember started on it
       silo: siloSaveData(),                                           // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
-      recipes: craftKnown.slice()                                     // the crafting recipes you've unlocked
+      recipes: craftKnown.slice(),                                    // the crafting recipes you've unlocked
+      friends: townsfolk.reduce(function (o, p) { o[p.name] = p.hearts; return o; }, relSaved)   // and how many hearts everyone in town has
     };
     var before = null; try { before = localStorage.getItem(SAVE_KEY); } catch (err) {}   // (what was in the slot until now, in case it's a day to keep as a backup)
     try {
@@ -7227,6 +7307,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     millLoadData(data.mill || null);                                  // and your mill
     siloLoadData(data.silo || null);                                  // and your silo, with its hay
     craftKnown = Array.isArray(data.recipes) ? data.recipes.slice() : [];   // and the crafting recipes you've unlocked (none in older saves)
+    relSaved = data.friends && typeof data.friends === 'object' ? data.friends : {};   // and everyone's hearts
+    townsfolk.forEach(function (p) { p.hearts = relSaved[p.name] || 0; });
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
