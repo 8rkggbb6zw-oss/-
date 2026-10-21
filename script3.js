@@ -1404,6 +1404,139 @@ EVERDAWN_PARTS.push(function (THREE) {
     window.addEventListener('resize', soon);
   })();
 
+  // ---------- Skills: eight masteries, and the bag's sixth page ----------
+  // You earn experience in eight masteries by doing the things they're about: Farming (tilling, planting, watering and
+  // picking your crops), Ranching (petting, feeding and collecting from your animals), Foraging (chopping trees,
+  // trimming bushes, gathering Dawn Petals), Mining (breaking rocks), and Diving, Catching, Fishing and Combat, which
+  // come later. What you earn during the day only counts once you go to bed: overnight it's added up, and any mastery
+  // that's reached a new level levels up (up to level 10). Every even level (2, 4, 6, 8 and 10) gives that mastery a
+  // skill point, so up to five points each. After Relationships, "Skills ›" turns to the Skills page (or press L to go
+  // straight there, and L again to close it), with each mastery's level, how close it is to the next one, what's
+  // waiting for tonight, and its points to spend on perks. A point, once spent, can't be changed or taken back. There
+  // are no perks yet: to add one, push { id, name, desc, cost: 1, level: the level it needs, recipe: a crafting
+  // recipe it unlocks } onto SKILL_PERKS.farming (or another mastery), and check for it with hasPerk(id); give
+  // experience with addSkillXp('fishing', 5), say. It's all kept in your save
+  var SKILLS = [['farming', 'Farming', '🌱'], ['ranching', 'Ranching', '🐮'], ['foraging', 'Foraging', '🍄'], ['mining', 'Mining', '⛏️'], ['diving', 'Diving', '🤿'], ['catching', 'Catching', '🦋'], ['fishing', 'Fishing', '🎣'], ['combat', 'Combat', '⚔️']];
+  var SKILL_XP = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];   // (the experience it takes to reach each level, 0 to 10)
+  var SKILL_PERKS = {}, skills = {}, skillPage = false, skillKey = null, skillConfirm = null;
+  try { skillKey = localStorage.getItem('everdawn-skill-key') || null; } catch (err) {}
+  function skillsReset() { SKILLS.forEach(function (k) { skills[k[0]] = { xp: 0, pending: 0, points: 0, perks: [] }; if (!SKILL_PERKS[k[0]]) SKILL_PERKS[k[0]] = []; }); }
+  skillsReset();
+  function skillLevel(xp) { var l = 0; while (l < 10 && xp >= SKILL_XP[l + 1]) l++; return l; }
+  var skillLoading = false;
+  function addSkillXp(name, n) { if (skillLoading || !skills[name] || !(n > 0)) return; skills[name].pending += n; if (skillPage) renderSkillPage(); }
+  function hasPerk(id) { return SKILLS.some(function (k) { return skills[k[0]].perks.indexOf(id) >= 0; }); }
+  function learnPerk(name, perk) {                                     // (spending points on a perk: for good)
+    var sk = skills[name], cost = perk.cost || 1;
+    if (sk.perks.indexOf(perk.id) >= 0 || sk.points < cost || skillLevel(sk.xp) < (perk.level || 0)) return;
+    sk.points -= cost; sk.perks.push(perk.id); spellSound();
+    if (perk.recipe) unlockRecipe(perk.recipe);
+    showToast('⭐ Learned ' + perk.name + '!', 2200); renderSkillPage();
+  }
+  function skillsOvernight() {                                         // (bedtime: today's experience counts, levels go up, and even levels give points)
+    var news = [];
+    SKILLS.forEach(function (k) {
+      var sk = skills[k[0]]; if (!sk.pending) return;
+      var before = skillLevel(sk.xp); sk.xp += sk.pending; sk.pending = 0;
+      var after = skillLevel(sk.xp), pts = 0;
+      for (var l = before + 1; l <= after; l++) if (l % 2 === 0) pts++;
+      sk.points += pts;
+      if (after > before) news.push(k[2] + ' ' + k[1] + ' reached level ' + after + (pts ? ' (+' + pts + ' skill point' + (pts > 1 ? 's' : '') + ')' : ''));
+    });
+    if (news.length) setTimeout(function () { showToast('⭐ ' + news.join(' · '), 4200); spellSound(); }, 3600);
+  }
+  wakeNextMorning = (function (base) { return function () { var r = base.apply(this, arguments); skillsOvernight(); return r; }; })(wakeNextMorning);
+  // (where the experience comes from)
+  var skillSpell = false;
+  hoeHits = (function (base) { return function (tile) { var was = !!tile.soil, r = base.apply(this, arguments); if (!was) addSkillXp('farming', 5); return r; }; })(hoeHits);
+  setWet = (function (base) { return function (tile, wet) { if (wet && !tile.wet && !skillSpell) addSkillXp('farming', 3); return base.apply(this, arguments); }; })(setWet);
+  makeCrop = (function (base) { return function () { addSkillXp('farming', 4); return base.apply(this, arguments); }; })(makeCrop);
+  castSpell = (function (base) { return function () { skillSpell = true; try { return base.apply(this, arguments); } finally { skillSpell = false; } }; })(castSpell);   // (watering by magic doesn't count)
+  addItem = (function (base) { return function (id, n) { var r = base.apply(this, arguments); if (r) { if (id === 'bloom') addSkillXp('farming', 8); else if (id === 'petal') addSkillXp('foraging', 3); } return r; }; })(addItem);
+  axeHits = (function (base) { return function () { addSkillXp('foraging', 2); return base.apply(this, arguments); }; })(axeHits);
+  snipHits = (function (base) { return function () { addSkillXp('foraging', 2); return base.apply(this, arguments); }; })(snipHits);
+  pickHits = (function (base) { return function () { addSkillXp('mining', 2); return base.apply(this, arguments); }; })(pickHits);
+  function ranchXp(base) { return function (kind) { addSkillXp('ranching', kind === 'egg' ? 10 : kind === 'pet' || kind === 'eat' ? 4 : 0); return base.apply(this, arguments); }; }   // (petting, feeding and collecting from your animals)
+  glimSound = ranchXp(glimSound); duckSound = ranchXp(duckSound); emberSound = ranchXp(emberSound); gemSound = ranchXp(gemSound); celSound = ranchXp(celSound); moonSound = ranchXp(moonSound);
+  auroraSound = ranchXp(auroraSound); zephSound = ranchXp(zephSound); lunaSound = ranchXp(lunaSound); sirSound = ranchXp(sirSound); prismSound = ranchXp(prismSound); lotusSound = ranchXp(lotusSound);
+  veilSound = ranchXp(veilSound); lizSound = ranchXp(lizSound); tortSound = ranchXp(tortSound); bisonSound = ranchXp(bisonSound); crabSound = ranchXp(crabSound);
+  loadGame = (function (base) { return function () { skillLoading = true; try { return base.apply(this, arguments); } finally { skillLoading = false; } }; })(loadGame);
+  // (the page)
+  var skillBtn = document.createElement('button');
+  skillBtn.type = 'button'; skillBtn.className = 'inv-close map-btn'; skillBtn.textContent = 'Skills ›'; skillBtn.style.display = 'none';
+  var bagNav = bagUi.box && bagUi.box.querySelector('.bag-nav'); if (bagNav) bagNav.appendChild(skillBtn);
+  var skillBox = document.createElement('div');
+  skillBox.style.cssText = 'display:none;height:min(46vh,320px);overflow:auto;border-radius:12px;box-shadow:inset 0 0 0 2px #fff;background:linear-gradient(180deg,#fffbea,#f2ecff);padding:10px 12px;box-sizing:border-box;-webkit-overflow-scrolling:touch;';
+  var skillHint = document.createElement('p'); skillHint.className = 'inv-info'; skillHint.style.display = 'none';
+  function showSkillKey() { skillHint.textContent = 'Press ' + everdawnKeyName(skillKey || 'KeyL') + ' to open your skills any time.'; }
+  window.everdawnSetSkillKey = function (code) { skillKey = code || null; showSkillKey(); };
+  showSkillKey();
+  if (bagUi.grid) { bagUi.grid.parentNode.insertBefore(skillBox, relHint.nextSibling); bagUi.grid.parentNode.insertBefore(skillHint, skillBox.nextSibling); }
+  function renderSkillPage() {
+    var top = skillBox.scrollTop; skillBox.innerHTML = '';
+    var intro = document.createElement('div'); intro.style.cssText = 'font-size:.8rem;color:#7a6a98;margin:0 2px 8px;line-height:1.35';
+    intro.textContent = 'What you earn today counts when you go to bed. Each mastery gives a skill point at levels 2, 4, 6, 8 and 10. Choose carefully: a point, once spent, can\'t be changed or taken back.';
+    skillBox.appendChild(intro);
+    SKILLS.forEach(function (k) {
+      var sk = skills[k[0]], lv = skillLevel(sk.xp), perks = SKILL_PERKS[k[0]] || [];
+      var card = document.createElement('div'); card.style.cssText = 'background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(90,60,140,.15)';
+      var row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:8px';
+      row.innerHTML = '<span style="font-size:1.3rem">' + k[2] + '</span><b style="flex:1;color:#7b4fd6">' + k[1] + '</b><span style="font-weight:700;color:#5a4a7a">Lv ' + lv + '</span>' +
+        (sk.points ? '<span style="background:linear-gradient(180deg,#ffd86a,#f0a830);color:#5a3a00;font-weight:700;font-size:.78rem;padding:2px 8px;border-radius:999px">' + sk.points + ' point' + (sk.points > 1 ? 's' : '') + '</span>' : '');
+      card.appendChild(row);
+      var next = lv < 10 ? SKILL_XP[lv + 1] : SKILL_XP[10], prev = SKILL_XP[lv], frac = lv < 10 ? (sk.xp - prev) / (next - prev) : 1, wait = lv < 10 ? Math.min(1 - frac, sk.pending / (next - prev)) : 0;
+      var bar = document.createElement('div'); bar.style.cssText = 'position:relative;height:9px;border-radius:999px;background:#ece6f6;margin:7px 0 4px;overflow:hidden';
+      bar.innerHTML = '<div style="position:absolute;left:0;top:0;bottom:0;width:' + (frac * 100).toFixed(1) + '%;background:linear-gradient(90deg,#9a7aff,#ff8ac8)"></div>' +
+        '<div style="position:absolute;top:0;bottom:0;left:' + (frac * 100).toFixed(1) + '%;width:' + (wait * 100).toFixed(1) + '%;background:repeating-linear-gradient(135deg,#ffd27a 0 4px,#ffe6a8 4px 8px)"></div>';
+      card.appendChild(bar);
+      var sub = document.createElement('div'); sub.style.cssText = 'font-size:.76rem;color:#7a6a98;display:flex;justify-content:space-between;gap:8px';
+      sub.innerHTML = '<span>' + (lv < 10 ? (sk.xp - prev) + ' / ' + (next - prev) + ' XP to level ' + (lv + 1) : 'Mastered!') + '</span>' + (sk.pending ? '<span style="color:#b07a20;font-weight:600">+' + sk.pending + ' XP tonight</span>' : '');
+      card.appendChild(sub);
+      if (!perks.length) { var none = document.createElement('div'); none.style.cssText = 'font-size:.76rem;color:#a898c0;font-style:italic;margin-top:5px'; none.textContent = 'Perks coming soon'; card.appendChild(none); }
+      perks.forEach(function (pk) {
+        var got = sk.perks.indexOf(pk.id) >= 0, cost = pk.cost || 1, can = !got && sk.points >= cost && lv >= (pk.level || 0);
+        var pr = document.createElement('div'); pr.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid #f0eaf8';
+        var tx = document.createElement('div'); tx.style.cssText = 'flex:1;min-width:0;font-size:.8rem';
+        tx.innerHTML = '<b style="color:' + (got ? '#4a8a4e' : '#5a4a7a') + '"></b><div style="opacity:.75"></div>'; tx.firstChild.textContent = (got ? '✓ ' : '') + pk.name; tx.lastChild.textContent = (pk.desc || '') + (pk.level && !got && lv < pk.level ? ' (needs level ' + pk.level + ')' : '');
+        pr.appendChild(tx);
+        if (!got) {
+          var b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'flex:none;padding:5px 10px;font-size:.78rem' + (can ? '' : ';opacity:.45;cursor:default');
+          var sure = skillConfirm === pk.id; b.textContent = sure ? 'Sure? Can\'t undo' : 'Learn · ' + cost + ' pt'; b.disabled = !can;
+          b.addEventListener('click', function () { if (skillConfirm === pk.id) { skillConfirm = null; learnPerk(k[0], pk); } else { skillConfirm = pk.id; renderSkillPage(); } focusGame(); });   // (tap once, then again to be sure)
+          pr.appendChild(b);
+        }
+        card.appendChild(pr);
+      });
+      skillBox.appendChild(card);
+    });
+    skillBox.scrollTop = top;
+  }
+  function showSkillPage(on) {
+    if (on) { if (mapPage) showMapPage(false); if (questPage) showQuestPage(false); if (craftPage) showCraftPage(false); if (relPage) showRelPage(false); }
+    skillPage = on; skillConfirm = null;
+    if (bagUi.grid) bagUi.grid.style.display = on ? 'none' : '';
+    if (bagUi.info) bagUi.info.style.display = on ? 'none' : '';
+    var extras = bagUi.box ? bagUi.box.querySelectorAll('.trash-row') : [];
+    for (var i = 0; i < extras.length; i++) extras[i].style.display = on ? 'none' : '';
+    skillBox.style.display = skillHint.style.display = on ? '' : 'none';
+    relBtn.textContent = on ? '‹ Relationships' : 'Relationships ›';    // (here the way back is "‹ Relationships")
+    if (on) { mapBtn.style.display = questBtn.style.display = craftBtn.style.display = skillBtn.style.display = 'none'; relBtn.style.display = ''; renderSkillPage(); if (mapHead) mapHead.textContent = '⭐ Skills'; }
+    else mapBtn.style.display = '';
+  }
+  showRelPage = (function (base) {                                     // ("Skills ›" shows on the Relationship Screen)
+    return function (on) { if (on && skillPage) showSkillPage(false); base.apply(this, arguments); skillBtn.style.display = on ? '' : 'none'; };
+  })(showRelPage);
+  showCraftPage = (function (base) { return function (on) { if (on && skillPage) showSkillPage(false); base.apply(this, arguments); skillBtn.style.display = 'none'; }; })(showCraftPage);
+  showQuestPage = (function (base) { return function (on) { if (on && skillPage) showSkillPage(false); base.apply(this, arguments); skillBtn.style.display = 'none'; }; })(showQuestPage);
+  showMapPage = (function (base) { return function (on) { if (skillPage) showSkillPage(false); base.apply(this, arguments); skillBtn.style.display = 'none'; }; })(showMapPage);
+  skillBtn.addEventListener('click', function () { showSkillPage(true); focusGame(); });
+  function openSkills() {
+    if (bagUi.box && !bagUi.box.hidden && skillPage) { toggleBag(false); return; }   // (pressing L again closes it)
+    if (!bagUi.box || bagUi.box.hidden) toggleBag(true);
+    showSkillPage(true);
+  }
+  window.addEventListener('keydown', function (e) { if (e.code === (skillKey || 'KeyL') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) openSkills(); });
+
   // ---------- Teleport spell ----------
   // Press T (or the Teleport button) to open the world map with glowing pins on your house, the Dawn Tree and every
   // shop. Tap a pin and you vanish in a swirl of sparkles and reappear there. It costs some mana, and works from
@@ -5745,7 +5878,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       mill: millSaveData(),                                           // your mill: where it is, and the day Oak & Ember started on it
       silo: siloSaveData(),                                           // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
       recipes: craftKnown.slice(),                                    // the crafting recipes you've unlocked
-      friends: townsfolk.reduce(function (o, p) { o[p.name] = p.hearts; return o; }, relSaved)   // and how many hearts everyone in town has
+      friends: townsfolk.reduce(function (o, p) { o[p.name] = p.hearts; return o; }, relSaved),   // and how many hearts everyone in town has
+      skills: skills                                                  // and your masteries: experience, today's experience, points and perks
     };
     var before = null; try { before = localStorage.getItem(SAVE_KEY); } catch (err) {}   // (what was in the slot until now, in case it's a day to keep as a backup)
     try {
@@ -7340,6 +7474,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     craftKnown = Array.isArray(data.recipes) ? data.recipes.slice() : [];   // and the crafting recipes you've unlocked (none in older saves)
     relSaved = data.friends && typeof data.friends === 'object' ? data.friends : {};   // and everyone's hearts
     townsfolk.forEach(function (p) { p.hearts = relSaved[p.name] || 0; });
+    skillsReset(); if (data.skills) SKILLS.forEach(function (k) { var d = data.skills[k[0]]; if (d) skills[k[0]] = { xp: d.xp || 0, pending: d.pending || 0, points: d.points || 0, perks: Array.isArray(d.perks) ? d.perks.slice() : [] }; });   // and your masteries
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
     flushDirty();
