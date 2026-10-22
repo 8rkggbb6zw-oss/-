@@ -8760,6 +8760,63 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (decorDropKey && e.code === decorDropKey && decorHeld) decorDrop();
   }, true);
 
+  // ---------- Farm View ----------
+  // Outdoors, V (Enter Farm View Mode, or a key of your own on the Mouse & Keyboard page) pulls the camera far back and
+  // up for a bird's-eye view of the whole island: your fields, buildings, crops and decorations, for planning where
+  // things go without the close-up camera in the way. Dragging still turns the view round. V again (Exit Farm View
+  // Mode, or a key of your own), or Escape, brings the camera back. The game carries on as usual meanwhile; going
+  // indoors leaves Farm View
+  var farmView = false, farmViewSaved = null, farmEnterKey = null, farmExitKey = null, FARM_VIEW_DIST = 82, FARM_VIEW_PITCH = 1.42;
+  try { farmEnterKey = localStorage.getItem('everdawn-farm-view-key') || null; farmExitKey = localStorage.getItem('everdawn-farm-view-exit-key') || null; } catch (err) {}
+  window.everdawnSetFarmViewKey = function (code) { farmEnterKey = code || null; };
+  window.everdawnSetFarmViewExitKey = function (code) { farmExitKey = code || null; showFarmBadge(); };
+  (function () { var st = document.createElement('style'); st.textContent = '.ev-farmview{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;padding:5px 14px;border-radius:999px;font:600 .85rem Fredoka,system-ui,sans-serif;color:#4a3b6b;background:rgba(255,255,255,.9);box-shadow:0 4px 14px rgba(120,80,190,.3);pointer-events:none;white-space:nowrap}.ev-farmview[hidden]{display:none}'; document.head.appendChild(st); })();
+  var farmBadge = document.createElement('div'); farmBadge.className = 'ev-farmview'; farmBadge.hidden = true; canvas.parentNode.appendChild(farmBadge);
+  function showFarmBadge() { farmBadge.innerHTML = '🌾 Farm View · <b>' + everdawnKeyName(farmExitKey || 'KeyV') + '</b> to leave'; }
+  showFarmBadge();
+  function enterFarmView() {
+    if (farmView) return;
+    if (indoors) { showToast('🌾 Farm View only works outside.', 2000); return; }
+    if (gamePaused || somethingOpen() || flying) return;
+    farmView = true;
+    farmViewSaved = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw, fogNear: scene.fog ? scene.fog.near : 0, fogFar: scene.fog ? scene.fog.far : 0, far: camera.far };
+    cam.dist = FARM_VIEW_DIST; cam.pitch = FARM_VIEW_PITCH;
+    if (scene.fog) { scene.fog.near = 150; scene.fog.far = 400; }      // (no fog across the island: you can see right to the far side)
+    camera.far = 500; camera.updateProjectionMatrix();
+    farmBadge.hidden = false;
+  }
+  function leaveFarmView() {
+    if (!farmView) return;
+    farmView = false; var v = farmViewSaved; farmViewSaved = null;
+    cam.dist = v.dist; cam.pitch = v.pitch; cam.yaw = v.yaw;
+    if (scene.fog) { scene.fog.near = v.fogNear; scene.fog.far = v.fogFar; }
+    camera.far = v.far; camera.updateProjectionMatrix();
+    farmBadge.hidden = true;
+  }
+  var farmBaseCamera = updateCamera;
+  updateCamera = function (dt) {                                       // (in Farm View the camera looks down over the middle of the island)
+    if (farmView && indoors) leaveFarmView();
+    if (!farmView) return farmBaseCamera.apply(this, arguments);
+    cam.pitch = FARM_VIEW_PITCH; camGoal.set(0, 0, 0); cam.target.lerp(camGoal, calmMotion ? 1 : 1 - Math.exp(-dt * 4));
+    var flat = Math.cos(cam.pitch) * cam.dist;
+    camera.position.set(cam.target.x + Math.sin(cam.yaw) * flat, cam.target.y + Math.sin(cam.pitch) * cam.dist, cam.target.z + Math.cos(cam.yaw) * flat);
+    camera.lookAt(cam.target);
+  };
+  var farmBaseCull = cullScene;
+  cullScene = function () {                                            // (in Farm View everything on the island shows, however far off)
+    if (!farmView) return farmBaseCull.apply(this, arguments);
+    for (var i = 0; i < cullList.length; i++) cullList[i].o.layers.set(cullList[i].r !== -1 ? 0 : 1);
+  };
+  window.addEventListener('keydown', function (e) {
+    if (window.EVERDAWN_TITLE || gamePaused || e.repeat || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()) || (window.everdawnSettingsOpen && window.everdawnSettingsOpen())) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (farmView) {
+      if (e.code === (farmExitKey || 'KeyV') || (e.code === 'Escape' && !somethingOpen())) { e.preventDefault(); e.stopImmediatePropagation(); leaveFarmView(); }
+      return;
+    }
+    if (e.code === (farmEnterKey || 'KeyV') && !decorMode) { e.preventDefault(); e.stopImmediatePropagation(); enterFarmView(); }
+  }, true);
+
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
   // Decor Mode, the clock stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
