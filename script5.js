@@ -1204,6 +1204,7 @@
     ["Scale HUD", "Escala del HUD", "Taille de l'ATH", "Scala HUD", "HUD-Größe", "Escala do HUD"],
     ["Scale Hotbar", "Escala de la barra rápida", "Taille de la barre d'outils", "Scala barra rapida", "Schnellleisten-Größe", "Escala da barra rápida"],
     ["TV with Stand", "Televisor con mueble", "Télé avec meuble", "TV con mobile", "Fernseher mit Schrank", "TV com rack"],
+    ["🧵 Thread & Thimble’s racks are still empty: new clothes are coming soon!", "🧵 Los percheros de Thread & Thimble aún están vacíos: ¡pronto llegará ropa nueva!", "🧵 Les portants de Thread & Thimble sont encore vides : de nouveaux vêtements arrivent bientôt !", "🧵 Gli appendiabiti di Thread & Thimble sono ancora vuoti: presto arriveranno vestiti nuovi!", "🧵 Die Kleiderstangen bei Thread & Thimble sind noch leer: Bald gibt es neue Kleidung!", "🧵 As araras da Thread & Thimble ainda estão vazias: roupas novas chegam em breve!"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
