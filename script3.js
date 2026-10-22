@@ -9238,6 +9238,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var g = new THREE.LatheGeometry(prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 40);
         if (ribs) { var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var a = Math.atan2(p.getZ(i), p.getX(i)), y = p.getY(i); if (y > h * 0.05 && y < h * 0.9) { var k = 1 + Math.abs(Math.sin(a * ribs)) * 0.04 - 0.02; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } g.computeVertexNormals(); }
         var o = new THREE.Mesh(g, m); o.position.set(x, 0, z); o.castShadow = o.receiveShadow = true; P.add(o);
+        if (soilY < 0) return;                                           // (a vase for dried flowers: no soil)
         var sy = soilY || h * 0.86, sg = new THREE.CircleGeometry(r * 0.93, 32, 0), sp = sg.attributes.position;   // (soil, mounded a little in the middle and lumpy)
         for (var si = 0; si < sp.count; si++) { var sd = Math.hypot(sp.getX(si), sp.getY(si)) / (r * 0.93); sp.setZ(si, (1 - sd * sd) * r * 0.1 + Math.sin(sp.getX(si) * 90) * Math.cos(sp.getY(si) * 80) * r * 0.012); }
         sg.computeVertexNormals();
@@ -9340,20 +9341,33 @@ EVERDAWN_PARTS.push(function (THREE) {
     var top = put(new THREE.ExtrudeGeometry(topShape, { depth: 0.05, bevelEnabled: false, curveSegments: 18 }), whiteTop, 0, CH + 0.05, 0, Math.PI / 2, 0, 0, C);
     var edge = put(new THREE.ExtrudeGeometry(topShape, { depth: 0.025, bevelEnabled: false, curveSegments: 18 }), rose, 0, CH + 0.005, 0, Math.PI / 2, 0, 0, C); edge.scale.set(1.01, 1.03, 1);
     var plinth = put(new THREE.ExtrudeGeometry(topShape, { depth: 0.06, bevelEnabled: false, curveSegments: 18 }), rose, 0, 0.06, 0, Math.PI / 2, 0, 0, C); plinth.scale.set(0.97, 0.9, 1);
-    // (a little ribbed vase of dried flowers: bunny-tail grass, dried lavender and a few papery leaves)
+    // (a ribbed bud vase of dried flowers: fluffy bunny-tail grass, dried lavender in whorls of tiny buds, wheat-pale
+    // grass seed heads and curling dried leaves, all gathered into the vase's narrow neck)
     var DV = new THREE.Group(); DV.position.set(0.45, CH + 0.05, -0.05); C.add(DV);
-    PLK.pot(DV, 0, 0, 0.055, 0.18, stoneware, 10, 0.155);
-    for (var df = 0; df < 7; df++) {
-      var da = df / 7 * Math.PI * 2, dl = 0.1 + PLK.rnd(df * 3.3) * 0.08, dh = 0.42 + PLK.rnd(df * 1.7) * 0.16;
-      var tip = [Math.cos(da) * dl, dh, Math.sin(da) * dl], cv = PLK.stem(DV, [[Math.cos(da) * 0.01, 0.14, Math.sin(da) * 0.01], [Math.cos(da) * dl * 0.4, dh * 0.6, Math.sin(da) * dl * 0.4], tip], 0.003, 0.002, rMat(0xa48a62), 8);
-      var hd = put(new THREE.SphereGeometry(0.02, 10, 8), rMat(0xf2e8d6, { roughness: 1 }), tip[0], tip[1] + 0.02, tip[2], 0, 0, 0, DV); hd.scale.set(0.85, 1.7, 0.85);   // (a soft bunny tail)
-      var lp = cv.getPointAt(0.55); PLK.leaves(DV, 'lance', [[lp.x, lp.y, lp.z, Math.cos(da + 0.6), 0.5, Math.sin(da + 0.6), 0.012, 0.07, 0xc4a77c, 1]], true);
+    var vprof = [[0.001, 0], [0.04, 0], [0.055, 0.02], [0.062, 0.07], [0.05, 0.13], [0.026, 0.17], [0.024, 0.2], [0.03, 0.212], [0.026, 0.215], [0.02, 0.2]];
+    var vg = new THREE.LatheGeometry(vprof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 36), vp2 = vg.attributes.position;
+    for (var vi2 = 0; vi2 < vp2.count; vi2++) { var vy = vp2.getY(vi2); if (vy > 0.01 && vy < 0.16) { var vk = 1 + Math.abs(Math.sin(Math.atan2(vp2.getZ(vi2), vp2.getX(vi2)) * 12)) * 0.05 - 0.025; vp2.setX(vi2, vp2.getX(vi2) * vk); vp2.setZ(vi2, vp2.getZ(vi2) * vk); } }
+    vg.computeVertexNormals(); put(vg, stoneware, 0, 0, 0, 0, 0, 0, DV);
+    var fluff = [], buds = [], seeds = [], dry = [], q2 = new THREE.Vector3(), tg2 = new THREE.Vector3(), straw = rMat(0xb49a70, { roughness: 0.9 }), green2 = rMat(0x8a8a62, { roughness: 0.9 });
+    function sprig(k, tilt, len, m) { var a = k * 2.39 + 0.3, lean = tilt * (0.6 + PLK.rnd(k * 3.7) * 0.6); return PLK.stem(DV, [[Math.cos(a) * 0.006, 0.17, Math.sin(a) * 0.006], [Math.cos(a) * lean * 0.3, 0.17 + len * 0.45, Math.sin(a) * lean * 0.3], [Math.cos(a) * lean, 0.17 + len, Math.sin(a) * lean]], 0.0022, 0.0012, m, 10); }
+    for (var df = 0; df < 8; df++) {                                     // (bunny tails: an oval of soft fluff, dozens of fine hairs standing out from it)
+      var cv = sprig(df, 0.16, 0.3 + PLK.rnd(df * 1.7) * 0.14, straw), tip = cv.getPointAt(1);
+      put(new THREE.SphereGeometry(0.015, 12, 10), rMat(0xf0e6d4, { roughness: 1 }), tip.x, tip.y + 0.022, tip.z, 0, 0, 0, DV).scale.set(1, 1.9, 1);
+      for (var fh = 0; fh < 130; fh++) { var u = PLK.rnd(df * 97 + fh) * 2 - 1, fa2 = PLK.rnd(df * 31 + fh * 3) * Math.PI * 2, rr2 = Math.sqrt(1 - u * u);
+        fluff.push([tip.x + rr2 * Math.cos(fa2) * 0.012, tip.y + 0.022 + u * 0.026, tip.z + rr2 * Math.sin(fa2) * 0.012, rr2 * Math.cos(fa2) * 0.7, 1 + u * 0.4, rr2 * Math.sin(fa2) * 0.7, 0.008, 0.011 + PLK.rnd(fh * 7) * 0.005, [0xf6efe2, 0xeee2cc, 0xfaf6ee, 0xe4d6bc][fh % 4], fa2]); }   // (soft hairs swept up round it)
+      var lp = cv.getPointAt(0.45); cv.getTangentAt(0.45, tg2); dry.push([lp.x, lp.y, lp.z, tg2.x + Math.cos(df) * 0.8, tg2.y, tg2.z + Math.sin(df) * 0.8, 0.01, 0.09, 0xc9ae84, 1.2]);
     }
-    for (var dlv = 0; dlv < 5; dlv++) {
-      var la = dlv / 5 * Math.PI * 2 + 0.3, ll = 0.06 + PLK.rnd(dlv * 9.1) * 0.05, lh = 0.36 + PLK.rnd(dlv * 4.2) * 0.1;
-      var lcv = PLK.stem(DV, [[0, 0.14, 0], [Math.cos(la) * ll * 0.5, lh * 0.6, Math.sin(la) * ll * 0.5], [Math.cos(la) * ll, lh, Math.sin(la) * ll]], 0.0025, 0.0015, rMat(0x7a7a5a), 8);
-      for (var bud = 0; bud < 9; bud++) { var bp = lcv.getPointAt(0.72 + bud * 0.03); var bd = put(new THREE.SphereGeometry(0.006, 6, 4), rMat(bud % 2 ? 0x8a7aa6 : 0x9e8cb8, { roughness: 1 }), bp.x + Math.cos(bud * 2) * 0.004, bp.y, bp.z + Math.sin(bud * 2) * 0.004, 0, 0, 0, DV); bd.scale.y = 1.6; bd.castShadow = false; }
+    for (var dlv = 0; dlv < 7; dlv++) {                                  // (lavender: whorls of tiny violet buds, closer together toward the tip)
+      var lcv = sprig(dlv + 20, 0.12, 0.26 + PLK.rnd(dlv * 4.2) * 0.1, green2);
+      for (var wh = 0; wh < 9; wh++) { var wt = 0.62 + wh * 0.045; lcv.getPointAt(Math.min(1, wt), q2); lcv.getTangentAt(Math.min(1, wt), tg2);
+        for (var bb = 0; bb < 6; bb++) { var ba4 = bb / 6 * Math.PI * 2 + wh; buds.push([q2.x, q2.y, q2.z, Math.cos(ba4) + tg2.x * 2.2, tg2.y * 2.2 + 0.3, Math.sin(ba4) + tg2.z * 2.2, 0.006, 0.015 + (wh < 3 ? 0.003 : 0), [0x7a64a0, 0x8e78b4, 0x6a5690, 0xa290c4][(bb + wh) % 4], ba4]); } }
     }
+    for (var sg2 = 0; sg2 < 5; sg2++) {                                  // (pale grass seed heads: a feathery spike of tiny husks)
+      var scv = sprig(sg2 + 40, 0.22, 0.34 + PLK.rnd(sg2 * 6.1) * 0.1, straw);
+      for (var hk = 0; hk < 18; hk++) { scv.getPointAt(0.7 + hk * 0.0165, q2); scv.getTangentAt(0.7 + hk * 0.0165, tg2); var hs = hk % 2 ? 1 : -1;
+        seeds.push([q2.x, q2.y, q2.z, tg2.x + hs * 0.5, tg2.y, tg2.z + hs * 0.3, 0.006, 0.02, [0xdcc8a0, 0xcab48a][hk % 2], 0]); }
+    }
+    PLK.leaves(DV, 'strand', fluff, true); PLK.leaves(DV, 'lance', buds, true); PLK.leaves(DV, 'lance', seeds, true); PLK.leaves(DV, 'strand', dry, true);
     var till = new THREE.Group(); till.position.set(-0.5, CH + 0.08, -0.05); C.add(till);   // (a slim modern till and a card reader)
     put(new THREE.BoxGeometry(0.34, 0.24, 0.02), rMat(0x1c1c20, { roughness: 0.3 }), 0, 0.18, 0, -0.25, 0, 0, till);
     put(new THREE.PlaneGeometry(0.3, 0.2), rMat(0xf2ece4, { emissive: 0xf0e8de, emissiveIntensity: 0.5 }), 0, 0.18, 0.012, -0.25, 0, 0, till);
