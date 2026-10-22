@@ -8899,7 +8899,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Inside: warm greige plaster and a pale oak floor; a cream fluted counter with rounded ends and a rose-gold edge at
   // the back, a low white table of shoes and boxes in front of it, a rail of peach and cream clothes hung from the
   // ceiling by the big window and its window seat, a rose-gold rack of neutrals and handbags, pampas grass, three
-  // glass globe lights, an olive tree by the door, and a curving plaster staircase in the corner. Nothing's
+  // glass globe lights, an arched mirror, oak shelves and an olive tree by the door. Nothing's
   // for sale yet: at the counter, Interact says new clothes are coming (the shop's menu goes there later). It has a pin
   // on the map and a Teleport spot like the other shops
   var CLOTH_X = -97, CLOTH_Z = 14, CLOTH_TURN = Math.PI, CLOTH_HW = 4, CLOTH_HD = 3, CLOTH_WALL = 3.6, CLOTH_FY = 0.12;
@@ -9185,7 +9185,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     layTownPath(clLine);                                               // (and its path, laid just like the town's others)
   })();
   // ---- inside ----
-  var clothScene = new THREE.Scene(); clothScene.background = new THREE.Color(0x1e1a16);
+  var clothScene = new THREE.Scene(); clothScene.background = new THREE.Color(0xd9cfc2);   // (round the room, a soft greige like its plaster, never black)
   var CLI_X = -800, CLI_Z = 1000, CLI_W = CLOTH_HW * 2, CLI_D = CLOTH_HD * 2, CLI_EXIT_Z = CLI_D / 2 - 0.6, inCloth = false;
   var clothRoom = new THREE.Group(); clothRoom.position.set(CLI_X, 0, CLI_Z); clothScene.add(clothRoom);
   clothScene.add(new THREE.HemisphereLight(0xfff6ea, 0x7a6a58, 0.65));
@@ -9337,26 +9337,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       put(new THREE.SphereGeometry(0.085, 18, 14), rMat(0xfffaf0, { emissive: 0xfff2dc, emissiveIntensity: 1.1, roughness: 0.2 }), g3[0], g3[2], g3[1], 0, 0, 0).castShadow = false;
       var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0d8, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })); gl.position.set(g3[0], g3[2], g3[1]); gl.scale.set(0.6, 0.6, 1); R.add(gl);
     });
-    // ===== a curving plaster staircase in the front right corner, sweeping up to the floor above =====
-    var ST = new THREE.Group(); ST.position.set(W2, 0, D2); R.add(ST); clWalls[2].extra.push(ST);
-    var IN_R = 0.55, OUT_R = 1.85, STEPS = 15, RISE = (H - 0.05) / STEPS, A0 = Math.PI, A1 = Math.PI / 2;   // (it turns a quarter circle, from along the front wall to along the right one)
-    var stepMat = new THREE.MeshStandardMaterial({ map: plasterTex, color: 0xece4d8, roughness: 0.9 }), treadMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.5 });
-    for (var s2 = 0; s2 < STEPS; s2++) {
-      var a0 = A0 + (A1 - A0) * s2 / STEPS, a1 = A0 + (A1 - A0) * (s2 + 1) / STEPS, sh2 = new THREE.Shape();
-      sh2.absarc(0, 0, OUT_R, a0, a1, true); sh2.absarc(0, 0, IN_R, a1, a0, false);
-      var top2 = (s2 + 1) * RISE;
-      var blk = put(new THREE.ExtrudeGeometry(sh2, { depth: top2, bevelEnabled: false, curveSegments: 4 }), stepMat, 0, 0, 0, -Math.PI / 2, 0, 0, ST);   // (each step a solid block from the floor up)
-      var tr = put(new THREE.ExtrudeGeometry(sh2, { depth: 0.03, bevelEnabled: false, curveSegments: 4 }), treadMat, 0, top2, 0, -Math.PI / 2, 0, 0, ST); tr.castShadow = false;
-      if (s2 % 2 === 0) { var mid = (a0 + a1) / 2; clothSolids.push([W2 + Math.cos(mid) * 1.2, D2 - Math.sin(mid) * 1.2, 0.6]); }
-    }
-    var bal = [], balN = 30;                                              // (a smooth curving plaster wall along its open edge, rising with the steps)
-    for (var b2 = 0; b2 <= balN; b2++) { var ab = A0 + (A1 - A0) * b2 / balN, yb = (b2 / balN) * (H - 0.05); bal.push([Math.cos(ab) * OUT_R, -Math.sin(ab) * OUT_R, yb]); }
-    var bpos = [], bidx = [];
-    bal.forEach(function (p, i) { bpos.push(p[0], p[2] - 0.02, p[1], p[0], p[2] + 0.95, p[1]); if (i) { var q = i * 2; bidx.push(q - 2, q - 1, q, q - 1, q + 1, q); } });
-    var bgeo = new THREE.BufferGeometry(); bgeo.setAttribute('position', new THREE.Float32BufferAttribute(bpos, 3)); bgeo.setIndex(bidx); bgeo.computeVertexNormals();
-    put(bgeo, new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.9, side: THREE.DoubleSide }), 0, 0, 0, 0, 0, 0, ST);
-    put(new THREE.CircleGeometry(0.11, 20), rMat(0xfff6e6, { emissive: 0xfff0d8, emissiveIntensity: 1 }), -0.075, 1.6, -2.0, 0, -Math.PI / 2, 0, ST);   // (a round light set into the wall beside it)
-    var wl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0d8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); wl.position.set(-0.15, 1.6, -2.0); wl.scale.set(0.7, 0.7, 1); ST.add(wl);
+    // ===== a round light set into the right-hand wall =====
+    var WL = new THREE.Group(); WL.position.set(W2, 0, D2); R.add(WL); clWalls[2].extra.push(WL);
+    put(new THREE.CircleGeometry(0.11, 20), rMat(0xfff6e6, { emissive: 0xfff0d8, emissiveIntensity: 1 }), -0.075, 1.6, -2.0, 0, -Math.PI / 2, 0, WL);
+    var wl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff0d8, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false })); wl.position.set(-0.15, 1.6, -2.0); wl.scale.set(0.7, 0.7, 1); WL.add(wl);
     // ===== a potted olive tree by the door =====
     var OL = new THREE.Group(); OL.position.set(-1.35, 0, D2 - 0.4); R.add(OL);
     put(new THREE.CylinderGeometry(0.2, 0.16, 0.42, 18), rMat(0xe8e0d4, { roughness: 0.7 }), 0, 0.21, 0, 0, 0, 0, OL);
@@ -9432,10 +9416,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       var sh4 = put(new THREE.SphereGeometry(0.05, 10, 6), rMat(s3[1], { roughness: 0.35 }), s3[0], 0.03, 0.08, 0, 0, 0, RK); sh4.scale.set(0.8, 0.55, 2.1);
       if (k > 1) put(new THREE.CylinderGeometry(0.006, 0.01, 0.07, 6), rMat(s3[1]), s3[0], 0.04, 0.0, 0, 0, 0, RK);
     });
-    // (the staircase: a cream cap along the top of its curving wall, and a slim rose-gold handrail)
-    function tube(pts, r, m) { var curve = new THREE.CatmullRomCurve3(pts.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); })); return put(new THREE.TubeGeometry(curve, 60, r, 8, false), m, 0, 0, 0, 0, 0, 0, ST); }
-    tube(bal.map(function (p) { return [p[0], p[2] + 0.95, p[1]]; }), 0.035, trim);
-    tube(bal.map(function (p) { var k2 = (OUT_R - 0.08) / OUT_R; return [p[0] * k2, p[2] + 0.85, p[1] * k2]; }), 0.016, rose);
   })(clothRoom);
   var clLook = new THREE.Vector3();
   function clothNight() { var hr = state.minutes / 60; return hr < 5.5 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr < 18.5 ? 0 : hr < 20 ? (hr - 18.5) / 1.5 : 1; }
