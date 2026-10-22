@@ -9207,6 +9207,12 @@ EVERDAWN_PARTS.push(function (THREE) {
         for (var v = 0; v < p.count; v++) { var x = p.getX(v), y = p.getY(v); p.setZ(v, -x * x * 0.5 + Math.sin(y * Math.PI) * 0.05); var mid = Math.max(0, 1 - Math.abs(x) * (kind === 'strand' ? 3 : 10)); c.push(1 + mid * 0.2, 1 + mid * 0.22, 1 + mid * 0.12); }
         g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); g.rotateX(Math.PI / 2); g.computeVertexNormals(); return g;
       }
+      var soilMat = new THREE.MeshStandardMaterial({ roughness: 1, map: cpTex(128, 128, function (g, w, h) {   // (dark, crumbly potting soil with bits of grit and perlite)
+        g.fillStyle = '#3a281a'; g.fillRect(0, 0, w, h);
+        function R(k) { var s = Math.sin(k * 91.7 + 3.1) * 43758.5453; return s - Math.floor(s); }   // (scattered at random, so there's no pattern to it)
+        for (var k = 0; k < 1400; k++) { var c = [[70, 50, 34], [48, 34, 22], [92, 68, 46], [30, 22, 14], [58, 42, 28]][Math.floor(R(k * 3) * 5)]; g.fillStyle = 'rgba(' + c.join(',') + ',0.85)'; g.beginPath(); g.ellipse(R(k) * w, R(k + 0.5) * h, 0.6 + R(k * 7) * 2.2, 0.5 + R(k * 9) * 1.6, R(k * 11) * 3, 0, Math.PI * 2); g.fill(); }
+        for (var q = 0; q < 18; q++) { g.fillStyle = q % 3 ? 'rgba(232,226,216,0.8)' : 'rgba(176,164,148,0.8)'; g.beginPath(); g.arc(R(q * 13 + 7) * w, R(q * 17 + 2) * h, 0.8 + R(q) * 0.8, 0, Math.PI * 2); g.fill(); }
+      }, [2, 2]) }), mossMat = rMat(0x5e7f3a, { roughness: 1, flatShading: true }), mossMat2 = rMat(0x7a9a48, { roughness: 1, flatShading: true });
       var geos = { lance: leafGeo('lance'), heart: leafGeo('heart'), strand: leafGeo('strand') };
       var mats = { leaf: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: THREE.DoubleSide }), dry: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, side: THREE.DoubleSide }) };
       var dm = new THREE.Object3D(), col = new THREE.Color();
@@ -9221,9 +9227,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       // (a stem or branch along a curve, tapering from r0 to r1)
       function stem(P, pts, r0, r1, m, seg) {
-        var curve = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })), n = seg || 16, rs = 7;
+        var curve = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })), n = seg || 16, rs = r0 > 0.018 ? 14 : 7, gn = r0 > 0.018 ? 1 : 0;   // (thick ones get knobbly and ridged, like old wood)
         var g = new THREE.TubeGeometry(curve, n, r0, rs, false), p = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
-        for (var i = 0; i <= n; i++) { curve.getPointAt(i / n, c); var k = (r0 + (r1 - r0) * i / n) / r0; for (var j = 0; j <= rs; j++) { var ix = i * (rs + 1) + j; v.fromBufferAttribute(p, ix).sub(c).multiplyScalar(k).add(c); p.setXYZ(ix, v.x, v.y, v.z); } }
+        for (var i = 0; i <= n; i++) { curve.getPointAt(i / n, c); var k = (r0 + (r1 - r0) * i / n) / r0; for (var j = 0; j <= rs; j++) { var ix = i * (rs + 1) + j, kk = k * (1 + gn * (Math.sin(i * 1.3 + j * 2.1 + r0 * 300) * 0.07 + Math.sin(i * 0.45 + j * 0.9) * 0.08 + (j % 3 ? 0 : -0.05))); v.fromBufferAttribute(p, ix).sub(c).multiplyScalar(kk).add(c); p.setXYZ(ix, v.x, v.y, v.z); } }
         g.computeVertexNormals(); var o = new THREE.Mesh(g, m); o.castShadow = true; P.add(o); return curve;
       }
       // (a round pot turned on a lathe: a rim, a gentle belly, and fine ribs if asked; then soil with a few pebbles)
@@ -9232,10 +9238,32 @@ EVERDAWN_PARTS.push(function (THREE) {
         var g = new THREE.LatheGeometry(prof.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 40);
         if (ribs) { var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var a = Math.atan2(p.getZ(i), p.getX(i)), y = p.getY(i); if (y > h * 0.05 && y < h * 0.9) { var k = 1 + Math.abs(Math.sin(a * ribs)) * 0.04 - 0.02; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } g.computeVertexNormals(); }
         var o = new THREE.Mesh(g, m); o.position.set(x, 0, z); o.castShadow = o.receiveShadow = true; P.add(o);
-        var soil = new THREE.Mesh(new THREE.CircleGeometry(r * 0.9, 24), rMat(0x3e2c1e, { roughness: 1 })); soil.rotation.x = -Math.PI / 2; soil.position.set(x, soilY || h * 0.86, z); P.add(soil);
-        for (var b = 0; b < 6; b++) { var pb = new THREE.Mesh(new THREE.SphereGeometry(r * 0.08, 6, 4), rMat([0xd8d0c4, 0xa89c8c, 0xece6dc][b % 3], { roughness: 0.8 })); pb.scale.y = 0.55; pb.position.set(x + Math.cos(b * 2.3) * r * 0.55, (soilY || h * 0.86) + 0.004, z + Math.sin(b * 2.3) * r * 0.55); P.add(pb); }
+        var sy = soilY || h * 0.86, sg = new THREE.CircleGeometry(r * 0.93, 32, 0), sp = sg.attributes.position;   // (soil, mounded a little in the middle and lumpy)
+        for (var si = 0; si < sp.count; si++) { var sd = Math.hypot(sp.getX(si), sp.getY(si)) / (r * 0.93); sp.setZ(si, (1 - sd * sd) * r * 0.1 + Math.sin(sp.getX(si) * 90) * Math.cos(sp.getY(si) * 80) * r * 0.012); }
+        sg.computeVertexNormals();
+        var soil = new THREE.Mesh(sg, soilMat); soil.rotation.x = -Math.PI / 2; soil.position.set(x, sy, z); soil.receiveShadow = true; P.add(soil);
+        function onTop(px, pz) { var d = Math.hypot(px - x, pz - z) / (r * 0.93); return sy + (1 - d * d) * r * 0.1; }
+        for (var b = 0; b < 14; b++) {                                   // (pebbles of a few sizes and colours...)
+          var ba = b * 2.39, bd = r * (0.3 + (b * 0.37) % 0.55), bx = x + Math.cos(ba) * bd, bz = z + Math.sin(ba) * bd, bs = r * (0.04 + (b % 4) * 0.018);
+          var pb = new THREE.Mesh(new THREE.DodecahedronGeometry(bs, 1), rMat([0xd8d0c4, 0xa89c8c, 0xece6dc, 0x8a8278, 0xc4b8a6][b % 5], { roughness: 0.75 })); pb.scale.set(1, 0.5, 0.8); pb.rotation.y = b; pb.position.set(bx, onTop(bx, bz) + bs * 0.2, bz); pb.castShadow = true; P.add(pb);
+        }
+        for (var c2 = 0; c2 < 10; c2++) {                                // (...curls of bark mulch...)
+          var ca = c2 * 1.7 + 0.5, cd = r * (0.2 + (c2 * 0.29) % 0.6), cx = x + Math.cos(ca) * cd, cz = z + Math.sin(ca) * cd;
+          var ch = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.06, r * 0.06, r * (0.14 + (c2 % 3) * 0.05), 6, 1, true, 0, 2.2), new THREE.MeshStandardMaterial({ color: [0x5a3e2a, 0x4a3222, 0x6e4c34][c2 % 3], roughness: 1, side: THREE.DoubleSide }));   // (curved slivers of bark)
+          ch.position.set(cx, onTop(cx, cz) + r * 0.01, cz); ch.rotation.set(Math.PI / 2, ca * 2, (c2 % 2 - 0.5) * 0.4); P.add(ch);
+        }
+        for (var m3 = 0; m3 < 3; m3++) {                                 // (...and soft cushions of moss)
+          var ma = m3 * 2.2 + 1, mx = x + Math.cos(ma) * r * 0.62, mz = z + Math.sin(ma) * r * 0.62;
+          for (var mb = 0; mb < 7; mb++) { var ms = new THREE.Mesh(new THREE.IcosahedronGeometry(r * (0.035 + (mb % 3) * 0.012), 1), mb % 2 ? mossMat : mossMat2); var mo = mb * 2.4; ms.scale.y = 0.6; ms.position.set(mx + Math.cos(mo) * r * 0.05 * (mb ? 1 : 0), onTop(mx, mz) + r * 0.01, mz + Math.sin(mo) * r * 0.05 * (mb ? 1 : 0)); P.add(ms); }   // (a soft lumpy cushion)
+        }
       }
-      var barkMat = new THREE.MeshStandardMaterial({ roughness: 0.95, map: cpTex(64, 128, function (g, w, h) { g.fillStyle = '#6e604e'; g.fillRect(0, 0, w, h); for (var k = 0; k < 140; k++) { g.fillStyle = 'rgba(' + (k % 3 ? '52,44,34' : '150,138,118') + ',0.55)'; g.fillRect((k * 23) % w, (k * 37) % h, 1 + (k % 2), 6 + (k % 9) * 2); } }, [1, 3]) });
+      var barkTex = cpTex(128, 256, function (g, w, h) {              // (olive bark: grey-brown, with long twisting fissures, lichen-pale ridges and the odd knot)
+        g.fillStyle = '#7a6c58'; g.fillRect(0, 0, w, h);
+        for (var k = 0; k < 26; k++) { var fx = (k * 41) % w, wv = 3 + (k % 4); g.strokeStyle = 'rgba(40,32,24,' + (0.5 + (k % 3) * 0.15) + ')'; g.lineWidth = 1.5 + (k % 3); g.beginPath(); g.moveTo(fx, 0); for (var y = 0; y <= h; y += 16) g.lineTo(fx + Math.sin(y * 0.05 + k) * wv * 2, y); g.stroke(); }
+        for (var r2 = 0; r2 < 260; r2++) { g.fillStyle = 'rgba(' + (r2 % 4 ? '150,140,120' : '172,170,150') + ',0.35)'; g.fillRect((r2 * 53) % w, (r2 * 97) % h, 2 + (r2 % 3), 3 + (r2 % 7)); }
+        for (var kn = 0; kn < 3; kn++) { var kx = 20 + kn * 40, ky = 50 + kn * 70; g.fillStyle = 'rgba(46,36,26,0.8)'; g.beginPath(); g.ellipse(kx, ky, 5, 8, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(150,138,118,0.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(kx, ky, 8, 12, 0, 0, Math.PI * 2); g.stroke(); }
+      }, [1, 2]);
+      var barkMat = new THREE.MeshStandardMaterial({ roughness: 0.95, map: barkTex, bumpMap: barkTex, bumpScale: 0.012 });
       function rnd(seed) { var s = Math.sin(seed * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s); }
       return { leaves: leaves, stem: stem, pot: pot, bark: barkMat, rnd: rnd };
     })();
@@ -9421,12 +9449,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ===== a potted olive tree by the door: a gnarled twin trunk, six branches, silvery leaves and a few olives =====
     var OL = new THREE.Group(); OL.position.set(-1.35, 0, D2 - 0.4); R.add(OL);
     PLK.pot(OL, 0, 0, 0.22, 0.46, stoneware, 18);
-    PLK.stem(OL, [[0, 0.38, 0], [0.04, 0.6, 0.02], [-0.02, 0.85, 0.04], [0.02, 1.08, 0]], 0.034, 0.02, PLK.bark, 14);
-    PLK.stem(OL, [[0.02, 0.38, -0.02], [-0.04, 0.62, -0.03], [0.03, 0.88, -0.03], [-0.01, 1.1, 0.01]], 0.026, 0.016, PLK.bark, 14);
+    [0, Math.PI].forEach(function (ph, k) {                             // (a twin trunk, the two stems spiralling round each other as they climb)
+      var tp = []; for (var ti = 0; ti <= 8; ti++) { var ty = 0.36 + ti * 0.09, ta = ph + ti * 0.75, tr = 0.028 * (1 - ti / 14); tp.push([Math.cos(ta) * tr + Math.sin(ti * 1.3) * 0.006, ty, Math.sin(ta) * tr]); }
+      PLK.stem(OL, tp, k ? 0.034 : 0.04, k ? 0.019 : 0.022, PLK.bark, 32);
+    });
+    for (var rt = 0; rt < 6; rt++) { var ra = rt / 6 * Math.PI * 2 + 0.4, rl = 0.09 + (rt % 3) * 0.03;   // (its flared foot, roots reaching out into the soil)
+      PLK.stem(OL, [[Math.cos(ra) * 0.02, 0.47, Math.sin(ra) * 0.02], [Math.cos(ra) * rl * 0.6, 0.42, Math.sin(ra) * rl * 0.6], [Math.cos(ra) * rl, 0.385, Math.sin(ra) * rl]], 0.02, 0.006, PLK.bark, 8); }
+    var knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.036, 14, 10), PLK.bark); knuckle.position.set(0, 1.07, 0); knuckle.scale.set(1.15, 1.5, 1.05); knuckle.castShadow = true; OL.add(knuckle);   // (the swollen knuckle where it branches)
     for (var ob2 = 0; ob2 < 6; ob2++) {
       var ba2 = ob2 / 6 * Math.PI * 2 + 0.3, bl = 0.3 + PLK.rnd(ob2 * 4.1) * 0.12, by = 1.0 + PLK.rnd(ob2 * 2.7) * 0.12;
       var mid2 = [Math.cos(ba2) * bl * 0.45, by + 0.2, Math.sin(ba2) * bl * 0.45], end = [Math.cos(ba2) * bl, by + 0.36 + PLK.rnd(ob2) * 0.18, Math.sin(ba2) * bl];
-      PLK.stem(OL, [[0, by - 0.06, 0], mid2, end], 0.014, 0.004, PLK.bark, 10);
+      PLK.stem(OL, [[0, by - 0.04, 0], [mid2[0] * 0.35, by + 0.08, mid2[2] * 0.35], mid2, end], 0.019, 0.004, PLK.bark, 16);
       oliveSpray(OL, mid2, [end[0] - mid2[0], end[1] - mid2[1], end[2] - mid2[2]], 130, ob2 * 37, 1);
       [0.9, -0.9].forEach(function (tw, k) { var tb = [mid2[0] + (end[0] - mid2[0]) * 0.5, mid2[1] + (end[1] - mid2[1]) * 0.5, mid2[2] + (end[2] - mid2[2]) * 0.5], td = [Math.cos(ba2 + tw) * 0.16, 0.08, Math.sin(ba2 + tw) * 0.16];
         PLK.stem(OL, [tb, [tb[0] + td[0], tb[1] + td[1], tb[2] + td[2]]], 0.005, 0.002, PLK.bark, 4); oliveSpray(OL, tb, td, 45, ob2 * 53 + k * 19, 1); });
