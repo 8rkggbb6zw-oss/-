@@ -8217,6 +8217,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (go && go()) { e.preventDefault(); e.stopImmediatePropagation(); }
   }, true);
 
+  // ---------- Bigger screens ----------
+  // The bag and its pages (World Map, Quests, Crafting, Relationships and Skills) open bigger: a wider panel, and taller
+  // pages, so more fits without scrolling. On a small screen they still shrink to fit
+  (function () {
+    var st = document.createElement('style'); st.textContent =
+      '.inventory:not(.ship){width:min(600px,94%)}' +
+      '.inventory:not(.ship) .inv-grid{grid-template-columns:repeat(4,minmax(0,104px));justify-content:center;gap:10px}' +
+      '.inventory:not(.ship) .ev-bigpage{height:min(56vh,370px)!important}.inventory:not(.ship) .ev-bigpage.ev-mappage{height:min(52vh,330px)!important}';   // (the map has its key underneath)
+    document.head.appendChild(st);
+    [mapBox, questBox, craftBox, relBox, skillBox].forEach(function (box) { box.classList.add('ev-bigpage'); });
+    mapBox.classList.add('ev-mappage');
+  })();
+
   // ---------- Zooming the World Map ----------
   // On the map page, the + and − buttons by "Find me" zoom the map in and out, and so do Zoom In Map (+, which is the
   // = key, or + on the number pad) and Zoom Out Map (the − key, or − on the number pad); on the Mouse & Keyboard page
