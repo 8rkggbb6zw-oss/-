@@ -1014,6 +1014,8 @@ var everdawnTitle = (function () {
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
       hud = this.getAttribute('data-h'); showHud(); try { localStorage.setItem('everdawn-hud', hud); } catch (err) {} if (window.everdawnSetHud) window.everdawnSetHud(hud === 'on'); });
     showHud();
+  } }, { name: 'Controller', build: function (body) {                  // (Controller: for playing with an Xbox, PlayStation or Switch controller; its settings are still to come)
+    var gap = document.createElement('div'); gap.style.height = 'clamp(160px,32vh,280px)'; body.appendChild(gap);   // (empty for now, but the page keeps its usual size)
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
