@@ -822,6 +822,18 @@ var everdawnTitle = (function () {
     '#evTitle .ev-langs button{padding:.6em 1em;font:600 17px Fredoka,system-ui,sans-serif;color:#f0e2ff;border:2px solid #ffe2a0;border-radius:999px;background:rgba(30,15,60,.6);cursor:pointer}' +
     '#evTitle .ev-langs button.on{color:#fff;background:linear-gradient(180deg,#ff9ecb,#d8609c)}#evTitle .ev-langs button:focus-visible{outline:3px solid #fff;outline-offset:2px}';
     document.head.appendChild(st); })();
+  // Dyslexic Font, on the Accessibility page: Disabled (the usual fonts) or Enabled. Enabled, the text on screen is in
+  // OpenDyslexic (free, loaded from cdn.jsdelivr.net only when it's on): heavier bottoms anchor each letter so they don't
+  // seem to flip or swap, b, d, p and q are each shaped their own way, and the roomier letters are easier on the eyes in
+  // long text. The Everdawn logo keeps its own look. It's remembered
+  (function () { var st = document.createElement('style'), F = 'https://cdn.jsdelivr.net/npm/@fontsource/opendyslexic@5.2.5/files/opendyslexic-latin-';
+    st.textContent = "@font-face{font-family:'OpenDyslexic';font-style:normal;font-display:swap;font-weight:400;src:url(" + F + "400-normal.woff2) format('woff2')}" +
+      "@font-face{font-family:'OpenDyslexic';font-style:normal;font-display:swap;font-weight:700;src:url(" + F + "700-normal.woff2) format('woff2')}" +
+      "html.ev-dyslexic body *{font-family:'OpenDyslexic',system-ui,sans-serif!important}" +
+      "html.ev-dyslexic .ev-name,html.ev-dyslexic .ev-name *,html.ev-dyslexic .topbar h1,html.ev-dyslexic .topbar h1 *{font-family:'Fredoka',system-ui,sans-serif!important}";
+    document.head.appendChild(st); })();
+  window.everdawnSetDyslexicFont = function (on) { document.documentElement.classList.toggle('ev-dyslexic', !!on); };
+  try { window.everdawnSetDyslexicFont(localStorage.getItem('everdawn-dyslexic-font') === 'on'); } catch (err) {}
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
@@ -1028,8 +1040,13 @@ var everdawnTitle = (function () {
     function showLang() { var now = window.everdawnLanguage ? window.everdawnLanguage() : 'en'; for (var b = 0; b < lb.length; b++) { var on = lb[b].getAttribute('data-l') === now; lb[b].classList.toggle('on', on); lb[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var l = 0; l < lb.length; l++) lb[l].addEventListener('click', function () { if (window.everdawnSetLanguage) window.everdawnSetLanguage(this.getAttribute('data-l')); showLang(); });
     showLang();
-  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: its settings are still to come)
-    var gap = document.createElement('div'); gap.style.height = 'clamp(160px,32vh,280px)'; body.appendChild(gap);   // (empty for now, but the page keeps its usual size)
+  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: the Dyslexic Font)
+    body.innerHTML = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evDysL">Dyslexic Font</span><div class="ev-seg" role="group" aria-labelledby="evDysL"><button type="button" data-d="off">Disabled</button><button type="button" data-d="on">Enabled</button></div></div>';
+    var dys = document.documentElement.classList.contains('ev-dyslexic') ? 'on' : 'off', dyBtns = body.querySelectorAll('.ev-seg button');
+    function showDys() { for (var b = 0; b < dyBtns.length; b++) { var on = dyBtns[b].getAttribute('data-d') === dys; dyBtns[b].classList.toggle('on', on); dyBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var dy = 0; dy < dyBtns.length; dy++) dyBtns[dy].addEventListener('click', function () {
+      dys = this.getAttribute('data-d'); showDys(); try { localStorage.setItem('everdawn-dyslexic-font', dys); } catch (err) {} window.everdawnSetDyslexicFont(dys === 'on'); });
+    showDys();
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
