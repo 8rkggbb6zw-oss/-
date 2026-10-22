@@ -8390,6 +8390,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetDecorZoomInKey = function (code) { decorZoomInKey = code || null; };
   window.everdawnSetDecorZoomOutKey = function (code) { decorZoomOutKey = code || null; };
   function decorZoom(dir) { cam.dist = Math.max(DECOR_DIST_MIN, Math.min(DECOR_DIST_MAX, cam.dist + dir * DECOR_DIST_STEP)); }
+  // Reset Decor Mode Camera: C in Decor Mode (or a key of your own) puts the camera back to how Decor Mode starts: its
+  // usual distance and angle, facing the room the usual way, after any zooming or turning the view
+  var decorCamResetKey = null; try { decorCamResetKey = localStorage.getItem('everdawn-decor-camera-reset') || null; } catch (err) {}
+  window.everdawnSetDecorCamResetKey = function (code) { decorCamResetKey = code || null; };
+  function decorResetCamera() { cam.dist = 12; cam.pitch = 1.1; cam.yaw = 0; }
   // Toggle HUD In Decor Mode, on the Mouse & Keyboard page: On (the usual way) or Off. Off, while you're in Decor Mode,
   // the stats along the top, the Quests box, the buttons under the game and the pop-up messages are hidden (the hotbar
   // always is), for a clear view of the room; the Decor Mode panel stays, to place things from. It's remembered
@@ -8672,7 +8677,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!inFarmhouse()) { showToast('🪑 Decor Mode only works inside your house.', 2200); return; }
     if (gamePaused || somethingOpen()) return;
     decorMode = true; decorStoreOpen = false; walkTarget = null; keys = {};
-    decorCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 12; cam.pitch = 1.1; cam.yaw = 0;
+    decorCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; decorResetCamera();
     decorBox.hidden = false; document.body.classList.add('ev-decor-on'); gridLines.visible = decorGrid; renderDecor();
   }
   function leaveDecorMode() {
@@ -8748,6 +8753,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (e.code === (decorStoreKey || 'Space')) decorToggleStorage();
     else if (decorZoomInKey ? e.code === decorZoomInKey : e.code === 'Equal' || e.code === 'NumpadAdd') decorZoom(-1);
     else if (decorZoomOutKey ? e.code === decorZoomOutKey : e.code === 'Minus' || e.code === 'NumpadSubtract') decorZoom(1);
+    else if (e.code === (decorCamResetKey || 'KeyC')) decorResetCamera();
     else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
     else if (decorSelKey && e.code === decorSelKey && !decorHeld && decorScreenAt) { var sp = decorPieceAt(decorScreenAt); if (sp) decorSelect(sp); }
     else if (decorDeselKey && e.code === decorDeselKey) decorDeselect();
