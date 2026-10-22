@@ -1201,6 +1201,8 @@
     ["Red-blind (Protanopia)", "Ceguera al rojo (protanopia)", "Cécité au rouge (protanopie)", "Cecità al rosso (protanopia)", "Rotblindheit (Protanopie)", "Cegueira ao vermelho (protanopia)"],
     ["Green-blind (Deuteranopia)", "Ceguera al verde (deuteranopia)", "Cécité au vert (deutéranopie)", "Cecità al verde (deuteranopia)", "Grünblindheit (Deuteranopie)", "Cegueira ao verde (deuteranopia)"],
     ["Blue-blind (Tritanopia)", "Ceguera al azul (tritanopia)", "Cécité au bleu (tritanopie)", "Cecità al blu (tritanopia)", "Blaublindheit (Tritanopie)", "Cegueira ao azul (tritanopia)"],
+    ["Scale HUD", "Escala del HUD", "Taille de l'ATH", "Scala HUD", "HUD-Größe", "Escala do HUD"],
+    ["Scale Hotbar", "Escala de la barra rápida", "Taille de la barre d'outils", "Scala barra rapida", "Schnellleisten-Größe", "Escala da barra rápida"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();

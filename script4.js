@@ -854,6 +854,28 @@ var everdawnTitle = (function () {
   window.everdawnSetColorBlind = function (n) { for (var k = 1; k <= 3; k++) document.documentElement.classList.toggle('ev-cb-' + k, +n === k); };
   function colorBlindNow() { var v = 0; try { v = Math.max(0, Math.min(3, parseInt(localStorage.getItem('everdawn-color-blind'), 10) || 0)); } catch (err) {} return v; }
   window.everdawnSetColorBlind(colorBlindNow());
+  // Scale HUD and Scale Hotbar, on the Accessibility page: sliders from 0 to 10, 5 being the usual size (0 is half size,
+  // 10 one and a half times). Scale HUD sizes everything on screen while you play: the stats, Mana and Stamina along the
+  // top, the hotbar and its tool icons, the Quests box, the pop-up messages, the Farm View tag, the Decor Mode panel and
+  // the buttons under the game, smaller for more room to see the island or bigger to make small text and icons easier
+  // to see (it goes along with Text Size and Bold Text, for any screen from a small laptop to a big 4K one). Scale
+  // Hotbar sizes just the hotbar's slots, icons and counts, on top of that. Both are remembered
+  (function () { var st = document.createElement('style'); st.textContent =
+    'html{--ev-hud:1;--ev-hot:1}.topbar,.controls{zoom:var(--ev-hud)}' +                       // (these sit in the page, so the page makes room for them)
+    '.quest-hud{scale:var(--ev-hud);transform-origin:0 0}.ev-decor{scale:var(--ev-hud);transform-origin:100% 0}' +   // (and these sit over the island, growing from their corner)
+    '.toast{scale:var(--ev-hud);transform-origin:0 100%}.ev-farmview{scale:var(--ev-hud);transform-origin:0 0}' +   // (from their middle edge: they're centred by moving half their width)
+    '.hotbar{scale:calc(var(--ev-hud) * var(--ev-hot));transform-origin:0 100%}' +
+    'html.ev-hud-big .stats{flex-wrap:wrap!important;row-gap:6px}';                           // (bigger than usual, the stats along the top can take two rows)
+    document.head.appendChild(st); })();
+  function hudScaleNow(key) { var v = 5; try { var s = localStorage.getItem(key); if (s !== null && s !== '') v = Math.max(0, Math.min(10, parseInt(s, 10))); if (isNaN(v)) v = 5; } catch (err) {} return v; }
+  window.everdawnSetHudScale = function (v) { document.documentElement.style.setProperty('--ev-hud', (0.5 + v * 0.1).toFixed(2)); document.documentElement.classList.toggle('ev-hud-big', v > 5); };
+  window.everdawnSetHotbarScale = function (v) { document.documentElement.style.setProperty('--ev-hot', (0.5 + v * 0.1).toFixed(2)); };
+  window.everdawnSetHudScale(hudScaleNow('everdawn-hud-scale')); window.everdawnSetHotbarScale(hudScaleNow('everdawn-hotbar-scale'));
+  (function () {                                                       // (in full screen the stats float over the island: the Quests box sits just below them, however big they are)
+    var bar = document.querySelector('.topbar'); if (!bar || !window.ResizeObserver) return;
+    var st = document.createElement('style'); st.textContent = 'body.full .quest-hud{top:var(--ev-top-h,18px)}'; document.head.appendChild(st);
+    new ResizeObserver(function () { if (document.body.classList.contains('full')) document.documentElement.style.setProperty('--ev-top-h', Math.round(bar.getBoundingClientRect().bottom + 8) + 'px'); }).observe(bar);
+  })();
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
@@ -1060,7 +1082,7 @@ var everdawnTitle = (function () {
     function showLang() { var now = window.everdawnLanguage ? window.everdawnLanguage() : 'en'; for (var b = 0; b < lb.length; b++) { var on = lb[b].getAttribute('data-l') === now; lb[b].classList.toggle('on', on); lb[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var l = 0; l < lb.length; l++) lb[l].addEventListener('click', function () { if (window.everdawnSetLanguage) window.everdawnSetLanguage(this.getAttribute('data-l')); showLang(); });
     showLang();
-  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: the Dyslexic Font and Color Blind Mode)
+  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: the Dyslexic Font, Color Blind Mode, Scale HUD and Scale Hotbar)
     body.innerHTML = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evDysL">Dyslexic Font</span><div class="ev-seg" role="group" aria-labelledby="evDysL"><button type="button" data-d="off">Disabled</button><button type="button" data-d="on">Enabled</button></div></div>';
     var dys = document.documentElement.classList.contains('ev-dyslexic') ? 'on' : 'off', dyBtns = body.querySelectorAll('.ev-seg button');
     function showDys() { for (var b = 0; b < dyBtns.length; b++) { var on = dyBtns[b].getAttribute('data-d') === dys; dyBtns[b].classList.toggle('on', on); dyBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
@@ -1071,6 +1093,12 @@ var everdawnTitle = (function () {
     var cb = body.querySelector('#evCb'), cbn = body.querySelector('#evCbName'); cb.value = colorBlindNow();   // (Color Blind Mode: 0 Normal, 1 red-blind, 2 green-blind, 3 blue-blind)
     function showCb() { cbn.textContent = CB_NAMES[+cb.value]; } showCb();
     cb.addEventListener('input', function () { showCb(); try { localStorage.setItem('everdawn-color-blind', cb.value); } catch (err) {} window.everdawnSetColorBlind(+cb.value); });
+    [['evHudS', 'Scale HUD', 'everdawn-hud-scale', window.everdawnSetHudScale], ['evHotS', 'Scale Hotbar', 'everdawn-hotbar-scale', window.everdawnSetHotbarScale]].forEach(function (s) {   // (Scale HUD and Scale Hotbar: 0 to 10, 5 the usual size)
+      body.insertAdjacentHTML('beforeend', '<div class="ev-srow"><div class="ev-lrow"><label for="' + s[0] + '">' + s[1] + '</label><output for="' + s[0] + '" id="' + s[0] + 'N"></output></div><div class="ev-range"><span>0</span><input type="range" id="' + s[0] + '" min="0" max="10" step="1"><span>10</span></div></div>');
+      var r = body.querySelector('#' + s[0]), n = body.querySelector('#' + s[0] + 'N'); r.value = hudScaleNow(s[2]);
+      function show() { n.textContent = r.value; } show();
+      r.addEventListener('input', function () { show(); try { localStorage.setItem(s[2], r.value); } catch (err) {} s[3](+r.value); });
+    });
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
