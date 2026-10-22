@@ -8333,8 +8333,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // piece, the panel can send it to your house storage or your backpack instead. Escape puts a piece back where it
   // came from, or, holding nothing, leaves Decor Mode, and so does Exit Decor Mode (G to start, or a key of your own on
   // the Mouse & Keyboard page). The bed and the fireplace stay where they are;
-  // the nightstand, the bookshelf and the rug can move, and a table, two chairs, a floor lamp and two potted plants
-  // start in your house storage. More decor can be added to DECOR below
+  // the nightstand, the bookshelf and the rug can move. Your house storage starts empty: the table, the chairs, the floor
+  // lamp and the potted plants below are ready to be given out in the game. More decor can be added to DECOR below
   var decorKey = null; try { decorKey = localStorage.getItem('everdawn-decor-key') || null; } catch (err) {}
   window.everdawnSetDecorKey = function (code) { decorKey = code || null; };
   var decorExitKey = null; try { decorExitKey = localStorage.getItem('everdawn-decor-exit-key') || null; } catch (err) {}
@@ -8367,6 +8367,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   // storage, with the furniture in your backpack under it, and closes it again. It starts closed each time
   var decorStoreKey = null, decorStoreOpen = false; try { decorStoreKey = localStorage.getItem('everdawn-decor-storage-key') || null; } catch (err) {}
   window.everdawnSetDecorStorageKey = function (code) { decorStoreKey = code || null; if (decorMode) renderDecor(); };
+  // Open Inventory: I in Decor Mode (or a key of your own) opens your bag, in case some furniture is in there; I or
+  // Escape closes it, and the Decor Mode panel comes back
+  var decorInvKey = null; try { decorInvKey = localStorage.getItem('everdawn-decor-inventory-key') || null; } catch (err) {}
+  window.everdawnSetDecorInventoryKey = function (code) { decorInvKey = code || null; };
+  function decorBagOpen() { return !!(bagUi.box && !bagUi.box.hidden); }
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
   // way to the door are kept clear)
@@ -8474,7 +8479,6 @@ EVERDAWN_PARTS.push(function (THREE) {
   function decorDefaults() {
     decorPlaced.slice().forEach(decorLift); houseStorage = [];
     decorPut({ id: 'decor_nightstand', x: NSX, z: NSZ, rot: 0 }); decorPut({ id: 'decor_bookshelf', x: SX, z: SZ, rot: 0 }); decorPut({ id: 'decor_rug', x: RUG_X, z: RUG_Z, rot: 0 });
-    storeAdd('decor_table', 1); storeAdd('decor_chair', 2); storeAdd('decor_lamp', 1); storeAdd('decor_plant', 2);
   }
   function decorSaveData() {
     var placed = decorPlaced.map(function (p) { return { id: p.id, x: p.x, z: p.z, rot: p.rot }; }), store = houseStorage.map(function (x) { return { id: x.id, count: x.count }; });
@@ -8671,6 +8675,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (decorMode && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 6) decorTap(e);
   });
   function decorTap(e) {
+    if (decorBagOpen()) return;                                         // (your bag's open: taps are for it)
     var at = decorFloorAt(e); if (at) decorPointer = at;
     if (decorHeld) { if (at) decorFollow(at.x, at.z); if (!decorDropKey) decorDrop(); return; }   // (a click puts it down, unless Put Down has a key of its own)
     var p = decorPieceAt(e);
@@ -8696,7 +8701,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     camera.lookAt(cam.target);
   };
   var decorBaseUpdatePlayer = updatePlayer;
-  updatePlayer = function (dt) { if (decorMode) { keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); } return decorBaseUpdatePlayer.apply(this, arguments); };   // (she stays put while you arrange)
+  updatePlayer = function (dt) {                                       // (she stays put while you arrange)
+    if (decorMode) { keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); else if (decorBox.hidden && !decorBagOpen()) { decorBox.hidden = false; renderDecor(); } }   // (the bag's been closed: the panel comes back)
+    return decorBaseUpdatePlayer.apply(this, arguments);
+  };
   window.addEventListener('keydown', function (e) {                    // (caught first: in Decor Mode only its own keys do anything)
     if (window.EVERDAWN_TITLE || gamePaused || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()) || (window.everdawnSettingsOpen && window.everdawnSettingsOpen())) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -8705,6 +8713,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.code === 'KeyF') return;                                     // (full screen still works)
     e.preventDefault(); e.stopImmediatePropagation();
     if (e.repeat) return;
+    var isInv = e.code === (decorInvKey || 'KeyI');
+    if (decorBagOpen()) { if (isInv || e.code === 'Escape') { toggleBag(false); decorBox.hidden = false; renderDecor(); } return; }   // (with the bag open, only closing it)
+    if (isInv) { decorCancel(); decorDeselect(true); decorBox.hidden = true; toggleBag(true); return; }
     if (isExit) leaveDecorMode();
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
