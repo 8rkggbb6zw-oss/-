@@ -6190,7 +6190,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       silo: siloSaveData(),                                           // your silo: where it is, when Oak & Ember started on it, and how much hay is in it
       recipes: craftKnown.slice(),                                    // the crafting recipes you've unlocked
       friends: townsfolk.reduce(function (o, p) { o[p.name] = p.hearts; return o; }, relSaved),   // and how many hearts everyone in town has
-      skills: skills                                                  // and your masteries: experience, today's experience, points and perks
+      skills: skills,                                                 // and your masteries: experience, today's experience, points and perks
+      decor: decorSaveData()                                          // and your house: where its furniture stands, and what's in your house storage
     };
     var before = null; try { before = localStorage.getItem(SAVE_KEY); } catch (err) {}   // (what was in the slot until now, in case it's a day to keep as a backup)
     try {
@@ -7785,6 +7786,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     craftKnown = Array.isArray(data.recipes) ? data.recipes.slice() : [];   // and the crafting recipes you've unlocked (none in older saves)
     relSaved = data.friends && typeof data.friends === 'object' ? data.friends : {};   // and everyone's hearts
     townsfolk.forEach(function (p) { p.hearts = relSaved[p.name] || 0; });
+    decorLoadData(data.decor || null);                                // your house's furniture and storage (as it always was, in older saves)
     skillsReset(); if (data.skills) SKILLS.forEach(function (k) { var d = data.skills[k[0]]; if (d) skills[k[0]] = { xp: d.xp || 0, pending: d.pending || 0, points: d.points || 0, perks: Array.isArray(d.perks) ? d.perks.slice() : [] }; });   // and your masteries
     homeMigrate(true);                                                // (anyone still at Fluff & Feather moves home, if there's room)
     tiles.forEach(function (tile) { if (tile.soil) coverGrass(tile); }); // grass stays tucked under your soil
@@ -8119,7 +8121,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   ['btnSave', 'btnLoad'].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = 'none'; });   // (saving and loading are on the pause menu now)
   function somethingOpen() {                                           // (Escape closes these first; it only pauses when none is open)
     return (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || carpShopOpen || coopPlacing || pickKind || glimNaming ||
-      dialogueOpen() || cutscenePlaying() || sleeping || teleporting;
+      dialogueOpen() || cutscenePlaying() || sleeping || teleporting || decorMode;
   }
   function pauseGame() {
     if (gamePaused || window.EVERDAWN_TITLE) return;
@@ -8321,6 +8323,293 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function () { var st = document.createElement('style'); st.textContent = '.ev-hud-off .topbar,.ev-hud-off .hotbar,.ev-hud-off .quest-hud{visibility:hidden!important}'; document.head.appendChild(st); })();
   window.everdawnSetHud = function (on) { document.documentElement.classList.toggle('ev-hud-off', !on); };
   try { window.everdawnSetHud(localStorage.getItem('everdawn-hud') !== 'off'); } catch (err) {}
+
+  // ---------- Decor Mode: arranging the farmhouse ----------
+  // Inside your house, G (on the Mouse & Keyboard page it can be a key of your own) turns on Decor Mode: the camera
+  // pulls back to look over the whole room, and a panel opens with your house storage (furniture and decor kept at
+  // home, which you can only reach in Decor Mode) and any furniture you're carrying in your backpack. Tap a piece in
+  // either to pick it up, or tap a piece already in the room; it follows the pointer, R turns it, and a tap puts it
+  // down where the square under it shows green (red means it's in the way or off the floor). While you're holding a
+  // piece, the panel can send it to your house storage or your backpack instead. Escape puts a piece back where it
+  // came from, or, holding nothing, leaves Decor Mode, and so does G. The bed and the fireplace stay where they are;
+  // the nightstand, the bookshelf and the rug can move, and a table, two chairs, a floor lamp and two potted plants
+  // start in your house storage. More decor can be added to DECOR below
+  var decorKey = null; try { decorKey = localStorage.getItem('everdawn-decor-key') || null; } catch (err) {}
+  window.everdawnSetDecorKey = function (code) { decorKey = code || null; showDecorKey(); };
+  var decorMode = false, decorHeld = null, decorPlaced = [], houseStorage = [], DECOR_SNAP = 0.25;
+  function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
+  // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
+  // way to the door are kept clear)
+  var DECOR_FIXED = [[BX - BED_W / 2 - 0.05, HZ - 0.2, BX + BED_W / 2 + 0.2, FZ + 0.1], [FPX - 2.1, -ROOM_D / 2, FPX + 1.9, FZF + 0.55], [-0.9, EXIT_Z - 0.7, 0.9, ROOM_D / 2]];
+  function decorMesh(geo, mat, x, y, z, g) { var m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; }
+  var dWood = rMat(0x8a5a3c, { roughness: 0.7 }), dWoodDark = rMat(0x5e3b26, { roughness: 0.7 }), dCloth = rMat(0xc9a3e8, { roughness: 0.9 });
+  var dPot = rMat(0xc8734a, { roughness: 0.8 }), dLeaf = rMat(0x4f9a52, { roughness: 0.8 }), dLeaf2 = rMat(0x6cc062, { roughness: 0.8 });
+  var dShade = rMat(0xfff0c8, { emissive: 0xffd27a, emissiveIntensity: 0.7, roughness: 0.6 });
+  function buildTable() {
+    var g = new THREE.Group();
+    decorMesh(new THREE.BoxGeometry(1.4, 0.07, 0.9), dWood, 0, 0.74, 0, g);
+    [[-0.6, -0.36], [0.6, -0.36], [-0.6, 0.36], [0.6, 0.36]].forEach(function (p) { decorMesh(new THREE.BoxGeometry(0.08, 0.72, 0.08), dWoodDark, p[0], 0.36, p[1], g); });
+    decorMesh(new THREE.CylinderGeometry(0.07, 0.09, 0.18, 10), rMat(0xe8f4ff, { roughness: 0.2, transparent: true, opacity: 0.7 }), 0.25, 0.87, 0.05, g);   // (a little vase)
+    var fl = decorMesh(new THREE.SphereGeometry(0.06, 8, 6), rMat(0xf2a6c8, { emissive: 0xf2a6c8, emissiveIntensity: 0.2 }), 0.25, 1.0, 0.05, g); fl.scale.set(1, 0.8, 1);
+    return g;
+  }
+  function buildChair() {                                              // (facing +z: the back is at -z)
+    var g = new THREE.Group();
+    decorMesh(new THREE.BoxGeometry(0.46, 0.06, 0.46), dWood, 0, 0.45, 0, g);
+    decorMesh(new THREE.BoxGeometry(0.42, 0.05, 0.42), dCloth, 0, 0.5, 0.01, g);
+    [[-0.19, -0.19], [0.19, -0.19], [-0.19, 0.19], [0.19, 0.19]].forEach(function (p) { decorMesh(new THREE.BoxGeometry(0.05, 0.45, 0.05), dWoodDark, p[0], 0.22, p[1], g); });
+    [-0.19, 0.19].forEach(function (x) { decorMesh(new THREE.BoxGeometry(0.05, 0.55, 0.05), dWoodDark, x, 0.75, -0.2, g); });
+    decorMesh(new THREE.BoxGeometry(0.42, 0.22, 0.04), dWood, 0, 0.88, -0.2, g);
+    return g;
+  }
+  function buildLamp() {
+    var g = new THREE.Group();
+    decorMesh(new THREE.CylinderGeometry(0.17, 0.2, 0.05, 16), dWoodDark, 0, 0.025, 0, g);
+    decorMesh(new THREE.CylinderGeometry(0.025, 0.025, 1.35, 8), R.gold, 0, 0.7, 0, g);
+    decorMesh(new THREE.CylinderGeometry(0.13, 0.24, 0.3, 16, 1, true), dShade, 0, 1.42, 0, g).material.side = THREE.DoubleSide;
+    var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd27a, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.position.set(0, 1.38, 0); glow.scale.set(0.9, 0.9, 1); g.add(glow);
+    return g;
+  }
+  function buildPlant() {
+    var g = new THREE.Group();
+    decorMesh(new THREE.CylinderGeometry(0.17, 0.12, 0.3, 14), dPot, 0, 0.15, 0, g);
+    decorMesh(new THREE.CylinderGeometry(0.18, 0.18, 0.04, 14), dPot, 0, 0.3, 0, g);
+    for (var k = 0; k < 7; k++) {
+      var a = k / 7 * Math.PI * 2, lf = decorMesh(new THREE.SphereGeometry(0.12, 8, 6), k % 2 ? dLeaf : dLeaf2, Math.cos(a) * 0.1, 0.48 + (k % 3) * 0.08, Math.sin(a) * 0.1, g);
+      lf.scale.set(0.7, 1.5, 0.7); lf.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+    }
+    return g;
+  }
+  // Pieces that were already in the room (the nightstand, the bookshelf and the rug) are gathered into groups of their own
+  function gatherPiece(test, cx, cz) {
+    var walls = []; for (var wn in inWalls) walls.push(inWalls[wn].g);
+    var g = new THREE.Group(), take = room.children.filter(function (o) { return walls.indexOf(o) < 0 && !o.isLight && test(o); });
+    take.forEach(function (o) { room.remove(o); o.position.x -= cx; o.position.z -= cz; g.add(o); });
+    return g;
+  }
+  var nightstandTpl = gatherPiece(function (o) { return Math.abs(o.position.x - NSX) < 0.4 && Math.abs(o.position.z - NSZ) < 0.35 && o.position.y < 1; }, NSX, NSZ);
+  var bookshelfTpl = gatherPiece(function (o) { return Math.abs(o.position.x - SX) < 0.36 && Math.abs(o.position.z - SZ) < 1.12 && o.position.y < 2.7; }, SX, SZ);
+  var rugTpl = gatherPiece(function (o) { return o.position.y < 0.04 && !(o.geometry && o.geometry.type === 'PlaneGeometry') && Math.abs(o.position.x - RUG_X) < RUG_W / 2 + 0.35 && Math.abs(o.position.z - RUG_Z) < RUG_D / 2 + 0.1; }, RUG_X, RUG_Z);
+  [[NSX, NSZ, 0.38], [SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]].forEach(function (sv) {   // (their old bumps come out: they're the pieces' own now)
+    for (var i = inSolids.length - 1; i >= 0; i--) if (inSolids[i][0] === sv[0] && inSolids[i][1] === sv[1] && inSolids[i][2] === sv[2]) inSolids.splice(i, 1);
+  });
+  // Each kind of decor: its name and picture, the floor it takes (w along x, d along z, turned 0), whether it's flat
+  // (a rug, which other pieces can stand on), what you bump into, and how it's made
+  var DECOR = {
+    decor_table: { name: 'Wooden Table', icon: '🍽️', w: 1.4, d: 0.9, bumps: [[-0.35, 0, 0.5], [0.35, 0, 0.5]], make: buildTable },
+    decor_chair: { name: 'Cushioned Chair', icon: '🪑', w: 0.5, d: 0.5, bumps: [[0, 0, 0.3]], make: buildChair },
+    decor_lamp: { name: 'Floor Lamp', icon: '💡', w: 0.42, d: 0.42, bumps: [[0, 0, 0.22]], make: buildLamp },
+    decor_plant: { name: 'Potted Plant', icon: '🪴', w: 0.42, d: 0.42, bumps: [[0, 0, 0.25]], make: buildPlant },
+    decor_nightstand: { name: 'Nightstand', icon: '🕯️', w: 0.64, d: 0.58, bumps: [[0, 0, 0.38]], make: function () { return nightstandTpl.clone(); } },
+    decor_bookshelf: { name: 'Bookshelf', icon: '📚', w: 0.62, d: 2.16, bumps: [[0, -0.6, 0.5], [0, 0, 0.5], [0, 0.6, 0.5]], make: function () { return bookshelfTpl.clone(); } },
+    decor_rug: { name: 'Woven Rug', icon: '🧶', w: 4.3, d: 2.7, flat: true, bumps: [], make: function () { return rugTpl.clone(); } }
+  };
+  Object.keys(DECOR).forEach(function (id) {                           // (they're items too, so they can go in your backpack)
+    ITEMS[id] = { name: DECOR[id].name, icon: DECOR[id].icon, info: 'Furniture for your house. Inside, press ' + everdawnKeyName(decorKey || 'KeyG') + ' for Decor Mode to place it.' };
+  });
+  function decorSize(id, rot) { var D = DECOR[id]; return rot % 2 ? [D.d, D.w] : [D.w, D.d]; }
+  function decorFits(id, x, z, rot, skip) {
+    var s = decorSize(id, rot), x0 = x - s[0] / 2, x1 = x + s[0] / 2, z0 = z - s[1] / 2, z1 = z + s[1] / 2;
+    if (x0 < -ROOM_W / 2 - 0.001 || x1 > ROOM_W / 2 + 0.001 || z0 < -ROOM_D / 2 - 0.001 || z1 > ROOM_D / 2 + 0.001) return false;
+    if (DECOR[id].flat) return true;                                   // (a rug can go under anything)
+    function hits(a) { return x0 < a[2] && x1 > a[0] && z0 < a[3] && z1 > a[1]; }
+    if (DECOR_FIXED.some(hits)) return false;
+    return !decorPlaced.some(function (p) {
+      if (p === skip || DECOR[p.id].flat) return false;
+      var t = decorSize(p.id, p.rot); return hits([p.x - t[0] / 2, p.z - t[1] / 2, p.x + t[0] / 2, p.z + t[1] / 2]);
+    });
+  }
+  function decorBumps(p) {                                             // (what you bump into, turned with the piece, in the room's own spot)
+    var c = Math.cos(-p.rot * Math.PI / 2), s = Math.sin(-p.rot * Math.PI / 2);
+    return DECOR[p.id].bumps.map(function (b) { return [p.x + b[0] * c - b[1] * s, p.z + b[0] * s + b[1] * c, b[2]]; });
+  }
+  function decorPut(p) {                                               // (into the room)
+    if (!p.g) p.g = DECOR[p.id].make();
+    p.g.position.set(p.x, 0, p.z); p.g.rotation.y = -p.rot * Math.PI / 2; room.add(p.g);
+    p.solids = decorBumps(p); p.solids.forEach(function (sv) { inSolids.push(sv); });
+    decorPlaced.push(p);
+  }
+  function decorLift(p) {                                              // (out of the room)
+    var i = decorPlaced.indexOf(p); if (i >= 0) decorPlaced.splice(i, 1);
+    (p.solids || []).forEach(function (sv) { var k = inSolids.indexOf(sv); if (k >= 0) inSolids.splice(k, 1); });
+    p.solids = null; if (p.g) room.remove(p.g);
+  }
+  function storeAdd(id, n) { var it = houseStorage.filter(function (x) { return x.id === id; })[0]; if (it) it.count += n; else houseStorage.push({ id: id, count: n }); }
+  function storeTake(id) { var it = houseStorage.filter(function (x) { return x.id === id; })[0]; if (!it) return false; if (--it.count <= 0) houseStorage.splice(houseStorage.indexOf(it), 1); return true; }
+  function decorDefaults() {
+    decorPlaced.slice().forEach(decorLift); houseStorage = [];
+    decorPut({ id: 'decor_nightstand', x: NSX, z: NSZ, rot: 0 }); decorPut({ id: 'decor_bookshelf', x: SX, z: SZ, rot: 0 }); decorPut({ id: 'decor_rug', x: RUG_X, z: RUG_Z, rot: 0 });
+    storeAdd('decor_table', 1); storeAdd('decor_chair', 2); storeAdd('decor_lamp', 1); storeAdd('decor_plant', 2);
+  }
+  function decorSaveData() {
+    var placed = decorPlaced.map(function (p) { return { id: p.id, x: p.x, z: p.z, rot: p.rot }; }), store = houseStorage.map(function (x) { return { id: x.id, count: x.count }; });
+    if (decorHeld) {                                                   // (holding a piece when the game saves: it's kept where it came from)
+      if (decorHeld.from === 'room') placed.push({ id: decorHeld.id, x: decorHeld.was.x, z: decorHeld.was.z, rot: decorHeld.was.rot });
+    }
+    return { placed: placed, storage: store };
+  }
+  function decorLoadData(d) {
+    if (decorMode) leaveDecorMode();
+    if (!d) { decorDefaults(); return; }                               // (a save from before Decor Mode: the room as it always was)
+    decorPlaced.slice().forEach(decorLift);
+    (d.placed || []).forEach(function (p) { if (DECOR[p.id]) decorPut({ id: p.id, x: +p.x || 0, z: +p.z || 0, rot: (p.rot | 0) % 4 }); });
+    houseStorage = (d.storage || []).filter(function (x) { return DECOR[x.id] && x.count > 0; }).map(function (x) { return { id: x.id, count: x.count | 0 }; });
+  }
+  decorDefaults();
+  // The panel, and the square under the piece you're holding
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-decor{position:absolute;top:12px;right:12px;z-index:7;width:min(250px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;box-sizing:border-box;padding:12px;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(120,80,190,.35),inset 0 0 0 2px #fff;font-family:Fredoka,system-ui,sans-serif;color:#4a3b6b}' +
+    '.ev-decor[hidden]{display:none}.ev-decor h3{margin:0 0 4px;font-size:1.1rem;color:#7b4fd6}.ev-decor p{margin:0 0 8px;font-size:.8rem;line-height:1.35}' +
+    '.ev-decor h4{margin:8px 0 4px;font-size:.85rem;color:#7b4fd6}.ev-dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
+    '.ev-dgrid button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font:500 .7rem Fredoka,system-ui,sans-serif;color:#4a3b6b;border-radius:12px;background:linear-gradient(160deg,#f6eeff,#ffe9f6);box-shadow:inset 0 0 0 2px #e6d6ff;border:0;cursor:pointer}' +
+    '.ev-dgrid button span:first-child{font-size:1.6rem;line-height:1.2}.ev-dgrid button b{position:absolute;top:3px;right:6px;font-size:.7rem}' +
+    '.ev-dgrid button:hover{box-shadow:inset 0 0 0 2px #c08bff}.ev-dgrid .none{grid-column:1/-1;font-size:.75rem;opacity:.7}' +
+    '.ev-dhold{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ev-dhold[hidden]{display:none}.ev-dhold button,.ev-decor .ev-ddone{padding:5px 10px;font:600 .8rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}' +
+    '.ev-decor .ev-ddone{margin-top:10px;width:100%}body.ev-decor-on .hotbar{visibility:hidden}';
+    document.head.appendChild(st); })();
+  var decorBox = document.createElement('div'); decorBox.className = 'ev-decor'; decorBox.hidden = true;
+  decorBox.innerHTML = '<h3>🪑 Decor Mode</h3><p class="ev-dhint"></p><div class="ev-dhold" hidden><button type="button" data-d="rot">⟳ Turn (R)</button><button type="button" data-d="store">📦 To storage</button><button type="button" data-d="bag">🎒 To backpack</button><button type="button" data-d="cancel">✕ Put back</button></div>' +
+    '<h4>🏠 House storage</h4><div class="ev-dgrid ev-dstore"></div><h4>🎒 In your backpack</h4><div class="ev-dgrid ev-dbag"></div><button type="button" class="ev-ddone"></button>';
+  canvas.parentNode.appendChild(decorBox);
+  var decorHint = decorBox.querySelector('.ev-dhint'), decorHoldBar = decorBox.querySelector('.ev-dhold'), decorDone = decorBox.querySelector('.ev-ddone');
+  function showDecorKey() { decorDone.textContent = 'Done (' + everdawnKeyName(decorKey || 'KeyG') + ')'; }
+  showDecorKey();
+  var decorMark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x50c86e, transparent: true, opacity: 0.4, depthWrite: false }));
+  decorMark.rotation.x = -Math.PI / 2; decorMark.position.y = 0.04; decorMark.visible = false; decorMark.renderOrder = 2;
+  function decorTile(id, n, from) {
+    var b = document.createElement('button'); b.type = 'button'; b.title = ITEMS[id].name;
+    b.appendChild(itemPicture(id)); var nm = document.createElement('span'); nm.textContent = ITEMS[id].name; b.appendChild(nm);
+    if (n > 1) { var c = document.createElement('b'); c.textContent = '×' + n; b.appendChild(c); }
+    b.addEventListener('click', function () { decorPick(id, from); focusGame(); });
+    return b;
+  }
+  function renderDecor() {
+    var sg = decorBox.querySelector('.ev-dstore'), bg = decorBox.querySelector('.ev-dbag'); sg.innerHTML = bg.innerHTML = '';
+    houseStorage.forEach(function (it) { sg.appendChild(decorTile(it.id, it.count, 'storage')); });
+    if (!houseStorage.length) sg.innerHTML = '<span class="none">Empty. Pick up a piece in the room and send it here.</span>';
+    var inBag = {}; bag.forEach(function (it) { if (it && DECOR[it.id]) inBag[it.id] = (inBag[it.id] || 0) + it.count; });
+    Object.keys(inBag).forEach(function (id) { bg.appendChild(decorTile(id, inBag[id], 'bag')); });
+    if (!Object.keys(inBag).length) bg.innerHTML = '<span class="none">No furniture in your backpack.</span>';
+    decorHoldBar.hidden = !decorHeld;
+    decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: tap the floor to set it down where the square is green. R turns it.'
+      : 'Tap a piece in the room to move it, or pick one from your storage or backpack below.';
+  }
+  function decorPick(id, from) {                                       // (picking a piece from your storage or your backpack)
+    if (!decorMode) return;
+    if (decorHeld) decorCancel();
+    var p = { id: id, x: 0, z: 0, rot: 0, from: from, g: DECOR[id].make() };
+    room.add(p.g); decorHeld = p; decorFollow(decorPointer ? decorPointer.x : 0, decorPointer ? decorPointer.z : 0.4); renderDecor();
+  }
+  function decorGrab(p) {                                              // (picking up a piece that's in the room)
+    decorLift(p); p.from = 'room'; p.was = { x: p.x, z: p.z, rot: p.rot }; room.add(p.g); decorHeld = p; decorFollow(p.x, p.z); renderDecor();
+  }
+  function decorFollow(x, z) {
+    var p = decorHeld; if (!p) return;
+    var s = decorSize(p.id, p.rot);
+    x = Math.round(x / DECOR_SNAP) * DECOR_SNAP; z = Math.round(z / DECOR_SNAP) * DECOR_SNAP;
+    x = Math.max(-ROOM_W / 2 + s[0] / 2, Math.min(ROOM_W / 2 - s[0] / 2, x)); z = Math.max(-ROOM_D / 2 + s[1] / 2, Math.min(ROOM_D / 2 - s[1] / 2, z));
+    p.x = x; p.z = z; p.g.position.set(x, 0.08, z); p.g.rotation.y = -p.rot * Math.PI / 2;   // (lifted a touch while you hold it)
+    var ok = decorFits(p.id, x, z, p.rot, p);
+    decorMark.scale.set(s[0], s[1], 1); decorMark.position.set(x, 0.04, z); decorMark.material.color.set(ok ? 0x50c86e : 0xdc4646); decorMark.visible = true;
+    if (decorMark.parent !== room) room.add(decorMark);
+    return ok;
+  }
+  function decorRotate() { if (decorHeld) { decorHeld.rot = (decorHeld.rot + 1) % 4; decorFollow(decorHeld.x, decorHeld.z); } }
+  function decorDrop() {                                               // (setting it down here, if there's room)
+    var p = decorHeld; if (!p) return;
+    if (!decorFollow(p.x, p.z)) { showToast('🪑 Something\'s in the way there. Find a spot where the square shows green.', 2200); return; }
+    if (p.from === 'storage') storeTake(p.id); else if (p.from === 'bag') { takeItem(p.id, 1); renderBag(); }
+    room.remove(p.g); decorHeld = null; decorMark.visible = false; delete p.from; delete p.was; decorPut(p); popSound(); renderDecor();
+  }
+  function decorCancel() {                                             // (back where it came from)
+    var p = decorHeld; if (!p) return;
+    room.remove(p.g); decorHeld = null; decorMark.visible = false;
+    if (p.from === 'room') { p.x = p.was.x; p.z = p.was.z; p.rot = p.was.rot; delete p.from; delete p.was; decorPut(p); }
+    renderDecor();
+  }
+  function decorSend(to) {                                             // (the piece you're holding goes to your house storage or your backpack)
+    var p = decorHeld; if (!p) return;
+    if (to === 'bag') {
+      if (p.from === 'bag') { decorCancel(); return; }
+      if (!addItem(p.id, 1)) { showToast('🎒 Your backpack is full.', 2000); return; }
+      if (p.from === 'storage') storeTake(p.id);
+    } else {
+      if (p.from === 'storage') { decorCancel(); return; }
+      storeAdd(p.id, 1); if (p.from === 'bag') { takeItem(p.id, 1); renderBag(); }
+    }
+    room.remove(p.g); decorHeld = null; decorMark.visible = false; popSound();
+    showToast((to === 'bag' ? '🎒 The ' + ITEMS[p.id].name + ' went into your backpack.' : '📦 The ' + ITEMS[p.id].name + ' went into your house storage.'), 2000);
+    renderDecor();
+  }
+  decorHoldBar.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-d]'); if (!b) return; var what = b.getAttribute('data-d');
+    if (what === 'rot') decorRotate(); else if (what === 'cancel') decorCancel(); else decorSend(what);
+    focusGame();
+  });
+  decorDone.addEventListener('click', function () { leaveDecorMode(); focusGame(); });
+  decorBox.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  // Entering and leaving
+  var decorCam = null;
+  function enterDecorMode() {
+    if (decorMode) return;
+    if (!inFarmhouse()) { showToast('🪑 Decor Mode only works inside your house.', 2200); return; }
+    if (gamePaused || somethingOpen()) return;
+    decorMode = true; walkTarget = null; keys = {};
+    decorCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 12; cam.pitch = 1.1; cam.yaw = 0;
+    decorBox.hidden = false; document.body.classList.add('ev-decor-on'); renderDecor();
+  }
+  function leaveDecorMode() {
+    if (!decorMode) return;
+    decorCancel(); decorMode = false; decorBox.hidden = true; document.body.classList.remove('ev-decor-on'); keys = {};
+    if (decorCam) { cam.dist = decorCam.dist; cam.pitch = decorCam.pitch; cam.yaw = decorCam.yaw; decorCam = null; }
+  }
+  var decorPointer = null;
+  function decorFloorAt(e) {                                           // (the spot on the floor under the pointer, in the room's own terms)
+    var rect = canvas.getBoundingClientRect();
+    raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
+    var hit = new THREE.Vector3(); if (!raycaster.ray.intersectPlane(ground, hit)) return null;
+    return { x: hit.x - IN_X, z: hit.z - IN_Z, e: e };
+  }
+  canvas.addEventListener('pointermove', function (e) { if (!decorMode) return; decorPointer = decorFloorAt(e); if (decorHeld && decorPointer) decorFollow(decorPointer.x, decorPointer.z); });
+  var decorBaseTap = tapToWalk;
+  tapToWalk = function (e) { if (!decorMode) return decorBaseTap.apply(this, arguments); };   // (in Decor Mode a tap doesn't walk you anywhere...)
+  var decorDown = null;                                                // (...it picks a piece up or sets it down: a press that doesn't move, held as long as you like)
+  canvas.addEventListener('pointerdown', function (e) { decorDown = decorMode && e.isPrimary ? { x: e.clientX, y: e.clientY } : null; });
+  canvas.addEventListener('pointerup', function (e) {
+    var d = decorDown; decorDown = null;
+    if (decorMode && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 6) decorTap(e);
+  });
+  function decorTap(e) {
+    var at = decorFloorAt(e); if (at) decorPointer = at;
+    if (decorHeld) { if (at) decorFollow(at.x, at.z); decorDrop(); return; }
+    var rect = canvas.getBoundingClientRect();
+    raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
+    var pieces = decorPlaced.filter(function (p) { return !DECOR[p.id].flat; }).concat(decorPlaced.filter(function (p) { return DECOR[p.id].flat; }));   // (furniture before the rug under it)
+    for (var i = 0; i < pieces.length; i++) if (raycaster.intersectObject(pieces[i].g, true).length) { decorGrab(pieces[i]); return; }
+  }
+  var decorBaseCamera = updateCamera;
+  updateCamera = function (dt) {                                       // (in Decor Mode the camera looks over the room, not at you, with the room a little to the left of the panel)
+    if (!decorMode) return decorBaseCamera.apply(this, arguments);
+    camGoal.set(IN_X + Math.cos(cam.yaw) * 2.1 + Math.sin(cam.yaw) * 0.6, 0.4, IN_Z - Math.sin(cam.yaw) * 2.1 + Math.cos(cam.yaw) * 0.6 - 1.1); cam.target.lerp(camGoal, calmMotion ? 1 : 1 - Math.exp(-dt * 6));
+    var flat = Math.cos(cam.pitch) * cam.dist;
+    camera.position.set(cam.target.x + Math.sin(cam.yaw) * flat, cam.target.y + Math.sin(cam.pitch) * cam.dist, cam.target.z + Math.cos(cam.yaw) * flat);
+    camera.lookAt(cam.target);
+  };
+  var decorBaseUpdatePlayer = updatePlayer;
+  updatePlayer = function (dt) { if (decorMode) { keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); } return decorBaseUpdatePlayer.apply(this, arguments); };   // (she stays put while you arrange)
+  window.addEventListener('keydown', function (e) {                    // (caught first: in Decor Mode only its own keys do anything)
+    if (window.EVERDAWN_TITLE || gamePaused || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()) || (window.everdawnSettingsOpen && window.everdawnSettingsOpen())) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    var isKey = e.code === (decorKey || 'KeyG');
+    if (!decorMode) { if (isKey && !e.repeat && !somethingOpen()) { e.preventDefault(); e.stopImmediatePropagation(); enterDecorMode(); } return; }
+    if (e.code === 'KeyF') return;                                     // (full screen still works)
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (e.repeat) return;
+    if (isKey) leaveDecorMode();
+    else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
+    else if (e.code === 'KeyR') decorRotate();
+  }, true);
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), the clock
@@ -9875,7 +10164,7 @@ var everdawnTitle = (function () {
     var stops = [];
     keyGrabStop = function () { stops.forEach(function (f) { f(); }); };   // (leaving the page stops waiting for a key)
     var KEY_SECTIONS = { 'Interact': 'Gameplay', 'Confirm': 'Menu' };                  // (a little label over the row each section starts at)
-    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Skip Events', 'everdawn-skip-key', 'everdawnSetSkipKey', 'N'], ['Open Pause Menu', 'everdawn-pause-key', 'everdawnSetPauseKey', 'P'], ['Zoom In Map', 'everdawn-map-zoom-in', 'everdawnSetZoomInKey', '+'], ['Zoom Out Map', 'everdawn-map-zoom-out', 'everdawnSetZoomOutKey', '−'], ['Center Map Focus', 'everdawn-map-center', 'everdawnSetCenterMapKey', 'M'], ['Sort List Shortcut', 'everdawn-sort-key', 'everdawnSetSortKey', 'Tab'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Next Tab', 'everdawn-tab-key', 'everdawnSetTabKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Previous Tab', 'everdawn-tab-prev-key', 'everdawnSetTabPrevKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
+    [['Interact', 'everdawn-interact', 'everdawnSetInteract', 'E/Space-bar'], ['Use Tool/Place Item', 'everdawn-use-key', 'everdawnSetUseKey', 'E/Space-bar'], ['Move Up', 'everdawn-move-up', 'everdawnSetMoveUp', 'W/Up Arrow'], ['Move Down', 'everdawn-move-down', 'everdawnSetMoveDown', 'S/Down Arrow'], ['Move Right', 'everdawn-move-right', 'everdawnSetMoveRight', 'D/Right Arrow'], ['Move Left', 'everdawn-move-left', 'everdawnSetMoveLeft', 'A/Left Arrow'], ['Spell Casting', 'everdawn-spell-key', 'everdawnSetSpellKey', 'Q'], ['Sprint', 'everdawn-sprint-key', 'everdawnSetSprintKey', 'Shift'], ['Strafe', 'everdawn-strafe-key', 'everdawnSetStrafeKey', 'C'], ['Quest Screen', 'everdawn-quest-key', 'everdawnSetQuestKey', 'J'], ['Craft Screen', 'everdawn-craft-key', 'everdawnSetCraftKey', 'K'], ['Inventory Screen', 'everdawn-bag-key', 'everdawnSetBagKey', 'I'], ['Map Screen', 'everdawn-map-key', 'everdawnSetMapKey', 'T'], ['Relationship Screen', 'everdawn-rel-key', 'everdawnSetRelKey', 'H'], ['Skills Screen', 'everdawn-skill-key', 'everdawnSetSkillKey', 'L'], ['Switch To next Toolbar Row', 'everdawn-row-key', 'everdawnSetRowKey', 'R'], ['Toolbar 1', 'everdawn-slot1-key', 'everdawnSetSlot1Key', '1'], ['Toolbar 2', 'everdawn-slot2-key', 'everdawnSetSlot2Key', '2'], ['Toolbar 3', 'everdawn-slot3-key', 'everdawnSetSlot3Key', '3'], ['Toolbar 4', 'everdawn-slot4-key', 'everdawnSetSlot4Key', '4'], ['Call Moonstone Mooring', 'everdawn-mooring-key', 'everdawnSetMooringKey', 'X'], ['Cast/Cut fishing rod', 'everdawn-rod-key', 'everdawnSetRodKey', 'E/Space'], ['Advance Dialogue', 'everdawn-advance-key', 'everdawnSetAdvanceKey', 'E'], ['Skip Events', 'everdawn-skip-key', 'everdawnSetSkipKey', 'N'], ['Open Pause Menu', 'everdawn-pause-key', 'everdawnSetPauseKey', 'P'], ['Zoom In Map', 'everdawn-map-zoom-in', 'everdawnSetZoomInKey', '+'], ['Zoom Out Map', 'everdawn-map-zoom-out', 'everdawnSetZoomOutKey', '−'], ['Center Map Focus', 'everdawn-map-center', 'everdawnSetCenterMapKey', 'M'], ['Sort List Shortcut', 'everdawn-sort-key', 'everdawnSetSortKey', 'Tab'], ['Enter Decor Mode', 'everdawn-decor-key', 'everdawnSetDecorKey', 'G'], ['Confirm', 'everdawn-confirm-key', 'everdawnSetConfirmKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Cancel', 'everdawn-cancel-key', 'everdawnSetCancelKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Next Tab', 'everdawn-tab-key', 'everdawnSetTabKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>'], ['Switch Previous Tab', 'everdawn-tab-prev-key', 'everdawnSetTabPrevKey', '<svg viewBox="0 0 24 28" width="20" height="23" role="img" aria-label="Left mouse click" style="display:block;margin:0 auto"><path d="M12 2.5A8.5 8.5 0 0 0 3.5 11v.5H12z" fill="currentColor"/><rect x="3" y="2" width="18" height="24" rx="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v10M3 12h18" stroke="currentColor" stroke-width="2"/></svg>']].forEach(function (row, n) {
       if (KEY_SECTIONS[row[0]]) body.insertAdjacentHTML('beforeend', '<div class="ev-ksec">' + KEY_SECTIONS[row[0]] + '</div>');
       body.insertAdjacentHTML('beforeend', '<div class="ev-srow ev-tog" style="flex-wrap:wrap;row-gap:8px"><span class="ev-lbl" id="evKeyL' + n + '" style="flex:1 0 auto">' + row[0] + '</span><div class="ev-seg" role="group" aria-labelledby="evKeyL' + n + '"><button type="button">' + row[3] + '</button><button type="button" aria-label="Your own key" style="min-width:96px"></button></div></div>');   // (on a narrow screen the buttons drop below the name)
       var btns = body.querySelectorAll('#evKeyL' + n + ' + .ev-seg button'), code = '', waiting = false;   // (the usual keys, or a key of your own: tap the second button, then press the key)
@@ -9903,6 +10192,8 @@ var everdawnTitle = (function () {
     body.insertBefore(hudRow, menuSec || null);
     var decorSec = document.createElement('div'); decorSec.className = 'ev-ksec'; decorSec.textContent = 'Decor Mode';   // (the Decor Mode section, under Toggle HUD: its settings are still to come)
     body.insertBefore(decorSec, menuSec || null);
+    var decorRowLbl = Array.prototype.filter.call(body.querySelectorAll('.ev-lbl'), function (x) { return x.textContent === 'Enter Decor Mode'; })[0];   // (its key goes in the Decor Mode section)
+    if (decorRowLbl) body.insertBefore(decorRowLbl.parentNode, menuSec || null);
     var hudBtns = hudRow.querySelectorAll('button');
     function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
