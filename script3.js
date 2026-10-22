@@ -8295,11 +8295,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     'body.ev-time-stopped #clock{color:#e0284f;animation:evTimeBlink 1s steps(1,end) infinite}' +
     '.ev-calm body.ev-time-stopped #clock{animation:none}@media (prefers-reduced-motion:reduce){body.ev-time-stopped #clock{animation:none}}';
     document.head.appendChild(st); })();
-  var timeStopped = false;
+  // In full screen, while a screen is open (the bag and its pages, a shop, the shipping bin), the buttons down the side
+  // step away and the screen sits in the middle; they come back when it closes
+  (function () { var st = document.createElement('style'); st.textContent =
+    'body.full.ev-screen-up .controls{display:none!important}' +
+    'body.full.ev-screen-up .inventory{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;max-width:calc(100% - 24px)!important;max-height:calc(100% - 150px)!important}';
+    document.head.appendChild(st); })();
+  var timeStopped = false, screenUp = false;
   var screenBaseFrame = frame;
   frame = function () {
     var screen = bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE, stopped = screen || gamePaused;
     if (stopped !== timeStopped) { timeStopped = stopped; document.body.classList.toggle('ev-time-stopped', stopped); }
+    var up = !!(screen || binOpen || shopOpen || barnShopOpen || carpShopOpen || pickKind || glimNaming);
+    if (up !== screenUp) { screenUp = up; document.body.classList.toggle('ev-screen-up', up); }
     if (screen) { clock.getDelta(); renderer.render(scene, camera); return; }
     return screenBaseFrame.apply(this, arguments);
   };
