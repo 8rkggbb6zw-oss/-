@@ -987,12 +987,22 @@ var everdawnTitle = (function () {
     for (var dh = 0; dh < dhudBtns.length; dh++) dhudBtns[dh].addEventListener('click', function () {
       dhud = this.getAttribute('data-h'); showDecorHud(); try { localStorage.setItem('everdawn-decor-hud', dhud); } catch (err) {} if (window.everdawnSetDecorHud) window.everdawnSetDecorHud(dhud === 'on'); });
     showDecorHud();
-    var farmSec = document.createElement('div'); farmSec.className = 'ev-ksec'; farmSec.textContent = 'Farm View';   // (the Farm View section, after Decor Mode: its settings are still to come)
+    var farmSec = document.createElement('div'); farmSec.className = 'ev-ksec'; farmSec.textContent = 'Farm View';   // (the Farm View section, after Decor Mode)
     body.insertBefore(farmSec, menuSec || null);
     ['Enter Farm View Mode', 'Exit Farm View Mode'].forEach(function (name) {   // (its keys, right under)
       var lbl = Array.prototype.filter.call(body.querySelectorAll('.ev-lbl'), function (x) { return x.textContent === name; })[0];
       if (lbl) body.insertBefore(lbl.parentNode, menuSec || null);
     });
+    // Toggle HUD In Farm View Mode: On or Off, at the end of the Farm View section
+    var fhud = 'on'; try { if (localStorage.getItem('everdawn-farm-hud') === 'off') fhud = 'off'; } catch (err) {}
+    var fhudRow = document.createElement('div'); fhudRow.className = 'ev-srow ev-tog';
+    fhudRow.innerHTML = '<span class="ev-lbl" id="evFarmHudL">Toggle HUD In Farm View Mode</span><div class="ev-seg" role="group" aria-labelledby="evFarmHudL"><button type="button" data-h="on">On</button><button type="button" data-h="off">Off</button></div>';
+    body.insertBefore(fhudRow, menuSec || null);
+    var fhudBtns = fhudRow.querySelectorAll('button');
+    function showFarmHud() { for (var b = 0; b < fhudBtns.length; b++) { var on = fhudBtns[b].getAttribute('data-h') === fhud; fhudBtns[b].classList.toggle('on', on); fhudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var fh = 0; fh < fhudBtns.length; fh++) fhudBtns[fh].addEventListener('click', function () {
+      fhud = this.getAttribute('data-h'); showFarmHud(); try { localStorage.setItem('everdawn-farm-hud', fhud); } catch (err) {} if (window.everdawnSetFarmHud) window.everdawnSetFarmHud(fhud === 'on'); });
+    showFarmHud();
     var hudBtns = hudRow.querySelectorAll('button');
     function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {

@@ -8774,6 +8774,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   var farmBadge = document.createElement('div'); farmBadge.className = 'ev-farmview'; farmBadge.hidden = true; canvas.parentNode.appendChild(farmBadge);
   function showFarmBadge() { farmBadge.innerHTML = '🌾 Farm View · <b>' + everdawnKeyName(farmExitKey || 'KeyV') + '</b> to leave'; }
   showFarmBadge();
+  // Toggle HUD In Farm View Mode, on the Mouse & Keyboard page: On (the usual way) or Off. Off, while you're in Farm View,
+  // the stats along the top, the hotbar, the Quests box, the buttons under the game, the pop-up messages and the Farm View
+  // tag are all hidden, for a clear look at the whole farm. It's remembered
+  (function () { var st = document.createElement('style'); st.textContent = '.ev-farm-hud-off body.ev-farm-on .topbar,.ev-farm-hud-off body.ev-farm-on .hotbar,.ev-farm-hud-off body.ev-farm-on .quest-hud,.ev-farm-hud-off body.ev-farm-on .controls,.ev-farm-hud-off body.ev-farm-on #toast,.ev-farm-hud-off body.ev-farm-on .ev-farmview{visibility:hidden!important}'; document.head.appendChild(st); })();
+  window.everdawnSetFarmHud = function (on) { document.documentElement.classList.toggle('ev-farm-hud-off', !on); };
+  try { window.everdawnSetFarmHud(localStorage.getItem('everdawn-farm-hud') !== 'off'); } catch (err) {}
   function enterFarmView() {
     if (farmView) return;
     if (indoors) { showToast('🌾 Farm View only works outside.', 2000); return; }
@@ -8784,7 +8790,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (scene.fog) { scene.fog.near = 150; scene.fog.far = 400; }      // (no fog across the island: you can see right to the far side)
     camera.far = 500; camera.updateProjectionMatrix();
     walkTarget = null; player.visible = false;
-    farmBadge.hidden = false;
+    farmBadge.hidden = false; document.body.classList.add('ev-farm-on');
   }
   function leaveFarmView() {
     if (!farmView) return;
@@ -8793,7 +8799,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (scene.fog) { scene.fog.near = v.fogNear; scene.fog.far = v.fogFar; }
     camera.far = v.far; camera.updateProjectionMatrix();
     player.visible = !camHid;
-    farmBadge.hidden = true;
+    farmBadge.hidden = true; document.body.classList.remove('ev-farm-on');
   }
   var farmBaseCamera = updateCamera;
   updateCamera = function (dt) {                                       // (in Farm View the camera looks down over the middle of the island)
