@@ -1003,6 +1003,8 @@ var everdawnTitle = (function () {
     for (var fh = 0; fh < fhudBtns.length; fh++) fhudBtns[fh].addEventListener('click', function () {
       fhud = this.getAttribute('data-h'); showFarmHud(); try { localStorage.setItem('everdawn-farm-hud', fhud); } catch (err) {} if (window.everdawnSetFarmHud) window.everdawnSetFarmHud(fhud === 'on'); });
     showFarmHud();
+    var eventsSec = document.createElement('div'); eventsSec.className = 'ev-ksec'; eventsSec.textContent = 'Events';   // (the Events section, after Farm View: its settings are still to come)
+    body.insertBefore(eventsSec, menuSec || null);
     var hudBtns = hudRow.querySelectorAll('button');
     function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
