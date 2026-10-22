@@ -8363,6 +8363,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   var DECOR_GRID = 0.5, decorGrid = false, decorGridKey = null;
   try { decorGrid = localStorage.getItem('everdawn-decor-grid') === 'on'; decorGridKey = localStorage.getItem('everdawn-decor-grid-key') || null; } catch (err) {}
   window.everdawnSetDecorGridKey = function (code) { decorGridKey = code || null; if (decorMode) renderDecor(); };
+  // Open/Close Storage: Space in Decor Mode (on the Mouse & Keyboard page it can be a key of your own) opens your house
+  // storage, with the furniture in your backpack under it, and closes it again. It starts closed each time
+  var decorStoreKey = null, decorStoreOpen = false; try { decorStoreKey = localStorage.getItem('everdawn-decor-storage-key') || null; } catch (err) {}
+  window.everdawnSetDecorStorageKey = function (code) { decorStoreKey = code || null; if (decorMode) renderDecor(); };
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
   // way to the door are kept clear)
@@ -8497,13 +8501,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     '.ev-dgrid button:hover{box-shadow:inset 0 0 0 2px #c08bff}.ev-dgrid .none{grid-column:1/-1;font-size:.75rem;opacity:.7}' +
     '.ev-dhold{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ev-dhold[hidden]{display:none}.ev-dhold button,.ev-decor .ev-ddone{padding:5px 10px;font:600 .8rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}' +
     '.ev-decor .ev-dgridbtn{margin:0 0 8px;padding:3px 10px;font:600 .75rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}.ev-decor .ev-dgridbtn.on{background:linear-gradient(180deg,#9be7b0,#4fbf73);color:#14401f}' +
+    '.ev-decor .ev-dopen{margin-top:8px;width:100%;padding:6px 10px;font:600 .85rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}.ev-dstorage[hidden]{display:none}' +
     '.ev-decor .ev-ddone{margin-top:10px;width:100%}body.ev-decor-on .hotbar{visibility:hidden}';
     document.head.appendChild(st); })();
   var decorBox = document.createElement('div'); decorBox.className = 'ev-decor'; decorBox.hidden = true;
   decorBox.innerHTML = '<h3>🪑 Decor Mode</h3><button type="button" class="ev-dgridbtn"></button><p class="ev-dhint"></p><div class="ev-dhold" hidden><button type="button" data-d="rot">⟳ Turn (R)</button><button type="button" data-d="store">📦 To storage</button><button type="button" data-d="bag">🎒 To backpack</button><button type="button" data-d="cancel">✕ Put back</button></div>' +
-    '<h4>🏠 House storage</h4><div class="ev-dgrid ev-dstore"></div><h4>🎒 In your backpack</h4><div class="ev-dgrid ev-dbag"></div><button type="button" class="ev-ddone"></button>';
+    '<button type="button" class="ev-dopen"></button><div class="ev-dstorage" hidden><h4>🏠 House storage</h4><div class="ev-dgrid ev-dstore"></div><h4>🎒 In your backpack</h4><div class="ev-dgrid ev-dbag"></div></div><button type="button" class="ev-ddone"></button>';
   canvas.parentNode.appendChild(decorBox);
-  var decorGridBtn = decorBox.querySelector('.ev-dgridbtn');
+  var decorGridBtn = decorBox.querySelector('.ev-dgridbtn'), decorOpenBtn = decorBox.querySelector('.ev-dopen'), decorStorage = decorBox.querySelector('.ev-dstorage');
+  function decorToggleStorage() { decorStoreOpen = !decorStoreOpen; renderDecor(); }
+  decorOpenBtn.addEventListener('click', function () { decorToggleStorage(); focusGame(); });
   decorGridBtn.addEventListener('click', function () { decorToggleGrid(); focusGame(); });
   var decorHint = decorBox.querySelector('.ev-dhint'), decorHoldBar = decorBox.querySelector('.ev-dhold'), decorDone = decorBox.querySelector('.ev-ddone');
   function showDecorKey() { decorDone.textContent = 'Done (' + everdawnKeyName(decorExitKey || 'KeyG') + ')'; }
@@ -8527,11 +8534,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     decorHoldBar.hidden = !decorHeld && !decorSel;
     decorHoldBar.querySelector('[data-d="cancel"]').textContent = decorHeld ? '✕ Put back' : '✕ Deselect';
     var rk = everdawnKeyName(decorRotKey || 'KeyR');
+    decorStorage.hidden = !decorStoreOpen; decorOpenBtn.textContent = (decorStoreOpen ? '📦 Close Storage (' : '📦 Open Storage (') + everdawnKeyName(decorStoreKey || 'Space') + ')';
     decorGridBtn.textContent = '▦ Grid: ' + (decorGrid ? 'On' : 'Off') + ' (' + everdawnKeyName(decorGridKey || 'KeyT') + ')'; decorGridBtn.classList.toggle('on', decorGrid);
     decorHoldBar.querySelector('[data-d="rot"]').textContent = '⟳ Turn (' + rk + ')';
     decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: ' + (decorDropKey ? 'press <b>' + everdawnKeyName(decorDropKey) + '</b>' : 'tap the floor') + ' to set it down where the square is green. <b>' + rk + '</b> turns it.'
       : decorSel ? 'Selected the <b>' + ITEMS[decorSel.id].name + '</b>: ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up, <b>' + rk + '</b> turns it where it stands, or send it to your storage or backpack. ' + (decorDeselKey ? 'Press <b>' + everdawnKeyName(decorDeselKey) + '</b>' : 'Tap the floor') + ' to let it go.'
-      : (decorSelKey ? 'Point at a piece and press <b>' + everdawnKeyName(decorSelKey) + '</b> to select it' : 'Tap a piece in the room to select it') + ', then ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up. Or pick one from your storage or backpack below.';
+      : (decorSelKey ? 'Point at a piece and press <b>' + everdawnKeyName(decorSelKey) + '</b> to select it' : 'Tap a piece in the room to select it') + ', then ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up. Or ' + (decorStoreOpen ? 'pick one from your storage or backpack below.' : 'press <b>' + everdawnKeyName(decorStoreKey || 'Space') + '</b> to open your storage.');
   }
   function decorPick(id, from) {                                       // (picking a piece from your storage or your backpack)
     if (!decorMode) return;
@@ -8634,7 +8642,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (decorMode) return;
     if (!inFarmhouse()) { showToast('🪑 Decor Mode only works inside your house.', 2200); return; }
     if (gamePaused || somethingOpen()) return;
-    decorMode = true; walkTarget = null; keys = {};
+    decorMode = true; decorStoreOpen = false; walkTarget = null; keys = {};
     decorCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 12; cam.pitch = 1.1; cam.yaw = 0;
     decorBox.hidden = false; document.body.classList.add('ev-decor-on'); gridLines.visible = decorGrid; renderDecor();
   }
@@ -8701,6 +8709,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
     else if (e.code === (decorGridKey || 'KeyT')) decorToggleGrid();
+    else if (e.code === (decorStoreKey || 'Space')) decorToggleStorage();
     else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
     else if (decorSelKey && e.code === decorSelKey && !decorHeld && decorScreenAt) { var sp = decorPieceAt(decorScreenAt); if (sp) decorSelect(sp); }
     else if (decorDeselKey && e.code === decorDeselKey) decorDeselect();
