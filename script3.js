@@ -8347,6 +8347,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetDecorPickKey = function (code) { decorPickKey = code || null; if (decorMode) renderDecor(); };
   window.everdawnSetDecorDropKey = function (code) { decorDropKey = code || null; if (decorMode) renderDecor(); };
   window.everdawnSetDecorRotateKey = function (code) { decorRotKey = code || null; if (decorMode) renderDecor(); };
+  // Select Item and Deselect Item are a left click too, so the one click does each in turn: a click on a piece selects it
+  // where it stands (a gold square shows under it, and it can be turned in place or sent to your storage or backpack
+  // without picking it up), a click on the selected piece picks it up (Pick Up), a click on the floor sets down the piece
+  // you're holding (Put Down), and a click on the floor with nothing in hand lets the selected piece go. On the Mouse &
+  // Keyboard page any of these can be a key of your own instead: then that key does it, and the click doesn't
+  var decorSelKey = null, decorDeselKey = null, decorSel = null;
+  try { decorSelKey = localStorage.getItem('everdawn-decor-select-key') || null; decorDeselKey = localStorage.getItem('everdawn-decor-deselect-key') || null; } catch (err) {}
+  window.everdawnSetDecorSelectKey = function (code) { decorSelKey = code || null; if (decorMode) renderDecor(); };
+  window.everdawnSetDecorDeselectKey = function (code) { decorDeselKey = code || null; if (decorMode) renderDecor(); };
   var decorMode = false, decorHeld = null, decorPlaced = [], houseStorage = [], DECOR_SNAP = 0.25;
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
@@ -8506,20 +8515,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     var inBag = {}; bag.forEach(function (it) { if (it && DECOR[it.id]) inBag[it.id] = (inBag[it.id] || 0) + it.count; });
     Object.keys(inBag).forEach(function (id) { bg.appendChild(decorTile(id, inBag[id], 'bag')); });
     if (!Object.keys(inBag).length) bg.innerHTML = '<span class="none">No furniture in your backpack.</span>';
-    decorHoldBar.hidden = !decorHeld;
+    decorHoldBar.hidden = !decorHeld && !decorSel;
+    decorHoldBar.querySelector('[data-d="cancel"]').textContent = decorHeld ? '✕ Put back' : '✕ Deselect';
     var rk = everdawnKeyName(decorRotKey || 'KeyR');
     decorHoldBar.querySelector('[data-d="rot"]').textContent = '⟳ Turn (' + rk + ')';
     decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: ' + (decorDropKey ? 'press <b>' + everdawnKeyName(decorDropKey) + '</b>' : 'tap the floor') + ' to set it down where the square is green. <b>' + rk + '</b> turns it.'
-      : (decorPickKey ? 'Point at a piece in the room and press <b>' + everdawnKeyName(decorPickKey) + '</b> to move it' : 'Tap a piece in the room to move it') + ', or pick one from your storage or backpack below.';
+      : decorSel ? 'Selected the <b>' + ITEMS[decorSel.id].name + '</b>: ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up, <b>' + rk + '</b> turns it where it stands, or send it to your storage or backpack. ' + (decorDeselKey ? 'Press <b>' + everdawnKeyName(decorDeselKey) + '</b>' : 'Tap the floor') + ' to let it go.'
+      : (decorSelKey ? 'Point at a piece and press <b>' + everdawnKeyName(decorSelKey) + '</b> to select it' : 'Tap a piece in the room to select it') + ', then ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up. Or pick one from your storage or backpack below.';
   }
   function decorPick(id, from) {                                       // (picking a piece from your storage or your backpack)
     if (!decorMode) return;
+    decorDeselect(true);
     if (decorHeld) decorCancel();
     var p = { id: id, x: 0, z: 0, rot: 0, from: from, g: DECOR[id].make() };
     room.add(p.g); decorHeld = p; decorFollow(decorPointer ? decorPointer.x : 0, decorPointer ? decorPointer.z : 0.4); renderDecor();
   }
   function decorGrab(p) {                                              // (picking up a piece that's in the room)
-    decorLift(p); p.from = 'room'; p.was = { x: p.x, z: p.z, rot: p.rot }; room.add(p.g); decorHeld = p; decorFollow(p.x, p.z); renderDecor();
+    decorDeselect(true); decorLift(p); p.from = 'room'; p.was = { x: p.x, z: p.z, rot: p.rot }; room.add(p.g); decorHeld = p; decorFollow(p.x, p.z); renderDecor();
   }
   function decorFollow(x, z) {
     var p = decorHeld; if (!p) return;
@@ -8532,7 +8544,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (decorMark.parent !== room) room.add(decorMark);
     return ok;
   }
-  function decorRotate() { if (decorHeld) { decorHeld.rot = (decorHeld.rot + 1) % 4; decorFollow(decorHeld.x, decorHeld.z); } }
+  function decorRotate() {
+    if (decorHeld) { decorHeld.rot = (decorHeld.rot + 1) % 4; decorFollow(decorHeld.x, decorHeld.z); return; }
+    var p = decorSel; if (!p) return;                                  // (the selected piece turns where it stands, if there's room)
+    var nr = (p.rot + 1) % 4, s = decorSize(p.id, nr);
+    var x = Math.max(-ROOM_W / 2 + s[0] / 2, Math.min(ROOM_W / 2 - s[0] / 2, p.x)), z = Math.max(-ROOM_D / 2 + s[1] / 2, Math.min(ROOM_D / 2 - s[1] / 2, p.z));
+    if (!decorFits(p.id, x, z, nr, p)) { showToast('🪑 There isn\'t room to turn it here.', 2000); return; }
+    decorLift(p); p.x = x; p.z = z; p.rot = nr; decorPut(p); decorSelect(p);
+  }
+  var selMark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.65, depthWrite: false }));
+  selMark.rotation.x = -Math.PI / 2; selMark.visible = false; selMark.renderOrder = 2;
+  function decorSelect(p) {                                            // (selecting a piece where it stands)
+    decorSel = p; var s = decorSize(p.id, p.rot);
+    selMark.scale.set(s[0] + 0.35, s[1] + 0.35, 1); selMark.position.set(p.x, 0.045, p.z); selMark.visible = true;
+    if (selMark.parent !== room) room.add(selMark);
+    renderDecor();
+  }
+  function decorDeselect(quiet) { if (!decorSel) return; decorSel = null; selMark.visible = false; if (!quiet) renderDecor(); }
   function decorDrop() {                                               // (setting it down here, if there's room)
     var p = decorHeld; if (!p) return;
     if (!decorFollow(p.x, p.z)) { showToast('🪑 Something\'s in the way there. Find a spot where the square shows green.', 2200); return; }
@@ -8546,6 +8574,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     renderDecor();
   }
   function decorSend(to) {                                             // (the piece you're holding goes to your house storage or your backpack)
+    if (!decorHeld && decorSel) {                                      // (or the one you've selected, straight from where it stands)
+      var q = decorSel;
+      if (to === 'bag' && !addItem(q.id, 1)) { showToast('🎒 Your backpack is full.', 2000); return; }
+      if (to !== 'bag') storeAdd(q.id, 1);
+      decorDeselect(true); decorLift(q); popSound();
+      showToast((to === 'bag' ? '🎒 The ' + ITEMS[q.id].name + ' went into your backpack.' : '📦 The ' + ITEMS[q.id].name + ' went into your house storage.'), 2000);
+      renderDecor(); return;
+    }
     var p = decorHeld; if (!p) return;
     if (to === 'bag') {
       if (p.from === 'bag') { decorCancel(); return; }
@@ -8561,7 +8597,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   decorHoldBar.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-d]'); if (!b) return; var what = b.getAttribute('data-d');
-    if (what === 'rot') decorRotate(); else if (what === 'cancel') decorCancel(); else decorSend(what);
+    if (what === 'rot') decorRotate(); else if (what === 'cancel') { if (decorHeld) decorCancel(); else decorDeselect(); } else decorSend(what);
     focusGame();
   });
   decorDone.addEventListener('click', function () { leaveDecorMode(); focusGame(); });
@@ -8578,7 +8614,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function leaveDecorMode() {
     if (!decorMode) return;
-    decorCancel(); decorMode = false; decorBox.hidden = true; document.body.classList.remove('ev-decor-on'); keys = {};
+    decorCancel(); decorDeselect(true); decorMode = false; decorBox.hidden = true; document.body.classList.remove('ev-decor-on'); keys = {};
     if (decorCam) { cam.dist = decorCam.dist; cam.pitch = decorCam.pitch; cam.yaw = decorCam.yaw; decorCam = null; }
   }
   var decorPointer = null;
@@ -8593,7 +8629,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorBaseTap = tapToWalk;
   tapToWalk = function (e) { if (!decorMode) return decorBaseTap.apply(this, arguments); };   // (in Decor Mode a tap doesn't walk you anywhere...)
   var decorDown = null;                                                // (...it picks a piece up or sets it down: a press that doesn't move, held as long as you like)
-  canvas.addEventListener('pointerdown', function (e) { decorDown = decorMode && e.isPrimary ? { x: e.clientX, y: e.clientY } : null; });
+  canvas.addEventListener('pointerdown', function (e) {
+    decorDown = decorMode && e.isPrimary && e.button === 0 ? { x: e.clientX, y: e.clientY } : null;   // (a left click, or a finger)
+  });
   canvas.addEventListener('pointerup', function (e) {
     var d = decorDown; decorDown = null;
     if (decorMode && d && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 6) decorTap(e);
@@ -8601,14 +8639,19 @@ EVERDAWN_PARTS.push(function (THREE) {
   function decorTap(e) {
     var at = decorFloorAt(e); if (at) decorPointer = at;
     if (decorHeld) { if (at) decorFollow(at.x, at.z); if (!decorDropKey) decorDrop(); return; }   // (a click puts it down, unless Put Down has a key of its own)
-    if (!decorPickKey) decorGrabAt(e);                                 // (and picks one up, unless Pick Up has a key of its own)
+    var p = decorPieceAt(e);
+    if (p && decorSel && p !== decorSel && DECOR[p.id].flat) p = null;   // (with a piece selected, the rug counts as floor: a click there lets it go)
+    if (p && p === decorSel) { if (!decorPickKey) decorGrab(p); return; }   // (a click on the selected piece picks it up)
+    if (p) { if (!decorSelKey) decorSelect(p); else if (!decorPickKey) decorGrab(p); return; }   // (a click on another piece selects it; or, with Select Item on a key, picks it straight up)
+    if (decorSel && !decorDeselKey) decorDeselect();                  // (a click on the floor lets the selected piece go)
   }
-  function decorGrabAt(e) {                                            // (picking up the piece at that spot on the screen)
+  function decorGrabAt(e) { var p = decorPieceAt(e); if (p) decorGrab(p); return !!p; }   // (picking up the piece at that spot on the screen)
+  function decorPieceAt(e) {                                           // (the piece at that spot on the screen, if any)
     var rect = canvas.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
     var pieces = decorPlaced.filter(function (p) { return !DECOR[p.id].flat; }).concat(decorPlaced.filter(function (p) { return DECOR[p.id].flat; }));   // (furniture before the rug under it)
-    for (var i = 0; i < pieces.length; i++) if (raycaster.intersectObject(pieces[i].g, true).length) { decorGrab(pieces[i]); return true; }
-    return false;
+    for (var i = 0; i < pieces.length; i++) if (raycaster.intersectObject(pieces[i].g, true).length) return pieces[i];
+    return null;
   }
   var decorBaseCamera = updateCamera;
   updateCamera = function (dt) {                                       // (in Decor Mode the camera looks over the room, not at you, with the room a little to the left of the panel)
@@ -8632,6 +8675,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
     else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
+    else if (decorSelKey && e.code === decorSelKey && !decorHeld && decorScreenAt) { var sp = decorPieceAt(decorScreenAt); if (sp) decorSelect(sp); }
+    else if (decorDeselKey && e.code === decorDeselKey) decorDeselect();
     else if (decorDropKey && e.code === decorDropKey && decorHeld) decorDrop();
   }, true);
 
