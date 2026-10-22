@@ -8372,6 +8372,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorInvKey = null; try { decorInvKey = localStorage.getItem('everdawn-decor-inventory-key') || null; } catch (err) {}
   window.everdawnSetDecorInventoryKey = function (code) { decorInvKey = code || null; };
   function decorBagOpen() { return !!(bagUi.box && !bagUi.box.hidden); }
+  // Toggle HUD In Decor Mode, on the Mouse & Keyboard page: On (the usual way) or Off. Off, while you're in Decor Mode,
+  // the stats along the top, the Quests box, the buttons under the game and the pop-up messages are hidden (the hotbar
+  // always is), for a clear view of the room; the Decor Mode panel stays, to place things from. It's remembered
+  (function () { var st = document.createElement('style'); st.textContent = '.ev-decor-hud-off body.ev-decor-on .topbar,.ev-decor-hud-off body.ev-decor-on .quest-hud,.ev-decor-hud-off body.ev-decor-on .controls,.ev-decor-hud-off body.ev-decor-on #toast{visibility:hidden!important}'; document.head.appendChild(st); })();
+  window.everdawnSetDecorHud = function (on) { document.documentElement.classList.toggle('ev-decor-hud-off', !on); };
+  try { window.everdawnSetDecorHud(localStorage.getItem('everdawn-decor-hud') !== 'off'); } catch (err) {}
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
   // way to the door are kept clear)

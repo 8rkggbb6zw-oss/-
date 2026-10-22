@@ -977,6 +977,16 @@ var everdawnTitle = (function () {
       var lbl = Array.prototype.filter.call(body.querySelectorAll('.ev-lbl'), function (x) { return x.textContent === name; })[0];
       if (lbl) body.insertBefore(lbl.parentNode, menuSec || null);
     });
+    // Toggle HUD In Decor Mode: On or Off, at the end of the Decor Mode section
+    var dhud = 'on'; try { if (localStorage.getItem('everdawn-decor-hud') === 'off') dhud = 'off'; } catch (err) {}
+    var dhudRow = document.createElement('div'); dhudRow.className = 'ev-srow ev-tog';
+    dhudRow.innerHTML = '<span class="ev-lbl" id="evDecorHudL">Toggle HUD In Decor Mode</span><div class="ev-seg" role="group" aria-labelledby="evDecorHudL"><button type="button" data-h="on">On</button><button type="button" data-h="off">Off</button></div>';
+    body.insertBefore(dhudRow, menuSec || null);
+    var dhudBtns = dhudRow.querySelectorAll('button');
+    function showDecorHud() { for (var b = 0; b < dhudBtns.length; b++) { var on = dhudBtns[b].getAttribute('data-h') === dhud; dhudBtns[b].classList.toggle('on', on); dhudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var dh = 0; dh < dhudBtns.length; dh++) dhudBtns[dh].addEventListener('click', function () {
+      dhud = this.getAttribute('data-h'); showDecorHud(); try { localStorage.setItem('everdawn-decor-hud', dhud); } catch (err) {} if (window.everdawnSetDecorHud) window.everdawnSetDecorHud(dhud === 'on'); });
+    showDecorHud();
     var hudBtns = hudRow.querySelectorAll('button');
     function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
