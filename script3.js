@@ -8965,29 +8965,68 @@ EVERDAWN_PARTS.push(function (THREE) {
       var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: color || 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
       glow.position.set(x, y, z); glow.scale.set(s, s, 1); P.add(glow); clothLamps.push({ m: lm, g: glow }); return lm;
     }
-    var leafGeo = new THREE.CircleGeometry(1, 7), leafDummy = new THREE.Object3D(), leafCol = new THREE.Color(), leafN = new THREE.Vector3();
-    var bark = new THREE.MeshStandardMaterial({ roughness: 0.9, map: cpTex(64, 64, function (g, w, h) { g.fillStyle = '#4a3220'; g.fillRect(0, 0, w, h); for (var k = 0; k < 60; k++) { g.fillStyle = 'rgba(' + (k % 2 ? '30,20,12' : '110,84,58') + ',0.5)'; g.fillRect((k * 23) % w, (k * 37) % h, 2, 6 + (k % 5)); } }) });
-    var mulch = new THREE.MeshStandardMaterial({ roughness: 1, map: cpTex(128, 128, function (g, w, h) { g.fillStyle = '#3a2618'; g.fillRect(0, 0, w, h); for (var k = 0; k < 260; k++) { var c = [[120, 76, 44], [92, 58, 34], [150, 104, 64], [60, 40, 26]][k % 4]; g.fillStyle = 'rgb(' + c.join(',') + ')'; g.save(); g.translate((k * 53) % w, (k * 97) % h); g.rotate(k); g.fillRect(-4, -1.5, 6 + (k % 5), 3); g.restore(); } }) });
-    function topiary(P, x, z) {                                        // (a clipped boxwood ball on a short trunk, in a tapered black planter with a bark mulch top)
+    // (a clipped boxwood topiary: thousands of small, curved, pointed leaves in two layers over a gently lumpy ball, on a
+    // forked bark trunk, in a tapered charcoal stone planter with a lip, little feet, and bark mulch with a little moss)
+    var leafGeo = (function () {                                         // (one leaf: a pointed oval, cupped a little along its midrib, with a lighter midrib)
+      var sh = new THREE.Shape(); sh.moveTo(0, -1); sh.bezierCurveTo(0.62, -0.7, 0.62, 0.45, 0, 1); sh.bezierCurveTo(-0.62, 0.45, -0.62, -0.7, 0, -1);
+      var g = new THREE.ShapeGeometry(sh, 5), p = g.attributes.position, cols = [];
+      for (var v = 0; v < p.count; v++) { var x = p.getX(v), y = p.getY(v); p.setZ(v, -x * x * 0.45 + (1 - y) * 0.06); var mid = Math.max(0, 1 - Math.abs(x) * 9); cols.push(1 + mid * 0.18, 1 + mid * 0.22, 1 + mid * 0.1); }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); return g;
+    })();
+    var leafMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0, side: THREE.DoubleSide });
+    var leafDummy = new THREE.Object3D(), leafCol = new THREE.Color(), leafN = new THREE.Vector3();
+    var bark = new THREE.MeshStandardMaterial({ roughness: 0.9, map: cpTex(64, 128, function (g, w, h) { g.fillStyle = '#5a3e28'; g.fillRect(0, 0, w, h); for (var k = 0; k < 90; k++) { g.fillStyle = 'rgba(' + (k % 3 ? '34,22,12' : '128,98,68') + ',0.55)'; g.fillRect((k * 23) % w, (k * 37) % h, 1 + (k % 2), 8 + (k % 7) * 2); } }) });
+    var mulch = new THREE.MeshStandardMaterial({ roughness: 1, map: cpTex(128, 128, function (g, w, h) {
+      g.fillStyle = '#3a2618'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 320; k++) { var c = [[120, 76, 44], [92, 58, 34], [150, 104, 64], [60, 40, 26]][k % 4]; g.fillStyle = 'rgb(' + c.join(',') + ')'; g.save(); g.translate((k * 53) % w, (k * 97) % h); g.rotate(k); g.fillRect(-4, -1.5, 6 + (k % 5), 3); g.restore(); }
+      for (var m = 0; m < 6; m++) { g.fillStyle = 'rgba(96,140,58,0.85)'; g.beginPath(); g.arc((m * 41 + 17) % w, (m * 67 + 30) % h, 6 + (m % 3) * 3, 0, Math.PI * 2); g.fill(); }   // (a few cushions of moss)
+    }) });
+    var stoneTex = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#2a2a2e'; g.fillRect(0, 0, w, h); for (var k = 0; k < 900; k++) { var b = 30 + (k * 37) % 40; g.fillStyle = 'rgba(' + b + ',' + b + ',' + (b + 4) + ',0.6)'; g.fillRect((k * 71) % w, (k * 113) % h, 1 + (k % 2), 1 + (k % 3)); } });
+    var planterMat = new THREE.MeshStandardMaterial({ map: stoneTex, roughness: 0.75, metalness: 0.05 }), planterRim = new THREE.MeshStandardMaterial({ map: stoneTex, color: 0xd8d8dc, roughness: 0.6 });
+    function topiary(P, x, z) {
       var T = new THREE.Group(); T.position.set(x, 0, z); P.add(T);
-      cpPart(new THREE.CylinderGeometry(0.36, 0.27, 0.66, 4, 1), rMat(0x1b1b1e, { roughness: 0.45, metalness: 0.15 }), 0, 0.33, 0, 0, Math.PI / 4, 0, T);
-      cpPart(new THREE.CylinderGeometry(0.385, 0.375, 0.05, 4, 1), rMat(0x26262a, { roughness: 0.4, metalness: 0.2 }), 0, 0.655, 0, 0, Math.PI / 4, 0, T);   // (its rim)
-      cpPart(new THREE.CylinderGeometry(0.33, 0.33, 0.02, 4, 1), mulch, 0, 0.635, 0, 0, Math.PI / 4, 0, T).castShadow = false;
-      cpPart(new THREE.CylinderGeometry(0.025, 0.04, 0.42, 7), bark, 0, 0.84, 0, 0.04, 0, 0.03, T);
-      cpPart(new THREE.SphereGeometry(0.34, 18, 14), rMat(0x2a4a24, { roughness: 1 }), 0, 1.25, 0, 0, 0, 0, T);   // (deep inside the ball, shadowy green)
-      var N = 1100, leaves = new THREE.InstancedMesh(leafGeo, new THREE.MeshStandardMaterial({ roughness: 0.6, side: THREE.DoubleSide }), N), seed = x * 13.7 + z * 7.1;
-      function rnd(k) { var s = Math.sin(seed + k * 12.9898) * 43758.5453; return s - Math.floor(s); }
-      for (var k = 0; k < N; k++) {                                    // (hundreds of little oval leaves all over its surface, each turned its own way, in mixed greens)
-        var u = rnd(k * 3 + 1) * 2 - 1, a = rnd(k * 3 + 2) * Math.PI * 2, r = Math.sqrt(1 - u * u), rad = 0.355 + rnd(k * 5 + 7) * 0.035;
-        leafN.set(r * Math.cos(a), u, r * Math.sin(a));
-        leafDummy.position.set(leafN.x * rad, 1.25 + leafN.y * rad, leafN.z * rad);
-        leafDummy.lookAt(leafN.x * 2, 1.25 + leafN.y * 2, leafN.z * 2); leafDummy.rotateZ(rnd(k * 7 + 3) * Math.PI); leafDummy.rotateX((rnd(k * 11 + 5) - 0.5) * 1.1);
-        leafDummy.scale.set(0.036 + rnd(k) * 0.012, 0.022 + rnd(k + 9) * 0.008, 1);
+      var seed = x * 13.7 + z * 7.1; function rnd(k) { var s = Math.sin(seed + k * 12.9898) * 43758.5453; return s - Math.floor(s); }
+      // (the planter)
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (f) { cpPart(new THREE.BoxGeometry(0.07, 0.04, 0.07), planterMat, f[0] * 0.21, 0.02, f[1] * 0.21, 0, 0, 0, T); });
+      cpPart(new THREE.CylinderGeometry(0.36, 0.26, 0.62, 4, 1), planterMat, 0, 0.35, 0, 0, Math.PI / 4, 0, T);
+      cpPart(new THREE.CylinderGeometry(0.4, 0.39, 0.06, 4, 1), planterRim, 0, 0.69, 0, 0, Math.PI / 4, 0, T);
+      cpPart(new THREE.CylinderGeometry(0.335, 0.335, 0.02, 4, 1), mulch, 0, 0.665, 0, 0, Math.PI / 4, 0, T).castShadow = false;
+      // (the trunk, forking into three branches that disappear into the ball)
+      var BC = 1.27, R = 0.37;
+      cpPart(new THREE.CylinderGeometry(0.028, 0.042, 0.42, 8), bark, 0, 0.87, 0, 0.03, 0, 0.02, T);
+      cpPart(new THREE.SphereGeometry(0.045, 8, 6), bark, 0, 0.66, 0, 0, 0, 0, T).scale.y = 0.4;
+      for (var b = 0; b < 3; b++) { var ba = b * 2.1 + 0.4, br = cpPart(new THREE.CylinderGeometry(0.012, 0.022, 0.32, 6), bark, Math.cos(ba) * 0.05, 1.18, Math.sin(ba) * 0.05, Math.sin(ba) * 0.45, 0, -Math.cos(ba) * 0.45, T); br.castShadow = false; }
+      cpPart(new THREE.SphereGeometry(R - 0.06, 20, 16), rMat(0x24401f, { roughness: 1 }), 0, BC, 0, 0, 0, 0, T);   // (shadowy green deep inside)
+      // (the lumpy outline: a few soft bulges, as if clipped by hand)
+      var bumps = []; for (var q = 0; q < 9; q++) { var bu = rnd(q * 7 + 1) * 2 - 1, bang = rnd(q * 7 + 2) * Math.PI * 2, brr = Math.sqrt(1 - bu * bu); bumps.push([brr * Math.cos(bang), bu, brr * Math.sin(bang), 0.018 + rnd(q * 7 + 3) * 0.02]); }
+      function radiusAt(n) { var r = R; bumps.forEach(function (bp) { var d = n.x * bp[0] + n.y * bp[1] + n.z * bp[2]; if (d > 0.7) r += bp[3] * (d - 0.7) / 0.3; }); return r; }
+      var N = 3200, leaves = new THREE.InstancedMesh(leafGeo, leafMat, N);
+      var greens = [0x2f5a28, 0x3a6c30, 0x46803a, 0x548f42, 0x63a04c];
+      for (var k = 0; k < N; k++) {
+        var outer = k > N * 0.28, u = rnd(k * 3 + 1) * 2 - 1, a = rnd(k * 3 + 2) * Math.PI * 2, rr = Math.sqrt(1 - u * u);
+        leafN.set(rr * Math.cos(a), u, rr * Math.sin(a));
+        var rad = radiusAt(leafN) * (outer ? 1 : 0.9) + (rnd(k * 5 + 7) - 0.5) * 0.03;
+        leafDummy.position.set(leafN.x * rad, BC + leafN.y * rad, leafN.z * rad);
+        leafDummy.lookAt(leafN.x * 3, BC + leafN.y * 3, leafN.z * 3);   // (each leaf faces out from the ball...)
+        leafDummy.rotateZ(rnd(k * 7 + 3) * Math.PI * 2);                // (...turned its own way, and tipped up or down a little)
+        leafDummy.rotateX((rnd(k * 11 + 5) - 0.5) * 1.2); leafDummy.rotateY((rnd(k * 13 + 9) - 0.5) * 0.8);
+        var sz = 0.019 + rnd(k) * 0.009; leafDummy.scale.set(sz, sz * 1.7, sz);
         leafDummy.updateMatrix(); leaves.setMatrixAt(k, leafDummy.matrix);
-        var c = rnd(k * 13 + 1), lit = Math.max(0, leafN.y) * 0.25;
-        leaves.setColorAt(k, leafCol.set(c < 0.3 ? 0x3d6e32 : c < 0.65 ? 0x4f8a3c : c < 0.9 ? 0x69a048 : 0x9cbf5e).offsetHSL(0, 0, lit * 0.15));
+        var shade = Math.max(0, Math.min(1, (leafN.y + 1) / 2 * 0.8 + rnd(k * 17 + 4) * 0.4)) * (outer ? 1 : 0.55);
+        leafCol.set(greens[Math.min(4, Math.floor(shade * 5))]);
+        if (outer && leafN.y > 0.35 && rnd(k * 19 + 6) > 0.86) leafCol.set(0x8fbf5a);   // (fresh new growth on top, a brighter green)
+        leaves.setColorAt(k, leafCol);
       }
-      leaves.castShadow = true; T.add(leaves);
+      leaves.castShadow = true; leaves.receiveShadow = true; T.add(leaves);
+      var sprigs = new THREE.InstancedMesh(leafGeo, leafMat, 60);       // (a few sprigs poking out past the clipped edge)
+      for (var sp = 0; sp < 60; sp++) {
+        var su = rnd(sp * 23 + 1) * 1.6 - 0.6, sa = rnd(sp * 23 + 2) * Math.PI * 2, sr = Math.sqrt(1 - su * su);
+        leafN.set(sr * Math.cos(sa), su, sr * Math.sin(sa)); var srad = radiusAt(leafN) + 0.02 + rnd(sp * 23 + 3) * 0.025;
+        leafDummy.position.set(leafN.x * srad, BC + leafN.y * srad, leafN.z * srad); leafDummy.lookAt(leafN.x * 3, BC + leafN.y * 3 + 1, leafN.z * 3);
+        leafDummy.rotateZ(rnd(sp * 29) * 6.28); leafDummy.scale.set(0.016, 0.03, 0.016); leafDummy.updateMatrix(); sprigs.setMatrixAt(sp, leafDummy.matrix);
+        sprigs.setColorAt(sp, leafCol.set(0x7fb04e));
+      }
+      sprigs.castShadow = false; T.add(sprigs);
     }
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.3, 0.24, D2 * 2 + 0.3), clPave, 0, 0, 0, 0, 0, 0, G);   // (a low stone plinth)
     var pave = cpPart(new THREE.PlaneGeometry(W2 * 2 + 1.6, 2.2), new THREE.MeshStandardMaterial({ roughness: 0.85, map: cpTex(512, 128, function (g, w, h) {   // (big pale paving slabs along the front, with a darker kerb)
