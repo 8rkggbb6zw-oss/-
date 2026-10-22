@@ -8162,9 +8162,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     if ((e.code === 'Escape' || isPauseKey(e.code)) && !e.repeat) { e.preventDefault(); if (!pauseAsk.hidden) { pauseAsk.hidden = true; pauseMain.hidden = false; } else resumeGame(); }
     e.stopImmediatePropagation();                                      // (paused: no key reaches the game; Tab, Enter and Space still work the menu's buttons)
   }, true);
+  function sceneNow() { return indoors ? (inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene; }   // (wherever you are: outdoors, or inside a building)
   var pauseBaseFrame = frame;                                          // (paused: nothing moves and the clock stands still, but the picture is still drawn)
   frame = function () {
-    if (gamePaused) { clock.getDelta(); renderer.render(scene, camera); return; }
+    if (gamePaused) { clock.getDelta(); renderer.render(sceneNow(), camera); return; }
     return pauseBaseFrame.apply(this, arguments);
   };
 
@@ -8372,6 +8373,16 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorInvKey = null; try { decorInvKey = localStorage.getItem('everdawn-decor-inventory-key') || null; } catch (err) {}
   window.everdawnSetDecorInventoryKey = function (code) { decorInvKey = code || null; };
   function decorBagOpen() { return !!(bagUi.box && !bagUi.box.hidden); }
+  // With the bag open in Decor Mode it sits at the side, where the Decor Mode panel was, so the room stays in view; tap a
+  // piece of furniture in it to pick it up, and the bag closes so you can set it down in the room
+  (function () { var st = document.createElement('style'); st.textContent = 'body.ev-decor-on .inventory:not(.ship){left:auto!important;right:12px!important;top:12px!important;transform:none!important;width:min(300px,45%)!important;max-height:calc(100% - 24px)!important}'; document.head.appendChild(st); })();
+  if (bagUi.box) bagUi.box.addEventListener('click', function (e) {
+    if (!decorMode) return;
+    var slot = e.target.closest && e.target.closest('[data-slot]'), it = slot && bag[+slot.getAttribute('data-slot')];
+    if (!it || !DECOR[it.id]) return;                                  // (anything else in the bag works as usual)
+    e.stopPropagation(); e.preventDefault();
+    toggleBag(false); decorBox.hidden = false; decorPick(it.id, 'bag');
+  }, true);
   // Zoom In Decor Mode and Zoom Out Decor Mode: + (the = key, or + on the number pad) brings the camera closer to the
   // room, and − (or − on the number pad) pulls it back; on the Mouse & Keyboard page either can be a key of your own
   var decorZoomInKey = null, decorZoomOutKey = null, DECOR_DIST_MIN = 6, DECOR_DIST_MAX = 16, DECOR_DIST_STEP = 1.5;
@@ -8766,7 +8777,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (stopped !== timeStopped) { timeStopped = stopped; document.body.classList.toggle('ev-time-stopped', stopped); }
     var up = !!(screen || binOpen || shopOpen || barnShopOpen || carpShopOpen || pickKind || glimNaming);
     if (up !== screenUp) { screenUp = up; document.body.classList.toggle('ev-screen-up', up); }
-    if (screen) { clock.getDelta(); renderer.render(scene, camera); return; }
+    if (screen) { clock.getDelta(); if (decorMode) updateCamera(0.016); renderer.render(sceneNow(), camera); return; }   // (in Decor Mode the camera still answers the zoom keys)
     return screenBaseFrame.apply(this, arguments);
   };
 
