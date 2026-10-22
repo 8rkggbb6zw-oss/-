@@ -9227,7 +9227,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       }
       // (a stem or branch along a curve, tapering from r0 to r1)
       function stem(P, pts, r0, r1, m, seg) {
-        var curve = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })), n = seg || 16, rs = r0 > 0.018 ? 14 : 7, gn = r0 > 0.018 ? 1 : 0;   // (thick ones get knobbly and ridged, like old wood)
+        var curve = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })), n = seg || 16, rs = r0 > 0.018 ? 14 : r0 > 0.01 ? 10 : 7, gn = r0 > 0.01 ? 1 : 0;   // (thick ones get knobbly and ridged, like old wood)
         var g = new THREE.TubeGeometry(curve, n, r0, rs, false), p = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
         for (var i = 0; i <= n; i++) { curve.getPointAt(i / n, c); var k = (r0 + (r1 - r0) * i / n) / r0; for (var j = 0; j <= rs; j++) { var ix = i * (rs + 1) + j, kk = k * (1 + gn * (Math.sin(i * 1.3 + j * 2.1 + r0 * 300) * 0.07 + Math.sin(i * 0.45 + j * 0.9) * 0.08 + (j % 3 ? 0 : -0.05))); v.fromBufferAttribute(p, ix).sub(c).multiplyScalar(kk).add(c); p.setXYZ(ix, v.x, v.y, v.z); } }
         g.computeVertexNormals(); var o = new THREE.Mesh(g, m); o.castShadow = true; P.add(o); return curve;
@@ -9512,11 +9512,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     put(new THREE.CylinderGeometry(0.012, 0.012, wz1 - wz0, 8), rose, 0.18, wy1 - 0.05, (wz0 + wz1) / 2, Math.PI / 2, 0, 0, WN);
     var SY = wy0 + 0.06;
     var OV = new THREE.Group(); OV.position.set(0.24, SY, -0.85); WN.add(OV);   // (a stoneware vase with a cut olive branch, its twigs reaching up and over)
-    PLK.pot(OV, 0, 0, 0.07, 0.26, stoneware, 0, 0.24);
+    PLK.pot(OV, 0, 0, 0.085, 0.26, stoneware, 12, 0.248);   // (filled nearly to the rim, so its soil shows)
     var obr = [[0, 0.2, 0], [0.02, 0.45, -0.02], [0.05, 0.62, -0.08], [0.03, 0.72, -0.16]];
-    PLK.stem(OV, obr, 0.007, 0.002, PLK.bark, 12);
+    [0, Math.PI].forEach(function (ph, k) {                             // (a little twisted twin trunk of real olive bark, as on the big tree)
+      var tp = []; for (var ti = 0; ti <= 6; ti++) { var ta = ph + ti * 0.9, tr = 0.008 * (1 - ti / 9); tp.push([Math.cos(ta) * tr + obr[1][0] * ti / 6, 0.22 + ti * 0.04, Math.sin(ta) * tr + obr[1][2] * ti / 6]); }
+      PLK.stem(OV, tp, k ? 0.011 : 0.013, 0.007, PLK.bark, 20);
+    });
+    for (var ort = 0; ort < 4; ort++) { var ora = ort / 4 * Math.PI * 2 + 0.7; PLK.stem(OV, [[Math.cos(ora) * 0.006, 0.255, Math.sin(ora) * 0.006], [Math.cos(ora) * 0.03, 0.245, Math.sin(ora) * 0.03], [Math.cos(ora) * 0.045, 0.238, Math.sin(ora) * 0.045]], 0.007, 0.002, PLK.bark, 6); }   // (its roots, gripping the soil)
+    var okn = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), PLK.bark); okn.position.set(obr[1][0], obr[1][1], obr[1][2]); okn.scale.set(1.2, 1.6, 1.1); OV.add(okn);   // (a knot where it branches)
+    PLK.stem(OV, obr.slice(1), 0.008, 0.002, PLK.bark, 12);
     oliveSpray(OV, obr[1], [obr[3][0] - obr[1][0], obr[3][1] - obr[1][1], obr[3][2] - obr[1][2]], 60, 911, 0.85);
-    PLK.stem(OV, [obr[1], [0.08, 0.55, 0.06], [0.13, 0.6, 0.12]], 0.004, 0.0015, PLK.bark, 8); oliveSpray(OV, [0.06, 0.52, 0.04], [0.07, 0.08, 0.08], 26, 977, 0.85);
+    PLK.stem(OV, [obr[1], [0.08, 0.55, 0.06], [0.13, 0.6, 0.12]], 0.006, 0.0015, PLK.bark, 10); oliveSpray(OV, [0.06, 0.52, 0.04], [0.07, 0.08, 0.08], 26, 977, 0.85);
     [[0xe8dccb, 0.04], [0x9aa392, 0.035], [0xd9b9a4, 0.03]].forEach(function (bk, k) { put(new THREE.BoxGeometry(0.24, bk[1], 0.17), rMat(bk[0], { roughness: 0.8 }), 0.22, SY + 0.02 + k * 0.035 + bk[1] / 2 - 0.02, -0.35, 0, k * 0.15, 0, WN); });   // (a stack of books...)
     put(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 14), rMat(0xf6efe4, { roughness: 0.7 }), 0.22, SY + 0.15, -0.35, 0, 0, 0, WN);   // (...with a candle on top)
     put(new THREE.SphereGeometry(0.012, 6, 4), rMat(0xffd27a, { emissive: 0xffb84a, emissiveIntensity: 1.2 }), 0.22, SY + 0.205, -0.35, 0, 0, 0, WN).scale.y = 1.8;
