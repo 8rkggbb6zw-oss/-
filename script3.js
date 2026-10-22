@@ -2745,13 +2745,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-CARP_HW - 1.4, 1.0, 0.75], [-CARP_HW - 1.4, 0.2, 0.6], [-CARP_HW - 1.4, 1.8, 0.6], [-CARP_HW - 1.0, CARP_HD + 2.1, 0.75], [-CARP_HW - 0.7, -1.6, 0.9], [CARP_HW + 1.2, CARP_HD + 1.0, 0.7], [CARP_HW + 1.2, CARP_HD + 0.2, 0.6], [CARP_HW + 1.6, CARP_HD + 2.6, 0.45], [-1.7, CARP_HD + 1.95, 0.42], [CARP_HW + 0.45, -1.2, 0.6], [-1.9, CARP_HD + 1.6, 0.15], [1.9, CARP_HD + 1.6, 0.15]].forEach(function (o) { var w2 = wl(o[0], o[1]); solids.push({ x: w2.x, z: w2.z, r: o[2] }); });
   })();
   // (its own flagstone path, branching off the one from the bridge and laid just like the town's others: paving,
-  // dressed stone kerbs, lavender, flowers and leafy plants along the edges, little glowing mushrooms, and lamp posts)
-  (function () {
+  // dressed stone kerbs, lavender, flowers and leafy plants along the edges, little glowing mushrooms, and lamp posts.
+  // layTownPath(line) lays one like it along any line, from the path it branches off to the door it leads to)
+  function layTownPath(line) {
     var paveMat = null; scene.traverse(function (o) { if (!paveMat && o.isMesh && o.material && o.material.polygonOffset && o.material.map && o.material.map.isDataTexture && o.material.bumpMap) paveMat = o.material; });
     if (!paveMat) return;
     var paveTex = paveMat.map, dummy = new THREE.Object3D(), col = new THREE.Color();
     function H(k) { return isle2Hash(k * 1.37 + 4812); }
-    var line = crpLine, pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
+    var pos = [], uv = [], idx = [], run = 0, W = SP_W * 2;
     for (var k = 0; k < line.length; k++) {
       var a = line[Math.max(0, k - 1)], b = line[Math.min(line.length - 1, k + 1)], tx = b[0] - a[0], tz = b[1] - a[1], tl = Math.sqrt(tx * tx + tz * tz) || 1, nx = -tz / tl, nz = tx / tl;
       if (k) run += Math.sqrt(Math.pow(line[k][0] - line[k - 1][0], 2) + Math.pow(line[k][1] - line[k - 1][1], 2));
@@ -2810,7 +2811,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       glowS.position.set(0, 1.72, 0); glowS.scale.set(1.4, 1.4, 1); g.add(glowS); pathLanternGlows.push(glowS);
       solids.push({ x: lp[0], z: lp[1], r: 0.18 });
     });
-  })();
+  }
+  layTownPath(crpLine);
   function updateCarpOutside(t, night) {                               // smoke drifting up from the chimney, lanterns flickering, the sign swaying in the breeze
     carpGroup.userData.smokes.forEach(function (s) { s.t = (s.t + 0.0035) % 1; var k = s.t; s.s.position.set(Math.sin(k * 5 + t * 0.3) * 0.25 * k, 5.6 + k * 2.6, k * 0.6); var sc = 0.4 + k * 1.4; s.s.scale.set(sc, sc, 1); s.s.material.opacity = Math.sin(k * Math.PI) * 0.4; });
     carpGlows.forEach(function (L) { var fl = 1 + Math.sin(t * 11 + L.p) * 0.1 + Math.sin(t * 6.7 + L.p * 2) * 0.07; L.f.scale.set(fl, 1.5 * fl, fl); L.h.material.opacity = (0.25 + night * 0.5) * fl; });
@@ -8904,8 +8906,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   function clothFront(d) { return clothWorld(CLOTH_DOOR_X, CLOTH_HD + d); }   // (out in front of the door)
   function clothLocal(x, z) { var dx = x - CLOTH_X, dz = z - CLOTH_Z, c = Math.cos(CLOTH_TURN), s = Math.sin(CLOTH_TURN); return [dx * c - dz * s, dx * s + dz * c]; }
   function onClothLot(x, z, m) { var l = clothLocal(x, z); return Math.abs(l[0]) < CLOTH_HW + 1.6 + m && l[1] > -CLOTH_HD - 1.2 - m && l[1] < CLOTH_HD + 2.4 + m; }
-  var clothDoor = clothWorld(CLOTH_DOOR_X, CLOTH_HD - CL_RECESS + 0.15), CLOTH_PATH_END = 3.4;   // (the stepping stones run from the door to the path, here)
-  function onClothPath(x, z) { return Math.abs(x - clothFront(0).x) < 0.8 && z > CLOTH_PATH_END - 0.5 && z < clothFront(1).z + 0.5; }
+  var clothDoor = clothWorld(CLOTH_DOOR_X, CLOTH_HD - CL_RECESS + 0.15);
+  var CL_PTS = [[clothFront(0).x - 0.1, 2.9], [clothFront(0).x - 0.08, 4.7], [clothFront(0).x, 6.7], [clothFront(2.2).x, clothFront(2.2).z]];   // (its flagstone path, from the path to Fluff & Feather up to the shop's paving)
+  var clLine = stoneCurve(CL_PTS, 60), clBox = lineBox(clLine);
+  function onClothPath(x, z) { return lineDist(clLine, clBox, x, z) < SP_W + 0.6; }
   var clMarble = new THREE.MeshStandardMaterial({ roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.2, map: cpTex(512, 512, function (g, w, h) {   // (white marble, with soft grey veins)
     g.fillStyle = '#f4f2ee'; g.fillRect(0, 0, w, h);
     for (var k = 0; k < 26; k++) {
@@ -8956,18 +8960,34 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function (G) {
     var W2 = CLOTH_HW, D2 = CLOTH_HD, H = CLOTH_WALL, FY = CLOTH_FY;
     var granite = rMat(0x2c2c30, { roughness: 0.4, metalness: 0.1 }), reveal = rMat(0xd9d6d0, { roughness: 0.6 }), brass = rMat(0xc9a14a, { metalness: 0.75, roughness: 0.3 });
-    var leaf = rMat(0x3f7a3a, { roughness: 0.85 }), leaf2 = rMat(0x55934a, { roughness: 0.85 });
     function lamp(P, x, y, z, s, color) {                              // (a little light that glows after dark)
       var lm = rMat(color || 0xfff4e0, { emissive: color || 0xfff0d0, emissiveIntensity: 0.4 });
       var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: color || 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
       glow.position.set(x, y, z); glow.scale.set(s, s, 1); P.add(glow); clothLamps.push({ m: lm, g: glow }); return lm;
     }
-    function topiary(P, x, z) {                                        // (a square black planter with a clipped boxwood ball)
-      cpPart(new THREE.BoxGeometry(0.56, 0.62, 0.56), clBlack, x, 0.31, z, 0, 0, 0, P);
-      cpPart(new THREE.BoxGeometry(0.5, 0.03, 0.5), rMat(0x4a3424, { roughness: 1 }), x, 0.6, z, 0, 0, 0, P);
-      cpPart(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6), rMat(0x5a4030), x, 0.75, z, 0, 0, 0, P);
-      cpPart(new THREE.SphereGeometry(0.36, 16, 12), leaf, x, 1.15, z, 0, 0, 0, P);
-      for (var k = 0; k < 14; k++) { var a = k * 2.4, b = Math.acos(1 - 2 * ((k + 0.5) / 14)); cpPart(new THREE.SphereGeometry(0.09, 7, 5), k % 2 ? leaf2 : leaf, x + Math.sin(b) * Math.cos(a) * 0.33, 1.15 + Math.cos(b) * 0.33, z + Math.sin(b) * Math.sin(a) * 0.33, 0, 0, 0, P).castShadow = false; }
+    var leafGeo = new THREE.CircleGeometry(1, 7), leafDummy = new THREE.Object3D(), leafCol = new THREE.Color(), leafN = new THREE.Vector3();
+    var bark = new THREE.MeshStandardMaterial({ roughness: 0.9, map: cpTex(64, 64, function (g, w, h) { g.fillStyle = '#4a3220'; g.fillRect(0, 0, w, h); for (var k = 0; k < 60; k++) { g.fillStyle = 'rgba(' + (k % 2 ? '30,20,12' : '110,84,58') + ',0.5)'; g.fillRect((k * 23) % w, (k * 37) % h, 2, 6 + (k % 5)); } }) });
+    var mulch = new THREE.MeshStandardMaterial({ roughness: 1, map: cpTex(128, 128, function (g, w, h) { g.fillStyle = '#3a2618'; g.fillRect(0, 0, w, h); for (var k = 0; k < 260; k++) { var c = [[120, 76, 44], [92, 58, 34], [150, 104, 64], [60, 40, 26]][k % 4]; g.fillStyle = 'rgb(' + c.join(',') + ')'; g.save(); g.translate((k * 53) % w, (k * 97) % h); g.rotate(k); g.fillRect(-4, -1.5, 6 + (k % 5), 3); g.restore(); } }) });
+    function topiary(P, x, z) {                                        // (a clipped boxwood ball on a short trunk, in a tapered black planter with a bark mulch top)
+      var T = new THREE.Group(); T.position.set(x, 0, z); P.add(T);
+      cpPart(new THREE.CylinderGeometry(0.36, 0.27, 0.66, 4, 1), rMat(0x1b1b1e, { roughness: 0.45, metalness: 0.15 }), 0, 0.33, 0, 0, Math.PI / 4, 0, T);
+      cpPart(new THREE.CylinderGeometry(0.385, 0.375, 0.05, 4, 1), rMat(0x26262a, { roughness: 0.4, metalness: 0.2 }), 0, 0.655, 0, 0, Math.PI / 4, 0, T);   // (its rim)
+      cpPart(new THREE.CylinderGeometry(0.33, 0.33, 0.02, 4, 1), mulch, 0, 0.635, 0, 0, Math.PI / 4, 0, T).castShadow = false;
+      cpPart(new THREE.CylinderGeometry(0.025, 0.04, 0.42, 7), bark, 0, 0.84, 0, 0.04, 0, 0.03, T);
+      cpPart(new THREE.SphereGeometry(0.34, 18, 14), rMat(0x2a4a24, { roughness: 1 }), 0, 1.25, 0, 0, 0, 0, T);   // (deep inside the ball, shadowy green)
+      var N = 1100, leaves = new THREE.InstancedMesh(leafGeo, new THREE.MeshStandardMaterial({ roughness: 0.6, side: THREE.DoubleSide }), N), seed = x * 13.7 + z * 7.1;
+      function rnd(k) { var s = Math.sin(seed + k * 12.9898) * 43758.5453; return s - Math.floor(s); }
+      for (var k = 0; k < N; k++) {                                    // (hundreds of little oval leaves all over its surface, each turned its own way, in mixed greens)
+        var u = rnd(k * 3 + 1) * 2 - 1, a = rnd(k * 3 + 2) * Math.PI * 2, r = Math.sqrt(1 - u * u), rad = 0.355 + rnd(k * 5 + 7) * 0.035;
+        leafN.set(r * Math.cos(a), u, r * Math.sin(a));
+        leafDummy.position.set(leafN.x * rad, 1.25 + leafN.y * rad, leafN.z * rad);
+        leafDummy.lookAt(leafN.x * 2, 1.25 + leafN.y * 2, leafN.z * 2); leafDummy.rotateZ(rnd(k * 7 + 3) * Math.PI); leafDummy.rotateX((rnd(k * 11 + 5) - 0.5) * 1.1);
+        leafDummy.scale.set(0.036 + rnd(k) * 0.012, 0.022 + rnd(k + 9) * 0.008, 1);
+        leafDummy.updateMatrix(); leaves.setMatrixAt(k, leafDummy.matrix);
+        var c = rnd(k * 13 + 1), lit = Math.max(0, leafN.y) * 0.25;
+        leaves.setColorAt(k, leafCol.set(c < 0.3 ? 0x3d6e32 : c < 0.65 ? 0x4f8a3c : c < 0.9 ? 0x69a048 : 0x9cbf5e).offsetHSL(0, 0, lit * 0.15));
+      }
+      leaves.castShadow = true; T.add(leaves);
     }
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.3, 0.24, D2 * 2 + 0.3), clPave, 0, 0, 0, 0, 0, 0, G);   // (a low stone plinth)
     var pave = cpPart(new THREE.PlaneGeometry(W2 * 2 + 1.6, 2.2), new THREE.MeshStandardMaterial({ roughness: 0.85, map: cpTex(512, 128, function (g, w, h) {   // (big pale paving slabs along the front, with a darker kerb)
@@ -9103,7 +9123,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function () {
     var m4 = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     scene.traverse(function (o) {
-      if (!o.isInstancedMesh || o.parent === clothGroup) return; o.updateWorldMatrix(true, false); var changed = false;
+      if (!o.isInstancedMesh) return; for (var up = o.parent; up; up = up.parent) if (up === clothGroup) return;   // (the shop's own leaves stay)
+      o.updateWorldMatrix(true, false); var changed = false;
       for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); v.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld);
         if (Math.abs(v.x - CLOTH_X) < 12 && Math.abs(v.z - CLOTH_Z) < 14 && (onClothLot(v.x, v.z, 0) || onClothPath(v.x, v.z))) { o.setMatrixAt(i, zero); changed = true; } }
       if (changed) o.instanceMatrix.needsUpdate = true;
@@ -9120,9 +9141,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-CLOTH_HW - 0.25, CLOTH_HD + 0.55, 0.4], [CLOTH_HW + 0.3, CLOTH_HD + 0.55, 0.4], [-0.55, CLOTH_HD + 1.25, 0.35]].concat([-4.3, -0.4, 1.9, 4.3].map(function (x) { return [x, CLOTH_HD + 2.05, 0.15]; })).forEach(function (o) {   // (the topiaries, the chalkboard and the bollards)
       var p = clothWorld(o[0], o[1]); solids.push({ x: p.x, z: p.z, r: o[2] });
     });
-    // (round stepping stones from the door to the path, a little wobbly, the way stepping stones are)
-    var f0 = clothFront(0), stones = []; for (var sz = clothFront(2.4).z, k = 0; sz > CLOTH_PATH_END; sz -= 0.8, k++) stones.push([f0.x + (k % 2 ? 0.16 : -0.14), sz, 0.3 + (k % 3) * 0.03]);
-    stones.forEach(function (st, k) { cpPart(new THREE.CylinderGeometry(st[2], st[2] + 0.03, 0.06, 14), rMat([0xc9c0b4, 0xb8afa4, 0xd4ccc0][k % 3], { roughness: 0.95 }), st[0], 0.02, st[1], 0, k * 0.7, 0, scene).castShadow = false; });
+    layTownPath(clLine);                                               // (and its path, laid just like the town's others)
   })();
   // ---- inside ----
   var clothScene = new THREE.Scene(); clothScene.background = new THREE.Color(0x24161e);
