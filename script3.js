@@ -8888,11 +8888,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---------- Thread & Thimble, the clothing shop on the Western Isle ----------
   // A smart modern boutique on the south side of the Western Isle, facing north onto the path from the bridge to Fluff
   // & Feather, with stepping stones from its door to the path. Outside: a flat-roofed box of white marble with the
-  // shop's name in big black letters across the top; on the left, a deep doorway with black-framed glass doors and
+  // shop's name in big glowing gold letters across the top; on the left, a deep doorway with black-framed glass doors and
   // little lights in its ceiling; on the right, a tall glass display case in a thin black frame, standing a little
   // proud of the wall, where four mannequins in this season's outfits (a hat, a scarf, handbags) pose on white plinths
-  // against a pale blue wall under a track of spotlights, lit up bright (brighter still at night). Above, a set-back upper
-  // floor of dark glass with a planter of shrubs. Out front: pale paving, a step, a black mat, a brass plaque, two
+  // against a pale blue wall under a track of spotlights, lit up bright (brighter still at night). Out front: pale
+  // paving, a step, a black mat, a brass plaque, two
   // topiaries, glowing bollards and a chalkboard; round the back, a service door. Stand by the door and press Interact to go in.
   // Inside: the counter at the back with its till, a bell, a pincushion and folded cloth, shelves of fabric bolts
   // behind it, two clothes rails with empty hangers, a dress form, a tall mirror and a curtained fitting room. Nothing's
@@ -8919,11 +8919,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   var clGlass = rMat(0xffe6c0, { emissive: 0xffd49a, emissiveIntensity: 0.35, roughness: 0.15 });   // (warm light through the doors and windows)
   var clVitrine = new THREE.MeshStandardMaterial({ color: 0xdfeefa, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, depthWrite: false });
   var clDisplay = rMat(0xc9def2, { emissive: 0xb8d6f4, emissiveIntensity: 0.45, roughness: 0.9 });   // (the pale blue wall behind the mannequins)
-  var clNameTex = cpTex(1024, 128, function (g, w, h) {                 // (the shop's name, in black capitals, letters spaced wide)
-    g.clearRect(0, 0, w, h); g.fillStyle = '#16161a'; g.font = '600 86px "Futura", "Century Gothic", "Trebuchet MS", sans-serif'; g.textBaseline = 'middle';
+  var clNameTex = cpTex(1024, 128, function (g, w, h) {                 // (the shop's name, in capitals with the letters spaced wide: coloured gold on the wall)
+    g.clearRect(0, 0, w, h); g.fillStyle = '#ffffff'; g.font = '600 86px "Futura", "Century Gothic", "Trebuchet MS", sans-serif'; g.textBaseline = 'middle';
     var txt = 'THREAD & THIMBLE', sp = 10, tw = 0; for (var i = 0; i < txt.length; i++) tw += g.measureText(txt[i]).width + sp;
     var x = (w - tw + sp) / 2; for (var j = 0; j < txt.length; j++) { g.fillText(txt[j], x, h / 2 + 4); x += g.measureText(txt[j]).width + sp; }
   });
+  var clNameGold = new THREE.MeshStandardMaterial({ map: clNameTex, color: 0xf4c95a, emissive: 0xffb83a, emissiveMap: clNameTex, emissiveIntensity: 0.55, metalness: 0.45, roughness: 0.3, transparent: true, alphaTest: 0.3 }), clNameHalo = null;   // (the name's gold, glowing)
   // ---- outside ----
   var clothGroup = new THREE.Group(); clothGroup.position.set(CLOTH_X, 0, CLOTH_Z); clothGroup.rotation.y = CLOTH_TURN; scene.add(clothGroup);
   var clothLamps = [], clothWins = [];
@@ -8950,7 +8951,6 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function (G) {
     var W2 = CLOTH_HW, D2 = CLOTH_HD, H = CLOTH_WALL, FY = CLOTH_FY;
     var granite = rMat(0x2c2c30, { roughness: 0.4, metalness: 0.1 }), reveal = rMat(0xd9d6d0, { roughness: 0.6 }), brass = rMat(0xc9a14a, { metalness: 0.75, roughness: 0.3 });
-    var darkGlass = rMat(0x2a3540, { metalness: 0.6, roughness: 0.12, emissive: 0x0a1018, emissiveIntensity: 0.4 });
     var leaf = rMat(0x3f7a3a, { roughness: 0.85 }), leaf2 = rMat(0x55934a, { roughness: 0.85 });
     function lamp(P, x, y, z, s, color) {                              // (a little light that glows after dark)
       var lm = rMat(color || 0xfff4e0, { emissive: color || 0xfff0d0, emissiveIntensity: 0.4 });
@@ -8981,32 +8981,22 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     [[-W2 + 0.15, CL_ENTRY[0] + 0.0], [CL_ENTRY[1], CL_CASE[0]]].forEach(function (p) { var w = p[1] - p[0] + 0.15; cpPart(new THREE.BoxGeometry(w, 0.32, 0.05), granite, (p[0] + p[1]) / 2, 0.16, D2 + 0.16, 0, 0, 0, B); });
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.04, 0.05, 0.06), clBlack, 0, 2.79, D2 + 0.14, 0, 0, 0, B);   // (a thin black line along the bottom of the fascia)
-    // ===== the name, in raised black letters, lit by three slim spotlights on arms =====
-    [[0.022, 0x8a8a8e], [0.011, 0x4a4a50], [0, 0x16161a]].forEach(function (l, k) {   // (stacked a hair apart, so the letters stand out from the marble)
-      var nm = cpPart(new THREE.PlaneGeometry(5.6, 0.7), new THREE.MeshStandardMaterial({ map: clNameTex, color: k === 2 ? 0xffffff : l[1], transparent: true, alphaTest: 0.3, roughness: 0.45, metalness: k === 2 ? 0.3 : 0 }), 0.35 + l[0], 3.2 - l[0], D2 + 0.155 + k * 0.008, 0, 0, 0, B);
+    // ===== the name, in raised glowing gold letters, lit by three slim spotlights on arms =====
+    [[0.022, 0x5a3c0c], [0.011, 0x9a6c1c], [0, 0xf4c95a]].forEach(function (l, k) {   // (stacked a hair apart, darker gold behind, so the letters stand out from the marble)
+      var nm = cpPart(new THREE.PlaneGeometry(5.6, 0.7), k === 2 ? clNameGold : new THREE.MeshStandardMaterial({ map: clNameTex, color: l[1], transparent: true, alphaTest: 0.3, roughness: 0.5 }), 0.35 + l[0], 3.2 - l[0], D2 + 0.155 + k * 0.008, 0, 0, 0, B);
       nm.castShadow = false;
     });
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc860, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false }));   // (a soft golden glow round them)
+    halo.position.set(0.35, 3.2, D2 + 0.25); halo.scale.set(6.4, 1.5, 1); B.add(halo); clNameHalo = halo;
     [-2.0, 0.35, 2.7].forEach(function (x) {
       cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.42), clBlack, x, H + 0.1, D2 + 0.36, 0, 0, 0, B);
       cpPart(new THREE.CylinderGeometry(0.06, 0.05, 0.14, 12), clBlack, x, H + 0.06, D2 + 0.58, 0.9, 0, 0, B);
       cpPart(new THREE.CircleGeometry(0.045, 12), lamp(B, x, 3.35, D2 + 0.4, 1.4), x, H + 0.02, D2 + 0.64, 0.9 - Math.PI / 2, 0, 0, B);
     });
-    // ===== the roof, and a set-back upper floor of dark glass with black mullions and a planter of shrubs along its front =====
+    // ===== the flat roof, with a marble parapet round it =====
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.2, 0.16, D2 * 2 + 0.2), clRoofTop, 0, H - 0.02, 0, 0, 0, 0, B);
     [[0, D2 + 0.06, W2 * 2 + 0.42, 0.42], [0, -D2 - 0.02, W2 * 2 + 0.34, 0.3], [W2 + 0.02, 0, 0.3, D2 * 2 + 0.3], [-W2 - 0.02, 0, 0.3, D2 * 2 + 0.3]].forEach(function (p) { cpPart(new THREE.BoxGeometry(p[2], 0.34, p[3]), clMarble, p[0], H + 0.15, p[1], 0, 0, 0, B); });
     [[0, D2 + 0.06, W2 * 2 + 0.46, 0.46], [0, -D2 - 0.02, W2 * 2 + 0.38, 0.34], [W2 + 0.02, 0, 0.34, D2 * 2 + 0.34], [-W2 - 0.02, 0, 0.34, D2 * 2 + 0.34]].forEach(function (p) { cpPart(new THREE.BoxGeometry(p[2], 0.05, p[3]), granite, p[0], H + 0.34, p[1], 0, 0, 0, B); });   // (dark coping along its top)
-    var UW = 3.3, UD0 = -2.4, UD1 = 1.9, UH = 1.75, U = new THREE.Group(); U.position.y = H + 0.06; B.add(U);
-    cpPart(new THREE.BoxGeometry(UW * 2 - 0.1, UH - 0.05, UD1 - UD0 - 0.1), granite, 0, UH / 2, (UD0 + UD1) / 2, 0, 0, 0, U);
-    [[0, UD1, UW * 2, 0, 1], [0, UD0, UW * 2, Math.PI, 1], [UW, (UD0 + UD1) / 2, UD1 - UD0, Math.PI / 2, 0], [-UW, (UD0 + UD1) / 2, UD1 - UD0, -Math.PI / 2, 0]].forEach(function (f) {
-      var F = new THREE.Group(); F.position.set(f[0], 0, f[1]); F.rotation.y = f[3]; U.add(F);
-      cpPart(new THREE.PlaneGeometry(f[2], UH - 0.12), darkGlass, 0, UH / 2, 0.005, 0, 0, 0, F);
-      for (var m = -f[2] / 2; m <= f[2] / 2 + 0.01; m += f[2] / Math.round(f[2] / 0.82)) cpPart(new THREE.BoxGeometry(0.05, UH, 0.06), clBlack, m, UH / 2, 0.02, 0, 0, 0, F);
-      cpPart(new THREE.BoxGeometry(f[2], 0.05, 0.06), clBlack, 0, UH * 0.62, 0.02, 0, 0, 0, F);
-    });
-    cpPart(new THREE.BoxGeometry(UW * 2 + 0.4, 0.14, UD1 - UD0 + 0.4), clMarble, 0, UH + 0.07, (UD0 + UD1) / 2, 0, 0, 0, U);
-    cpPart(new THREE.BoxGeometry(UW * 2 - 0.4, 0.34, 0.4), clBlack, 0, 0.17, UD1 + 0.5, 0, 0, 0, U);   // (the planter along the upper floor's front)
-    for (var hb = 0; hb < 9; hb++) cpPart(new THREE.SphereGeometry(0.2 + (hb % 3) * 0.03, 10, 8), hb % 2 ? leaf2 : leaf, -UW + 0.45 + hb * (UW * 2 - 0.9) / 8, 0.42, UD1 + 0.5, 0, 0, 0, U);
-    cpPart(new THREE.BoxGeometry(0.9, 0.5, 0.6), rMat(0xb8b8bc, { metalness: 0.5, roughness: 0.5 }), UW - 0.8, 0.25 + UH + 0.14, (UD0 + UD1) / 2, 0, 0, 0, U);   // (a little air vent on top)
     // ===== the deep doorway: marble sides, a stone step, a black mat, lights in its ceiling, and glass doors with brass bars =====
     var E = new THREE.Group(); E.position.set((CL_ENTRY[0] + CL_ENTRY[1]) / 2, 0, D2); B.add(E);
     var EW = CL_ENTRY[1] - CL_ENTRY[0], EH = CL_ENTRY[3];
@@ -9255,7 +9245,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateClothOutside(t, night) {                               // (the doors, the windows and the display case glow in the evening, and the doorway's lights come on)
     var nt = clothNight();
     clGlass.emissiveIntensity = 0.35 + nt * 0.65; clDisplay.emissiveIntensity = 0.45 + nt * 0.45;
-    clMarble.emissiveIntensity = 0.2 * (1 - nt) + 0.03;                // (the marble stays bright white by day, even on the shady side)
+    clMarble.emissiveIntensity = 0.2 * (1 - nt) + 0.03;
+    clNameGold.emissiveIntensity = 0.55 + nt * 0.9 + Math.sin(t * 1.6) * 0.06;   // (the gold name glows, softly shimmering, brighter after dark)
+    if (clNameHalo) clNameHalo.material.opacity = 0.12 + nt * 0.4;                // (the marble stays bright white by day, even on the shady side)
     clothLamps.forEach(function (L, i) { L.m.emissiveIntensity = 0.3 + nt * 1.2; L.g.material.opacity = nt * (0.75 + Math.sin(t * 3 + i * 2) * 0.05); });
   }
   function drawClothView() {                                            // (the windows look out on the real island, just like the other shops')
