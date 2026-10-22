@@ -8031,6 +8031,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var TYPE_KEY = 'everdawn-typewriter', typewriter = false, TYPE_PER_SECOND = 40;
   try { typewriter = localStorage.getItem(TYPE_KEY) === 'on'; } catch (err) {}
   function typeText(el, text, done) {
+    if (window.everdawnTranslate) text = window.everdawnTranslate(text);   // (in the language chosen in Settings, so it types out in that language)
     var timer = 0, start = Date.now();
     function finish() { clearInterval(timer); el.textContent = text; if (done) { var d = done; done = null; d(); } }
     if (!typewriter) { finish(); return finish; }

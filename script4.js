@@ -817,6 +817,11 @@ var everdawnTitle = (function () {
   applyBold(boldNow());
   function timeNow() { try { var t = parseFloat(localStorage.getItem('everdawn-time-speed')); if (t >= 50 && t <= 100) return t; } catch (err) {} return 50; }
   function zoomNow() { try { var z = parseFloat(localStorage.getItem('everdawn-zoom')); if (z >= 6 && z <= 26) return z; } catch (err) {} return 14; }
+  (function () { var st = document.createElement('style'); st.textContent =   // (the Language page: the six languages as big round buttons, two to a row)
+    '#evTitle .ev-langs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}' +
+    '#evTitle .ev-langs button{padding:.6em 1em;font:600 17px Fredoka,system-ui,sans-serif;color:#f0e2ff;border:2px solid #ffe2a0;border-radius:999px;background:rgba(30,15,60,.6);cursor:pointer}' +
+    '#evTitle .ev-langs button.on{color:#fff;background:linear-gradient(180deg,#ff9ecb,#d8609c)}#evTitle .ev-langs button:focus-visible{outline:3px solid #fff;outline-offset:2px}';
+    document.head.appendChild(st); })();
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
@@ -1016,6 +1021,13 @@ var everdawnTitle = (function () {
     showHud();
   } }, { name: 'Controller', build: function (body) {                  // (Controller: for playing with an Xbox, PlayStation or Switch controller; its settings are still to come)
     var gap = document.createElement('div'); gap.style.height = 'clamp(160px,32vh,280px)'; body.appendChild(gap);   // (empty for now, but the page keeps its usual size)
+  } }, { name: 'Language', build: function (body) {                    // (Language: every word in the game in English, Español, Français, Italiano, Deutsch or Português; script5.js does the changing)
+    var names = [['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['it', 'Italiano'], ['de', 'Deutsch'], ['pt', 'Português']];
+    body.innerHTML = '<div class="ev-langs" role="group" aria-label="Language">' + names.map(function (l) { return '<button type="button" translate="no" lang="' + l[0] + '" data-l="' + l[0] + '">' + l[1] + '</button>'; }).join('') + '</div>';
+    var lb = body.querySelectorAll('.ev-langs button');
+    function showLang() { var now = window.everdawnLanguage ? window.everdawnLanguage() : 'en'; for (var b = 0; b < lb.length; b++) { var on = lb[b].getAttribute('data-l') === now; lb[b].classList.toggle('on', on); lb[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var l = 0; l < lb.length; l++) lb[l].addEventListener('click', function () { if (window.everdawnSetLanguage) window.everdawnSetLanguage(this.getAttribute('data-l')); showLang(); });
+    showLang();
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
