@@ -8852,6 +8852,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetMinigameSecondaryKey = function (code) { minigameSecondaryKey = code || null; };
   window.everdawnMinigameSecondaryKey = function () { return minigameSecondaryKey || 'KeyW'; };
   function minigameSecondaryPressed(e) { return e.code === (minigameSecondaryKey || 'KeyW'); }
+  // Minigame Attack: a left click (or a key of your own, which takes its place) attacks when a minigame asks you to.
+  // A minigame passes each key press and each pointer press to minigameAttackPressed(e)
+  var minigameAttackKey = null; try { minigameAttackKey = localStorage.getItem('everdawn-minigame-attack') || null; } catch (err) {}
+  window.everdawnSetMinigameAttackKey = function (code) { minigameAttackKey = code || null; };
+  window.everdawnMinigameAttackKey = function () { return minigameAttackKey; };   // (null: the left click)
+  function minigameAttackPressed(e) { return minigameAttackKey ? e.type === 'keydown' && e.code === minigameAttackKey : e.type === 'pointerdown' && e.button === 0; }
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
