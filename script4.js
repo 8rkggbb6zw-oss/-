@@ -987,6 +987,8 @@ var everdawnTitle = (function () {
     for (var dh = 0; dh < dhudBtns.length; dh++) dhudBtns[dh].addEventListener('click', function () {
       dhud = this.getAttribute('data-h'); showDecorHud(); try { localStorage.setItem('everdawn-decor-hud', dhud); } catch (err) {} if (window.everdawnSetDecorHud) window.everdawnSetDecorHud(dhud === 'on'); });
     showDecorHud();
+    var farmSec = document.createElement('div'); farmSec.className = 'ev-ksec'; farmSec.textContent = 'Farm View';   // (the Farm View section, after Decor Mode: its settings are still to come)
+    body.insertBefore(farmSec, menuSec || null);
     var hudBtns = hudRow.querySelectorAll('button');
     function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
