@@ -834,6 +834,26 @@ var everdawnTitle = (function () {
     document.head.appendChild(st); })();
   window.everdawnSetDyslexicFont = function (on) { document.documentElement.classList.toggle('ev-dyslexic', !!on); };
   try { window.everdawnSetDyslexicFont(localStorage.getItem('everdawn-dyslexic-font') === 'on'); } catch (err) {}
+  // Color Blind Mode, on the Accessibility page: a slider from 0 (Normal) to 3. 1 is for red-blindness (protanopia), 2 for
+  // green-blindness (deuteranopia), 3 for blue-blindness (tritanopia). Each one recolours the whole screen, the island
+  // and every menu, with a colour filter made for it (daltonizing): the colours that kind of eye mixes up are moved
+  // towards ones it can tell apart, so ripe and unripe crops, red and green bars, blue and yellow flowers and the like
+  // stand apart again. It's remembered
+  var CB_NAMES = ['Normal', 'Red-blind (Protanopia)', 'Green-blind (Deuteranopia)', 'Blue-blind (Tritanopia)'];
+  (function () {
+    var M = ['1 0 0 0 0 0.479 0.477 0.044 0 0 0.597 -0.689 1.091 0 0 0 0 0 1 0',      // (red-blind)
+      '1 0 0 0 0 0.163 0.725 0.112 0 0 0.455 -0.645 1.191 0 0 0 0 0 1 0',             // (green-blind)
+      '0.741 -0.407 0.666 0 0 0.075 0.585 0.340 0 0 0 0 1 0 0 0 0 0 1 0'];             // (blue-blind)
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('aria-hidden', 'true');
+    svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    svg.innerHTML = M.map(function (m, i) { return '<filter id="evCb' + (i + 1) + '"><feColorMatrix type="matrix" values="' + m + '"/></filter>'; }).join('');
+    document.body.appendChild(svg);
+    var st = document.createElement('style'); st.textContent = 'html.ev-cb-1{filter:url(#evCb1)}html.ev-cb-2{filter:url(#evCb2)}html.ev-cb-3{filter:url(#evCb3)}';
+    document.head.appendChild(st);
+  })();
+  window.everdawnSetColorBlind = function (n) { for (var k = 1; k <= 3; k++) document.documentElement.classList.toggle('ev-cb-' + k, +n === k); };
+  function colorBlindNow() { var v = 0; try { v = Math.max(0, Math.min(3, parseInt(localStorage.getItem('everdawn-color-blind'), 10) || 0)); } catch (err) {} return v; }
+  window.everdawnSetColorBlind(colorBlindNow());
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
@@ -1040,13 +1060,17 @@ var everdawnTitle = (function () {
     function showLang() { var now = window.everdawnLanguage ? window.everdawnLanguage() : 'en'; for (var b = 0; b < lb.length; b++) { var on = lb[b].getAttribute('data-l') === now; lb[b].classList.toggle('on', on); lb[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var l = 0; l < lb.length; l++) lb[l].addEventListener('click', function () { if (window.everdawnSetLanguage) window.everdawnSetLanguage(this.getAttribute('data-l')); showLang(); });
     showLang();
-  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: the Dyslexic Font)
+  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: the Dyslexic Font and Color Blind Mode)
     body.innerHTML = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evDysL">Dyslexic Font</span><div class="ev-seg" role="group" aria-labelledby="evDysL"><button type="button" data-d="off">Disabled</button><button type="button" data-d="on">Enabled</button></div></div>';
     var dys = document.documentElement.classList.contains('ev-dyslexic') ? 'on' : 'off', dyBtns = body.querySelectorAll('.ev-seg button');
     function showDys() { for (var b = 0; b < dyBtns.length; b++) { var on = dyBtns[b].getAttribute('data-d') === dys; dyBtns[b].classList.toggle('on', on); dyBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var dy = 0; dy < dyBtns.length; dy++) dyBtns[dy].addEventListener('click', function () {
       dys = this.getAttribute('data-d'); showDys(); try { localStorage.setItem('everdawn-dyslexic-font', dys); } catch (err) {} window.everdawnSetDyslexicFont(dys === 'on'); });
     showDys();
+    body.insertAdjacentHTML('beforeend', '<div class="ev-srow"><div class="ev-lrow"><label for="evCb">Color Blind Mode</label><output for="evCb" id="evCbName"></output></div><div class="ev-range"><span>0</span><input type="range" id="evCb" min="0" max="3" step="1"><span>3</span></div></div>');
+    var cb = body.querySelector('#evCb'), cbn = body.querySelector('#evCbName'); cb.value = colorBlindNow();   // (Color Blind Mode: 0 Normal, 1 red-blind, 2 green-blind, 3 blue-blind)
+    function showCb() { cbn.textContent = CB_NAMES[+cb.value]; } showCb();
+    cb.addEventListener('input', function () { showCb(); try { localStorage.setItem('everdawn-color-blind', cb.value); } catch (err) {} window.everdawnSetColorBlind(+cb.value); });
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');

@@ -1196,6 +1196,11 @@
     ["service", "atención", "service", "servizio", "für Service", "atendimento"],
     ["Accessibility", "Accesibilidad", "Accessibilité", "Accessibilità", "Barrierefreiheit", "Acessibilidade"],
     ["Dyslexic Font", "Fuente para dislexia", "Police pour dyslexie", "Font per dislessia", "Legasthenie-Schrift", "Fonte para dislexia"],
+    ["Color Blind Mode", "Modo daltónico", "Mode daltonien", "Modalità daltonismo", "Farbenblind-Modus", "Modo daltônico"],
+    ["Normal", "Normal", "Normal", "Normale", "Normal", "Normal"],
+    ["Red-blind (Protanopia)", "Ceguera al rojo (protanopia)", "Cécité au rouge (protanopie)", "Cecità al rosso (protanopia)", "Rotblindheit (Protanopie)", "Cegueira ao vermelho (protanopia)"],
+    ["Green-blind (Deuteranopia)", "Ceguera al verde (deuteranopia)", "Cécité au vert (deutéranopie)", "Cecità al verde (deuteranopia)", "Grünblindheit (Deuteranopie)", "Cegueira ao verde (deuteranopia)"],
+    ["Blue-blind (Tritanopia)", "Ceguera al azul (tritanopia)", "Cécité au bleu (tritanopie)", "Cecità al blu (tritanopia)", "Blaublindheit (Tritanopie)", "Cegueira ao azul (tritanopia)"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
