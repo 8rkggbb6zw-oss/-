@@ -8846,6 +8846,12 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetMinigamePrimaryKey = function (code) { minigamePrimaryKey = code || null; };
   window.everdawnMinigamePrimaryKey = function () { return minigamePrimaryKey || 'Space'; };
   function minigamePrimaryPressed(e) { return e.code === (minigamePrimaryKey || 'Space'); }
+  // Minigame Secondary Action: W (or a key of your own), the second key a minigame can use. A minigame asks
+  // minigameSecondaryPressed(e), or window.everdawnMinigameSecondaryKey() for the key itself
+  var minigameSecondaryKey = null; try { minigameSecondaryKey = localStorage.getItem('everdawn-minigame-secondary') || null; } catch (err) {}
+  window.everdawnSetMinigameSecondaryKey = function (code) { minigameSecondaryKey = code || null; };
+  window.everdawnMinigameSecondaryKey = function () { return minigameSecondaryKey || 'KeyW'; };
+  function minigameSecondaryPressed(e) { return e.code === (minigameSecondaryKey || 'KeyW'); }
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
