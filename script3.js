@@ -8324,10 +8324,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     'body.ev-time-stopped #clock{color:#e0284f;animation:evTimeBlink 1s steps(1,end) infinite}' +
     '.ev-calm body.ev-time-stopped #clock{animation:none}@media (prefers-reduced-motion:reduce){body.ev-time-stopped #clock{animation:none}}';
     document.head.appendChild(st); })();
-  // In full screen, while a screen is open (the bag and its pages, a shop, the shipping bin), the buttons down the side
-  // step away and the screen sits in the middle; they come back when it closes
+  // In full screen there are no buttons down the side at all (the keys do all of it: F leaves full screen), and an open
+  // screen (the bag and its pages, a shop, the shipping bin) sits in the middle
   (function () { var st = document.createElement('style'); st.textContent =
-    'body.full.ev-screen-up .controls{display:none!important}' +
+    'body.full .controls{display:none!important}' +
     'body.full.ev-screen-up .inventory{left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;max-width:calc(100% - 24px)!important;max-height:calc(100% - 150px)!important}';
     document.head.appendChild(st); })();
   var timeStopped = false, screenUp = false;
