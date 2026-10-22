@@ -8446,6 +8446,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     return g;
   }
+  function buildTv() {                                                 // (an old-fashioned telly on a low wooden stand, facing +z; it's off for now, with a little red light on)
+    var g = new THREE.Group(), cream = rMat(0xf1e2c4, { roughness: 0.55 }), dark = rMat(0x2b2433, { roughness: 0.6 });
+    [[-0.58, -0.19], [0.58, -0.19], [-0.58, 0.19], [0.58, 0.19]].forEach(function (p) { decorMesh(new THREE.CylinderGeometry(0.035, 0.025, 0.08, 8), dWoodDark, p[0], 0.04, p[1], g); });   // (the stand)
+    decorMesh(new THREE.BoxGeometry(1.3, 0.46, 0.48), dWood, 0, 0.31, 0, g);
+    decorMesh(new THREE.BoxGeometry(1.36, 0.04, 0.52), dWoodDark, 0, 0.56, 0, g);
+    [-0.31, 0.31].forEach(function (x) {                                // (its two cupboard doors, with gold knobs)
+      decorMesh(new THREE.BoxGeometry(0.58, 0.36, 0.02), dWoodDark, x, 0.31, 0.245, g);
+      decorMesh(new THREE.SphereGeometry(0.025, 8, 6), R.gold, x - Math.sign(x) * 0.22, 0.31, 0.265, g);
+    });
+    decorMesh(new THREE.BoxGeometry(0.98, 0.7, 0.5), cream, 0, 0.94, -0.02, g);   // (the telly: its case)
+    decorMesh(new THREE.BoxGeometry(0.7, 0.54, 0.02), dark, -0.1, 0.95, 0.235, g);   // (the dark frame round the screen)
+    var screen = decorMesh(new THREE.PlaneGeometry(0.62, 0.46), rMat(0x14161f, { roughness: 0.12, metalness: 0.4 }), -0.1, 0.95, 0.247, g);
+    screen.name = 'tvScreen';                                           // (the screen: channels will show here)
+    [0.03, -0.12].forEach(function (y, k) { var kn = decorMesh(new THREE.CylinderGeometry(0.045, 0.045, 0.04, 14), k ? dark : R.gold, 0.35, 0.95 + y + 0.1, 0.245, g); kn.rotation.x = Math.PI / 2; });   // (two dials)
+    for (var k = 0; k < 4; k++) decorMesh(new THREE.BoxGeometry(0.13, 0.012, 0.01), dark, 0.35, 0.74 + k * 0.035, 0.248, g);   // (the speaker)
+    decorMesh(new THREE.SphereGeometry(0.012, 8, 6), rMat(0xff4a4a, { emissive: 0xff3030, emissiveIntensity: 1.2 }), 0.42, 0.66, 0.24, g);   // (the red light: it's on standby)
+    decorMesh(new THREE.SphereGeometry(0.08, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), dark, 0, 1.29, -0.05, g);   // (and its rabbit-ear aerial)
+    [-1, 1].forEach(function (s) {
+      var ear = decorMesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), R.gold, s * 0.13, 1.5, -0.05, g); ear.rotation.z = -s * 0.55;
+      decorMesh(new THREE.SphereGeometry(0.02, 8, 6), R.gold, s * 0.26, 1.72, -0.05, g);
+    });
+    return g;
+  }
   // Pieces that were already in the room (the nightstand, the bookshelf and the rug) are gathered into groups of their own
   function gatherPiece(test, cx, cz) {
     var walls = []; for (var wn in inWalls) walls.push(inWalls[wn].g);
@@ -8472,8 +8495,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     decor_plant: { name: 'Potted Plant', icon: '🪴', w: 0.42, d: 0.42, bumps: [[0, 0, 0.25]], make: buildPlant },
     decor_nightstand: { name: 'Nightstand', icon: '🕯️', w: 0.64, d: 0.58, bumps: [[0, 0, 0.38]], make: function () { return nightstandTpl.clone(); } },
     decor_bookshelf: { name: 'Bookshelf', icon: '📚', w: 0.62, d: 2.16, bumps: [[0, -0.6, 0.5], [0, 0, 0.5], [0, 0.6, 0.5]], make: function () { return bookshelfTpl.clone(); } },
-    decor_rug: { name: 'Woven Rug', icon: '🧶', w: 4.3, d: 2.7, flat: true, bumps: [], make: function () { return rugTpl.clone(); } }
+    decor_rug: { name: 'Woven Rug', icon: '🧶', w: 4.3, d: 2.7, flat: true, bumps: [], make: function () { return rugTpl.clone(); } },
+    decor_tv: { name: 'TV with Stand', icon: '📺', w: 1.4, d: 0.56, bumps: [[-0.4, 0, 0.32], [0.4, 0, 0.32]], make: buildTv }
   };
+  var TV_X = -ROOM_W / 2 + 0.3, TV_Z = 1.9;                           // (where the TV starts: against the left wall past the bookshelf, facing the rug)
   Object.keys(DECOR).forEach(function (id) {                           // (they're items too, so they can go in your backpack)
     ITEMS[id] = { name: DECOR[id].name, icon: DECOR[id].icon, info: 'Furniture for your house. Inside, press ' + everdawnKeyName(decorKey || 'KeyG') + ' for Decor Mode to place it.' };
   });
@@ -8509,13 +8534,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   function decorDefaults() {
     decorPlaced.slice().forEach(decorLift); houseStorage = [];
     decorPut({ id: 'decor_nightstand', x: NSX, z: NSZ, rot: 0 }); decorPut({ id: 'decor_bookshelf', x: SX, z: SZ, rot: 0 }); decorPut({ id: 'decor_rug', x: RUG_X, z: RUG_Z, rot: 0 });
+    decorPut({ id: 'decor_tv', x: TV_X, z: TV_Z, rot: 3 });
   }
   function decorSaveData() {
     var placed = decorPlaced.map(function (p) { return { id: p.id, x: p.x, z: p.z, rot: p.rot }; }), store = houseStorage.map(function (x) { return { id: x.id, count: x.count }; });
     if (decorHeld) {                                                   // (holding a piece when the game saves: it's kept where it came from)
       if (decorHeld.from === 'room') placed.push({ id: decorHeld.id, x: decorHeld.was.x, z: decorHeld.was.z, rot: decorHeld.was.rot });
     }
-    return { placed: placed, storage: store, starterGone: true };
+    return { placed: placed, storage: store, starterGone: true, tvGiven: true };
   }
   function decorLoadData(d) {
     if (decorMode) leaveDecorMode();
@@ -8524,6 +8550,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     (d.placed || []).forEach(function (p) { if (DECOR[p.id]) decorPut({ id: p.id, x: +p.x || 0, z: +p.z || 0, rot: (p.rot | 0) % 4 }); });
     houseStorage = (d.storage || []).filter(function (x) { return DECOR[x.id] && x.count > 0; }).map(function (x) { return { id: x.id, count: x.count | 0 }; });
     if (!d.starterGone) houseStorage = houseStorage.filter(function (x) { return ['decor_table', 'decor_chair', 'decor_lamp', 'decor_plant'].indexOf(x.id) < 0; });   // (once, in saves from when storage started full: nothing's been earned yet)
+    if (!d.tvGiven) { if (decorFits('decor_tv', TV_X, TV_Z, 3)) decorPut({ id: 'decor_tv', x: TV_X, z: TV_Z, rot: 3 }); else storeAdd('decor_tv', 1); }   // (saves from before the TV: it goes in its usual spot, or into storage if that's taken)
   }
   decorDefaults();
   // The panel, and the square under the piece you're holding
