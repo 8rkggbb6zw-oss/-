@@ -8363,7 +8363,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var DECOR_GRID = 0.5, decorGrid = false, decorGridKey = null;
   try { decorGrid = localStorage.getItem('everdawn-decor-grid') === 'on'; decorGridKey = localStorage.getItem('everdawn-decor-grid-key') || null; } catch (err) {}
   window.everdawnSetDecorGridKey = function (code) { decorGridKey = code || null; if (decorMode) renderDecor(); };
-  // Open/Close Storage: Space in Decor Mode (on the Mouse & Keyboard page it can be a key of your own) opens your house
+  // Open Storage: Space in Decor Mode (on the Mouse & Keyboard page it can be a key of your own) opens your house
   // storage, with the furniture in your backpack under it, and closes it again. It starts closed each time
   var decorStoreKey = null, decorStoreOpen = false; try { decorStoreKey = localStorage.getItem('everdawn-decor-storage-key') || null; } catch (err) {}
   window.everdawnSetDecorStorageKey = function (code) { decorStoreKey = code || null; if (decorMode) renderDecor(); };
@@ -8485,7 +8485,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (decorHeld) {                                                   // (holding a piece when the game saves: it's kept where it came from)
       if (decorHeld.from === 'room') placed.push({ id: decorHeld.id, x: decorHeld.was.x, z: decorHeld.was.z, rot: decorHeld.was.rot });
     }
-    return { placed: placed, storage: store };
+    return { placed: placed, storage: store, starterGone: true };
   }
   function decorLoadData(d) {
     if (decorMode) leaveDecorMode();
@@ -8493,6 +8493,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     decorPlaced.slice().forEach(decorLift);
     (d.placed || []).forEach(function (p) { if (DECOR[p.id]) decorPut({ id: p.id, x: +p.x || 0, z: +p.z || 0, rot: (p.rot | 0) % 4 }); });
     houseStorage = (d.storage || []).filter(function (x) { return DECOR[x.id] && x.count > 0; }).map(function (x) { return { id: x.id, count: x.count | 0 }; });
+    if (!d.starterGone) houseStorage = houseStorage.filter(function (x) { return ['decor_table', 'decor_chair', 'decor_lamp', 'decor_plant'].indexOf(x.id) < 0; });   // (once, in saves from when storage started full: nothing's been earned yet)
   }
   decorDefaults();
   // The panel, and the square under the piece you're holding
