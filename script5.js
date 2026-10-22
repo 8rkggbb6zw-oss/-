@@ -1194,6 +1194,7 @@
     ["mill", "molino", "moulin", "mulino", "Mühle", "moinho"],
     ["skill points", "puntos de habilidad", "points de compétence", "punti abilità", "Fertigkeitspunkte", "pontos de habilidade"],
     ["service", "atención", "service", "servizio", "für Service", "atendimento"],
+    ["Accessibility", "Accesibilidad", "Accessibilité", "Accessibilità", "Barrierefreiheit", "Acessibilidade"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();

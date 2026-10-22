@@ -1028,6 +1028,8 @@ var everdawnTitle = (function () {
     function showLang() { var now = window.everdawnLanguage ? window.everdawnLanguage() : 'en'; for (var b = 0; b < lb.length; b++) { var on = lb[b].getAttribute('data-l') === now; lb[b].classList.toggle('on', on); lb[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
     for (var l = 0; l < lb.length; l++) lb[l].addEventListener('click', function () { if (window.everdawnSetLanguage) window.everdawnSetLanguage(this.getAttribute('data-l')); showLang(); });
     showLang();
+  } }, { name: 'Accessibility', build: function (body) {               // (Accessibility: its settings are still to come)
+    var gap = document.createElement('div'); gap.style.height = 'clamp(160px,32vh,280px)'; body.appendChild(gap);   // (empty for now, but the page keeps its usual size)
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
