@@ -9532,18 +9532,52 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (floating oak shelves on the right wall, with folded knits, a little plant and a candle)
     var SH = new THREE.Group(); SH.position.set(W2 - 0.08, 0, -1.8); SH.rotation.y = -Math.PI / 2; R.add(SH); clWalls[2].extra.push(SH);
     var oakS = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.5 });
+    var knitTex = cpTex(64, 64, function (g, w, h) {                   // (chunky knit: rows of little V stitches, with a cable up the middle)
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+      for (var ky = 0; ky < h; ky += 6) for (var kx = 0; kx < w; kx += 8) { g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(kx, ky); g.lineTo(kx + 4, ky + 5); g.lineTo(kx + 8, ky); g.stroke(); }
+      g.strokeStyle = 'rgba(0,0,0,0.22)'; g.lineWidth = 2.5; for (var cy = 0; cy < h; cy += 16) { g.beginPath(); g.moveTo(26, cy); g.bezierCurveTo(40, cy + 6, 26, cy + 10, 38, cy + 16); g.moveTo(38, cy); g.bezierCurveTo(24, cy + 6, 38, cy + 10, 26, cy + 16); g.stroke(); }
+    }, [2, 1]);
+    function sweater(P, x, y, w, col, ry) {                             // (a folded jumper: its body, the rounded fold along the front, a ribbed cuff peeping out)
+      var F = new THREE.Group(); F.position.set(x, y, 0.15); F.rotation.y = ry; P.add(F);
+      var m = new THREE.MeshStandardMaterial({ color: col, map: knitTex, bumpMap: knitTex, bumpScale: 0.004, roughness: 1 });
+      put(new THREE.BoxGeometry(w, 0.05, 0.2), m, 0, 0.025, -0.01, 0, 0, 0, F);
+      put(new THREE.CylinderGeometry(0.025, 0.025, w, 12, 1, false, 0, Math.PI), m, 0, 0.025, 0.09, 0, 0, Math.PI / 2, F);
+      put(new THREE.BoxGeometry(0.07, 0.012, 0.05), m, w * 0.3, 0.052, 0.07, 0, 0.3, 0, F);
+    }
     [1.25, 1.75].forEach(function (y, r) {
-      put(new THREE.BoxGeometry(1.3, 0.05, 0.3), oakS, 0, y, 0.15, 0, 0, 0, SH);
-      [[0xe9e0d0, -0.4], [0xc9a98c, -0.05], [0x9aa392, 0.3]].forEach(function (k, i) { if (r === 1 && i === 2) return; for (var f2 = 0; f2 < 3; f2++) put(new THREE.BoxGeometry(0.28, 0.06, 0.22), rMat(new THREE.Color(k[0]).offsetHSL(0, 0, (f2 - 1) * 0.03).getHex(), { roughness: 1 }), k[1] + (r ? 0.1 : 0), y + 0.055 + f2 * 0.06, 0.15, 0, (f2 - 1) * 0.05, 0, SH); });
+      put(new THREE.BoxGeometry(1.3, 0.045, 0.29), oakS, 0, y, 0.145, 0, 0, 0, SH);   // (the shelf, with a softened front edge)
+      put(new THREE.CylinderGeometry(0.0225, 0.0225, 1.3, 10), oakS, 0, y, 0.29, 0, 0, Math.PI / 2, SH);
+      [[0xe9e0d0, -0.4], [0xc9a98c, -0.05], [0x9aa392, 0.3]].forEach(function (k, i) { if (r === 1 && i === 2) return; for (var f2 = 0; f2 < 3; f2++) sweater(SH, k[1] + (r ? 0.1 : 0) + (f2 - 1) * 0.008, y + 0.0225 + f2 * 0.052, 0.28 - f2 * 0.012, new THREE.Color(k[0]).offsetHSL(0, 0, (f2 - 1) * 0.035).getHex(), (f2 - 1) * 0.06); });
     });
-    var PO = new THREE.Group(); PO.position.set(0.42, 1.775, 0.15); SH.add(PO);   // (a trailing pothos: heart-shaped leaves in a ribbed pot, its vines spilling over the shelf)
+    [[-0.38, 1.25], [0.05, 1.75]].forEach(function (tg) {               // (little kraft price tags on string, hanging from the top jumpers)
+      put(new THREE.BoxGeometry(0.035, 0.05, 0.002), rMat(0xc9a77c), tg[0] + 0.09, tg[1] + 0.12, 0.27, 0, 0, 0.2, SH);
+      put(new THREE.CylinderGeometry(0.0012, 0.0012, 0.05, 4), rMat(0xf2ece0), tg[0] + 0.085, tg[1] + 0.155, 0.265, 0.3, 0, 0.2, SH);
+    });
+    var CJ = new THREE.Group(); CJ.position.set(-0.56, 1.7725, 0.14); SH.add(CJ);   // (an amber candle jar with a wooden lid, on the top shelf)
+    put(new THREE.CylinderGeometry(0.045, 0.045, 0.09, 20), new THREE.MeshStandardMaterial({ color: 0xc07a30, transparent: true, opacity: 0.75, roughness: 0.1 }), 0, 0.045, 0, 0, 0, 0, CJ);
+    put(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 20), rMat(0xf4ecdc), 0, 0.032, 0, 0, 0, 0, CJ);
+    put(new THREE.CylinderGeometry(0.048, 0.048, 0.02, 20), rMat(0x9a7454, { roughness: 0.7 }), 0, 0.1, 0, 0, 0, 0, CJ);
+    put(new THREE.PlaneGeometry(0.05, 0.03), rMat(0xf6f0e4), 0, 0.05, 0.046, 0, 0, 0, CJ);
+    var BV = new THREE.Group(); BV.position.set(0.55, 1.2725, 0.12); SH.add(BV);   // (a tiny bud vase with a sprig of dried eucalyptus, on the bottom shelf)
+    put(new THREE.SphereGeometry(0.035, 16, 12), stoneware, 0, 0.035, 0, 0, 0, 0, BV); put(new THREE.CylinderGeometry(0.009, 0.014, 0.04, 12), stoneware, 0, 0.08, 0, 0, 0, 0, BV);
+    var ec = PLK.stem(BV, [[0, 0.07, 0], [0.01, 0.17, 0.01], [0.04, 0.26, 0.02]], 0.002, 0.0012, rMat(0x7a6a50), 8), eq = new THREE.Vector3(), eus = [];
+    for (var eu = 0; eu < 10; eu++) { ec.getPointAt(0.3 + eu * 0.07, eq); var es = eu % 2 ? 1 : -1; eus.push([eq.x, eq.y, eq.z, es, 0.1, 0.4, 0.03, 0.034, [0x8fa49a, 0xa4b4aa][eu % 2], Math.PI / 2]); }
+    PLK.leaves(BV, 'heart', eus, true);
+    var PO = new THREE.Group(); PO.position.set(0.42, 1.7725, 0.15); SH.add(PO);   // (a trailing pothos: heart-shaped leaves, green splashed with gold, on vines spilling over the shelf)
     PLK.pot(PO, 0, 0, 0.075, 0.13, stoneware, 12, 0.115);
-    var pgreen = [0x3e7a36, 0x4f8c3c, 0x5f9c44, 0x6aa84a, 0x8cbf5a], hearts = [];
-    for (var ph = 0; ph < 16; ph++) { var pha = ph / 16 * Math.PI * 2; hearts.push([Math.cos(pha) * 0.03, 0.12, Math.sin(pha) * 0.03, Math.cos(pha) * 0.8, 0.7 + PLK.rnd(ph) * 0.6, Math.sin(pha) * 0.8, 0.05, 0.07 + PLK.rnd(ph * 3) * 0.02, pgreen[ph % 5], PLK.rnd(ph * 7) - 0.5]); }
-    var vineM = rMat(0x5a8a3a);
-    [[[0.03, 0.12, 0.05], [0.08, 0.1, 0.15], [0.1, 0.0, 0.19], [0.13, -0.2, 0.19], [0.18, -0.4, 0.18]], [[-0.04, 0.12, 0.04], [-0.14, 0.06, 0.13], [-0.24, -0.02, 0.18], [-0.27, -0.16, 0.19]], [[0.05, 0.12, -0.03], [0.17, 0.07, -0.01], [0.26, -0.02, 0.01], [0.28, -0.17, 0.02]]].forEach(function (vp, vi) {
-      var vc = PLK.stem(PO, vp, 0.004, 0.003, vineM, 16), q = new THREE.Vector3();
-      for (var vl = 0.12; vl < 1; vl += 0.085) { vc.getPointAt(vl, q); var side = (Math.round(vl * 12) % 2 ? 1 : -1); hearts.push([q.x, q.y, q.z, side * 0.6, -0.2, 1, 0.045 * (1.1 - vl * 0.4), 0.06 * (1.1 - vl * 0.4), pgreen[(vi + Math.round(vl * 10)) % 5], side * 0.4]); }
+    var pgreen = [0x3e7a36, 0x4f8c3c, 0x5f9c44, 0x6aa84a, 0x8cbf5a, 0xa8c46a], hearts = [];
+    for (var ph = 0; ph < 34; ph++) {                                   // (a full crown, each leaf arching out from the pot and dipping at its tip)
+      var pha = ph * 2.39, prr = 0.02 + PLK.rnd(ph * 5) * 0.04, pup = -0.25 + PLK.rnd(ph) * 0.6;
+      hearts.push([Math.cos(pha) * prr, 0.12 + PLK.rnd(ph * 2) * 0.05, Math.sin(pha) * prr, Math.cos(pha), pup, Math.sin(pha), 0.06 + PLK.rnd(ph * 3) * 0.015, 0.07 + PLK.rnd(ph * 3) * 0.02, pgreen[ph % 6], Math.PI / 2 + (PLK.rnd(ph * 7) - 0.5) * 0.6]);   // (lying open, face up)
+    }
+    var vineM = rMat(0x6a8a40);
+    [[[0.03, 0.12, 0.05], [0.08, 0.1, 0.15], [0.1, 0.0, 0.19], [0.13, -0.2, 0.19], [0.18, -0.4, 0.18]], [[-0.04, 0.12, 0.04], [-0.14, 0.06, 0.13], [-0.24, -0.02, 0.18], [-0.27, -0.16, 0.19]], [[0.05, 0.12, -0.03], [0.17, 0.07, -0.01], [0.26, -0.02, 0.01], [0.28, -0.17, 0.02]],
+     [[0.0, 0.12, 0.05], [-0.03, 0.08, 0.16], [-0.06, -0.05, 0.18], [-0.05, -0.28, 0.17], [-0.02, -0.46, 0.15]], [[-0.03, 0.12, 0.0], [-0.12, 0.09, 0.08], [-0.2, 0.04, 0.17], [-0.36, 0.0, 0.2], [-0.44, -0.1, 0.2]]].forEach(function (vp, vi) {
+      var vc = PLK.stem(PO, vp, 0.0035, 0.0025, vineM, 20), q = new THREE.Vector3();
+      for (var vl = 0.08; vl < 0.98; vl += 0.05) {                     // (a leaf at each node, turning outward on alternate sides, smaller toward the tip)
+        vc.getPointAt(vl, q); var side = (Math.round(vl * 20) % 2 ? 1 : -1), sz = 1.15 - vl * 0.5, ni = Math.round(vl * 20) + vi * 7;
+        hearts.push([q.x, q.y, q.z, side * 0.7, -0.35, 0.8, 0.042 * sz, 0.058 * sz, pgreen[ni % 6], side * 0.5 + (PLK.rnd(ni) - 0.5) * 0.6]);
+      }
     });
     PLK.leaves(PO, 'heart', hearts);
     // (shoes under the rack: loafers and a pair of heels)
