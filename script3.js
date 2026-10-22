@@ -8314,6 +8314,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     sortSlots(openChest.slots); if (openChest.redraw) openChest.redraw();
   }, true);
 
+  // ---------- Toggle HUD ----------
+  // On the Mouse & Keyboard page, Toggle HUD: On (the usual way) or Off. Off hides what sits over the game (the stats
+  // along the top, with your money, the time, mana and stamina, the item hotbar, and the Quests box) for a clean view
+  // of the island; On brings it all back. It's remembered
+  (function () { var st = document.createElement('style'); st.textContent = '.ev-hud-off .topbar,.ev-hud-off .hotbar,.ev-hud-off .quest-hud{visibility:hidden!important}'; document.head.appendChild(st); })();
+  window.everdawnSetHud = function (on) { document.documentElement.classList.toggle('ev-hud-off', !on); };
+  try { window.everdawnSetHud(localStorage.getItem('everdawn-hud') !== 'off'); } catch (err) {}
+
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), the clock
   // stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
@@ -9887,6 +9895,17 @@ var everdawnTitle = (function () {
       btns[1].addEventListener('click', function () { if (waiting) return; keyGrabStop(); waiting = true; keyGrab = true; show(); window.addEventListener('keydown', grab, true); });
       show();
     });
+    // Toggle HUD: On or Off, at the end of Gameplay (just above Menu)
+    var hud = 'on'; try { if (localStorage.getItem('everdawn-hud') === 'off') hud = 'off'; } catch (err) {}
+    var hudRow = document.createElement('div'); hudRow.className = 'ev-srow ev-tog';
+    hudRow.innerHTML = '<span class="ev-lbl" id="evHudL">Toggle HUD</span><div class="ev-seg" role="group" aria-labelledby="evHudL"><button type="button" data-h="on">On</button><button type="button" data-h="off">Off</button></div>';
+    var menuSec = Array.prototype.filter.call(body.querySelectorAll('.ev-ksec'), function (x) { return x.textContent === 'Menu'; })[0];
+    body.insertBefore(hudRow, menuSec || null);
+    var hudBtns = hudRow.querySelectorAll('button');
+    function showHud() { for (var b = 0; b < hudBtns.length; b++) { var on = hudBtns[b].getAttribute('data-h') === hud; hudBtns[b].classList.toggle('on', on); hudBtns[b].setAttribute('aria-pressed', on ? 'true' : 'false'); } }
+    for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
+      hud = this.getAttribute('data-h'); showHud(); try { localStorage.setItem('everdawn-hud', hud); } catch (err) {} if (window.everdawnSetHud) window.everdawnSetHud(hud === 'on'); });
+    showHud();
   } }], setPage = 0, keyGrab = false, keyGrabStop = null;
   window.everdawnKeyGrabbing = function () { return keyGrab; };   // (while a new key is being chosen, Cancel's key doesn't cancel)
   var sett = document.createElement('div'); sett.className = 'ev-slots ev-sett'; sett.setAttribute('role', 'dialog'); sett.setAttribute('aria-modal', 'true'); sett.setAttribute('aria-label', 'Settings');
