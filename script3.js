@@ -8339,6 +8339,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   window.everdawnSetDecorKey = function (code) { decorKey = code || null; };
   var decorExitKey = null; try { decorExitKey = localStorage.getItem('everdawn-decor-exit-key') || null; } catch (err) {}
   window.everdawnSetDecorExitKey = function (code) { decorExitKey = code || null; showDecorKey(); };
+  // Pick Up and Put Down are a left click to start (a tap on a piece, a tap on the floor); on the Mouse & Keyboard page
+  // either can be a key of your own instead: then that key picks up the piece under the pointer, or sets down the one
+  // you're holding, and a click doesn't. Rotate is R to start, or a key of your own
+  var decorPickKey = null, decorDropKey = null, decorRotKey = null;
+  try { decorPickKey = localStorage.getItem('everdawn-decor-pick-key') || null; decorDropKey = localStorage.getItem('everdawn-decor-drop-key') || null; decorRotKey = localStorage.getItem('everdawn-decor-rotate-key') || null; } catch (err) {}
+  window.everdawnSetDecorPickKey = function (code) { decorPickKey = code || null; if (decorMode) renderDecor(); };
+  window.everdawnSetDecorDropKey = function (code) { decorDropKey = code || null; if (decorMode) renderDecor(); };
+  window.everdawnSetDecorRotateKey = function (code) { decorRotKey = code || null; if (decorMode) renderDecor(); };
   var decorMode = false, decorHeld = null, decorPlaced = [], houseStorage = [], DECOR_SNAP = 0.25;
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
@@ -8393,7 +8401,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   var nightstandTpl = gatherPiece(function (o) { return Math.abs(o.position.x - NSX) < 0.4 && Math.abs(o.position.z - NSZ) < 0.35 && o.position.y < 1; }, NSX, NSZ);
   var bookshelfTpl = gatherPiece(function (o) { return Math.abs(o.position.x - SX) < 0.36 && Math.abs(o.position.z - SZ) < 1.12 && o.position.y < 2.7; }, SX, SZ);
-  var rugTpl = gatherPiece(function (o) { return o.position.y < 0.04 && !(o.geometry && o.geometry.type === 'PlaneGeometry') && Math.abs(o.position.x - RUG_X) < RUG_W / 2 + 0.35 && Math.abs(o.position.z - RUG_Z) < RUG_D / 2 + 0.1; }, RUG_X, RUG_Z);
+  var rugTpl = gatherPiece(function (o) {                              // (only the rug itself, its gold knots and its tassels: nothing else that stands on that part of the floor)
+    var gp = o.geometry && o.geometry.parameters; if (!gp || o.position.y > 0.04 || Math.abs(o.position.x - RUG_X) > RUG_W / 2 + 0.35 || Math.abs(o.position.z - RUG_Z) > RUG_D / 2 + 0.1) return false;
+    if (o.geometry.type === 'BoxGeometry') return (gp.width === RUG_W && gp.depth === RUG_D) || (gp.width === 0.17 && gp.height === 0.01);
+    return o.geometry.type === 'SphereGeometry' && gp.radius === 0.03;
+  }, RUG_X, RUG_Z);
   [[NSX, NSZ, 0.38], [SX, SZ - 0.6, 0.5], [SX, SZ, 0.5], [SX, SZ + 0.6, 0.5]].forEach(function (sv) {   // (their old bumps come out: they're the pieces' own now)
     for (var i = inSolids.length - 1; i >= 0; i--) if (inSolids[i][0] === sv[0] && inSolids[i][1] === sv[1] && inSolids[i][2] === sv[2]) inSolids.splice(i, 1);
   });
@@ -8495,8 +8507,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     Object.keys(inBag).forEach(function (id) { bg.appendChild(decorTile(id, inBag[id], 'bag')); });
     if (!Object.keys(inBag).length) bg.innerHTML = '<span class="none">No furniture in your backpack.</span>';
     decorHoldBar.hidden = !decorHeld;
-    decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: tap the floor to set it down where the square is green. R turns it.'
-      : 'Tap a piece in the room to move it, or pick one from your storage or backpack below.';
+    var rk = everdawnKeyName(decorRotKey || 'KeyR');
+    decorHoldBar.querySelector('[data-d="rot"]').textContent = '⟳ Turn (' + rk + ')';
+    decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: ' + (decorDropKey ? 'press <b>' + everdawnKeyName(decorDropKey) + '</b>' : 'tap the floor') + ' to set it down where the square is green. <b>' + rk + '</b> turns it.'
+      : (decorPickKey ? 'Point at a piece in the room and press <b>' + everdawnKeyName(decorPickKey) + '</b> to move it' : 'Tap a piece in the room to move it') + ', or pick one from your storage or backpack below.';
   }
   function decorPick(id, from) {                                       // (picking a piece from your storage or your backpack)
     if (!decorMode) return;
@@ -8574,7 +8588,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     var hit = new THREE.Vector3(); if (!raycaster.ray.intersectPlane(ground, hit)) return null;
     return { x: hit.x - IN_X, z: hit.z - IN_Z, e: e };
   }
-  canvas.addEventListener('pointermove', function (e) { if (!decorMode) return; decorPointer = decorFloorAt(e); if (decorHeld && decorPointer) decorFollow(decorPointer.x, decorPointer.z); });
+  var decorScreenAt = null;                                            // (where the pointer was last, for Pick Up with a key)
+  canvas.addEventListener('pointermove', function (e) { if (!decorMode) return; decorScreenAt = { clientX: e.clientX, clientY: e.clientY }; decorPointer = decorFloorAt(e); if (decorHeld && decorPointer) decorFollow(decorPointer.x, decorPointer.z); });
   var decorBaseTap = tapToWalk;
   tapToWalk = function (e) { if (!decorMode) return decorBaseTap.apply(this, arguments); };   // (in Decor Mode a tap doesn't walk you anywhere...)
   var decorDown = null;                                                // (...it picks a piece up or sets it down: a press that doesn't move, held as long as you like)
@@ -8585,11 +8600,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
   function decorTap(e) {
     var at = decorFloorAt(e); if (at) decorPointer = at;
-    if (decorHeld) { if (at) decorFollow(at.x, at.z); decorDrop(); return; }
+    if (decorHeld) { if (at) decorFollow(at.x, at.z); if (!decorDropKey) decorDrop(); return; }   // (a click puts it down, unless Put Down has a key of its own)
+    if (!decorPickKey) decorGrabAt(e);                                 // (and picks one up, unless Pick Up has a key of its own)
+  }
+  function decorGrabAt(e) {                                            // (picking up the piece at that spot on the screen)
     var rect = canvas.getBoundingClientRect();
     raycaster.setFromCamera(new THREE.Vector2((e.clientX - rect.left) / rect.width * 2 - 1, -(e.clientY - rect.top) / rect.height * 2 + 1), camera);
     var pieces = decorPlaced.filter(function (p) { return !DECOR[p.id].flat; }).concat(decorPlaced.filter(function (p) { return DECOR[p.id].flat; }));   // (furniture before the rug under it)
-    for (var i = 0; i < pieces.length; i++) if (raycaster.intersectObject(pieces[i].g, true).length) { decorGrab(pieces[i]); return; }
+    for (var i = 0; i < pieces.length; i++) if (raycaster.intersectObject(pieces[i].g, true).length) { decorGrab(pieces[i]); return true; }
+    return false;
   }
   var decorBaseCamera = updateCamera;
   updateCamera = function (dt) {                                       // (in Decor Mode the camera looks over the room, not at you, with the room a little to the left of the panel)
@@ -8611,7 +8630,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.repeat) return;
     if (isExit) leaveDecorMode();
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
-    else if (e.code === 'KeyR') decorRotate();
+    else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
+    else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
+    else if (decorDropKey && e.code === decorDropKey && decorHeld) decorDrop();
   }, true);
 
   // ---------- Time stands still while a screen is open ----------
