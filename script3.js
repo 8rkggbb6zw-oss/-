@@ -8924,7 +8924,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var txt = 'THREAD & THIMBLE', sp = 10, tw = 0; for (var i = 0; i < txt.length; i++) tw += g.measureText(txt[i]).width + sp;
     var x = (w - tw + sp) / 2; for (var j = 0; j < txt.length; j++) { g.fillText(txt[j], x, h / 2 + 4); x += g.measureText(txt[j]).width + sp; }
   });
-  var clNameGold = new THREE.MeshStandardMaterial({ map: clNameTex, color: 0xf4c95a, emissive: 0xffb83a, emissiveMap: clNameTex, emissiveIntensity: 0.55, metalness: 0.45, roughness: 0.3, transparent: true, alphaTest: 0.3 }), clNameHalo = null;   // (the name's gold, glowing)
+  var clNameGold = new THREE.MeshStandardMaterial({ map: clNameTex, color: 0xd2a23c, emissive: 0xd8962a, emissiveMap: clNameTex, emissiveIntensity: 0.55, metalness: 0.45, roughness: 0.3, transparent: true, alphaTest: 0.3 }), clNameHalo = null;   // (the name's gold, glowing)
   // ---- outside ----
   var clothGroup = new THREE.Group(); clothGroup.position.set(CLOTH_X, 0, CLOTH_Z); clothGroup.rotation.y = CLOTH_TURN; scene.add(clothGroup);
   var clothLamps = [], clothWins = [];
@@ -8982,11 +8982,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-W2 + 0.15, CL_ENTRY[0] + 0.0], [CL_ENTRY[1], CL_CASE[0]]].forEach(function (p) { var w = p[1] - p[0] + 0.15; cpPart(new THREE.BoxGeometry(w, 0.32, 0.05), granite, (p[0] + p[1]) / 2, 0.16, D2 + 0.16, 0, 0, 0, B); });
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.04, 0.05, 0.06), clBlack, 0, 2.79, D2 + 0.14, 0, 0, 0, B);   // (a thin black line along the bottom of the fascia)
     // ===== the name, in raised glowing gold letters, lit by three slim spotlights on arms =====
-    [[0.022, 0x5a3c0c], [0.011, 0x9a6c1c], [0, 0xf4c95a]].forEach(function (l, k) {   // (stacked a hair apart, darker gold behind, so the letters stand out from the marble)
+    [[0.022, 0x45300a], [0.011, 0x7a5414], [0, 0xd2a23c]].forEach(function (l, k) {   // (stacked a hair apart, darker gold behind, so the letters stand out from the marble)
       var nm = cpPart(new THREE.PlaneGeometry(5.6, 0.7), k === 2 ? clNameGold : new THREE.MeshStandardMaterial({ map: clNameTex, color: l[1], transparent: true, alphaTest: 0.3, roughness: 0.5 }), 0.35 + l[0], 3.2 - l[0], D2 + 0.155 + k * 0.008, 0, 0, 0, B);
       nm.castShadow = false;
     });
-    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc860, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false }));   // (a soft golden glow round them)
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xe0a440, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false }));   // (a soft golden glow round them)
     halo.position.set(0.35, 3.2, D2 + 0.25); halo.scale.set(6.4, 1.5, 1); B.add(halo); clNameHalo = halo;
     [-2.0, 0.35, 2.7].forEach(function (x) {
       cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.42), clBlack, x, H + 0.1, D2 + 0.36, 0, 0, 0, B);
@@ -9246,7 +9246,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var nt = clothNight();
     clGlass.emissiveIntensity = 0.35 + nt * 0.65; clDisplay.emissiveIntensity = 0.45 + nt * 0.45;
     clMarble.emissiveIntensity = 0.2 * (1 - nt) + 0.03;
-    clNameGold.emissiveIntensity = 0.55 + nt * 0.9 + Math.sin(t * 1.6) * 0.06;   // (the gold name glows, softly shimmering, brighter after dark)
+    clNameGold.emissiveIntensity = 0.55 + nt * 0.45 + Math.sin(t * 1.6) * 0.05;   // (the gold name glows, softly shimmering, brighter after dark)
     if (clNameHalo) clNameHalo.material.opacity = 0.12 + nt * 0.4;                // (the marble stays bright white by day, even on the shady side)
     clothLamps.forEach(function (L, i) { L.m.emissiveIntensity = 0.3 + nt * 1.2; L.g.material.opacity = nt * (0.75 + Math.sin(t * 3 + i * 2) * 0.05); });
   }
