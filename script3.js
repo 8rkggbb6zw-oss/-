@@ -8763,7 +8763,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---------- Farm View ----------
   // Outdoors, V (Enter Farm View Mode, or a key of your own on the Mouse & Keyboard page) pulls the camera far back and
   // up for a bird's-eye view of the whole island: your fields, buildings, crops and decorations, for planning where
-  // things go without the close-up camera in the way. Dragging still turns the view round. V again (Exit Farm View
+  // things go without the close-up camera in the way. Dragging still turns the view round. You can't walk meanwhile, and you're out of sight. V again (Exit Farm View
   // Mode, or a key of your own), or Escape, brings the camera back. The game carries on as usual meanwhile; going
   // indoors leaves Farm View
   var farmView = false, farmViewSaved = null, farmEnterKey = null, farmExitKey = null, FARM_VIEW_DIST = 82, FARM_VIEW_PITCH = 1.42;
@@ -8783,6 +8783,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cam.dist = FARM_VIEW_DIST; cam.pitch = FARM_VIEW_PITCH;
     if (scene.fog) { scene.fog.near = 150; scene.fog.far = 400; }      // (no fog across the island: you can see right to the far side)
     camera.far = 500; camera.updateProjectionMatrix();
+    walkTarget = null; player.visible = false;
     farmBadge.hidden = false;
   }
   function leaveFarmView() {
@@ -8791,6 +8792,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cam.dist = v.dist; cam.pitch = v.pitch; cam.yaw = v.yaw;
     if (scene.fog) { scene.fog.near = v.fogNear; scene.fog.far = v.fogFar; }
     camera.far = v.far; camera.updateProjectionMatrix();
+    player.visible = !camHid;
     farmBadge.hidden = true;
   }
   var farmBaseCamera = updateCamera;
@@ -8801,6 +8803,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     var flat = Math.cos(cam.pitch) * cam.dist;
     camera.position.set(cam.target.x + Math.sin(cam.yaw) * flat, cam.target.y + Math.sin(cam.pitch) * cam.dist, cam.target.z + Math.cos(cam.yaw) * flat);
     camera.lookAt(cam.target);
+  };
+  var farmBasePlayer = updatePlayer;
+  updatePlayer = function (dt) {                                       // (in Farm View she can't walk: no keys and no tapping to walk, and she's out of sight)
+    if (!farmView) return farmBasePlayer.apply(this, arguments);
+    var held = keys; keys = {}; walkTarget = null;
+    farmBasePlayer.apply(this, arguments);
+    keys = held; player.visible = false;
   };
   var farmBaseCull = cullScene;
   cullScene = function () {                                            // (in Farm View everything on the island shows, however far off)
