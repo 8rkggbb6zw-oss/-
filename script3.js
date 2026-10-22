@@ -8886,44 +8886,43 @@ EVERDAWN_PARTS.push(function (THREE) {
   function minigameAttackPressed(e) { return minigameAttackKey ? e.type === 'keydown' && e.code === minigameAttackKey : e.type === 'pointerdown' && e.button === 0; }
 
   // ---------- Thread & Thimble, the clothing shop on the Western Isle ----------
-  // A little pink boutique on the south side of the Western Isle, its door facing north onto the path from the bridge
-  // to Fluff & Feather, with stepping stones from its door to the path. Outside: a scalloped lavender roof, a striped
-  // awning over two big display windows with flower boxes, the shop's sign and two lanterns by the door, which glow
-  // at night. Stand by the door and press Interact to go in. Inside: the counter at the back with its till, a bell, a
-  // pincushion and folded cloth, shelves of fabric bolts behind it, two clothes rails with empty hangers, a dress form,
-  // a tall mirror and a curtained fitting room. Nothing's for sale yet: at the counter, Interact says new clothes
-  // are coming (the shop's menu goes there later). It has a pin on the map and a Teleport spot like the other shops
-  var CLOTH_X = -97, CLOTH_Z = 14, CLOTH_TURN = Math.PI, CLOTH_HW = 4, CLOTH_HD = 3, CLOTH_WALL = 3.2;
-  function clothFront(d) { return { x: CLOTH_X + Math.sin(CLOTH_TURN) * (CLOTH_HD + d), z: CLOTH_Z + Math.cos(CLOTH_TURN) * (CLOTH_HD + d) }; }
-  function clothLocal(x, z) { var dx = x - CLOTH_X, dz = z - CLOTH_Z, c = Math.cos(CLOTH_TURN), s = Math.sin(CLOTH_TURN); return [dx * c - dz * s, dx * s + dz * c]; }
+  // A smart modern boutique on the south side of the Western Isle, facing north onto the path from the bridge to Fluff
+  // & Feather, with stepping stones from its door to the path. Outside: a flat-roofed box of white marble with the
+  // shop's name in big black letters across the top; on the left, a deep doorway with black-framed glass doors and
+  // little lights in its ceiling; on the right, a tall glass display case in a thin black frame, standing a little
+  // proud of the wall, where four mannequins in this season's outfits (a hat, a scarf, handbags) pose on white plinths
+  // against a pale blue wall under a track of spotlights, lit up bright (brighter still at night). Above, a set-back upper
+  // floor of dark glass with a planter of shrubs. Out front: pale paving, a step, a black mat, a brass plaque, two
+  // topiaries, glowing bollards and a chalkboard; round the back, a service door. Stand by the door and press Interact to go in.
+  // Inside: the counter at the back with its till, a bell, a pincushion and folded cloth, shelves of fabric bolts
+  // behind it, two clothes rails with empty hangers, a dress form, a tall mirror and a curtained fitting room. Nothing's
+  // for sale yet: at the counter, Interact says new clothes are coming (the shop's menu goes there later). It has a pin
+  // on the map and a Teleport spot like the other shops
+  var CLOTH_X = -97, CLOTH_Z = 14, CLOTH_TURN = Math.PI, CLOTH_HW = 4, CLOTH_HD = 3, CLOTH_WALL = 3.6, CLOTH_FY = 0.12;
+  var CLOTH_DOOR_X = -2.5, CL_RECESS = 0.6;                             // (the door's middle across the front, and how deep its doorway is set back)
   function clothWorld(lx, lz) { var c = Math.cos(CLOTH_TURN), s = Math.sin(CLOTH_TURN); return { x: CLOTH_X + lx * c + lz * s, z: CLOTH_Z - lx * s + lz * c }; }
+  function clothFront(d) { return clothWorld(CLOTH_DOOR_X, CLOTH_HD + d); }   // (out in front of the door)
+  function clothLocal(x, z) { var dx = x - CLOTH_X, dz = z - CLOTH_Z, c = Math.cos(CLOTH_TURN), s = Math.sin(CLOTH_TURN); return [dx * c - dz * s, dx * s + dz * c]; }
   function onClothLot(x, z, m) { var l = clothLocal(x, z); return Math.abs(l[0]) < CLOTH_HW + 1.6 + m && l[1] > -CLOTH_HD - 1.2 - m && l[1] < CLOTH_HD + 2.4 + m; }
-  var clothDoor = clothFront(0.12), CLOTH_PATH_END = 3.4;               // (the stepping stones run from the door to the path, here)
-  function onClothPath(x, z) { return Math.abs(x - CLOTH_X) < 0.8 && z > CLOTH_PATH_END - 0.5 && z < clothFront(1).z + 0.5; }
-  var clPink = rMat(0xf5c6d3, { roughness: 0.92 }), clTrim = rMat(0xfff7ef, { roughness: 0.7 }), clStone = rMat(0xb9b0a6, { roughness: 0.95 });
-  var clGold = rMat(0xd9a93e, { metalness: 0.6, roughness: 0.35 }), clMint = rMat(0x79bfae, { roughness: 0.6 }), clDark = rMat(0x3a2c44, { roughness: 0.7 });
-  var clGlass = rMat(0xffe8c4, { emissive: 0xffd49a, emissiveIntensity: 0.25, roughness: 0.2 });
-  var clShingleTex = cpTex(256, 256, function (g, w, h) {              // (rows of rounded lavender shingles)
-    g.fillStyle = '#6f5a9c'; g.fillRect(0, 0, w, h);
-    for (var r = 0; r < 8; r++) for (var c = -1; c < 9; c++) {
-      var x = c * 32 + (r % 2 ? 16 : 0), y = r * 32, sh = 140 + ((r * 7 + c * 13) % 5) * 9;
-      g.fillStyle = 'rgb(' + Math.round(sh * 0.86) + ',' + Math.round(sh * 0.74) + ',' + Math.min(255, Math.round(sh * 1.25)) + ')';
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 32, y); g.lineTo(x + 32, y + 18); g.arc(x + 16, y + 18, 16, 0, Math.PI); g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(60,40,90,0.35)'; g.lineWidth = 2; g.beginPath(); g.arc(x + 16, y + 18, 16, 0, Math.PI); g.stroke();
+  var clothDoor = clothWorld(CLOTH_DOOR_X, CLOTH_HD - CL_RECESS + 0.15), CLOTH_PATH_END = 3.4;   // (the stepping stones run from the door to the path, here)
+  function onClothPath(x, z) { return Math.abs(x - clothFront(0).x) < 0.8 && z > CLOTH_PATH_END - 0.5 && z < clothFront(1).z + 0.5; }
+  var clMarble = new THREE.MeshStandardMaterial({ roughness: 0.35, emissive: 0xffffff, emissiveIntensity: 0.2, map: cpTex(512, 512, function (g, w, h) {   // (white marble, with soft grey veins)
+    g.fillStyle = '#f4f2ee'; g.fillRect(0, 0, w, h);
+    for (var k = 0; k < 26; k++) {
+      var x = (k * 97) % w, y = (k * 211) % h; g.strokeStyle = 'rgba(150,150,160,' + (0.06 + (k % 4) * 0.035) + ')'; g.lineWidth = 0.6 + (k % 3) * 0.5;
+      g.beginPath(); g.moveTo(x, y); for (var s = 1; s < 7; s++) g.lineTo(x + s * 40 + ((k * s * 13) % 30) - 15, y + s * 22 + ((k * s * 7) % 26) - 13); g.stroke();
     }
-  }, [3, 2]);
-  var clRoof = new THREE.MeshStandardMaterial({ map: clShingleTex, roughness: 0.8 });
-  var clStripeTex = cpTex(256, 64, function (g, w, h) { for (var k = 0; k < 8; k++) { g.fillStyle = k % 2 ? '#fff6f2' : '#ef8fae'; g.fillRect(k * 32, 0, 32, h); } }, [2, 1]);
-  var clScallopTex = cpTex(256, 64, function (g, w, h) {               // (the awning's scalloped edge: the stripes, cut into rounded flaps)
-    g.clearRect(0, 0, w, h);
-    for (var k = 0; k < 8; k++) { g.fillStyle = k % 2 ? '#fff6f2' : '#ef8fae'; g.beginPath(); g.moveTo(k * 32, 0); g.lineTo(k * 32 + 32, 0); g.lineTo(k * 32 + 32, 30); g.arc(k * 32 + 16, 30, 16, 0, Math.PI); g.closePath(); g.fill(); }
-  }, [2, 1]);
-  var clSignTex = cpTex(512, 128, function (g, w, h) {                 // (the shop's sign: its name in gold on plum, with a needle and thread)
-    g.fillStyle = '#4a2f5e'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#e6c46a'; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
-    g.fillStyle = '#f6d98a'; g.font = 'italic 600 52px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('Thread & Thimble', w / 2, h / 2 + 2);
-    g.strokeStyle = '#f2a6c2'; g.lineWidth = 3; g.beginPath(); g.moveTo(26, 96); g.bezierCurveTo(40, 40, 60, 110, 72, 34); g.stroke();
-    g.beginPath(); g.moveTo(w - 26, 96); g.bezierCurveTo(w - 40, 40, w - 60, 110, w - 72, 34); g.stroke();
+    for (var b = 0; b < 4; b++) { g.fillStyle = 'rgba(200,200,205,0.25)'; g.fillRect(0, b * 128 + 127, w, 1); }   // (the joins between slabs)
+  }, [2, 2]) });
+  var clBlack = rMat(0x141416, { metalness: 0.4, roughness: 0.35 }), clPave = rMat(0xd6d3cd, { roughness: 0.9 }), clRoofTop = rMat(0x9a9894, { roughness: 0.95 });
+  var clGold = rMat(0xd9a93e, { metalness: 0.6, roughness: 0.35 }), clDark = rMat(0x3a2c44, { roughness: 0.7 });   // (for the brass till, the mirror, the curtain rod and the lamps inside)
+  var clGlass = rMat(0xffe6c0, { emissive: 0xffd49a, emissiveIntensity: 0.35, roughness: 0.15 });   // (warm light through the doors and windows)
+  var clVitrine = new THREE.MeshStandardMaterial({ color: 0xdfeefa, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, depthWrite: false });
+  var clDisplay = rMat(0xc9def2, { emissive: 0xb8d6f4, emissiveIntensity: 0.45, roughness: 0.9 });   // (the pale blue wall behind the mannequins)
+  var clNameTex = cpTex(1024, 128, function (g, w, h) {                 // (the shop's name, in black capitals, letters spaced wide)
+    g.clearRect(0, 0, w, h); g.fillStyle = '#16161a'; g.font = '600 86px "Futura", "Century Gothic", "Trebuchet MS", sans-serif'; g.textBaseline = 'middle';
+    var txt = 'THREAD & THIMBLE', sp = 10, tw = 0; for (var i = 0; i < txt.length; i++) tw += g.measureText(txt[i]).width + sp;
+    var x = (w - tw + sp) / 2; for (var j = 0; j < txt.length; j++) { g.fillText(txt[j], x, h / 2 + 4); x += g.measureText(txt[j]).width + sp; }
   });
   // ---- outside ----
   var clothGroup = new THREE.Group(); clothGroup.position.set(CLOTH_X, 0, CLOTH_Z); clothGroup.rotation.y = CLOTH_TURN; scene.add(clothGroup);
@@ -8941,72 +8940,171 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     return W;
   }
-  function clFrame(P, w, h, x, y, z, ry, mat) {                         // (a white frame round an opening)
+  function clFrame(P, w, h, x, y, z, ry, mat) {                         // (a thin frame round an opening)
     var F = new THREE.Group(); F.position.set(x, y, z); F.rotation.y = ry || 0; P.add(F);
-    [[0, h / 2 + 0.05, w + 0.2, 0.1], [0, -h / 2 - 0.05, w + 0.2, 0.1], [-w / 2 - 0.05, 0, 0.1, h], [w / 2 + 0.05, 0, 0.1, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.08), mat || clTrim, f[0], f[1], 0, 0, 0, 0, F); });
+    [[0, h / 2 + 0.03, w + 0.12, 0.06], [0, -h / 2 - 0.03, w + 0.12, 0.06], [-w / 2 - 0.03, 0, 0.06, h], [w / 2 + 0.03, 0, 0.06, h]].forEach(function (f) { cpPart(new THREE.BoxGeometry(f[2], f[3], 0.07), mat || clBlack, f[0], f[1], 0, 0, 0, 0, F); });
     return F;
   }
-  var CL_DOOR = [-0.6, 0.6, 0, 2.2], CL_WINL = [-3.3, -1.3, 0.75, 2.15], CL_WINR = [1.3, 3.3, 0.75, 2.15], CL_SIDE = [-0.65, 0.65, 1.1, 2.0];
+  var CL_DOOR = [CLOTH_DOOR_X - 0.6, CLOTH_DOOR_X + 0.6, 0, 2.3], CL_SIDE = [-0.65, 0.65, 1.1, 2.2];   // (the doorway, and the side windows)
+  var CL_ENTRY = [-3.65, -1.35, 0, 2.75], CL_CASE = [-1.0, 3.65, 0.2, 2.75], CL_CASE_OUT = 0.55;     // (the opening of the deep doorway, and the display case)
   (function (G) {
-    var W2 = CLOTH_HW, D2 = CLOTH_HD, H = CLOTH_WALL, FY = 0.18;
-    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.4, 0.36, D2 * 2 + 0.4), clStone, 0, 0, 0, 0, 0, 0, G);   // (a low stone footing)
+    var W2 = CLOTH_HW, D2 = CLOTH_HD, H = CLOTH_WALL, FY = CLOTH_FY;
+    var granite = rMat(0x2c2c30, { roughness: 0.4, metalness: 0.1 }), reveal = rMat(0xd9d6d0, { roughness: 0.6 }), brass = rMat(0xc9a14a, { metalness: 0.75, roughness: 0.3 });
+    var darkGlass = rMat(0x2a3540, { metalness: 0.6, roughness: 0.12, emissive: 0x0a1018, emissiveIntensity: 0.4 });
+    var leaf = rMat(0x3f7a3a, { roughness: 0.85 }), leaf2 = rMat(0x55934a, { roughness: 0.85 });
+    function lamp(P, x, y, z, s, color) {                              // (a little light that glows after dark)
+      var lm = rMat(color || 0xfff4e0, { emissive: color || 0xfff0d0, emissiveIntensity: 0.4 });
+      var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: color || 0xfff0d0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.position.set(x, y, z); glow.scale.set(s, s, 1); P.add(glow); clothLamps.push({ m: lm, g: glow }); return lm;
+    }
+    function topiary(P, x, z) {                                        // (a square black planter with a clipped boxwood ball)
+      cpPart(new THREE.BoxGeometry(0.56, 0.62, 0.56), clBlack, x, 0.31, z, 0, 0, 0, P);
+      cpPart(new THREE.BoxGeometry(0.5, 0.03, 0.5), rMat(0x4a3424, { roughness: 1 }), x, 0.6, z, 0, 0, 0, P);
+      cpPart(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6), rMat(0x5a4030), x, 0.75, z, 0, 0, 0, P);
+      cpPart(new THREE.SphereGeometry(0.36, 16, 12), leaf, x, 1.15, z, 0, 0, 0, P);
+      for (var k = 0; k < 14; k++) { var a = k * 2.4, b = Math.acos(1 - 2 * ((k + 0.5) / 14)); cpPart(new THREE.SphereGeometry(0.09, 7, 5), k % 2 ? leaf2 : leaf, x + Math.sin(b) * Math.cos(a) * 0.33, 1.15 + Math.cos(b) * 0.33, z + Math.sin(b) * Math.sin(a) * 0.33, 0, 0, 0, P).castShadow = false; }
+    }
+    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.3, 0.24, D2 * 2 + 0.3), clPave, 0, 0, 0, 0, 0, 0, G);   // (a low stone plinth)
+    var pave = cpPart(new THREE.PlaneGeometry(W2 * 2 + 1.6, 2.2), new THREE.MeshStandardMaterial({ roughness: 0.85, map: cpTex(512, 128, function (g, w, h) {   // (big pale paving slabs along the front, with a darker kerb)
+      g.fillStyle = '#dcd9d3'; g.fillRect(0, 0, w, h);
+      for (var x = 0; x < w; x += 64) for (var y = 0; y < h; y += 42) { var sh = 214 + ((x * 3 + y * 7) % 13) - 6; g.fillStyle = 'rgb(' + sh + ',' + (sh - 3) + ',' + (sh - 9) + ')'; g.fillRect(x + 1, y + 1, 62, 40); }
+      g.fillStyle = '#9c978f'; g.fillRect(0, h - 10, w, 10);
+    }, [3, 1]) }), 0, 0.015, D2 + 1.25, -Math.PI / 2, 0, 0, G); pave.castShadow = false;
     var B = new THREE.Group(); B.position.y = FY; G.add(B);
-    clWall(B, W2 * 2, 0, D2, 0, [CL_DOOR, CL_WINL, CL_WINR], H, clPink);   // (the front: the door between two display windows)
-    clWall(B, W2 * 2, 0, -D2, 0, [[-1.6, -0.4, 1.1, 2.0], [0.4, 1.6, 1.1, 2.0]], H, clPink);
-    clWall(B, D2 * 2 - 0.16, W2 - 0.08, 0, Math.PI / 2, [CL_SIDE], H, clPink); clWall(B, D2 * 2 - 0.16, -W2 + 0.08, 0, Math.PI / 2, [CL_SIDE], H, clPink);
-    [[-W2, -D2], [W2, -D2], [-W2, D2], [W2, D2]].forEach(function (c) { cpPart(new THREE.BoxGeometry(0.26, H, 0.26), clTrim, c[0], H / 2, c[1], 0, 0, 0, B); });   // (white corner boards)
-    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.3, 0.14, 0.3), clTrim, 0, 0.07, D2, 0, 0, 0, B);
-    // (the windows: warm light inside, white frames, and flower boxes under the display windows)
-    [[CL_WINL, D2 + 0.01, 0], [CL_WINR, D2 + 0.01, 0]].forEach(function (w) {
-      var cx = (w[0][0] + w[0][1]) / 2, cy = (w[0][2] + w[0][3]) / 2, ww = w[0][1] - w[0][0], hh = w[0][3] - w[0][2];
-      clothWins.push(cpPart(new THREE.PlaneGeometry(ww, hh), clGlass, cx, cy, w[1] - 0.05, 0, 0, 0, B));
-      clFrame(B, ww, hh, cx, cy, w[1] + 0.02); cpPart(new THREE.BoxGeometry(0.06, hh, 0.06), clTrim, cx, cy, w[1] + 0.03, 0, 0, 0, B);
-      cpPart(new THREE.BoxGeometry(ww + 0.1, 0.24, 0.32), rMat(0x9a6a48, { roughness: 0.8 }), cx, w[0][2] - 0.2, w[1] + 0.17, 0, 0, 0, B);
-      for (var f = 0; f < 9; f++) {
-        var fl = cpPart(new THREE.SphereGeometry(0.075, 8, 6), rMat([0xf27aa0, 0xfff1a8, 0xb69cf2, 0xffffff][f % 4], { roughness: 0.7 }), cx - ww / 2 + 0.12 + f * (ww - 0.24) / 8, w[0][2] - 0.04 + (f % 2) * 0.05, w[1] + 0.17 + ((f * 7) % 3 - 1) * 0.07, 0, 0, 0, B);
-        fl.castShadow = false;
-        cpPart(new THREE.SphereGeometry(0.06, 6, 5), rMat(0x5fa65a), fl.position.x + 0.05, fl.position.y - 0.06, fl.position.z - 0.04, 0, 0, 0, B).castShadow = false;
+    // ===== the walls: thick white marble, a dark granite band round the bottom, and shadow lines across the slabs =====
+    clWall(B, W2 * 2, 0, D2, 0, [CL_ENTRY, CL_CASE], H, clMarble, 0.3);
+    clWall(B, W2 * 2, 0, -D2, 0, [[-1.6, -0.4, 1.1, 2.2], [0.4, 1.6, 1.1, 2.2], [2.4, 3.4, 0, 2.1]], H, clMarble);
+    clWall(B, D2 * 2 - 0.16, W2 - 0.08, 0, Math.PI / 2, [CL_SIDE], H, clMarble); clWall(B, D2 * 2 - 0.16, -W2 + 0.08, 0, Math.PI / 2, [CL_SIDE], H, clMarble);
+    [[0, -D2 - 0.09, W2 * 2 + 0.06, 0.04], [W2 + 0.09, 0, 0.04, D2 * 2 + 0.06], [-W2 - 0.09, 0, 0.04, D2 * 2 + 0.06]].forEach(function (b) {
+      cpPart(new THREE.BoxGeometry(b[2], 0.32, b[3]), granite, b[0], 0.16, b[1], 0, 0, 0, B);
+      [1.25, 2.4].forEach(function (y) { cpPart(new THREE.BoxGeometry(b[2], 0.025, b[3]), reveal, b[0], y, b[1], 0, 0, 0, B).castShadow = false; });
+    });
+    [[-W2 + 0.15, CL_ENTRY[0] + 0.0], [CL_ENTRY[1], CL_CASE[0]]].forEach(function (p) { var w = p[1] - p[0] + 0.15; cpPart(new THREE.BoxGeometry(w, 0.32, 0.05), granite, (p[0] + p[1]) / 2, 0.16, D2 + 0.16, 0, 0, 0, B); });
+    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.04, 0.05, 0.06), clBlack, 0, 2.79, D2 + 0.14, 0, 0, 0, B);   // (a thin black line along the bottom of the fascia)
+    // ===== the name, in raised black letters, lit by three slim spotlights on arms =====
+    [[0.022, 0x8a8a8e], [0.011, 0x4a4a50], [0, 0x16161a]].forEach(function (l, k) {   // (stacked a hair apart, so the letters stand out from the marble)
+      var nm = cpPart(new THREE.PlaneGeometry(5.6, 0.7), new THREE.MeshStandardMaterial({ map: clNameTex, color: k === 2 ? 0xffffff : l[1], transparent: true, alphaTest: 0.3, roughness: 0.45, metalness: k === 2 ? 0.3 : 0 }), 0.35 + l[0], 3.2 - l[0], D2 + 0.155 + k * 0.008, 0, 0, 0, B);
+      nm.castShadow = false;
+    });
+    [-2.0, 0.35, 2.7].forEach(function (x) {
+      cpPart(new THREE.BoxGeometry(0.05, 0.05, 0.42), clBlack, x, H + 0.1, D2 + 0.36, 0, 0, 0, B);
+      cpPart(new THREE.CylinderGeometry(0.06, 0.05, 0.14, 12), clBlack, x, H + 0.06, D2 + 0.58, 0.9, 0, 0, B);
+      cpPart(new THREE.CircleGeometry(0.045, 12), lamp(B, x, 3.35, D2 + 0.4, 1.4), x, H + 0.02, D2 + 0.64, 0.9 - Math.PI / 2, 0, 0, B);
+    });
+    // ===== the roof, and a set-back upper floor of dark glass with black mullions and a planter of shrubs along its front =====
+    cpPart(new THREE.BoxGeometry(W2 * 2 + 0.2, 0.16, D2 * 2 + 0.2), clRoofTop, 0, H - 0.02, 0, 0, 0, 0, B);
+    [[0, D2 + 0.06, W2 * 2 + 0.42, 0.42], [0, -D2 - 0.02, W2 * 2 + 0.34, 0.3], [W2 + 0.02, 0, 0.3, D2 * 2 + 0.3], [-W2 - 0.02, 0, 0.3, D2 * 2 + 0.3]].forEach(function (p) { cpPart(new THREE.BoxGeometry(p[2], 0.34, p[3]), clMarble, p[0], H + 0.15, p[1], 0, 0, 0, B); });
+    [[0, D2 + 0.06, W2 * 2 + 0.46, 0.46], [0, -D2 - 0.02, W2 * 2 + 0.38, 0.34], [W2 + 0.02, 0, 0.34, D2 * 2 + 0.34], [-W2 - 0.02, 0, 0.34, D2 * 2 + 0.34]].forEach(function (p) { cpPart(new THREE.BoxGeometry(p[2], 0.05, p[3]), granite, p[0], H + 0.34, p[1], 0, 0, 0, B); });   // (dark coping along its top)
+    var UW = 3.3, UD0 = -2.4, UD1 = 1.9, UH = 1.75, U = new THREE.Group(); U.position.y = H + 0.06; B.add(U);
+    cpPart(new THREE.BoxGeometry(UW * 2 - 0.1, UH - 0.05, UD1 - UD0 - 0.1), granite, 0, UH / 2, (UD0 + UD1) / 2, 0, 0, 0, U);
+    [[0, UD1, UW * 2, 0, 1], [0, UD0, UW * 2, Math.PI, 1], [UW, (UD0 + UD1) / 2, UD1 - UD0, Math.PI / 2, 0], [-UW, (UD0 + UD1) / 2, UD1 - UD0, -Math.PI / 2, 0]].forEach(function (f) {
+      var F = new THREE.Group(); F.position.set(f[0], 0, f[1]); F.rotation.y = f[3]; U.add(F);
+      cpPart(new THREE.PlaneGeometry(f[2], UH - 0.12), darkGlass, 0, UH / 2, 0.005, 0, 0, 0, F);
+      for (var m = -f[2] / 2; m <= f[2] / 2 + 0.01; m += f[2] / Math.round(f[2] / 0.82)) cpPart(new THREE.BoxGeometry(0.05, UH, 0.06), clBlack, m, UH / 2, 0.02, 0, 0, 0, F);
+      cpPart(new THREE.BoxGeometry(f[2], 0.05, 0.06), clBlack, 0, UH * 0.62, 0.02, 0, 0, 0, F);
+    });
+    cpPart(new THREE.BoxGeometry(UW * 2 + 0.4, 0.14, UD1 - UD0 + 0.4), clMarble, 0, UH + 0.07, (UD0 + UD1) / 2, 0, 0, 0, U);
+    cpPart(new THREE.BoxGeometry(UW * 2 - 0.4, 0.34, 0.4), clBlack, 0, 0.17, UD1 + 0.5, 0, 0, 0, U);   // (the planter along the upper floor's front)
+    for (var hb = 0; hb < 9; hb++) cpPart(new THREE.SphereGeometry(0.2 + (hb % 3) * 0.03, 10, 8), hb % 2 ? leaf2 : leaf, -UW + 0.45 + hb * (UW * 2 - 0.9) / 8, 0.42, UD1 + 0.5, 0, 0, 0, U);
+    cpPart(new THREE.BoxGeometry(0.9, 0.5, 0.6), rMat(0xb8b8bc, { metalness: 0.5, roughness: 0.5 }), UW - 0.8, 0.25 + UH + 0.14, (UD0 + UD1) / 2, 0, 0, 0, U);   // (a little air vent on top)
+    // ===== the deep doorway: marble sides, a stone step, a black mat, lights in its ceiling, and glass doors with brass bars =====
+    var E = new THREE.Group(); E.position.set((CL_ENTRY[0] + CL_ENTRY[1]) / 2, 0, D2); B.add(E);
+    var EW = CL_ENTRY[1] - CL_ENTRY[0], EH = CL_ENTRY[3];
+    clWall(E, EW, 0, -CL_RECESS, 0, [[CL_DOOR[0] - E.position.x, CL_DOOR[1] - E.position.x, 0, CL_DOOR[3]]], EH, clMarble, 0.1);
+    [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.1, EH, CL_RECESS + 0.3), clMarble, s * (EW / 2 - 0.05), EH / 2, -CL_RECESS / 2 + 0.1, 0, 0, 0, E); });
+    cpPart(new THREE.BoxGeometry(EW, 0.08, CL_RECESS + 0.3), clMarble, 0, EH - 0.04, -CL_RECESS / 2 + 0.1, 0, 0, 0, E);
+    cpPart(new THREE.PlaneGeometry(EW - 0.2, CL_RECESS + 0.2), clPave, 0, 0.005, -CL_RECESS / 2 + 0.1, -Math.PI / 2, 0, 0, E).castShadow = false;
+    cpPart(new THREE.BoxGeometry(EW + 0.3, 0.1, 0.4), rMat(0xc8c4bc, { roughness: 0.8 }), 0, -0.07, 0.35, 0, 0, 0, E);   // (the step)
+    var DX = CLOTH_DOOR_X - E.position.x, DZ = -CL_RECESS + 0.06;
+    cpPart(new THREE.BoxGeometry(1.3, 0.015, 0.5), rMat(0x1a1a1e, { roughness: 1 }), DX, 0.01, DZ + 0.32, 0, 0, 0, E);   // (the mat, with a thin gold border)
+    [[0, 0.24, 1.26, 0.015], [0, -0.24, 1.26, 0.015], [0.62, 0, 0.015, 0.48], [-0.62, 0, 0.015, 0.48]].forEach(function (b) { cpPart(new THREE.BoxGeometry(b[2], 0.018, b[3]), brass, DX + b[0], 0.012, DZ + 0.32 + b[1], 0, 0, 0, E).castShadow = false; });
+    [-0.55, 0.55].forEach(function (x) { cpPart(new THREE.CircleGeometry(0.06, 14), lamp(E, x, EH - 0.2, -CL_RECESS / 2 + 0.1, 0.8), x, EH - 0.085, -CL_RECESS / 2 + 0.1, Math.PI / 2, 0, 0, E); });
+    [-1, 1].forEach(function (s) {
+      var cx = DX + s * 0.3;
+      clothWins.push(cpPart(new THREE.PlaneGeometry(0.54, 2.22), clGlass, cx, 1.15, DZ - 0.01, 0, 0, 0, E));
+      clFrame(E, 0.54, 2.22, cx, 1.15, DZ);
+      cpPart(new THREE.CylinderGeometry(0.018, 0.018, 1.0, 8), brass, DX + s * 0.09, 1.1, DZ + 0.09, 0, 0, 0, E);   // (long brass bars)
+      [0.65, 1.55].forEach(function (y) { cpPart(new THREE.BoxGeometry(0.02, 0.02, 0.06), brass, DX + s * 0.09, y, DZ + 0.05, 0, 0, 0, E); });
+      cpPart(new THREE.BoxGeometry(0.54, 0.08, 0.02), brass, cx, 0.08, DZ + 0.04, 0, 0, 0, E);   // (and kick plates)
+    });
+    // (a brass plaque on the marble between the doorway and the display case)
+    cpPart(new THREE.PlaneGeometry(0.26, 0.34), new THREE.MeshStandardMaterial({ metalness: 0.25, roughness: 0.35, map: cpTex(128, 168, function (g, w, h) {
+      g.fillStyle = '#c9a14a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8a6a28'; g.lineWidth = 4; g.strokeRect(8, 8, w - 16, h - 16);
+      g.fillStyle = '#6a4e18'; g.textAlign = 'center'; g.font = 'bold 26px Georgia, serif'; g.fillText('T & T', w / 2, 58); g.font = '15px Georgia, serif'; g.fillText('Atelier', w / 2, 88); g.fillText('Est. Year 1', w / 2, 116);
+    }) }), (CL_ENTRY[1] + CL_CASE[0]) / 2, 1.45, D2 + 0.16, 0, 0, 0, B);
+    // ===== the display case: a tall glass box in a thin black frame, spotlights on a track, white plinths, and four mannequins =====
+    var V = new THREE.Group(); V.position.set((CL_CASE[0] + CL_CASE[1]) / 2, CL_CASE[2], D2); B.add(V);
+    var VW = CL_CASE[1] - CL_CASE[0], VH = CL_CASE[3] - CL_CASE[2], VO = CL_CASE_OUT, white = rMat(0xf6f4f0, { roughness: 0.45 });
+    cpPart(new THREE.PlaneGeometry(VW, VH), clDisplay, 0, VH / 2, -0.1, 0, 0, 0, V);
+    cpPart(new THREE.BoxGeometry(VW, 0.12, VO + 0.1), white, 0, 0.06, VO / 2 - 0.05, 0, 0, 0, V);
+    cpPart(new THREE.BoxGeometry(VW - 0.04, 0.04, 0.05), clBlack, 0, VH - 0.1, VO * 0.45, 0, 0, 0, V);   // (the track, with its spotlights)
+    for (var sl = 0; sl < 5; sl++) { var sx = -VW / 2 + 0.45 + sl * (VW - 0.9) / 4; cpPart(new THREE.CylinderGeometry(0.045, 0.035, 0.13, 10), clBlack, sx, VH - 0.18, VO * 0.45, 0.35, 0, 0, V); cpPart(new THREE.CircleGeometry(0.035, 10), rMat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1 }), sx, VH - 0.24, VO * 0.45 + 0.03, Math.PI / 2 + 0.35, 0, 0, V); }
+    cpPart(new THREE.PlaneGeometry(VW, VH), clVitrine, 0, VH / 2, VO, 0, 0, 0, V).castShadow = false;
+    [-1, 1].forEach(function (s) { cpPart(new THREE.PlaneGeometry(VO + 0.1, VH), clVitrine, s * VW / 2, VH / 2, VO / 2 - 0.05, 0, s * Math.PI / 2, 0, V).castShadow = false; });
+    cpPart(new THREE.BoxGeometry(VW + 0.06, 0.05, VO + 0.12), clBlack, 0, VH, VO / 2 - 0.04, 0, 0, 0, V);
+    cpPart(new THREE.BoxGeometry(VW + 0.06, 0.05, 0.05), clBlack, 0, 0.12, VO, 0, 0, 0, V);
+    [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(0.05, VH, 0.05), clBlack, s * VW / 2, VH / 2, VO, 0, 0, 0, V); cpPart(new THREE.BoxGeometry(0.05, 0.05, VO + 0.1), clBlack, s * VW / 2, 0.12, VO / 2 - 0.05, 0, 0, 0, V); });
+    cpPart(new THREE.BoxGeometry(VW, 0.04, 0.04), clBlack, 0, VH * 0.72, VO, 0, 0, 0, V);
+    cpPart(new THREE.BoxGeometry(0.04, VH * 0.72, 0.04), clBlack, -VW / 2 + VW * 0.3, VH * 0.36, VO, 0, 0, 0, V);
+    cpPart(new THREE.PlaneGeometry(1.1, 0.14), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, map: cpTex(512, 64, function (g, w, h) {   // ("NEW COLLECTION" in white on the glass)
+      g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,0.9)'; g.font = '600 34px "Futura", "Century Gothic", "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('N E W   C O L L E C T I O N', w / 2, h / 2);
+    }) }), VW / 2 - 0.75, 0.32, VO + 0.005, 0, 0, 0, V).castShadow = false;
+    var skin = rMat(0xf1ece6, { roughness: 0.6 });
+    [[-1.45, 0xc8a070, 0xc8a070, 'coat', 0.16, 'hat'], [-0.4, 0xf2eadc, 0x6a4632, 'trousers', 0.06, 'scarf'], [0.65, 0x1c1c22, 0x1c1c22, 'dress', 0.22, 'bag'], [1.6, 0x7a4a30, 0xb08a68, 'skirt', 0.1, 'bag2']].forEach(function (mq, k) {
+      var plinthH = mq[4];
+      cpPart(new THREE.CylinderGeometry(0.3, 0.3, plinthH, 24), white, mq[0], 0.12 + plinthH / 2, VO * 0.42, 0, 0, 0, V);
+      var Mq = new THREE.Group(); Mq.position.set(mq[0], 0.12 + plinthH, VO * 0.42); Mq.rotation.y = (k - 1.5) * 0.18; V.add(Mq);
+      var top = rMat(mq[1], { roughness: 0.85 }), low = rMat(mq[2], { roughness: 0.85 }), shoe = rMat(k === 1 ? 0x2a1a12 : 0x141414, { roughness: 0.35 });
+      if (mq[3] === 'trousers') { [-0.06, 0.06].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.055, 0.05, 0.82, 10), low, x, 0.44, 0, 0, 0, 0, Mq); }); cpPart(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 14), low, 0, 0.92, 0, 0, 0, 0, Mq); }
+      else { [-0.05, 0.05].forEach(function (x) { cpPart(new THREE.CylinderGeometry(0.035, 0.03, 0.6, 8), skin, x, 0.33, 0, 0, 0, 0, Mq); }); cpPart(new THREE.CylinderGeometry(0.11, mq[3] === 'coat' ? 0.19 : 0.17, mq[3] === 'coat' ? 0.55 : 0.38, 16), low, 0, mq[3] === 'coat' ? 0.78 : 0.82, 0, 0, 0, 0, Mq); }
+      [-0.06, 0.06].forEach(function (x) { cpPart(new THREE.BoxGeometry(0.07, 0.05, 0.15), shoe, x, 0.03, 0.03, 0, 0, 0, Mq); });   // (shoes)
+      var torso = cpPart(new THREE.CylinderGeometry(0.15, 0.11, 0.46, 14), top, 0, 1.2, 0, 0, 0, 0, Mq); torso.scale.z = 0.7;
+      cpPart(new THREE.SphereGeometry(0.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), top, 0, 1.42, 0, 0, 0, 0, Mq).scale.set(1.15, 0.45, 0.75);   // (shoulders)
+      [-1, 1].forEach(function (s) { cpPart(new THREE.CylinderGeometry(0.04, 0.035, 0.5, 8), top, s * 0.19, 1.16, 0, 0, 0, s * 0.18, Mq); cpPart(new THREE.SphereGeometry(0.03, 8, 6), skin, s * 0.235, 0.9, 0, 0, 0, 0, Mq); });
+      if (mq[3] === 'coat') { cpPart(new THREE.BoxGeometry(0.02, 0.5, 0.01), rMat(0xa07c50), 0, 1.0, 0.11, 0, 0, 0, Mq); [1.15, 1.0, 0.85].forEach(function (y) { cpPart(new THREE.SphereGeometry(0.012, 6, 4), clBlack, 0.03, y, 0.11, 0, 0, 0, Mq); }); }
+      cpPart(new THREE.CylinderGeometry(0.035, 0.04, 0.08, 8), skin, 0, 1.49, 0, 0, 0, 0, Mq);
+      var head = cpPart(new THREE.SphereGeometry(0.1, 14, 10), skin, 0, 1.62, 0, 0, 0, 0, Mq); head.scale.y = 1.2;
+      if (mq[5] === 'hat') { cpPart(new THREE.CylinderGeometry(0.24, 0.24, 0.015, 20), clBlack, 0, 1.72, 0, 0.08, 0, 0, Mq); cpPart(new THREE.CylinderGeometry(0.1, 0.11, 0.1, 16), clBlack, 0, 1.77, 0, 0.08, 0, 0, Mq); }
+      if (mq[5] === 'scarf') cpPart(new THREE.TorusGeometry(0.08, 0.035, 8, 16), rMat(0xb8322e, { roughness: 0.9 }), 0, 1.45, 0, Math.PI / 2, 0, 0, Mq);
+      if (mq[5] === 'bag' || mq[5] === 'bag2') {                       // (a handbag on her arm)
+        var bc = mq[5] === 'bag' ? 0xe8d6b0 : 0x1c1c22;
+        cpPart(new THREE.BoxGeometry(0.2, 0.15, 0.08), rMat(bc, { roughness: 0.4 }), 0.27, 0.86, 0.04, 0, 0, 0, Mq);
+        cpPart(new THREE.TorusGeometry(0.06, 0.008, 6, 14, Math.PI), brass, 0.27, 0.935, 0.04, 0, 0, 0, Mq);
       }
     });
-    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (sd) {          // (round-topped windows on the sides and back)
+    var T = new THREE.Group(); T.position.set(VW / 2 - 0.42, 0.12, VO * 0.4); V.add(T);   // (a little table at the end, with folded jumpers and a bag)
+    cpPart(new THREE.BoxGeometry(0.5, 0.03, 0.34), white, 0, 0.55, 0, 0, 0, 0, T);
+    cpPart(new THREE.CylinderGeometry(0.03, 0.05, 0.54, 10), brass, 0, 0.27, 0, 0, 0, 0, T);
+    [[0xe9d8c0, 0], [0x8a5a3a, 1], [0x1c1c22, 2]].forEach(function (f) { cpPart(new THREE.BoxGeometry(0.26, 0.05, 0.2), rMat(f[0], { roughness: 0.9 }), -0.08, 0.59 + f[1] * 0.05, 0, 0, f[1] * 0.1, 0, T); });
+    cpPart(new THREE.BoxGeometry(0.16, 0.12, 0.07), rMat(0xb8322e, { roughness: 0.4 }), 0.14, 0.63, 0, 0, -0.3, 0, T);
+    // ===== out front: two topiaries by the doorway, glowing bollards along the paving, and a chalkboard =====
+    topiary(G, -W2 - 0.25, D2 + 0.55); topiary(G, W2 + 0.3, D2 + 0.55);
+    [-4.3, -0.4, 1.9, 4.3].forEach(function (x) {
+      cpPart(new THREE.CylinderGeometry(0.09, 0.1, 0.62, 14), clBlack, x, 0.31, D2 + 2.05, 0, 0, 0, G);
+      cpPart(new THREE.CylinderGeometry(0.092, 0.092, 0.07, 14), lamp(G, x, 0.5, D2 + 2.05, 1.0), x, 0.5, D2 + 2.05, 0, 0, 0, G);
+    });
+    var A = new THREE.Group(); A.position.set(-0.55, 0, D2 + 1.25); A.rotation.y = 0.35; G.add(A);
+    var chalk = new THREE.MeshStandardMaterial({ roughness: 0.9, map: cpTex(128, 192, function (g, w, h) {
+      g.fillStyle = '#2b2f2c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8a6a48'; g.lineWidth = 10; g.strokeRect(0, 0, w, h);
+      g.fillStyle = '#f4f0e6'; g.textAlign = 'center'; g.font = 'italic 22px Georgia, serif'; g.fillText('New', w / 2, 60); g.fillText('Season', w / 2, 88);
+      g.fillStyle = '#f2a6c2'; g.font = '26px Georgia, serif'; g.fillText('✿', w / 2, 130); g.fillStyle = '#f4f0e6'; g.font = '14px Georgia, serif'; g.fillText('come on in', w / 2, 162);
+    }) });
+    [-1, 1].forEach(function (s) { var p = cpPart(new THREE.BoxGeometry(0.46, 0.72, 0.025), chalk, 0, 0.36, s * 0.12, s * 0.17, 0, 0, A); if (s < 0) p.rotation.y = Math.PI; });
+    // ===== the sides and back: windows with stone sills, a drainpipe, and a service door with its own light =====
+    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (sd) {
       var onSide = sd[1] === 1, x = onSide ? sd[0] * (W2 + 0.01) : sd[0], z = onSide ? 0 : -D2 - 0.01, ry = onSide ? sd[0] * Math.PI / 2 : Math.PI;
-      var w = onSide ? 1.3 : 1.2, P = new THREE.Group(); P.position.set(x, 1.55, z); P.rotation.y = ry; B.add(P);
-      clothWins.push(cpPart(new THREE.PlaneGeometry(w, 0.9), clGlass, 0, 0, -0.05, 0, 0, 0, P)); clFrame(P, w, 0.9, 0, 0, 0.02);
+      var w = onSide ? 1.3 : 1.2, P = new THREE.Group(); P.position.set(x, 1.65, z); P.rotation.y = ry; B.add(P);
+      clothWins.push(cpPart(new THREE.PlaneGeometry(w, 1.1), clGlass, 0, 0, -0.05, 0, 0, 0, P)); clFrame(P, w, 1.1, 0, 0, 0.02);
+      cpPart(new THREE.BoxGeometry(w + 0.2, 0.06, 0.16), reveal, 0, -0.6, 0.07, 0, 0, 0, P);
     });
-    // (the door: mint green with a glass panel and a gold knob, under a little white pediment)
-    var door = new THREE.Group(); door.position.set(0, 0, D2 + 0.02); B.add(door);
-    cpPart(new THREE.BoxGeometry(1.15, 2.15, 0.08), clMint, 0, 1.075, 0, 0, 0, 0, door);
-    clothWins.push(cpPart(new THREE.PlaneGeometry(0.62, 0.8), clGlass, 0, 1.45, 0.045, 0, 0, 0, door));
-    clFrame(door, 0.62, 0.8, 0, 1.45, 0.05); cpPart(new THREE.BoxGeometry(0.8, 0.5, 0.03), rMat(0x67a898, { roughness: 0.6 }), 0, 0.5, 0.045, 0, 0, 0, door);
-    cpPart(new THREE.SphereGeometry(0.05, 10, 8), clGold, 0.42, 1.0, 0.08, 0, 0, 0, door);
-    clFrame(B, 1.2, 2.2, 0, 1.1, D2 + 0.05);
-    cpPart(new THREE.BoxGeometry(1.7, 0.12, 0.4), clTrim, 0, 2.32, D2 + 0.12, 0, 0, 0, B);
-    // (the striped awning over the front, with its scalloped edge, and the sign above it)
-    var aw = cpPart(new THREE.PlaneGeometry(W2 * 2 + 0.1, 1.15), new THREE.MeshStandardMaterial({ map: clStripeTex, side: THREE.DoubleSide, roughness: 0.85 }), 0, 2.35, D2 + 0.5, -Math.PI / 2 + 0.55, 0, 0, B);
-    aw.castShadow = true;
-    cpPart(new THREE.PlaneGeometry(W2 * 2 + 0.1, 0.32), new THREE.MeshStandardMaterial({ map: clScallopTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.85 }), 0, 1.93, D2 + 0.98, 0, 0, 0, B);
-    cpPart(new THREE.BoxGeometry(2.4, 0.56, 0.08), clDark, 0, H - 0.32, D2 + 0.12, 0, 0, 0, B);
-    cpPart(new THREE.PlaneGeometry(2.3, 0.48), new THREE.MeshStandardMaterial({ map: clSignTex, roughness: 0.5, emissive: 0x2a1a30, emissiveIntensity: 0.3 }), 0, H - 0.32, D2 + 0.165, 0, 0, 0, B);
-    // (lanterns either side of the door)
-    [-0.95, 0.95].forEach(function (x) {
-      cpPart(new THREE.BoxGeometry(0.06, 0.06, 0.22), clDark, x, 1.95, D2 + 0.12, 0, 0, 0, B);
-      var lm = rMat(0xffe2a8, { emissive: 0xffc870, emissiveIntensity: 0.3 }); cpPart(new THREE.BoxGeometry(0.16, 0.24, 0.16), lm, x, 1.8, D2 + 0.24, 0, 0, 0, B);
-      cpPart(new THREE.ConeGeometry(0.13, 0.1, 4), clDark, x, 1.97, D2 + 0.24, 0, Math.PI / 4, 0, B);
-      var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffcf80, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-      glow.position.set(x, 1.8, D2 + 0.26); glow.scale.set(1.1, 1.1, 1); B.add(glow); clothLamps.push({ m: lm, g: glow });
-    });
-    // (the roof: two slopes of rounded lavender shingles, the gables filled in pink, with a little round window each end)
-    var RISE = 1.6, OVER = 0.45, slope = Math.hypot(D2 + OVER, RISE), ang = Math.atan2(RISE, D2 + OVER);
-    [-1, 1].forEach(function (s) { cpPart(new THREE.BoxGeometry(W2 * 2 + 0.8, 0.12, slope), clRoof, 0, H + RISE / 2 + 0.04, s * (D2 + OVER) / 2, s * ang, 0, 0, B); });
-    cpPart(new THREE.CylinderGeometry(0.1, 0.1, W2 * 2 + 0.9, 10).rotateZ(Math.PI / 2), clTrim, 0, H + RISE + 0.08, 0, 0, 0, 0, B);
-    [-1, 1].forEach(function (s) {
-      var sh = new THREE.Shape(); sh.moveTo(-D2, 0); sh.lineTo(D2, 0); sh.lineTo(0, RISE); sh.closePath();
-      cpPart(new THREE.ShapeGeometry(sh), new THREE.MeshStandardMaterial({ color: 0xf5c6d3, roughness: 0.92, side: THREE.DoubleSide }), s * (W2 - 0.02), H, 0, 0, Math.PI / 2, 0, B);
-      clothWins.push(cpPart(new THREE.CircleGeometry(0.24, 18), clGlass, s * (W2 + 0.03), H + 0.55, 0, 0, s * Math.PI / 2, 0, B));
-      cpPart(new THREE.TorusGeometry(0.26, 0.04, 6, 20), clTrim, s * (W2 + 0.04), H + 0.55, 0, 0, s * Math.PI / 2, 0, B);
-    });
+    cpPart(new THREE.CylinderGeometry(0.05, 0.05, H + 0.3, 10), rMat(0x3a3a40, { metalness: 0.5, roughness: 0.4 }), W2 + 0.14, (H + 0.3) / 2, -D2 + 0.3, 0, 0, 0, B);
+    var SD = new THREE.Group(); SD.position.set(2.9, 0, -D2 - 0.02); SD.rotation.y = Math.PI; B.add(SD);
+    cpPart(new THREE.BoxGeometry(0.98, 2.08, 0.06), rMat(0x5a5e66, { metalness: 0.4, roughness: 0.5 }), 0, 1.04, 0, 0, 0, 0, SD);
+    cpPart(new THREE.BoxGeometry(0.2, 0.04, 0.05), clBlack, -0.3, 1.0, 0.05, 0, 0, 0, SD);
+    clFrame(SD, 0.98, 2.08, 0, 1.04, 0.0);
+    cpPart(new THREE.BoxGeometry(0.2, 0.1, 0.14), clBlack, 0, 2.35, 0.07, 0, 0, 0, SD); cpPart(new THREE.PlaneGeometry(0.16, 0.08), lamp(SD, 0, 2.25, 0.2, 0.9), 0, 2.3, 0.075, -Math.PI / 2, 0, 0, SD);
   })(clothGroup);
-  // (no grass, flowers or pebbles growing up through the shop or its stepping stones; its walls are solid, with the doorway open)
+  // (no grass, flowers or pebbles growing up through the shop, its paving or its stepping stones; its walls are solid, with the doorway open)
   (function () {
     var m4 = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0);
     scene.traverse(function (o) {
@@ -9016,11 +9114,19 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (changed) o.instanceMatrix.needsUpdate = true;
     });
     for (var s = solids.length - 1; s >= 0; s--) if (onClothLot(solids[s].x, solids[s].z, 0.3) || onClothPath(solids[s].x, solids[s].z)) solids.splice(s, 1);
-    for (var x = -CLOTH_HW; x <= CLOTH_HW + 0.01; x += 0.5) { if (Math.abs(x) > 0.85) { var f = clothWorld(x, CLOTH_HD); solids.push({ x: f.x, z: f.z, r: 0.33 }); } var bk = clothWorld(x, -CLOTH_HD); solids.push({ x: bk.x, z: bk.z, r: 0.33 }); }
-    for (var z = -CLOTH_HD; z <= CLOTH_HD + 0.01; z += 0.5) [-CLOTH_HW, CLOTH_HW].forEach(function (x2) { var sd = clothWorld(x2, z); solids.push({ x: sd.x, z: sd.z, r: 0.33 }); });
-    var inner = clothWorld(0, -0.3); solids.push({ x: inner.x, z: inner.z, r: 2.5 });
+    function wall(lx, lz) { var p = clothWorld(lx, lz); solids.push({ x: p.x, z: p.z, r: 0.33 }); }
+    for (var x = -CLOTH_HW; x <= CLOTH_HW + 0.01; x += 0.5) {
+      if (x < CL_ENTRY[0] || x > CL_ENTRY[1]) wall(x, x > CL_CASE[0] ? CLOTH_HD + CL_CASE_OUT : CLOTH_HD);   // (the front, and the display case standing out from it)
+      else wall(x, CLOTH_HD - CL_RECESS - 0.25);                        // (the back of the doorway: you can step into it, up to the doors)
+      wall(x, -CLOTH_HD);
+    }
+    for (var z = -CLOTH_HD; z <= CLOTH_HD + 0.01; z += 0.5) [-CLOTH_HW, CLOTH_HW].forEach(function (x2) { wall(x2, z); });
+    var inner = clothWorld(0.6, -0.2); solids.push({ x: inner.x, z: inner.z, r: 2.6 });
+    [[-CLOTH_HW - 0.25, CLOTH_HD + 0.55, 0.4], [CLOTH_HW + 0.3, CLOTH_HD + 0.55, 0.4], [-0.55, CLOTH_HD + 1.25, 0.35]].concat([-4.3, -0.4, 1.9, 4.3].map(function (x) { return [x, CLOTH_HD + 2.05, 0.15]; })).forEach(function (o) {   // (the topiaries, the chalkboard and the bollards)
+      var p = clothWorld(o[0], o[1]); solids.push({ x: p.x, z: p.z, r: o[2] });
+    });
     // (round stepping stones from the door to the path, a little wobbly, the way stepping stones are)
-    var stones = []; for (var sz = clothFront(0.75).z, k = 0; sz > CLOTH_PATH_END; sz -= 0.8, k++) stones.push([CLOTH_X + (k % 2 ? 0.16 : -0.14), sz, 0.3 + (k % 3) * 0.03]);
+    var f0 = clothFront(0), stones = []; for (var sz = clothFront(2.4).z, k = 0; sz > CLOTH_PATH_END; sz -= 0.8, k++) stones.push([f0.x + (k % 2 ? 0.16 : -0.14), sz, 0.3 + (k % 3) * 0.03]);
     stones.forEach(function (st, k) { cpPart(new THREE.CylinderGeometry(st[2], st[2] + 0.03, 0.06, 14), rMat([0xc9c0b4, 0xb8afa4, 0xd4ccc0][k % 3], { roughness: 0.95 }), st[0], 0.02, st[1], 0, k * 0.7, 0, scene).castShadow = false; });
   })();
   // ---- inside ----
@@ -9047,7 +9153,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cpPart(new THREE.RingGeometry(1.1, 1.18, 40), rMat(0xfff4e8, { roughness: 1 }), -0.6, 0.008, 0.6, -Math.PI / 2, 0, 0, R).castShadow = false;
     var wallIn = rMat(0xf9dbe4, { roughness: 0.95 }), wain = rMat(0xfff6ee, { roughness: 0.8 });
     // (the four walls, each hidden when it's between you and the camera, with the windows looking out on the island)
-    [[0, -D2, 0, [[-1.6, -0.4, 1.1, 2.0], [0.4, 1.6, 1.1, 2.0]], [0, 0, -1], W2], [0, D2, 0, [CL_DOOR, CL_WINL, CL_WINR], [0, 0, 1], W2], [W2, 0, Math.PI / 2, [CL_SIDE], [1, 0, 0], D2], [-W2, 0, Math.PI / 2, [CL_SIDE], [-1, 0, 0], D2]].forEach(function (w) {
+    [[0, -D2, 0, [[-1.6, -0.4, 1.1, 2.2], [0.4, 1.6, 1.1, 2.2]], [0, 0, -1], D2], [0, D2, 0, [CL_DOOR], [0, 0, 1], D2], [W2, 0, Math.PI / 2, [CL_SIDE], [1, 0, 0], W2], [-W2, 0, Math.PI / 2, [CL_SIDE], [-1, 0, 0], W2]].forEach(function (w) {
       var len = w[2] ? D2 * 2 : W2 * 2, g = clWall(R, len, w[0], w[1], w[2], w[3], H, wallIn, 0.12), n = new THREE.Vector3(w[4][0], 0, w[4][2]);
       var inZ = -(n.x + n.z) * 0.07, faceIn = inZ < 0 ? Math.PI : 0;      // (the room's side of this wall, in the wall's own directions)
       clWall(g, len, 0, inZ, 0, w[3].filter(function (h) { return h[2] < 0.05; }).map(function (h) { return [h[0], h[1], 0, 0.8]; }), 0.8, wain, 0.03);   // (a cream wainscot round the bottom)
@@ -9089,7 +9195,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     clothSolids.push([CL_COUNTER[0] - 0.9, -D2 + 0.3, 0.4], [CL_COUNTER[0] + 0.9, -D2 + 0.3, 0.4]);
     // ===== two clothes rails on the left, with hangers waiting for clothes =====
-    [[-2.2, -0.7], [-2.2, 0.9]].forEach(function (rp) {
+    [[-2.4, -0.9], [-2.4, 0.5]].forEach(function (rp) {
       var Q = new THREE.Group(); Q.position.set(rp[0], 0, rp[1]); R.add(Q);
       [-0.75, 0.75].forEach(function (x) { put(new THREE.CylinderGeometry(0.02, 0.02, 1.45, 8), mChrome, x, 0.75, 0, 0, 0, 0, Q); put(new THREE.BoxGeometry(0.06, 0.03, 0.45), mChrome, x, 0.02, 0, 0, 0, 0, Q); });
       put(new THREE.CylinderGeometry(0.018, 0.018, 1.56, 8), mChrome, 0, 1.47, 0, 0, 0, Math.PI / 2, Q);
@@ -9146,16 +9252,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     var nt = clothNight(); clSun.intensity = 0.4 * (1 - nt);
     clLights.forEach(function (l, i) { l.intensity = (0.5 + nt * 0.25) * (1 + Math.sin(t * 2 + i) * 0.02); });
   }
-  function updateClothOutside(t, night) {                               // (the windows and lanterns glow warmly in the evening)
+  function updateClothOutside(t, night) {                               // (the doors, the windows and the display case glow in the evening, and the doorway's lights come on)
     var nt = clothNight();
-    clGlass.emissiveIntensity = 0.25 + nt * 0.75;
+    clGlass.emissiveIntensity = 0.35 + nt * 0.65; clDisplay.emissiveIntensity = 0.45 + nt * 0.45;
+    clMarble.emissiveIntensity = 0.2 * (1 - nt) + 0.03;                // (the marble stays bright white by day, even on the shady side)
     clothLamps.forEach(function (L, i) { L.m.emissiveIntensity = 0.3 + nt * 1.2; L.g.material.opacity = nt * (0.75 + Math.sin(t * 3 + i * 2) * 0.05); });
   }
   function drawClothView() {                                            // (the windows look out on the real island, just like the other shops')
     renderer.getDrawingBufferSize(shopViewSize);
     if (shopViewTarget.width !== shopViewSize.x || shopViewTarget.height !== shopViewSize.y) shopViewTarget.setSize(shopViewSize.x, shopViewSize.y);
     siWindowMask.uniforms.uSize.value.copy(shopViewSize);
-    shopViewMap.makeTranslation(CLOTH_X, 0.18, CLOTH_Z).multiply(shopViewTmp.makeRotationY(CLOTH_TURN)).multiply(shopViewTmp.makeTranslation(-CLI_X, 0, -CLI_Z));   // (its floor sits up on its stone footing)
+    shopViewMap.makeTranslation(CLOTH_X, CLOTH_FY, CLOTH_Z).multiply(shopViewTmp.makeRotationY(CLOTH_TURN)).multiply(shopViewTmp.makeTranslation(-CLI_X, 0, -CLI_Z));   // (its floor sits up on its stone footing)
     shopViewCam.projectionMatrix.copy(camera.projectionMatrix); shopViewCam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
     shopViewCam.matrix.multiplyMatrices(shopViewMap, camera.matrixWorld);
     shopViewCam.updateMatrixWorld(true);
@@ -9169,7 +9276,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     setTimeout(function () {
       if (goIn) {
         indoors = true; inShop = inClinic = inBarn = inCarp = inCoop = inFbarn = false; inCloth = true;
-        clothScene.add(player); player.position.set(CLI_X, 0, CLI_Z + CLI_EXIT_Z - 1.0); facing = Math.PI;
+        clothScene.add(player); player.position.set(CLI_X + CLOTH_DOOR_X, 0, CLI_Z + CLI_EXIT_Z - 0.8); facing = Math.PI;
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = 0;
       } else {
         indoors = false; inCloth = false; scene.add(player);
@@ -9182,14 +9289,14 @@ EVERDAWN_PARTS.push(function (THREE) {
     }, 380);
   }
   function clothAtCounter() { return inCloth && dist(player.position.x, player.position.z, CLI_X + CL_COUNTER[0], CLI_Z + CL_COUNTER[1] + 0.9) < 1.1; }
-  function clothDrawOnMap(g, K, label) {                                // (on the world map: its lavender roof with the ridge along it, and its striped awning)
+  function clothDrawOnMap(g, K, label) {                                // (on the world map: its flat white roof, the display case in black, and the paving in front)
     var p = mapXY(CLOTH_X, CLOTH_Z);
     g.save(); g.translate(p[0], p[1]); g.rotate(-CLOTH_TURN);
     g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-CLOTH_HW * K + 6, -CLOTH_HD * K + 8, CLOTH_HW * K * 2, CLOTH_HD * K * 2);
-    g.fillStyle = '#7a64a8'; g.fillRect(-CLOTH_HW * K - 4, -CLOTH_HD * K - 4, CLOTH_HW * K * 2 + 8, CLOTH_HD * K + 4);
-    g.fillStyle = '#9480c4'; g.fillRect(-CLOTH_HW * K - 4, 0, CLOTH_HW * K * 2 + 8, CLOTH_HD * K + 4);
-    g.fillStyle = '#fff7ef'; g.fillRect(-CLOTH_HW * K - 4, -2, CLOTH_HW * K * 2 + 8, 4);
-    for (var k = 0; k < 8; k++) { g.fillStyle = k % 2 ? '#fff6f2' : '#ef8fae'; g.fillRect(-CLOTH_HW * K + k * CLOTH_HW * K / 4, CLOTH_HD * K + 4, CLOTH_HW * K / 4, 0.7 * K); }
+    g.fillStyle = '#d9d6d0'; g.fillRect(-CLOTH_HW * K - 6, CLOTH_HD * K, CLOTH_HW * K * 2 + 12, 1.6 * K);
+    g.fillStyle = '#f4f2ee'; g.fillRect(-CLOTH_HW * K - 3, -CLOTH_HD * K - 3, CLOTH_HW * K * 2 + 6, CLOTH_HD * K * 2 + 6);
+    g.fillStyle = '#b8b6b2'; g.fillRect(-CLOTH_HW * K + 2, -CLOTH_HD * K + 2, CLOTH_HW * K * 2 - 4, CLOTH_HD * K * 2 - 4);
+    g.fillStyle = '#16161a'; g.fillRect(CL_CASE[0] * K, CLOTH_HD * K, (CL_CASE[1] - CL_CASE[0]) * K, CL_CASE_OUT * K + 2);
     g.restore();
     label('Thread & Thimble', CLOTH_X, CLOTH_Z, CLOTH_HD * K + 30);
   }
@@ -9206,8 +9313,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     var px = player.position.x, pz = player.position.z;
     if (inCloth) {                                                     // (inside: walking out through the doorway takes her out)
       doorWasIn = true; doorNear = doorHinted = null;
-      if (!doorArmed) { if (dist(px, pz, CLI_X, CLI_Z + CLI_EXIT_Z) > 0.85) doorArmed = true; return; }
-      if (dist(px, pz, CLI_X, CLI_Z + CLI_EXIT_Z) < 0.5) clothDoorUse(false);
+      if (!doorArmed) { if (dist(px, pz, CLI_X + CLOTH_DOOR_X, CLI_Z + CLI_EXIT_Z) > 0.85) doorArmed = true; return; }
+      if (dist(px, pz, CLI_X + CLOTH_DOOR_X, CLI_Z + CLI_EXIT_Z) < 0.5) clothDoorUse(false);
       return;
     }
     clothBaseDoors.apply(this, arguments);
