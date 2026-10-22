@@ -8448,27 +8448,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     return g;
   }
-  function buildTv() {                                                 // (an old-fashioned telly on a low wooden stand, facing +z; it's off for now, with a little red light on)
-    var g = new THREE.Group(), cream = rMat(0xf1e2c4, { roughness: 0.55 }), dark = rMat(0x2b2433, { roughness: 0.6 });
-    [[-0.58, -0.19], [0.58, -0.19], [-0.58, 0.19], [0.58, 0.19]].forEach(function (p) { decorMesh(new THREE.CylinderGeometry(0.035, 0.025, 0.08, 8), dWoodDark, p[0], 0.04, p[1], g); });   // (the stand)
-    decorMesh(new THREE.BoxGeometry(1.3, 0.46, 0.48), dWood, 0, 0.31, 0, g);
-    decorMesh(new THREE.BoxGeometry(1.36, 0.04, 0.52), dWoodDark, 0, 0.56, 0, g);
-    [-0.31, 0.31].forEach(function (x) {                                // (its two cupboard doors, with gold knobs)
-      decorMesh(new THREE.BoxGeometry(0.58, 0.36, 0.02), dWoodDark, x, 0.31, 0.245, g);
-      decorMesh(new THREE.SphereGeometry(0.025, 8, 6), R.gold, x - Math.sign(x) * 0.22, 0.31, 0.265, g);
-    });
-    decorMesh(new THREE.BoxGeometry(0.98, 0.7, 0.5), cream, 0, 0.94, -0.02, g);   // (the telly: its case)
-    decorMesh(new THREE.BoxGeometry(0.7, 0.54, 0.02), dark, -0.1, 0.95, 0.235, g);   // (the dark frame round the screen)
-    var screen = decorMesh(new THREE.PlaneGeometry(0.62, 0.46), rMat(0x14161f, { roughness: 0.12, metalness: 0.4 }), -0.1, 0.95, 0.247, g);
+  function buildTv() {                                                 // (a slim flat-screen TV on a low black media stand, facing +z; it's off for now, with a little white light on)
+    var g = new THREE.Group(), matte = rMat(0x18181c, { roughness: 0.55 }), gloss = rMat(0x111114, { roughness: 0.18, metalness: 0.2 }), metal = rMat(0x2a2a30, { metalness: 0.7, roughness: 0.35 });
+    [[-0.6, -0.16], [0.6, -0.16], [-0.6, 0.16], [0.6, 0.16]].forEach(function (p) { decorMesh(new THREE.BoxGeometry(0.03, 0.12, 0.03), metal, p[0], 0.06, p[1], g); });   // (the stand, on slim metal legs)
+    decorMesh(new THREE.BoxGeometry(1.4, 0.34, 0.44), matte, 0, 0.29, 0, g);
+    decorMesh(new THREE.BoxGeometry(1.42, 0.025, 0.46), gloss, 0, 0.47, 0, g);   // (a glossy top)
+    [-0.46, 0.46].forEach(function (x) { decorMesh(new THREE.BoxGeometry(0.44, 0.28, 0.012), gloss, x, 0.29, 0.226, g); });   // (two flat doors with no handles...)
+    decorMesh(new THREE.BoxGeometry(0.44, 0.26, 0.02), rMat(0x0a0a0c, { roughness: 0.9 }), 0, 0.29, 0.215, g);   // (...either side of an open shelf)
+    decorMesh(new THREE.BoxGeometry(0.22, 0.04, 0.16), gloss, 0, 0.18, 0.1, g);   // (a little box on it, with its light on)
+    decorMesh(new THREE.BoxGeometry(0.012, 0.006, 0.004), rMat(0x9ad8ff, { emissive: 0x6ac8ff, emissiveIntensity: 1.2 }), 0.07, 0.18, 0.182, g);
+    decorMesh(new THREE.BoxGeometry(0.5, 0.02, 0.32), metal, 0, 0.49, -0.04, g);   // (the TV: its foot and neck...)
+    decorMesh(new THREE.BoxGeometry(0.08, 0.16, 0.04), metal, 0, 0.58, -0.08, g);
+    decorMesh(new THREE.BoxGeometry(1.26, 0.74, 0.045), gloss, 0, 1.02, -0.05, g);   // (...and its thin panel)
+    var screen = decorMesh(new THREE.PlaneGeometry(1.2, 0.68), rMat(0x0c0d14, { roughness: 0.08, metalness: 0.5 }), 0, 1.025, -0.026, g);
     screen.name = 'tvScreen';                                           // (the screen: channels will show here)
-    [0.03, -0.12].forEach(function (y, k) { var kn = decorMesh(new THREE.CylinderGeometry(0.045, 0.045, 0.04, 14), k ? dark : R.gold, 0.35, 0.95 + y + 0.1, 0.245, g); kn.rotation.x = Math.PI / 2; });   // (two dials)
-    for (var k = 0; k < 4; k++) decorMesh(new THREE.BoxGeometry(0.13, 0.012, 0.01), dark, 0.35, 0.74 + k * 0.035, 0.248, g);   // (the speaker)
-    decorMesh(new THREE.SphereGeometry(0.012, 8, 6), rMat(0xff4a4a, { emissive: 0xff3030, emissiveIntensity: 1.2 }), 0.42, 0.66, 0.24, g);   // (the red light: it's on standby)
-    decorMesh(new THREE.SphereGeometry(0.08, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), dark, 0, 1.29, -0.05, g);   // (and its rabbit-ear aerial)
-    [-1, 1].forEach(function (s) {
-      var ear = decorMesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 6), R.gold, s * 0.13, 1.5, -0.05, g); ear.rotation.z = -s * 0.55;
-      decorMesh(new THREE.SphereGeometry(0.02, 8, 6), R.gold, s * 0.26, 1.72, -0.05, g);
-    });
+    decorMesh(new THREE.BoxGeometry(0.018, 0.006, 0.004), rMat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1 }), 0, 0.66, -0.026, g);   // (its little standby light)
+    decorMesh(new THREE.BoxGeometry(0.85, 0.06, 0.08), matte, 0, 0.515, 0.14, g);   // (and a soundbar in front of it)
+    decorMesh(new THREE.PlaneGeometry(0.82, 0.04), rMat(0x2e2e34, { roughness: 0.95 }), 0, 0.515, 0.181, g);
     return g;
   }
   // Pieces that were already in the room (the nightstand, the bookshelf and the rug) are gathered into groups of their own
