@@ -8838,6 +8838,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.code === (farmEnterKey || 'KeyV') && !decorMode) { e.preventDefault(); e.stopImmediatePropagation(); enterFarmView(); }
   }, true);
 
+  // ---------- Minigame Primary Action ----------
+  // Ready for the minigames at events and festivals: in most of them, Space (Minigame Primary Action, or a key of your own
+  // on the Mouse & Keyboard page) is the key you press over and over while you play. A minigame asks
+  // minigamePrimaryPressed(e) about each key press, or window.everdawnMinigamePrimaryKey() for the key itself
+  var minigamePrimaryKey = null; try { minigamePrimaryKey = localStorage.getItem('everdawn-minigame-primary') || null; } catch (err) {}
+  window.everdawnSetMinigamePrimaryKey = function (code) { minigamePrimaryKey = code || null; };
+  window.everdawnMinigamePrimaryKey = function () { return minigamePrimaryKey || 'Space'; };
+  function minigamePrimaryPressed(e) { return e.code === (minigamePrimaryKey || 'Space'); }
+
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
   // Decor Mode, the clock stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
