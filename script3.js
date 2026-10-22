@@ -8372,6 +8372,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorInvKey = null; try { decorInvKey = localStorage.getItem('everdawn-decor-inventory-key') || null; } catch (err) {}
   window.everdawnSetDecorInventoryKey = function (code) { decorInvKey = code || null; };
   function decorBagOpen() { return !!(bagUi.box && !bagUi.box.hidden); }
+  // Zoom In Decor Mode and Zoom Out Decor Mode: + (the = key, or + on the number pad) brings the camera closer to the
+  // room, and − (or − on the number pad) pulls it back; on the Mouse & Keyboard page either can be a key of your own
+  var decorZoomInKey = null, decorZoomOutKey = null, DECOR_DIST_MIN = 6, DECOR_DIST_MAX = 16, DECOR_DIST_STEP = 1.5;
+  try { decorZoomInKey = localStorage.getItem('everdawn-decor-zoom-in') || null; decorZoomOutKey = localStorage.getItem('everdawn-decor-zoom-out') || null; } catch (err) {}
+  window.everdawnSetDecorZoomInKey = function (code) { decorZoomInKey = code || null; };
+  window.everdawnSetDecorZoomOutKey = function (code) { decorZoomOutKey = code || null; };
+  function decorZoom(dir) { cam.dist = Math.max(DECOR_DIST_MIN, Math.min(DECOR_DIST_MAX, cam.dist + dir * DECOR_DIST_STEP)); }
   // Toggle HUD In Decor Mode, on the Mouse & Keyboard page: On (the usual way) or Off. Off, while you're in Decor Mode,
   // the stats along the top, the Quests box, the buttons under the game and the pop-up messages are hidden (the hotbar
   // always is), for a clear view of the room; the Decor Mode panel stays, to place things from. It's remembered
@@ -8728,6 +8735,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
     else if (e.code === (decorGridKey || 'KeyT')) decorToggleGrid();
     else if (e.code === (decorStoreKey || 'Space')) decorToggleStorage();
+    else if (decorZoomInKey ? e.code === decorZoomInKey : e.code === 'Equal' || e.code === 'NumpadAdd') decorZoom(-1);
+    else if (decorZoomOutKey ? e.code === decorZoomOutKey : e.code === 'Minus' || e.code === 'NumpadSubtract') decorZoom(1);
     else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
     else if (decorSelKey && e.code === decorSelKey && !decorHeld && decorScreenAt) { var sp = decorPieceAt(decorScreenAt); if (sp) decorSelect(sp); }
     else if (decorDeselKey && e.code === decorDeselKey) decorDeselect();
