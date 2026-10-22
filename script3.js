@@ -8804,6 +8804,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     camera.position.set(cam.target.x + Math.sin(cam.yaw) * flat, cam.target.y + Math.sin(cam.pitch) * cam.dist, cam.target.z + Math.cos(cam.yaw) * flat);
     camera.lookAt(cam.target);
   };
+  var farmBaseSky = updateSky;
+  updateSky = function () {                                            // (the sky sets the fog afresh every frame: in Farm View it's kept far off, so no blue haze over the island)
+    var night = farmBaseSky.apply(this, arguments);
+    if (farmView && scene.fog) { scene.fog.near = 150; scene.fog.far = 400; }
+    return night;
+  };
   var farmBasePlayer = updatePlayer;
   updatePlayer = function (dt) {                                       // (in Farm View she can't walk: no keys and no tapping to walk, and she's out of sight)
     if (!farmView) return farmBasePlayer.apply(this, arguments);
