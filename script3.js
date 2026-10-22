@@ -8356,7 +8356,13 @@ EVERDAWN_PARTS.push(function (THREE) {
   try { decorSelKey = localStorage.getItem('everdawn-decor-select-key') || null; decorDeselKey = localStorage.getItem('everdawn-decor-deselect-key') || null; } catch (err) {}
   window.everdawnSetDecorSelectKey = function (code) { decorSelKey = code || null; if (decorMode) renderDecor(); };
   window.everdawnSetDecorDeselectKey = function (code) { decorDeselKey = code || null; if (decorMode) renderDecor(); };
-  var decorMode = false, decorHeld = null, decorPlaced = [], houseStorage = [], DECOR_SNAP = 0.25;
+  var decorMode = false, decorHeld = null, decorPlaced = [], houseStorage = [], DECOR_SNAP = 0.05;
+  // Toggle Grid: T in Decor Mode (on the Mouse & Keyboard page it can be a key of your own) turns the grid on and off.
+  // Off, pieces move smoothly in small steps; on, faint lines show on the floor every half step and pieces snap to
+  // them, so they line up in straight, even rows. It's remembered
+  var DECOR_GRID = 0.5, decorGrid = false, decorGridKey = null;
+  try { decorGrid = localStorage.getItem('everdawn-decor-grid') === 'on'; decorGridKey = localStorage.getItem('everdawn-decor-grid-key') || null; } catch (err) {}
+  window.everdawnSetDecorGridKey = function (code) { decorGridKey = code || null; if (decorMode) renderDecor(); };
   function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
   // way to the door are kept clear)
@@ -8490,12 +8496,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     '.ev-dgrid button span:first-child{font-size:1.6rem;line-height:1.2}.ev-dgrid button b{position:absolute;top:3px;right:6px;font-size:.7rem}' +
     '.ev-dgrid button:hover{box-shadow:inset 0 0 0 2px #c08bff}.ev-dgrid .none{grid-column:1/-1;font-size:.75rem;opacity:.7}' +
     '.ev-dhold{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.ev-dhold[hidden]{display:none}.ev-dhold button,.ev-decor .ev-ddone{padding:5px 10px;font:600 .8rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}' +
+    '.ev-decor .ev-dgridbtn{margin:0 0 8px;padding:3px 10px;font:600 .75rem Fredoka,system-ui,sans-serif;border-radius:999px;cursor:pointer}.ev-decor .ev-dgridbtn.on{background:linear-gradient(180deg,#9be7b0,#4fbf73);color:#14401f}' +
     '.ev-decor .ev-ddone{margin-top:10px;width:100%}body.ev-decor-on .hotbar{visibility:hidden}';
     document.head.appendChild(st); })();
   var decorBox = document.createElement('div'); decorBox.className = 'ev-decor'; decorBox.hidden = true;
-  decorBox.innerHTML = '<h3>🪑 Decor Mode</h3><p class="ev-dhint"></p><div class="ev-dhold" hidden><button type="button" data-d="rot">⟳ Turn (R)</button><button type="button" data-d="store">📦 To storage</button><button type="button" data-d="bag">🎒 To backpack</button><button type="button" data-d="cancel">✕ Put back</button></div>' +
+  decorBox.innerHTML = '<h3>🪑 Decor Mode</h3><button type="button" class="ev-dgridbtn"></button><p class="ev-dhint"></p><div class="ev-dhold" hidden><button type="button" data-d="rot">⟳ Turn (R)</button><button type="button" data-d="store">📦 To storage</button><button type="button" data-d="bag">🎒 To backpack</button><button type="button" data-d="cancel">✕ Put back</button></div>' +
     '<h4>🏠 House storage</h4><div class="ev-dgrid ev-dstore"></div><h4>🎒 In your backpack</h4><div class="ev-dgrid ev-dbag"></div><button type="button" class="ev-ddone"></button>';
   canvas.parentNode.appendChild(decorBox);
+  var decorGridBtn = decorBox.querySelector('.ev-dgridbtn');
+  decorGridBtn.addEventListener('click', function () { decorToggleGrid(); focusGame(); });
   var decorHint = decorBox.querySelector('.ev-dhint'), decorHoldBar = decorBox.querySelector('.ev-dhold'), decorDone = decorBox.querySelector('.ev-ddone');
   function showDecorKey() { decorDone.textContent = 'Done (' + everdawnKeyName(decorExitKey || 'KeyG') + ')'; }
   showDecorKey();
@@ -8518,6 +8527,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     decorHoldBar.hidden = !decorHeld && !decorSel;
     decorHoldBar.querySelector('[data-d="cancel"]').textContent = decorHeld ? '✕ Put back' : '✕ Deselect';
     var rk = everdawnKeyName(decorRotKey || 'KeyR');
+    decorGridBtn.textContent = '▦ Grid: ' + (decorGrid ? 'On' : 'Off') + ' (' + everdawnKeyName(decorGridKey || 'KeyT') + ')'; decorGridBtn.classList.toggle('on', decorGrid);
     decorHoldBar.querySelector('[data-d="rot"]').textContent = '⟳ Turn (' + rk + ')';
     decorHint.innerHTML = decorHeld ? 'Holding the <b>' + ITEMS[decorHeld.id].name + '</b>: ' + (decorDropKey ? 'press <b>' + everdawnKeyName(decorDropKey) + '</b>' : 'tap the floor') + ' to set it down where the square is green. <b>' + rk + '</b> turns it.'
       : decorSel ? 'Selected the <b>' + ITEMS[decorSel.id].name + '</b>: ' + (decorPickKey ? 'press <b>' + everdawnKeyName(decorPickKey) + '</b>' : 'tap it again') + ' to pick it up, <b>' + rk + '</b> turns it where it stands, or send it to your storage or backpack. ' + (decorDeselKey ? 'Press <b>' + everdawnKeyName(decorDeselKey) + '</b>' : 'Tap the floor') + ' to let it go.'
@@ -8536,13 +8546,29 @@ EVERDAWN_PARTS.push(function (THREE) {
   function decorFollow(x, z) {
     var p = decorHeld; if (!p) return;
     var s = decorSize(p.id, p.rot);
-    x = Math.round(x / DECOR_SNAP) * DECOR_SNAP; z = Math.round(z / DECOR_SNAP) * DECOR_SNAP;
+    var snap = decorGrid ? DECOR_GRID : DECOR_SNAP;                    // (on the grid's lines, or in small smooth steps)
+    x = Math.round(x / snap) * snap; z = Math.round(z / snap) * snap;
     x = Math.max(-ROOM_W / 2 + s[0] / 2, Math.min(ROOM_W / 2 - s[0] / 2, x)); z = Math.max(-ROOM_D / 2 + s[1] / 2, Math.min(ROOM_D / 2 - s[1] / 2, z));
     p.x = x; p.z = z; p.g.position.set(x, 0.08, z); p.g.rotation.y = -p.rot * Math.PI / 2;   // (lifted a touch while you hold it)
     var ok = decorFits(p.id, x, z, p.rot, p);
     decorMark.scale.set(s[0], s[1], 1); decorMark.position.set(x, 0.04, z); decorMark.material.color.set(ok ? 0x50c86e : 0xdc4646); decorMark.visible = true;
     if (decorMark.parent !== room) room.add(decorMark);
     return ok;
+  }
+  var gridLines = (function () {                                      // (the grid's faint lines across the floor, every half step)
+    var pts = [], hw = ROOM_W / 2, hd = ROOM_D / 2, y = 0.036;
+    for (var gx = -hw; gx <= hw + 0.001; gx += DECOR_GRID) pts.push(gx, y, -hd, gx, y, hd);
+    for (var gz = -hd; gz <= hd + 0.001; gz += DECOR_GRID) pts.push(-hw, y, gz, hw, y, gz);
+    var geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    var l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
+    l.visible = false; l.renderOrder = 1; room.add(l); return l;
+  })();
+  function decorToggleGrid() {
+    decorGrid = !decorGrid; try { localStorage.setItem('everdawn-decor-grid', decorGrid ? 'on' : 'off'); } catch (err) {}
+    gridLines.visible = decorMode && decorGrid;
+    if (decorHeld) decorFollow(decorHeld.x, decorHeld.z);              // (the piece in hand snaps straight onto the grid)
+    showToast('▦ Grid ' + (decorGrid ? 'on: pieces snap neatly into rows.' : 'off: pieces move freely.'), 1600);
+    renderDecor();
   }
   function decorRotate() {
     if (decorHeld) { decorHeld.rot = (decorHeld.rot + 1) % 4; decorFollow(decorHeld.x, decorHeld.z); return; }
@@ -8610,11 +8636,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (gamePaused || somethingOpen()) return;
     decorMode = true; walkTarget = null; keys = {};
     decorCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 12; cam.pitch = 1.1; cam.yaw = 0;
-    decorBox.hidden = false; document.body.classList.add('ev-decor-on'); renderDecor();
+    decorBox.hidden = false; document.body.classList.add('ev-decor-on'); gridLines.visible = decorGrid; renderDecor();
   }
   function leaveDecorMode() {
     if (!decorMode) return;
-    decorCancel(); decorDeselect(true); decorMode = false; decorBox.hidden = true; document.body.classList.remove('ev-decor-on'); keys = {};
+    decorCancel(); decorDeselect(true); decorMode = false; decorBox.hidden = true; gridLines.visible = false; document.body.classList.remove('ev-decor-on'); keys = {};
     if (decorCam) { cam.dist = decorCam.dist; cam.pitch = decorCam.pitch; cam.yaw = decorCam.yaw; decorCam = null; }
   }
   var decorPointer = null;
@@ -8674,6 +8700,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (isExit) leaveDecorMode();
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
+    else if (e.code === (decorGridKey || 'KeyT')) decorToggleGrid();
     else if (decorPickKey && e.code === decorPickKey && !decorHeld && decorScreenAt) decorGrabAt(decorScreenAt);
     else if (decorSelKey && e.code === decorSelKey && !decorHeld && decorScreenAt) { var sp = decorPieceAt(decorScreenAt); if (sp) decorSelect(sp); }
     else if (decorDeselKey && e.code === decorDeselKey) decorDeselect();
