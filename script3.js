@@ -8726,10 +8726,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     camera.lookAt(cam.target);
   };
   var decorBaseUpdatePlayer = updatePlayer;
-  updatePlayer = function (dt) {                                       // (she stays put while you arrange)
-    if (decorMode) { keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); else if (decorBox.hidden && !decorBagOpen()) { decorBox.hidden = false; renderDecor(); } }   // (the bag's been closed: the panel comes back)
-    return decorBaseUpdatePlayer.apply(this, arguments);
-  };
+  function decorTick() {                                               // (each moment in Decor Mode: she stays put while you arrange)
+    keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); else if (decorBox.hidden && !decorBagOpen()) { decorBox.hidden = false; renderDecor(); }   // (the bag's been closed: the panel comes back)
+  }
+  updatePlayer = function (dt) { if (decorMode) decorTick(); return decorBaseUpdatePlayer.apply(this, arguments); };
   window.addEventListener('keydown', function (e) {                    // (caught first: in Decor Mode only its own keys do anything)
     if (window.EVERDAWN_TITLE || gamePaused || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()) || (window.everdawnSettingsOpen && window.everdawnSettingsOpen())) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
@@ -8755,8 +8755,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   }, true);
 
   // ---------- Time stands still while a screen is open ----------
-  // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), the clock
-  // stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
+  // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
+  // Decor Mode, the clock stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
   // standing still like this, or the game is paused, the time at the top blinks red (steady red with Excessive
   // Animation off)
   (function () { var st = document.createElement('style'); st.textContent =
@@ -8773,11 +8773,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   var timeStopped = false, screenUp = false;
   var screenBaseFrame = frame;
   frame = function () {
-    var screen = bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE, stopped = screen || gamePaused;
+    var screen = bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE, stopped = screen || gamePaused || decorMode;   // (Decor Mode stops time too)
     if (stopped !== timeStopped) { timeStopped = stopped; document.body.classList.toggle('ev-time-stopped', stopped); }
     var up = !!(screen || binOpen || shopOpen || barnShopOpen || carpShopOpen || pickKind || glimNaming);
     if (up !== screenUp) { screenUp = up; document.body.classList.toggle('ev-screen-up', up); }
-    if (screen) { clock.getDelta(); if (decorMode) updateCamera(0.016); renderer.render(sceneNow(), camera); return; }   // (in Decor Mode the camera still answers the zoom keys)
+    if (decorMode) {                                                   // (in Decor Mode time stands still, but the camera, the walls and the panel keep up with you)
+      var ddt = Math.min(clock.getDelta(), 0.05); decorTick(); updateCamera(ddt); updateInterior(0, state.time); renderer.render(sceneNow(), camera); return;
+    }
+    if (screen) { clock.getDelta(); renderer.render(sceneNow(), camera); return; }
     return screenBaseFrame.apply(this, arguments);
   };
 
