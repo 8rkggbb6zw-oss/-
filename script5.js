@@ -1216,6 +1216,7 @@
     ["Place Item", "Colocar objeto", "Poser l'objet", "Posa oggetto", "Gegenstand platzieren", "Colocar Item"],
     ["Left Stick", "Stick izq.", "Stick gauche", "Levetta sin.", "Linker Stick", "Analógico esq."],
     ["Move Camera", "Mover cámara", "Bouger la caméra", "Muovi telecamera", "Kamera bewegen", "Mover câmera"],
+    ["Cast Spell", "Lanzar hechizo", "Lancer un sort", "Lancia incantesimo", "Zauber wirken", "Lançar feitiço"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
