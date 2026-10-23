@@ -880,7 +880,7 @@ var everdawnTitle = (function () {
     '#evTitle .ev-padnote{margin:0 0 10px;font-size:14px;color:#ffe2a0;text-align:center}#evTitle .ev-padrow{flex-wrap:wrap;row-gap:8px}#evTitle .ev-pads{display:flex;gap:6px;margin-left:auto}' +
     '#evTitle .ev-pad{display:flex;flex-direction:column;align-items:center;min-width:76px;padding:4px 8px;border:2px solid rgba(255,226,160,.5);border-radius:12px;background:rgba(30,15,60,.6);color:#f0e2ff}' +
     '#evTitle .ev-pad small{font-size:10px;letter-spacing:.06em;opacity:.8}#evTitle .ev-pad b{font:600 18px Fredoka,system-ui,sans-serif;line-height:1.2}' +
-    '#evTitle .ev-pad-ps b{color:#9ec4ff}#evTitle .ev-pad-xbox b{color:#9ae6a0}#evTitle .ev-pad-sw b{color:#ff9e9e}#evTitle .ev-pad.on{border-color:#ffe2a0;background:linear-gradient(180deg,#ff9ecb,#d8609c);color:#fff}#evTitle .ev-pad.on b{color:#fff}';
+    '#evTitle .ev-pad-ps b{color:#9ec4ff}#evTitle .ev-pad-xbox b{color:#9ae6a0}#evTitle .ev-pad-sw b{color:#ff9e9e}#evTitle .ev-pad.on{border-color:#ffe2a0;background:linear-gradient(180deg,#ff9ecb,#d8609c);color:#fff}#evTitle .ev-pad.on b{color:#fff}#evTitle .ev-pad b.ev-pad-long{font-size:12px;line-height:1.9;white-space:nowrap}';
     document.head.appendChild(st); })();
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
@@ -1086,7 +1086,7 @@ var everdawnTitle = (function () {
       list.forEach(function (b) {
         if (b.section !== sec) { sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
         html += '<div class="ev-srow ev-tog ev-padrow"><span class="ev-lbl">' + b.name + '</span><div class="ev-pads">' + ['ps', 'xbox', 'sw'].map(function (k) {
-          return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
+          return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
       });
       body.innerHTML = html + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
     }

@@ -1214,6 +1214,7 @@
     ["🎮 Plug in a controller, then press any button", "🎮 Conecta un mando y pulsa cualquier botón", "🎮 Branche une manette, puis appuie sur n’importe quel bouton", "🎮 Collega un controller, poi premi un tasto qualsiasi", "🎮 Schließ einen Controller an und drück eine beliebige Taste", "🎮 Conecte um controle e aperte qualquer botão"],
     ["Use Tool", "Usar herramienta", "Utiliser l'outil", "Usa attrezzo", "Werkzeug benutzen", "Usar Ferramenta"],
     ["Place Item", "Colocar objeto", "Poser l'objet", "Posa oggetto", "Gegenstand platzieren", "Colocar Item"],
+    ["Left Stick", "Stick izq.", "Stick gauche", "Levetta sin.", "Linker Stick", "Analógico esq."],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
