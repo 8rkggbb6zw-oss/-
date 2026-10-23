@@ -1084,6 +1084,7 @@ var everdawnTitle = (function () {
     function draw() {
       var now = window.everdawnControllerKind ? window.everdawnControllerKind() : null, sec = null, html = '<p class="ev-padnote">' + (now ? '🎮 Controller connected: ' + kinds[now] : '🎮 Plug in a controller, then press any button') + '</p>';
       list.forEach(function (b) {
+        if (b.unlisted) return;
         if (b.section !== sec) { sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
         html += '<div class="ev-srow ev-tog ev-padrow"><span class="ev-lbl">' + b.name + '</span><div class="ev-pads">' + ['ps', 'xbox', 'sw'].map(function (k) {
           return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';

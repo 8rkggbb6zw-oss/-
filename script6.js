@@ -11,16 +11,17 @@
 // setting it follows, and its usual key), or instead of key, call (a function the game gives, told true when the
 // button goes down and false when it comes up). Two can share a button: one with when (a function the game gives)
 // does its job when that says yes, and the other does its job the rest of the time. A stick direction has axis
-// (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button }
+// (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button. unlisted: true
+// leaves it off the Controller page }
 (function () {
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
-    { name: 'Move Up', section: 'Gameplay', axis: 1, dir: -1, ps: 'Left Stick ↑', xbox: 'Left Stick ↑', sw: 'Left Stick ↑', key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key)
-    { name: 'Move Down', section: 'Gameplay', axis: 1, dir: 1, ps: 'Left Stick ↓', xbox: 'Left Stick ↓', sw: 'Left Stick ↓', key: ['everdawn-move-down', 'KeyS'] },
-    { name: 'Move Right', section: 'Gameplay', axis: 0, dir: 1, ps: 'Left Stick →', xbox: 'Left Stick →', sw: 'Left Stick →', key: ['everdawn-move-right', 'KeyD'] },
-    { name: 'Move Left', section: 'Gameplay', axis: 0, dir: -1, ps: 'Left Stick ←', xbox: 'Left Stick ←', sw: 'Left Stick ←', key: ['everdawn-move-left', 'KeyA'] }
+    { name: 'Walk', section: 'Gameplay', axis: 1, dir: -1, ps: 'Left Stick', xbox: 'Left Stick', sw: 'Left Stick', key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key; one row on the Controller page for all four ways)
+    { name: 'Move Down', unlisted: true, axis: 1, dir: 1, key: ['everdawn-move-down', 'KeyS'] },
+    { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
+    { name: 'Move Left', unlisted: true, axis: 0, dir: -1, key: ['everdawn-move-left', 'KeyA'] }
   ];
   var DEAD = 0.35;                                                     // (how far a stick has to tilt before it counts: a little wobble does nothing)
   var KINDS = { ps: 'PlayStation', xbox: 'Xbox', sw: 'Switch' };
