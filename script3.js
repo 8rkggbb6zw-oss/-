@@ -9719,6 +9719,16 @@ EVERDAWN_PARTS.push(function (THREE) {
     return clothBaseInteract.apply(this, arguments);
   };
 
+  // ---------- The controller's Use Tool button (script6.js) ----------
+  // It uses the tool in your hand (axe, pickaxe, trimmers, hoe...) and only a tool: holding seeds or anything else
+  // placeable, it does nothing, so it never puts things down (that's another button). Held, it keeps the tool going.
+  // The fishing rod has its own button
+  window.everdawnPadUseTool = function (on) {
+    var h = heldItem();
+    if (!on || !h || !isTool(h) || h === 'fishingRod') { actionHeld = false; return; }
+    actionHeld = true; interact();
+  };
+
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
   // Decor Mode, the clock stops and the island waits, just as when the game is paused; closing it lets time carry on. Whenever time is
