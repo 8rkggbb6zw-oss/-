@@ -24,6 +24,7 @@
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
     { name: 'Cast Spell', section: 'Gameplay', button: 3, ps: '△', xbox: 'Y', sw: 'X', key: ['everdawn-spell-key', 'KeyQ'] },   // (the top face button: Dawn Bloom, or your own Spell Casting key)
     { name: 'Sprint', section: 'Gameplay', button: { ps: 10, xbox: 10, sw: 4 }, ps: 'L3', xbox: 'LS', sw: 'L', key: ['everdawn-sprint-key', 'ShiftLeft'] },   // (held: clicking the left stick in on PlayStation and Xbox, the L shoulder button on Switch)
+    { name: 'Strafe', section: 'Gameplay', button: { ps: 11, xbox: 11, sw: 5 }, ps: 'R3', xbox: 'RS', sw: 'R', key: ['everdawn-strafe-key', 'KeyC'] },   // (held: clicking the right stick in on PlayStation and Xbox, the R shoulder button on Switch)
     { name: 'Walk', section: 'Gameplay', axis: 1, dir: -1, ps: LSTICK, xbox: LSTICK, sw: LSTICK, key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key; one row on the Controller page for all four ways)
     { name: 'Move Down', unlisted: true, axis: 1, dir: 1, key: ['everdawn-move-down', 'KeyS'] },
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
