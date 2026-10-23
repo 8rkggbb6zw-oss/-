@@ -8125,7 +8125,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var controlsRow = document.querySelector('.controls'); if (controlsRow) controlsRow.appendChild(pauseBtn);
   ['btnSave', 'btnLoad'].forEach(function (id) { var b = document.getElementById(id); if (b) b.style.display = 'none'; });   // (saving and loading are on the pause menu now)
   function somethingOpen() {                                           // (Escape closes these first; it only pauses when none is open)
-    return (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || carpShopOpen || coopPlacing || pickKind || glimNaming ||
+    return (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || carpShopOpen || clothShopOpen || coopPlacing || pickKind || glimNaming ||
       dialogueOpen() || cutscenePlaying() || sleeping || teleporting || decorMode;
   }
   function pauseGame() {
@@ -8899,8 +8899,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Inside: warm greige plaster and a pale oak floor; a cream fluted counter with rounded ends and a rose-gold edge at
   // the back, a low white table of shoes and boxes in front of it, a rail of peach and cream clothes hung from the
   // ceiling by the big window and its window seat, a rose-gold rack of neutrals and handbags, pampas grass, three
-  // glass globe lights, an arched mirror, oak shelves and an olive tree by the door. Nothing's
-  // for sale yet: at the counter, Interact says new clothes are coming (the shop's menu goes there later). It has a pin
+  // glass globe lights, an arched mirror, oak shelves and an olive tree by the door. At the counter, Interact opens the shop's
+  // menu (empty for now: see CLOTH_STOCK). It has a pin
   // on the map and a Teleport spot like the other shops
   var CLOTH_X = -97, CLOTH_Z = 14, CLOTH_TURN = Math.PI, CLOTH_HW = 4, CLOTH_HD = 3, CLOTH_WALL = 3.6, CLOTH_FY = 0.12;
   var CLOTH_DOOR_X = -2.5, CL_RECESS = 0.6;                             // (the door's middle across the front, and how deep its doorway is set back)
@@ -9672,10 +9672,50 @@ EVERDAWN_PARTS.push(function (THREE) {
     clothBaseDoors.apply(this, arguments);
     if (!indoors && dist(px, pz, clothDoor.x, clothDoor.z) < DOOR_REACH && !doorNear) doorNear = doorHinted = 'cloth';   // (outside: by its door)
   };
+  // ---- the shop's menu, at the counter ----
+  // Press Interact at the counter for Thread & Thimble's menu, laid out like the other shops: the clothes as tiles on the
+  // left, the one you pick on the right with its buy button. To stock it, add clothes to CLOTH_STOCK, e.g.
+  //   { id: 'cloth_sunhat', name: 'Straw Sun Hat', icon: '👒', price: 450, info: 'A wide straw hat with a ribbon.' }
+  // Each one becomes an item too, so once bought it goes in your bag. Until there are any, it says new clothes are coming
+  var CLOTH_STOCK = [];
+  CLOTH_STOCK.forEach(function (c) { ITEMS[c.id] = { name: c.name, icon: c.icon, info: c.info }; });
+  var clothShopOpen = false, clothPick = 0, clothShopBox = document.createElement('div');
+  clothShopBox.className = 'inventory ship shop shop-wide'; clothShopBox.hidden = true;
+  clothShopBox.innerHTML = '<div class="inv-head"><b>🧵 Thread &amp; Thimble</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+    '<p class="ship-hint">Welcome to Thread &amp; Thimble! Clothes for every season, made with love.</p><div class="ship-cols shop-cols cl-cols"></div><p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(clothShopBox);
+  var clothCols = clothShopBox.querySelector('.cl-cols'), clothCoins = clothShopBox.querySelector('.ship-total b');
+  function renderClothShop() {
+    clothCoins.textContent = state.coins;
+    if (!CLOTH_STOCK.length) { clothCols.innerHTML = '<div class="shop-list" style="flex:1;grid-column:1/-1"><h4>For sale</h4><p class="ship-hint" style="text-align:center;margin:28px 8px">🧵 The racks are still empty: new clothes are coming soon!</p></div>'; paintCoinIcons(clothShopBox); return; }
+    var c = CLOTH_STOCK[clothPick] || CLOTH_STOCK[0];
+    clothCols.innerHTML = '<div class="shop-list"><h4>For sale</h4><div class="shop-tiles">' + CLOTH_STOCK.map(function (s, k) {
+      return '<button type="button" class="shop-tile' + (k === clothPick ? ' sel' : '') + (state.coins < s.price ? ' cant' : '') + '" data-k="' + k + '"><span class="shop-tile-pic" style="font-size:1.8rem">' + s.icon + '</span><span class="shop-tile-name">' + s.name + '</span><span class="shop-tile-price"><img class="coin-icon" alt=""> ' + s.price.toLocaleString('en-US') + '</span></button>';
+    }).join('') + '</div></div><div class="shop-detail"><h4>Take a look</h4><div class="shop-card on"><div class="shop-item"><div class="slot shop-pic" style="font-size:2.4rem;display:grid;place-items:center">' + c.icon + '</div><div class="shop-text"><b>' + c.name + '</b><span class="shop-desc">' + c.info + '</span>' +
+      '<span class="shop-price"><img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</span></div></div><div class="shop-buy"><button type="button" class="cl-buy"' + (state.coins < c.price ? ' disabled' : '') + '>Buy · <img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</button></div></div></div>';
+    clothCols.querySelectorAll('.shop-tile').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); clothPick = +b.getAttribute('data-k'); renderClothShop(); }); });
+    clothCols.querySelector('.cl-buy').addEventListener('click', function (e) {
+      e.stopPropagation(); if (state.coins < c.price) return;
+      if (!addItem(c.id, 1)) { showToast('Your bag is full', 1800); return; }
+      state.coins -= c.price; showCoins(true); coinSound(); showToast('🛍️ ' + c.name + ' is in your bag!', 2000); renderClothShop();
+    });
+    paintCoinIcons(clothShopBox);
+  }
+  function openClothShop() { if (clothShopOpen) return; toggleBag(false); clothShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; clothShopBox.hidden = false; renderClothShop(); }
+  function closeClothShop() { clothShopOpen = false; clothShopBox.hidden = true; }
+  clothShopBox.querySelector('.inv-close').addEventListener('click', function () { closeClothShop(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && clothShopOpen) closeClothShop(); });
+  var clothShopBaseCarp = updateCarpenter;                              // (it closes when you walk away from the counter, and keeps up with your coins)
+  updateCarpenter = function () {
+    clothShopBaseCarp.apply(this, arguments);
+    if (clothShopOpen && !clothAtCounter()) closeClothShop();
+    if (clothShopOpen && clothCoins.textContent !== String(state.coins)) renderClothShop();
+  };
   var clothBaseInteract = interact;
   interact = function () {
     if (!flying && !indoors && doorNear === 'cloth' && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) { doorNear = null; walkTarget = null; clothDoorUse(true); return; }
-    if (clothAtCounter() && !doorBusy) { showToast('🧵 Thread & Thimble’s racks are still empty: new clothes are coming soon!', 2600); return; }
+    if (clothShopOpen) { if (!menuJustOpened()) closeClothShop(); return; }
+    if (clothAtCounter() && !doorBusy) { openClothShop(); return; }   // (at the counter: the shop's menu)
     return clothBaseInteract.apply(this, arguments);
   };
 
@@ -9700,7 +9740,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   frame = function () {
     var screen = bagUi.box && !bagUi.box.hidden && !window.EVERDAWN_TITLE, stopped = screen || gamePaused || decorMode;   // (Decor Mode stops time too)
     if (stopped !== timeStopped) { timeStopped = stopped; document.body.classList.toggle('ev-time-stopped', stopped); }
-    var up = !!(screen || binOpen || shopOpen || barnShopOpen || carpShopOpen || pickKind || glimNaming);
+    var up = !!(screen || binOpen || shopOpen || barnShopOpen || carpShopOpen || clothShopOpen || pickKind || glimNaming);
     if (up !== screenUp) { screenUp = up; document.body.classList.toggle('ev-screen-up', up); }
     if (decorMode) {                                                   // (in Decor Mode time stands still, but the camera, the walls and the panel keep up with you)
       var ddt = Math.min(clock.getDelta(), 0.05); decorTick(); updateCamera(ddt); updateInterior(0, state.time); renderer.render(sceneNow(), camera); return;
@@ -10099,7 +10139,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     updateCamera(dt);
     updateClinicInterior(state.time);
     cullScene();
-    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || coopPlacing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
+    var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || clothShopOpen || coopPlacing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
     if (indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth) { camera.updateMatrixWorld(); drawHouseView(); }   // (your own house: its windows look out too)
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
