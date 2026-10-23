@@ -9728,6 +9728,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!on || !h || !isTool(h) || h === 'fishingRod') { actionHeld = false; return; }
     actionHeld = true; interact();
   };
+  // (its Place Item button: holding seeds or anything else that isn't a tool, it puts it down, just as the Use
+  // Tool/Place Item key does; it shares its button with Interact, which it leaves to do everything else)
+  window.everdawnPadCanPlace = function () { var h = heldItem(); return !!h && !isTool(h); };
+  window.everdawnPadPlace = function (on) { if (on) interact(); };
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in
