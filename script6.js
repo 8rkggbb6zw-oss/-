@@ -14,11 +14,13 @@
 // (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button. unlisted: true
 // leaves it off the Controller page }
 (function () {
+  var LSTICK = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="Left stick" style="display:block"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>' +   // (a joystick seen from above, L on its cap)
+    '<circle cx="13" cy="13" r="8" fill="currentColor" opacity=".2"/><circle cx="13" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 8.6v8h5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
-    { name: 'Walk', section: 'Gameplay', axis: 1, dir: -1, ps: 'Left Stick', xbox: 'Left Stick', sw: 'Left Stick', key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key; one row on the Controller page for all four ways)
+    { name: 'Walk', section: 'Gameplay', axis: 1, dir: -1, ps: LSTICK, xbox: LSTICK, sw: LSTICK, key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key; one row on the Controller page for all four ways)
     { name: 'Move Down', unlisted: true, axis: 1, dir: 1, key: ['everdawn-move-down', 'KeyS'] },
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
     { name: 'Move Left', unlisted: true, axis: 0, dir: -1, key: ['everdawn-move-left', 'KeyA'] }

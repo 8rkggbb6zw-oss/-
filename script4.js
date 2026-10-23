@@ -1087,7 +1087,7 @@ var everdawnTitle = (function () {
         if (b.unlisted) return;
         if (b.section !== sec) { sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
         html += '<div class="ev-srow ev-tog ev-padrow"><span class="ev-lbl">' + b.name + '</span><div class="ev-pads">' + ['ps', 'xbox', 'sw'].map(function (k) {
-          return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
+          return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 && b[k].charAt(0) !== '<' ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
       });
       body.innerHTML = html + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
     }
