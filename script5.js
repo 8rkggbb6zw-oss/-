@@ -1209,6 +1209,9 @@
     ["🧵 The racks are still empty: new clothes are coming soon!", "🧵 Los percheros aún están vacíos: ¡pronto llegará ropa nueva!", "🧵 Les portants sont encore vides : de nouveaux vêtements arrivent bientôt !", "🧵 Gli appendiabiti sono ancora vuoti: presto arriveranno vestiti nuovi!", "🧵 Die Kleiderstangen sind noch leer: Bald gibt es neue Kleidung!", "🧵 As araras ainda estão vazias: roupas novas chegam em breve!"],
     ["Your bag is full", "Tu mochila está llena", "Ton sac est plein", "La tua borsa è piena", "Deine Tasche ist voll", "Sua bolsa está cheia"],
     ["is in your bag!", "está en tu mochila!", "est dans ton sac !", "è nella tua borsa!", "ist in deiner Tasche!", "está na sua bolsa!"],
+    ["🎮 Controller connected:", "🎮 Mando conectado:", "🎮 Manette connectée :", "🎮 Controller collegato:", "🎮 Controller verbunden:", "🎮 Controle conectado:"],
+    ["🎮 Controller disconnected:", "🎮 Mando desconectado:", "🎮 Manette déconnectée :", "🎮 Controller scollegato:", "🎮 Controller getrennt:", "🎮 Controle desconectado:"],
+    ["🎮 Plug in a controller, then press any button", "🎮 Conecta un mando y pulsa cualquier botón", "🎮 Branche une manette, puis appuie sur n’importe quel bouton", "🎮 Collega un controller, poi premi un tasto qualsiasi", "🎮 Schließ einen Controller an und drück eine beliebige Taste", "🎮 Conecte um controle e aperte qualquer botão"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();

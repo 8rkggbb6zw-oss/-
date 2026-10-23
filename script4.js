@@ -876,6 +876,12 @@ var everdawnTitle = (function () {
     var st = document.createElement('style'); st.textContent = 'body.full .quest-hud{top:var(--ev-top-h,18px)}'; document.head.appendChild(st);
     new ResizeObserver(function () { if (document.body.classList.contains('full')) document.documentElement.style.setProperty('--ev-top-h', Math.round(bar.getBoundingClientRect().bottom + 8) + 'px'); }).observe(bar);
   })();
+  (function () { var st = document.createElement('style'); st.textContent =   // (the Controller page: each button as three little chips, one per controller, the one you're using lit up)
+    '#evTitle .ev-padnote{margin:0 0 10px;font-size:14px;color:#ffe2a0;text-align:center}#evTitle .ev-padrow{flex-wrap:wrap;row-gap:8px}#evTitle .ev-pads{display:flex;gap:6px;margin-left:auto}' +
+    '#evTitle .ev-pad{display:flex;flex-direction:column;align-items:center;min-width:76px;padding:4px 8px;border:2px solid rgba(255,226,160,.5);border-radius:12px;background:rgba(30,15,60,.6);color:#f0e2ff}' +
+    '#evTitle .ev-pad small{font-size:10px;letter-spacing:.06em;opacity:.8}#evTitle .ev-pad b{font:600 18px Fredoka,system-ui,sans-serif;line-height:1.2}' +
+    '#evTitle .ev-pad-ps b{color:#9ec4ff}#evTitle .ev-pad-xbox b{color:#9ae6a0}#evTitle .ev-pad-sw b{color:#ff9e9e}#evTitle .ev-pad.on{border-color:#ffe2a0;background:linear-gradient(180deg,#ff9ecb,#d8609c);color:#fff}#evTitle .ev-pad.on b{color:#fff}';
+    document.head.appendChild(st); })();
   var SET_PAGES = [{ name: 'Game', build: function (body) {                // (Game: how far the camera sits from you, how fast time goes, and more)
     body.innerHTML = '<div class="ev-srow"><div class="ev-lrow"><label for="evZoom">Adjust Camera Zoom</label><output for="evZoom" id="evZoomPct"></output></div><div class="ev-range"><span>0%</span><input type="range" id="evZoom" min="0" max="20" step="0.5"><span>100%</span></div></div>' +
       '<div class="ev-srow"><div class="ev-lrow"><label for="evTime">Game Time Speed</label><output for="evTime" id="evTimePct"></output></div><div class="ev-range"><span>50%</span><input type="range" id="evTime" min="50" max="100" step="5"><span>100%</span></div></div>' +
@@ -1073,8 +1079,18 @@ var everdawnTitle = (function () {
     for (var hb = 0; hb < hudBtns.length; hb++) hudBtns[hb].addEventListener('click', function () {
       hud = this.getAttribute('data-h'); showHud(); try { localStorage.setItem('everdawn-hud', hud); } catch (err) {} if (window.everdawnSetHud) window.everdawnSetHud(hud === 'on'); });
     showHud();
-  } }, { name: 'Controller', build: function (body) {                  // (Controller: for playing with an Xbox, PlayStation or Switch controller; its settings are still to come)
-    var gap = document.createElement('div'); gap.style.height = 'clamp(160px,32vh,280px)'; body.appendChild(gap);   // (empty for now, but the page keeps its usual size)
+  } }, { name: 'Controller', build: function (body) {                  // (Controller: each button, as it's called on a PlayStation, an Xbox and a Switch controller; script6.js does the rest)
+    var list = window.everdawnControllerButtons ? window.everdawnControllerButtons() : [], kinds = window.everdawnControllerKinds || { ps: 'PlayStation', xbox: 'Xbox', sw: 'Switch' };
+    function draw() {
+      var now = window.everdawnControllerKind ? window.everdawnControllerKind() : null, sec = null, html = '<p class="ev-padnote">' + (now ? '🎮 Controller connected: ' + kinds[now] : '🎮 Plug in a controller, then press any button') + '</p>';
+      list.forEach(function (b) {
+        if (b.section !== sec) { sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
+        html += '<div class="ev-srow ev-tog ev-padrow"><span class="ev-lbl">' + b.name + '</span><div class="ev-pads">' + ['ps', 'xbox', 'sw'].map(function (k) {
+          return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
+      });
+      body.innerHTML = html + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
+    }
+    draw(); window.everdawnControllerChanged = function () { if (body.isConnected) draw(); };   // (it lights up the controller you plug in)
   } }, { name: 'Language', build: function (body) {                    // (Language: every word in the game in English, Español, Français, Italiano, Deutsch or Português; script5.js does the changing)
     var names = [['en', 'English'], ['es', 'Español'], ['fr', 'Français'], ['it', 'Italiano'], ['de', 'Deutsch'], ['pt', 'Português']];
     body.innerHTML = '<div class="ev-langs" role="group" aria-label="Language">' + names.map(function (l) { return '<button type="button" translate="no" lang="' + l[0] + '" data-l="' + l[0] + '">' + l[1] + '</button>'; }).join('') + '</div>';
