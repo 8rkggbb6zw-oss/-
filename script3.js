@@ -9732,6 +9732,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // Tool/Place Item key does; it shares its button with Interact, which it leaves to do everything else)
   window.everdawnPadCanPlace = function () { var h = heldItem(); return !!h && !isTool(h); };
   window.everdawnPadPlace = function (on) { if (on) interact(); };
+  window.everdawnPadCam = function (dx, dy) { cam.yaw -= dx; cam.pitch = THREE.MathUtils.clamp(cam.pitch + dy, 0.25, 1.35); };   // (the right stick turns the camera, like dragging)
 
   // ---------- Time stands still while a screen is open ----------
   // While the bag is open, on any of its pages (Bag, World Map, Quests, Crafting, Relationships or Skills), or you're in

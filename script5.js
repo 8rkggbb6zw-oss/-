@@ -1215,6 +1215,7 @@
     ["Use Tool", "Usar herramienta", "Utiliser l'outil", "Usa attrezzo", "Werkzeug benutzen", "Usar Ferramenta"],
     ["Place Item", "Colocar objeto", "Poser l'objet", "Posa oggetto", "Gegenstand platzieren", "Colocar Item"],
     ["Left Stick", "Stick izq.", "Stick gauche", "Levetta sin.", "Linker Stick", "Analógico esq."],
+    ["Move Camera", "Mover cámara", "Bouger la caméra", "Muovi telecamera", "Kamera bewegen", "Mover câmera"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
