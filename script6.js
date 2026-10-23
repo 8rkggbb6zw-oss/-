@@ -12,7 +12,7 @@
 // button goes down and false when it comes up). Two can share a button: one with when (a function the game gives)
 // does its job when that says yes, and the other does its job the rest of the time. A stick direction has axis
 // (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button. unlisted: true
-// leaves it off the Controller page. A whole stick has stick: [its across axis, its up-and-down axis] and a call that's
+// leaves it off the Controller page. button can also be { ps, xbox, sw }, when it's a different button on each. A whole stick has stick: [its across axis, its up-and-down axis] and a call that's
 // told how far to turn each frame }
 (function () {
   var LSTICK = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="Left stick" style="display:block"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>' +   // (a joystick seen from above, L on its cap)
@@ -23,6 +23,7 @@
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
     { name: 'Cast Spell', section: 'Gameplay', button: 3, ps: '△', xbox: 'Y', sw: 'X', key: ['everdawn-spell-key', 'KeyQ'] },   // (the top face button: Dawn Bloom, or your own Spell Casting key)
+    { name: 'Sprint', section: 'Gameplay', button: { ps: 10, xbox: 10, sw: 4 }, ps: 'L3', xbox: 'LS', sw: 'L', key: ['everdawn-sprint-key', 'ShiftLeft'] },   // (held: clicking the left stick in on PlayStation and Xbox, the L shoulder button on Switch)
     { name: 'Walk', section: 'Gameplay', axis: 1, dir: -1, ps: LSTICK, xbox: LSTICK, sw: LSTICK, key: ['everdawn-move-up', 'KeyW'] },   // (the left stick: tilted far enough, it holds that way's key; one row on the Controller page for all four ways)
     { name: 'Move Down', unlisted: true, axis: 1, dir: 1, key: ['everdawn-move-down', 'KeyS'] },
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
@@ -56,6 +57,7 @@
   window.everdawnControllerKind = function () { return padKind; };
   window.everdawnControllerButtons = function () { return BUTTONS; };
   window.everdawnControllerKinds = KINDS;
+  function idx(b) { return typeof b.button === 'object' ? b.button[padKind] : b.button; }   // (which button it is on the controller you're using)
   function poll() {
     requestAnimationFrame(poll);
     if (padIndex === null || !navigator.getGamepads) return;
@@ -77,10 +79,10 @@
         else if (!tilt && down[b0.name]) { send('keyup', down[b0.name]); delete down[b0.name]; }
         return;
       }
-      var i = b0.button; if (seen[i]) return; seen[i] = true;
+      var i = idx(b0); if (seen[i]) return; seen[i] = true;
       var btn = pad.buttons[i], on = !paused && !!btn && (btn.pressed || btn.value > 0.5), was = held[i];
       if (on && !was) {                                                 // (pressed: of the jobs on this button, the one that fits right now)
-        var all = BUTTONS.filter(function (x) { return x.button === i; });
+        var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i; });
         var b = all.filter(function (x) { return x.when && window[x.when] && window[x.when](); })[0] || all.filter(function (x) { return !x.when; })[0];
         if (!b) return; held[i] = b;
         if (b.call) { down[b.name] = true; if (window[b.call]) window[b.call](true); } else { down[b.name] = keyFor(b); send('keydown', down[b.name]); }
