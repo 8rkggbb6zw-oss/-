@@ -14,7 +14,8 @@
 // (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button. unlisted: true
 // leaves it off the Controller page. button can also be { ps, xbox, sw }, when it's a different button on each. A whole stick has stick: [its across axis, its up-and-down axis] and a call that's
 // told how far to turn each frame. hold: (how long, in thousandths of a second) makes it one you have to hold down: it
-// presses its key once it's been held that long, and a quick press does nothing }
+// presses its key once it's been held that long, and a quick press does nothing. over: true puts its job ahead of the
+// others on the same button, when its when says yes }
 (function () {
   var LSTICK = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="Left stick" style="display:block"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>' +   // (a joystick seen from above, L on its cap)
     '<circle cx="13" cy="13" r="8" fill="currentColor" opacity=".2"/><circle cx="13" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 8.6v8h5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -65,6 +66,7 @@
     { name: 'Reset Decor Mode Camera', section: 'Decor Mode', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
     { name: 'Enter Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmEnter' },   // (the same hold as Decor Mode: outdoors, on your farm, it's Farm View)
     { name: 'Exit Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-exit-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmView' },   // (and again to leave)
+    { name: 'Minigame Primary Action', section: 'Events', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-minigame-primary', 'Space'], when: 'everdawnPadMinigame', over: true },   // (the Interact button again: while a minigame runs, it's the minigame's main button)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
@@ -83,6 +85,7 @@
   window.everdawnPadDecor = function () { return document.body.classList.contains('ev-decor-on'); };   // (in Decor Mode?)
   window.everdawnPadFarmView = function () { return document.body.classList.contains('ev-farm-on'); };   // (in Farm View?)
   window.everdawnPadFarmEnter = function () { return !!(window.everdawnPadOutside && window.everdawnPadOutside()) && !window.everdawnPadFarmView(); };
+  window.everdawnPadMinigame = function () { return !!window.everdawnMinigameOn; };   // (a minigame sets window.everdawnMinigameOn = true while it runs, and false when it's over)
   window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
   // ---- skipping a cutscene: hold ✕ / A / B ----
   // While a cutscene plays, the Skip button at the top right says "Hold to skip" with your controller's button on it, and
@@ -278,6 +281,7 @@
       var btn = pad.buttons[i], on = !paused && !!btn && (btn.pressed || btn.value > 0.5), was = held[i];
       if (on && !was) {                                                 // (pressed: of the jobs on this button, the one that fits right now)
         var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i && (screen ? x.menuOnly || x.menuToo : !x.menuOnly) && !(x.gameOnly && inMenus); });   // (on a screen only the menu buttons; off it, the rest)
+        all.sort(function (p, q) { return (q.over ? 1 : 0) - (p.over ? 1 : 0); });   // (one marked over: true comes first when it fits)
         var b = all.filter(function (x) { return x.when && window[x.when] && window[x.when](); })[0] || all.filter(function (x) { return !x.when; })[0];
         if (!b) return; held[i] = b;
         if (b.hold) { holdAt[i] = now; return; }                      // (one you hold: nothing yet)
