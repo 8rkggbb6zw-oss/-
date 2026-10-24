@@ -22,6 +22,7 @@
   var RSTICK_UP = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 -9 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 -9l6.5 7h-13z" fill="currentColor"/></svg>');   // (the right stick with an arrow: pushed forward)
   var RSTICK_DOWN = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 0 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 35l6.5-7h-13z" fill="currentColor"/></svg>');   // (and pulled back)
   var DPAD_UP = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="D-pad up" style="display:block"><path d="M9.5 2.5h7v7h7v7h-7v7h-7v-7h-7v-7h7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".6"/><path d="M9.5 2.5h7v7.5h-7z" fill="currentColor"/></svg>';   // (a D-pad, its up arm filled in)
+  var DPAD_RIGHT = DPAD_UP.replace('D-pad up', 'D-pad right').replace('M9.5 2.5h7v7.5h-7z', 'M16 9.5h7.5v7h-7.5z');   // (the same D-pad, its right arm filled in)
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
@@ -52,6 +53,8 @@
     { name: 'Pick Up', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },   // (✕ / A / B is a click with the Decor Mode pointer: worked in decorNav below)
     { name: 'Put Down', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Rotate', section: 'Decor Mode', button: 2, ps: '□', xbox: 'X', sw: 'Y', key: ['everdawn-decor-rotate-key', 'KeyR'], when: 'everdawnPadDecor', menuToo: true },   // (the Use Tool button: in Decor Mode it turns the piece you're holding)
+    { name: 'Open Storage', section: 'Decor Mode', button: 15, ps: DPAD_RIGHT, xbox: DPAD_RIGHT, sw: DPAD_RIGHT, key: ['everdawn-decor-storage-key', 'Space'], when: 'everdawnPadDecor', menuToo: true },   // (right on the D-pad: your house storage, and again to close it)
+    { name: 'Close Storage', section: 'Decor Mode', ps: DPAD_RIGHT, xbox: DPAD_RIGHT, sw: DPAD_RIGHT, note: true },
     { name: 'Select Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Deselect Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)

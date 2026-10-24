@@ -1227,6 +1227,7 @@
     ["Hold to skip", "Mantén para saltar", "Maintenir pour passer", "Tieni premuto per saltare", "Halten zum Überspringen", "Segure para pular"],
     ["Enter Decor Mode (Hold)", "Entrar en Modo Decoración (mantener)", "Entrer en Mode déco (maintenir)", "Entra in Modalità Arredo (tieni premuto)", "Deko-Modus starten (halten)", "Entrar no Modo Decoração (segurar)"],
     ["Exit Decor Mode (Hold)", "Salir del Modo Decoración (mantener)", "Quitter le Mode déco (maintenir)", "Esci da Modalità Arredo (tieni premuto)", "Deko-Modus beenden (halten)", "Sair do Modo Decoração (segurar)"],
+    ["Close Storage", "Cerrar almacén", "Fermer le rangement", "Chiudi deposito", "Lager schließen", "Fechar Depósito"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
