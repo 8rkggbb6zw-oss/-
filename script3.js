@@ -8639,6 +8639,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
     l.visible = false; l.renderOrder = 1; room.add(l); return l;
   })();
+  window.everdawnSetDecorGrid = function (on) { if (decorGrid !== on) decorToggleGrid(); };   // (Toggle Grid on the Controller page)
   function decorToggleGrid() {
     decorGrid = !decorGrid; try { localStorage.setItem('everdawn-decor-grid', decorGrid ? 'on' : 'off'); } catch (err) {}
     gridLines.visible = decorMode && decorGrid;

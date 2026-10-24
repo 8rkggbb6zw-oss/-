@@ -49,6 +49,11 @@
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
     { name: 'Enter Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-key', 'KeyG'], hold: 1000 },   // (hold up on the D-pad for a second, inside your house)
     { name: 'Exit Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-exit-key', 'KeyG'], hold: 1000, when: 'everdawnPadDecor', menuToo: true },   // (and again to leave)
+    { name: 'Pick Up', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },   // (✕ / A / B is a click with the Decor Mode pointer: worked in decorNav below)
+    { name: 'Put Down', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
+    { name: 'Rotate', section: 'Decor Mode', button: 2, ps: '□', xbox: 'X', sw: 'Y', key: ['everdawn-decor-rotate-key', 'KeyR'], when: 'everdawnPadDecor', menuToo: true },   // (the Use Tool button: in Decor Mode it turns the piece you're holding)
+    { name: 'Select Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
+    { name: 'Deselect Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
