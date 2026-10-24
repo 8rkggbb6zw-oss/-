@@ -30,6 +30,8 @@
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
     { name: 'Move Left', unlisted: true, axis: 0, dir: -1, key: ['everdawn-move-left', 'KeyA'] },
     { name: 'Move Camera', section: 'Gameplay', stick: [2, 3], ps: RSTICK, xbox: RSTICK, sw: RSTICK, call: 'everdawnPadCam' },   // (the right stick turns the camera round and tips it up and down, faster the further it's pushed),
+    { name: 'Switch Toolbar Row', section: 'Gameplay', button: 7, ps: 'L2 / R2', xbox: 'LT / RT', sw: 'ZL / ZR', call: 'everdawnPadRowNext' },   // (the triggers: the right one shows the next row of the toolbar, the left one the row before)
+    { name: 'Previous Toolbar Row', unlisted: true, button: 6, call: 'everdawnPadRowPrev' },
     { name: 'World Map', section: 'Gameplay', button: 9, ps: 'OPTIONS', xbox: '☰', sw: '+', call: 'everdawnPadMap', menuToo: true, gameOnly: true },   // (Start: the map, and again to close it)
     { name: 'Previous Tab', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen, or of Settings)
     { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
@@ -41,6 +43,8 @@
   function settingsUp() { return !!(window.everdawnSettingsOpen && window.everdawnSettingsOpen()); }
   window.everdawnPadTabPrev = function (on) { if (!on) return; if (settingsUp()) window.everdawnSettingsPrevPage(); else if (window.everdawnPadTab) window.everdawnPadTab(-1); };
   window.everdawnPadTabNext = function (on) { if (!on) return; if (settingsUp()) window.everdawnSettingsNextPage(); else if (window.everdawnPadTab) window.everdawnPadTab(1); };
+  window.everdawnPadRowNext = function (on) { if (on && window.everdawnPadRow) window.everdawnPadRow(1); };
+  window.everdawnPadRowPrev = function (on) { if (on && window.everdawnPadRow) window.everdawnPadRow(-1); };
   var DEAD = 0.35;
   // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
   // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the

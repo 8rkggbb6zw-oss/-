@@ -831,6 +831,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     hotRow = (hotRow + 1) % (BAG_SLOTS / ROW_SIZE);
     renderHotbar();
   }
+  window.everdawnPadRow = function (d) { hotRow = (hotRow + d + BAG_SLOTS / ROW_SIZE) % (BAG_SLOTS / ROW_SIZE); renderHotbar(); };   // (the controller's triggers: R2 a row on, L2 a row back)
   if (hotUi.row) hotUi.row.addEventListener('click', function () { nextRow(); focusGame(); });
   function stepSlot(dir) { // select the next slot that has something in it, flipping the hotbar to its row
     var at = selectedSlot >= 0 ? selectedSlot : (dir > 0 ? hotRow * ROW_SIZE - 1 : hotRow * ROW_SIZE + ROW_SIZE);

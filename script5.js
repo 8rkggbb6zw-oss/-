@@ -1221,6 +1221,7 @@
     ["Next Tab", "Pestaña siguiente", "Onglet suivant", "Scheda successiva", "Nächster Reiter", "Próxima aba"],
     ["Cursor", "Cursor", "Curseur", "Cursore", "Cursor", "Cursor"],
     ["World Map", "Mapa del mundo", "Carte du monde", "Mappa del mondo", "Weltkarte", "Mapa do Mundo"],
+    ["Switch Toolbar Row", "Cambiar fila de la barra", "Changer de rangée de la barre", "Cambia riga della barra", "Schnellleisten-Reihe wechseln", "Trocar fileira da barra"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
