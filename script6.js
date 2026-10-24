@@ -48,7 +48,7 @@
     { name: 'Sort List Shortcut', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', key: ['everdawn-sort-key', 'Tab'], menuToo: true, when: 'everdawnPadSorting' },   // (the left bumper again: while a storage chest or the shipping bin is open, it sorts)
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
     { name: 'Enter Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-key', 'KeyG'], hold: 1000 },   // (hold up on the D-pad for a second, inside your house)
-    { name: 'Exit Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-exit-key', 'KeyG'], hold: 1000, when: 'everdawnPadDecor' },   // (and again to leave)
+    { name: 'Exit Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-exit-key', 'KeyG'], hold: 1000, when: 'everdawnPadDecor', menuToo: true },   // (and again to leave)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
@@ -138,9 +138,23 @@
     if (el.closest('button, [role="button"], a[href]')) { el.closest('button, [role="button"], a[href]').click(); return; }
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, view: window }));
   }
+  function pointAt(el, type, x, y) { el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true, button: type === 'pointermove' ? -1 : 0, buttons: type === 'pointerdown' ? 1 : 0, view: window })); }
+  function decorNav(pad, dt, press, back) {                            // (Decor Mode: the left stick is a mouse pointer over the room and its panel)
+    if (focusEl) setFocus(null);
+    if (back) { send('keydown', 'Escape'); send('keyup', 'Escape'); return true; }   // (○ / B / A: puts a piece back, or leaves Decor Mode)
+    var room = (document.querySelector('.ev-decor') || document.body).parentNode.getBoundingClientRect(), sx = pad.axes[0] || 0, sy = pad.axes[1] || 0, mag = Math.hypot(sx, sy), moved = false;
+    if (!cursorOn) { cx = room.left + room.width * 0.4; cy = room.top + room.height / 2; cursorOn = moved = true; }
+    if (mag > 0.18) { var k = (mag - 0.18) / (1 - 0.18) / mag * 650 * dt; cx = Math.max(room.left, Math.min(room.right - 4, cx + sx * k)); cy = Math.max(room.top, Math.min(room.bottom - 4, cy + sy * k)); moved = true; }
+    var el = document.elementFromPoint(cx, cy);
+    if (moved && el) pointAt(el, 'pointermove', cx, cy);               // (a piece you're holding follows it)
+    cursor.hidden = false; cursor.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+    if (press && el) { if (el.tagName === 'CANVAS') { pointAt(el, 'pointerdown', cx, cy); pointAt(el, 'pointerup', cx, cy); } else clickAt(cx, cy); }   // (✕ / A / B: a click, on the room or the panel)
+    return true;
+  }
   function edge(pad, i) { var b = pad.buttons[i], on = !!b && (b.pressed || b.value > 0.5), was = prevB[i]; prevB[i] = on; return on && !was; }
   function menuNav(pad, dt) {                                          // (told each frame: true while a screen is up)
     var scr = screensUp(), press = edge(pad, 0), back = edge(pad, 1);
+    if (!scr.length && window.everdawnPadDecor && window.everdawnPadDecor()) return decorNav(pad, dt, press, back);
     if (!scr.length) { if (focusEl) setFocus(null); cursor.hidden = true; cursorOn = false; return false; }
     var map = [].slice.call(document.querySelectorAll('.ev-mapbox')).filter(seen)[0];
     var sx = pad.axes[0] || 0, sy = pad.axes[1] || 0, mag = Math.hypot(sx, sy);
