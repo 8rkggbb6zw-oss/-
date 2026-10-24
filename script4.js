@@ -1083,13 +1083,19 @@ var everdawnTitle = (function () {
     var list = window.everdawnControllerButtons ? window.everdawnControllerButtons() : [], kinds = window.everdawnControllerKinds || { ps: 'PlayStation', xbox: 'Xbox', sw: 'Switch' };
     function draw() {
       var now = window.everdawnControllerKind ? window.everdawnControllerKind() : null, sec = null, html = '<p class="ev-padnote">' + (now ? '🎮 Controller connected: ' + kinds[now] : '🎮 Plug in a controller, then press any button') + '</p>';
+      var hudOn = true; try { hudOn = localStorage.getItem('everdawn-hud') !== 'off'; } catch (err) {}
+      var hudRow = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evPadHudL">Toggle HUD</span><div class="ev-seg ev-padhud" role="group" aria-labelledby="evPadHudL">' +   // (Toggle HUD, the same setting as on the Mouse & Keyboard page, at the end of Gameplay)
+        '<button type="button" data-h="on" class="' + (hudOn ? 'on' : '') + '" aria-pressed="' + hudOn + '">On</button><button type="button" data-h="off" class="' + (hudOn ? '' : 'on') + '" aria-pressed="' + !hudOn + '">Off</button></div></div>';
       list.forEach(function (b) {
         if (b.unlisted) return;
-        if (b.section !== sec) { sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
+        if (b.section !== sec) { if (sec === 'Gameplay') html += hudRow; sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
         html += '<div class="ev-srow ev-tog ev-padrow"><span class="ev-lbl">' + b.name + '</span><div class="ev-pads">' + ['ps', 'xbox', 'sw'].map(function (k) {
           return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 && b[k].charAt(0) !== '<' ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
       });
-      body.innerHTML = html + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
+      body.innerHTML = html + (sec === 'Gameplay' ? hudRow : '') + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
+      [].forEach.call(body.querySelectorAll('.ev-padhud button'), function (btn) { btn.addEventListener('click', function () {
+        var h = this.getAttribute('data-h'); try { localStorage.setItem('everdawn-hud', h); } catch (err) {} if (window.everdawnSetHud) window.everdawnSetHud(h === 'on'); draw();
+      }); });
     }
     draw(); window.everdawnControllerChanged = function () { if (body.isConnected) draw(); };   // (it lights up the controller you plug in)
   } }, { name: 'Language', build: function (body) {                    // (Language: every word in the game in English, Español, Français, Italiano, Deutsch or Português; script5.js does the changing)
