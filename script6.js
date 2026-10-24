@@ -43,6 +43,7 @@
     { name: 'Open Pause Menu', section: 'Gameplay', button: 8, ps: 'CREATE', xbox: '⧉', sw: '−', key: ['everdawn-pause-key', 'KeyP'], menuToo: true, gameOnly: true },   // (Select: the pause menu, and again to close it)
     { name: 'Previous Tab', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen, or of Settings)
     { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
+    { name: 'Sort List Shortcut', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', key: ['everdawn-sort-key', 'Tab'], menuToo: true, when: 'everdawnPadSorting' },   // (the left bumper again: while a storage chest or the shipping bin is open, it sorts)
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },

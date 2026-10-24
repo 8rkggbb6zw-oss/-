@@ -8297,17 +8297,18 @@ EVERDAWN_PARTS.push(function (THREE) {
     mapFollow = true; centreMapOnYou(drawMap());
   }, true);
 
-  // ---------- Sort List Shortcut (for storage chests) ----------
-  // While a storage chest is open, Tab (on the Mouse & Keyboard page it can be a key of your own) sorts what's in it:
-  // the same things are gathered into one stack, everything goes in the game's own order of items (seeds, flowers,
-  // tools, wood, stone and so on), and the empty slots go to the end. The rest of the time Tab still steps through
-  // your items. There are no chests yet: when there are, a chest calls chestOpened(slots, redraw) as it opens (its
+  // ---------- Sort List Shortcut (for storage chests and the shipping bin) ----------
+  // While a storage chest or the shipping bin is open, Tab (on the Mouse & Keyboard page it can be a key of your own)
+  // sorts what's in it: the same things are gathered into one stack, everything goes in the game's own order of items
+  // (seeds, flowers, tools, wood, stone and so on), and the empty slots go to the end. The rest of the time Tab still
+  // steps through your items. There are no chests yet: when there are, a chest calls chestOpened(slots, redraw) as it opens (its
   // list of slots, each null or { id, count }, and a function that draws it again) and chestClosed() as it closes
   var sortKey = null; try { sortKey = localStorage.getItem('everdawn-sort-key') || null; } catch (err) {}
   window.everdawnSetSortKey = function (code) { sortKey = code || null; };
   var openChest = null;
   function chestOpened(slots, redraw) { openChest = { slots: slots, redraw: redraw || null }; }
   function chestClosed() { openChest = null; }
+  window.everdawnPadSorting = function () { return !!openChest || binOpen; };   // (the controller asks this: while it's true, L1 / LB / L sorts)
   function sortSlots(slots) {
     var order = Object.keys(ITEMS), stacks = {}, ids = [];
     slots.forEach(function (it) { if (!it) return; if (!stacks[it.id]) { stacks[it.id] = 0; ids.push(it.id); } stacks[it.id] += it.count; });
@@ -8318,11 +8319,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var i = 0; i < slots.length; i++) slots[i] = i < ids.length ? { id: ids[i], count: stacks[ids[i]] } : null;
     return slots;
   }
-  window.addEventListener('keydown', function (e) {                    // (caught first, so while a chest is open the key only sorts)
-    if (!openChest || e.code !== (sortKey || 'Tab') || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing())) return;
+  window.addEventListener('keydown', function (e) {                    // (caught first, so while a chest or the bin is open the key only sorts)
+    if (!(openChest || binOpen) || e.code !== (sortKey || 'Tab') || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing())) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (e.repeat) return;
+    if (!openChest) { var inBin = sortSlots(shipBin.slice()).filter(Boolean); shipBin.splice.apply(shipBin, [0, shipBin.length].concat(inBin)); renderShip(); return; }   // (the bin: what's in it, in order)
     sortSlots(openChest.slots); if (openChest.redraw) openChest.redraw();
   }, true);
 
