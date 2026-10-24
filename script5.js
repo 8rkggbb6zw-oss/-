@@ -1222,6 +1222,7 @@
     ["Cursor", "Cursor", "Curseur", "Cursore", "Cursor", "Cursor"],
     ["World Map", "Mapa del mundo", "Carte du monde", "Mappa del mondo", "Weltkarte", "Mapa do Mundo"],
     ["Switch Toolbar Row", "Cambiar fila de la barra", "Changer de rangée de la barre", "Cambia riga della barra", "Schnellleisten-Reihe wechseln", "Trocar fileira da barra"],
+    ["Switch Toolbar Column", "Cambiar columna de la barra", "Changer de colonne de la barre", "Cambia colonna della barra", "Schnellleisten-Spalte wechseln", "Trocar coluna da barra"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
