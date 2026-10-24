@@ -61,6 +61,8 @@
     { name: 'Select Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Deselect Item', section: 'Decor Mode', ps: '✕', xbox: 'A', sw: 'B', note: true },
     { name: 'Zoom In Decor Mode', section: 'Decor Mode', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },   // (worked in decorNav below)
+    { name: 'Zoom Out Decor Mode', section: 'Decor Mode', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
+    { name: 'Reset Decor Mode Camera', section: 'Decor Mode', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
@@ -160,9 +162,10 @@
     var el = document.elementFromPoint(cx, cy);
     if (moved && el) pointAt(el, 'pointermove', cx, cy);               // (a piece you're holding follows it)
     cursor.hidden = false; cursor.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
-    var ry = pad.axes[3] || 0, zd = ry < -0.5 ? 1 : 0, tnow = performance.now();   // (the right stick pushed forward: zooms in, a step at a time)
+    var ry = pad.axes[3] || 0, zd = ry < -0.5 ? 1 : ry > 0.5 ? -1 : 0, tnow = performance.now();   // (the right stick: forward zooms in, back zooms out, a step at a time)
     if (!zd) zoomDir = 0;
-    else if (zd !== zoomDir || tnow >= zoomNext) { var zc = keyFor({ key: ['everdawn-decor-zoom-in', 'Equal'] }); send('keydown', zc); send('keyup', zc); zoomNext = tnow + (zd !== zoomDir ? 450 : 260); zoomDir = zd; }
+    else if (zd !== zoomDir || tnow >= zoomNext) { var zc = zd > 0 ? keyFor({ key: ['everdawn-decor-zoom-in', 'Equal'] }) : keyFor({ key: ['everdawn-decor-zoom-out', 'Minus'] }); send('keydown', zc); send('keyup', zc); zoomNext = tnow + (zd !== zoomDir ? 450 : 260); zoomDir = zd; }
+    if (edge(pad, 11)) { var rc = keyFor({ key: ['everdawn-decor-camera-reset', 'KeyC'] }); send('keydown', rc); send('keyup', rc); }   // (clicking the right stick in: the camera back how it was)
     if (press && el) { if (el.tagName === 'CANVAS') { pointAt(el, 'pointerdown', cx, cy); pointAt(el, 'pointerup', cx, cy); } else clickAt(cx, cy); }   // (✕ / A / B: a click, on the room or the panel)
     return true;
   }

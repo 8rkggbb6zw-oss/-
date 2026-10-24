@@ -1083,13 +1083,14 @@ var everdawnTitle = (function () {
     var list = window.everdawnControllerButtons ? window.everdawnControllerButtons() : [], kinds = window.everdawnControllerKinds || { ps: 'PlayStation', xbox: 'Xbox', sw: 'Switch' };
     function draw() {
       var now = window.everdawnControllerKind ? window.everdawnControllerKind() : null, sec = null, html = '<p class="ev-padnote">' + (now ? '🎮 Controller connected: ' + kinds[now] : '🎮 Plug in a controller, then press any button') + '</p>';
-      var hudOn = true; try { hudOn = localStorage.getItem('everdawn-hud') !== 'off'; } catch (err) {}
-      var hudRow = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evPadHudL">Toggle HUD</span><div class="ev-seg ev-padhud" role="group" aria-labelledby="evPadHudL">' +   // (Toggle HUD, the same setting as on the Mouse & Keyboard page, at the end of Gameplay)
-        '<button type="button" data-h="on" class="' + (hudOn ? 'on' : '') + '" aria-pressed="' + hudOn + '">On</button><button type="button" data-h="off" class="' + (hudOn ? '' : 'on') + '" aria-pressed="' + !hudOn + '">Off</button></div></div>';
-      var gridOn = false; try { gridOn = localStorage.getItem('everdawn-decor-grid') === 'on'; } catch (err) {}
-      var gridRow = '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evPadGridL">Toggle Grid</span><div class="ev-seg ev-padgrid" role="group" aria-labelledby="evPadGridL">' +   // (Toggle Grid: whether Decor Mode's grid is on, at the end of Decor Mode)
-        '<button type="button" data-h="on" class="' + (gridOn ? 'on' : '') + '" aria-pressed="' + gridOn + '">On</button><button type="button" data-h="off" class="' + (gridOn ? '' : 'on') + '" aria-pressed="' + !gridOn + '">Off</button></div></div>';
-      var ends = { 'Gameplay': hudRow, 'Decor Mode': gridRow };          // (the toggles at the end of a section)
+      // (On / Off settings shown here too, the same ones as on the Mouse & Keyboard page: each one's name, where it's kept, the game's function, and whether it starts on)
+      var TOGS = [['Toggle HUD', 'everdawn-hud', 'everdawnSetHud', true], ['Toggle Grid', 'everdawn-decor-grid', 'everdawnSetDecorGrid', false], ['Toggle HUD In Decor Mode', 'everdawn-decor-hud', 'everdawnSetDecorHud', true]];
+      function togRow(n) {
+        var tg = TOGS[n], on = tg[3]; try { var v = localStorage.getItem(tg[1]); if (v) on = v === 'on'; } catch (err) {}
+        return '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evPadTog' + n + '">' + tg[0] + '</span><div class="ev-seg ev-padtog" data-t="' + n + '" role="group" aria-labelledby="evPadTog' + n + '">' +
+          '<button type="button" data-h="on" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '">On</button><button type="button" data-h="off" class="' + (on ? '' : 'on') + '" aria-pressed="' + !on + '">Off</button></div></div>';
+      }
+      var ends = { 'Gameplay': togRow(0), 'Decor Mode': togRow(1) + togRow(2) };   // (the toggles at the end of a section)
       list.forEach(function (b) {
         if (b.unlisted) return;
         if (b.section !== sec) { html += ends[sec] || ''; sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
@@ -1097,11 +1098,9 @@ var everdawnTitle = (function () {
           return '<span class="ev-pad ev-pad-' + k + (k === now ? ' on' : '') + '"><small translate="no">' + kinds[k] + '</small><b' + (b[k].length > 2 && b[k].charAt(0) !== '<' ? ' class="ev-pad-long"' : '') + '>' + b[k] + '</b></span>'; }).join('') + '</div></div>';
       });
       body.innerHTML = html + (ends[sec] || '') + '<div style="min-height:clamp(60px,14vh,140px)"></div>';
-      [].forEach.call(body.querySelectorAll('.ev-padhud button'), function (btn) { btn.addEventListener('click', function () {
-        var h = this.getAttribute('data-h'); try { localStorage.setItem('everdawn-hud', h); } catch (err) {} if (window.everdawnSetHud) window.everdawnSetHud(h === 'on'); draw();
-      }); });
-      [].forEach.call(body.querySelectorAll('.ev-padgrid button'), function (btn) { btn.addEventListener('click', function () {
-        var g = this.getAttribute('data-h'); try { localStorage.setItem('everdawn-decor-grid', g); } catch (err) {} if (window.everdawnSetDecorGrid) window.everdawnSetDecorGrid(g === 'on'); draw();
+      [].forEach.call(body.querySelectorAll('.ev-padtog button'), function (btn) { btn.addEventListener('click', function () {
+        var tg = TOGS[+this.parentNode.getAttribute('data-t')], h = this.getAttribute('data-h');
+        try { localStorage.setItem(tg[1], h); } catch (err) {} if (window[tg[2]]) window[tg[2]](h === 'on'); draw();
       }); });
     }
     draw(); window.everdawnControllerChanged = function () { if (body.isConnected) draw(); };   // (it lights up the controller you plug in)
