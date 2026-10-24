@@ -21,6 +21,7 @@
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
+    { name: 'Skip Cutscene (Hold)', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadSkipHold', when: 'everdawnPadCutscene' },   // (the same button again: while a cutscene plays, holding it skips; a tap still moves dialogue along)
     { name: 'Advance Dialogue', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-advance-key', 'KeyE'], when: 'everdawnPadTalking' },   // (the same button as Interact: while someone's talking, it moves the conversation along)
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
     { name: 'Cast Spell', section: 'Gameplay', button: 3, ps: '△', xbox: 'Y', sw: 'X', key: ['everdawn-spell-key', 'KeyQ'] },   // (the top face button: Dawn Bloom, or your own Spell Casting key)
@@ -52,6 +53,35 @@
   window.everdawnPadColNext = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(1); };
   window.everdawnPadColPrev = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(-1); };
   window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
+  // ---- skipping a cutscene: hold ✕ / A / B ----
+  // While a cutscene plays, the Skip button at the top right says "Hold to skip" with your controller's button on it, and
+  // fills up as you hold; held for a second, it skips (with your Skip Events key). Let go sooner and it was a tap: if
+  // anyone's talking, it moves them along
+  var HOLD = 1000, holdStart = 0, skipLabelled = null;
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-skip.ev-skiphold{background:linear-gradient(90deg,rgba(255,158,203,.9) var(--ev-hold,0%),rgba(58,34,112,.85) var(--ev-hold,0%))}' +
+    '.ev-skippad{display:inline-block;min-width:1.4em;margin-right:.35em;padding:0 .3em;border-radius:999px;background:#fff;color:#4e2b9c;text-align:center}';
+    document.head.appendChild(st); })();
+  window.everdawnPadCutscene = function () { var s = document.querySelector('.ev-skip'); return !!s && !s.hidden; };
+  window.everdawnPadSkipHold = function (on) {
+    if (on) { holdStart = performance.now(); return; }
+    var tapped = holdStart; holdStart = 0; holdFill(0);
+    if (tapped && window.everdawnPadTalking()) { var k = keyFor(byName('Advance Dialogue')); send('keydown', k); send('keyup', k); }
+  };
+  function byName(n) { return BUTTONS.filter(function (b) { return b.name === n; })[0]; }
+  function holdFill(f) { var s = document.querySelector('.ev-skip'); if (s) s.style.setProperty('--ev-hold', Math.round(f * 100) + '%'); }
+  function holdTick(now) {                                             // (each frame: fill the button, skip once it's full, and say "Hold to skip" while a controller's in)
+    var s = document.querySelector('.ev-skip'); if (!s) return;
+    var want = padKind && !s.hidden ? padKind : null;
+    if (want !== skipLabelled) {
+      skipLabelled = want; s.classList.toggle('ev-skiphold', !!want);
+      if (want) s.innerHTML = '<b class="ev-skippad" translate="no">' + byName('Skip Cutscene (Hold)')[want] + '</b>Hold to skip';
+      else if (window.everdawnSetSkipKey) { var k = null; try { k = localStorage.getItem('everdawn-skip-key'); } catch (err) {} window.everdawnSetSkipKey(k); }   // (back to the keyboard's own label)
+    }
+    if (!holdStart) return;
+    var f = (now - holdStart) / HOLD; holdFill(Math.min(1, f));
+    if (f >= 1) { holdStart = 0; holdFill(0); var c = keyFor({ key: ['everdawn-skip-key', 'KeyN'] }); send('keydown', c); send('keyup', c); }
+  }
   var DEAD = 0.35;
   // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
   // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the
@@ -167,6 +197,7 @@
     var pad = navigator.getGamepads()[padIndex]; if (!pad) return;
     var paused = !document.hasFocus() || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()), inMenus = !!window.EVERDAWN_TITLE || settingsUp();   // (on the title screen and in Settings, only the menu buttons work)
     var now = performance.now(), dt = Math.min(0.05, (now - (poll.t || now)) / 1000); poll.t = now;
+    holdTick(now);
     var screen = !paused && (menuNav(pad, dt) || inMenus);
     var seenB = {};
     BUTTONS.forEach(function (b0) {
