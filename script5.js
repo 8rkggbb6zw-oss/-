@@ -1229,6 +1229,8 @@
     ["Exit Decor Mode (Hold)", "Salir del Modo Decoración (mantener)", "Quitter le Mode déco (maintenir)", "Esci da Modalità Arredo (tieni premuto)", "Deko-Modus beenden (halten)", "Sair do Modo Decoração (segurar)"],
     ["Close Storage", "Cerrar almacén", "Fermer le rangement", "Chiudi deposito", "Lager schließen", "Fechar Depósito"],
     ["Close Inventory", "Cerrar inventario", "Fermer l'inventaire", "Chiudi inventario", "Inventar schließen", "Fechar Inventário"],
+    ["Enter Farm View Mode (Hold)", "Entrar en Vista de la granja (mantener)", "Entrer en Vue de la ferme (maintenir)", "Entra in Vista Fattoria (tieni premuto)", "Hofansicht starten (halten)", "Entrar na Vista da Fazenda (segurar)"],
+    ["🌾 Farm View only works outside on your farm.", "🌾 La Vista de la granja solo funciona al aire libre en tu granja.", "🌾 La Vue de la ferme ne fonctionne qu'en extérieur, sur ta ferme.", "🌾 La Vista Fattoria funziona solo all'aperto nella tua fattoria.", "🌾 Die Hofansicht funktioniert nur draußen auf deinem Hof.", "🌾 A Vista da Fazenda só funciona ao ar livre na sua fazenda."],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();

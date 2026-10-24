@@ -63,6 +63,7 @@
     { name: 'Zoom In Decor Mode', section: 'Decor Mode', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },   // (worked in decorNav below)
     { name: 'Zoom Out Decor Mode', section: 'Decor Mode', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
     { name: 'Reset Decor Mode Camera', section: 'Decor Mode', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
+    { name: 'Enter Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-key', 'KeyV'], hold: 1000, when: 'everdawnPadOutside' },   // (the same hold as Decor Mode: outdoors, on your farm, it's Farm View)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },

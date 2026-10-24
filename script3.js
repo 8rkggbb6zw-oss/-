@@ -8822,9 +8822,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function () { var st = document.createElement('style'); st.textContent = '.ev-farm-hud-off body.ev-farm-on .topbar,.ev-farm-hud-off body.ev-farm-on .hotbar,.ev-farm-hud-off body.ev-farm-on .quest-hud,.ev-farm-hud-off body.ev-farm-on .controls,.ev-farm-hud-off body.ev-farm-on #toast,.ev-farm-hud-off body.ev-farm-on .ev-farmview{visibility:hidden!important}'; document.head.appendChild(st); })();
   window.everdawnSetFarmHud = function (on) { document.documentElement.classList.toggle('ev-farm-hud-off', !on); };
   try { window.everdawnSetFarmHud(localStorage.getItem('everdawn-farm-hud') !== 'off'); } catch (err) {}
+  window.everdawnPadOutside = function () { return !indoors; };   // (the controller asks this: outdoors, holding up on the D-pad is Farm View)
   function enterFarmView() {
     if (farmView) return;
-    if (indoors) { showToast('🌾 Farm View only works outside.', 2000); return; }
+    if (indoors || islandR(player.position.x, player.position.z) > ISLAND) { showToast('🌾 Farm View only works outside on your farm.', 2000); return; }   // (outdoors, on your own island)
     if (gamePaused || somethingOpen() || flying) return;
     farmView = true;
     farmViewSaved = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw, fogNear: scene.fog ? scene.fog.near : 0, fogFar: scene.fog ? scene.fog.far : 0, far: camera.far };
