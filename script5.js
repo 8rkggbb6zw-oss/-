@@ -1231,6 +1231,7 @@
     ["Close Inventory", "Cerrar inventario", "Fermer l'inventaire", "Chiudi inventario", "Inventar schließen", "Fechar Inventário"],
     ["Enter Farm View Mode (Hold)", "Entrar en Vista de la granja (mantener)", "Entrer en Vue de la ferme (maintenir)", "Entra in Vista Fattoria (tieni premuto)", "Hofansicht starten (halten)", "Entrar na Vista da Fazenda (segurar)"],
     ["Exit Farm View Mode (Hold)", "Salir de Vista de la granja (mantener)", "Quitter la Vue de la ferme (maintenir)", "Esci da Vista Fattoria (tieni premuto)", "Hofansicht beenden (halten)", "Sair da Vista da Fazenda (segurar)"],
+    ["Cancel Minigame", "Cancelar minijuego", "Annuler le mini-jeu", "Annulla minigioco", "Minispiel abbrechen", "Cancelar Minijogo"],
     ["🌾 Farm View only works outside on your farm.", "🌾 La Vista de la granja solo funciona al aire libre en tu granja.", "🌾 La Vue de la ferme ne fonctionne qu'en extérieur, sur ta ferme.", "🌾 La Vista Fattoria funziona solo all'aperto nella tua fattoria.", "🌾 Die Hofansicht funktioniert nur draußen auf deinem Hof.", "🌾 A Vista da Fazenda só funciona ao ar livre na sua fazenda."],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}

@@ -67,13 +67,18 @@
     { name: 'Enter Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmEnter' },   // (the same hold as Decor Mode: outdoors, on your farm, it's Farm View)
     { name: 'Exit Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-exit-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmView' },   // (and again to leave)
     { name: 'Minigame Primary Action', section: 'Events', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-minigame-primary', 'Space'], when: 'everdawnPadMinigame', over: true },   // (the Interact button again: while a minigame runs, it's the minigame's main button)
+    { name: 'Minigame Secondary Action', section: 'Events', button: 2, ps: '□', xbox: 'X', sw: 'Y', key: ['everdawn-minigame-secondary', 'KeyW'], when: 'everdawnPadMinigame', over: true },   // (the Use Tool button: in a minigame, its second button)
+    { name: 'Cancel Minigame', section: 'Events', button: 1, ps: '○', xbox: 'B', sw: 'A', call: 'everdawnPadMinigameCancel', when: 'everdawnPadMinigame', over: true },   // (presses Escape: a minigame stops when it hears it, from the keyboard too)
+    { name: 'Minigame Attack', section: 'Events', button: 7, ps: 'R2', xbox: 'RT', sw: 'ZR', call: 'everdawnPadMinigameAttack', when: 'everdawnPadMinigame', over: true },   // (the right trigger: the Toolbar Row trigger, in a minigame)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
     { name: 'Center Map Focus', section: 'World Map', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
     { name: 'Previous Tab', section: 'Menu', ps: 'L1', xbox: 'LB', sw: 'L', note: true },   // (the same in Settings and on the title screen: shown again under Menu)
     { name: 'Next Tab', section: 'Menu', ps: 'R1', xbox: 'RB', sw: 'R', note: true },
-    { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true }
+    { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },
+    { name: 'Confirm', section: 'Menu', ps: '✕', xbox: 'A', sw: 'B', note: true },   // (on a screen, ✕ / A / B presses the box it's on, and ○ / B / A goes back: worked in menuNav below)
+    { name: 'Cancel', section: 'Menu', ps: '○', xbox: 'B', sw: 'A', note: true }
   ];
   function settingsUp() { return !!(window.everdawnSettingsOpen && window.everdawnSettingsOpen()); }
   window.everdawnPadTabPrev = function (on) { if (!on) return; if (settingsUp()) window.everdawnSettingsPrevPage(); else if (window.everdawnPadTab) window.everdawnPadTab(-1); };
@@ -86,6 +91,13 @@
   window.everdawnPadFarmView = function () { return document.body.classList.contains('ev-farm-on'); };   // (in Farm View?)
   window.everdawnPadFarmEnter = function () { return !!(window.everdawnPadOutside && window.everdawnPadOutside()) && !window.everdawnPadFarmView(); };
   window.everdawnPadMinigame = function () { return !!window.everdawnMinigameOn; };   // (a minigame sets window.everdawnMinigameOn = true while it runs, and false when it's over)
+  window.everdawnPadMinigameCancel = function (on) { if (on) { send('keydown', 'Escape'); send('keyup', 'Escape'); } };
+  window.everdawnPadMinigameAttack = function (on) {                   // (Minigame Attack: your own key for it, or else a left click in the middle of the game)
+    if (!on) return; var k = null; try { k = localStorage.getItem('everdawn-minigame-attack'); } catch (err) {}
+    if (k) { send('keydown', k); send('keyup', k); return; }
+    var c = document.querySelector('canvas#game') || document.querySelector('canvas'); if (!c) return; var r = c.getBoundingClientRect();
+    pointAt(c, 'pointerdown', r.left + r.width / 2, r.top + r.height / 2); pointAt(c, 'pointerup', r.left + r.width / 2, r.top + r.height / 2);
+  };
   window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
   // ---- skipping a cutscene: hold ✕ / A / B ----
   // While a cutscene plays, the Skip button at the top right says "Hold to skip" with your controller's button on it, and
