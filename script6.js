@@ -38,6 +38,7 @@
     { name: 'Switch Toolbar Column', section: 'Gameplay', button: 5, ps: 'L1 / R1', xbox: 'LB / RB', sw: 'L / R', call: 'everdawnPadColNext' },   // (the bumpers, while playing: the right one picks the next slot along the toolbar, the left one the slot before)
     { name: 'Previous Toolbar Column', unlisted: true, button: 4, call: 'everdawnPadColPrev' },
     { name: 'World Map', section: 'Gameplay', button: 9, ps: 'OPTIONS', xbox: '☰', sw: '+', call: 'everdawnPadMap', menuToo: true, gameOnly: true },   // (Start: the map, and again to close it)
+    { name: 'Open Pause Menu', section: 'Gameplay', button: 8, ps: 'CREATE', xbox: '⧉', sw: '−', key: ['everdawn-pause-key', 'KeyP'], menuToo: true, gameOnly: true },   // (Select: the pause menu, and again to close it)
     { name: 'Previous Tab', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen, or of Settings)
     { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
