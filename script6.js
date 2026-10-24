@@ -30,13 +30,17 @@
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
     { name: 'Move Left', unlisted: true, axis: 0, dir: -1, key: ['everdawn-move-left', 'KeyA'] },
     { name: 'Move Camera', section: 'Gameplay', stick: [2, 3], ps: RSTICK, xbox: RSTICK, sw: RSTICK, call: 'everdawnPadCam' },   // (the right stick turns the camera round and tips it up and down, faster the further it's pushed),
-    { name: 'World Map', section: 'Menu', button: 9, ps: 'OPTIONS', xbox: '☰', sw: '+', call: 'everdawnPadMap', menu: true, menuToo: true },   // (Start: the map, and again to close it)
-    { name: 'Previous Tab', section: 'Menu', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen: the map, quests, crafting, relationships, skills and the bag)
-    { name: 'Next Tab', section: 'Menu', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
-    { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
+    { name: 'World Map', section: 'Gameplay', button: 9, ps: 'OPTIONS', xbox: '☰', sw: '+', call: 'everdawnPadMap', menuToo: true, gameOnly: true },   // (Start: the map, and again to close it)
+    { name: 'Previous Tab', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen, or of Settings)
+    { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
+    { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
+    { name: 'Previous Tab', section: 'Menu', ps: 'L1', xbox: 'LB', sw: 'L', note: true },   // (the same in Settings and on the title screen: shown again under Menu)
+    { name: 'Next Tab', section: 'Menu', ps: 'R1', xbox: 'RB', sw: 'R', note: true },
+    { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true }
   ];
-  window.everdawnPadTabPrev = function (on) { if (on && window.everdawnPadTab) window.everdawnPadTab(-1); };
-  window.everdawnPadTabNext = function (on) { if (on && window.everdawnPadTab) window.everdawnPadTab(1); };
+  function settingsUp() { return !!(window.everdawnSettingsOpen && window.everdawnSettingsOpen()); }
+  window.everdawnPadTabPrev = function (on) { if (!on) return; if (settingsUp()) window.everdawnSettingsPrevPage(); else if (window.everdawnPadTab) window.everdawnPadTab(-1); };
+  window.everdawnPadTabNext = function (on) { if (!on) return; if (settingsUp()) window.everdawnSettingsNextPage(); else if (window.everdawnPadTab) window.everdawnPadTab(1); };
   var DEAD = 0.35;
   // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
   // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the
@@ -51,7 +55,11 @@
   document.body.appendChild(cursor);
   var focusEl = null, lastC = null, navKey = '', navNext = 0, navDir = '', navReps = 0, cx = -1, cy = -1, prevB = {}, cursorOn = false;
   function seen(el) { if (!el || el.hidden) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
-  function screensUp() { return [].slice.call(document.querySelectorAll('.inventory, .ev-pause')).filter(seen); }
+  function screensUp() {                                               // (Settings, the title screen and its save slots, or the game's own screens)
+    if (settingsUp()) return [document.querySelector('.ev-sett .ev-scard') || document.querySelector('.ev-sett')];
+    if (window.EVERDAWN_TITLE) { var sl = [].slice.call(document.querySelectorAll('#evTitle .ev-slots.open')).filter(seen); return sl.length ? sl : [].slice.call(document.querySelectorAll('#evTitle .ev-btns')).filter(seen); }
+    return [].slice.call(document.querySelectorAll('.inventory, .ev-pause')).filter(seen);
+  }
   function centre(el) { var r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
   function boxes(scr) {
     var out = []; scr.forEach(function (s) { [].slice.call(s.querySelectorAll('button, [role="button"], a[href], input, select, .shop-tile')).forEach(function (el) {
@@ -100,6 +108,12 @@
       var items = list.filter(function (el) { return el.matches('.slot, .shop-tile'); });
       setFocus(lastC ? nearestTo(list, lastC) : nearestTo(items.length ? items : list, null));   // (or, if it was redrawn, the box where it was)
     }
+    if (focusEl && focusEl.matches('input[type="range"]') && Math.abs(sx) > 0.5 && Math.abs(sx) > Math.abs(sy)) {   // (on a slider, left and right slide it)
+      if ((sx > 0 ? 'R' : 'L') !== navDir || performance.now() >= navNext) { var stp = +focusEl.step || 1; focusEl.value = Math.max(+focusEl.min, Math.min(+focusEl.max, +focusEl.value + (sx > 0 ? stp : -stp))); focusEl.dispatchEvent(new Event('input', { bubbles: true })); focusEl.dispatchEvent(new Event('change', { bubbles: true }));
+        navNext = performance.now() + ((sx > 0 ? 'R' : 'L') !== navDir ? 380 : 140); navDir = sx > 0 ? 'R' : 'L'; }
+      if (press) focusEl.click();
+      return true;
+    }
     var dir = mag < 0.5 ? '' : Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 'R' : 'L') : (sy > 0 ? 'D' : 'U'), now = performance.now();
     if (!dir) { navDir = ''; navReps = 0; }
     else if (dir !== navDir || now >= navNext) {
@@ -140,9 +154,9 @@
     requestAnimationFrame(poll);
     if (padIndex === null || !navigator.getGamepads) return;
     var pad = navigator.getGamepads()[padIndex]; if (!pad) return;
-    var paused = window.EVERDAWN_TITLE || (window.everdawnSettingsOpen && window.everdawnSettingsOpen()) || !document.hasFocus();   // (not on the title screen or in Settings)
+    var paused = !document.hasFocus() || (window.everdawnKeyGrabbing && window.everdawnKeyGrabbing()), inMenus = !!window.EVERDAWN_TITLE || settingsUp();   // (on the title screen and in Settings, only the menu buttons work)
     var now = performance.now(), dt = Math.min(0.05, (now - (poll.t || now)) / 1000); poll.t = now;
-    var screen = !paused && menuNav(pad, dt);
+    var screen = !paused && (menuNav(pad, dt) || inMenus);
     var seenB = {};
     BUTTONS.forEach(function (b0) {
       if (b0.note) return;
@@ -162,7 +176,7 @@
       var i = idx(b0); if (seenB[i]) return; seenB[i] = true;
       var btn = pad.buttons[i], on = !paused && !!btn && (btn.pressed || btn.value > 0.5), was = held[i];
       if (on && !was) {                                                 // (pressed: of the jobs on this button, the one that fits right now)
-        var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i && (screen ? x.menuOnly || x.menuToo : !x.menuOnly); });   // (on a screen only the menu buttons; off it, the rest)
+        var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i && (screen ? x.menuOnly || x.menuToo : !x.menuOnly) && !(x.gameOnly && inMenus); });   // (on a screen only the menu buttons; off it, the rest)
         var b = all.filter(function (x) { return x.when && window[x.when] && window[x.when](); })[0] || all.filter(function (x) { return !x.when; })[0];
         if (!b) return; held[i] = b;
         if (b.call) { down[b.name] = true; if (window[b.call]) window[b.call](true); } else { down[b.name] = keyFor(b); send('keydown', down[b.name]); }
