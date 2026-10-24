@@ -18,6 +18,8 @@
   var LSTICK = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="Left stick" style="display:block"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>' +   // (a joystick seen from above, L on its cap)
     '<circle cx="13" cy="13" r="8" fill="currentColor" opacity=".2"/><circle cx="13" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 8.6v8h5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var RSTICK = LSTICK.replace('Left stick', 'Right stick').replace('M10.6 8.6v8h5.2', 'M10.4 16.8V8.6h2.9a2.3 2.3 0 0 1 0 4.6h-2.9M13.2 13.2l2.6 3.6');   // (the same joystick, R on its cap)
+  var RSTICK_UP = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 -9 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 -9l6.5 7h-13z" fill="currentColor"/></svg>');   // (the right stick with an arrow: pushed forward)
+  var RSTICK_DOWN = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 0 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 35l6.5-7h-13z" fill="currentColor"/></svg>');   // (and pulled back)
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
@@ -42,6 +44,10 @@
     { name: 'Previous Tab', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen, or of Settings)
     { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
+    { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
+    { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
+    { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
+    { name: 'Center Map Focus', section: 'World Map', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
     { name: 'Previous Tab', section: 'Menu', ps: 'L1', xbox: 'LB', sw: 'L', note: true },   // (the same in Settings and on the title screen: shown again under Menu)
     { name: 'Next Tab', section: 'Menu', ps: 'R1', xbox: 'RB', sw: 'R', note: true },
     { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true }
@@ -87,7 +93,8 @@
   // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
   // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the
   // one it's on; ✕ / A / B presses it, ○ / B / A closes the screen. On the world map it's a free cursor instead, to
-  // point at a pin, and the right stick scrolls the map
+  // point at a pin, and pushed against the map's edge it moves the map along; the right stick forward and back zooms
+  // in and out, and clicking it in centres the map on you
   (function () { var st = document.createElement('style'); st.textContent =
     '.ev-padfocus{outline:3px solid #ffd36e!important;outline-offset:2px!important;box-shadow:0 0 0 6px rgba(255,211,110,.35),0 0 16px rgba(255,190,90,.6)!important;position:relative;z-index:2;transition:outline-color .1s}' +
     '.ev-padcursor{position:fixed;left:0;top:0;z-index:99999;width:26px;height:26px;margin:-3px 0 0 -3px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(40,20,80,.6))}';
@@ -95,7 +102,7 @@
   var cursor = document.createElement('div'); cursor.className = 'ev-padcursor'; cursor.hidden = true;
   cursor.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M3 2l15 9-6.5 1.6L15 20l-3 1.4-3.4-7.6L3 18z" fill="#fff" stroke="#7b4fd6" stroke-width="1.6" stroke-linejoin="round"/></svg>';
   document.body.appendChild(cursor);
-  var focusEl = null, lastC = null, navKey = '', navNext = 0, navDir = '', navReps = 0, cx = -1, cy = -1, prevB = {}, cursorOn = false;
+  var focusEl = null, lastC = null, navKey = '', navNext = 0, navDir = '', navReps = 0, cx = -1, cy = -1, prevB = {}, cursorOn = false, zoomDir = 0, zoomNext = 0;
   function seen(el) { if (!el || el.hidden) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
   function screensUp() {                                               // (Settings, the title screen and its save slots, or the game's own screens)
     if (settingsUp()) return [document.querySelector('.ev-sett .ev-scard') || document.querySelector('.ev-sett')];
@@ -134,10 +141,19 @@
     if (back) { send('keydown', 'Escape'); send('keyup', 'Escape'); return true; }
     if (map) {                                                         // (the world map: a free cursor)
       if (focusEl) setFocus(null);
-      var area = scr[scr.length - 1].getBoundingClientRect();
-      if (!cursorOn) { var m = map.getBoundingClientRect(); cx = m.left + m.width / 2; cy = m.top + m.height / 2; cursorOn = true; }
-      if (mag > 0.18) { var k = (mag - 0.18) / (1 - 0.18) / mag * 650 * dt; cx = Math.max(area.left, Math.min(area.right - 4, cx + sx * k)); cy = Math.max(area.top, Math.min(area.bottom - 4, cy + sy * k)); }
-      var rx = pad.axes[2] || 0, ry = pad.axes[3] || 0; if (Math.hypot(rx, ry) > 0.18) { map.scrollLeft += rx * 600 * dt; map.scrollTop += ry * 600 * dt; }
+      var area = map.getBoundingClientRect();
+      if (!cursorOn) { cx = area.left + area.width / 2; cy = area.top + area.height / 2; cursorOn = true; }
+      if (mag > 0.18) {
+        var k = (mag - 0.18) / (1 - 0.18) / mag * 650 * dt, nx = cx + sx * k, ny = cy + sy * k;
+        cx = Math.max(area.left + 2, Math.min(area.right - 6, nx)); cy = Math.max(area.top + 2, Math.min(area.bottom - 6, ny));
+        if (nx !== cx || ny !== cy) {                                  // (pushed against an edge: the map moves along under it, and stops following you, as it does for the mouse wheel)
+          map.dispatchEvent(new WheelEvent('wheel', { bubbles: false })); map.scrollLeft += (nx - cx) * 1.6; map.scrollTop += (ny - cy) * 1.6;
+        }
+      }
+      var ry = pad.axes[3] || 0, zd = ry < -0.5 ? 1 : ry > 0.5 ? -1 : 0, tnow = performance.now();   // (the right stick: forward zooms in, back zooms out, a step at a time)
+      if (!zd) zoomDir = 0;
+      else if (zd !== zoomDir || tnow >= zoomNext) { var zc = zd > 0 ? keyFor({ key: ['everdawn-map-zoom-in', 'Equal'] }) : keyFor({ key: ['everdawn-map-zoom-out', 'Minus'] }); send('keydown', zc); send('keyup', zc); zoomNext = tnow + (zd !== zoomDir ? 450 : 260); zoomDir = zd; }
+      if (edge(pad, 11)) { var mc = keyFor({ key: ['everdawn-map-center', 'KeyM'] }); send('keydown', mc); send('keyup', mc); }   // (clicking the right stick in: back to you)
       cursor.hidden = false; cursor.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
       if (press) { cursor.hidden = true; clickAt(cx, cy); cursor.hidden = false; }
       return true;
