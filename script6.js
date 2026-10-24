@@ -21,6 +21,7 @@
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
+    { name: 'Advance Dialogue', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-advance-key', 'KeyE'], when: 'everdawnPadTalking' },   // (the same button as Interact: while someone's talking, it moves the conversation along)
     { name: 'Place Item', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', call: 'everdawnPadPlace', when: 'everdawnPadCanPlace' },   // (the same button as Interact: it places when you're holding something placeable)
     { name: 'Cast Spell', section: 'Gameplay', button: 3, ps: '△', xbox: 'Y', sw: 'X', key: ['everdawn-spell-key', 'KeyQ'] },   // (the top face button: Dawn Bloom, or your own Spell Casting key)
     { name: 'Call Moonstone Mooring', section: 'Gameplay', button: 3, ps: '△', xbox: 'Y', sw: 'X', key: ['everdawn-mooring-key', 'KeyX'], when: 'everdawnPadUnderwater' },   // (the same button as Cast Spell: underwater, where there are no spells, it calls the Mooring)
@@ -50,6 +51,7 @@
   window.everdawnPadRowPrev = function (on) { if (on && window.everdawnPadRow) window.everdawnPadRow(-1); };
   window.everdawnPadColNext = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(1); };
   window.everdawnPadColPrev = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(-1); };
+  window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
   var DEAD = 0.35;
   // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
   // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the
