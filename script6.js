@@ -29,9 +29,86 @@
     { name: 'Move Down', unlisted: true, axis: 1, dir: 1, key: ['everdawn-move-down', 'KeyS'] },
     { name: 'Move Right', unlisted: true, axis: 0, dir: 1, key: ['everdawn-move-right', 'KeyD'] },
     { name: 'Move Left', unlisted: true, axis: 0, dir: -1, key: ['everdawn-move-left', 'KeyA'] },
-    { name: 'Move Camera', section: 'Gameplay', stick: [2, 3], ps: RSTICK, xbox: RSTICK, sw: RSTICK, call: 'everdawnPadCam' }   // (the right stick turns the camera round and tips it up and down, faster the further it's pushed)
+    { name: 'Move Camera', section: 'Gameplay', stick: [2, 3], ps: RSTICK, xbox: RSTICK, sw: RSTICK, call: 'everdawnPadCam' },   // (the right stick turns the camera round and tips it up and down, faster the further it's pushed),
+    { name: 'World Map', section: 'Menu', button: 9, ps: 'OPTIONS', xbox: '☰', sw: '+', call: 'everdawnPadMap', menu: true, menuToo: true },   // (Start: the map, and again to close it)
+    { name: 'Previous Tab', section: 'Menu', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', menuOnly: true, call: 'everdawnPadTabPrev' },   // (the bumpers turn the pages of an open screen: the map, quests, crafting, relationships, skills and the bag)
+    { name: 'Next Tab', section: 'Menu', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
+    { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
   ];
-  var DEAD = 0.35;                                                     // (how far a stick has to tilt before it counts: a little wobble does nothing)
+  window.everdawnPadTabPrev = function (on) { if (on && window.everdawnPadTab) window.everdawnPadTab(-1); };
+  window.everdawnPadTabNext = function (on) { if (on && window.everdawnPadTab) window.everdawnPadTab(1); };
+  var DEAD = 0.35;
+  // ---- on a screen (the bag and its pages, the shops, the shipping bin, the pause menu): the left stick is a cursor ----
+  // On most screens it hops from box to box (each slot, tile and button), one at a time, with a glowing frame round the
+  // one it's on; ✕ / A / B presses it, ○ / B / A closes the screen. On the world map it's a free cursor instead, to
+  // point at a pin, and the right stick scrolls the map
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.ev-padfocus{outline:3px solid #ffd36e!important;outline-offset:2px!important;box-shadow:0 0 0 6px rgba(255,211,110,.35),0 0 16px rgba(255,190,90,.6)!important;position:relative;z-index:2;transition:outline-color .1s}' +
+    '.ev-padcursor{position:fixed;left:0;top:0;z-index:99999;width:26px;height:26px;margin:-3px 0 0 -3px;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(40,20,80,.6))}';
+    document.head.appendChild(st); })();
+  var cursor = document.createElement('div'); cursor.className = 'ev-padcursor'; cursor.hidden = true;
+  cursor.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M3 2l15 9-6.5 1.6L15 20l-3 1.4-3.4-7.6L3 18z" fill="#fff" stroke="#7b4fd6" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  document.body.appendChild(cursor);
+  var focusEl = null, lastC = null, navKey = '', navNext = 0, navDir = '', navReps = 0, cx = -1, cy = -1, prevB = {}, cursorOn = false;
+  function seen(el) { if (!el || el.hidden) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
+  function screensUp() { return [].slice.call(document.querySelectorAll('.inventory, .ev-pause')).filter(seen); }
+  function centre(el) { var r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+  function boxes(scr) {
+    var out = []; scr.forEach(function (s) { [].slice.call(s.querySelectorAll('button, [role="button"], a[href], input, select, .shop-tile')).forEach(function (el) {
+      if (el.disabled || !seen(el) || out.indexOf(el) >= 0) return; var cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.pointerEvents === 'none') return; out.push(el); }); });
+    return out;
+  }
+  function setFocus(el) {
+    if (focusEl && focusEl !== el) focusEl.classList.remove('ev-padfocus');
+    focusEl = el; if (!el) return; el.classList.add('ev-padfocus'); lastC = centre(el);
+    try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (err) {}
+  }
+  function nearestTo(list, c) { var best = null, bd = 1e9; list.forEach(function (el) { var p = centre(el), d = c ? Math.hypot(p[0] - c[0], p[1] - c[1]) : p[1] * 4 + p[0]; if (d < bd) { bd = d; best = el; } }); return best; }
+  function hop(dx, dy, list) {                                         // (to the nearest box that way, keeping close to the same line)
+    var f = centre(focusEl), best = null, bs = 1e9;
+    list.forEach(function (el) { if (el === focusEl) return; var p = centre(el), ex = p[0] - f[0], ey = p[1] - f[1], along = ex * dx + ey * dy, side = Math.abs(ex * dy - ey * dx);
+      if (along <= 4) return; var s = along + side * 2.5; if (s < bs) { bs = s; best = el; } });
+    if (best) setFocus(best);
+  }
+  function clickAt(x, y) {
+    var el = document.elementFromPoint(x, y); if (!el) return;
+    if (el.closest('button, [role="button"], a[href]')) { el.closest('button, [role="button"], a[href]').click(); return; }
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0, view: window }));
+  }
+  function edge(pad, i) { var b = pad.buttons[i], on = !!b && (b.pressed || b.value > 0.5), was = prevB[i]; prevB[i] = on; return on && !was; }
+  function menuNav(pad, dt) {                                          // (told each frame: true while a screen is up)
+    var scr = screensUp(), press = edge(pad, 0), back = edge(pad, 1);
+    if (!scr.length) { if (focusEl) setFocus(null); cursor.hidden = true; cursorOn = false; return false; }
+    var map = [].slice.call(document.querySelectorAll('.ev-mapbox')).filter(seen)[0];
+    var sx = pad.axes[0] || 0, sy = pad.axes[1] || 0, mag = Math.hypot(sx, sy);
+    if (back) { send('keydown', 'Escape'); send('keyup', 'Escape'); return true; }
+    if (map) {                                                         // (the world map: a free cursor)
+      if (focusEl) setFocus(null);
+      var area = scr[scr.length - 1].getBoundingClientRect();
+      if (!cursorOn) { var m = map.getBoundingClientRect(); cx = m.left + m.width / 2; cy = m.top + m.height / 2; cursorOn = true; }
+      if (mag > 0.18) { var k = (mag - 0.18) / (1 - 0.18) / mag * 650 * dt; cx = Math.max(area.left, Math.min(area.right - 4, cx + sx * k)); cy = Math.max(area.top, Math.min(area.bottom - 4, cy + sy * k)); }
+      var rx = pad.axes[2] || 0, ry = pad.axes[3] || 0; if (Math.hypot(rx, ry) > 0.18) { map.scrollLeft += rx * 600 * dt; map.scrollTop += ry * 600 * dt; }
+      cursor.hidden = false; cursor.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+      if (press) { cursor.hidden = true; clickAt(cx, cy); cursor.hidden = false; }
+      return true;
+    }
+    cursor.hidden = true; cursorOn = false;
+    var list = boxes(scr); if (!list.length) return true;
+    var key = scr.map(function (s) { var h = s.querySelector('.inv-head b, h2'); return s.className + '|' + (h ? h.textContent : ''); }).join();
+    if (key !== navKey) { navKey = key; lastC = null; if (focusEl) setFocus(null); }   // (a new screen or page: start on its first slot or tile)
+    if (!focusEl || !document.contains(focusEl) || list.indexOf(focusEl) < 0) {
+      var items = list.filter(function (el) { return el.matches('.slot, .shop-tile'); });
+      setFocus(lastC ? nearestTo(list, lastC) : nearestTo(items.length ? items : list, null));   // (or, if it was redrawn, the box where it was)
+    }
+    var dir = mag < 0.5 ? '' : Math.abs(sx) > Math.abs(sy) ? (sx > 0 ? 'R' : 'L') : (sy > 0 ? 'D' : 'U'), now = performance.now();
+    if (!dir) { navDir = ''; navReps = 0; }
+    else if (dir !== navDir || now >= navNext) {
+      hop(dir === 'R' ? 1 : dir === 'L' ? -1 : 0, dir === 'D' ? 1 : dir === 'U' ? -1 : 0, list);
+      navNext = now + (dir !== navDir ? 380 : 140); navDir = dir;
+    }
+    if (press && focusEl) { var f = focusEl; f.click(); }
+    return true;
+  }                                                     // (how far a stick has to tilt before it counts: a little wobble does nothing)
   var KINDS = { ps: 'PlayStation', xbox: 'Xbox', sw: 'Switch' };
   function kindOf(pad) {                                               // (which controller it is, from the name the browser gives it)
     var id = (pad && pad.id || '').toLowerCase();
@@ -65,25 +142,27 @@
     var pad = navigator.getGamepads()[padIndex]; if (!pad) return;
     var paused = window.EVERDAWN_TITLE || (window.everdawnSettingsOpen && window.everdawnSettingsOpen()) || !document.hasFocus();   // (not on the title screen or in Settings)
     var now = performance.now(), dt = Math.min(0.05, (now - (poll.t || now)) / 1000); poll.t = now;
-    var seen = {};
+    var screen = !paused && menuNav(pad, dt);
+    var seenB = {};
     BUTTONS.forEach(function (b0) {
+      if (b0.note) return;
       if (b0.stick) {                                                  // (a whole stick: past a little wobble, it turns smoothly)
-        if (paused || !window[b0.call]) return;
+        if (paused || screen || !window[b0.call]) return;
         var sx = pad.axes[b0.stick[0]] || 0, sy = pad.axes[b0.stick[1]] || 0, mag = Math.hypot(sx, sy);
         if (mag < 0.18) return; var k2 = (mag - 0.18) / (1 - 0.18) / mag;
         window[b0.call](sx * k2 * 2.6 * dt, sy * k2 * 1.4 * dt);
         return;
       }
       if (b0.axis !== undefined) {                                     // (a stick direction)
-        var tilt = !paused && (pad.axes[b0.axis] || 0) * b0.dir > DEAD;
+        var tilt = !paused && !screen && (pad.axes[b0.axis] || 0) * b0.dir > DEAD;
         if (tilt && !down[b0.name]) { down[b0.name] = keyFor(b0); send('keydown', down[b0.name]); }
         else if (!tilt && down[b0.name]) { send('keyup', down[b0.name]); delete down[b0.name]; }
         return;
       }
-      var i = idx(b0); if (seen[i]) return; seen[i] = true;
+      var i = idx(b0); if (seenB[i]) return; seenB[i] = true;
       var btn = pad.buttons[i], on = !paused && !!btn && (btn.pressed || btn.value > 0.5), was = held[i];
       if (on && !was) {                                                 // (pressed: of the jobs on this button, the one that fits right now)
-        var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i; });
+        var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i && (screen ? x.menuOnly || x.menuToo : !x.menuOnly); });   // (on a screen only the menu buttons; off it, the rest)
         var b = all.filter(function (x) { return x.when && window[x.when] && window[x.when](); })[0] || all.filter(function (x) { return !x.when; })[0];
         if (!b) return; held[i] = b;
         if (b.call) { down[b.name] = true; if (window[b.call]) window[b.call](true); } else { down[b.name] = keyFor(b); send('keydown', down[b.name]); }

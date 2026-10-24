@@ -1217,6 +1217,10 @@
     ["Left Stick", "Stick izq.", "Stick gauche", "Levetta sin.", "Linker Stick", "Analógico esq."],
     ["Move Camera", "Mover cámara", "Bouger la caméra", "Muovi telecamera", "Kamera bewegen", "Mover câmera"],
     ["Cast Spell", "Lanzar hechizo", "Lancer un sort", "Lancia incantesimo", "Zauber wirken", "Lançar feitiço"],
+    ["Previous Tab", "Pestaña anterior", "Onglet précédent", "Scheda precedente", "Vorheriger Reiter", "Aba anterior"],
+    ["Next Tab", "Pestaña siguiente", "Onglet suivant", "Scheda successiva", "Nächster Reiter", "Próxima aba"],
+    ["Cursor", "Cursor", "Curseur", "Cursore", "Cursor", "Cursor"],
+    ["World Map", "Mapa del mundo", "Carte du monde", "Mappa del mondo", "Weltkarte", "Mapa do Mundo"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();

@@ -8207,6 +8207,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     else showSkillPage(true);                                          // (the Bag: round to Skills)
     return true;
   }
+  mapBox.classList.add('ev-mapbox'); window.everdawnPadMap = function (on) { if (on) openTeleport(); }; window.everdawnPadTab = function (d) { return d > 0 ? nextTab() : prevTab(); };   // (the controller's Start and bumpers)
   var TAB_CLICKABLE = 'button, a, input, select, textarea, label, canvas, svg, [draggable="true"], [role="button"], [tabindex], .ev-seg, .ev-slot';
   window.addEventListener('click', function (e) {                      // (a left click on an empty part of the bag or Settings: the next page)
     if (tabKey || e.button !== 0) return;
