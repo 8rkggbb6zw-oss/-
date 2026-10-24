@@ -13,13 +13,15 @@
 // does its job when that says yes, and the other does its job the rest of the time. A stick direction has axis
 // (0 the left stick across, 1 up and down; 2 and 3 the right stick) and dir (-1 or 1) instead of button. unlisted: true
 // leaves it off the Controller page. button can also be { ps, xbox, sw }, when it's a different button on each. A whole stick has stick: [its across axis, its up-and-down axis] and a call that's
-// told how far to turn each frame }
+// told how far to turn each frame. hold: (how long, in thousandths of a second) makes it one you have to hold down: it
+// presses its key once it's been held that long, and a quick press does nothing }
 (function () {
   var LSTICK = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="Left stick" style="display:block"><circle cx="13" cy="13" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".55"/>' +   // (a joystick seen from above, L on its cap)
     '<circle cx="13" cy="13" r="8" fill="currentColor" opacity=".2"/><circle cx="13" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.6 8.6v8h5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var RSTICK = LSTICK.replace('Left stick', 'Right stick').replace('M10.6 8.6v8h5.2', 'M10.4 16.8V8.6h2.9a2.3 2.3 0 0 1 0 4.6h-2.9M13.2 13.2l2.6 3.6');   // (the same joystick, R on its cap)
   var RSTICK_UP = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 -9 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 -9l6.5 7h-13z" fill="currentColor"/></svg>');   // (the right stick with an arrow: pushed forward)
   var RSTICK_DOWN = RSTICK.replace('viewBox="0 0 26 26" width="24" height="24"', 'viewBox="0 0 26 35" width="24" height="32"').replace('</svg>', '<path d="M13 35l6.5-7h-13z" fill="currentColor"/></svg>');   // (and pulled back)
+  var DPAD_UP = '<svg viewBox="0 0 26 26" width="24" height="24" role="img" aria-label="D-pad up" style="display:block"><path d="M9.5 2.5h7v7h7v7h-7v7h-7v-7h-7v-7h7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".6"/><path d="M9.5 2.5h7v7.5h-7z" fill="currentColor"/></svg>';   // (a D-pad, its up arm filled in)
   var BUTTONS = [
     { name: 'Interact', section: 'Gameplay', button: 0, ps: '✕', xbox: 'A', sw: 'B', key: ['everdawn-interact', 'KeyE'] },
     { name: 'Use Tool', section: 'Gameplay', button: 2, ps: '□', xbox: 'X', sw: 'Y', call: 'everdawnPadUseTool' },   // (tools only: the game's own Use Tool/Place Item key would place things too)
@@ -45,6 +47,8 @@
     { name: 'Next Tab', section: 'Gameplay', button: 5, ps: 'R1', xbox: 'RB', sw: 'R', menuOnly: true, call: 'everdawnPadTabNext' },
     { name: 'Sort List Shortcut', section: 'Gameplay', button: 4, ps: 'L1', xbox: 'LB', sw: 'L', key: ['everdawn-sort-key', 'Tab'], menuToo: true, when: 'everdawnPadSorting' },   // (the left bumper again: while a storage chest or the shipping bin is open, it sorts)
     { name: 'Cursor', section: 'Gameplay', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on a screen, the left stick moves the cursor: shown here, worked below)
+    { name: 'Enter Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-key', 'KeyG'], hold: 1000 },   // (hold up on the D-pad for a second, inside your house)
+    { name: 'Exit Decor Mode (Hold)', section: 'Decor Mode', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-decor-exit-key', 'KeyG'], hold: 1000, when: 'everdawnPadDecor' },   // (and again to leave)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
@@ -60,6 +64,7 @@
   window.everdawnPadRowPrev = function (on) { if (on && window.everdawnPadRow) window.everdawnPadRow(-1); };
   window.everdawnPadColNext = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(1); };
   window.everdawnPadColPrev = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(-1); };
+  window.everdawnPadDecor = function () { return document.body.classList.contains('ev-decor-on'); };   // (in Decor Mode?)
   window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
   // ---- skipping a cutscene: hold ✕ / A / B ----
   // While a cutscene plays, the Skip button at the top right says "Hold to skip" with your controller's button on it, and
@@ -191,7 +196,7 @@
   }
   function keyFor(b) { var k = null; try { k = localStorage.getItem(b.key[0]); } catch (err) {} return k || b.key[1]; }
   function send(type, code) { window.dispatchEvent(new KeyboardEvent(type, { code: code, key: code, bubbles: true, cancelable: true })); }
-  var padIndex = null, padKind = null, down = {}, held = {};
+  var padIndex = null, padKind = null, down = {}, held = {}, holdAt = {};
   function releaseAll() { BUTTONS.forEach(function (b) { if (!down[b.name]) return; if (b.call) { if (window[b.call]) window[b.call](false); } else send('keyup', down[b.name]); }); down = {}; held = {}; }
   function changed() { if (window.everdawnControllerChanged) window.everdawnControllerChanged(padKind); }
   window.addEventListener('gamepadconnected', function (e) {
@@ -239,9 +244,13 @@
         var all = BUTTONS.filter(function (x) { return x.button !== undefined && idx(x) === i && (screen ? x.menuOnly || x.menuToo : !x.menuOnly) && !(x.gameOnly && inMenus); });   // (on a screen only the menu buttons; off it, the rest)
         var b = all.filter(function (x) { return x.when && window[x.when] && window[x.when](); })[0] || all.filter(function (x) { return !x.when; })[0];
         if (!b) return; held[i] = b;
+        if (b.hold) { holdAt[i] = now; return; }                      // (one you hold: nothing yet)
         if (b.call) { down[b.name] = true; if (window[b.call]) window[b.call](true); } else { down[b.name] = keyFor(b); send('keydown', down[b.name]); }
+      } else if (on && was && was.hold) {                               // (still held: once it's been long enough, it presses that key)
+        if (holdAt[i] && now - holdAt[i] >= was.hold) { holdAt[i] = 0; var hk = keyFor(was); send('keydown', hk); send('keyup', hk); }
       } else if (!on && was) {                                          // (let go: that same job lets go)
         held[i] = null;
+        if (was.hold) { holdAt[i] = 0; return; }                       // (let go too soon: nothing happens)
         if (was.call) { if (window[was.call]) window[was.call](false); } else send('keyup', down[was.name]);
         delete down[was.name];
       }

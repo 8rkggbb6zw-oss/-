@@ -1225,6 +1225,8 @@
     ["Switch Toolbar Column", "Cambiar columna de la barra", "Changer de colonne de la barre", "Cambia colonna della barra", "Schnellleisten-Spalte wechseln", "Trocar coluna da barra"],
     ["Skip Cutscene (Hold)", "Saltar escena (mantener)", "Passer la cinématique (maintenir)", "Salta filmato (tieni premuto)", "Zwischensequenz überspringen (halten)", "Pular cena (segurar)"],
     ["Hold to skip", "Mantén para saltar", "Maintenir pour passer", "Tieni premuto per saltare", "Halten zum Überspringen", "Segure para pular"],
+    ["Enter Decor Mode (Hold)", "Entrar en Modo Decoración (mantener)", "Entrer en Mode déco (maintenir)", "Entra in Modalità Arredo (tieni premuto)", "Deko-Modus starten (halten)", "Entrar no Modo Decoração (segurar)"],
+    ["Exit Decor Mode (Hold)", "Salir del Modo Decoración (mantener)", "Quitter le Mode déco (maintenir)", "Esci da Modalità Arredo (tieni premuto)", "Deko-Modus beenden (halten)", "Sair do Modo Decoração (segurar)"],
   ];
   var lang = 'en'; try { var saved = localStorage.getItem('everdawn-language'); if (LANGS.indexOf(saved) > 0) lang = saved; } catch (err) {}
   var dict = new Map(), find = null, memo = new Map();
