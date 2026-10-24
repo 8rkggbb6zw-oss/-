@@ -63,7 +63,8 @@
     { name: 'Zoom In Decor Mode', section: 'Decor Mode', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },   // (worked in decorNav below)
     { name: 'Zoom Out Decor Mode', section: 'Decor Mode', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
     { name: 'Reset Decor Mode Camera', section: 'Decor Mode', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
-    { name: 'Enter Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-key', 'KeyV'], hold: 1000, when: 'everdawnPadOutside' },   // (the same hold as Decor Mode: outdoors, on your farm, it's Farm View)
+    { name: 'Enter Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmEnter' },   // (the same hold as Decor Mode: outdoors, on your farm, it's Farm View)
+    { name: 'Exit Farm View Mode (Hold)', section: 'Farm View', button: 12, ps: DPAD_UP, xbox: DPAD_UP, sw: DPAD_UP, key: ['everdawn-farm-view-exit-key', 'KeyV'], hold: 1000, when: 'everdawnPadFarmView' },   // (and again to leave)
     { name: 'Cursor', section: 'World Map', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on the map: moves the cursor, and the map too at its edges; worked below)
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
@@ -80,6 +81,8 @@
   window.everdawnPadColNext = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(1); };
   window.everdawnPadColPrev = function (on) { if (on && window.everdawnPadCol) window.everdawnPadCol(-1); };
   window.everdawnPadDecor = function () { return document.body.classList.contains('ev-decor-on'); };   // (in Decor Mode?)
+  window.everdawnPadFarmView = function () { return document.body.classList.contains('ev-farm-on'); };   // (in Farm View?)
+  window.everdawnPadFarmEnter = function () { return !!(window.everdawnPadOutside && window.everdawnPadOutside()) && !window.everdawnPadFarmView(); };
   window.everdawnPadTalking = function () { var d = document.querySelector('.ev-dlg'); return !!d && !d.hidden; };   // (is a conversation box open?)
   // ---- skipping a cutscene: hold ✕ / A / B ----
   // While a cutscene plays, the Skip button at the top right says "Hold to skip" with your controller's button on it, and
