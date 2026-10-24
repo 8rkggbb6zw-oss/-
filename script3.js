@@ -1721,7 +1721,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   })(updateTrees);
   window.addEventListener('keydown', function (e) { // I opens and closes the bag, Escape closes it
     if (e.repeat) return;
-    if (e.code === (bagKey || 'KeyI')) toggleBag();
+    if (e.code === (bagKey || 'KeyI') && !decorMode) toggleBag();   // (in Decor Mode its own Open Inventory key does this)
     if (e.code === (rowKey || 'KeyR')) nextRow();
     if (e.code === 'Tab') { e.preventDefault(); stepSlot(e.shiftKey ? -1 : 1); } // Tab steps to your next item, Shift+Tab goes back
     // number keys 1-4 pick that slot in the hotbar's current row (pressing it again unselects it)
@@ -8384,9 +8384,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorInvKey = null; try { decorInvKey = localStorage.getItem('everdawn-decor-inventory-key') || null; } catch (err) {}
   window.everdawnSetDecorInventoryKey = function (code) { decorInvKey = code || null; };
   function decorBagOpen() { return !!(bagUi.box && !bagUi.box.hidden); }
-  // With the bag open in Decor Mode it sits at the side, where the Decor Mode panel was, so the room stays in view; tap a
-  // piece of furniture in it to pick it up, and the bag closes so you can set it down in the room
-  (function () { var st = document.createElement('style'); st.textContent = 'body.ev-decor-on .inventory:not(.ship){left:auto!important;right:12px!important;top:12px!important;transform:none!important;width:min(300px,45%)!important;max-height:calc(100% - 24px)!important}'; document.head.appendChild(st); })();
+  function decorPlaceBag() {                                           // (in Decor Mode the bag sits on the right, just under the panel and your house storage)
+    var open = decorBagOpen(); document.body.classList.toggle('ev-decor-bag', open); if (!open) return;
+    bagUi.box.style.setProperty('--ev-decor-bag-top', (decorBox.hidden ? 12 : decorBox.offsetTop + decorBox.offsetHeight + 8) + 'px');
+  }
+  // With the bag open in Decor Mode it sits on the right, just under the Decor Mode panel and your house storage (even in
+  // full screen), so the room stays in view; tap a piece of furniture in it to pick it up, and the bag closes so you can
+  // set it down in the room
+  (function () { var st = document.createElement('style'); st.textContent = 'body.ev-decor-on #inventory.inventory:not(.ship){left:auto!important;right:12px!important;top:var(--ev-decor-bag-top,12px)!important;transform:none!important;width:min(250px,calc(100% - 24px))!important;max-height:calc(100% - var(--ev-decor-bag-top,12px) - 12px)!important}'; document.head.appendChild(st); })();
   if (bagUi.box) bagUi.box.addEventListener('click', function (e) {
     if (!decorMode) return;
     var slot = e.target.closest && e.target.closest('[data-slot]'), it = slot && bag[+slot.getAttribute('data-slot')];
@@ -8561,6 +8566,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   decorDefaults();
   // The panel, and the square under the piece you're holding
   (function () { var st = document.createElement('style'); st.textContent =
+    'body.ev-decor-on.ev-decor-bag .ev-decor{max-height:calc(50% - 20px)}' +   // (with the bag open under it, the panel takes the top half)
     '.ev-decor{position:absolute;top:12px;right:12px;z-index:7;width:min(250px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;box-sizing:border-box;padding:12px;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 10px 30px rgba(120,80,190,.35),inset 0 0 0 2px #fff;font-family:Fredoka,system-ui,sans-serif;color:#4a3b6b}' +
     '.ev-decor[hidden]{display:none}.ev-decor h3{margin:0 0 4px;font-size:1.1rem;color:#7b4fd6}.ev-decor p{margin:0 0 8px;font-size:.8rem;line-height:1.35}' +
     '.ev-decor h4{margin:8px 0 4px;font-size:.85rem;color:#7b4fd6}.ev-dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
@@ -8768,6 +8774,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var decorBaseUpdatePlayer = updatePlayer;
   function decorTick() {                                               // (each moment in Decor Mode: she stays put while you arrange)
     keys = {}; walkTarget = null; if (!inFarmhouse()) leaveDecorMode(); else if (decorBox.hidden && !decorBagOpen()) { decorBox.hidden = false; renderDecor(); }   // (the bag's been closed: the panel comes back)
+    if (decorMode) decorPlaceBag();
   }
   updatePlayer = function (dt) { if (decorMode) decorTick(); return decorBaseUpdatePlayer.apply(this, arguments); };
   window.addEventListener('keydown', function (e) {                    // (caught first: in Decor Mode only its own keys do anything)
@@ -8780,7 +8787,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (e.repeat) return;
     var isInv = e.code === (decorInvKey || 'KeyI');
     if (decorBagOpen()) { if (isInv || e.code === 'Escape') { toggleBag(false); decorBox.hidden = false; renderDecor(); } return; }   // (with the bag open, only closing it)
-    if (isInv) { decorCancel(); decorDeselect(true); decorBox.hidden = true; toggleBag(true); return; }
+    if (isInv) { decorCancel(); decorDeselect(true); toggleBag(true); decorPlaceBag(); return; }   // (the bag opens on the right, under the panel)
     if (isExit) leaveDecorMode();
     else if (e.code === 'Escape') { if (decorHeld) decorCancel(); else leaveDecorMode(); }
     else if (e.code === (decorRotKey || 'KeyR')) decorRotate();
