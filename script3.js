@@ -1656,6 +1656,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var mooringKey = null; try { mooringKey = localStorage.getItem('everdawn-mooring-key') || null; } catch (err) {}
   window.everdawnSetMooringKey = function (code) { mooringKey = code || null; };
   function callMooring() { showToast('🌙 The Moonstone Mooring only answers underwater', 2200); }
+  window.everdawnPadUnderwater = function () { return false; };   // (the controller asks this: while it's true, △ / Y / X calls the Mooring instead of casting a spell)
   window.addEventListener('keydown', function (e) { if (e.code === (mooringKey || 'KeyX') && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) callMooring(); });
   // Cast/Cut fishing rod is E or Space (Interact) to start; on the Mouse & Keyboard page it can be a key of your own
   // instead. Then that key casts the line and reels it back in, and E, Space and Interact go back to their usual jobs
