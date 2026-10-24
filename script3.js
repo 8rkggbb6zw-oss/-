@@ -10359,7 +10359,7 @@ EVERDAWN_PARTS.push(function (THREE) {
 // ---------- Starting up ----------
 // Join the three parts back into one game (so they share the same variables, just as if they were one file) and run it
 function startGame(THREE) {
-  if (EVERDAWN_PARTS.length !== 3) { showToast('Part of the game is missing: check that script.js, script2.js, script3.js and script4.js are all there.', 60000); return; }
+  if (EVERDAWN_PARTS.length !== 4) { showToast('Part of the game is missing: check that script.js, script2.js, script3.js, script4.js and script7.js are all there.', 60000); return; }
   var src = EVERDAWN_PARTS.map(function (part) { var t = part.toString(); return t.slice(t.indexOf('{') + 1, t.lastIndexOf('}')); }).join('\n');
   new Function('THREE', src)(THREE);
 }
