@@ -1084,13 +1084,14 @@ var everdawnTitle = (function () {
     function draw() {
       var now = window.everdawnControllerKind ? window.everdawnControllerKind() : null, sec = null, html = '<p class="ev-padnote">' + (now ? '🎮 Controller connected: ' + kinds[now] : '🎮 Plug in a controller, then press any button') + '</p>';
       // (On / Off settings shown here too, the same ones as on the Mouse & Keyboard page: each one's name, where it's kept, the game's function, and whether it starts on)
-      var TOGS = [['Toggle HUD', 'everdawn-hud', 'everdawnSetHud', true], ['Toggle Grid', 'everdawn-decor-grid', 'everdawnSetDecorGrid', false], ['Toggle HUD In Decor Mode', 'everdawn-decor-hud', 'everdawnSetDecorHud', true]];
+      var TOGS = [['Toggle HUD', 'everdawn-hud', 'everdawnSetHud', true], ['Toggle Grid', 'everdawn-decor-grid', 'everdawnSetDecorGrid', false], ['Toggle HUD In Decor Mode', 'everdawn-decor-hud', 'everdawnSetDecorHud', true],
+        ['Toggle HUD In Farm View Mode', 'everdawn-farm-hud', 'everdawnSetFarmHud', true]];
       function togRow(n) {
         var tg = TOGS[n], on = tg[3]; try { var v = localStorage.getItem(tg[1]); if (v) on = v === 'on'; } catch (err) {}
         return '<div class="ev-srow ev-tog"><span class="ev-lbl" id="evPadTog' + n + '">' + tg[0] + '</span><div class="ev-seg ev-padtog" data-t="' + n + '" role="group" aria-labelledby="evPadTog' + n + '">' +
           '<button type="button" data-h="on" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '">On</button><button type="button" data-h="off" class="' + (on ? '' : 'on') + '" aria-pressed="' + !on + '">Off</button></div></div>';
       }
-      var ends = { 'Gameplay': togRow(0), 'Decor Mode': togRow(1) + togRow(2) };   // (the toggles at the end of a section)
+      var ends = { 'Gameplay': togRow(0), 'Decor Mode': togRow(1) + togRow(2), 'Farm View': togRow(3) };   // (the toggles at the end of a section)
       list.forEach(function (b) {
         if (b.unlisted) return;
         if (b.section !== sec) { html += ends[sec] || ''; sec = b.section; html += '<div class="ev-ksec">' + sec + '</div>'; }
