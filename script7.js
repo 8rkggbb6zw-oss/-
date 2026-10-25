@@ -608,8 +608,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     [1, -1].forEach(function (leg) {
       var g = new THREE.Group(), lx = leg * 0.077;
       [1, -1].forEach(function (side) {                                 // (out from her outer side, and her inner side)
-        var w = new THREE.Mesh(geo, mat); w.castShadow = true; w.scale.set(side, 1, 1);
-        w.position.set(lx + side * 0.047, 0.218, -0.012); w.rotation.y = -side * 0.35; g.add(w);
+        var w = new THREE.Mesh(geo, mat); w.castShadow = true; w.scale.set(side * 1.6, 1.6, 1.6);
+        w.position.set(lx + side * 0.044, 0.226, -0.008); w.rotation.y = -side * 0.3; g.add(w);
       });
       parts.push({ bone: leg > 0 ? 'leftLowerLeg' : 'rightLowerLeg', obj: g });
     });
