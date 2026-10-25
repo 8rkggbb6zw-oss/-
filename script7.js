@@ -88,11 +88,11 @@ EVERDAWN_PARTS.push(function (THREE) {
 
     // ---- every time she's drawn: her joints follow the chibi's ----
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
-    var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0;   // (armsOut: her arms held further from her sides, clear of a full skirt)
+    var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
     function follow() {
       R.position.y = (flying || inBoat) ? 0.37 - hipY : 0;              // (sitting on her broom or in the boat: her hips where the chibi's seat was)
       var t = state.time, L0 = w.legs[0].rotation, L1 = w.legs[1].rotation;
-      var calm = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
+      var calm = restCalm = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
       // (walking: her arms swing opposite to her legs, each arm forward as the other leg steps, a moment behind it so they
       // trail and follow through; they swing further forward than back, the elbow bending more on the way forward, and
       // further when she jogs or runs. Her hips turn with the leg that steps and her shoulders turn back against them.
@@ -141,6 +141,33 @@ EVERDAWN_PARTS.push(function (THREE) {
         ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, k) { pose(B['right' + f + j], E(0, 0, k ? 1.05 : 0.95 + n * 0.05)); }); });   // (her fingers closed round what she holds)
         B.rightUpperArm.updateMatrixWorld(true);
       }
+      if (handRest && restCalm > 0.01) [1, -1].forEach(function (s) {   // (standing still in a full dress: her hands resting on its skirt, elbows softly bent)
+        if (s < 0 && axeArm.visible) return;
+        var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, lo = s > 0 ? B.leftLowerArm : B.rightLowerArm, hd = s > 0 ? B.leftHand : B.rightHand, fg = B[(s > 0 ? 'left' : 'right') + 'MiddleProximal'];
+        var goal = handRest(s); if (!goal || !up || !lo || !hd) return;
+        var k = restCalm * restCalm * (3 - 2 * restCalm);
+        var S = up.getWorldPosition(new THREE.Vector3()), El = lo.getWorldPosition(new THREE.Vector3()), W0 = hd.getWorldPosition(new THREE.Vector3());
+        var a = S.distanceTo(El), b = El.distanceTo(W0), T = W0.clone().lerp(goal.wrist, k), ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length()));
+        ST.normalize(); T.copy(S).addScaledVector(ST, d);
+        var pole = new THREE.Vector3(s * 0.3, -0.15, -1).applyQuaternion(root.getWorldQuaternion(q2)).normalize();   // (her elbow bending back and a little out)
+        pole.addScaledVector(ST, -pole.dot(ST)).normalize();
+        var x = (a * a - b * b + d * d) / (2 * d), Ep = S.clone().addScaledVector(ST, x).addScaledVector(pole, Math.sqrt(Math.max(0, a * a - x * x)));
+        function aim(bone, child, to) {                                 // (turn a bone so its child lies towards a point, keeping its twist)
+          var qw = bone.getWorldQuaternion(new THREE.Quaternion()), cur = child.position.clone().normalize().applyQuaternion(qw);
+          var want = to.clone().sub(bone.getWorldPosition(new THREE.Vector3())).normalize();
+          qw.premultiply(new THREE.Quaternion().setFromUnitVectors(cur, want));
+          bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qw)); bone.updateMatrixWorld(true);
+        }
+        aim(up, lo, Ep); aim(lo, hd, T);
+        if (fg) {                                                       // (her hand carrying on from her forearm with a gentle bend at the wrist, its fingers following the skirt down)
+          var fd = T.clone().sub(Ep).normalize().multiplyScalar(0.6).add(goal.fingers.clone().sub(goal.wrist).normalize().multiplyScalar(0.4)).normalize();
+          aim(hd, fg, hd.getWorldPosition(new THREE.Vector3()).add(fd));
+        }
+        ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, m) {   // (and softly curled, a little more towards her little finger)
+          var fb = B[(s > 0 ? 'left' : 'right') + f + j]; if (!fb) return;
+          var c = (0.3 + 0.05 * n) * (1 - k) + (0.12 + n * 0.05 + m * 0.06) * k; pose(fb, E(0, 0, -s * c)); fb.updateMatrixWorld(true);
+        }); });
+      });
       [[w.armL, B.leftHand], [w.armR, B.rightHand]].forEach(function (p) {   // (the chibi's hidden hands kept where hers are, for anything held in them, like the title screen's wand)
         if (!p[1]) return; p[1].getWorldPosition(v1); chibi.worldToLocal(v1);
         p[0].position.copy(v1).sub(v2.set(0, -0.3, 0.02).applyEuler(p[0].rotation));
@@ -181,7 +208,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       meshes.forEach(function (m) { if (ORIGINAL.test(m.material.name || '')) m.visible = !made; });
       outfits.forEach(function (o) { o.forEach(function (m) { m.visible = o === made; }); });
     }
-    return { root: R, bones: B, rest: rest, meshes: meshes, express: express, outfit: outfit, wearOutfit: wearOutfit, armsOut: function (v) { armsOutGoal = v; } };
+    return { root: R, bones: B, rest: rest, meshes: meshes, express: express, outfit: outfit, wearOutfit: wearOutfit, armsOut: function (v) { armsOutGoal = v; }, handRest: function (f) { handRest = f; } };
   }
 
   // ---------- A modern black closet in the farmhouse ----------
@@ -290,12 +317,21 @@ EVERDAWN_PARTS.push(function (THREE) {
     g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     return g;
   }
+  var cardTex = {};
+  function clothCard(id) {                                             // (clothes held up by their top edge: your own drawing of them, sized by what they are)
+    var t = cardTex[id] || (cardTex[id] = new THREE.TextureLoader().load(ITEMS[id].img));
+    var sl = ITEMS[id].slot, h = /dress|shirt|pants/.test(sl) ? 0.3 : sl === 'hat' ? 0.16 : /shoes|socks/.test(sl) ? 0.13 : 0.11;
+    var m = new THREE.Mesh(new THREE.PlaneGeometry(h, h), new THREE.MeshLambertMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.35 }));
+    m.position.set(0, -h / 2 + 0.01, 0.01); m.castShadow = true;
+    var g = new THREE.Group(); g.add(m); return g;
+  }
   pickupModel = (function (base) {
     return function (item) {
       var c = CLOTH_STOCK.filter(function (s) { return s.id === item && s.hold; })[0];
-      if (!c) return base.apply(this, arguments);
+      var make = c ? c.hold : isClothes(item) && ITEMS[item].img ? function () { return clothCard(item); } : null;   // (any other clothes: your drawing of it)
+      if (!make) return base.apply(this, arguments);
       var up = new THREE.Group(); up.rotation.x = 1.05; if (you) up.position.set(0, 0.08, -0.025); else up.position.y = 0.03;   // (undoes the arm's angle, so it hangs straight down from her fingers, or the chibi's hand)
-      up.add(c.hold()); return up;
+      up.add(make()); return up;
     };
   })(pickupModel);
 
@@ -335,7 +371,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var n = 0; n < LINKS; n++) { var l = new THREE.Mesh(linkG, linkM); l.scale.set(1.35, 0.8, 1); links.push(l); grp.add(l); }
     grp.traverse(function (m) { if (m.isMesh) m.castShadow = true; });
 
-    var dress = null, top = [], bot = [], bA, bL, bR, chain = [], v = new THREE.Vector3(), q = new THREE.Vector3();
+    var dress = null, top = [], bot = [], bA, bL, bR, chain = [], rest = {}, v = new THREE.Vector3(), q = new THREE.Vector3();
     function setup(mesh) {                                              // (which points of the dress each part is pinned to)
       dress = mesh; var g = mesh.geometry, P = g.attributes.position, U = g.attributes.uv, used = {};
       for (var i = 0; i < g.index.count; i++) used[g.index.getX(i)] = 1;
@@ -348,11 +384,21 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var i = 0; i <= N; i++) { var a = i / N * 360 - 180; top.push(near(band, a, function (e, b) { return e.y > b.y; })); bot.push(near(band, a, function (e, b) { return e.y < b.y; })); }
       function mid(a) { var t = near(band, a, function (e, b) { return e.y > b.y; }), u = near(band, a, function (e, b) { return e.y < b.y; }); return [t, u]; }
       bA = mid(BX); bL = mid(BX - 6); bR = mid(BX + 6);
+      [1, -1].forEach(function (s) {                                    // (where her hands rest on the skirt: its side, a little to the front; her wrist a palm's width out from it, her fingertips lower down)
+        function pick(y) { var best = null, bd = 1e9; skirt.forEach(function (e) { var d = Math.abs(((e.a - s * 84 + 540) % 360) - 180) / 12 + Math.abs(e.y - y) / 0.02; if (d < bd) { bd = d; best = e; } }); return best; }
+        rest[s] = [pick(0.9), pick(0.83)];
+      });
       var all = band.concat(skirt);
       AM_CHAIN.forEach(function (c) {                                   // (each point of the chain: the nearest point of the dress, and how far out from it and below it)
         var best = null, bd = 1e9;
         all.forEach(function (e) { var d = (e.x - c[0]) * (e.x - c[0]) + (e.y - c[1]) * (e.y - c[1]) + (e.z - c[2]) * (e.z - c[2]); if (d < bd) { bd = d; best = e; } });
         chain.push({ k: best.k, out: Math.max(0, Math.hypot(c[0], c[2] - AM_CZ) - best.r) + 0.009, dy: c[1] - best.y });
+      });
+      you.handRest(function (s) {
+        if (!dress || !grp.parent || !dress.visible || !rest[s][0]) return null;
+        var w0 = at(rest[s][0], new THREE.Vector3()), f0 = at(rest[s][1], new THREE.Vector3()), o0 = outward(w0, new THREE.Vector3()), o1 = outward(f0, new THREE.Vector3());
+        w0.addScaledVector(o0, 0.034); f0.addScaledVector(o1, 0.048);
+        return { wrist: dress.localToWorld(w0), fingers: dress.localToWorld(f0) };
       });
     }
     function at(e, t) { return dress.boneTransform(e.k, t); }             // (where that point of the dress is now)

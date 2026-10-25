@@ -497,6 +497,8 @@ body.full .mana-num { color: #fff; text-shadow: 0 0 3px #4a2a8a, 0 1px 4px rgba(
 .shop-tile.cant.sel { opacity: .8; }
 .shop-tile.sold { position: relative; filter: grayscale(1); opacity: .55; }   /* clothes you've bought already */
 .shop-tile.sold.sel { opacity: .8; }
+.shop-pic.sold { position: relative; filter: grayscale(1); opacity: .6; }   /* and its picture in "Take a look" */
+.shop-pic .sold-stamp { top: 50%; }
 .sold-stamp { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg); z-index: 1; padding: 1px 8px; border: 2px solid #5b4a6e; border-radius: 6px; background: rgba(255, 255, 255, .85); color: #5b4a6e; font-size: .78rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; pointer-events: none; }
 
 /* the panel on the right: the crate, holding just the one you picked */
