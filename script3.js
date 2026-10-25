@@ -9700,13 +9700,19 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<p class="ship-hint">Welcome to Thread &amp; Thimble! Clothes for every season, made with love.</p><div class="ship-cols shop-cols cl-cols"></div><p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(clothShopBox);
   var clothCols = clothShopBox.querySelector('.cl-cols'), clothCoins = clothShopBox.querySelector('.ship-total b');
+  var CLOTH_SECTIONS = [['necklace', 'Necklace']];                    // (the shop's sections, in order: [the slot its clothes go in, its heading]; add more here, e.g. ['hat', 'Hats'])
+  function clothSection(s) { for (var i = 0; i < CLOTH_SECTIONS.length; i++) if (CLOTH_SECTIONS[i][0] === s.slot || (s.slot === 'dress' && CLOTH_SECTIONS[i][0] === 'shirt')) return CLOTH_SECTIONS[i]; return CLOTH_SECTIONS[CLOTH_SECTIONS.length - 1]; }   // (clothes with no section of their own go in the last one)
+  function clothTile(s, k) {
+    return '<button type="button" class="shop-tile' + (k === clothPick ? ' sel' : '') + (state.coins < s.price ? ' cant' : '') + '" data-k="' + k + '"><span class="shop-tile-pic" style="font-size:1.8rem">' + clothPic(s) + '</span><span class="shop-tile-name">' + s.name + '</span><span class="shop-tile-price"><img class="coin-icon" alt=""> ' + s.price.toLocaleString('en-US') + '</span></button>';
+  }
   function clothPic(c) { return c.img ? '<img src="' + c.img + '" alt="" style="width:1.2em;height:1.2em;object-fit:contain;pointer-events:none">' : c.icon; }   // (your own drawing, if it has one)
   function renderClothShop() {
     clothCoins.textContent = state.coins;
     if (!CLOTH_STOCK.length) { clothCols.innerHTML = '<div class="shop-list" style="flex:1;grid-column:1/-1"><h4>For sale</h4><p class="ship-hint" style="text-align:center;margin:28px 8px">🧵 The racks are still empty: new clothes are coming soon!</p></div>'; paintCoinIcons(clothShopBox); return; }
     var c = CLOTH_STOCK[clothPick] || CLOTH_STOCK[0];
-    clothCols.innerHTML = '<div class="shop-list"><h4>For sale</h4><div class="shop-tiles">' + CLOTH_STOCK.map(function (s, k) {
-      return '<button type="button" class="shop-tile' + (k === clothPick ? ' sel' : '') + (state.coins < s.price ? ' cant' : '') + '" data-k="' + k + '"><span class="shop-tile-pic" style="font-size:1.8rem">' + clothPic(s) + '</span><span class="shop-tile-name">' + s.name + '</span><span class="shop-tile-price"><img class="coin-icon" alt=""> ' + s.price.toLocaleString('en-US') + '</span></button>';
+    clothCols.innerHTML = '<div class="shop-list"><h4>For sale</h4><div class="shop-tiles">' + CLOTH_SECTIONS.map(function (sec) {   // (the clothes in their sections, each under its heading)
+      var tiles = CLOTH_STOCK.map(function (s, k) { return clothSection(s) === sec ? clothTile(s, k) : ''; }).join('');
+      return tiles ? '<div class="shop-section">' + sec[1] + '</div>' + tiles : '';
     }).join('') + '</div></div><div class="shop-detail"><h4>Take a look</h4><div class="shop-card on"><div class="shop-item"><div class="slot shop-pic" style="font-size:2.4rem;display:grid;place-items:center">' + clothPic(c) + '</div><div class="shop-text"><b>' + c.name + '</b><span class="shop-desc">' + c.info + '</span>' +
       '<span class="shop-price"><img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</span></div></div><div class="shop-buy"><button type="button" class="cl-buy"' + (state.coins < c.price ? ' disabled' : '') + '>Buy · <img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</button></div></div></div>';
     clothCols.querySelectorAll('.shop-tile').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); clothPick = +b.getAttribute('data-k'); renderClothShop(); }); });
