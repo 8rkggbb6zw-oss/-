@@ -137,4 +137,51 @@ EVERDAWN_PARTS.push(function (THREE) {
     R.updateMatrixWorld = function (force) { follow(); THREE.Object3D.prototype.updateMatrixWorld.call(this, force); afterFollow(); };
     return { root: R, bones: B, meshes: meshes, express: express };
   }
+
+  // ---------- A modern black closet in the farmhouse ----------
+  // A tall, sleek wardrobe in satin black against the right-hand wall past the end of the bed, standing on slim black
+  // legs with brass tips: two tall doors over a pair of drawers, each set apart by a fine shadow gap, with long, slim
+  // brass bar pulls on the doors and short ones on the drawers, a crisp top that overhangs a touch, and a woven basket
+  // on top. It's decor like the TV, so in Decor Mode it can be moved, turned or put away; saves from before it was
+  // added get it in its spot (or in your house storage if that spot is taken)
+  function buildCloset() {
+    var g = new THREE.Group(), W = 1.2, D = 0.58, H = 2.15, L = 0.13, F = D / 2;
+    var matte = rMat(0x1b1b1f, { roughness: 0.6 }), satin = rMat(0x2c2c31, { roughness: 0.3, metalness: 0.22 }), gap = rMat(0x060607, { roughness: 1 }), brass = rMat(0xcaa76c, { metalness: 0.85, roughness: 0.28 });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {          // (slim, slightly splayed legs with brass tips)
+      var leg = decorMesh(new THREE.CylinderGeometry(0.016, 0.01, L, 10), matte, c[0] * (W / 2 - 0.07), L / 2, c[1] * (F - 0.07), g); leg.rotation.set(c[1] * 0.08, 0, -c[0] * 0.08);
+      decorMesh(new THREE.CylinderGeometry(0.0105, 0.0105, 0.022, 10), brass, c[0] * (W / 2 - 0.065), 0.011, c[1] * (F - 0.065), g);
+    });
+    decorMesh(new THREE.BoxGeometry(W, 0.03, D), matte, 0, L + 0.015, 0, g);   // (its body: the base...)
+    [-1, 1].forEach(function (s) { decorMesh(new THREE.BoxGeometry(0.026, H - L, D), matte, s * (W / 2 - 0.013), L + (H - L) / 2, 0, g); });   // (...sides...)
+    decorMesh(new THREE.BoxGeometry(W + 0.024, 0.036, D + 0.024), matte, 0, H - 0.018, 0.006, g);   // (...a crisp top, overhanging a touch...)
+    decorMesh(new THREE.BoxGeometry(W - 0.02, H - L, 0.016), matte, 0, L + (H - L) / 2, -F + 0.008, g);   // (...and a back)
+    decorMesh(new THREE.BoxGeometry(W - 0.05, H - L - 0.05, 0.01), gap, 0, L + (H - L) / 2, F - 0.024, g);   // (the dark gaps round every door and drawer)
+    var iw = W - 0.052, x0 = -iw / 2, DRW = 0.2, by = L + 0.03 + 0.006;
+    [0, 1].forEach(function (k) {                                       // (two drawers along the bottom...)
+      var dy = by + k * (DRW + 0.006) + DRW / 2;
+      decorMesh(new THREE.BoxGeometry(iw, DRW, 0.022), satin, 0, dy, F - 0.011, g);
+      decorMesh(new THREE.BoxGeometry(0.18, 0.012, 0.014), brass, 0, dy + 0.02, F + 0.024, g);   // (...with short brass pulls)
+      [-0.08, 0.08].forEach(function (x) { var st = new THREE.CylinderGeometry(0.004, 0.004, 0.024, 8); st.rotateX(Math.PI / 2); decorMesh(st, brass, x, dy + 0.02, F + 0.012, g); });
+    });
+    var dy0 = by + 2 * (DRW + 0.006), dh = H - 0.036 - 0.006 - dy0, dw = iw / 2 - 0.003;
+    [-1, 1].forEach(function (s) {                                       // (two tall doors above them...)
+      decorMesh(new THREE.BoxGeometry(dw, dh, 0.022), satin, s * (dw / 2 + 0.003), dy0 + dh / 2, F - 0.011, g);
+      var hx = s * 0.045, hy = dy0 + dh * 0.45;                          // (...each with a long, slim brass bar pull near the middle)
+      decorMesh(new THREE.BoxGeometry(0.012, 0.56, 0.014), brass, hx, hy, F + 0.03, g);
+      [hy - 0.25, hy + 0.25].forEach(function (y) { var st = new THREE.CylinderGeometry(0.005, 0.005, 0.03, 8); st.rotateX(Math.PI / 2); decorMesh(st, brass, hx, y, F + 0.013, g); });
+    });
+    var weave = rMat(0xb98e5c, { roughness: 0.9 }), weave2 = rMat(0x9c7444, { roughness: 0.9 });   // (a woven basket on top)
+    decorMesh(new THREE.CylinderGeometry(0.17, 0.15, 0.2, 20, 1, true), weave, 0.24, H + 0.1, 0, g).material.side = THREE.DoubleSide;
+    for (var r = 0; r < 4; r++) decorMesh(new THREE.TorusGeometry(0.155 + r * 0.005, 0.008, 5, 24).rotateX(Math.PI / 2), weave2, 0.24, H + 0.03 + r * 0.05, 0, g);
+    decorMesh(new THREE.CylinderGeometry(0.15, 0.15, 0.01, 20), weave2, 0.24, H + 0.005, 0, g);
+    return g;
+  }
+  DECOR.decor_closet = { name: 'Black Closet', icon: '👗', w: 1.2, d: 0.6, bumps: [[-0.3, 0, 0.34], [0.3, 0, 0.34]], make: buildCloset };
+  ITEMS.decor_closet = { name: 'Black Closet', icon: '👗', info: 'Furniture for your house. Inside, press ' + everdawnKeyName(decorKey || 'KeyG') + ' for Decor Mode to place it.' };
+  var CLOSET_X = ROOM_W / 2 - 0.3, CLOSET_Z = 1.75;                    // (where it starts: against the right-hand wall, past the end of the bed, facing into the room)
+  function giveCloset() { if (decorFits('decor_closet', CLOSET_X, CLOSET_Z, 1)) decorPut({ id: 'decor_closet', x: CLOSET_X, z: CLOSET_Z, rot: 1 }); else storeAdd('decor_closet', 1); }
+  giveCloset();
+  decorDefaults = (function (base) { return function () { base(); giveCloset(); }; })(decorDefaults);
+  decorSaveData = (function (base) { return function () { var d = base(); d.closetGiven = true; return d; }; })(decorSaveData);
+  decorLoadData = (function (base) { return function (d) { base(d); if (d && !d.closetGiven) giveCloset(); }; })(decorLoadData);
 });
