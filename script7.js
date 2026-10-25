@@ -150,13 +150,24 @@ EVERDAWN_PARTS.push(function (THREE) {
     // dress, and her body as VRoid made it for that dress, put on her own bones; her face, hair and boots stay her own ----
     var bodyMat = (meshes.filter(function (m) { return /Body_00_SKIN/.test(m.material.name); })[0] || {}).material;
     var ORIGINAL = /Onepiece|Tops|Body_00_SKIN/, outfits = [], outfitShown = null;
+    function skinFor(src) {                                            // (her own skin as painted, but filled in from the outfit's wherever hers was hidden under her old clothes, like her arms under her gloves; and hidden only where the outfit hides it)
+      try {
+        var a = bodyMat.map.image, b = src.map.image, W = b.width, H = b.height, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        var g2 = cv.getContext('2d', { willReadFrequently: true }); g2.drawImage(a, 0, 0, W, H); var A = g2.getImageData(0, 0, W, H);
+        g2.clearRect(0, 0, W, H); g2.drawImage(b, 0, 0, W, H); var Bd = g2.getImageData(0, 0, W, H), d = A.data, e = Bd.data;
+        for (var i = 0; i < e.length; i += 4) if (d[i + 3] >= 128) { e[i] = d[i]; e[i + 1] = d[i + 1]; e[i + 2] = d[i + 2]; }
+        g2.putImageData(Bd, 0, 0);
+        var t = bodyMat.map.clone(); t.image = cv; t.needsUpdate = true;
+        var mat = bodyMat.clone(); mat.map = t; mat.emissiveMap = t; return mat;
+      } catch (err) { return toon(src); }
+    }
     function outfit(g) {
       var made = []; g.scene.updateMatrixWorld(true);
       g.scene.traverse(function (o) {
         if (!o.isSkinnedMesh || !/Onepiece|Tops|Bottoms|Body_00_SKIN/.test(o.material.name)) return;
         var bones = o.skeleton.bones.map(function (b) { return root.getObjectByName(b.name); });
         if (bones.some(function (b) { return !b; })) return;              // (made for a different skeleton)
-        var m = new THREE.SkinnedMesh(o.geometry, /Body_00_SKIN/.test(o.material.name) && bodyMat ? bodyMat : toon(o.material));   // (her own skin)
+        var m = new THREE.SkinnedMesh(o.geometry, /Body_00_SKIN/.test(o.material.name) && bodyMat ? skinFor(o.material) : toon(o.material));
         m.name = o.name; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.visible = false;
         o.matrixWorld.decompose(m.position, m.quaternion, m.scale); root.add(m);
         m.bind(new THREE.Skeleton(bones, o.skeleton.boneInverses.map(function (q) { return q.clone(); })), o.bindMatrix.clone());
