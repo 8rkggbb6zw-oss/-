@@ -160,12 +160,16 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (handRest && restCalm > 0.01) [1, -1].forEach(function (s) {   // (standing still in a full dress: her hands resting on its skirt, elbows softly bent)
         if (s < 0 && axeArm.visible) return;
         var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, lo = s > 0 ? B.leftLowerArm : B.rightLowerArm, hd = s > 0 ? B.leftHand : B.rightHand, fg = B[(s > 0 ? 'left' : 'right') + 'MiddleProximal'];
-        var goal = handRest(s); if (!goal || !up || !lo || !hd) return;
+        var line = handRest(s); if (!line || !up || !lo || !hd) return;
         var k = restCalm * restCalm * (3 - 2 * restCalm);
         var S = up.getWorldPosition(new THREE.Vector3()), El = lo.getWorldPosition(new THREE.Vector3()), W0 = hd.getWorldPosition(new THREE.Vector3());
-        var a = S.distanceTo(El), b = El.distanceTo(W0), T = W0.clone().lerp(goal.wrist, k), ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length()));
+        var a = S.distanceTo(El), b = El.distanceTo(W0), reach = (a + b) * 0.975, u = line.w.length - 1;   // (her arm hanging almost straight: the point down the skirt her hand reaches like that)
+        for (var i = 0; i < line.w.length - 1; i++) { var d0 = S.distanceTo(line.w[i]), d1 = S.distanceTo(line.w[i + 1]); if (i === 0 && d0 >= reach) { u = 0; break; } if (d0 <= reach && d1 >= reach) { u = i + (reach - d0) / Math.max(1e-6, d1 - d0); break; } }
+        function along(list, x) { x = Math.max(0, Math.min(list.length - 1, x)); var i = Math.min(list.length - 2, Math.floor(x)); return list[i].clone().lerp(list[i + 1], x - i); }
+        var goal = { wrist: along(line.w, u), fingers: along(line.f, u + 2) };
+        var T = W0.clone().lerp(goal.wrist, k), ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length()));
         ST.normalize(); T.copy(S).addScaledVector(ST, d);
-        var pole = new THREE.Vector3(s * 0.3, -0.15, -1).applyQuaternion(root.getWorldQuaternion(q2)).normalize();   // (her elbow bending back and a little out)
+        var pole = new THREE.Vector3(s * 0.15, -0.3, -1).applyQuaternion(root.getWorldQuaternion(q2)).normalize();   // (her elbow bending back and a little out)
         pole.addScaledVector(ST, -pole.dot(ST)).normalize();
         var x = (a * a - b * b + d * d) / (2 * d), Ep = S.clone().addScaledVector(ST, x).addScaledVector(pole, Math.sqrt(Math.max(0, a * a - x * x)));
         function aim(bone, child, to) {                                 // (turn a bone so its child lies towards a point, keeping its twist)
@@ -410,7 +414,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       bA = mid(BX); bL = mid(BX - 6); bR = mid(BX + 6);
       [1, -1].forEach(function (s) {                                    // (where her hands rest on the skirt: its side, a little to the front; her wrist a palm's width out from it, her fingertips lower down)
         function pick(y) { var best = null, bd = 1e9; skirt.forEach(function (e) { var d = Math.abs(((e.a - s * 84 + 540) % 360) - 180) / 12 + Math.abs(e.y - y) / 0.02; if (d < bd) { bd = d; best = e; } }); return best; }
-        rest[s] = [pick(0.9), pick(0.83)];
+        rest[s] = [0.95, 0.92, 0.89, 0.86, 0.83, 0.8, 0.77, 0.74, 0.71].map(pick);   // (a line of points down the skirt's side)
       });
       var all = band.concat(skirt);
       AM_CHAIN.forEach(function (c) {                                   // (each point of the chain: the nearest point of the dress, and how far out from it and below it)
@@ -420,9 +424,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       });
       you.handRest(function (s) {
         if (!dress || !grp.parent || !dress.visible || !rest[s][0]) return null;
-        var w0 = at(rest[s][0], new THREE.Vector3()), f0 = at(rest[s][1], new THREE.Vector3()), o0 = outward(w0, new THREE.Vector3()), o1 = outward(f0, new THREE.Vector3());
-        w0.addScaledVector(o0, 0.042); f0.addScaledVector(o1, 0.062);
-        return { wrist: dress.localToWorld(w0), fingers: dress.localToWorld(f0) };
+        var line = { w: [], f: [] };                                    // (down the skirt's side, just clear of it: where her wrist may go, and a little further out, her fingers)
+        rest[s].forEach(function (e) { var p = at(e, new THREE.Vector3()), o = outward(p, new THREE.Vector3()); line.w.push(dress.localToWorld(p.clone().addScaledVector(o, 0.046))); line.f.push(dress.localToWorld(p.addScaledVector(o, 0.095))); });
+        return line;
       });
     }
     function at(e, t) { return dress.boneTransform(e.k, t); }             // (where that point of the dress is now)
