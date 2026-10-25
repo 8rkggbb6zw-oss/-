@@ -102,7 +102,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (walking && dt > 0) pace += (Math.min(2, Math.max(0.6, dp / dt / 10)) - pace) * (1 - Math.exp(-dt * 4));
       stride += ((walking ? 1 : 0) - stride) * (1 - Math.exp(-dt * (walking ? 9 : 6)));
       armsOut += (armsOutGoal - armsOut) * (1 - Math.exp(-dt * 6));
-      var ph = w.phase, swing = stride * (0.75 + 0.3 * pace), sw = Math.sin(ph - 0.35), el = Math.sin(ph - 0.75);   // (sw: the right arm forward, -1 to 1, the left arm the opposite; el: the forearms, a little later still)
+      var ph = w.phase, swing = stride * (0.45 + 0.18 * pace), sw = Math.sin(ph - 0.35), el = Math.sin(ph - 0.75);   // (sw: the right arm forward, -1 to 1, the left arm the opposite; el: the forearms, a little later still)
       pose(B.hips, E(0, 0.05 * calm - 0.15 * Math.sin(ph) * stride, -0.03 * calm)); pose(B.spine, E(0, -0.03 * calm + 0.07 * Math.sin(ph) * stride, 0.022 * calm)); pose(B.chest, E(Math.sin(t * 1.7) * 0.012, -0.02 * calm + 0.07 * Math.sin(ph) * stride, 0.012 * calm));   // (her weight on her left leg, her hips tilting a little, and breathing)
       for (var k = 0; k < 2; k++) {                                     // (legs: k 0 her left, 1 her right, as with the chibi's; standing still, her right knee softens)
         var leg = w.legs[k], up = k ? B.rightUpperLeg : B.leftUpperLeg, low = k ? B.rightLowerLeg : B.leftLowerLeg;
