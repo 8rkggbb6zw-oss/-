@@ -116,9 +116,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         pose(a[3], E(0, -s * (0.15 + 0.17 * calm + 0.45 * Math.max(0, -r.x) * (1 - stride) + swing * (0.12 + 0.3 * Math.max(0, fe) + 0.08 * pace)), 0));
         pose(a[4], E(0, -s * (0.1 * calm + swing * (0.06 - 0.08 * fe)), -s * (0.14 * calm + 0.1 * stride - 1.6 * armsOut * calm)));   // (wrists softly turned in, or out over a full skirt; walking, her hands trail behind the swing)
       });
-      ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j) {   // (fingers gently curled, a little more towards her little finger)
-        var c = (0.3 + 0.12 * calm + n * 0.05 * calm) * (1 - 1.5 * armsOut); pose(B['left' + f + j], E(0, 0, -c)); pose(B['right' + f + j], E(0, 0, c));
-      }); });
+      fingers(1, 0, t); fingers(-1, 0, t);
       var hr = w.head.rotation; pose(B.neck, E(hr.x * 0.4, hr.y * 0.4, hr.z * 0.4)); pose(B.head, E(hr.x * 0.6 + 0.04 * calm, hr.y * 0.6 + 0.05 * calm, hr.z * 0.6 + 0.05 * calm));   // (her head tipped a touch to one side)
       skirtRoots.forEach(function (o) {                                  // (her skirt swinging out of her legs' way as she walks)
         var leg = w.legs[/_L_/.test(o.name) ? 0 : 1], x = leg.rotation.x, front = /Front/.test(o.name), back = /Back/.test(o.name);
@@ -127,6 +125,24 @@ EVERDAWN_PARTS.push(function (THREE) {
       hairRoots.forEach(function (o) { pose(o, E(Math.max(-0.05, w.hairBack.rotation.x) * 0.6, 0, 0)); });   // (her hair swaying)
       var want = w.mFace.map === w.faces[2] ? 'happy' : w.mFace.map === w.faces[1] ? 'blink' : '';
       if (want !== look) { express('blink', want === 'blink' ? 1 : 0); smile(want === 'happy' ? 1 : 0); look = want; }
+    }
+    // (her hands at rest, the way real hands rest: each finger curled a little more than the one before it, most at its
+    // middle joint, spread very slightly; her thumb drawn in towards her first finger; her two hands not quite alike, and
+    // never quite still. sd: 1 her left hand, -1 her right; open: 0 to 1, how much straighter)
+    var FINGER_CURL = [[0.26, 0.48, 0.3], [0.33, 0.56, 0.35], [0.41, 0.64, 0.4], [0.49, 0.72, 0.44]], FINGER_SPREAD = [-0.08, -0.015, 0.05, 0.12];
+    function fingers(sd, open, t) {
+      var side = sd > 0 ? 'left' : 'right';
+      ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) {
+        var drift = Math.sin(t * 0.55 + n * 0.8 + (sd < 0 ? 2.1 : 0)) * 0.035 + (sd < 0 ? 0.05 : 0);
+        ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, m) {
+          var b = B[side + f + j]; if (!b) return;
+          pose(b, E(0, m ? 0 : sd * FINGER_SPREAD[n], -sd * (FINGER_CURL[n][m] + drift) * (1 - open)));
+        });
+      });
+      var th = 1 - 0.5 * open;                                          // (her thumb lying in alongside her first finger)
+      if (B[side + 'ThumbMetacarpal']) pose(B[side + 'ThumbMetacarpal'], E(0, sd * 0.4 * th, sd * 0.08 * th));
+      if (B[side + 'ThumbProximal']) pose(B[side + 'ThumbProximal'], E(0, sd * 0.3 * th, sd * 0.05 * th));
+      if (B[side + 'ThumbDistal']) pose(B[side + 'ThumbDistal'], E(0, sd * 0.25 * th, 0));
     }
     function afterFollow() {
       if (axeArm.visible && B.rightUpperArm) {                           // (holding a tool: her right arm reaches along the tool arm, her hand round the handle)
@@ -162,11 +178,19 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (fg) {                                                       // (her hand carrying on from her forearm with a gentle bend at the wrist, its fingers following the skirt down)
           var fd = T.clone().sub(Ep).normalize().multiplyScalar(0.6).add(goal.fingers.clone().sub(goal.wrist).normalize().multiplyScalar(0.4)).normalize();
           aim(hd, fg, hd.getWorldPosition(new THREE.Vector3()).add(fd));
+          // (and her palm turned in towards the skirt, the back of her hand outwards, as a relaxed hand hangs: her forearm
+          // turns to do it, the way a real arm does, rather than her wrist)
+          var rq = rest.get(hd), palmL = new THREE.Vector3(0, -1, 0).applyQuaternion(rq.model.clone().invert());
+          var palm = palmL.clone().applyQuaternion(hd.getWorldQuaternion(new THREE.Quaternion()));
+          var hp = hd.getWorldPosition(new THREE.Vector3()), inward = root.worldToLocal(hp.clone()); inward.set(-inward.x, 0, -(inward.z - 0.033));
+          inward.applyQuaternion(root.getWorldQuaternion(q2)).normalize();
+          var axis = T.clone().sub(Ep).normalize(), p1 = palm.addScaledVector(axis, -palm.dot(axis)).normalize(), p2 = inward.addScaledVector(axis, -inward.dot(axis)).normalize();
+          var ang = Math.atan2(new THREE.Vector3().crossVectors(p1, p2).dot(axis), p1.dot(p2)) * k * 0.85;
+          var qw = lo.getWorldQuaternion(new THREE.Quaternion()).premultiply(new THREE.Quaternion().setFromAxisAngle(axis, ang));
+          lo.quaternion.copy(lo.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qw)); lo.updateMatrixWorld(true);
+          aim(hd, fg, hd.getWorldPosition(new THREE.Vector3()).add(fd));
         }
-        ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, m) {   // (and softly curled, a little more towards her little finger)
-          var fb = B[(s > 0 ? 'left' : 'right') + f + j]; if (!fb) return;
-          var c = (0.3 + 0.05 * n) * (1 - k) + (0.12 + n * 0.05 + m * 0.06) * k; pose(fb, E(0, 0, -s * c)); fb.updateMatrixWorld(true);
-        }); });
+        fingers(s, 0.12 * k, state.time); hd.updateMatrixWorld(true);   // (a touch more open, lying on the skirt)
       });
       [[w.armL, B.leftHand], [w.armR, B.rightHand]].forEach(function (p) {   // (the chibi's hidden hands kept where hers are, for anything held in them, like the title screen's wand)
         if (!p[1]) return; p[1].getWorldPosition(v1); chibi.worldToLocal(v1);
@@ -397,7 +421,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       you.handRest(function (s) {
         if (!dress || !grp.parent || !dress.visible || !rest[s][0]) return null;
         var w0 = at(rest[s][0], new THREE.Vector3()), f0 = at(rest[s][1], new THREE.Vector3()), o0 = outward(w0, new THREE.Vector3()), o1 = outward(f0, new THREE.Vector3());
-        w0.addScaledVector(o0, 0.034); f0.addScaledVector(o1, 0.048);
+        w0.addScaledVector(o0, 0.042); f0.addScaledVector(o1, 0.062);
         return { wrist: dress.localToWorld(w0), fingers: dress.localToWorld(f0) };
       });
     }
