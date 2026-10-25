@@ -89,21 +89,32 @@ EVERDAWN_PARTS.push(function (THREE) {
 
     // ---- every time she's drawn: her joints follow the chibi's ----
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
+    var lastT = 0, lastPhase = 0, stride = 0, pace = 1;
     function follow() {
       R.position.y = (flying || inBoat) ? 0.37 - hipY : 0;              // (sitting on her broom or in the boat: her hips where the chibi's seat was)
       var t = state.time, L0 = w.legs[0].rotation, L1 = w.legs[1].rotation;
       var calm = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
-      pose(B.hips, E(0, 0.05 * calm, -0.03 * calm)); pose(B.spine, E(0, -0.03 * calm, 0.022 * calm)); pose(B.chest, E(Math.sin(t * 1.7) * 0.012, -0.02 * calm, 0.012 * calm));   // (her weight on her left leg, her hips tilting a little, and breathing)
+      // (walking: her arms swing opposite to her legs, each arm forward as the other leg steps, a moment behind it so they
+      // trail and follow through; they swing further forward than back, the elbow bending more on the way forward, and
+      // further when she jogs or runs. Her hips turn with the leg that steps and her shoulders turn back against them.
+      // The swing eases in as she sets off and settles as she stops, rather than snapping)
+      var dt = Math.min(0.1, Math.max(0, t - lastT)), dp = w.phase - lastPhase; lastT = t; lastPhase = w.phase;
+      var walking = dp > 0 && !flying && !inBoat && !window.EVERDAWN_TITLE;
+      if (walking && dt > 0) pace += (Math.min(2, Math.max(0.6, dp / dt / 10)) - pace) * (1 - Math.exp(-dt * 4));
+      stride += ((walking ? 1 : 0) - stride) * (1 - Math.exp(-dt * (walking ? 9 : 6)));
+      var ph = w.phase, swing = stride * (0.75 + 0.3 * pace), sw = Math.sin(ph - 0.35), el = Math.sin(ph - 0.75);   // (sw: the right arm forward, -1 to 1, the left arm the opposite; el: the forearms, a little later still)
+      pose(B.hips, E(0, 0.05 * calm - 0.15 * Math.sin(ph) * stride, -0.03 * calm)); pose(B.spine, E(0, -0.03 * calm + 0.07 * Math.sin(ph) * stride, 0.022 * calm)); pose(B.chest, E(Math.sin(t * 1.7) * 0.012, -0.02 * calm + 0.07 * Math.sin(ph) * stride, 0.012 * calm));   // (her weight on her left leg, her hips tilting a little, and breathing)
       for (var k = 0; k < 2; k++) {                                     // (legs: k 0 her left, 1 her right, as with the chibi's; standing still, her right knee softens)
         var leg = w.legs[k], up = k ? B.rightUpperLeg : B.leftUpperLeg, low = k ? B.rightLowerLeg : B.leftLowerLeg;
         pose(up, E(leg.rotation.x - (k ? 0.08 : 0.01) * calm, leg.rotation.y + (k ? -0.12 : 0.04) * calm, leg.rotation.z + (k ? 0.025 : 0.03) * calm)); pose(low, E(leg.userData.shin.rotation.x + (k ? 0.17 : 0.02) * calm, 0, 0));
       }
-      pose(B.leftShoulder, E(0, 0, -0.06 * calm)); pose(B.rightShoulder, E(0, 0, 0.06 * calm));   // (shoulders relaxed)
-      [[w.armL, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [w.armR, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {   // (arms: hanging close at her sides, then swinging as the chibi's do, elbows softly bent)
-        var r = a[0].rotation, s = a[4];
-        pose(a[1], E(r.x + 0.04 * calm, r.y, r.z).multiply(E(0, 0, -s * (DOWN + 0.13 * calm))));
-        pose(a[2], E(0, -s * (0.15 + 0.17 * calm + 0.45 * Math.max(0, -r.x)), 0));
-        pose(a[3], E(0, -s * 0.1 * calm, -s * 0.14 * calm));            // (wrists softly turned in)
+      [[w.armL, B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [w.armR, B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {   // (arms: hanging close at her sides, then swinging as she walks, elbows softly bent)
+        var r = a[0].rotation, s = a[5], f = -s * sw, fe = -s * el;     // (f: this arm forward, -1 to 1)
+        var x = r.x * (1 - stride) - swing * (f > 0 ? 0.4 : 0.28) * f;   // (walking, her own swing takes over from the chibi's)
+        pose(a[1], E(0, -s * 0.07 * f * swing, -s * 0.06 * calm));      // (shoulders relaxed, rolling a little with the swing)
+        pose(a[2], E(x + 0.04 * calm, r.y, r.z).multiply(E(0, 0, -s * (DOWN + 0.13 * calm - 0.06 * stride))));   // (held a touch out from her sides as she walks, clear of her hips)
+        pose(a[3], E(0, -s * (0.15 + 0.17 * calm + 0.45 * Math.max(0, -r.x) * (1 - stride) + swing * (0.12 + 0.3 * Math.max(0, fe) + 0.08 * pace)), 0));
+        pose(a[4], E(0, -s * (0.1 * calm + swing * (0.06 - 0.08 * fe)), -s * (0.14 * calm + 0.1 * stride)));   // (wrists softly turned in; walking, her hands trail behind the swing)
       });
       ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j) {   // (fingers gently curled, a little more towards her little finger)
         var c = 0.3 + 0.12 * calm + n * 0.05 * calm; pose(B['left' + f + j], E(0, 0, -c)); pose(B['right' + f + j], E(0, 0, c));
