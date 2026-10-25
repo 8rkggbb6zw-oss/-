@@ -181,7 +181,152 @@ EVERDAWN_PARTS.push(function (THREE) {
   var CLOSET_X = ROOM_W / 2 - 0.3, CLOSET_Z = 1.75;                    // (where it starts: against the right-hand wall, past the end of the bed, facing into the room)
   function giveCloset() { if (decorFits('decor_closet', CLOSET_X, CLOSET_Z, 1)) decorPut({ id: 'decor_closet', x: CLOSET_X, z: CLOSET_Z, rot: 1 }); else storeAdd('decor_closet', 1); }
   giveCloset();
-  decorDefaults = (function (base) { return function () { base(); giveCloset(); }; })(decorDefaults);
-  decorSaveData = (function (base) { return function () { var d = base(); d.closetGiven = true; return d; }; })(decorSaveData);
-  decorLoadData = (function (base) { return function (d) { base(d); if (d && !d.closetGiven) giveCloset(); }; })(decorLoadData);
+  decorDefaults = (function (base) { return function () { base(); giveCloset(); closetReset(); }; })(decorDefaults);
+  decorSaveData = (function (base) { return function () { var d = base(); d.closetGiven = true; d.closet = { items: closetItems.map(function (c) { return c && { id: c.id, count: c.count }; }), worn: Object.assign({}, worn) }; return d; }; })(decorSaveData);
+  decorLoadData = (function (base) { return function (d) {
+    base(d); if (!d) return;
+    if (!d.closetGiven) giveCloset();
+    closetReset(); var c = d.closet;                                   // (what's in your closet, and what you're wearing)
+    if (c) {
+      (c.items || []).forEach(function (it, i) { if (it && i < CLOSET_SLOTS && isClothes(it.id)) closetItems[i] = { id: it.id, count: Math.max(1, it.count | 0) }; });
+      OUTFIT.forEach(function (s) { var id = c.worn && c.worn[s[0]]; if (id && isClothes(id)) worn[s[0]] = id; });
+    }
+  }; })(decorLoadData);
+
+  // ---------- The closet: your clothes, and what you're wearing ----------
+  // Stand in front of the closet and press Interact (✕ / A / B) to open it. On the left: you, in a live picture, with
+  // your outfit slots round you (Hat, Necklace, Shirt and Pants down one side, Belt, Socks and Shoes down the other).
+  // On the right: the closet, laid out like your bag but for clothes only, and under it any clothes in your bag. Tap
+  // clothes in your bag to put them away; tap clothes in the closet to put them on (whatever was in that slot goes back
+  // in); tap something you're wearing to take it off. A dress goes in the Shirt slot, and while you wear one, no pants.
+  // Clothes are any item with a slot: 'hat', 'necklace', 'shirt', 'dress', 'pants', 'belt', 'socks' or 'shoes' (give
+  // Thread & Thimble's clothes one in CLOTH_STOCK). What's in the closet and what you wear are saved with your house
+  var CLOSET_SLOTS = 24, OUTFIT = [['hat', 'Hat', '🎩'], ['necklace', 'Necklace', '📿'], ['shirt', 'Shirt', '👕'], ['pants', 'Pants', '👖'], ['belt', 'Belt', '🪢'], ['socks', 'Socks', '🧦'], ['shoes', 'Shoes', '👟']];
+  var closetItems = [], worn = {}, closetOpen = false;
+  function closetReset() { closetItems = []; for (var i = 0; i < CLOSET_SLOTS; i++) closetItems.push(null); worn = {}; OUTFIT.forEach(function (s) { worn[s[0]] = null; }); }
+  closetReset();
+  CLOTH_STOCK.forEach(function (c) { if (ITEMS[c.id] && c.slot) ITEMS[c.id].slot = c.slot; });   // (the shop's clothes, and the slot each one goes in)
+  function isClothes(id) { return !!(ITEMS[id] && ITEMS[id].slot && /^(hat|necklace|shirt|dress|pants|belt|socks|shoes)$/.test(ITEMS[id].slot)); }
+  function slotFor(id) { var s = ITEMS[id].slot; return s === 'dress' ? 'shirt' : s; }
+  function wearingDress() { return !!(worn.shirt && ITEMS[worn.shirt] && ITEMS[worn.shirt].slot === 'dress'); }
+  function closetAdd(id) {                                            // (into the closet: with others of its kind, or the first empty space)
+    for (var i = 0; i < CLOSET_SLOTS; i++) if (closetItems[i] && closetItems[i].id === id) { closetItems[i].count++; return true; }
+    for (i = 0; i < CLOSET_SLOTS; i++) if (!closetItems[i]) { closetItems[i] = { id: id, count: 1 }; return true; }
+    showToast('👗 Your closet is full.', 1800); return false;
+  }
+  function closetTake(i) { var c = closetItems[i]; if (!c) return null; if (--c.count <= 0) closetItems[i] = null; return c.id; }
+  (function () { var st = document.createElement('style'); st.textContent =
+    '.inventory.ev-closet{width:min(780px,96%);max-height:94%;overflow-y:auto}' +
+    '.ev-cl-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}@media (max-width:620px){.ev-cl-cols{grid-template-columns:1fr}}' +
+    '.ev-cl-me{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px;border-radius:18px;background:linear-gradient(180deg,#f3e9ff,#ffeaf4)}' +
+    '.ev-cl-side{display:flex;flex-direction:column;gap:8px}.ev-cl-pic{position:relative;height:min(52vh,340px);border-radius:14px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,#fff7fb,#ead8ff 70%,#d9c4f7)}' +
+    '.ev-cl-pic canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;background:transparent!important;box-shadow:none!important;border-radius:0!important}' +
+    '.ev-oslot{display:flex;flex-direction:column;align-items:center;gap:2px;font:600 .66rem Fredoka,system-ui,sans-serif;color:#6b56a0}' +
+    '.ev-oslot .slot{width:54px;height:54px;font-size:1.7rem}.ev-oslot .slot.ph span{opacity:.3;filter:grayscale(1)}.ev-oslot .slot.locked{opacity:.45}' +
+    '.ev-cl-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:6px!important}.ev-cl-grid .slot{font-size:1.5rem}' +
+    '.ev-cl-bag{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:6px!important;margin-top:4px}.ev-cl-info{min-height:1.3em;margin:8px 0 0;font-size:.8rem;color:#6b56a0;text-align:center}' +
+    '.ev-closet h4{margin:0 0 6px;color:#7b4fd6;font-size:.9rem}.ev-cl-none{grid-column:1/-1;font-size:.78rem;opacity:.7;margin:4px 0}';
+    document.head.appendChild(st); })();
+  var clBox = document.createElement('div'); clBox.className = 'inventory ev-closet'; clBox.hidden = true;
+  clBox.innerHTML = '<div class="inv-head"><b>👗 Closet</b><button type="button" class="inv-close" aria-label="Close the closet">✕</button></div>' +
+    '<div class="ev-cl-cols"><div class="ev-cl-me"><div class="ev-cl-side ev-cl-l"></div><div class="ev-cl-pic"></div><div class="ev-cl-side ev-cl-r"></div></div>' +
+    '<div><h4>Your closet</h4><div class="inv-grid ev-cl-grid"></div><h4 style="margin-top:12px">Clothes in your bag</h4><div class="inv-grid ev-cl-bag"></div></div></div><p class="ev-cl-info"></p>';
+  canvas.parentNode.appendChild(clBox);
+  var clLeft = clBox.querySelector('.ev-cl-l'), clRight = clBox.querySelector('.ev-cl-r'), clGrid = clBox.querySelector('.ev-cl-grid'), clBag = clBox.querySelector('.ev-cl-bag'), clInfo = clBox.querySelector('.ev-cl-info'), clPic = clBox.querySelector('.ev-cl-pic');
+  clBox.querySelector('.inv-close').addEventListener('click', function () { closeCloset(); focusGame(); });
+  clBox.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  function say(txt) { clInfo.textContent = txt || ''; }
+  function slotButton(id, count, tip, act) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'slot' + (id ? '' : ' empty');
+    if (id) { b.appendChild(itemPicture(id)); if (count > 1) { var c = document.createElement('span'); c.className = 'count'; c.textContent = count; b.appendChild(c); } }
+    if (tip) { b.title = tip; b.setAttribute('aria-label', tip); b.addEventListener('pointerenter', function () { say(tip); }); b.addEventListener('focus', function () { say(tip); }); }
+    if (act) b.addEventListener('click', act);
+    return b;
+  }
+  var clSeen = '';
+  function bagClothes() { return bag.map(function (it) { return it && isClothes(it.id) ? it.id + it.count : ''; }).join(); }
+  function renderCloset() {
+    if (!closetOpen) return;
+    clSeen = bagClothes();
+    clLeft.innerHTML = ''; clRight.innerHTML = '';
+    OUTFIT.forEach(function (s, n) {                                    // (your outfit, round you)
+      var id = worn[s[0]], lock = s[0] === 'pants' && wearingDress(), wrap = document.createElement('div'); wrap.className = 'ev-oslot';
+      var b = id ? slotButton(id, 1, ITEMS[id].name + ': tap to take it off', function () { takeOff(s[0]); }) : slotButton(null, 0, lock ? 'Not with a dress' : s[1] + ': empty', null);
+      if (!id) { b.classList.add('ph'); var ph = document.createElement('span'); ph.textContent = lock ? '🚫' : s[2]; b.appendChild(ph); if (lock) b.classList.add('locked'); }
+      wrap.appendChild(b); var lb = document.createElement('span'); lb.textContent = s[1]; wrap.appendChild(lb);
+      (n < 4 ? clLeft : clRight).appendChild(wrap);
+    });
+    clGrid.innerHTML = '';
+    closetItems.forEach(function (c, i) { clGrid.appendChild(c ? slotButton(c.id, c.count, ITEMS[c.id].name + ': tap to wear it', function () { putOn(i); }) : slotButton(null)); });
+    clBag.innerHTML = ''; var any = false;
+    bag.forEach(function (it, i) { if (!it || !isClothes(it.id)) return; any = true; clBag.appendChild(slotButton(it.id, it.count, ITEMS[it.id].name + ': tap to put it in your closet', function () { stow(i); })); });
+    if (!any) { var p = document.createElement('p'); p.className = 'ev-cl-none'; p.textContent = 'No clothes in your bag. Thread & Thimble sells them!'; clBag.appendChild(p); }
+  }
+  function stow(i) {                                                  // (from your bag into the closet)
+    var it = bag[i]; if (!it || !isClothes(it.id)) return;
+    if (!closetAdd(it.id)) return;
+    if (--it.count <= 0) { bag[i] = null; if (selectedSlot === i) selectedSlot = -1; }
+    renderBag(); renderCloset(); popSound();
+  }
+  function putOn(i) {                                                 // (from the closet onto you)
+    var c = closetItems[i]; if (!c) return;
+    var s = slotFor(c.id);
+    if (s === 'pants' && wearingDress()) { showToast('👗 You can\'t wear pants with a dress.', 1800); return; }
+    var id = closetTake(i), off = worn[s];
+    worn[s] = id; if (off) closetAdd(off);
+    if (ITEMS[id].slot === 'dress' && worn.pants) { closetAdd(worn.pants); worn.pants = null; }   // (a dress: no pants with it)
+    renderCloset(); popSound();
+  }
+  function takeOff(s) { var id = worn[s]; if (!id) return; if (!closetAdd(id)) return; worn[s] = null; renderCloset(); popSound(); }
+
+  // (the live picture of you: drawn in its own little window, with soft light, while the closet is open)
+  var pr = null;
+  function portrait() {
+    if (!closetOpen) return;
+    requestAnimationFrame(portrait);
+    var w = clPic.clientWidth, h = clPic.clientHeight; if (!w || !h) return;
+    if (!pr) {
+      var R3 = new THREE.WebGLRenderer({ antialias: true, alpha: true }); R3.setClearColor(0x000000, 0);
+      R3.outputEncoding = renderer.outputEncoding; R3.toneMapping = renderer.toneMapping; R3.toneMappingExposure = renderer.toneMappingExposure; R3.physicallyCorrectLights = renderer.physicallyCorrectLights;
+      var S = new THREE.Scene(); S.add(new THREE.HemisphereLight(0xfff4f8, 0x8a6ab4, 0.75));
+      var key = new THREE.DirectionalLight(0xfff6ee, 0.75); key.position.set(1.5, 3, 4); S.add(key);
+      var rim = new THREE.DirectionalLight(0xffc0e6, 0.35); rim.position.set(-3, 2, -2); S.add(rim);
+      pr = { R: R3, S: S, cam: new THREE.PerspectiveCamera(24, 1, 0.05, 30) };
+    }
+    if (pr.R.domElement.parentNode !== clPic) clPic.appendChild(pr.R.domElement);
+    pr.R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); pr.R.setSize(w, h, false);
+    var fit = 1.76, cam = pr.cam; cam.aspect = w / h; cam.position.set(0, 0.85, fit * 0.5 / Math.tan(12 * Math.PI / 180) / Math.min(1, cam.aspect * 1.9)); cam.lookAt(0, 0.83, 0); cam.updateProjectionMatrix();   // (all of you, filling the picture)
+    var parent = player.parent, pos = player.position.clone(), rot = player.rotation.clone(), vis = player.visible;   // (you, borrowed for a moment, facing out at yourself)
+    pr.S.add(player); player.position.set(0, 0, 0); player.rotation.set(0, 0, 0); player.visible = true;
+    try { pr.R.render(pr.S, cam); } finally { (parent || scene).add(player); player.position.copy(pos); player.rotation.copy(rot); player.visible = vis; }
+  }
+
+  function closetSpot() {                                             // (the spot in front of the closet's doors, in the room's own terms, or null if it isn't in the room)
+    var p = decorPlaced.filter(function (q) { return q.id === 'decor_closet'; })[0]; if (!p) return null;
+    var a = -p.rot * Math.PI / 2; return { x: p.x + Math.sin(a) * 0.75, z: p.z + Math.cos(a) * 0.75 };
+  }
+  function nearCloset(r) {
+    if (!inFarmhouse() || decorMode || flying) return false;
+    var s = closetSpot(); return !!s && dist(player.position.x - IN_X, player.position.z - IN_Z, s.x, s.z) < (r || 0.75);
+  }
+  function openCloset() { if (closetOpen) return; toggleBag(false); closetOpen = true; menuOpenedAt = Date.now(); walkTarget = null; clBox.hidden = false; say('Tap clothes in your bag to put them away, tap clothes in your closet to wear them.'); renderCloset(); portrait(); }
+  function closeCloset() { closetOpen = false; clBox.hidden = true; }
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && closetOpen) closeCloset(); });
+  var clBtn = document.createElement('button'); clBtn.type = 'button'; clBtn.className = 'sleep-btn ship-btn'; canvas.parentNode.appendChild(clBtn);   // (pops up when you're in front of it)
+  function showClosetKey() { clBtn.innerHTML = '👗 Closet <kbd>' + (interactKey ? everdawnKeyName(interactKey) : 'E') + '</kbd>'; }
+  showClosetKey(); clBtn.addEventListener('click', function () { openCloset(); focusGame(); });
+  somethingOpen = (function (base) { return function () { return closetOpen || base.apply(this, arguments); }; })(somethingOpen);
+  interact = (function (base) { return function () {
+    if (closetOpen) { if (!menuJustOpened()) closeCloset(); return; }
+    if (nearCloset() && !somethingOpen()) { openCloset(); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
+  updatePlayer = (function (base) { return function (dt) {
+    var r = base.apply(this, arguments);
+    if (closetOpen && !nearCloset(1.8)) closeCloset();                 // (it stays open until you walk away)
+    var show = nearCloset() && !closetOpen && !somethingOpen(); if (clBtn.classList.contains('show') !== show) { clBtn.classList.toggle('show', show); if (show) showClosetKey(); }
+    if (closetOpen && bagClothes() !== clSeen) renderCloset();        // (clothes came into your bag while it was open)
+    return r;
+  }; })(updatePlayer);
+  window.everdawnCloset = { open: openCloset, close: closeCloset, add: closetAdd, worn: function () { return Object.assign({}, worn); } };   // (for anything else that needs it, like testing)
 });

@@ -9690,8 +9690,8 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---- the shop's menu, at the counter ----
   // Press Interact at the counter for Thread & Thimble's menu, laid out like the other shops: the clothes as tiles on the
   // left, the one you pick on the right with its buy button. To stock it, add clothes to CLOTH_STOCK, e.g.
-  //   { id: 'cloth_sunhat', name: 'Straw Sun Hat', icon: '👒', price: 450, info: 'A wide straw hat with a ribbon.' }
-  // Each one becomes an item too, so once bought it goes in your bag. Until there are any, it says new clothes are coming
+  //   { id: 'cloth_sunhat', name: 'Straw Sun Hat', icon: '👒', price: 450, info: 'A wide straw hat with a ribbon.', slot: 'hat' }
+  // Each one becomes an item too, so once bought it goes in your bag (slot: where it's worn, for the closet in script7.js). Until there are any, it says new clothes are coming
   var CLOTH_STOCK = [];
   CLOTH_STOCK.forEach(function (c) { ITEMS[c.id] = { name: c.name, icon: c.icon, info: c.info }; });
   var clothShopOpen = false, clothPick = 0, clothShopBox = document.createElement('div');
