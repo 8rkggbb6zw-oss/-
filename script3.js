@@ -9702,8 +9702,10 @@ EVERDAWN_PARTS.push(function (THREE) {
   var clothCols = clothShopBox.querySelector('.cl-cols'), clothCoins = clothShopBox.querySelector('.ship-total b');
   var CLOTH_SECTIONS = [['necklace', 'Necklace']];                    // (the shop's sections, in order: [the slot its clothes go in, its heading]; add more here, e.g. ['hat', 'Hats'])
   function clothSection(s) { for (var i = 0; i < CLOTH_SECTIONS.length; i++) if (CLOTH_SECTIONS[i][0] === s.slot || (s.slot === 'dress' && CLOTH_SECTIONS[i][0] === 'shirt')) return CLOTH_SECTIONS[i]; return CLOTH_SECTIONS[CLOTH_SECTIONS.length - 1]; }   // (clothes with no section of their own go in the last one)
+  var clothOwned = function () { return false; }, clothBought = function () {};   // (whether you've bought it already, and noting that you have: see script7.js)
   function clothTile(s, k) {
-    return '<button type="button" class="shop-tile' + (k === clothPick ? ' sel' : '') + (state.coins < s.price ? ' cant' : '') + '" data-k="' + k + '"><span class="shop-tile-pic" style="font-size:1.8rem">' + clothPic(s) + '</span><span class="shop-tile-name">' + s.name + '</span><span class="shop-tile-price"><img class="coin-icon" alt=""> ' + s.price.toLocaleString('en-US') + '</span></button>';
+    var sold = clothOwned(s.id);
+    return '<button type="button" class="shop-tile' + (k === clothPick ? ' sel' : '') + (sold ? ' sold' : state.coins < s.price ? ' cant' : '') + '" data-k="' + k + '">' + (sold ? '<span class="sold-stamp">Sold</span>' : '') + '<span class="shop-tile-pic" style="font-size:1.8rem">' + clothPic(s) + '</span><span class="shop-tile-name">' + s.name + '</span><span class="shop-tile-price"><img class="coin-icon" alt=""> ' + s.price.toLocaleString('en-US') + '</span></button>';
   }
   function clothPic(c) { return c.img ? '<img src="' + c.img + '" alt="" style="width:1.2em;height:1.2em;object-fit:contain;pointer-events:none">' : c.icon; }   // (your own drawing, if it has one)
   function renderClothShop() {
@@ -9711,15 +9713,15 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (!CLOTH_STOCK.length) { clothCols.innerHTML = '<div class="shop-list" style="flex:1;grid-column:1/-1"><h4>For sale</h4><p class="ship-hint" style="text-align:center;margin:28px 8px">🧵 The racks are still empty: new clothes are coming soon!</p></div>'; paintCoinIcons(clothShopBox); return; }
     var c = CLOTH_STOCK[clothPick] || CLOTH_STOCK[0];
     clothCols.innerHTML = '<div class="shop-list"><h4>For sale</h4><div class="shop-tiles">' + CLOTH_SECTIONS.map(function (sec) {   // (the clothes in their sections, each under its heading)
-      var tiles = CLOTH_STOCK.map(function (s, k) { return clothSection(s) === sec ? clothTile(s, k) : ''; }).join('');
+      var tiles = [false, true].map(function (sold) { return CLOTH_STOCK.map(function (s, k) { return clothSection(s) === sec && clothOwned(s.id) === sold ? clothTile(s, k) : ''; }).join(''); }).join('');   // (what you've bought already goes to the bottom)
       return tiles ? '<div class="shop-section">' + sec[1] + '</div>' + tiles : '';
     }).join('') + '</div></div><div class="shop-detail"><h4>Take a look</h4><div class="shop-card on"><div class="shop-item"><div class="slot shop-pic" style="font-size:2.4rem;display:grid;place-items:center">' + clothPic(c) + '</div><div class="shop-text"><b>' + c.name + '</b><span class="shop-desc">' + c.info + '</span>' +
-      '<span class="shop-price"><img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</span></div></div><div class="shop-buy"><button type="button" class="cl-buy"' + (state.coins < c.price ? ' disabled' : '') + '>Buy · <img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</button></div></div></div>';
+      '<span class="shop-price"><img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US') + '</span></div></div><div class="shop-buy"><button type="button" class="cl-buy"' + (state.coins < c.price || clothOwned(c.id) ? ' disabled' : '') + '>' + (clothOwned(c.id) ? 'Sold' : 'Buy · <img class="coin-icon" alt=""> ' + c.price.toLocaleString('en-US')) + '</button></div></div></div>';
     clothCols.querySelectorAll('.shop-tile').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); clothPick = +b.getAttribute('data-k'); renderClothShop(); }); });
     clothCols.querySelector('.cl-buy').addEventListener('click', function (e) {
-      e.stopPropagation(); if (state.coins < c.price) return;
+      e.stopPropagation(); if (state.coins < c.price || clothOwned(c.id)) return;
       if (!addItem(c.id, 1)) { showToast('Your bag is full', 1800); return; }
-      state.coins -= c.price; showCoins(true); coinSound(); showToast('🛍️ ' + c.name + ' is in your bag!', 2000); renderClothShop();
+      clothBought(c.id); state.coins -= c.price; showCoins(true); coinSound(); showToast('🛍️ ' + c.name + ' is in your bag!', 2000); renderClothShop();
     });
     paintCoinIcons(clothShopBox);
   }
