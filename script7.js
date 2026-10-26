@@ -336,14 +336,24 @@ EVERDAWN_PARTS.push(function (THREE) {
         var mat = bodyMat.clone(); mat.map = t; mat.emissiveMap = t; return mat;
       } catch (err) { return toon(src); }
     }
-    function outfit(g) {
+    function boneFor(b) {                                              // (her bone of that name; or, for the little sway bones some clothes bring with them, one made for her, on the bone it hangs from)
+      var mine = root.getObjectByName(b.name); if (mine) return mine;
+      if (!b.parent || !/^J_Sec_/.test(b.name)) return null;
+      var up = boneFor(b.parent); if (!up) return null;
+      var nb = new THREE.Bone(); nb.name = b.name; nb.position.copy(b.position); nb.quaternion.copy(b.quaternion); nb.scale.copy(b.scale); up.add(nb); nb.updateMatrixWorld(true); return nb;
+    }
+    function painted(mat, tex) {
+      var key = (mat.name.match(/Onepiece|Tops|Bottoms/) || [''])[0]; if (!tex || !tex[key]) return mat;
+      var t = new THREE.TextureLoader().load(tex[key]); t.flipY = false; t.encoding = mat.map ? mat.map.encoding : t.encoding; mat.map = mat.emissiveMap = t; return mat;
+    }
+    function outfit(g, tex) {                                         // (tex: your painting of its clothes, by the kind of clothes in each material's name)
       var made = []; g.scene.updateMatrixWorld(true);
       g.scene.traverse(function (o) {
         if (!o.isSkinnedMesh || !/Onepiece|Tops|Bottoms|Body_00_SKIN/.test(o.material.name)) return;
-        var bones = o.skeleton.bones.map(function (b) { return root.getObjectByName(b.name); });
+        var bones = o.skeleton.bones.map(boneFor);
         if (bones.some(function (b) { return !b; })) return;              // (made for a different skeleton)
         var skin = /Body_00_SKIN/.test(o.material.name) && bodyMat;
-        var geo = skin ? bodyPart(o.geometry, 9) : o.geometry, m = new THREE.SkinnedMesh(geo, skin ? skinFor(o.material) : toon(o.material));   // (its body without feet, which would poke through her boots)
+        var geo = skin ? bodyPart(o.geometry, 9) : o.geometry, m = new THREE.SkinnedMesh(geo, skin ? skinFor(o.material) : painted(toon(o.material), tex));   // (its body without feet, which would poke through her boots)
         if (skin) { geo.userData.knee = kneeOf(o); legGeos.push(geo); if (legSpec || bareLegs) { legMap = null; paintSkin(addSkin(m.material)); } }   // (socks on her: on this body's skin too)
         m.name = o.name; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.visible = false;
         o.matrixWorld.decompose(m.position, m.quaternion, m.scale); root.add(m);
@@ -435,7 +445,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.scene.traverse(function (o) {
         if (!o.isSkinnedMesh) return; var nm = o.material.name || '', shoe = /Shoes/.test(nm), body = /Body_00_SKIN/.test(nm);
         if (!shoe && !(body && bodyMat)) return;
-        var bones = o.skeleton.bones.map(function (b) { return root.getObjectByName(b.name); }); if (bones.some(function (b) { return !b; })) return;
+        var bones = o.skeleton.bones.map(boneFor); if (bones.some(function (b) { return !b; })) return;
         var geo = o.geometry, mat;
         if (shoe) {
           mat = toon(o.material); var key = (nm.match(/CLOTH_\d+/) || [''])[0];
@@ -828,7 +838,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       'https://cdn.jsdelivr.net/gh/8rkggbb6zw-oss/-@claude/coding-conversation-f08c0n/' + f].filter(Boolean);
     (function load(n) {
       if (!THREE.GLTFLoader || n >= urls.length) { if (window.console) console.warn('Everdawn: ' + file + ' could not be loaded'); return; }
-      new THREE.GLTFLoader().load(urls[n], function (g) { try { var k = outfitKinds[file]; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { load(n + 1); });
+      new THREE.GLTFLoader().load(urls[n], function (g) { try { var k = outfitKinds[file]; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g, k && k.tex); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { load(n + 1); });
     })(0);
     return null;
   }
