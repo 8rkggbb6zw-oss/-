@@ -9549,9 +9549,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[0xe8dccb, 0.04], [0x9aa392, 0.035], [0xd9b9a4, 0.03]].forEach(function (bk, k) { put(new THREE.BoxGeometry(0.24, bk[1], 0.17), rMat(bk[0], { roughness: 0.8 }), 0.22, SY + 0.02 + k * 0.035 + bk[1] / 2 - 0.02, -0.35, 0, k * 0.15, 0, WN); });   // (a stack of books...)
     put(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 14), rMat(0xf6efe4, { roughness: 0.7 }), 0.22, SY + 0.15, -0.35, 0, 0, 0, WN);   // (...with a candle on top)
     put(new THREE.SphereGeometry(0.012, 6, 4), rMat(0xffd27a, { emissive: 0xffb84a, emissiveIntensity: 1.2 }), 0.22, SY + 0.205, -0.35, 0, 0, 0, WN).scale.y = 1.8;
-    // (a bouclé pouf in the middle of the room)
-    var pouf = put(new THREE.SphereGeometry(0.33, 24, 14), new THREE.MeshStandardMaterial({ color: 0xf2ece2, roughness: 1, map: cpTex(128, 128, function (g, w, h) { g.fillStyle = '#f2ece2'; g.fillRect(0, 0, w, h); for (var k = 0; k < 700; k++) { g.fillStyle = 'rgba(' + (k % 2 ? '255,252,246' : '200,190,176') + ',0.6)'; g.beginPath(); g.arc((k * 37) % w, (k * 59) % h, 1.5 + (k % 3), 0, Math.PI * 2); g.fill(); } }, [3, 2]) }), -1.5, 0.22, 1.2, 0, 0, 0);
-    pouf.scale.set(1, 0.68, 1); clothSolids.push([-1.5, 1.2, 0.38]);
     // (floating oak shelves on the right wall, with folded knits, a little plant and a candle)
     var SH = new THREE.Group(); SH.position.set(W2 - 0.08, 0, -1.8); SH.rotation.y = -Math.PI / 2; R.add(SH); clWalls[2].extra.push(SH);
     var oakS = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.5 });
