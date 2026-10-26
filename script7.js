@@ -86,29 +86,54 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ---- hide the chibi witch, all but her flying broom ----
     chibi.traverse(function (o) { if (!o.isMesh) return; for (var p = o; p; p = p.parent) if (p === w.rideBroom || p === R) return; o.visible = false; });
 
-    // ---- her own broom to ride, sized for her: a long wooden handle with a gentle upturn at the front, a full sheaf of
-    // straw bound with purple cord, lying under her where she sits astride it (in place of the chibi's little one) ----
+    // ---- her own broom to ride, sized for her and made like a real besom: a crooked branch for a handle, grained and
+    // knotted, with a gentle rise at the front; a full bundle of separate twigs, each its own length and shade, fanning
+    // out behind; and twine wound tight round its neck. It lies under her where she sits astride it (in place of the
+    // chibi's little one) ----
     w.rideBroom.children.forEach(function (c) { c.visible = false; });
+    var grips = (function () {
     var SEAT = -0.11, broom = new THREE.Group(); broom.position.y = SEAT; broom.rotation.x = -0.2; w.rideBroom.add(broom);   // (its front tipped up a little)
-    var wood = new THREE.MeshStandardMaterial({ color: 0x6e4528, roughness: 0.75 });
-    var handle = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, -0.62), new THREE.Vector3(0, 0, 0.2), new THREE.Vector3(0, 0.012, 0.62), new THREE.Vector3(0, 0.05, 0.86), new THREE.Vector3(0, 0.1, 0.95)]);
-    broom.add(new THREE.Mesh(new THREE.TubeGeometry(handle, 48, 0.017, 10, false), wood));
-    var knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 8), wood); knob.position.set(0, 0.1, 0.95); broom.add(knob);
-    var cv = document.createElement('canvas'); cv.width = 128; cv.height = 8; var g2 = cv.getContext('2d');   // (straw: strands of gold and honey side by side)
-    for (var i = 0; i < 128; i++) { var l = 150 + Math.floor(Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 70); g2.fillStyle = 'rgb(' + (l + 60) + ',' + (l + 10) + ',' + Math.floor(l * 0.45) + ')'; g2.fillRect(i, 0, 1, 8); }
-    var straw = new THREE.CanvasTexture(cv); straw.wrapS = THREE.RepeatWrapping; straw.repeat.x = 3;
-    var strawMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: straw, roughness: 0.9, side: THREE.DoubleSide });
-    [[1, 0], [0.8, 0.5]].forEach(function (L) {                         // (the sheaf, and a fuller layer inside it, fanning out from the binding to ragged ends)
-      var pts = []; for (var k = 0; k <= 10; k++) { var u = k / 10; pts.push(new THREE.Vector2(L[0] * (0.03 + 0.095 * Math.pow(u, 0.7)), -0.6 - u * 0.48)); }
-      var sheaf = new THREE.LatheGeometry(pts, 40), P = sheaf.attributes.position;
-      for (var j = 0; j < P.count; j++) if (P.getY(j) < -1.07) P.setY(j, P.getY(j) + 0.035 * Math.abs(Math.sin(j * 1.7 + L[1])));   // (its ends uneven)
-      sheaf.rotateX(Math.PI / 2); sheaf.computeVertexNormals(); broom.add(new THREE.Mesh(sheaf, strawMat));
+    function hash(k) { var s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+    function grainTex(w0, h0, base, draw) { var cv = document.createElement('canvas'); cv.width = w0; cv.height = h0; var g = cv.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, w0, h0); draw(g); var tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; return tx; }
+    var bark = grainTex(64, 512, '#5e3c22', function (g) {             // (wood: long streaks of grain running down it, and a few dark knots)
+      for (var i = 0; i < 260; i++) { var x = hash(i) * 64, l = 40 + hash(i + 9) * 200, y = hash(i + 3) * 512; g.strokeStyle = 'rgba(' + (hash(i + 5) > 0.5 ? '35,20,10,' : '140,98,60,') + (0.25 + hash(i + 7) * 0.35) + ')'; g.lineWidth = 0.6 + hash(i + 2) * 1.6; g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + 2, y + l / 3, x - 2, y + 2 * l / 3, x + (hash(i + 4) - 0.5) * 3, y + l); g.stroke(); }
+      for (var k = 0; k < 5; k++) { var kx = hash(k + 50) * 64, ky = hash(k + 60) * 512; g.fillStyle = 'rgba(30,16,8,0.75)'; g.beginPath(); g.ellipse(kx, ky, 2.5, 6, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(30,16,8,0.4)'; g.lineWidth = 1; g.beginPath(); g.ellipse(kx, ky, 4.5, 11, 0, 0, Math.PI * 2); g.stroke(); }
     });
-    var cord = new THREE.MeshStandardMaterial({ color: 0x5a2d8c, roughness: 0.6 });
-    [-0.62, -0.67].forEach(function (z) { var b = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.008, 6, 20), cord); b.position.z = z; broom.add(b); });
+    var wood = new THREE.MeshStandardMaterial({ map: bark, bumpMap: bark, bumpScale: 0.004, roughness: 0.8 });
+    var spine = new THREE.CatmullRomCurve3([[0, 0, -0.8], [0.004, 0, -0.45], [-0.006, 0.002, -0.1], [0.008, 0.004, 0.25], [-0.004, 0.012, 0.58], [0.006, 0.04, 0.82], [0, 0.085, 0.97]].map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); }));
+    var handleGeo = (function () {                                      // (the branch: a tube round that crooked line, thickest at the bundle, thinning to the front, swelling a little at its knots)
+      var N = 90, S = 12, pos = [], uv = [], idx = [], fr = spine.computeFrenetFrames(N, false);
+      for (var i = 0; i <= N; i++) {
+        var u = i / N, c = spine.getPointAt(u), r = 0.0175 - 0.004 * u + 0.0022 * Math.exp(-Math.pow((u - 0.33) / 0.02, 2)) + 0.0018 * Math.exp(-Math.pow((u - 0.71) / 0.018, 2));
+        if (u > 0.985) r *= Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.985) / 0.015, 2))) * 0.85 + 0.15;   // (a rounded, worn end)
+        for (var j = 0; j <= S; j++) { var a = j / S * Math.PI * 2, rr = r * (1 + 0.04 * Math.sin(a * 3 + u * 9)); pos.push(c.x + (fr.normals[i].x * Math.cos(a) + fr.binormals[i].x * Math.sin(a)) * rr, c.y + (fr.normals[i].y * Math.cos(a) + fr.binormals[i].y * Math.sin(a)) * rr, c.z + (fr.normals[i].z * Math.cos(a) + fr.binormals[i].z * Math.sin(a)) * rr); uv.push(j / S, u * 3); if (i && j) { var A = (i - 1) * (S + 1) + j - 1, Bq = A + 1, C = i * (S + 1) + j - 1, D = C + 1; idx.push(A, Bq, C, Bq, D, C); } }
+      }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
+    })();
+    broom.add(new THREE.Mesh(handleGeo, wood));
+    var NT = 520, twigGeo = new THREE.CylinderGeometry(0.0014, 0.0026, 1, 4, 1); twigGeo.translate(0, 0.5, 0);   // (the twigs: thin, tapering, each from the neck out to its own end)
+    var twigs = new THREE.InstancedMesh(twigGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), NT), m4 = new THREE.Matrix4(), qT = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+    for (var i = 0; i < NT; i++) {
+      var a = hash(i) * Math.PI * 2, rr = Math.sqrt(hash(i + 0.5)), r0 = 0.03 * rr, z0 = -0.6 - hash(i + 0.25) * 0.05;
+      var len = 0.36 + hash(i + 0.75) * 0.16, spread = 0.035 + 0.075 * rr + hash(i + 0.33) * 0.03;
+      var s0 = new THREE.Vector3(Math.cos(a) * r0, Math.sin(a) * r0, z0), e = new THREE.Vector3(Math.cos(a + (hash(i + 0.9) - 0.5) * 0.3) * spread, Math.sin(a + (hash(i + 0.9) - 0.5) * 0.3) * spread - 0.012 * rr, z0 - len);
+      var d = e.clone().sub(s0), L = d.length(); qT.setFromUnitVectors(up, d.normalize());
+      m4.compose(s0, qT, new THREE.Vector3(1 + hash(i + 0.1) * 0.6, L, 1 + hash(i + 0.1) * 0.6)); twigs.setMatrixAt(i, m4);
+      var shade = hash(i + 0.6); col.setRGB(0.55 + 0.25 * shade, 0.38 + 0.2 * shade, 0.2 + 0.1 * shade); if (hash(i + 0.8) > 0.8) col.multiplyScalar(0.7); twigs.setColorAt(i, col);
+    }
+    broom.add(twigs);
+    var core = new THREE.Mesh(new THREE.LatheGeometry([0.028, 0.045, 0.062, 0.075].map(function (r, k) { return new THREE.Vector2(r, -0.6 - k * 0.1); }), 18), new THREE.MeshStandardMaterial({ color: 0x5a3f22, roughness: 1 }));
+    core.geometry.rotateX(Math.PI / 2); broom.add(core);                // (the bundle's shadowy middle, so it looks full rather than see-through)
+    var twine = new THREE.MeshStandardMaterial({ map: grainTex(8, 64, '#9a7a4e', function (g) { for (var y = 0; y < 64; y += 4) { g.fillStyle = 'rgba(60,40,20,0.5)'; g.fillRect(0, y, 8, 1.5); } }), roughness: 0.9 });
+    [[-0.592, 7], [-0.66, 4]].forEach(function (b) {                     // (twine wound round and round its neck, twice)
+      var turns = b[1], hel = new THREE.Curve(); hel.getPoint = function (t, o) { var an = t * turns * Math.PI * 2, rr = 0.033 + (b[0] < -0.62 ? 0.009 : 0); return (o || new THREE.Vector3()).set(Math.cos(an) * rr, Math.sin(an) * rr, b[0] - t * turns * 0.0055); };
+      broom.add(new THREE.Mesh(new THREE.TubeGeometry(hel, turns * 20, 0.0032, 6, false), twine));
+    });
     broom.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
-    var grips = [new THREE.Object3D(), new THREE.Object3D()];            // (where her hands hold it: her right a little ahead of her left)
-    grips[0].position.set(0, 0.02, 0.22); grips[1].position.set(0, 0.02, 0.31); grips.forEach(function (o) { broom.add(o); });
+    var grips = [new THREE.Object3D(), new THREE.Object3D()];            // (where her hands hold it, on the handle's middle line: her left behind her right)
+    grips[0].position.set(0, 0.002, 0.13); grips[1].position.set(0, 0.002, 0.215); grips.forEach(function (o) { broom.add(o); });
+    return grips;
+    })();
 
     // ---- every time she's drawn: her joints follow the chibi's ----
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
@@ -134,7 +159,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         pose(up, E(leg.rotation.x - (k ? 0.08 : 0.01) * calm, leg.rotation.y + (k ? -0.12 : 0.04) * calm, leg.rotation.z + (k ? 0.025 : 0.03) * calm)); pose(low, E(leg.userData.shin.rotation.x + (k ? 0.17 : 0.02) * calm, 0, 0));
         if (flying) { var sd = k ? -1 : 1, bob = Math.sin(t * 1.3 + k) * 0.03; pose(up, E(-1.3 + bob, sd * 0.1, sd * 0.2)); pose(low, E(1.45 - bob, 0, 0)); pose(k ? B.rightFoot : B.leftFoot, E(0.35, 0, 0)); }   // (astride her broom: knees bent, legs either side of it, feet hanging and pointed)
       }
-      if (flying) { pose(B.spine, E(0.2, 0, 0)); pose(B.chest, E(0.1 + Math.sin(t * 1.7) * 0.012, 0, 0)); pose(B.neck, E(-0.15, 0, 0)); pose(B.head, E(-0.12, 0, 0)); }   // (looking ahead, not down)   // (leaning a little forward over the handle)
+      if (flying) { pose(B.spine, E(0.26, 0, 0)); pose(B.chest, E(0.12 + Math.sin(t * 1.7) * 0.012, 0, 0)); pose(B.neck, E(-0.2, 0, 0)); pose(B.head, E(-0.16, 0, 0)); }   // (looking ahead, not down)   // (leaning a little forward over the handle)
       [[w.armL, B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [w.armR, B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {   // (arms: hanging close at her sides, then swinging as she walks, elbows softly bent)
         var r = a[0].rotation, s = a[5], f = -s * sw, fe = -s * el;     // (f: this arm forward, -1 to 1)
         var x = r.x * (1 - stride) - swing * (f > 0 ? 0.4 : 0.28) * f;   // (walking, her own swing takes over from the chibi's)
@@ -231,19 +256,43 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (s < 0 && axeArm.visible) return;
         var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, lo = s > 0 ? B.leftLowerArm : B.rightLowerArm, hd = s > 0 ? B.leftHand : B.rightHand, fg = B[(s > 0 ? 'left' : 'right') + 'MiddleProximal'];
         var rq = root.getWorldQuaternion(new THREE.Quaternion()), side = new THREE.Vector3(s, 0, 0).applyQuaternion(rq), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq), dn = new THREE.Vector3(0, -1, 0).applyQuaternion(rq);
-        var grip = grips[s > 0 ? 0 : 1].getWorldPosition(new THREE.Vector3()), T = grip.clone().addScaledVector(side, 0.028).addScaledVector(dn, -0.03);   // (her wrist just above and to her side of the handle)
-        var S = up.getWorldPosition(new THREE.Vector3()), a = S.distanceTo(lo.getWorldPosition(new THREE.Vector3())), b = lo.getWorldPosition(new THREE.Vector3()).distanceTo(hd.getWorldPosition(new THREE.Vector3()));
-        var ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length())); ST.normalize(); T.copy(S).addScaledVector(ST, d);
-        var pole = side.clone().multiplyScalar(0.8).add(dn).normalize(); pole.addScaledVector(ST, -pole.dot(ST)).normalize();   // (elbows down and a little out)
-        var x = (a * a - b * b + d * d) / (2 * d), Ep = S.clone().addScaledVector(ST, x).addScaledVector(pole, Math.sqrt(Math.max(0, a * a - x * x)));
-        function aim(bone, child, to) {
-          var qw = bone.getWorldQuaternion(new THREE.Quaternion()), cur = child.position.clone().normalize().applyQuaternion(qw);
-          qw.premultiply(new THREE.Quaternion().setFromUnitVectors(cur, to.clone().sub(bone.getWorldPosition(new THREE.Vector3())).normalize()));
-          bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qw)); bone.updateMatrixWorld(true);
+        // (her hand round the handle: the handle running through her fist from her thumb to her little finger, the back
+        // of her hand out to her side and a little up, her fingers going down past it and curling under it, her thumb over the top)
+        var C = grips[s > 0 ? 0 : 1].getWorldPosition(new THREE.Vector3()), rqi = rq.clone().invert();
+        var A = new THREE.Vector3(0, 0, 1).applyQuaternion(grips[0].parent.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(rqi).normalize();   // (along the handle, in her own terms)
+        var yD = new THREE.Vector3(s, 0.45, 0).normalize(); yD.addScaledVector(A, -yD.dot(A)).normalize(); var zD = A.clone(), xD = new THREE.Vector3().crossVectors(yD, zD).normalize();
+        var M = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xD, yD, zD)), want = rq.clone().multiply(M).multiply(rest.get(hd).model);
+        var fingersW = xD.clone().multiplyScalar(s).applyQuaternion(rq), backW = yD.clone().applyQuaternion(rq), palmLen = fg ? hd.getWorldPosition(new THREE.Vector3()).distanceTo(fg.getWorldPosition(new THREE.Vector3())) : 0.08;
+        var T = C.clone().addScaledVector(fingersW, -(palmLen + 0.014)).addScaledVector(backW, 0.026);   // (her wrist: back from the handle by her palm's length, her palm against it)
+        var nm = s > 0 ? 'left' : 'right';
+        ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { [1.05, 1.35, 0.85].forEach(function (c, k) { pose(B[nm + f + ['Proximal', 'Intermediate', 'Distal'][k]], E(0, 0, -s * (c + (k ? 0 : n * 0.06)))); }); });   // (curled round it, the little finger a touch tighter)
+        if (B[nm + 'ThumbMetacarpal']) pose(B[nm + 'ThumbMetacarpal'], E(s * 0.6, s * 0.6, s * 0.2)); if (B[nm + 'ThumbProximal']) pose(B[nm + 'ThumbProximal'], E(0, s * 0.5, 0)); if (B[nm + 'ThumbDistal']) pose(B[nm + 'ThumbDistal'], E(0, s * 0.5, 0));   // (her thumb round it too)
+        function reach(T) {                                             // (her arm to put her wrist at T, her forearm turning with her hand, her hand round the handle)
+          var S = up.getWorldPosition(new THREE.Vector3()), a = S.distanceTo(lo.getWorldPosition(new THREE.Vector3())), b = lo.getWorldPosition(new THREE.Vector3()).distanceTo(hd.getWorldPosition(new THREE.Vector3()));
+          var ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length())); ST.normalize(); T.copy(S).addScaledVector(ST, d);
+          var pole = side.clone().multiplyScalar(0.8).add(dn).normalize(); pole.addScaledVector(ST, -pole.dot(ST)).normalize();   // (elbows down and a little out)
+          var x = (a * a - b * b + d * d) / (2 * d), Ep = S.clone().addScaledVector(ST, x).addScaledVector(pole, Math.sqrt(Math.max(0, a * a - x * x)));
+          function aim(bone, child, to) {
+            var qw = bone.getWorldQuaternion(new THREE.Quaternion()), cur = child.position.clone().normalize().applyQuaternion(qw);
+            qw.premultiply(new THREE.Quaternion().setFromUnitVectors(cur, to.clone().sub(bone.getWorldPosition(new THREE.Vector3())).normalize()));
+            bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qw)); bone.updateMatrixWorld(true);
+          }
+          aim(up, lo, Ep); aim(lo, hd, T);
+          var tw = lo.getWorldQuaternion(new THREE.Quaternion()), fa = T.clone().sub(Ep).normalize();   // (her forearm turning with her hand, as a real one does, so her wrist isn't wrung)
+          var hNow = hd.getWorldQuaternion(new THREE.Quaternion()), turn = want.clone().multiply(hNow.clone().invert()), tAx = new THREE.Vector3(turn.x, turn.y, turn.z), tw2 = 2 * Math.atan2(tAx.dot(fa), turn.w);
+          lo.quaternion.copy(lo.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(tw.premultiply(new THREE.Quaternion().setFromAxisAngle(fa, tw2 * 0.6)))); lo.updateMatrixWorld(true);
+          hd.quaternion.copy(hd.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(want)); hd.updateMatrixWorld(true);
         }
-        aim(up, lo, Ep); aim(lo, hd, T);
-        if (fg) aim(hd, fg, hd.getWorldPosition(new THREE.Vector3()).addScaledVector(fwd, 0.5).addScaledVector(side, -0.6).addScaledVector(dn, 0.35));   // (over the top of the handle, fingers round it)
-        ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, k) { pose(B[(s > 0 ? 'left' : 'right') + f + j], E(0, 0, s * -(k ? 1.1 : 0.9 + n * 0.05))); }); });
+        reach(T);
+        var j0 = B[nm + 'MiddleProximal'], j1 = B[nm + 'MiddleIntermediate'], j2 = B[nm + 'MiddleDistal'];
+        if (j0 && j1 && j2) {                                           // (then her hand moved so the handle lies right in the middle of her curled fingers, not through them)
+          var p0 = j0.getWorldPosition(new THREE.Vector3()), p1 = j1.getWorldPosition(new THREE.Vector3()), p2 = j2.getWorldPosition(new THREE.Vector3());
+          var u1 = p1.clone().sub(p0), u2 = p2.clone().sub(p0), nn = new THREE.Vector3().crossVectors(u1, u2), n2 = nn.lengthSq();
+          if (n2 > 1e-12) {
+            var cc = p0.clone().add(new THREE.Vector3().crossVectors(nn, u1).multiplyScalar(u2.lengthSq()).add(new THREE.Vector3().crossVectors(u2, nn).multiplyScalar(u1.lengthSq())).multiplyScalar(1 / (2 * n2)));
+            var miss = C.clone().sub(cc); miss.addScaledVector(fwd, -miss.dot(fwd)); reach(hd.getWorldPosition(new THREE.Vector3()).add(miss));
+          }
+        }
         hd.updateMatrixWorld(true);
       });
       if (handClear && !flying) [1, -1].forEach(function (s) {                      // (a full skirt: never letting her hand or fingertips into it, however it swings; her arm eased out just enough)
