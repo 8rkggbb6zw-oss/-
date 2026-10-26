@@ -239,7 +239,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (bones.some(function (b) { return !b; })) return;              // (made for a different skeleton)
         var skin = /Body_00_SKIN/.test(o.material.name) && bodyMat;
         var geo = skin ? bodyPart(o.geometry, 9) : o.geometry, m = new THREE.SkinnedMesh(geo, skin ? skinFor(o.material) : toon(o.material));   // (its body without feet, which would poke through her boots)
-        if (skin) { legGeos.push(geo); if (legSpec || bareLegs) { legMap = null; paintSkin(addSkin(m.material)); } }   // (socks on her: on this body's skin too)
+        if (skin) { geo.userData.knee = kneeOf(o); legGeos.push(geo); if (legSpec || bareLegs) { legMap = null; paintSkin(addSkin(m.material)); } }   // (socks on her: on this body's skin too)
         m.name = o.name; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.visible = false;
         o.matrixWorld.decompose(m.position, m.quaternion, m.scale); root.add(m);
         m.bind(new THREE.Skeleton(bones, o.skeleton.boneInverses.map(function (q) { return q.clone(); })), o.bindMatrix.clone());
@@ -267,13 +267,17 @@ EVERDAWN_PARTS.push(function (THREE) {
     })();
     meshes.forEach(function (m) { if (/Body_00_SKIN/.test(m.material.name)) legGeos.push(m.geometry); });
     var kneeY = B.leftLowerLeg ? rest.get(B.leftLowerLeg).pos.y : 0.47;
-    function buildLegMap(W, H) {                                       // (for each spot of the skin picture on her lower legs: how high it is, and which leg)
+    function kneeOf(o) {                                               // (how high the knee is in another file's body: each file stands her a little higher or lower)
+      var i = B.leftLowerLeg ? o.skeleton.bones.map(function (b) { return b.name; }).indexOf(B.leftLowerLeg.name) : -1;
+      return i < 0 ? kneeY : new THREE.Matrix4().copy(o.skeleton.boneInverses[i]).invert().premultiply(o.bindMatrixInverse).elements[13];
+    }
+    function buildLegMap(W, H) {                                       // (for each spot of the skin picture on her lower legs: how high it is below her knee, and which leg)
       var hgt = new Float32Array(W * H).fill(-1), side = new Int8Array(W * H);
       legGeos.forEach(function (g) {
-        var P = g.attributes.position, U = g.attributes.uv, I = g.index;
+        var P = g.attributes.position, U = g.attributes.uv, I = g.index, off = kneeY - (g.userData.knee || kneeY);   // (measured from its own knee, so every body's stripes line up)
         for (var t = 0; t < I.count; t += 3) {
           var a = I.getX(t), b = I.getX(t + 1), c = I.getX(t + 2);
-          if (Math.max(P.getY(a), P.getY(b), P.getY(c)) > kneeY + 0.02) continue;
+          if (Math.max(P.getY(a), P.getY(b), P.getY(c)) + off > kneeY + 0.02) continue;
           var ax = U.getX(a) * W, ay = U.getY(a) * H, bx = U.getX(b) * W, by = U.getY(b) * H, cx = U.getX(c) * W, cy = U.getY(c) * H;
           var den = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy); if (Math.abs(den) < 1e-9) continue;
           var sd = (P.getX(a) + P.getX(b) + P.getX(c)) > 0 ? 1 : -1;
@@ -281,7 +285,7 @@ EVERDAWN_PARTS.push(function (THREE) {
             for (var x = Math.max(0, Math.floor(Math.min(ax, bx, cx))); x <= Math.min(W - 1, Math.ceil(Math.max(ax, bx, cx))); x++) {
               var px = x + 0.5, py = y + 0.5, l1 = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / den, l2 = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / den, l3 = 1 - l1 - l2;
               if (l1 < -0.02 || l2 < -0.02 || l3 < -0.02) continue;
-              hgt[y * W + x] = l1 * P.getY(a) + l2 * P.getY(b) + l3 * P.getY(c); side[y * W + x] = sd;
+              hgt[y * W + x] = l1 * P.getY(a) + l2 * P.getY(b) + l3 * P.getY(c) + off; side[y * W + x] = sd;
             }
         }
       });
@@ -332,7 +336,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           mat = toon(o.material); var key = (nm.match(/CLOTH_\d+/) || [''])[0];
           if (tex && tex[key]) { var t = new THREE.TextureLoader().load(tex[key]); t.flipY = false; t.encoding = mat.map ? mat.map.encoding : t.encoding; mat.map = mat.emissiveMap = t; }
         } else {                                                        // (the shins: only the body below her knees, in her own skin)
-          geo = bodyPart(geo, 0.43); mat = bodyMat; legGeos.push(geo); legMap = null;
+          geo = bodyPart(geo, 0.43); geo.userData.knee = kneeOf(o); mat = bodyMat; legGeos.push(geo); legMap = null;
         }
         var m = new THREE.SkinnedMesh(geo, mat); m.name = o.name; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.visible = false;
         o.matrixWorld.decompose(m.position, m.quaternion, m.scale); root.add(m);
