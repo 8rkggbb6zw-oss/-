@@ -138,11 +138,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ---- every time she's drawn: her joints follow the chibi's ----
     var FLY = { hips: 0.24, spine: 0.3, chest: 0.24, neck: -0.36, head: -0.3, front: 0.55, back: 2.62, fall: 0 };   // (riding her broom: how far she leans forward, and how her skirt lies)
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
-    var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
+    var lastT = 0, lastPhase = 0, calmS = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
     function follow() {
       R.position.y = (flying || inBoat) ? 0.37 - hipY : 0;              // (sitting on her broom or in the boat: her hips where the chibi's seat was)
       var t = state.time, L0 = w.legs[0].rotation, L1 = w.legs[1].rotation;
-      var calm = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
+      var calm0 = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
       // (walking: her arms swing opposite to her legs, each arm forward as the other leg steps, a moment behind it so they
       // trail and follow through; they swing further forward than back, the elbow bending more on the way forward, and
       // further when she jogs or runs. Her hips turn with the leg that steps and her shoulders turn back against them.
@@ -151,7 +151,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       var walking = dp > 0 && !flying && !inBoat && !window.EVERDAWN_TITLE;
       if (walking && dt > 0) pace += (Math.min(2, Math.max(0.6, dp / dt / 10)) - pace) * (1 - Math.exp(-dt * 4));
       stride += ((walking ? 1 : 0) - stride) * (1 - Math.exp(-dt * (walking ? 9 : 6)));
-      var still = restCalm = calm * (1 - stride);                       // (properly standing still: not just between steps)
+      calmS += (calm0 * (1 - stride) - calmS) * (1 - Math.exp(-dt * 4));   // (only once she's stopped, and eased in: her legs passing each other mid-stride isn't standing still, and mustn't twitch her into her standing pose)
+      var calm = calmS, still = restCalm = calm;                         // (properly standing still: not just between steps)
       armsOut += (armsOutGoal - armsOut) * (1 - Math.exp(-dt * 6));
       var ph = w.phase, swing = stride * (0.45 + 0.18 * pace), sw = Math.sin(ph - 0.35), el = Math.sin(ph - 0.75);   // (sw: the right arm forward, -1 to 1, the left arm the opposite; el: the forearms, a little later still)
       pose(B.hips, E(0, 0.05 * calm - 0.15 * Math.sin(ph) * stride, -0.03 * calm)); pose(B.spine, E(0, -0.03 * calm + 0.07 * Math.sin(ph) * stride, 0.022 * calm)); pose(B.chest, E(Math.sin(t * 1.7) * 0.012, -0.02 * calm + 0.07 * Math.sin(ph) * stride, 0.012 * calm));   // (her weight on her left leg, her hips tilting a little, and breathing)
