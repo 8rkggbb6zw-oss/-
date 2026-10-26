@@ -131,12 +131,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     broom.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     var grips = [new THREE.Object3D(), new THREE.Object3D()];            // (where her hands hold it, on the handle's middle line: her left behind her right)
-    grips[0].position.set(0, 0.002, 0.36); grips[1].position.set(0, 0.002, 0.45); grips.forEach(function (o) { broom.add(o); });
+    grips[0].position.set(0, 0.002, 0.3); grips[1].position.set(0, 0.002, 0.385); grips.forEach(function (o) { broom.add(o); });
     return grips;
     })();
 
     // ---- every time she's drawn: her joints follow the chibi's ----
-    var FLY = { hips: 0.2, spine: 0.25, chest: 0.2, neck: -0.3, head: -0.25, front: 0.55, back: 2.8, fall: 0 };   // (riding her broom: how far she leans forward, and how her skirt lies)
+    var FLY = { hips: 0.24, spine: 0.3, chest: 0.24, neck: -0.36, head: -0.3, front: 0.55, back: 2.62, fall: 0 };   // (riding her broom: how far she leans forward, and how her skirt lies)
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
     var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
     function follow() {
@@ -263,11 +263,11 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (s < 0 && axeArm.visible) return;
         var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, lo = s > 0 ? B.leftLowerArm : B.rightLowerArm, hd = s > 0 ? B.leftHand : B.rightHand, fg = B[(s > 0 ? 'left' : 'right') + 'MiddleProximal'];
         var rq = root.getWorldQuaternion(new THREE.Quaternion()), side = new THREE.Vector3(s, 0, 0).applyQuaternion(rq), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq), dn = new THREE.Vector3(0, -1, 0).applyQuaternion(rq);
-        // (her hand round the handle: the handle running through her fist from her thumb to her little finger, the back
-        // of her hand out to her side and a little up, her fingers going down past it and curling under it, her thumb over the top)
+        // (her hand round the handle, overhand: her palm on top of it, the back of her hand up, her fingers reaching across
+        // it towards her middle and curling down round it, her thumb tucked round the near side)
         var C = grips[s > 0 ? 0 : 1].getWorldPosition(new THREE.Vector3()), rqi = rq.clone().invert();
         var A = new THREE.Vector3(0, 0, 1).applyQuaternion(grips[0].parent.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(rqi).normalize();   // (along the handle, in her own terms)
-        var yD = new THREE.Vector3(s, 0.45, 0).normalize(); yD.addScaledVector(A, -yD.dot(A)).normalize(); var zD = A.clone(), xD = new THREE.Vector3().crossVectors(yD, zD).normalize();
+        var yD = new THREE.Vector3(s * 0.25, 1, 0).normalize(); yD.addScaledVector(A, -yD.dot(A)).normalize(); var zD = A.clone().negate(), xD = new THREE.Vector3().crossVectors(yD, zD).normalize();   // (overhand: the back of her hand up, her fingers across the top towards her middle and down round the far side)
         var M = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xD, yD, zD)), want = rq.clone().multiply(M).multiply(rest.get(hd).model);
         var fingersW = xD.clone().multiplyScalar(s).applyQuaternion(rq), backW = yD.clone().applyQuaternion(rq), palmLen = fg ? hd.getWorldPosition(new THREE.Vector3()).distanceTo(fg.getWorldPosition(new THREE.Vector3())) : 0.08;
         var T = C.clone().addScaledVector(fingersW, -(palmLen + 0.014)).addScaledVector(backW, 0.026);   // (her wrist: back from the handle by her palm's length, her palm against it)
