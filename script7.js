@@ -86,6 +86,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ---- hide the chibi witch, all but her flying broom ----
     chibi.traverse(function (o) { if (!o.isMesh) return; for (var p = o; p; p = p.parent) if (p === w.rideBroom || p === R) return; o.visible = false; });
 
+    // ---- her own broom to ride, sized for her: a long wooden handle with a gentle upturn at the front, a full sheaf of
+    // straw bound with purple cord, lying under her where she sits astride it (in place of the chibi's little one) ----
+    w.rideBroom.children.forEach(function (c) { c.visible = false; });
+    var SEAT = -0.11, broom = new THREE.Group(); broom.position.y = SEAT; broom.rotation.x = -0.2; w.rideBroom.add(broom);   // (its front tipped up a little)
+    var wood = new THREE.MeshStandardMaterial({ color: 0x6e4528, roughness: 0.75 });
+    var handle = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, -0.62), new THREE.Vector3(0, 0, 0.2), new THREE.Vector3(0, 0.012, 0.62), new THREE.Vector3(0, 0.05, 0.86), new THREE.Vector3(0, 0.1, 0.95)]);
+    broom.add(new THREE.Mesh(new THREE.TubeGeometry(handle, 48, 0.017, 10, false), wood));
+    var knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 8), wood); knob.position.set(0, 0.1, 0.95); broom.add(knob);
+    var cv = document.createElement('canvas'); cv.width = 128; cv.height = 8; var g2 = cv.getContext('2d');   // (straw: strands of gold and honey side by side)
+    for (var i = 0; i < 128; i++) { var l = 150 + Math.floor(Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 70); g2.fillStyle = 'rgb(' + (l + 60) + ',' + (l + 10) + ',' + Math.floor(l * 0.45) + ')'; g2.fillRect(i, 0, 1, 8); }
+    var straw = new THREE.CanvasTexture(cv); straw.wrapS = THREE.RepeatWrapping; straw.repeat.x = 3;
+    var strawMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: straw, roughness: 0.9, side: THREE.DoubleSide });
+    [[1, 0], [0.8, 0.5]].forEach(function (L) {                         // (the sheaf, and a fuller layer inside it, fanning out from the binding to ragged ends)
+      var pts = []; for (var k = 0; k <= 10; k++) { var u = k / 10; pts.push(new THREE.Vector2(L[0] * (0.03 + 0.095 * Math.pow(u, 0.7)), -0.6 - u * 0.48)); }
+      var sheaf = new THREE.LatheGeometry(pts, 40), P = sheaf.attributes.position;
+      for (var j = 0; j < P.count; j++) if (P.getY(j) < -1.07) P.setY(j, P.getY(j) + 0.035 * Math.abs(Math.sin(j * 1.7 + L[1])));   // (its ends uneven)
+      sheaf.rotateX(Math.PI / 2); sheaf.computeVertexNormals(); broom.add(new THREE.Mesh(sheaf, strawMat));
+    });
+    var cord = new THREE.MeshStandardMaterial({ color: 0x5a2d8c, roughness: 0.6 });
+    [-0.62, -0.67].forEach(function (z) { var b = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.008, 6, 20), cord); b.position.z = z; broom.add(b); });
+    broom.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    var grips = [new THREE.Object3D(), new THREE.Object3D()];            // (where her hands hold it: her right a little ahead of her left)
+    grips[0].position.set(0, 0.02, 0.22); grips[1].position.set(0, 0.02, 0.31); grips.forEach(function (o) { broom.add(o); });
+
     // ---- every time she's drawn: her joints follow the chibi's ----
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
     var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
@@ -108,7 +132,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var k = 0; k < 2; k++) {                                     // (legs: k 0 her left, 1 her right, as with the chibi's; standing still, her right knee softens)
         var leg = w.legs[k], up = k ? B.rightUpperLeg : B.leftUpperLeg, low = k ? B.rightLowerLeg : B.leftLowerLeg;
         pose(up, E(leg.rotation.x - (k ? 0.08 : 0.01) * calm, leg.rotation.y + (k ? -0.12 : 0.04) * calm, leg.rotation.z + (k ? 0.025 : 0.03) * calm)); pose(low, E(leg.userData.shin.rotation.x + (k ? 0.17 : 0.02) * calm, 0, 0));
+        if (flying) { var sd = k ? -1 : 1, bob = Math.sin(t * 1.3 + k) * 0.03; pose(up, E(-1.3 + bob, sd * 0.1, sd * 0.2)); pose(low, E(1.45 - bob, 0, 0)); pose(k ? B.rightFoot : B.leftFoot, E(0.35, 0, 0)); }   // (astride her broom: knees bent, legs either side of it, feet hanging and pointed)
       }
+      if (flying) { pose(B.spine, E(0.2, 0, 0)); pose(B.chest, E(0.1 + Math.sin(t * 1.7) * 0.012, 0, 0)); pose(B.neck, E(-0.15, 0, 0)); pose(B.head, E(-0.12, 0, 0)); }   // (looking ahead, not down)   // (leaning a little forward over the handle)
       [[w.armL, B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [w.armR, B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {   // (arms: hanging close at her sides, then swinging as she walks, elbows softly bent)
         var r = a[0].rotation, s = a[5], f = -s * sw, fe = -s * el;     // (f: this arm forward, -1 to 1)
         var x = r.x * (1 - stride) - swing * (f > 0 ? 0.4 : 0.28) * f;   // (walking, her own swing takes over from the chibi's)
@@ -121,6 +147,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       var hr = w.head.rotation; pose(B.neck, E(hr.x * 0.4, hr.y * 0.4, hr.z * 0.4)); pose(B.head, E(hr.x * 0.6 + 0.04 * calm, hr.y * 0.6 + 0.05 * calm, hr.z * 0.6 + 0.05 * calm));   // (her head tipped a touch to one side)
       skirtRoots.forEach(function (o) {                                  // (her skirt swinging out of her legs' way as she walks)
         var leg = w.legs[/_L_/.test(o.name) ? 0 : 1], x = leg.rotation.x, front = /Front/.test(o.name), back = /Back/.test(o.name);
+        if (flying) {                                                   // (riding her broom: its front lying along her thighs, rather than flipped up by them)
+          var rp = rest.get(o).pos, hp = rest.get(B.hips).pos, fr = Math.max(0, (rp.z - hp.z) / Math.max(0.01, Math.hypot(rp.x - hp.x, rp.z - hp.z)));
+          pose(o, E(0.55 * fr, 0, 0)); return;
+        }
         pose(o, E(front ? Math.min(0, x) * 0.85 : back ? Math.max(0, x) * 0.85 : x * 0.4, 0, 0));
       });
       hairRoots.forEach(function (o) { pose(o, E(Math.max(-0.05, w.hairBack.rotation.x) * 0.6, 0, 0)); });   // (her hair swaying)
@@ -197,7 +227,26 @@ EVERDAWN_PARTS.push(function (THREE) {
         }
         fingers(s, 0.12 * k, state.time); hd.updateMatrixWorld(true);   // (a touch more open, lying on the skirt)
       });
-      if (handClear) [1, -1].forEach(function (s) {                      // (a full skirt: never letting her hand or fingertips into it, however it swings; her arm eased out just enough)
+      if (flying && B.leftUpperArm) [1, -1].forEach(function (s) {       // (flying: both hands on the broom's handle, her right ahead of her left; just her left while her right holds something)
+        if (s < 0 && axeArm.visible) return;
+        var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, lo = s > 0 ? B.leftLowerArm : B.rightLowerArm, hd = s > 0 ? B.leftHand : B.rightHand, fg = B[(s > 0 ? 'left' : 'right') + 'MiddleProximal'];
+        var rq = root.getWorldQuaternion(new THREE.Quaternion()), side = new THREE.Vector3(s, 0, 0).applyQuaternion(rq), fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq), dn = new THREE.Vector3(0, -1, 0).applyQuaternion(rq);
+        var grip = grips[s > 0 ? 0 : 1].getWorldPosition(new THREE.Vector3()), T = grip.clone().addScaledVector(side, 0.028).addScaledVector(dn, -0.03);   // (her wrist just above and to her side of the handle)
+        var S = up.getWorldPosition(new THREE.Vector3()), a = S.distanceTo(lo.getWorldPosition(new THREE.Vector3())), b = lo.getWorldPosition(new THREE.Vector3()).distanceTo(hd.getWorldPosition(new THREE.Vector3()));
+        var ST = T.clone().sub(S), d = Math.min(a + b - 1e-4, Math.max(Math.abs(a - b) + 1e-4, ST.length())); ST.normalize(); T.copy(S).addScaledVector(ST, d);
+        var pole = side.clone().multiplyScalar(0.8).add(dn).normalize(); pole.addScaledVector(ST, -pole.dot(ST)).normalize();   // (elbows down and a little out)
+        var x = (a * a - b * b + d * d) / (2 * d), Ep = S.clone().addScaledVector(ST, x).addScaledVector(pole, Math.sqrt(Math.max(0, a * a - x * x)));
+        function aim(bone, child, to) {
+          var qw = bone.getWorldQuaternion(new THREE.Quaternion()), cur = child.position.clone().normalize().applyQuaternion(qw);
+          qw.premultiply(new THREE.Quaternion().setFromUnitVectors(cur, to.clone().sub(bone.getWorldPosition(new THREE.Vector3())).normalize()));
+          bone.quaternion.copy(bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qw)); bone.updateMatrixWorld(true);
+        }
+        aim(up, lo, Ep); aim(lo, hd, T);
+        if (fg) aim(hd, fg, hd.getWorldPosition(new THREE.Vector3()).addScaledVector(fwd, 0.5).addScaledVector(side, -0.6).addScaledVector(dn, 0.35));   // (over the top of the handle, fingers round it)
+        ['Index', 'Middle', 'Ring', 'Little'].forEach(function (f, n) { ['Proximal', 'Intermediate', 'Distal'].forEach(function (j, k) { pose(B[(s > 0 ? 'left' : 'right') + f + j], E(0, 0, s * -(k ? 1.1 : 0.9 + n * 0.05))); }); });
+        hd.updateMatrixWorld(true);
+      });
+      if (handClear && !flying) [1, -1].forEach(function (s) {                      // (a full skirt: never letting her hand or fingertips into it, however it swings; her arm eased out just enough)
         if (s < 0 && axeArm.visible) return;
         var up = s > 0 ? B.leftUpperArm : B.rightUpperArm, hd = s > 0 ? B.leftHand : B.rightHand, tip = B[(s > 0 ? 'left' : 'right') + 'MiddleDistal']; if (!up || !hd) return;
         for (var it = 0; it < 3; it++) {
