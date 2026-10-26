@@ -50,7 +50,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     Object.keys(B).forEach(function (k) { remember(B[k]); });
     var skirtRoots = [], hairRoots = [];
     root.traverse(function (o) {
-      if (/^J_Sec_[LR]_(Coat)?Skirt\w*?0_01$/.test(o.name) || /^J_Sec_[LR]_(Coat)?Skirt(Front|Back|Side\d?)_01$/.test(o.name)) { remember(o); skirtRoots.push(o); }
+      if (/^J_Sec_[LR]_(Coat)?Skirt\w*?0_01$/.test(o.name) || /^J_Sec_[LR]_(Coat)?Skirt(Front|Back|Side\d?)_01$/.test(o.name)) { remember(o); skirtRoots.push(o); o.traverse(function (c) { if (c !== o && c.isBone) remember(c); }); }   // (and the joints down it, for draping it over her broom)
       if (/^J_Sec_Hair1_\d+$/.test(o.name)) { remember(o); hairRoots.push(o); }   // (the first joint of each lock of her hair)
     });
     var qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), ea = new THREE.Euler();
@@ -92,7 +92,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // chibi's little one) ----
     w.rideBroom.children.forEach(function (c) { c.visible = false; });
     var grips = (function () {
-    var SEAT = -0.11, broom = new THREE.Group(); broom.position.y = SEAT; broom.rotation.x = -0.2; w.rideBroom.add(broom);   // (its front tipped up a little)
+    var SEAT = -0.125, broom = new THREE.Group(); broom.position.y = SEAT; broom.rotation.x = -0.2; w.rideBroom.add(broom);   // (its front tipped up a little)
     function hash(k) { var s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
     function grainTex(w0, h0, base, draw) { var cv = document.createElement('canvas'); cv.width = w0; cv.height = h0; var g = cv.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, w0, h0); draw(g); var tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; return tx; }
     var bark = grainTex(64, 512, '#5e3c22', function (g) {             // (wood: long streaks of grain running down it, and a few dark knots)
@@ -131,11 +131,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     broom.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     var grips = [new THREE.Object3D(), new THREE.Object3D()];            // (where her hands hold it, on the handle's middle line: her left behind her right)
-    grips[0].position.set(0, 0.002, 0.13); grips[1].position.set(0, 0.002, 0.215); grips.forEach(function (o) { broom.add(o); });
+    grips[0].position.set(0, 0.002, 0.36); grips[1].position.set(0, 0.002, 0.45); grips.forEach(function (o) { broom.add(o); });
     return grips;
     })();
 
     // ---- every time she's drawn: her joints follow the chibi's ----
+    var FLY = { hips: 0.2, spine: 0.25, chest: 0.2, neck: -0.3, head: -0.25, front: 0.55, back: 2.8, fall: 0 };   // (riding her broom: how far she leans forward, and how her skirt lies)
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
     var lastT = 0, lastPhase = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
     function follow() {
@@ -157,9 +158,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var k = 0; k < 2; k++) {                                     // (legs: k 0 her left, 1 her right, as with the chibi's; standing still, her right knee softens)
         var leg = w.legs[k], up = k ? B.rightUpperLeg : B.leftUpperLeg, low = k ? B.rightLowerLeg : B.leftLowerLeg;
         pose(up, E(leg.rotation.x - (k ? 0.08 : 0.01) * calm, leg.rotation.y + (k ? -0.12 : 0.04) * calm, leg.rotation.z + (k ? 0.025 : 0.03) * calm)); pose(low, E(leg.userData.shin.rotation.x + (k ? 0.17 : 0.02) * calm, 0, 0));
-        if (flying) { var sd = k ? -1 : 1, bob = Math.sin(t * 1.3 + k) * 0.03; pose(up, E(-1.3 + bob, sd * 0.1, sd * 0.2)); pose(low, E(1.45 - bob, 0, 0)); pose(k ? B.rightFoot : B.leftFoot, E(0.35, 0, 0)); }   // (astride her broom: knees bent, legs either side of it, feet hanging and pointed)
+        if (flying) { var sd = k ? -1 : 1, bob = Math.sin(t * 1.3 + k) * 0.03; pose(up, E(-1.3 - FLY.hips + bob, sd * 0.1, sd * 0.2)); pose(low, E(1.45 - bob, 0, 0)); pose(k ? B.rightFoot : B.leftFoot, E(0.35, 0, 0)); }   // (astride her broom: knees bent, legs either side of it, feet hanging and pointed)
       }
-      if (flying) { pose(B.spine, E(0.26, 0, 0)); pose(B.chest, E(0.12 + Math.sin(t * 1.7) * 0.012, 0, 0)); pose(B.neck, E(-0.2, 0, 0)); pose(B.head, E(-0.16, 0, 0)); }   // (looking ahead, not down)   // (leaning a little forward over the handle)
       [[w.armL, B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [w.armR, B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {   // (arms: hanging close at her sides, then swinging as she walks, elbows softly bent)
         var r = a[0].rotation, s = a[5], f = -s * sw, fe = -s * el;     // (f: this arm forward, -1 to 1)
         var x = r.x * (1 - stride) - swing * (f > 0 ? 0.4 : 0.28) * f;   // (walking, her own swing takes over from the chibi's)
@@ -170,11 +170,18 @@ EVERDAWN_PARTS.push(function (THREE) {
       });
       fingers(1, 0, t); fingers(-1, 0, t);
       var hr = w.head.rotation; pose(B.neck, E(hr.x * 0.4, hr.y * 0.4, hr.z * 0.4)); pose(B.head, E(hr.x * 0.6 + 0.04 * calm, hr.y * 0.6 + 0.05 * calm, hr.z * 0.6 + 0.05 * calm));   // (her head tipped a touch to one side)
+      if (flying) {                                                     // (riding her broom: leaning well forward over its handle from her hips up, her head up to look where she's going)
+        pose(B.hips, E(FLY.hips, 0, 0)); pose(B.spine, E(FLY.spine, 0, 0)); pose(B.chest, E(FLY.chest + Math.sin(t * 1.7) * 0.012, 0, 0));
+        pose(B.neck, E(FLY.neck + hr.x * 0.2, hr.y * 0.4, 0)); pose(B.head, E(FLY.head + hr.x * 0.3, hr.y * 0.6, 0));
+      }
       skirtRoots.forEach(function (o) {                                  // (her skirt swinging out of her legs' way as she walks)
         var leg = w.legs[/_L_/.test(o.name) ? 0 : 1], x = leg.rotation.x, front = /Front/.test(o.name), back = /Back/.test(o.name);
         if (flying) {                                                   // (riding her broom: its front lying along her thighs, rather than flipped up by them)
           var rp = rest.get(o).pos, hp = rest.get(B.hips).pos, fr = Math.max(0, (rp.z - hp.z) / Math.max(0.01, Math.hypot(rp.x - hp.x, rp.z - hp.z)));
-          pose(o, E(0.55 * fr, 0, 0)); return;
+          var bk = Math.max(0, -(rp.z - hp.z) / Math.max(0.01, Math.hypot(rp.x - hp.x, rp.z - hp.z)));   // (how far round to her back it hangs)
+          pose(o, E(FLY.front * fr + FLY.back * bk, 0, 0));             // (and its back laid out along the top of the broom behind her, its sides falling either side of it, rather than the broom going through it)
+          o.traverse(function (c) { if (c !== o && c.isBone && rest.get(c)) pose(c, E(-FLY.fall * bk, 0, 0)); });
+          return;
         }
         pose(o, E(front ? Math.min(0, x) * 0.85 : back ? Math.max(0, x) * 0.85 : x * 0.4, 0, 0));
       });
