@@ -9697,7 +9697,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '<p class="ship-hint">Welcome to Thread &amp; Thimble! Clothes for every season, made with love.</p><div class="ship-cols shop-cols cl-cols"></div><p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
   canvas.parentNode.appendChild(clothShopBox);
   var clothCols = clothShopBox.querySelector('.cl-cols'), clothCoins = clothShopBox.querySelector('.ship-total b');
-  var CLOTH_SECTIONS = [['necklace', 'Necklace'], ['dress', 'Dresses'], ['shirt', 'Shirts'], ['socks', 'Socks'], ['shoes', 'Shoes']];                    // (the shop's sections, in order: [the slot its clothes go in, its heading]; add more here, e.g. ['hat', 'Hats'])
+  var CLOTH_SECTIONS = [['necklace', 'Necklace'], ['dress', 'Dresses'], ['shirt', 'Shirts'], ['pants', 'Pants'], ['socks', 'Socks'], ['shoes', 'Shoes']];                    // (the shop's sections, in order: [the slot its clothes go in, its heading]; add more here, e.g. ['hat', 'Hats'])
   function clothSection(s) { for (var i = 0; i < CLOTH_SECTIONS.length; i++) if (CLOTH_SECTIONS[i][0] === s.slot || (s.slot === 'dress' && CLOTH_SECTIONS[i][0] === 'shirt')) return CLOTH_SECTIONS[i]; return CLOTH_SECTIONS[CLOTH_SECTIONS.length - 1]; }   // (clothes with no section of their own go in the last one)
   var clothOwned = function () { return false; }, clothBought = function () {};   // (whether you've bought it already, and noting that you have: see script7.js)
   function clothTile(s, k) {
