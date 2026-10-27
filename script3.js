@@ -9051,13 +9051,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = '#9c978f'; g.fillRect(0, h - 10, w, 10);
     }, [3, 1]) }), 0, 0.015, D2 + 1.25, -Math.PI / 2, 0, 0, G); pave.castShadow = false;
     var B = new THREE.Group(); B.position.y = FY; G.add(B);
-    // ===== the walls: thick white marble, a dark granite band round the bottom, and shadow lines across the slabs =====
+    // ===== the walls: thick white marble, with a dark granite band round the bottom =====
     clWall(B, W2 * 2, 0, D2, 0, [CL_ENTRY, CL_CASE], H, clMarble, 0.3);
     clWall(B, W2 * 2, 0, -D2, 0, [[-1.6, -0.4, 1.1, 2.2], [0.4, 1.6, 1.1, 2.2], [2.4, 3.4, 0, 2.1]], H, clMarble);
     clWall(B, D2 * 2 - 0.16, W2 - 0.08, 0, Math.PI / 2, [CL_SIDE], H, clMarble); clWall(B, D2 * 2 - 0.16, -W2 + 0.08, 0, Math.PI / 2, [CL_SIDE_L], H, clMarble);
     [[0, -D2 - 0.09, W2 * 2 + 0.06, 0.04], [W2 + 0.09, 0, 0.04, D2 * 2 + 0.06], [-W2 - 0.09, 0, 0.04, D2 * 2 + 0.06]].forEach(function (b) {
       cpPart(new THREE.BoxGeometry(b[2], 0.32, b[3]), granite, b[0], 0.16, b[1], 0, 0, 0, B);
-      [1.25, 2.4].forEach(function (y) { cpPart(new THREE.BoxGeometry(b[2], 0.025, b[3]), reveal, b[0], y, b[1], 0, 0, 0, B).castShadow = false; });
     });
     [[-W2 + 0.15, CL_ENTRY[0] + 0.0], [CL_ENTRY[1], CL_CASE[0]]].forEach(function (p) { var w = p[1] - p[0] + 0.15; cpPart(new THREE.BoxGeometry(w, 0.32, 0.05), granite, (p[0] + p[1]) / 2, 0.16, D2 + 0.16, 0, 0, 0, B); });
     cpPart(new THREE.BoxGeometry(W2 * 2 + 0.04, 0.05, 0.06), clBlack, 0, 2.79, D2 + 0.14, 0, 0, 0, B);   // (a thin black line along the bottom of the fascia)
