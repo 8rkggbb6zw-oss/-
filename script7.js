@@ -987,7 +987,8 @@ EVERDAWN_PARTS.push(function (THREE) {
         }
       });
       var hb = null, hd = 1e9;                                           // (where the garter's strap hangs from: the hem, at the front of her left thigh)
-      all.forEach(function (e) { if (e.x < 0.03) return; var d = Math.abs(e.x - (GC.x + 0.012)) * 4 + Math.abs(e.y - 0.72) * 2 - e.z * 3; if (d < hd) { hd = d; hb = e; } });
+      var hemY = Math.min.apply(null, all.filter(function (e) { return e.x > 0.03; }).map(function (e) { return e.y; })) + 0.035;   // (just inside the painted hem: the shorts' last bit below it is see-through)
+      all.forEach(function (e) { if (e.x < 0.03) return; var d = Math.abs(e.x - (GC.x + 0.012)) * 4 + Math.abs(e.y - hemY) * 2 - e.z * 3; if (d < hd) { hd = d; hb = e; } });
       hemPin = hb;
     }
     function at(e, t) { return dress.boneTransform(e.k, t); }
