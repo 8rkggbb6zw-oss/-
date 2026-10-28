@@ -347,23 +347,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       var key = (mat.name.match(/Onepiece|Tops|Bottoms/) || [''])[0], own = key + '_' + (mat.name.match(/CLOTH_\d+/) || [''])[0];
       if (tex && tex[own]) key = own; if (!tex || !tex[key]) return mat;   // (a picture for just this part of it, if it has one: a dress in several parts)
       var t = new THREE.TextureLoader().load(tex[key]); t.flipY = false; t.encoding = mat.map ? mat.map.encoding : t.encoding; mat.map = mat.emissiveMap = t;
-      if (tex.sheer && tex.sheer.indexOf(key) >= 0) sheer(mat, t, tex[key]);
+      if (tex.sheer && tex.sheer.indexOf(key) >= 0) sheer(mat);
       return mat;
     }
-    function sheer(mat, t, url) {                                           // (a layer of tulle: a fine diamond net woven over its picture, see-through between the threads; its outlined hem stays solid)
-      mat.transparent = true; mat.depthWrite = false; mat.alphaTest = 0.02;
-      var img = new Image(); img.onload = function () {
-        var cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; var g = cv.getContext('2d'); g.drawImage(img, 0, 0);
-        var d = g.getImageData(0, 0, cv.width, cv.height), p = d.data, P = 5 * cv.width / 1024;
-        for (var y = 0, i = 0; y < cv.height; y++) for (var x = 0; x < cv.width; x++, i += 4) {
-          if (p[i + 3] < 128) { p[i + 3] = 0; continue; } if (p[i] < 40) continue;
-          var f1 = ((x + y) / Math.SQRT2 / P) % 1, f2 = ((x - y + 1e6) / Math.SQRT2 / P) % 1, net = Math.max(0, Math.min(1, 1.2 - Math.min(f1, 1 - f1, f2, 1 - f2) * P));
-          p[i + 3] = (0.38 + 0.52 * net) * 255; p[i] = Math.min(255, p[i] * 1.15 + 20); p[i + 1] = Math.min(255, p[i + 1] * 1.15 + 20); p[i + 2] = Math.min(255, p[i + 2] * 1.15 + 22);
-        }
-        g.putImageData(d, 0, 0); var c = new THREE.CanvasTexture(cv); c.flipY = false; c.encoding = t.encoding; mat.map = mat.emissiveMap = c; mat.needsUpdate = true;
-      };
-      img.src = url;
-    }
+    function sheer(mat) { mat.transparent = true; mat.opacity = 0.55; mat.depthWrite = false; }   // (a sheer layer: see-through, like chiffon)
     function shorter(geo, up) {                                        // (shorts made shorter: their legs drawn up, most at the hem and none from the hips up, a touch wider as they rise so they clear her thighs)
       if (!up) return geo; var P = geo.attributes.position.clone(), TOP = 0.84, HEM = 0.69;
       for (var i = 0; i < P.count; i++) {
