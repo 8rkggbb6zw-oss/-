@@ -165,9 +165,10 @@ EVERDAWN_PARTS.push(function (THREE) {
         var r = a[0].rotation, s = a[5], f = -s * sw, fe = -s * el;     // (f: this arm forward, -1 to 1)
         var x = r.x * (1 - stride) - swing * (f > 0 ? 0.4 : 0.28) * f;   // (walking, her own swing takes over from the chibi's)
         pose(a[1], E(0, -s * 0.07 * f * swing, -s * 0.06 * calm));      // (shoulders relaxed, rolling a little with the swing)
-        pose(a[2], E(x + 0.04 * calm, r.y, r.z).multiply(E(0, 0, -s * (DOWN + 0.13 * calm - armsOut * (0.15 + 1.35 * still)))));   // (close at her sides; a little out over a full skirt, mostly when she stands)
-        pose(a[3], E(0, -s * (0.15 + 0.17 * calm + 0.45 * Math.max(0, -r.x) * (1 - stride) + swing * (0.12 + 0.3 * Math.max(0, fe) + 0.08 * pace)), 0));
-        pose(a[4], E(0, -s * (0.1 * calm + swing * (0.06 - 0.08 * fe)), -s * (0.14 * calm + 0.1 * stride - 1.6 * armsOut * still)));   // (wrists softly turned in, or out over a full skirt; walking, her hands trail behind the swing)
+        var breath = Math.sin(t * 1.25 + s * 0.6) * 0.02 * calm, held = armsOut * still;   // (standing, her arms never quite frozen: easing in and out a little as she breathes)
+        pose(a[2], E(x + 0.04 * calm - 0.35 * held, r.y, r.z).multiply(E(0, 0, -s * (DOWN + 0.13 * calm - armsOut * 0.15 - 1.2 * held - breath))));   // (close at her sides; a little out and forward over a full skirt, mostly when she stands)
+        pose(a[3], E(0, -s * (0.15 + 0.17 * calm + 1.4 * held + 0.45 * Math.max(0, -r.x) * (1 - stride) + swing * (0.12 + 0.3 * Math.max(0, fe) + 0.08 * pace)), 0));   // (her elbows softly bent, more so over a full skirt)
+        pose(a[4], E(0, -s * (0.1 * calm + swing * (0.06 - 0.08 * fe)), -s * (0.14 * calm + 0.1 * stride - 0.5 * held)));   // (wrists softly turned in, or just a little out over a full skirt; walking, her hands trail behind the swing)
       });
       fingers(1, 0, t); fingers(-1, 0, t);
       var hr = w.head.rotation; pose(B.neck, E(hr.x * 0.4, hr.y * 0.4, hr.z * 0.4)); pose(B.head, E(hr.x * 0.6 + 0.04 * calm, hr.y * 0.6 + 0.05 * calm, hr.z * 0.6 + 0.05 * calm));   // (her head tipped a touch to one side)
@@ -227,7 +228,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var line = handRest(s); if (!line || !up || !lo || !hd) return;
         var k = restCalm * restCalm * (3 - 2 * restCalm);
         var S = up.getWorldPosition(new THREE.Vector3()), El = lo.getWorldPosition(new THREE.Vector3()), W0 = hd.getWorldPosition(new THREE.Vector3());
-        var a = S.distanceTo(El), b = El.distanceTo(W0), reach = (a + b) * 0.975, u = line.w.length - 1;   // (her arm hanging almost straight: the point down the skirt her hand reaches like that)
+        var a = S.distanceTo(El), b = El.distanceTo(W0), reach = (a + b) * (0.93 + Math.sin(state.time * 1.25 + s * 0.6) * 0.008), u = line.w.length - 1;   // (her arm hanging relaxed, elbow soft, easing a little as she breathes: the point down the skirt her hand reaches like that)
         for (var i = 0; i < line.w.length - 1; i++) { var d0 = S.distanceTo(line.w[i]), d1 = S.distanceTo(line.w[i + 1]); if (i === 0 && d0 >= reach) { u = 0; break; } if (d0 <= reach && d1 >= reach) { u = i + (reach - d0) / Math.max(1e-6, d1 - d0); break; } }
         function along(list, x) { x = Math.max(0, Math.min(list.length - 1, x)); var i = Math.min(list.length - 2, Math.floor(x)); return list[i].clone().lerp(list[i + 1], x - i); }
         var goal = { wrist: along(line.w, u), fingers: along(line.f, u + 2) };
