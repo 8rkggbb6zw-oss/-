@@ -140,7 +140,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var DOWN = 1.3, v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion(), q2 = new THREE.Quaternion(), look = '';
     var lastT = 0, lastPhase = 0, calmS = 0, stride = 0, pace = 1, armsOut = 0, armsOutGoal = 0, restCalm = 0, handRest = null, handClear = null;   // (handRest: where on her dress her hands rest when she stands still, if it has somewhere)   // (armsOut: her arms held further from her sides, clear of a full skirt)
     function follow() {
-      R.position.y = (flying || inBoat) ? 0.37 - hipY : 0;              // (sitting on her broom or in the boat: her hips where the chibi's seat was)
+      R.position.y = (flying || inBoat) ? 0.37 - hipY : soleLift();     // (sitting on her broom or in the boat: her hips where the chibi's seat was; standing, up on any thicker soles)
       var t = state.time, L0 = w.legs[0].rotation, L1 = w.legs[1].rotation;
       var calm0 = (flying || inBoat || window.EVERDAWN_TITLE) ? 0 : Math.max(0, 1 - (Math.abs(L0.x) + Math.abs(L1.x) + Math.abs(L0.z) + Math.abs(L1.z)) * 3);   // (standing still: how much to settle into a relaxed, natural stance)
       // (walking: her arms swing opposite to her legs, each arm forward as the other leg steps, a moment behind it so they
@@ -502,6 +502,19 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (shoe) made.boots.push(m); else made.patch = m;
       });
       shoeSets.push(made); if (legSpec || bareLegs || bareTorso) skins.forEach(paintSkin); return made;
+    }
+    var ownSole = null, sv = new THREE.Vector3();
+    function sole(list) {                                              // (the points along the bottoms of some boots' soles)
+      var all = [], mn = Infinity;
+      list.forEach(function (o) { var P = o.geometry.attributes.position, I = o.geometry.index, seen = new Uint8Array(P.count); for (var i = 0; i < I.count; i++) { var k = I.getX(i); if (seen[k]) continue; seen[k] = 1; all.push([o, k]); mn = Math.min(mn, P.getY(k)); } });
+      return all.filter(function (p) { return p[0].geometry.attributes.position.getY(p[1]) < mn + 0.012; });
+    }
+    function lowest(pts) { var mn = Infinity; pts.forEach(function (p) { sv.fromBufferAttribute(p[0].geometry.attributes.position, p[1]); p[0].boneTransform(p[1], sv); sv.applyMatrix4(p[0].matrixWorld); mn = Math.min(mn, sv.y); }); return mn; }
+    function soleLift() {                                              // (soles reaching lower than her own boots' would just now: lift her by that, so they stand on the ground, not in it)
+      if (!shoesShown) return 0;
+      ownSole = ownSole || sole(meshes.filter(function (m) { return m.isSkinnedMesh && /Shoes/.test(m.material.name || ''); }));
+      shoesShown.sole = shoesShown.sole || sole(shoesShown.boots);
+      return Math.max(0, lowest(ownSole) - lowest(shoesShown.sole));
     }
     function wearShoes(made) {                                         // (null: her own boots)
       if (made === shoesShown) return; shoesShown = made; showLook();
