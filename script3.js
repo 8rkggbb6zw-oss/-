@@ -9167,7 +9167,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (big) cpPart(new THREE.BoxGeometry(0.05, wh, 0.05), clBlack, 0, 0, 0.03, 0, 0, 0, P);
       cpPart(new THREE.BoxGeometry(w + 0.2, 0.06, 0.16), reveal, 0, -wh / 2 - 0.05, 0.07, 0, 0, 0, P);
     });
-    cpPart(new THREE.CylinderGeometry(0.05, 0.05, H + 0.3, 10), rMat(0x3a3a40, { metalness: 0.5, roughness: 0.4 }), W2 + 0.14, (H + 0.3) / 2, -D2 + 0.3, 0, 0, 0, B);
     var SD = new THREE.Group(); SD.position.set(2.9, 0, -D2 - 0.02); SD.rotation.y = Math.PI; B.add(SD);
     cpPart(new THREE.BoxGeometry(0.98, 2.08, 0.06), rMat(0x5a5e66, { metalness: 0.4, roughness: 0.5 }), 0, 1.04, 0, 0, 0, 0, SD);
     cpPart(new THREE.BoxGeometry(0.2, 0.04, 0.05), clBlack, -0.3, 1.0, 0.05, 0, 0, 0, SD);
