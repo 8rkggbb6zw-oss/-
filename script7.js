@@ -677,11 +677,31 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function corsetRuffles(file, part) {                                 // (a corset's black lace frills: gathered all round its top edge, standing up from it, and round its bottom edge, falling)
     return function () {
-      var grp = new THREE.Group(), N = 96, sk = null, cz = 0, edges = [], mat = new THREE.MeshStandardMaterial({ color: 0x151215, roughness: 0.85, side: THREE.DoubleSide });
+      var lace = document.createElement('canvas'); lace.width = 128; lace.height = 128; var lg = lace.getContext('2d'), L = Math.PI * 2;   // (black lace: a scalloped edge with picots, an open net with flowers worked into it, and a solid band with eyelets where it's sewn on)
+      function dot(x, y, r) { lg.beginPath(); lg.arc(x, y, r, 0, L); lg.fill(); }
+      lg.fillStyle = '#fff'; lg.fillRect(0, 30, 128, 98);
+      [32, 96].forEach(function (x) { lg.beginPath(); lg.arc(x, 34, 30, Math.PI, 0); lg.fill(); for (var k = 0; k <= 8; k++) { var a = Math.PI + k / 8 * Math.PI; dot(x + Math.cos(a) * 32, 34 + Math.sin(a) * 32, 2.6); } });   // (the scallops, picots round each)
+      lg.globalCompositeOperation = 'destination-out';
+      for (var y = 14, n = 0; y < 86; y += 7, n++) for (var x = (n % 2) * 3.5; x < 132; x += 7) dot(x, y, 2.4);   // (the open net)
+      lg.globalCompositeOperation = 'source-over';
+      [[64, 54, 1], [0, 54, 1], [128, 54, 1]].forEach(function (f) {   // (a flower in each repeat)
+        for (var p = 0; p < 6; p++) { var a = p / 6 * L; lg.beginPath(); lg.ellipse(f[0] + Math.cos(a) * 12, f[1] + Math.sin(a) * 12, 10, 5.5, a, 0, L); lg.fill(); }
+        dot(f[0], f[1], 6.5);
+      });
+      [[32, 74, 0.5], [96, 74, -0.5], [32, 36, -0.5], [96, 36, 0.5]].forEach(function (l) { lg.beginPath(); lg.ellipse(l[0], l[1], 12, 4.5, l[2], 0, L); lg.fill(); });   // (leaves between)
+      lg.fillRect(0, 86, 128, 42);                                       // (the band it's sewn on by)
+      lg.globalCompositeOperation = 'destination-out';
+      [0, 64, 128].forEach(function (x) { dot(x, 54, 2.6); for (var p = 0; p < 6; p++) { var a = (p + 0.5) / 6 * L; dot(x + Math.cos(a) * 9, 54 + Math.sin(a) * 9, 1.3); } });   // (open flower centres)
+      [32, 96].forEach(function (x) { lg.beginPath(); lg.ellipse(x, 74, 7, 1.2, 0.5 * (x < 64 ? 1 : -1), 0, L); lg.fill(); });   // (leaf veins)
+      for (var x = 8; x < 128; x += 16) dot(x, 100, 3.2);                // (eyelets along the band)
+      lg.globalCompositeOperation = 'source-over';
+      var lt = new THREE.CanvasTexture(lace); lt.wrapS = THREE.RepeatWrapping;
+      var grp = new THREE.Group(), N = 96, sk = null, cz = 0, edges = [], mat = new THREE.MeshStandardMaterial({ color: 0x151215, roughness: 0.85, side: THREE.DoubleSide, map: lt, alphaTest: 0.5 });
       [1, -1].forEach(function (dir) {
         var pos = new Float32Array((N + 1) * 3 * 3), idx = [];
         for (var i = 0; i < N; i++) for (var r = 0; r < 2; r++) { var a = i * 3 + r, b = a + 3; idx.push(a, b, a + 1, b, b + 1, a + 1); }
-        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx);
+        var uv = new Float32Array((N + 1) * 3 * 2); for (var i = 0; i <= N; i++) for (var r = 0; r < 3; r++) { uv[(i * 3 + r) * 2] = i / N * 16; uv[(i * 3 + r) * 2 + 1] = r / 2; }   // (the lace's scalloped edge along the frill's free edge)
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx);
         var m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.castShadow = true; grp.add(m); edges.push({ dir: dir, mesh: m, pts: [] });
       });
       var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3();
@@ -707,13 +727,15 @@ EVERDAWN_PARTS.push(function (THREE) {
           e.mesh.onBeforeRender = function () {
             if (!sk || !e.pts.length) return; var A = e.mesh.geometry.attributes.position, c = e.cur || (e.cur = e.pts.map(function () { return new THREE.Vector3(); }));
             e.pts.forEach(function (p, i) { sk.boneTransform(p.a, c[i]); sk.boneTransform(p.b, w); c[i].lerp(w, p.t); });
+            var ys = c.map(function (p) { return p.y; });
             for (var r = 0; r < 2; r++) for (var i = 0; i < N; i++) c[i].lerp(w.copy(c[(i + N - 1) % N]).add(c[(i + 1) % N]).multiplyScalar(0.5), 0.5);   // (smoothed, so it bends round the dip at the front instead of kinking)
+            c.forEach(function (p, i) { if (e.dir > 0 ? p.y > ys[i] : p.y < ys[i]) p.y = ys[i]; });   // (but never lifted off the corset's edge, so no skin shows under it)
             for (var i = 0; i <= N; i++) {
               v.copy(c[i % N]); o.set(v.x, 0, v.z - cz).normalize();
-              var pleat = Math.sin(i / N * Math.PI * 2 * 24), h = (e.dir > 0 ? 0.013 : 0.01) * (0.85 + 0.15 * Math.sin(i * 1.3)), y0 = v.y - (e.dir > 0 ? 0.013 : 0);   // (softly gathered folds, a little uneven like lace; the top one sewn on where the corset's painted edge is, below its see-through rim)
-              A.setXYZ(i * 3, v.x + o.x * 0.002, y0 - e.dir * 0.009, v.z + o.z * 0.002);
-              A.setXYZ(i * 3 + 1, v.x + o.x * (0.005 + 0.003 * pleat), y0 + e.dir * h * 0.5, v.z + o.z * (0.005 + 0.003 * pleat));
-              A.setXYZ(i * 3 + 2, v.x + o.x * (0.009 + 0.006 * pleat), y0 + e.dir * h, v.z + o.z * (0.009 + 0.006 * pleat));
+              var pleat = Math.sin(i / N * Math.PI * 2 * 24), h = (e.dir > 0 ? 0.016 : 0.012) * (0.85 + 0.15 * Math.sin(i * 1.3)), y0 = v.y - (e.dir > 0 ? 0.013 : 0);   // (softly gathered folds, a little uneven like lace; the top one sewn on where the corset's painted edge is, below its see-through rim)
+              A.setXYZ(i * 3, v.x + o.x * 0.006, y0 - e.dir * 0.012, v.z + o.z * 0.006);   // (standing a little out from the corset, clear of her skin above it, so none shows over it)
+              A.setXYZ(i * 3 + 1, v.x + o.x * (0.01 + 0.003 * pleat), y0 + e.dir * h * 0.5, v.z + o.z * (0.01 + 0.003 * pleat));
+              A.setXYZ(i * 3 + 2, v.x + o.x * (0.015 + 0.006 * pleat), y0 + e.dir * h, v.z + o.z * (0.015 + 0.006 * pleat));
             }
             A.needsUpdate = true; e.mesh.geometry.computeVertexNormals();
           };
