@@ -677,18 +677,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function corsetRuffles(file, part) {                                 // (a corset's black lace frills: gathered all round its top edge, standing up from it, and round its bottom edge, falling)
     return function () {
-      var lace = document.createElement('canvas'); lace.width = 256; lace.height = 128; var lg = lace.getContext('2d'), L = Math.PI * 2;   // (black Chantilly lace: a sheer net, outlined flowers on curling vines, fans in scallops edged with looped picots, and a corded band)
+      var lace = document.createElement('canvas'); lace.width = 256; lace.height = 128; var lg = lace.getContext('2d'), L = Math.PI * 2;   // (black Chantilly lace: a sheer net with a scalloped edge, outlined flowers on curling vines, and a corded band)
       function ring(x, y, r, w) { lg.lineWidth = w; lg.beginPath(); lg.arc(x, y, r, 0, L); lg.stroke(); }
       lg.strokeStyle = lg.fillStyle = '#fff';
       lg.globalAlpha = 0.8; lg.fillRect(0, 30, 256, 72);                 // (the sheer net)
       lg.globalAlpha = 1; lg.lineWidth = 0.8; for (var x = -128; x < 256; x += 6) { lg.beginPath(); lg.moveTo(x, 102); lg.lineTo(x + 72, 30); lg.moveTo(x + 72, 102); lg.lineTo(x, 30); lg.stroke(); }
       lg.globalAlpha = 1;
-      for (var x = 32; x < 256; x += 64) {                               // (the scallops: a fan in each, looped picots round it)
-        lg.lineWidth = 3; lg.beginPath(); lg.arc(x, 36, 28, Math.PI, 0); lg.stroke();
-        lg.lineWidth = 1.4; for (var k = 1; k < 8; k++) { var a = Math.PI + k / 8 * Math.PI; lg.beginPath(); lg.moveTo(x, 36); lg.lineTo(x + Math.cos(a) * 26, 36 + Math.sin(a) * 26); lg.stroke(); }
-        for (var k = 0; k <= 10; k++) { var a = Math.PI + k / 10 * Math.PI; ring(x + Math.cos(a) * 32, 36 + Math.sin(a) * 32, 2.6, 1.3); }
-        ring(x, 36, 4, 2);
-      }
+      lg.beginPath(); for (var x = 32; x < 256; x += 64) { lg.moveTo(x + 28, 36); lg.arc(x, 36, 28, 0, Math.PI, true); }   // (the scalloped edge, the net carried up into each scallop)
+      lg.save(); lg.clip(); lg.globalAlpha = 0.8; lg.fillRect(0, 0, 256, 40); lg.globalAlpha = 1; lg.lineWidth = 0.8; for (var x = -40; x < 256; x += 6) { lg.beginPath(); lg.moveTo(x, 40); lg.lineTo(x + 40, 0); lg.moveTo(x + 40, 40); lg.lineTo(x, 0); lg.stroke(); } lg.restore();
+      lg.lineWidth = 2.5; for (var x = 32; x < 256; x += 64) { lg.beginPath(); lg.arc(x, 36, 28, Math.PI, 0); lg.stroke(); }
       lg.lineWidth = 2.2; lg.beginPath(); lg.moveTo(0, 72); for (var x = 0; x <= 256; x += 64) lg.bezierCurveTo(x + 20, 52, x + 44, 92, x + 64, 72); lg.stroke();   // (a curling vine)
       [[32, 62, -0.6], [96, 84, 0.6], [160, 62, -0.6], [224, 84, 0.6]].forEach(function (l) { lg.save(); lg.translate(l[0], l[1]); lg.rotate(l[2]); lg.beginPath(); lg.ellipse(0, 0, 9, 3.6, 0, 0, L); lg.fill(); lg.restore(); });   // (its leaves)
       [64, 192].forEach(function (x) {                                   // (flowers, their petals outlined like corded lace)
