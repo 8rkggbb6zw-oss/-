@@ -53,7 +53,6 @@ EVERDAWN_PARTS.push(function (THREE) {
         while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
       }
-      DR.forEach(function (r) { stones.push({ x: r[0], d: r[2] - r[1], s: r[1] * 0.78, spin: rand() * 6.3, tip: 0 }); });   // (each drip ending in one bigger round stone, so it finishes clean)
       var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x120000, roughness: 0, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0, envMap: rubyEnv, envMapIntensity: 4, flatShading: true });   // (like a cut gem: each facet dark or flashing with light, rather than glowing all over)
       var gems = new THREE.InstancedMesh(cut, ruby, stones.length); gems.frustumCulled = false; gems.castShadow = true;
       var col = new THREE.Color();
@@ -66,6 +65,20 @@ EVERDAWN_PARTS.push(function (THREE) {
       var tw = stones.filter(function (st, k) { return k % 23 === 5; }).map(function (st) { return { st: st, ph: rand() * 6.3, rate: 1.5 + rand() * 2.5 }; });
       var twinkle = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(star), color: 0xfff0f0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), tw.length);
       twinkle.frustumCulled = false; for (var k = 0; k < tw.length; k++) twinkle.setMatrixAt(k, none); grp.add(twinkle);
+      // (at the end of each drip, a teardrop ruby: a pear cut, round below and pointed up into the drip, with a flat table ringed by
+      // star facets, upper and lower girdle facets round its edge, and a deep pavilion of facets behind, coming to a keel)
+      var pear = (function () {
+        var M = 48, rings = [[0.36, 0.44, 0], [0.52, 0.41, 0.5], [0.67, 0.35, 0], [0.81, 0.27, 0.5], [0.92, 0.17, 0], [0.99, 0.07, 0.5], [1, -0.01, 0], [0.93, -0.12, 0.5], [0.8, -0.26, 0], [0.62, -0.41, 0.5], [0.42, -0.55, 0], [0.22, -0.67, 0.5], [0.06, -0.76, 0]], pos = [];
+        function at(t, sc, z) { var x = Math.sin(t) * Math.pow(Math.sin(t / 2), 1.3) * 0.78, y = Math.cos(t) * 0.92 - 0.12 * Math.sin(t / 2); return [x * sc, (y + 0.1) * sc, z]; }   // (the teardrop: its point at the top)
+        var R = rings.map(function (r) { var ring = []; for (var m = 0; m < M; m++) ring.push(at((m + r[2]) / M * Math.PI * 2, r[0], r[1])); return ring; });
+        var top = [0, 0.04, 0.445];
+        for (var m = 0; m < M; m++) pos.push(top, R[0][m], R[0][(m + 1) % M]);   // (the table)
+        for (var r = 0; r < R.length - 1; r++) for (var m = 0; m < M; m++) { var a = R[r][m], b = R[r][(m + 1) % M], c = R[r + 1][m], d = R[r + 1][(m + 1) % M]; pos.push(a, c, b, b, c, d); }
+        var bot = [0, -0.02, -0.8]; for (var m = 0; m < M; m++) pos.push(R[R.length - 1][m], bot, R[R.length - 1][(m + 1) % M]);   // (the keel at the back)
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([].concat.apply([], pos), 3)); g.computeVertexNormals(); return g;
+      })();
+      var drops = new THREE.InstancedMesh(pear, ruby.clone(), DR.length); drops.material.side = THREE.DoubleSide; drops.frustumCulled = false; drops.castShadow = true;
+      DR.forEach(function (r, k) { col.setHSL(0.003, 1, 0.27); drops.setColorAt(k, col); drops.setMatrixAt(k, none); }); grp.add(drops);
       var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), dn = new THREE.Vector3(), nrm = new THREE.Vector3();
       var m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qs = new THREE.Quaternion(), sc = new THREE.Vector3(), p3 = new THREE.Vector3(), zA = new THREE.Vector3(0, 0, 1), xA = new THREE.Vector3(1, 0, 0);
       var fr = [];                                                     // (each frame: where each point round her is, and which ways are along, down and out over the skirt there)
@@ -121,6 +134,11 @@ EVERDAWN_PARTS.push(function (THREE) {
           m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4).multiply(qs.setFromAxisAngle(zA, t.ph)); m4.compose(p3, q, sc.setScalar(st.s * 5 * g + 1e-6)); twinkle.setMatrixAt(k, m4);
         });
         twinkle.instanceMatrix.needsUpdate = true;
+        DR.forEach(function (r, k) {                                   // (each teardrop hanging at its drip's end, its point up into it, facing out from the skirt)
+          var rb = r[1]; frame(r[0], r[2] - rb * 1.05); p3.copy(v).addScaledVector(nrm, rb * 0.42);
+          m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4); m4.compose(p3, q, sc.set(rb * 1.25, rb * 1.45, rb * 1.1)); drops.setMatrixAt(k, m4);
+        });
+        drops.instanceMatrix.needsUpdate = true;
       };
       return [{ dress: true, obj: grp, setup: setup }];
     };
