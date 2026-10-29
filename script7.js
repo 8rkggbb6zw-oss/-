@@ -1,4 +1,4 @@
-// Everdawn, part 4 of 4 (see the note at the top of script.js). This file holds you, the player: the character you made
+// Everdawn, part 4 of 5 (see the note at the top of script.js). This file holds you, the player: the character you made
 // in VRoid Studio (Witch.vrm, next to the game's files), loaded in and brought to life. script3.js joins it on after the
 // other parts, so it shares all their variables
 
