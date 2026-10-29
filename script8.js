@@ -43,8 +43,17 @@ EVERDAWN_PARTS.push(function (THREE) {
       var base = new THREE.Mesh(bg, new THREE.MeshPhysicalMaterial({ color: 0x5a0000, roughness: 0.12, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, envMap: rubyEnv, envMapIntensity: 1.5, emissive: 0x220000, side: THREE.DoubleSide, flatShading: true }));   // (glossy, like it's still wet)
       base.frustumCulled = false; grp.add(base);
       // (the stones: a cut rhinestone, flat table on top, facets round, pointed behind; hundreds of them, each its own size, turn and shade of red)
-      var cut = new THREE.LatheGeometry([new THREE.Vector2(0, -0.78), new THREE.Vector2(0.5, -0.42), new THREE.Vector2(1, 0), new THREE.Vector2(1, 0.07), new THREE.Vector2(0.82, 0.24), new THREE.Vector2(0.56, 0.38), new THREE.Vector2(0, 0.41)], 12);   // (a brilliant cut: pavilion, girdle, crown and star facets, table)
-      cut.rotateX(Math.PI / 2);                                        // (its table facing out)
+      // (every ruby cut like a real gem: a small flat table ringed by star facets, upper and lower girdle facets round its edge,
+      // and a deep pavilion of facets behind; at(t, scale, height) is the shape of its outline)
+      function gemCut(M, at, top, bot) {
+        var rings = [[0.36, 0.44, 0], [0.52, 0.41, 0.5], [0.67, 0.35, 0], [0.81, 0.27, 0.5], [0.92, 0.17, 0], [0.99, 0.07, 0.5], [1, -0.01, 0], [0.93, -0.12, 0.5], [0.8, -0.26, 0], [0.62, -0.41, 0.5], [0.42, -0.55, 0], [0.22, -0.67, 0.5], [0.06, -0.76, 0]], pos = [];
+        var R = rings.map(function (r) { var ring = []; for (var m = 0; m < M; m++) ring.push(at((m + r[2]) / M * Math.PI * 2, r[0], r[1])); return ring; });
+        for (var m = 0; m < M; m++) pos.push(top, R[0][m], R[0][(m + 1) % M]);   // (the table)
+        for (var r = 0; r < R.length - 1; r++) for (var m = 0; m < M; m++) { var a = R[r][m], b = R[r][(m + 1) % M], c = R[r + 1][m], d = R[r + 1][(m + 1) % M]; pos.push(a, c, b, b, c, d); }
+        for (var m = 0; m < M; m++) pos.push(R[R.length - 1][m], bot, R[R.length - 1][(m + 1) % M]);   // (the point at the back)
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([].concat.apply([], pos), 3)); g.computeVertexNormals(); return g;
+      }
+      var cut = gemCut(20, function (t, sc, z) { return [Math.cos(t) * sc, Math.sin(t) * sc, z]; }, [0, 0, 0.445], [0, 0, -0.8]);   // (the round stones: a brilliant cut)
       var stones = [], rnd = 7;
       function rand() { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; }
       for (var x = 0; x < N; x += 0.36) for (var d = 0.0024; d < 0.1; d += 0.0027 + rand() * 0.0007) {   // (packed close over all the blood)
@@ -54,6 +63,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
       }
       var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x120000, roughness: 0, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0, envMap: rubyEnv, envMapIntensity: 4, flatShading: true });   // (like a cut gem: each facet dark or flashing with light, rather than glowing all over)
+      ruby.side = THREE.DoubleSide;
       var gems = new THREE.InstancedMesh(cut, ruby, stones.length); gems.frustumCulled = false; gems.castShadow = true;
       var col = new THREE.Color();
       stones.forEach(function (st, k) { col.setHSL(rand() * 0.008, 1, 0.2 + rand() * 0.12); gems.setColorAt(k, col); });   // (each a slightly different red)
@@ -67,17 +77,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       twinkle.frustumCulled = false; for (var k = 0; k < tw.length; k++) twinkle.setMatrixAt(k, none); grp.add(twinkle);
       // (at the end of each drip, a teardrop ruby: a pear cut, round below and pointed up into the drip, with a flat table ringed by
       // star facets, upper and lower girdle facets round its edge, and a deep pavilion of facets behind, coming to a keel)
-      var pear = (function () {
-        var M = 48, rings = [[0.36, 0.44, 0], [0.52, 0.41, 0.5], [0.67, 0.35, 0], [0.81, 0.27, 0.5], [0.92, 0.17, 0], [0.99, 0.07, 0.5], [1, -0.01, 0], [0.93, -0.12, 0.5], [0.8, -0.26, 0], [0.62, -0.41, 0.5], [0.42, -0.55, 0], [0.22, -0.67, 0.5], [0.06, -0.76, 0]], pos = [];
-        function at(t, sc, z) { var x = Math.sin(t) * Math.pow(Math.sin(t / 2), 1.3) * 0.78, y = Math.cos(t) * 0.92 - 0.12 * Math.sin(t / 2); return [x * sc, (y + 0.1) * sc, z]; }   // (the teardrop: its point at the top)
-        var R = rings.map(function (r) { var ring = []; for (var m = 0; m < M; m++) ring.push(at((m + r[2]) / M * Math.PI * 2, r[0], r[1])); return ring; });
-        var top = [0, 0.04, 0.445];
-        for (var m = 0; m < M; m++) pos.push(top, R[0][m], R[0][(m + 1) % M]);   // (the table)
-        for (var r = 0; r < R.length - 1; r++) for (var m = 0; m < M; m++) { var a = R[r][m], b = R[r][(m + 1) % M], c = R[r + 1][m], d = R[r + 1][(m + 1) % M]; pos.push(a, c, b, b, c, d); }
-        var bot = [0, -0.02, -0.8]; for (var m = 0; m < M; m++) pos.push(R[R.length - 1][m], bot, R[R.length - 1][(m + 1) % M]);   // (the keel at the back)
-        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([].concat.apply([], pos), 3)); g.computeVertexNormals(); return g;
-      })();
-      var drops = new THREE.InstancedMesh(pear, ruby.clone(), DR.length); drops.material.side = THREE.DoubleSide; drops.frustumCulled = false; drops.castShadow = true;
+      var pear = gemCut(48, function (t, sc, z) { var x = Math.sin(t) * Math.pow(Math.sin(t / 2), 1.3) * 0.78, y = Math.cos(t) * 0.92 - 0.12 * Math.sin(t / 2); return [x * sc, (y + 0.1) * sc, z]; }, [0, 0.04, 0.445], [0, -0.02, -0.8]);   // (the teardrop: its point at the top)
+      var drops = new THREE.InstancedMesh(pear, ruby, DR.length); drops.frustumCulled = false; drops.castShadow = true;
       DR.forEach(function (r, k) { col.setHSL(0.003, 1, 0.27); drops.setColorAt(k, col); drops.setMatrixAt(k, none); }); grp.add(drops);
       var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), dn = new THREE.Vector3(), nrm = new THREE.Vector3();
       var m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qs = new THREE.Quaternion(), sc = new THREE.Vector3(), p3 = new THREE.Vector3(), zA = new THREE.Vector3(0, 0, 1), xA = new THREE.Vector3(1, 0, 0);
