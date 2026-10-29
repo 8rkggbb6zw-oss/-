@@ -40,30 +40,32 @@ EVERDAWN_PARTS.push(function (THREE) {
         for (var m = 0; m < M; m++) for (var k = 0; k < K - 1; k++) { var a = o0 + m * K + k, b = a + K; idx.push(a, b, a + 1, b, b + 1, a + 1); }
       });
       var bpos = new Float32Array(BX.length * 3), bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
-      var base = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x3a0006, roughness: 0.35, metalness: 0.2, side: THREE.DoubleSide, flatShading: true }));
+      var base = new THREE.Mesh(bg, new THREE.MeshPhysicalMaterial({ color: 0x5a0000, roughness: 0.12, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, envMap: rubyEnv, envMapIntensity: 1.5, emissive: 0x220000, side: THREE.DoubleSide, flatShading: true }));   // (glossy, like it's still wet)
       base.frustumCulled = false; grp.add(base);
       // (the stones: a cut rhinestone, flat table on top, facets round, pointed behind; hundreds of them, each its own size, turn and shade of red)
       var cut = new THREE.LatheGeometry([new THREE.Vector2(0, -0.78), new THREE.Vector2(0.5, -0.42), new THREE.Vector2(1, 0), new THREE.Vector2(1, 0.07), new THREE.Vector2(0.82, 0.24), new THREE.Vector2(0.56, 0.38), new THREE.Vector2(0, 0.41)], 12);   // (a brilliant cut: pavilion, girdle, crown and star facets, table)
       cut.rotateX(Math.PI / 2);                                        // (its table facing out)
       var stones = [], rnd = 7;
       function rand() { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; }
-      for (var x = 0; x < N; x += 0.28) for (var d = 0.002; d < 0.1; d += 0.002 + rand() * 0.0006) {   // (packed close over all the blood)
+      for (var x = 0; x < N; x += 0.36) for (var d = 0.0024; d < 0.1; d += 0.0027 + rand() * 0.0007) {   // (packed close over all the blood)
         var xx = x + (rand() - 0.5) * 0.2; if (!inside(xx, d)) continue;
-        var sz = 0.0008 + rand() * 0.0012; if (rand() < 0.05) sz *= 1.9;   // (now and then a bigger feature stone)
+        var sz = 0.0013 + rand() * 0.0013; if (rand() < 0.05) sz *= 1.6;   // (now and then a bigger feature stone)
         while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
       }
-      var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x2a0004, roughness: 0.03, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.02, envMap: rubyEnv, envMapIntensity: 3.2, flatShading: true });
+      DR.forEach(function (r) { stones.push({ x: r[0], d: r[2] - r[1], s: r[1] * 0.78, spin: rand() * 6.3, tip: 0 }); });   // (each drip ending in one bigger round stone, so it finishes clean)
+      var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x120000, roughness: 0, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0, envMap: rubyEnv, envMapIntensity: 4, flatShading: true });   // (like a cut gem: each facet dark or flashing with light, rather than glowing all over)
       var gems = new THREE.InstancedMesh(cut, ruby, stones.length); gems.frustumCulled = false; gems.castShadow = true;
       var col = new THREE.Color();
-      stones.forEach(function (st, k) { col.setHSL(0.985 + rand() * 0.02, 0.92, 0.26 + rand() * 0.16); gems.setColorAt(k, col); });   // (each a slightly different red)
+      stones.forEach(function (st, k) { col.setHSL(rand() * 0.008, 1, 0.2 + rand() * 0.12); gems.setColorAt(k, col); });   // (each a slightly different red)
       var none = new THREE.Matrix4().makeScale(0, 0, 0); for (var k = 0; k < stones.length; k++) gems.setMatrixAt(k, none);   // (hidden until they've found their places)
       grp.add(gems);
-      var dust = [], chip = new THREE.OctahedronGeometry(1, 0);         // (and a dusting of tiny ruby chips in every gap between them, glittering)
-      for (var k = 0; k < stones.length * 1.2; k++) { var x = rand() * N, d = 0.0015 + rand() * 0.1; if (inside(x, d) && inside(x + 0.0006 / CL, d) && inside(x, d + 0.0006)) dust.push({ x: x, d: d, s: 0.00035 + rand() * 0.0003, spin: rand() * 6.3, tip: rand() * 6.3 }); }
-      var glit = new THREE.InstancedMesh(chip, ruby, dust.length); glit.frustumCulled = false;
-      dust.forEach(function (st, k) { col.setHSL(0.99, 0.95, 0.3 + rand() * 0.3); glit.setColorAt(k, col); glit.setMatrixAt(k, none); });
-      grp.add(glit);
+      var star = document.createElement('canvas'); star.width = star.height = 64; var sg = star.getContext('2d');   // (now and then a stone twinkles: a little four-pointed star of light)
+      [[64, 3], [64, 3], [26, 2], [26, 2]].forEach(function (a, n) { sg.save(); sg.translate(32, 32); sg.rotate(n * Math.PI / 2 + (n > 1 ? Math.PI / 4 : 0)); var g = sg.createLinearGradient(0, 0, a[0] / 2, 0); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = g; sg.beginPath(); sg.moveTo(0, -a[1]); sg.lineTo(a[0] / 2, 0); sg.lineTo(0, a[1]); sg.fill(); sg.restore(); });
+      var rg = sg.createRadialGradient(32, 32, 0, 32, 32, 9); rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = rg; sg.fillRect(0, 0, 64, 64);
+      var tw = stones.filter(function (st, k) { return k % 23 === 5; }).map(function (st) { return { st: st, ph: rand() * 6.3, rate: 1.5 + rand() * 2.5 }; });
+      var twinkle = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(star), color: 0xfff0f0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), tw.length);
+      twinkle.frustumCulled = false; for (var k = 0; k < tw.length; k++) twinkle.setMatrixAt(k, none); grp.add(twinkle);
       var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), dn = new THREE.Vector3(), nrm = new THREE.Vector3();
       var m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qs = new THREE.Quaternion(), sc = new THREE.Vector3(), p3 = new THREE.Vector3(), zA = new THREE.Vector3(0, 0, 1), xA = new THREE.Vector3(1, 0, 0);
       var fr = [];                                                     // (each frame: where each point round her is, and which ways are along, down and out over the skirt there)
@@ -113,11 +115,12 @@ EVERDAWN_PARTS.push(function (THREE) {
           m4.compose(p3, q, sc.set(st.s, st.s, st.s)); gems.setMatrixAt(k, m4);
         });
         gems.instanceMatrix.needsUpdate = true;
-        dust.forEach(function (st, k) {
-          frame(st.x, st.d); p3.copy(v).addScaledVector(nrm, 0.0002); m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4).multiply(qs.setFromAxisAngle(zA, st.spin)).multiply(qs.setFromAxisAngle(xA, st.tip));
-          m4.compose(p3, q, sc.set(st.s, st.s, st.s)); glit.setMatrixAt(k, m4);
+        var now = performance.now() / 1000;
+        tw.forEach(function (t, k) {                                   // (each glint flaring and fading in its own time)
+          var st = t.st, g = Math.pow(Math.max(0, Math.sin(now * t.rate + t.ph)), 10); frame(st.x, st.d); p3.copy(v).addScaledVector(nrm, st.s * 0.6);
+          m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4).multiply(qs.setFromAxisAngle(zA, t.ph)); m4.compose(p3, q, sc.setScalar(st.s * 5 * g + 1e-6)); twinkle.setMatrixAt(k, m4);
         });
-        glit.instanceMatrix.needsUpdate = true;
+        twinkle.instanceMatrix.needsUpdate = true;
       };
       return [{ dress: true, obj: grp, setup: setup }];
     };
