@@ -47,7 +47,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         for (var m = 0; m < M; m++) for (var k = 0; k < K - 1; k++) { var a = o0 + m * K + k, b = a + K; idx.push(a, b, a + 1, b, b + 1, a + 1); }
       });
       var bpos = new Float32Array(BX.length * 3), bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
-      var base = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x5a0000, emissive: 0x200000, roughness: 0.55, metalness: 0, side: THREE.DoubleSide, flatShading: true }));   // (deep red, satin, under the stones)
+      var base = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x2c070e, emissive: 0x100205, roughness: 0.55, metalness: 0, side: THREE.DoubleSide, flatShading: true }));   // (deep red, satin, under the stones)
       base.frustumCulled = false; grp.add(base);
       // (the stones: a cut rhinestone, flat table on top, facets round, pointed behind; hundreds of them, each its own size, turn and shade of red)
       // (every ruby cut like a real gem: a small flat table ringed by star facets, upper and lower girdle facets round its edge,
@@ -69,11 +69,11 @@ EVERDAWN_PARTS.push(function (THREE) {
         while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
       }
-      var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x120000, roughness: 0, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0, envMap: rubyEnv, envMapIntensity: 4, flatShading: true });   // (like a cut gem: each facet dark or flashing with light, rather than glowing all over)
+      var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x0c0205, roughness: 0, metalness: 0.78, clearcoat: 1, clearcoatRoughness: 0, envMap: rubyEnv, envMapIntensity: 4, flatShading: true });   // (like a cut gem: each facet dark or flashing with light, rather than glowing all over)
       ruby.side = THREE.DoubleSide;
       var gems = new THREE.InstancedMesh(cut, ruby, stones.length); gems.frustumCulled = false; gems.castShadow = true;
       var col = new THREE.Color();
-      stones.forEach(function (st, k) { col.setHSL(rand() * 0.008, 1, 0.2 + rand() * 0.12); gems.setColorAt(k, col); });   // (each a slightly different red)
+      stones.forEach(function (st, k) { col.setHSL(0.97 + rand() * 0.01, 0.78 + rand() * 0.1, 0.085 + rand() * 0.05); gems.setColorAt(k, col); });   // (each a slightly different wine red, like the corset)
       var none = new THREE.Matrix4().makeScale(0, 0, 0); for (var k = 0; k < stones.length; k++) gems.setMatrixAt(k, none);   // (hidden until they've found their places)
       grp.add(gems);
       var star = document.createElement('canvas'); star.width = star.height = 64; var sg = star.getContext('2d');   // (now and then a stone twinkles: a little four-pointed star of light)
@@ -86,7 +86,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       // star facets, upper and lower girdle facets round its edge, and a deep pavilion of facets behind, coming to a keel)
       var pear = gemCut(48, function (t, sc, z) { var x = Math.sin(t) * Math.pow(Math.sin(t / 2), 1.3) * 0.78, y = Math.cos(t) * 0.92 - 0.12 * Math.sin(t / 2); return [x * sc, (y + 0.1) * sc, z]; }, [0, 0.04, 0.445], [0, -0.02, -0.8]);   // (the teardrop: its point at the top)
       var drops = new THREE.InstancedMesh(pear, ruby, DR.length); drops.frustumCulled = false; drops.castShadow = true;
-      DR.forEach(function (r, k) { col.setHSL(0.003, 1, 0.27); drops.setColorAt(k, col); drops.setMatrixAt(k, none); }); grp.add(drops);
+      DR.forEach(function (r, k) { col.setHSL(0.972, 0.82, 0.11); drops.setColorAt(k, col); drops.setMatrixAt(k, none); }); grp.add(drops);
       var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), dn = new THREE.Vector3(), nrm = new THREE.Vector3();
       var m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qs = new THREE.Quaternion(), sc = new THREE.Vector3(), p3 = new THREE.Vector3(), zA = new THREE.Vector3(0, 0, 1), xA = new THREE.Vector3(1, 0, 0);
       var fr = [];                                                     // (each frame: where each point round her is, and which ways are along, down and out over the skirt there)
