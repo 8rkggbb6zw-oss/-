@@ -2,9 +2,8 @@
 // (which was nearly full): it joins on after the other parts, so it shares all their variables
 
 EVERDAWN_PARTS.push(function (THREE) {
-  // ---- Victorian Vengeance's blood rubies: a band of ruby round where its skirt meets the corset, like blood poured
-  // round it, with drips of ruby running down the skirt from it, each a different length and ending in a faceted drop,
-  // and a few drops fallen below them ----
+  // ---- Victorian Vengeance's bejewelled blood: blood poured round where its skirt meets the corset and dripping down
+  // the skirt, every bit of it encrusted with little ruby rhinestones of all sizes, packed close and sparkling ----
   var rubyEnv = (function () {                                         // (something for the rubies to reflect: mostly dark, a soft window of light above, and small bright lights to sparkle in)
     var faces = [];
     for (var f = 0; f < 6; f++) {
@@ -19,26 +18,50 @@ EVERDAWN_PARTS.push(function (THREE) {
   })();
   function bloodRubies(file, part) {
     return function () {
-      var grp = new THREE.Group(), sk = null, cz = 0, N = 96, D = 30, drips = [];
-      var ruby = new THREE.MeshPhysicalMaterial({ color: 0x8a0614, emissive: 0x240004, roughness: 0.02, metalness: 0.5, clearcoat: 1, clearcoatRoughness: 0.01, envMap: rubyEnv, envMapIntensity: 3, flatShading: true });   // (deep crimson, catching the light in its facets)
-      var smooth = ruby.clone(); smooth.flatShading = false; smooth.metalness = 0.25; smooth.color.setHex(0xa10a1c); smooth.emissive.setHex(0x420007);   // (the drips polished smooth and glassy)
-      var R = 11, bpos = new Float32Array((N + 1) * R * 3), idx = [];
-      for (var i = 0; i < N; i++) for (var r = 0; r < R - 1; r++) { var a = i * R + r, b = a + R; idx.push(a, a + 1, b, b, a + 1, b + 1); }
-      var bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
-      var cut = ruby.clone(); cut.side = THREE.DoubleSide; var band = new THREE.Mesh(bg, cut); band.frustumCulled = false; band.castShadow = true; grp.add(band);   // (the band cut in facets like the drops)
-      var bead = new THREE.IcosahedronGeometry(1, 1), spark = new THREE.SphereGeometry(1, 6, 4), glint = new THREE.MeshBasicMaterial({ color: 0xfff6f2, transparent: true, opacity: 0.9 });
-      for (var j = 0; j < D; j++) {                                    // (each drip: a different length; some with a second bead partway, some with a drop fallen below)
-        var len = 0.005 + 0.034 * Math.pow(Math.abs(Math.sin(j * 2.31 + 0.7)), 1.5), w0 = 0.0036 + 0.002 * Math.abs(Math.sin(j * 1.7)), d = new THREE.Group(), pts = [new THREE.Vector2(0, 0.003)];
-        for (var n = 0; n <= 10; n++) { var t = n / 10; pts.push(new THREE.Vector2(w0 * (0.78 + 0.5 * Math.pow(1 - t, 3)) + 0.0004 * Math.sin(t * 7 + j), -t * len)); }
-        pts.push(new THREE.Vector2(0, -len)); d.add(new THREE.Mesh(new THREE.LatheGeometry(pts.reverse(), 16), smooth));
-        var end = new THREE.Mesh(bead, ruby), er = w0 * 1.15; end.scale.set(er, er * 1.25, er); end.position.y = -len - er * 0.6; d.add(end);   // (the drop at its end)
-        var gl = new THREE.Mesh(spark, glint); gl.scale.setScalar(er * 0.22); gl.position.set(-er * 0.4, -len - er * 0.2, er * 0.95); d.add(gl);   // (a glint of light on it)
-        if (j % 3 === 1 && len > 0.025) { var mid = new THREE.Mesh(bead, ruby), mr = w0 * 0.85; mid.scale.set(mr, mr * 1.3, mr); mid.position.y = -len * 0.5; d.add(mid); }
-        if (j % 4 === 2) { var fall = new THREE.Mesh(bead, ruby), fr = w0 * 0.8; fall.scale.set(fr, fr * 1.3, fr); fall.position.y = -len - 0.012 - 0.008 * (j % 3); d.add(fall); }   // (a drop fallen below it)
-        d.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
-        grp.add(d); drips.push(d);
+      var grp = new THREE.Group(), sk = null, cz = 0, N = 96, pts = [], c = [];
+      var CL = 0.0071;                                                 // (how far apart the points round her are, in metres, near enough)
+      function band(x) { return 0.016 + 0.003 * Math.sin(x * 0.7) + 0.002 * Math.sin(x * 1.9); }   // (the blood poured round: a little uneven)
+      // (the drips: where round her each runs from, the round drop at its end (its radius), and how far down it runs)
+      var DR = [[3, 0.0078, 0.070], [9.5, 0.0059, 0.044], [14, 0.0089, 0.092], [20.5, 0.0065, 0.053], [26, 0.0081, 0.080], [32.5, 0.0056, 0.039], [38, 0.0085, 0.072], [44.5, 0.0067, 0.058],
+        [50, 0.0089, 0.094], [56.5, 0.0059, 0.046], [62, 0.0083, 0.077], [68.5, 0.0063, 0.056], [74, 0.0087, 0.087], [80.5, 0.0056, 0.041], [86, 0.0081, 0.070], [92, 0.0065, 0.051]];
+      function half(r, d) {                                            // (how wide a drip is, d down from the corset: a neck that swells into a round drop at its end, and curves out where it leaves the band)
+        var rb = r[1], L = r[2], c0 = L - rb, b = band(r[0]);
+        if (d > c0) return Math.sqrt(Math.max(0, rb * rb - (d - c0) * (d - c0)));
+        var neck = rb * (0.56 + 0.3 * Math.pow(d / L, 2)); if (d < b + 0.01) neck += Math.pow((b + 0.01 - d) / 0.01, 2) * 0.006; return neck;
       }
-      var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), m4 = new THREE.Matrix4(), side = new THREE.Vector3(), q = new THREE.Quaternion(), tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.46), pts = [], c = [];
+      function inside(x, d) { if (d <= band(x)) return true; for (var k = 0; k < DR.length; k++) { var dx = Math.abs(((x - DR[k][0] + N * 1.5) % N) - N / 2) * CL; if (d <= DR[k][2] && dx <= half(DR[k], d)) return true; } return false; }
+      // (the blood under the stones, deep red, so no black shows between them: the band all round, and each drip)
+      var BX = [], BD = [], idx = [], CO = N * 2, RO = 6;
+      for (var i = 0; i <= CO; i++) for (var r = 0; r <= RO; r++) { var x = i / CO * N; BX.push(x); BD.push(band(x) * r / RO + 0.002); }
+      for (var i = 0; i < CO; i++) for (var r = 0; r < RO; r++) { var a = i * (RO + 1) + r, b = a + RO + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+      DR.forEach(function (r) {
+        var M = 16, K = 5, o0 = BX.length;
+        for (var m = 0; m <= M; m++) { var d = r[2] * m / M, h = half(r, d) * 1.08 / CL; for (var k = 0; k < K; k++) { BX.push(r[0] + (k / (K - 1) * 2 - 1) * h); BD.push(d); } }
+        for (var m = 0; m < M; m++) for (var k = 0; k < K - 1; k++) { var a = o0 + m * K + k, b = a + K; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      });
+      var bpos = new Float32Array(BX.length * 3), bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
+      var base = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x3a0006, roughness: 0.35, metalness: 0.2, side: THREE.DoubleSide, flatShading: true }));
+      base.frustumCulled = false; grp.add(base);
+      // (the stones: a cut rhinestone, flat table on top, facets round, pointed behind; hundreds of them, each its own size, turn and shade of red)
+      var cut = new THREE.LatheGeometry([new THREE.Vector2(0, -0.7), new THREE.Vector2(1, 0), new THREE.Vector2(0.95, 0.12), new THREE.Vector2(0.6, 0.42), new THREE.Vector2(0, 0.42)], 8);
+      cut.rotateX(Math.PI / 2);                                        // (its table facing out)
+      var stones = [], rnd = 7;
+      function rand() { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; }
+      for (var x = 0; x < N; x += 0.4) for (var d = 0.0028; d < 0.1; d += 0.0029 + rand() * 0.0008) {   // (packed close over all the blood)
+        var xx = x + (rand() - 0.5) * 0.25; if (!inside(xx, d)) continue;
+        var sz = 0.0011 + rand() * 0.0017; if (rand() < 0.08) sz *= 1.5;   // (now and then a bigger stone)
+        while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
+        stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
+      }
+      var ruby = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x2a0004, roughness: 0.03, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.02, envMap: rubyEnv, envMapIntensity: 3.2, flatShading: true });
+      var gems = new THREE.InstancedMesh(cut, ruby, stones.length); gems.frustumCulled = false; gems.castShadow = true;
+      var col = new THREE.Color();
+      stones.forEach(function (st, k) { col.setHSL(0.985 + rand() * 0.02, 0.92, 0.26 + rand() * 0.16); gems.setColorAt(k, col); });   // (each a slightly different red)
+      var none = new THREE.Matrix4().makeScale(0, 0, 0); for (var k = 0; k < stones.length; k++) gems.setMatrixAt(k, none);   // (hidden until they've found their places)
+      grp.add(gems);
+      var v = new THREE.Vector3(), w = new THREE.Vector3(), o = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), side = new THREE.Vector3(), dn = new THREE.Vector3(), nrm = new THREE.Vector3();
+      var m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qs = new THREE.Quaternion(), sc = new THREE.Vector3(), p3 = new THREE.Vector3(), zA = new THREE.Vector3(0, 0, 1), xA = new THREE.Vector3(1, 0, 0);
+      var fr = [];                                                     // (each frame: where each point round her is, and which ways are along, down and out over the skirt there)
       function setup() {
         sk = (outfitModel(file) || []).filter(function (m) { return m.material.name.indexOf(part) >= 0; })[0]; if (!sk) return;
         var P = sk.geometry.attributes.position, I = sk.geometry.index, rep = {}, cnt = {}, zs = [];
@@ -66,22 +89,25 @@ EVERDAWN_PARTS.push(function (THREE) {
           p.out = Math.max(0.012, r0 - rc + 0.006); p.lean = r1 > 0 && r0 > 0 ? Math.atan2(r1 - r0, 0.035) : 0.46;
         });
       }
-      band.onBeforeRender = function () {                              // (each frame: the band where the corset's edge is now, and the drips hanging from it down the skirt)
+      function frame(x, t) {                                         // (the point x round her, t down the skirt from the corset's edge)
+        x = ((x % N) + N) % N; var i0 = Math.floor(x), i1 = (i0 + 1) % N, f = x - i0, a = fr[i0], b = fr[i1];
+        v.copy(a.p).lerp(b.p, f); o.copy(a.o).lerp(b.o, f).normalize(); var lean = a.lean + (b.lean - a.lean) * f, out = a.out + (b.out - a.out) * f;
+        side.crossVectors(up, o).normalize(); dn.copy(up).multiplyScalar(-Math.cos(lean)).addScaledVector(o, Math.sin(lean)); nrm.copy(up).multiplyScalar(Math.sin(lean)).addScaledVector(o, Math.cos(lean));
+        return v.addScaledVector(o, out).addScaledVector(up, -0.004).addScaledVector(dn, t);
+      }
+      base.onBeforeRender = function () {
         if (!sk || !pts.length) return;
         pts.forEach(function (p, i) { sk.boneTransform(p.a, c[i]); sk.boneTransform(p.b, w); c[i].lerp(w, p.t); });
         for (var r = 0; r < 2; r++) for (var i = 0; i < N; i++) c[i].lerp(w.copy(c[(i + N - 1) % N]).add(c[(i + 1) % N]).multiplyScalar(0.5), 0.5);
-        for (var i = 0; i <= N; i++) {
-          v.copy(c[i % N]); o.set(v.x, 0, v.z - cz).normalize();
-          var h = 0.0075 + 0.0018 * Math.sin(i * 0.9) + 0.0012 * Math.sin(i * 2.3);   // (poured, so a little uneven)
-          for (var r = 0; r < R; r++) { var a = -Math.PI / 2 + r / (R - 1) * Math.PI, out = pts[i % N].out + 0.008 * Math.cos(a), y = v.y - 0.008 + h * Math.sin(a) * (a < 0 ? 1.3 : 1);   // (just outside the skirt's top, over the seam)
-            bpos.set([v.x + o.x * out, y, v.z + o.z * out], (i * R + r) * 3); }
-        }
+        for (var i = 0; i < N; i++) { var e = fr[i] || (fr[i] = { p: new THREE.Vector3(), o: new THREE.Vector3() }); e.p.copy(c[i]); e.o.set(c[i].x, 0, c[i].z - cz).normalize(); e.lean = pts[i].lean; e.out = pts[i].out; }
+        for (var i = 0; i < BX.length; i++) { frame(BX[i], BD[i]); bpos[i * 3] = v.x; bpos[i * 3 + 1] = v.y; bpos[i * 3 + 2] = v.z; }
         bg.attributes.position.needsUpdate = true; bg.computeVertexNormals();
-        drips.forEach(function (d, j) {
-          var f = (j + 0.5) / D * N, i0 = Math.floor(f) % N, p = pts[i0]; v.copy(c[i0]).lerp(c[(i0 + 1) % N], f - Math.floor(f)); o.set(v.x, 0, v.z - cz).normalize();
-          d.position.copy(v).addScaledVector(o, p.out + 0.002).addScaledVector(up, -0.01);
-          side.crossVectors(up, o); m4.makeBasis(side, up, o); tilt.setFromAxisAngle(side.set(1, 0, 0), -p.lean - 0.08); d.quaternion.setFromRotationMatrix(m4).multiply(tilt);   // (running down the skirt as steeply as it flares there)
+        stones.forEach(function (st, k) {                              // (every stone lying on the blood, facing out from the skirt, turned its own way)
+          frame(st.x, st.d); p3.copy(v).addScaledVector(nrm, st.s * 0.35);
+          m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4).multiply(qs.setFromAxisAngle(zA, st.spin)).multiply(qs.setFromAxisAngle(xA, st.tip));
+          m4.compose(p3, q, sc.set(st.s, st.s, st.s)); gems.setMatrixAt(k, m4);
         });
+        gems.instanceMatrix.needsUpdate = true;
       };
       return [{ dress: true, obj: grp, setup: setup }];
     };
