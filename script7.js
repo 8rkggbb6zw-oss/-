@@ -677,30 +677,33 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function corsetRuffles(file, part) {                                 // (a corset's black lace frills: gathered all round its top edge, standing up from it, and round its bottom edge, falling)
     return function () {
-      var lace = document.createElement('canvas'); lace.width = 128; lace.height = 128; var lg = lace.getContext('2d'), L = Math.PI * 2;   // (black lace: a scalloped edge with picots, an open net with flowers worked into it, and a solid band with eyelets where it's sewn on)
-      function dot(x, y, r) { lg.beginPath(); lg.arc(x, y, r, 0, L); lg.fill(); }
-      lg.fillStyle = '#fff'; lg.fillRect(0, 30, 128, 98);
-      [32, 96].forEach(function (x) { lg.beginPath(); lg.arc(x, 34, 30, Math.PI, 0); lg.fill(); for (var k = 0; k <= 8; k++) { var a = Math.PI + k / 8 * Math.PI; dot(x + Math.cos(a) * 32, 34 + Math.sin(a) * 32, 2.6); } });   // (the scallops, picots round each)
-      lg.globalCompositeOperation = 'destination-out';
-      for (var y = 14, n = 0; y < 86; y += 7, n++) for (var x = (n % 2) * 3.5; x < 132; x += 7) dot(x, y, 2.4);   // (the open net)
-      lg.globalCompositeOperation = 'source-over';
-      [[64, 54, 1], [0, 54, 1], [128, 54, 1]].forEach(function (f) {   // (a flower in each repeat)
-        for (var p = 0; p < 6; p++) { var a = p / 6 * L; lg.beginPath(); lg.ellipse(f[0] + Math.cos(a) * 12, f[1] + Math.sin(a) * 12, 10, 5.5, a, 0, L); lg.fill(); }
-        dot(f[0], f[1], 6.5);
+      var lace = document.createElement('canvas'); lace.width = 256; lace.height = 128; var lg = lace.getContext('2d'), L = Math.PI * 2;   // (black Chantilly lace: a sheer net, outlined flowers on curling vines, fans in scallops edged with looped picots, and a corded band)
+      function ring(x, y, r, w) { lg.lineWidth = w; lg.beginPath(); lg.arc(x, y, r, 0, L); lg.stroke(); }
+      lg.strokeStyle = lg.fillStyle = '#fff';
+      lg.globalAlpha = 0.8; lg.fillRect(0, 30, 256, 72);                 // (the sheer net)
+      lg.globalAlpha = 1; lg.lineWidth = 0.8; for (var x = -128; x < 256; x += 6) { lg.beginPath(); lg.moveTo(x, 102); lg.lineTo(x + 72, 30); lg.moveTo(x + 72, 102); lg.lineTo(x, 30); lg.stroke(); }
+      lg.globalAlpha = 1;
+      for (var x = 32; x < 256; x += 64) {                               // (the scallops: a fan in each, looped picots round it)
+        lg.lineWidth = 3; lg.beginPath(); lg.arc(x, 36, 28, Math.PI, 0); lg.stroke();
+        lg.lineWidth = 1.4; for (var k = 1; k < 8; k++) { var a = Math.PI + k / 8 * Math.PI; lg.beginPath(); lg.moveTo(x, 36); lg.lineTo(x + Math.cos(a) * 26, 36 + Math.sin(a) * 26); lg.stroke(); }
+        for (var k = 0; k <= 10; k++) { var a = Math.PI + k / 10 * Math.PI; ring(x + Math.cos(a) * 32, 36 + Math.sin(a) * 32, 2.6, 1.3); }
+        ring(x, 36, 4, 2);
+      }
+      lg.lineWidth = 2.2; lg.beginPath(); lg.moveTo(0, 72); for (var x = 0; x <= 256; x += 64) lg.bezierCurveTo(x + 20, 52, x + 44, 92, x + 64, 72); lg.stroke();   // (a curling vine)
+      [[32, 62, -0.6], [96, 84, 0.6], [160, 62, -0.6], [224, 84, 0.6]].forEach(function (l) { lg.save(); lg.translate(l[0], l[1]); lg.rotate(l[2]); lg.beginPath(); lg.ellipse(0, 0, 9, 3.6, 0, 0, L); lg.fill(); lg.restore(); });   // (its leaves)
+      [64, 192].forEach(function (x) {                                   // (flowers, their petals outlined like corded lace)
+        for (var p = 0; p < 5; p++) { var a = p / 5 * L - Math.PI / 2; lg.save(); lg.translate(x + Math.cos(a) * 10, 68 + Math.sin(a) * 10); lg.rotate(a); lg.globalAlpha = 0.85; lg.beginPath(); lg.ellipse(0, 0, 9, 6, 0, 0, L); lg.fill(); lg.globalAlpha = 1; lg.lineWidth = 2.4; lg.stroke(); lg.restore(); }
+        lg.beginPath(); lg.arc(x, 68, 5, 0, L); lg.fill();
       });
-      [[32, 74, 0.5], [96, 74, -0.5], [32, 36, -0.5], [96, 36, 0.5]].forEach(function (l) { lg.beginPath(); lg.ellipse(l[0], l[1], 12, 4.5, l[2], 0, L); lg.fill(); });   // (leaves between)
-      lg.fillRect(0, 86, 128, 42);                                       // (the band it's sewn on by)
-      lg.globalCompositeOperation = 'destination-out';
-      [0, 64, 128].forEach(function (x) { dot(x, 54, 2.6); for (var p = 0; p < 6; p++) { var a = (p + 0.5) / 6 * L; dot(x + Math.cos(a) * 9, 54 + Math.sin(a) * 9, 1.3); } });   // (open flower centres)
-      [32, 96].forEach(function (x) { lg.beginPath(); lg.ellipse(x, 74, 7, 1.2, 0.5 * (x < 64 ? 1 : -1), 0, L); lg.fill(); });   // (leaf veins)
-      for (var x = 8; x < 128; x += 16) dot(x, 100, 3.2);                // (eyelets along the band)
+      lg.fillRect(0, 104, 256, 24); lg.lineWidth = 2; lg.beginPath(); lg.moveTo(0, 101); lg.lineTo(256, 101); lg.stroke();   // (the corded band)
+      lg.globalCompositeOperation = 'destination-out'; [64, 192].forEach(function (x) { ring(x, 68, 0.1, 3.4); }); for (var x = 8; x < 256; x += 16) { lg.beginPath(); lg.arc(x, 116, 3.2, 0, L); lg.fill(); }
       lg.globalCompositeOperation = 'source-over';
-      var lt = new THREE.CanvasTexture(lace); lt.wrapS = THREE.RepeatWrapping;
-      var grp = new THREE.Group(), N = 96, sk = null, cz = 0, edges = [], mat = new THREE.MeshStandardMaterial({ color: 0x151215, roughness: 0.85, side: THREE.DoubleSide, map: lt, alphaTest: 0.5 });
+      var lt = new THREE.CanvasTexture(lace); lt.wrapS = THREE.RepeatWrapping; lt.anisotropy = 4;
+      var grp = new THREE.Group(), N = 96, sk = null, cz = 0, edges = [], mat = new THREE.MeshStandardMaterial({ color: 0x151215, roughness: 0.85, side: THREE.DoubleSide, map: lt, transparent: true, alphaTest: 0.1 });
       [1, -1].forEach(function (dir) {
         var pos = new Float32Array((N + 1) * 3 * 3), idx = [];
         for (var i = 0; i < N; i++) for (var r = 0; r < 2; r++) { var a = i * 3 + r, b = a + 3; idx.push(a, b, a + 1, b, b + 1, a + 1); }
-        var uv = new Float32Array((N + 1) * 3 * 2); for (var i = 0; i <= N; i++) for (var r = 0; r < 3; r++) { uv[(i * 3 + r) * 2] = i / N * 16; uv[(i * 3 + r) * 2 + 1] = r / 2; }   // (the lace's scalloped edge along the frill's free edge)
+        var uv = new Float32Array((N + 1) * 3 * 2); for (var i = 0; i <= N; i++) for (var r = 0; r < 3; r++) { uv[(i * 3 + r) * 2] = i / N * 9; uv[(i * 3 + r) * 2 + 1] = r / 2; }   // (the lace's scalloped edge along the frill's free edge)
         var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx);
         var m = new THREE.Mesh(g, mat); m.frustumCulled = false; m.castShadow = true; grp.add(m); edges.push({ dir: dir, mesh: m, pts: [] });
       });
@@ -733,7 +736,7 @@ EVERDAWN_PARTS.push(function (THREE) {
             for (var i = 0; i <= N; i++) {
               v.copy(c[i % N]); o.set(v.x, 0, v.z - cz).normalize();
               var pleat = Math.sin(i / N * Math.PI * 2 * 24), h = (e.dir > 0 ? 0.016 : 0.012) * (0.85 + 0.15 * Math.sin(i * 1.3)), y0 = v.y - (e.dir > 0 ? 0.013 : 0);   // (softly gathered folds, a little uneven like lace; the top one sewn on where the corset's painted edge is, below its see-through rim)
-              A.setXYZ(i * 3, v.x + o.x * 0.006, y0 - e.dir * 0.012, v.z + o.z * 0.006);   // (standing a little out from the corset, clear of her skin above it, so none shows over it)
+              A.setXYZ(i * 3, v.x + o.x * 0.006, y0 - e.dir * 0.018, v.z + o.z * 0.006);   // (standing a little out from the corset, clear of her skin above it, so none shows over it)
               A.setXYZ(i * 3 + 1, v.x + o.x * (0.01 + 0.003 * pleat), y0 + e.dir * h * 0.5, v.z + o.z * (0.01 + 0.003 * pleat));
               A.setXYZ(i * 3 + 2, v.x + o.x * (0.015 + 0.006 * pleat), y0 + e.dir * h, v.z + o.z * (0.015 + 0.006 * pleat));
             }
