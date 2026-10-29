@@ -5,12 +5,14 @@ EVERDAWN_PARTS.push(function (THREE) {
   // ---- Victorian Vengeance's blood rubies: a band of ruby round where its skirt meets the corset, like blood poured
   // round it, with drips of ruby running down the skirt from it, each a different length and ending in a faceted drop,
   // and a few drops fallen below them ----
-  var rubyEnv = (function () {                                         // (something for the rubies to reflect: soft light above, a few bright lights to sparkle in, dark below)
+  var rubyEnv = (function () {                                         // (something for the rubies to reflect: mostly dark, a soft window of light above, and small bright lights to sparkle in)
     var faces = [];
     for (var f = 0; f < 6; f++) {
-      var c = document.createElement('canvas'); c.width = c.height = 32; var g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 32);
-      gr.addColorStop(0, f === 3 ? '#0c0607' : '#5a4c4a'); gr.addColorStop(1, f === 2 ? '#6a5c58' : '#0e0708'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
-      g.fillStyle = '#fff'; for (var k = 0; k < 3; k++) { g.beginPath(); g.arc((f * 11 + k * 13) % 28 + 2, (f * 7 + k * 9) % 14 + 3, 1.6 + k % 2, 0, Math.PI * 2); g.fill(); }
+      var c = document.createElement('canvas'); c.width = c.height = 64; var g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 64);
+      gr.addColorStop(0, f === 3 ? '#050203' : '#2a2224'); gr.addColorStop(0.5, '#0c0809'); gr.addColorStop(1, f === 2 ? '#3a3234' : '#040203'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+      if (f === 2) { g.fillStyle = 'rgba(255,248,240,0.9)'; g.fillRect(18, 18, 28, 28); }   // (a soft light overhead)
+      for (var k = 0; k < 6; k++) { var x = (f * 23 + k * 17) % 56 + 4, y = (f * 13 + k * 11) % 40 + 4, r = 1 + (k % 3) * 0.8, rg = g.createRadialGradient(x, y, 0, x, y, r * 3);
+        rg.addColorStop(0, '#fff'); rg.addColorStop(0.35, 'rgba(255,255,255,0.7)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(x - r * 3, y - r * 3, r * 6, r * 6); }
       faces.push(c);
     }
     var t = new THREE.CubeTexture(faces); t.needsUpdate = true; return t;
@@ -18,18 +20,19 @@ EVERDAWN_PARTS.push(function (THREE) {
   function bloodRubies(file, part) {
     return function () {
       var grp = new THREE.Group(), sk = null, cz = 0, N = 96, D = 30, drips = [];
-      var ruby = new THREE.MeshStandardMaterial({ color: 0x700010, emissive: 0x1e0004, roughness: 0.03, metalness: 0.62, envMap: rubyEnv, envMapIntensity: 2.4, flatShading: true });   // (deep crimson, catching the light in its facets)
-      var smooth = ruby.clone(); smooth.side = THREE.DoubleSide;     // (the band, cut in facets like the drops)
-      var R = 7, bpos = new Float32Array((N + 1) * R * 3), idx = [];
-      for (var i = 0; i < N; i++) for (var r = 0; r < R - 1; r++) { var a = i * R + r, b = a + R; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      var ruby = new THREE.MeshPhysicalMaterial({ color: 0x8a0614, emissive: 0x240004, roughness: 0.02, metalness: 0.5, clearcoat: 1, clearcoatRoughness: 0.01, envMap: rubyEnv, envMapIntensity: 3, flatShading: true });   // (deep crimson, catching the light in its facets)
+      var smooth = ruby.clone(); smooth.flatShading = false; smooth.metalness = 0.25; smooth.color.setHex(0xa10a1c); smooth.emissive.setHex(0x420007);   // (the drips polished smooth and glassy)
+      var R = 11, bpos = new Float32Array((N + 1) * R * 3), idx = [];
+      for (var i = 0; i < N; i++) for (var r = 0; r < R - 1; r++) { var a = i * R + r, b = a + R; idx.push(a, a + 1, b, b, a + 1, b + 1); }
       var bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
-      var band = new THREE.Mesh(bg, smooth); band.frustumCulled = false; band.castShadow = true; grp.add(band);
-      var bead = new THREE.IcosahedronGeometry(1, 1);
+      var cut = ruby.clone(); cut.side = THREE.DoubleSide; var band = new THREE.Mesh(bg, cut); band.frustumCulled = false; band.castShadow = true; grp.add(band);   // (the band cut in facets like the drops)
+      var bead = new THREE.IcosahedronGeometry(1, 1), spark = new THREE.SphereGeometry(1, 6, 4), glint = new THREE.MeshBasicMaterial({ color: 0xfff6f2, transparent: true, opacity: 0.9 });
       for (var j = 0; j < D; j++) {                                    // (each drip: a different length; some with a second bead partway, some with a drop fallen below)
         var len = 0.005 + 0.034 * Math.pow(Math.abs(Math.sin(j * 2.31 + 0.7)), 1.5), w0 = 0.0036 + 0.002 * Math.abs(Math.sin(j * 1.7)), d = new THREE.Group(), pts = [new THREE.Vector2(0, 0.003)];
         for (var n = 0; n <= 10; n++) { var t = n / 10; pts.push(new THREE.Vector2(w0 * (0.78 + 0.5 * Math.pow(1 - t, 3)) + 0.0004 * Math.sin(t * 7 + j), -t * len)); }
-        pts.push(new THREE.Vector2(0, -len)); d.add(new THREE.Mesh(new THREE.LatheGeometry(pts.reverse(), 9), ruby));
+        pts.push(new THREE.Vector2(0, -len)); d.add(new THREE.Mesh(new THREE.LatheGeometry(pts.reverse(), 16), smooth));
         var end = new THREE.Mesh(bead, ruby), er = w0 * 1.15; end.scale.set(er, er * 1.25, er); end.position.y = -len - er * 0.6; d.add(end);   // (the drop at its end)
+        var gl = new THREE.Mesh(spark, glint); gl.scale.setScalar(er * 0.22); gl.position.set(-er * 0.4, -len - er * 0.2, er * 0.95); d.add(gl);   // (a glint of light on it)
         if (j % 3 === 1 && len > 0.025) { var mid = new THREE.Mesh(bead, ruby), mr = w0 * 0.85; mid.scale.set(mr, mr * 1.3, mr); mid.position.y = -len * 0.5; d.add(mid); }
         if (j % 4 === 2) { var fall = new THREE.Mesh(bead, ruby), fr = w0 * 0.8; fall.scale.set(fr, fr * 1.3, fr); fall.position.y = -len - 0.012 - 0.008 * (j % 3); d.add(fall); }   // (a drop fallen below it)
         d.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
