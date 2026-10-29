@@ -20,23 +20,30 @@ EVERDAWN_PARTS.push(function (THREE) {
     return function () {
       var grp = new THREE.Group(), sk = null, cz = 0, N = 96, pts = [], c = [];
       var CL = 0.0071;                                                 // (how far apart the points round her are, in metres, near enough)
-      function band(x) { return 0.016 + 0.003 * Math.sin(x * 0.7) + 0.002 * Math.sin(x * 1.9); }   // (the blood poured round: a little uneven)
-      // (the drips: where round her each runs from, the round drop at its end (its radius), and how far down it runs)
-      var DR = [[3, 0.0078, 0.070], [9.5, 0.0059, 0.044], [14, 0.0089, 0.092], [20.5, 0.0065, 0.053], [26, 0.0081, 0.080], [32.5, 0.0056, 0.039], [38, 0.0085, 0.072], [44.5, 0.0067, 0.058],
-        [50, 0.0089, 0.094], [56.5, 0.0059, 0.046], [62, 0.0083, 0.077], [68.5, 0.0063, 0.056], [74, 0.0087, 0.087], [80.5, 0.0056, 0.041], [86, 0.0081, 0.070], [92, 0.0065, 0.051]];
-      function half(r, d) {                                            // (how wide a drip is, d down from the corset: a neck that swells into a round drop at its end, and curves out where it leaves the band)
+      // (the drips: where round her each runs from, the round drop at its end (its radius), how far down it runs, and how much and how often it
+      // wavers from side to side as it runs; spaced unevenly, some long, some short, as poured blood falls)
+      var DR = [[2, 0.0082, 0.088, 0.0014, 55], [7.5, 0.006, 0.045, 0.0008, 70], [15, 0.0088, 0.1, 0.0018, 48], [19.5, 0.0058, 0.036, 0.0006, 80], [28, 0.0078, 0.072, 0.0012, 60],
+        [35.5, 0.0066, 0.054, 0.001, 66], [41, 0.0086, 0.094, 0.0016, 52], [50, 0.0062, 0.042, 0.0007, 75], [57.5, 0.0084, 0.082, 0.0014, 57], [62.5, 0.0058, 0.034, 0.0006, 84],
+        [71, 0.008, 0.076, 0.0013, 62], [79.5, 0.0064, 0.05, 0.0009, 70], [88, 0.0086, 0.09, 0.0016, 50]];
+      function sway(r, d) { return r[3] * Math.sin(d * r[4] + r[0]) * Math.min(1, d / 0.025); }   // (a drip wavering a little as it runs)
+      function band(x) {                                               // (the blood poured round: a little uneven, and sagging into the top of each drip)
+        var b = 0.013 + 0.002 * Math.sin(x * 0.7) + 0.0015 * Math.sin(x * 1.9);
+        for (var k = 0; k < DR.length; k++) { var dx = Math.abs(((x - DR[k][0] + N * 1.5) % N) - N / 2); b += 0.006 * Math.exp(-dx * dx / 2.2); }
+        return b;
+      }
+      function half(r, d) {                                            // (how wide a drip is, d down from the corset: pouring out of the band, thinning as it runs, then swelling into the drop at its end)
         var rb = r[1], L = r[2], c0 = L - rb, b = band(r[0]);
         if (d > c0) return Math.sqrt(Math.max(0, rb * rb - (d - c0) * (d - c0)));
-        var neck = rb * (0.56 + 0.3 * Math.pow(d / L, 2)); if (d < b + 0.01) neck += Math.pow((b + 0.01 - d) / 0.01, 2) * 0.006; return neck;
+        var neck = rb * (0.48 + 0.4 * Math.pow(d / L, 4)); if (d < b + 0.014) neck += Math.pow((b + 0.014 - d) / 0.014, 2) * 0.008; return neck;
       }
-      function inside(x, d) { if (d <= band(x)) return true; for (var k = 0; k < DR.length; k++) { var dx = Math.abs(((x - DR[k][0] + N * 1.5) % N) - N / 2) * CL; if (d <= DR[k][2] && dx <= half(DR[k], d)) return true; } return false; }
+      function inside(x, d) { if (d <= band(x)) return true; for (var k = 0; k < DR.length; k++) { var dx = Math.abs(((x - DR[k][0] - sway(DR[k], d) / CL + N * 1.5) % N) - N / 2) * CL; if (d <= DR[k][2] && dx <= half(DR[k], d)) return true; } return false; }
       // (the blood under the stones, deep red, so no black shows between them: the band all round, and each drip)
       var BX = [], BD = [], idx = [], CO = N * 2, RO = 6;
       for (var i = 0; i <= CO; i++) for (var r = 0; r <= RO; r++) { var x = i / CO * N; BX.push(x); BD.push(band(x) * r / RO + 0.002); }
       for (var i = 0; i < CO; i++) for (var r = 0; r < RO; r++) { var a = i * (RO + 1) + r, b = a + RO + 1; idx.push(a, a + 1, b, b, a + 1, b + 1); }
       DR.forEach(function (r) {
-        var M = 16, K = 5, o0 = BX.length;
-        for (var m = 0; m <= M; m++) { var d = r[2] * m / M, h = half(r, d) * 1.08 / CL; for (var k = 0; k < K; k++) { BX.push(r[0] + (k / (K - 1) * 2 - 1) * h); BD.push(d); } }
+        var M = 24, K = 5, o0 = BX.length;
+        for (var m = 0; m <= M; m++) { var d = r[2] * m / M, h = half(r, d) * 1.08 / CL; for (var k = 0; k < K; k++) { BX.push(r[0] + sway(r, d) / CL + (k / (K - 1) * 2 - 1) * h); BD.push(d); } }
         for (var m = 0; m < M; m++) for (var k = 0; k < K - 1; k++) { var a = o0 + m * K + k, b = a + K; idx.push(a, b, a + 1, b, b + 1, a + 1); }
       });
       var bpos = new Float32Array(BX.length * 3), bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(bpos, 3)); bg.setIndex(idx);
@@ -56,9 +63,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cut = gemCut(20, function (t, sc, z) { return [Math.cos(t) * sc, Math.sin(t) * sc, z]; }, [0, 0, 0.445], [0, 0, -0.8]);   // (the round stones: a brilliant cut)
       var stones = [], rnd = 7;
       function rand() { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; }
-      for (var x = 0; x < N; x += 0.36) for (var d = 0.0024; d < 0.1; d += 0.0027 + rand() * 0.0007) {   // (packed close over all the blood)
-        var xx = x + (rand() - 0.5) * 0.2; if (!inside(xx, d)) continue;
-        var sz = 0.0013 + rand() * 0.0013; if (rand() < 0.05) sz *= 1.6;   // (now and then a bigger feature stone)
+      for (var x = 0; x < N; x += 0.5) for (var d = 0.003; d < 0.11; d += 0.0037 + rand() * 0.0008) {   // (packed close over all the blood)
+        var xx = x + (rand() - 0.5) * 0.3; if (!inside(xx, d)) continue;
+        var sz = 0.0017 + rand() * 0.0015; if (rand() < 0.05) sz *= 1.5;   // (now and then a bigger feature stone)
         while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
       }
@@ -136,7 +143,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         });
         twinkle.instanceMatrix.needsUpdate = true;
         DR.forEach(function (r, k) {                                   // (each teardrop hanging at its drip's end, its point up into it, facing out from the skirt)
-          var rb = r[1]; frame(r[0], r[2] - rb * 1.05); p3.copy(v).addScaledVector(nrm, rb * 0.42);
+          var rb = r[1]; frame(r[0] + sway(r, r[2] - rb) / CL, r[2] - rb * 1.05); p3.copy(v).addScaledVector(nrm, rb * 0.42);
           m4.makeBasis(side, w.crossVectors(nrm, side), nrm); q.setFromRotationMatrix(m4); m4.compose(p3, q, sc.set(rb * 1.25, rb * 1.45, rb * 1.1)); drops.setMatrixAt(k, m4);
         });
         drops.instanceMatrix.needsUpdate = true;
