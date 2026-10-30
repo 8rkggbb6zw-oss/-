@@ -1320,7 +1320,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     pr.R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); pr.R.setSize(w, h, false);
     var fit = 1.76, cam = pr.cam; cam.aspect = w / h; cam.position.set(0, 0.85, fit * 0.5 / Math.tan(12 * Math.PI / 180) / Math.min(1, cam.aspect * 1.9)); prLook.set(0, 0.83, 0);   // (all of you, filling the picture)
     var parent = player.parent, pos = player.position.clone(), rot = player.rotation.clone(), vis = player.visible;   // (you, borrowed for a moment, facing out at yourself)
-    pr.S.add(player); player.position.set(0, 0, 0); player.rotation.set(0, 0, 0); player.visible = true;
+    pr.S.add(player); player.position.set(0, 0, 0); player.rotation.set(0, typeof prSpin === "number" ? prSpin : 0, 0); player.visible = true; if (typeof prView === 'function') prView(cam);
     var zt = (Date.now() - closeUpAt) / 1000, z = zt < 0.6 ? zt / 0.6 : zt < 2.8 ? 1 : zt < 3.5 ? 1 - (zt - 2.8) / 0.7 : 0;   // (just put on a necklace: in close, a moment's look, and back out)
     if (z > 0 && you && you.bones.neck) {
       z = z * z * (3 - 2 * z); player.updateMatrixWorld(true); var n = you.bones.neck.getWorldPosition(new THREE.Vector3()), d = 0.13 / Math.tan(12 * Math.PI / 180) / Math.min(1, cam.aspect * 1.4);
