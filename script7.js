@@ -458,7 +458,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var W = sk.work.width, H = sk.work.height, g = sk.work.getContext('2d', { willReadFrequently: true });
       g.clearRect(0, 0, W, H); g.drawImage(sk.base, 0, 0);
       if (bareLegs && bareCv) g.drawImage(bareCv, 0, BARE_LEGS.y * H / 2048, W, bareCv.height * H / 2048);
-      if (bareTorso && torsoCv) g.drawImage(torsoCv, BARE_TORSO.x * W / 2048, BARE_TORSO.y * H / 2048, BARE_TORSO.w * W / 2048, BARE_TORSO.h * H / 2048);   // (her bare middle, under a crop top)   // (the stockings she started in taken off)
+      if (bareTorso && torsoCv) g.drawImage(bareTorso === 2 && window.EVERDAWN_UNDIES || torsoCv, BARE_TORSO.x * W / 2048, BARE_TORSO.y * H / 2048, BARE_TORSO.w * W / 2048, BARE_TORSO.h * H / 2048);   // (her bare middle, under a crop top)   // (the stockings she started in taken off)
       if (legSpec && legSpec.paint) {                                  // (legwear with its own pattern: paint(how high above her knee, which leg, how far round it) gives a colour and how solid, or nothing)
         var up = kneeY + legSpec.upTo;
         if (!legMap || legMap.W !== W || legMap.up !== up) legMap = buildLegMap(W, H, up);
@@ -487,9 +487,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       skins.forEach(paintSkin);
     }
     function torsoBare(v) {                                            // (in a top and bottoms rather than a dress: her middle bare)
-      v = !!v; if (v === bareTorso) return; bareTorso = v;
+      v = v === 2 ? 2 : !!v; if (v === bareTorso) return; bareTorso = v;   // (2: undressed, in her undergarments)
       if (v) { if (bodyMat) addSkin(bodyMat); outfits.forEach(function (o) { o.forEach(function (m) { if (/Body_00_SKIN/.test(m.material.name)) addSkin(m.material); }); }); }
-      skins.forEach(paintSkin);
+      skins.forEach(paintSkin); showLook();
     }
     var shownList = [];
     function wearOutfit(made) {                                        // (null: her own dress; or a list, like a top and bottoms, worn together)
@@ -540,7 +540,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (made === shoesShown) return; shoesShown = made; showLook();
     }
     function showLook() {                                              // (what of her own, and of each outfit, shows)
-      meshes.forEach(function (m) { var n = m.material.name || ''; if (ORIGINAL.test(n)) m.visible = !outfitShown; if (/Shoes/.test(n)) m.visible = !shoesShown; });
+      meshes.forEach(function (m) { var n = m.material.name || ''; if (ORIGINAL.test(n)) m.visible = !outfitShown && (bareTorso !== 2 || /Body_00_SKIN/.test(n)); if (/Shoes/.test(n)) m.visible = !shoesShown; });
       var bodyFrom = shownList[shownList.length - 1];                   // (her body from just one of them: the last, so it isn't there twice)
       outfits.forEach(function (o) { var on = shownList.indexOf(o) >= 0; o.forEach(function (m) { m.visible = on && (!/Body_00_SKIN/.test(m.material.name) || o === bodyFrom); }); });
       shoeSets.forEach(function (o) { o.boots.forEach(function (m) { m.visible = o === shoesShown; }); if (o.patch) o.patch.visible = o === shoesShown && !outfitShown; });   // (an outfit's own body has her shins already)
@@ -1204,7 +1204,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var dc = worn.shirt && clothStock(worn.shirt);
     var dm = dc && dc.model ? outfitModel(dc.model) : null;
     var pc = worn.pants && clothStock(worn.pants), pm = pc && pc.model ? outfitModel(pc.model) : null;
-    you.wearOutfit([dm, pm]); you.torsoBare(!!(dm || pm) && !(worn.shirt && ITEMS[worn.shirt] && ITEMS[worn.shirt].slot === 'dress'));   // (a top and bottoms: her middle bare between them)                                          // (her dress, or her top and bottoms: her own dress until they've arrived)
+    you.wearOutfit([dm, pm, !worn.shirt && !worn.pants ? outfitModel('Undergarments.vrm') : null]); you.torsoBare(worn.shirt && ITEMS[worn.shirt] && ITEMS[worn.shirt].slot === 'dress' ? 0 : dm && pm ? 1 : 2);   // (a top and bottoms: her middle bare between them)                                          // (her dress, or her top and bottoms: her own dress until they've arrived)
     you.armsOut(dm ? dc.armsOut || 0 : 0);                             // (and her arms held clear of it)
     var sk = worn.socks && clothStock(worn.socks); you.legPaint(sk && sk.legs || null, worn.socks !== 'cloth_original_stockings');   // (her socks; and the stockings she started in, unless she's taken them off)
     var bt = worn.shoes && clothStock(worn.shoes); you.wearShoes(bt && bt.model ? outfitModel(bt.model) : null);   // (and her boots: her own until the others have arrived)
