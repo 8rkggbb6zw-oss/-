@@ -400,7 +400,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var P = geo.attributes.position, I = geo.index, cut = function (fl) { var keep = []; for (var i = 0; i < I.count; i += 3) { var a = I.getX(i), b = I.getX(i + 1), c = I.getX(i + 2), y = Math.max(P.getY(a), P.getY(b), P.getY(c)); if (y > fl && y < top) keep.push(a, b, c); } return new THREE.Uint32BufferAttribute(keep, 1); };
       var pg = new THREE.BufferGeometry(); Object.keys(geo.attributes).forEach(function (k) { pg.setAttribute(k, geo.attributes[k]); });
       if (floor != null) { pg.setIndex(cut(floor)); return pg; }
-      pg.userData.cuts = { tall: cut(0.19), low: cut(0.06) }; pg.setIndex(pg.userData.cuts.tall); return pg;   // (and lower, for ankle boots, so her ankles show above them)
+      pg.userData.cuts = { tall: cut(0.19), low: cut(0.06), bare: cut(-1) }; pg.setIndex(pg.userData.cuts.tall); return pg;   // (and lower, for ankle boots, so her ankles show above them)
     }
     (function () {                                                     // (her legs without the black stockings and garter she started in: plain skin for those parts of her skin picture)
       var col = new Image(), msk = new Image(), n = 0;
@@ -514,7 +514,7 @@ EVERDAWN_PARTS.push(function (THREE) {
           mat = toon(o.material); var key = (nm.match(/CLOTH(_\d+)?/) || [''])[0];
           if (tex && tex[key]) { var t = new THREE.TextureLoader().load(tex[key]); t.flipY = false; t.encoding = mat.map ? mat.map.encoding : t.encoding; mat.map = mat.emissiveMap = t; }
         } else {                                                        // (the shins: only the body below her knees, in her own skin)
-          geo = bodyPart(geo, 0.43, Math.max(0.05, top - 0.05)); geo.userData.knee = kneeOf(o); mat = bodyMat; legGeos.push(geo); legMap = null;   // (down to just inside the top of these boots)
+          geo = bodyPart(geo, 0.43, top ? Math.max(0.05, top - 0.05) : -1); geo.userData.knee = kneeOf(o); mat = bodyMat; legGeos.push(geo); legMap = null;   // (down to just inside the top of these boots)
         }
         var m = new THREE.SkinnedMesh(geo, mat); m.name = o.name; m.frustumCulled = false; m.castShadow = m.receiveShadow = true; m.visible = false;
         o.matrixWorld.decompose(m.position, m.quaternion, m.scale); root.add(m);
@@ -533,8 +533,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     function soleLift() {                                              // (soles reaching lower than her own boots' would just now: lift her by that, so they stand on the ground, not in it)
       if (!shoesShown) return 0;
       ownSole = ownSole || sole(meshes.filter(function (m) { return m.isSkinnedMesh && /Shoes/.test(m.material.name || ''); }));
-      shoesShown.sole = shoesShown.sole || sole(shoesShown.boots);
-      return Math.max(0, lowest(ownSole) - lowest(shoesShown.sole));
+      shoesShown.sole = shoesShown.sole || sole(shoesShown.boots.length ? shoesShown.boots : [shoesShown.patch]);
+      return Math.max(shoesShown.bare ? -1 : 0, lowest(ownSole) - lowest(shoesShown.sole));   // (barefoot: down onto her bare soles)
     }
     function wearShoes(made) {                                         // (null: her own boots)
       if (made === shoesShown) return; shoesShown = made; showLook();
@@ -545,7 +545,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       outfits.forEach(function (o) { var on = shownList.indexOf(o) >= 0; o.forEach(function (m) { m.visible = on && (!/Body_00_SKIN/.test(m.material.name) || o === bodyFrom); }); });
       shoeSets.forEach(function (o) { o.boots.forEach(function (m) { m.visible = o === shoesShown; }); if (o.patch) o.patch.visible = o === shoesShown && !outfitShown; });   // (an outfit's own body has her shins already)
       var low = !!(shoesShown && shoesShown.top < 0.19), changed = false;   // (in ankle boots: an outfit's body down to her ankles)
-      outfits.forEach(function (o) { o.forEach(function (m) { var c = m.geometry.userData.cuts; if (!c) return; var want = low ? c.low : c.tall; if (m.geometry.index !== want) { m.geometry.setIndex(want); changed = true; } }); });
+      outfits.concat([meshes]).forEach(function (o) { o.forEach(function (m) { var c = m.geometry.userData.cuts; if (!c) return; var want = shoesShown && shoesShown.bare ? c.bare : low ? c.low : c.tall; if (m.geometry.index !== want) { m.geometry.setIndex(want); changed = true; } }); });
       if (changed) { legMap = null; if (legSpec || bareLegs || bareTorso) skins.forEach(paintSkin); }
     }
     return { root: R, bones: B, rest: rest, meshes: meshes, express: express, outfit: outfit, wearOutfit: wearOutfit, torsoBare: torsoBare, shoes: shoes, wearShoes: wearShoes, armsOut: function (v) { armsOutGoal = v; }, handRest: function (f) { handRest = f; }, handClear: function (f) { handClear = f; }, legPaint: legPaint };
@@ -1176,7 +1176,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       'https://cdn.jsdelivr.net/gh/8rkggbb6zw-oss/-@claude/coding-conversation-f08c0n/' + f].filter(Boolean);
     (function load(n) {
       if (!THREE.GLTFLoader || n >= urls.length) { if (window.console) console.warn('Everdawn: ' + file + ' could not be loaded'); return; }
-      new THREE.GLTFLoader().load(urls[n], function (g) { try { var k = outfitKinds[file]; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g, k && k.tex, k); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { load(n + 1); });
+      new THREE.GLTFLoader().load(urls[n], function (g) { try { var k = outfitKinds[file]; o.g = g; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g, k && k.tex, k); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { load(n + 1); });
     })(0);
     return null;
   }
@@ -1207,7 +1207,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     you.wearOutfit([dm, pm, !worn.shirt && !worn.pants ? outfitModel('Undergarments.vrm') : null]); you.torsoBare(worn.shirt && ITEMS[worn.shirt] && ITEMS[worn.shirt].slot === 'dress' ? 0 : dm && pm ? 1 : 2);   // (a top and bottoms: her middle bare between them)                                          // (her dress, or her top and bottoms: her own dress until they've arrived)
     you.armsOut(dm ? dc.armsOut || 0 : 0);                             // (and her arms held clear of it)
     var sk = worn.socks && clothStock(worn.socks); you.legPaint(sk && sk.legs || null, worn.socks !== 'cloth_original_stockings');   // (her socks; and the stockings she started in, unless she's taken them off)
-    var bt = worn.shoes && clothStock(worn.shoes); you.wearShoes(bt && bt.model ? outfitModel(bt.model) : null);   // (and her boots: her own until the others have arrived)
+    var bt = worn.shoes && clothStock(worn.shoes); you.wearShoes(bt && bt.model ? outfitModel(bt.model) : worn.shoes ? null : barefoot());   // (and her boots: her own until the others have arrived)
     OUTFIT.forEach(function (sl) {
       var id = worn[sl[0]], cur = wearShown[sl[0]], c = id && clothStock(id);
       if (c && c.model && !outfitModel(c.model)) id = null;            // (its dress still on its way: nothing extra on her yet)
