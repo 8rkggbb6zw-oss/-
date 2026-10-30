@@ -63,8 +63,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cut = gemCut(20, function (t, sc, z) { return [Math.cos(t) * sc, Math.sin(t) * sc, z]; }, [0, 0, 0.445], [0, 0, -0.8]);   // (the round stones: a brilliant cut)
       var stones = [], rnd = 7;
       function rand() { rnd = (rnd * 16807) % 2147483647; return rnd / 2147483647; }
-      for (var x = 0; x < N; x += 0.5) for (var d = 0.003; d < 0.11; d += 0.0037 + rand() * 0.0008) {   // (packed close over all the blood)
-        var xx = x + (rand() - 0.5) * 0.3; if (!inside(xx, d)) continue;
+      for (var x = 0; x < N; x += 0.85) for (var d = 0.004; d < 0.11; d += 0.0058 + rand() * 0.0014) {   // (packed close over all the blood)
+        var xx = x + (rand() - 0.5) * 0.4; if (!inside(xx, d)) continue;
         var sz = 0.0017 + rand() * 0.0015; if (rand() < 0.05) sz *= 1.5;   // (now and then a bigger feature stone)
         while (sz > 0.0006 && !(inside(xx + sz / CL, d) && inside(xx - sz / CL, d) && inside(xx, d + sz) && inside(xx, Math.max(0.001, d - sz)))) sz *= 0.8;   // (smaller at the edges, so none hang off)
         stones.push({ x: xx, d: d, s: sz, spin: rand() * Math.PI * 2, tip: (rand() - 0.5) * 0.5 });
