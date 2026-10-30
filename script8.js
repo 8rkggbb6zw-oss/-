@@ -250,6 +250,15 @@ EVERDAWN_PARTS.push(function (THREE) {
   });
   function prUp(e) { delete prTouch[e.pointerId]; prTouch.pinch = undefined; if (!Object.keys(prTouch).length) clPic.style.cursor = 'grab'; }
   clPic.addEventListener('pointerup', prUp); clPic.addEventListener('pointercancel', prUp);
+  window.everdawnPadCloset = function (rx, ry, look, dt, reset) {    // (a controller: asked with nothing, whether the closet's open; told the right stick, the triggers and a click of the right stick)
+    if (!closetOpen) return false; if (rx === undefined) return true;
+    function dz(v) { return Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82; }
+    rx = dz(rx); ry = dz(ry); look = Math.abs(look) < 0.1 ? 0 : look;
+    if (rx || ry || look || reset) prHint.style.opacity = 0;
+    if (reset) { prSpin = prZoom = prLift = 0; return true; }
+    prSpin += rx * 3 * dt; prZoom = Math.max(0, Math.min(1, prZoom - ry * 1.3 * dt)); prLift += look * 0.6 * dt * prZoom;
+    return true;
+  };
   clPic.addEventListener('wheel', function (e) { prHint.style.opacity = 0; prZoom = Math.max(0, Math.min(1, prZoom - e.deltaY * 0.0015)); e.preventDefault(); }, { passive: false });
 
   // ---- what she wears underneath: with nothing on (or just a top, or just bottoms), plain black undergarments, from

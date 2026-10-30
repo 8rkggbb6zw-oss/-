@@ -74,6 +74,11 @@
     { name: 'Zoom In Map', section: 'World Map', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
     { name: 'Zoom Out Map', section: 'World Map', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
     { name: 'Center Map Focus', section: 'World Map', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
+    { name: 'Turn Her', section: 'Closet', ps: RSTICK, xbox: RSTICK, sw: RSTICK, note: true },   // (in the closet, her picture: the right stick, left and right, turns her round; worked in menuNav below)
+    { name: 'Zoom In Closet', section: 'Closet', ps: RSTICK_UP, xbox: RSTICK_UP, sw: RSTICK_UP, note: true },
+    { name: 'Zoom Out Closet', section: 'Closet', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
+    { name: 'Look Up and Down', section: 'Closet', ps: 'L2 / R2', xbox: 'LT / RT', sw: 'ZL / ZR', note: true },   // (zoomed in: the left trigger looks up her, the right one down)
+    { name: 'Reset Closet View', section: 'Closet', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
     { name: 'Previous Tab', section: 'Menu', ps: 'L1', xbox: 'LB', sw: 'L', note: true },   // (the same in Settings and on the title screen: shown again under Menu)
     { name: 'Next Tab', section: 'Menu', ps: 'R1', xbox: 'RB', sw: 'R', note: true },
     { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },
@@ -216,6 +221,9 @@
       return true;
     }
     cursor.hidden = true; cursorOn = false;
+    if (window.everdawnPadCloset && window.everdawnPadCloset()) {         // (the closet open: the right stick and triggers work her picture, while the left stick still picks clothes)
+      var t6 = pad.buttons[6], t7 = pad.buttons[7]; window.everdawnPadCloset(pad.axes[2] || 0, pad.axes[3] || 0, (t6 ? t6.value : 0) - (t7 ? t7.value : 0), dt, edge(pad, 11));
+    }
     var list = boxes(scr); if (!list.length) return true;
     var key = scr.map(function (s) { var h = s.querySelector('.inv-head b, h2'); return s.className + '|' + (h ? h.textContent : ''); }).join();
     if (key !== navKey) { navKey = key; lastC = null; if (focusEl) setFocus(null); }   // (a new screen or page: start on its first slot or tile)
