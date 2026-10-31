@@ -288,11 +288,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   var vv = CLOTH_STOCK.filter(function (c) { return c.id === 'cloth_victorian_vengeance'; })[0];
   if (vv) { var vvWear = vv.wear; vv.wear = function () { return vvWear().concat(bloodRubies('Victorian Vengeance.vrm', 'CLOTH_01')()); }; }   // (worn, along with its frills: its blood rubies)
   // ---------- Atom & Alembic, the science lab on the Western Isle ----------
-  // A cozy alchemist's laboratory: walls of honey stone banded with dark timber, a slate roof with a smoking chimney, and
-  // at the back a round stone observatory tower with a copper dome, a brass telescope poking out of it. Inside: shelves
-  // of glowing potions, a long workbench of bubbling flasks over a Bunsen burner, a copper alembic, a chalkboard of
-  // formulas, a telescope by the round window, a glowing crystal, and a counter ready for the shop to come. Stand by
-  // its door and press Interact to go in; walk out through the doorway to leave.
+  // A cozy stone laboratory outside, walls of honey stone banded with dark timber under a slate roof with a smoking
+  // chimney; inside, bright and modern (see below). Stand by its door and press Interact to go in; walk out through the
+  // doorway to leave.
   var LAB_X = -120, LAB_Z = 16, LAB_TURN = 2.03, LAB_HW = 4, LAB_HD = 3.2, LAB_H = 3.0, LAB_FY = 0.15;
   function labWorld(lx, lz) { var c = Math.cos(LAB_TURN), s = Math.sin(LAB_TURN); return { x: LAB_X + lx * c + lz * s, z: LAB_Z - lx * s + lz * c }; }
   function labFront(d) { return labWorld(0, LAB_HD + d); }
@@ -318,7 +316,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var lbGlow = rMat(0xffd89a, { emissive: 0xffc070, emissiveIntensity: 0.4, roughness: 0.2 });          // (warm light through the windows)
   var lbGreen = rMat(0x8affc0, { emissive: 0x3cff9a, emissiveIntensity: 0.6, roughness: 0.2 });         // (an alchemist's green glow)
   var labGroup = new THREE.Group(); labGroup.position.set(LAB_X, LAB_FY, LAB_Z); labGroup.rotation.y = LAB_TURN; scene.add(labGroup);
-  var lbLamps = [], lbSmoke = [], lbTele = null;
+  var lbLamps = [], lbSmoke = [];
   function lbP(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || labGroup); }
   function lbLamp(par, x, y, z) {                                       // (a little iron lantern, glowing after dark)
     lbP(new THREE.BoxGeometry(0.2, 0.28, 0.2), lbIron, x, y, z, 0, 0, 0, par);
@@ -347,18 +345,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (the chimney, smoking a little green)
     lbP(new THREE.BoxGeometry(0.6, 1.9, 0.6), lbStone, -W + 1.0, H + 1.2, -0.9); lbP(new THREE.BoxGeometry(0.72, 0.14, 0.72), lbWood, -W + 1.0, H + 2.18, -0.9);
     for (var k = 0; k < 6; k++) { var sm = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcfe8d8, transparent: true, opacity: 0, depthWrite: false })); G.add(sm); lbSmoke.push({ m: sm, k: k }); }
-    // (the round observatory tower at the back, with its copper dome, a star on the spire and a telescope out of its slit)
-    var TX = W - 1.1, TZ = -D - 0.6;
-    lbP(new THREE.CylinderGeometry(1.3, 1.4, H + 1.6, 20), lbStone, TX, (H + 1.6) / 2, TZ);
-    lbP(new THREE.CylinderGeometry(1.45, 1.45, 0.18, 20), lbWood, TX, H + 1.6, TZ);
-    lbP(new THREE.SphereGeometry(1.42, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), lbCopper, TX, H + 1.68, TZ);
-    lbP(new THREE.BoxGeometry(0.36, 1.2, 0.08), lbIron, TX, H + 2.5, TZ + 1.18, -0.75, 0, 0);   // (the dome's slit)
-    lbTele = new THREE.Group(); lbTele.position.set(TX, H + 2.3, TZ + 0.8); lbTele.rotation.x = -0.75; G.add(lbTele);
-    lbP(new THREE.CylinderGeometry(0.09, 0.13, 1.6, 12), lbBrass, 0, 0.6, 0, 0, 0, 0, lbTele); lbP(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 12), lbBrass, 0, 1.4, 0, 0, 0, 0, lbTele);
-    lbP(new THREE.CylinderGeometry(0.02, 0.05, 0.6, 6), lbBrass, TX, H + 3.3, TZ);
-    var star = new THREE.Shape(); for (var i = 0; i < 10; i++) { var a = i / 10 * Math.PI * 2, r = i % 2 ? 0.08 : 0.2; if (i) star.lineTo(Math.sin(a) * r, Math.cos(a) * r); else star.moveTo(0, r); }
-    lbP(new THREE.ExtrudeGeometry(star, { depth: 0.04, bevelEnabled: false }), rMat(0xffe08a, { emissive: 0xffc840, emissiveIntensity: 0.6, metalness: 0.5 }), TX, H + 3.75, TZ - 0.02);
-    [0.9, -0.6].forEach(function (a) { lbP(new THREE.BoxGeometry(0.34, 0.6, 0.06), lbGlow, TX + Math.sin(a) * 1.33, 1.9, TZ + Math.cos(a) * 1.33, 0, a, 0); });   // (its little windows)
     // (the arched front door, studded, under a round stone arch)
     var door = new THREE.Group(); door.position.set(0, 0, D + 0.12); G.add(door);
     var arch = new THREE.Shape(); arch.moveTo(-0.6, 0); arch.lineTo(0.6, 0); arch.lineTo(0.6, 1.6); arch.absarc(0, 1.6, 0.6, 0, Math.PI, false); arch.lineTo(-0.6, 0);   // (the door: arched at the top)
@@ -405,115 +391,132 @@ EVERDAWN_PARTS.push(function (THREE) {
     function wall(lx, lz, r) { var p = labWorld(lx, lz); solids.push({ x: p.x, z: p.z, r: r || 0.33 }); }
     for (var x = -LAB_HW; x <= LAB_HW + 0.01; x += 0.5) { if (Math.abs(x) > 0.75) wall(x, LAB_HD); wall(x, -LAB_HD); }
     for (var z = -LAB_HD; z <= LAB_HD + 0.01; z += 0.5) [-LAB_HW, LAB_HW].forEach(function (x2) { wall(x2, z); });
-    wall(0, 0, 2.6); wall(LAB_HW - 1.1, -LAB_HD - 0.6, 1.45);                                      // (inside, and the tower)
+    wall(0, 0, 2.6);                                                                  // (inside)
     wall(-LAB_HW + 0.6, LAB_HD + 0.75, 0.35); wall(LAB_HW - 0.7, LAB_HD + 0.75, 0.4);              // (the barrel and the fern)
     layTownPath(lbLine);
   })();
-  // ---- inside ----
-  var labScene = new THREE.Scene(); labScene.background = new THREE.Color(0x2a2230);
+  // ---- inside: a bright, modern laboratory. White panelled walls and gleaming floor ringed with light, glowing strips along
+  // the ceiling, a U of white lab benches in the middle with holographic screens floating over them, tablets and a robotic
+  // arm at work; machines along the back wall, a wall of plants growing in lit tubes, and by the big window onto a night
+  // city, a row of glass growth chambers. The counter by the door is ready for the shop to come ----
+  var labScene = new THREE.Scene(); labScene.background = new THREE.Color(0xdfe6ee);
   var LBI_X = -1200, LBI_Z = 1000, LBI_W = LAB_HW * 2, LBI_D = LAB_HD * 2, LBI_H = 3.2, LBI_EXIT_Z = LBI_D / 2 - 0.6, inLab = false;
   var labRoom = new THREE.Group(); labRoom.position.set(LBI_X, 0, LBI_Z); labScene.add(labRoom);
-  labScene.add(new THREE.HemisphereLight(0xffe8d0, 0x3a2a40, 0.55));
-  var lbLights = [[-2, 0.5, 0xffc890], [2, -0.8, 0xffd0a0], [0.4, -1.2, 0x7affc0]].map(function (p) { var l = new THREE.PointLight(p[2], 0.6, 9); l.position.set(LBI_X + p[0], 2.6, LBI_Z + p[1]); labScene.add(l); return l; });
-  var labSolids = [], lbWalls = [], lbBubbles = [], lbFlames = [], lbCrystal = null, LB_COUNTER = [2.4, 1.6], LB_COUNTER_W = 2.0;
+  labScene.add(new THREE.HemisphereLight(0xeef4ff, 0x7a889c, 0.5));
+  var lbSun = new THREE.DirectionalLight(0xffffff, 0.35); lbSun.position.set(LBI_X - 2, 6, LBI_Z + 4); lbSun.target.position.set(LBI_X, 0, LBI_Z); labScene.add(lbSun); labScene.add(lbSun.target);
+  var lbLights = [[-2, 0, 0xe8f2ff], [2, 0, 0xe8f2ff], [0, -1.8, 0x9ae8ff]].map(function (p) { var l = new THREE.PointLight(p[2], 0.45, 9); l.position.set(LBI_X + p[0], 2.8, LBI_Z + p[1]); labScene.add(l); return l; });
+  var labSolids = [], lbWalls = [], lbHolo = [], lbArms = [], lbChambers = [], LB_COUNTER = [2.4, 1.6], LB_COUNTER_W = 2.0;
   (function (R) {
     var W = LBI_W / 2, D = LBI_D / 2, H = LBI_H;
     function p(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || R); }
-    var floor = new THREE.MeshStandardMaterial({ roughness: 0.8, map: lbTex(256, 256, function (g, w, h) {   // (worn oak boards)
-      for (var i = 0; i < 8; i++) { var c = 110 + (i * 23) % 30; g.fillStyle = 'rgb(' + c + ',' + Math.round(c * 0.7) + ',' + Math.round(c * 0.45) + ')'; g.fillRect(0, i * 32, w, 31); g.fillStyle = 'rgba(40,24,12,0.5)'; g.fillRect(0, i * 32 + 31, w, 1); g.fillRect((i * 97) % w, i * 32, 1, 32); }
-    }, 3, 3) });
-    p(new THREE.PlaneGeometry(LBI_W, LBI_D), floor, 0, 0, 0, -Math.PI / 2, 0, 0);
-    p(new THREE.CircleGeometry(1.3, 32), rMat(0x4a2a5a, { roughness: 1 }), -0.3, 0.005, 0.4, -Math.PI / 2, 0, 0);   // (a round rug)
-    var inner = new THREE.MeshStandardMaterial({ roughness: 0.9, map: lbStone.map.clone() }); inner.map.needsUpdate = true; inner.map.repeat.set(3, 1.4);
-    [[0, -D, 0, LBI_W, 0, 0, 1], [0, D, Math.PI, LBI_W, 1, 0, -1], [-W, 0, Math.PI / 2, LBI_D, 2, 1, 0], [W, 0, -Math.PI / 2, LBI_D, 3, -1, 0]].forEach(function (w) {   // (the walls: the one between you and the camera steps aside)
+    var white = rMat(0xe4e8ee, { roughness: 0.35, metalness: 0.05 }), pale = rMat(0xc8ced8, { roughness: 0.3 }), dark = rMat(0x2a3038, { roughness: 0.4, metalness: 0.3 });
+    var lightM = new THREE.MeshBasicMaterial({ color: 0xffffff }), cyanM = new THREE.MeshBasicMaterial({ color: 0x9af2ff });
+    var screenTex = function (seed, w, h) { return cpTex(w || 256, h || 160, function (g, cw, ch) {   // (a glowing screen of readouts: graphs, a ring gauge, rows of data)
+      g.fillStyle = '#062a3a'; g.fillRect(0, 0, cw, ch); g.strokeStyle = '#4ae8ff'; g.fillStyle = '#4ae8ff'; g.lineWidth = 2; g.strokeRect(4, 4, cw - 8, ch - 8);
+      g.beginPath(); for (var x = 12; x < cw * 0.55; x += 4) g.lineTo(x, ch * 0.55 - Math.sin(x * 0.07 + seed) * ch * 0.18 - Math.sin(x * 0.19 + seed * 2) * ch * 0.06); g.stroke();
+      g.beginPath(); g.arc(cw * 0.78, ch * 0.4, ch * 0.2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (0.4 + (seed % 5) / 9)); g.stroke(); g.globalAlpha = 0.3; g.beginPath(); g.arc(cw * 0.78, ch * 0.4, ch * 0.2, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+      for (var r = 0; r < 4; r++) { g.globalAlpha = 0.5 + r * 0.1; g.fillRect(12, ch * 0.72 + r * 9, 30 + ((seed * 37 + r * 53) % 120), 4); } g.globalAlpha = 1;
+      for (var b = 0; b < 6; b++) g.fillRect(cw * 0.62 + b * 14, ch * 0.9 - ((seed * 17 + b * 29) % 30), 8, (seed * 17 + b * 29) % 30);
+    }); };
+    // (the floor: pale and gleaming, ringed by a line of light)
+    p(new THREE.PlaneGeometry(LBI_W, LBI_D), rMat(0x9aa4b4, { roughness: 0.3, metalness: 0.25, envMap: rubyEnv, envMapIntensity: 0.6 }), 0, 0, 0, -Math.PI / 2, 0, 0);
+    [[0, -D + 0.55, LBI_W - 1.1, 0.04], [0, D - 0.55, LBI_W - 1.1, 0.04], [-W + 0.55, 0, 0.04, LBI_D - 1.1], [W - 0.55, 0, 0.04, LBI_D - 1.1]].forEach(function (s) { p(new THREE.BoxGeometry(s[2], 0.01, s[3]), lightM, s[0], 0.006, s[1]); });
+    // (the walls: white panels, each with a glowing strip along its top; the one between you and the camera steps aside)
+    var panel = new THREE.MeshStandardMaterial({ roughness: 0.4, map: lbTex(256, 256, function (g, w, h) { g.fillStyle = '#dde2ea'; g.fillRect(0, 0, w, h); g.fillStyle = '#aeb6c4'; g.fillRect(0, 0, 3, h); g.fillRect(0, h - 3, w, 3); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(4, 0, 4, h); }, 4, 1) });
+    [[0, -D, 0, LBI_W], [0, D, Math.PI, LBI_W], [-W, 0, Math.PI / 2, LBI_D], [W, 0, -Math.PI / 2, LBI_D]].forEach(function (w) {
       var g = new THREE.Group(); g.position.set(w[0], 0, w[1]); g.rotation.y = w[2]; R.add(g);
-      p(new THREE.PlaneGeometry(w[3], H), inner, 0, H / 2, 0, 0, 0, 0, g);
-      p(new THREE.BoxGeometry(w[3], 0.16, 0.08), lbWood, 0, 0.08, 0.04, 0, 0, 0, g);
+      p(new THREE.PlaneGeometry(w[3], H), panel, 0, H / 2, 0, 0, 0, 0, g);
+      p(new THREE.BoxGeometry(w[3] - 0.4, 0.05, 0.05), lightM, 0, H - 0.35, 0.05, 0, 0, 0, g); p(new THREE.BoxGeometry(w[3], 0.12, 0.06), pale, 0, 0.06, 0.03, 0, 0, 0, g);
       lbWalls.push({ g: g, n: w[1] ? new THREE.Vector3(0, 0, w[1] < 0 ? -1 : 1) : new THREE.Vector3(w[0] < 0 ? -1 : 1, 0, 0), d: w[1] ? D : W });
     });
-    for (var bx = -W + 0.8; bx < W; bx += 1.6) p(new THREE.BoxGeometry(0.18, 0.22, LBI_D), lbWood, bx, H - 0.11, 0);   // (the ceiling beams)
-    // (the back wall: tall shelves of potions in every colour, glowing softly)
-    [-2.6, -0.4].forEach(function (sx) {
-      [-0.92, 0.92].forEach(function (e) { p(new THREE.BoxGeometry(0.07, 2.5, 0.42), lbWood, sx + e, 1.25, -D + 0.22); }); p(new THREE.BoxGeometry(1.9, 0.08, 0.44), lbWood, sx, 2.5, -D + 0.22);   // (an open case of shelves)
-      p(new THREE.BoxGeometry(1.76, 2.36, 0.04), rMat(0x2a1c14), sx, 1.25, -D + 0.06);
-      for (var sh = 0; sh < 4; sh++) {
-        var sy = 0.25 + sh * 0.6; p(new THREE.BoxGeometry(1.76, 0.05, 0.36), lbOak, sx, sy, -D + 0.26);
-        for (var b = 0; b < 7; b++) { var col = [0xff5a8a, 0x5ad8ff, 0x9aff5a, 0xc08aff, 0xffc04a, 0x4affc8, 0xff7a3a][(b + sh * 3) % 7], bm = rMat(col, { emissive: col, emissiveIntensity: 0.45, roughness: 0.15, transparent: true, opacity: 0.85 });
-          var bxx = sx - 0.72 + b * 0.24, kind = (b + sh) % 3;
-          if (kind === 0) { p(new THREE.CylinderGeometry(0.055, 0.06, 0.24, 10), bm, bxx, sy + 0.15, -D + 0.28); p(new THREE.CylinderGeometry(0.025, 0.025, 0.07, 8), lbOak, bxx, sy + 0.3, -D + 0.28); }
-          else if (kind === 1) { p(new THREE.SphereGeometry(0.08, 10, 8), bm, bxx, sy + 0.1, -D + 0.28); p(new THREE.CylinderGeometry(0.02, 0.02, 0.1, 6), bm, bxx, sy + 0.22, -D + 0.28); }
-          else { p(new THREE.ConeGeometry(0.07, 0.2, 10), bm, bxx, sy + 0.12, -D + 0.28); }
-        }
-      }
-    });
-    // (the chalkboard on the left wall, covered in formulas)
-    var chalk = cpTex(512, 320, function (g, w, h) {
-      g.fillStyle = '#23302a'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(255,255,255,0.05)'; for (var i = 0; i < 40; i++) g.fillRect((i * 97) % w, (i * 53) % h, 60, 8);
-      g.strokeStyle = g.fillStyle = 'rgba(240,240,230,0.9)'; g.lineWidth = 2.5; g.font = '28px "Comic Sans MS", cursive';
-      g.fillText('E = mc²', 24, 48); g.fillText('H₂O', 300, 50); g.fillText('2H₂ + O₂ → 2H₂O', 24, 112); g.fillText('pH = 7', 330, 160); g.fillText('C₆H₁₂O₆', 24, 280);
-      g.save(); g.translate(110, 200); for (var j = 0; j < 3; j++) { g.save(); g.rotate(j * Math.PI / 3); g.beginPath(); g.ellipse(0, 0, 58, 20, 0, 0, Math.PI * 2); g.stroke(); g.restore(); } g.beginPath(); g.arc(0, 0, 8, 0, Math.PI * 2); g.fill(); g.restore();
-      g.save(); g.translate(420, 250); g.beginPath(); for (var k = 0; k <= 6; k++) { var a = k / 6 * Math.PI * 2; g.lineTo(Math.cos(a) * 36, Math.sin(a) * 36); } g.stroke(); g.restore();
-    });
-    var cb = new THREE.Group(); cb.position.set(-W + 0.05, 1.6, -0.6); cb.rotation.y = Math.PI / 2; R.add(cb);
-    p(new THREE.BoxGeometry(2.2, 1.4, 0.05), lbWood, 0, 0, 0, 0, 0, 0, cb); p(new THREE.PlaneGeometry(2.04, 1.26), new THREE.MeshStandardMaterial({ map: chalk, roughness: 0.95 }), 0, 0, 0.03, 0, 0, 0, cb);
-    // (the workbench down the middle: flasks bubbling over a Bunsen burner, a test-tube rack, a copper alembic, a book)
-    var BZ = -0.4, BX = -0.6;
-    p(new THREE.BoxGeometry(3.0, 0.08, 0.95), lbOak, BX, 0.92, BZ); [[-1.4, -0.4], [1.4, -0.4], [-1.4, 0.4], [1.4, 0.4]].forEach(function (l) { p(new THREE.BoxGeometry(0.09, 0.9, 0.09), lbWood, BX + l[0], 0.45, BZ + l[1]); });
-    p(new THREE.BoxGeometry(2.8, 0.05, 0.8), lbWood, BX, 0.25, BZ);
-    var glass = new THREE.MeshStandardMaterial({ color: 0xdff4ff, transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.1, depthWrite: false });
-    function flask(x, z, col, round) {                                  // (a flask of glowing liquid, bubbling)
-      var lm = rMat(col, { emissive: col, emissiveIntensity: 0.7, roughness: 0.2, transparent: true, opacity: 0.9 });
-      if (round) { p(new THREE.SphereGeometry(0.15, 14, 10), glass, x, 1.12, z); p(new THREE.SphereGeometry(0.13, 14, 10, 0, Math.PI * 2, Math.PI / 2.4, Math.PI / 1.7), lm, x, 1.12, z); p(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 10), glass, x, 1.33, z); }
-      else { p(new THREE.CylinderGeometry(0.035, 0.15, 0.28, 14), glass, x, 1.1, z); p(new THREE.CylinderGeometry(0.075, 0.14, 0.13, 14), lm, x, 1.03, z); p(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 10), glass, x, 1.29, z); }
-      for (var i = 0; i < 4; i++) { var bb = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })); bb.position.set(x, 1.05, z); R.add(bb); lbBubbles.push({ m: bb, x: x, z: z, k: i / 4, top: round ? 1.42 : 1.33 }); }
+    p(new THREE.PlaneGeometry(LBI_W, LBI_D), rMat(0xf6f8fb, { roughness: 0.5, side: THREE.DoubleSide }), 0, H, 0, Math.PI / 2, 0, 0);   // (the ceiling, with a glowing frame in a recessed panel)
+    [[0, -1.3, 3.8, 0.08], [0, 1.3, 3.8, 0.08], [-1.9, 0, 0.08, 2.6], [1.9, 0, 0.08, 2.6]].forEach(function (s) { p(new THREE.BoxGeometry(s[2], 0.05, s[3]), lightM, s[0], H - 0.03, s[1]); });
+    // (the lab benches in the middle, a U open toward the door: white cabinets with drawers, pale tops)
+    function bench(x, z, lx, lz) {
+      p(new THREE.BoxGeometry(lx, 0.82, lz), white, x, 0.41, z); p(new THREE.BoxGeometry(lx + 0.08, 0.05, lz + 0.08), pale, x, 0.85, z);
+      var along = lx > lz, n = Math.floor((along ? lx : lz) / 0.55);
+      for (var i = 0; i < n; i++) { var o = -(along ? lx : lz) / 2 + 0.275 + i * 0.55; for (var r = 0; r < 3; r++) [-1, 1].forEach(function (sd) {
+        var y = 0.2 + r * 0.24; if (along) p(new THREE.BoxGeometry(0.3, 0.02, 0.01), dark, x + o, y, z + sd * (lz / 2 + 0.006)); else p(new THREE.BoxGeometry(0.01, 0.02, 0.3), dark, x + sd * (lx / 2 + 0.006), y, z + o); }); }
+      labSolids.push.apply(labSolids, (function () { var a = [], L = along ? lx : lz; for (var t = -L / 2 + 0.4; t <= L / 2 - 0.3; t += 0.6) a.push(along ? [x + t, z, lz / 2 + 0.05] : [x, z + t, lx / 2 + 0.05]); return a; })());
     }
-    p(new THREE.CylinderGeometry(0.05, 0.07, 0.16, 10), lbBrass, BX - 0.9, 1.04, BZ);   // (the Bunsen burner)
-    var fl = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.14, 8), new THREE.MeshBasicMaterial({ color: 0x5aa0ff, transparent: true, opacity: 0.85 })); fl.position.set(BX - 0.9, 1.19, BZ); R.add(fl); lbFlames.push(fl);
-    p(new THREE.TorusGeometry(0.1, 0.008, 6, 16), lbIron, BX - 0.9, 1.26, BZ, Math.PI / 2, 0, 0); [0, 2.1, 4.2].forEach(function (a) { p(new THREE.CylinderGeometry(0.006, 0.006, 0.34, 4), lbIron, BX - 0.9 + Math.sin(a) * 0.1, 1.1, BZ + Math.cos(a) * 0.1); });
-    flask(BX - 0.9, BZ, 0x4affb0, true); flask(BX - 0.45, BZ + 0.2, 0xff5aa8, false); flask(BX - 0.1, BZ - 0.15, 0x6ab0ff, false); flask(BX + 0.3, BZ + 0.22, 0xffc04a, true);
-    p(new THREE.BoxGeometry(0.5, 0.06, 0.14), lbOak, BX + 0.85, 0.99, BZ - 0.2); [0, 1, 2, 3, 4].forEach(function (t) { var tc = [0xff5a8a, 0x5ad8ff, 0x9aff5a, 0xc08aff, 0xffc04a][t]; p(new THREE.CylinderGeometry(0.022, 0.022, 0.22, 8), glass, BX + 0.67 + t * 0.09, 1.08, BZ - 0.2); p(new THREE.CylinderGeometry(0.019, 0.019, 0.1, 8), rMat(tc, { emissive: tc, emissiveIntensity: 0.6 }), BX + 0.67 + t * 0.09, 1.03, BZ - 0.2); });
-    p(new THREE.SphereGeometry(0.17, 14, 10), lbCopperBright, BX + 1.15, 1.13, BZ + 0.15); p(new THREE.CylinderGeometry(0.04, 0.06, 0.18, 10), lbCopperBright, BX + 1.15, 1.32, BZ + 0.15); p(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), lbCopperBright, BX + 1.32, 1.3, BZ + 0.15, 0, 0, -1.0);   // (the copper alembic)
-    p(new THREE.BoxGeometry(0.34, 0.04, 0.26), rMat(0xf2e6c8), BX + 0.35, 0.98, BZ - 0.25, 0, 0.3, 0); p(new THREE.BoxGeometry(0.36, 0.03, 0.28), rMat(0x6a2a3a), BX + 0.35, 0.96, BZ - 0.25, 0, 0.3, 0);   // (an open notebook)
-    labSolids.push([BX - 1.2, BZ, 0.5], [BX - 0.4, BZ, 0.5], [BX + 0.4, BZ, 0.5], [BX + 1.2, BZ, 0.5]);
-    labSolids.push([-2.6, -D + 0.3, 0.55], [-1.6, -D + 0.3, 0.45], [-0.4, -D + 0.3, 0.55], [0.6, -D + 0.3, 0.45]);
-    // (by the right wall: a brass telescope on its tripod at the round window, a globe, and a glowing crystal)
-    var RW = new THREE.Group(); RW.position.set(W - 0.03, 1.8, -1.6); RW.rotation.y = -Math.PI / 2; R.add(RW);
-    p(new THREE.CircleGeometry(0.5, 24), rMat(0x2a3a6a, { emissive: 0x3a4a8a, emissiveIntensity: 0.6 }), 0, 0, 0.01, 0, 0, 0, RW); p(new THREE.TorusGeometry(0.5, 0.06, 8, 28), lbWood, 0, 0, 0.02, 0, 0, 0, RW);
-    for (var st = 0; st < 9; st++) p(new THREE.SphereGeometry(0.012, 4, 3), new THREE.MeshBasicMaterial({ color: 0xffffff }), Math.sin(st * 2.4) * 0.35, Math.cos(st * 1.7) * 0.35, 0.02, 0, 0, 0, RW);
-    var TP = new THREE.Group(); TP.position.set(W - 0.9, 0, -1.6); R.add(TP);
-    [0, 2.1, 4.2].forEach(function (a) { p(new THREE.CylinderGeometry(0.015, 0.02, 1.25, 6), lbWood, Math.sin(a) * 0.22, 0.58, Math.cos(a) * 0.22, Math.cos(a) * 0.18, 0, -Math.sin(a) * 0.18, TP); });
-    var tube = new THREE.Group(); tube.position.set(0, 1.2, 0); tube.rotation.set(0, Math.PI / 2, 0.6); TP.add(tube);
-    p(new THREE.CylinderGeometry(0.05, 0.08, 0.9, 14), lbBrass, 0, 0.1, 0, 0, 0, 0, tube); p(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 14), lbBrass, 0, 0.55, 0, 0, 0, 0, tube);
-    p(new THREE.CylinderGeometry(0.09, 0.12, 0.7, 10), lbWood, W - 0.6, 0.35, 0.2); p(new THREE.SphereGeometry(0.2, 18, 12), rMat(0x3a7ab0, { roughness: 0.5 }), W - 0.6, 0.92, 0.2); p(new THREE.TorusGeometry(0.23, 0.012, 6, 24, Math.PI * 1.4), lbBrass, W - 0.6, 0.92, 0.2, 0, 0, 0.4);   // (the globe)
-    p(new THREE.CylinderGeometry(0.28, 0.32, 0.8, 8), lbStone, -W + 0.6, 0.4, 1.9);   // (the crystal's pedestal)
-    lbCrystal = new THREE.Group(); lbCrystal.position.set(-W + 0.6, 0.8, 1.9); R.add(lbCrystal);
-    var cm = rMat(0xb08aff, { emissive: 0x8a5aff, emissiveIntensity: 0.8, roughness: 0.1, metalness: 0.2, flatShading: true, transparent: true, opacity: 0.9 });
-    [[0, 0.32, 0, 0], [0.09, 0.22, 0.05, 0.4], [-0.08, 0.2, -0.04, -0.4], [0.03, 0.18, -0.09, 0.25]].forEach(function (c) { p(new THREE.OctahedronGeometry(1, 0), cm, c[0], c[1] * 0.7, c[2], c[3], 0, c[3], lbCrystal).scale.set(0.06, c[1], 0.06); });
-    var cl = new THREE.PointLight(0x9a6aff, 0.6, 3.5); cl.position.set(-W + 0.6, 1.3, 1.9); R.add(cl); lbCrystal.userData.light = cl;
-    labSolids.push([W - 0.9, -1.6, 0.4], [W - 0.6, 0.2, 0.35], [-W + 0.6, 1.9, 0.4]);
-    // (the counter by the door, ready for the shop to come: brass bell, a register book, and jars of powders)
-    p(new THREE.BoxGeometry(LB_COUNTER_W, 1.0, 0.6), lbOak, LB_COUNTER[0], 0.5, LB_COUNTER[1]); p(new THREE.BoxGeometry(LB_COUNTER_W + 0.1, 0.06, 0.68), lbWood, LB_COUNTER[0], 1.02, LB_COUNTER[1]);
-    p(new THREE.SphereGeometry(0.07, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), lbBrass, LB_COUNTER[0] - 0.6, 1.05, LB_COUNTER[1]); p(new THREE.CylinderGeometry(0.08, 0.08, 0.015, 12), lbWood, LB_COUNTER[0] - 0.6, 1.055, LB_COUNTER[1]);
-    [[0.1, 0xe8d0a0], [0.3, 0x9ad0ff], [0.5, 0xff9a9a]].forEach(function (j) { p(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 10), glass, LB_COUNTER[0] + j[0], 1.12, LB_COUNTER[1] - 0.1); p(new THREE.CylinderGeometry(0.055, 0.055, 0.08, 10), rMat(j[1]), LB_COUNTER[0] + j[0], 1.09, LB_COUNTER[1] - 0.1); p(new THREE.CylinderGeometry(0.065, 0.065, 0.025, 10), lbOak, LB_COUNTER[0] + j[0], 1.2, LB_COUNTER[1] - 0.1); });
+    bench(0, -0.7, 3.6, 0.9); bench(-1.35, 0.55, 0.9, 1.6); bench(1.35, 0.55, 0.9, 1.6);
+    // (on the benches: tablets, holographic screens floating above them, bottles, a microscope and a robotic arm)
+    [[-0.9, -0.75, 0.2], [0.7, -0.6, -0.2], [-1.35, 0.9, 1.4], [1.35, 0.3, -1.5]].forEach(function (t, i) { var tab = p(new THREE.BoxGeometry(0.42, 0.015, 0.3), dark, t[0], 0.885, t[1], 0, t[2], 0); p(new THREE.PlaneGeometry(0.38, 0.26), new THREE.MeshBasicMaterial({ map: screenTex(i + 3) }), t[0], 0.895, t[1], -Math.PI / 2, 0, -t[2]); });
+    [[-1.0, 1.45, -0.7, 0.2, 0], [0.1, 1.5, -0.95, 0, 0], [0.95, 1.45, -0.75, -0.25, 0], [-1.35, 1.4, 0.3, 1.4, 0], [1.35, 1.4, 0.9, -1.4, 0]].forEach(function (h, i) {   // (holograms)
+      var m = new THREE.MeshBasicMaterial({ map: screenTex(i * 7 + 1), color: 0xbaf6ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      var pl = p(new THREE.PlaneGeometry(0.72, 0.46), m, h[0], h[1], h[2], 0, h[3], 0); pl.castShadow = false; lbHolo.push({ m: m, k: i });
+      p(new THREE.BoxGeometry(0.62, 0.008, 0.008), cyanM, h[0], h[1] - 0.2, h[2], 0, h[3], 0);
+    });
+    [[0.45, -0.95], [0.55, -0.88]].forEach(function (b) { p(new THREE.CylinderGeometry(0.045, 0.05, 0.22, 12), rMat(0xc8202a, { roughness: 0.3 }), b[0], 0.98, b[1]); p(new THREE.CylinderGeometry(0.02, 0.03, 0.06, 8), white, b[0], 1.12, b[1]); });
+    p(new THREE.CylinderGeometry(0.02, 0.04, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xe6f6ff, transparent: true, opacity: 0.4 }), 0.68, 1.02, -0.92);
+    var MS = new THREE.Group(); MS.position.set(-0.3, 0.875, -0.85); R.add(MS);   // (a white microscope)
+    p(new THREE.BoxGeometry(0.2, 0.03, 0.26), white, 0, 0.015, 0, 0, 0, 0, MS); p(new THREE.BoxGeometry(0.05, 0.3, 0.06), white, 0, 0.16, -0.09, 0, 0, 0, MS); p(new THREE.CylinderGeometry(0.025, 0.03, 0.16, 10), dark, 0, 0.27, -0.02, 0.5, 0, 0, MS); p(new THREE.BoxGeometry(0.14, 0.015, 0.12), dark, 0, 0.12, 0.0, 0, 0, 0, MS);
+    function arm(x, z, ry) {                                            // (a white robotic arm, its joints dark, its tip glowing)
+      var base = new THREE.Group(); base.position.set(x, 0.875, z); base.rotation.y = ry; R.add(base);
+      p(new THREE.CylinderGeometry(0.09, 0.11, 0.08, 16), white, 0, 0.04, 0, 0, 0, 0, base);
+      var s1 = new THREE.Group(); s1.position.y = 0.08; base.add(s1); p(new THREE.SphereGeometry(0.06, 12, 8), dark, 0, 0, 0, 0, 0, 0, s1); p(new THREE.BoxGeometry(0.07, 0.36, 0.07), white, 0, 0.18, 0, 0, 0, 0, s1);
+      var s2 = new THREE.Group(); s2.position.y = 0.36; s1.add(s2); p(new THREE.SphereGeometry(0.05, 12, 8), dark, 0, 0, 0, 0, 0, 0, s2); p(new THREE.BoxGeometry(0.06, 0.3, 0.06), white, 0, 0.15, 0, 0, 0, 0, s2);
+      var s3 = new THREE.Group(); s3.position.y = 0.3; s2.add(s3); p(new THREE.SphereGeometry(0.04, 10, 6), dark, 0, 0, 0, 0, 0, 0, s3); p(new THREE.CylinderGeometry(0.025, 0.03, 0.1, 8), white, 0, 0.05, 0, 0, 0, 0, s3); p(new THREE.SphereGeometry(0.018, 8, 6), cyanM, 0, 0.11, 0, 0, 0, 0, s3);
+      lbArms.push({ b: base, s1: s1, s2: s2, s3: s3, k: lbArms.length, ry: ry });
+    }
+    arm(0.2, -0.55, 0); arm(-1.35, 0.1, Math.PI / 2);
+    // (along the back wall: a white counter of lab machines, their screens lit)
+    p(new THREE.BoxGeometry(LBI_W - 1.4, 0.88, 0.6), white, 0, 0.44, -D + 0.32); p(new THREE.BoxGeometry(LBI_W - 1.3, 0.04, 0.66), pale, 0, 0.9, -D + 0.32);
+    [[-2.6, 0.55, 0.5, 0.45], [-1.6, 0.42, 0.62, 0.4], [-0.5, 0.75, 0.7, 0.45], [0.7, 0.6, 0.55, 0.42], [1.8, 0.48, 0.66, 0.42], [2.75, 0.62, 0.45, 0.4]].forEach(function (mc, i) {
+      p(new THREE.BoxGeometry(mc[2], mc[1], mc[3]), white, mc[0], 0.92 + mc[1] / 2, -D + 0.32);
+      p(new THREE.PlaneGeometry(mc[2] * 0.62, mc[1] * 0.42), new THREE.MeshBasicMaterial({ map: screenTex(i * 11 + 5) }), mc[0] - mc[2] * 0.1, 0.92 + mc[1] * 0.62, -D + 0.32 + mc[3] / 2 + 0.003);
+      p(new THREE.BoxGeometry(mc[2] * 0.7, 0.03, 0.02), dark, mc[0], 0.98, -D + 0.32 + mc[3] / 2 + 0.01);
+      if (i % 2) p(new THREE.CylinderGeometry(0.03, 0.03, 0.12, 8), cyanM, mc[0] + mc[2] * 0.35, 0.92 + mc[1] + 0.06, -D + 0.32);
+    });
+    for (var bx = -2.8; bx <= 2.8; bx += 0.7) labSolids.push([bx, -D + 0.35, 0.38]);
+    // (the left wall: a lit panel where plants grow in a grid of tubes)
+    var PW = new THREE.Group(); PW.position.set(-W + 0.06, 1.55, 0.3); PW.rotation.y = Math.PI / 2; R.add(PW);
+    p(new THREE.BoxGeometry(2.0, 2.0, 0.08), lightM, 0, 0, 0, 0, 0, 0, PW); p(new THREE.BoxGeometry(1.84, 1.84, 0.06), rMat(0xb8eefa, { emissive: 0x7ad8f0, emissiveIntensity: 0.7, roughness: 0.4 }), 0, 0, 0.02, 0, 0, 0, PW);
+    for (var c = 0; c < 6; c++) {
+      p(new THREE.CylinderGeometry(0.1, 0.1, 1.7, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide }), -0.75 + c * 0.3, 0, 0.12, 0, 0, 0, PW);
+      for (var r2 = 0; r2 < 4; r2++) { var py = -0.65 + r2 * 0.43; p(new THREE.CylinderGeometry(0.06, 0.05, 0.08, 10), white, -0.75 + c * 0.3, py, 0.12, 0, 0, 0, PW);
+        for (var lf = 0; lf < 4; lf++) { var la = lf / 4 * Math.PI * 2 + c + r2; p(new THREE.ConeGeometry(0.025, 0.16, 5), rMat([0x4aa860, 0x6cc070, 0x3a9050][(c + r2) % 3]), -0.75 + c * 0.3 + Math.sin(la) * 0.03, py + 0.12, 0.12 + Math.cos(la) * 0.03, Math.cos(la) * 0.5, 0, -Math.sin(la) * 0.5, PW); } }
+    }
+    // (the right wall: a big window onto a city at night, and before it a row of glass growth chambers)
+    var city = cpTex(512, 256, function (g, w, h) {
+      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a0f2a'); gr.addColorStop(1, '#2a1a4a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect((i * 97) % w, (i * 31) % 70, 1.5, 1.5); }
+      for (var b = 0; b < 26; b++) { var bw = 14 + (b * 13) % 22, bh = 60 + (b * 47) % 150, bx2 = (b * 41) % (w - bw); g.fillStyle = ['#141a3a', '#1a1438', '#10203a'][b % 3]; g.fillRect(bx2, h - bh, bw, bh);
+        for (var wy = h - bh + 6; wy < h - 4; wy += 7) for (var wx = bx2 + 3; wx < bx2 + bw - 3; wx += 5) if ((wx * 7 + wy * 3 + b) % 5 < 2) { g.fillStyle = ['#ffd890', '#9ae8ff', '#ff8ad8'][(wx + wy) % 3]; g.fillRect(wx, wy, 2, 3); } }
+      g.fillStyle = '#ff5ab8'; g.fillRect(w * 0.62, h - 190, 4, 30); g.fillStyle = '#5ae8ff'; g.fillRect(w * 0.3, h - 150, 26, 3);
+    });
+    var WN = new THREE.Group(); WN.position.set(W - 0.03, 1.6, -0.3); WN.rotation.y = -Math.PI / 2; R.add(WN);
+    p(new THREE.PlaneGeometry(4.6, 1.9), new THREE.MeshBasicMaterial({ map: city }), 0, 0, 0, 0, 0, 0, WN);
+    [[0, 0.98, 4.7, 0.06], [0, -0.98, 4.7, 0.06], [-2.33, 0, 0.06, 2.0], [2.33, 0, 0.06, 2.0], [0, 0, 0.03, 1.9]].forEach(function (f) { p(new THREE.BoxGeometry(f[2], f[3], 0.05), white, f[0], f[1], 0.02, 0, 0, 0, WN); });
+    [-1.6, -0.75, 0.1, 0.95].forEach(function (cz, i) {
+      var cx = W - 0.55; p(new THREE.CylinderGeometry(0.26, 0.28, 0.6, 20), white, cx, 0.3, cz); p(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 20), cyanM, cx, 0.61, cz);
+      var gm = new THREE.MeshStandardMaterial({ color: 0xd8f8ff, transparent: true, opacity: 0.3, roughness: 0.05, emissive: 0x4ad8ff, emissiveIntensity: 0.25, depthWrite: false });
+      p(new THREE.CylinderGeometry(0.24, 0.24, 0.78, 20, 1, true), gm, cx, 1.02, cz); p(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 20), white, cx, 1.44, cz);
+      for (var lf = 0; lf < 9; lf++) { var la = lf * 2.39, rr = 0.03 + (lf % 3) * 0.04; p(new THREE.ConeGeometry(0.035, 0.36 + (lf % 4) * 0.06, 5), rMat([0x4ab868, 0x7ad070, 0x5aa8c8, 0xd86ab0][(i + lf) % 4]), cx + Math.sin(la) * rr, 0.85, cz + Math.cos(la) * rr, Math.cos(la) * 0.3, 0, -Math.sin(la) * 0.3); }
+      lbChambers.push(gm); labSolids.push([cx, cz, 0.3]);
+    });
+    // (the counter by the door, for the shop to come: white, with a glowing edge and a tablet)
+    p(new THREE.BoxGeometry(LB_COUNTER_W, 1.0, 0.6), white, LB_COUNTER[0], 0.5, LB_COUNTER[1]); p(new THREE.BoxGeometry(LB_COUNTER_W + 0.08, 0.05, 0.68), pale, LB_COUNTER[0], 1.02, LB_COUNTER[1]);
+    p(new THREE.BoxGeometry(LB_COUNTER_W, 0.03, 0.02), cyanM, LB_COUNTER[0], 0.9, LB_COUNTER[1] - 0.31);
+    p(new THREE.BoxGeometry(0.4, 0.015, 0.28), dark, LB_COUNTER[0] - 0.4, 1.055, LB_COUNTER[1], 0, 0.2, 0); p(new THREE.PlaneGeometry(0.36, 0.24), new THREE.MeshBasicMaterial({ map: screenTex(42) }), LB_COUNTER[0] - 0.4, 1.065, LB_COUNTER[1], -Math.PI / 2, 0, -0.2);
     for (var cbx = -1; cbx <= 1; cbx++) labSolids.push([LB_COUNTER[0] + cbx * 0.7, LB_COUNTER[1], 0.42]);
     // (the doorway out, and a mat before it)
-    p(new THREE.PlaneGeometry(1.3, 2.2), rMat(0x1a1410), 0, 1.1, D - 0.02, 0, Math.PI, 0); p(new THREE.PlaneGeometry(1.2, 0.6), rMat(0x5a2a2a, { roughness: 1 }), 0, 0.006, D - 0.5, -Math.PI / 2, 0, 0);
-    R.traverse(function (o) { if (o.isMesh) { o.receiveShadow = true; } });
+    p(new THREE.PlaneGeometry(1.3, 2.2), rMat(0x3a4250), 0, 1.1, D - 0.02, 0, Math.PI, 0); p(new THREE.PlaneGeometry(1.2, 0.6), rMat(0x5a6476, { roughness: 1 }), 0, 0.006, D - 0.5, -Math.PI / 2, 0, 0);
+    R.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
   })(labRoom);
   var lbLook = new THREE.Vector3();
   function updateLabInside(t) {
     lbLook.set(camera.position.x - LBI_X, 0, camera.position.z - LBI_Z);
     lbWalls.forEach(function (W) { W.g.visible = lbLook.dot(W.n) < W.d - 0.6; });   // (the wall between you and the camera steps aside)
-    lbBubbles.forEach(function (b) { var f = (t * 0.55 + b.k) % 1; b.m.position.set(b.x + Math.sin(f * 20 + b.k * 9) * 0.02, 1.05 + f * (b.top - 1.05), b.z); b.m.material.opacity = 0.75 * (1 - f); });
-    lbFlames.forEach(function (f) { f.scale.set(1, 0.8 + Math.sin(t * 23) * 0.15 + Math.sin(t * 37) * 0.1, 1); });
-    if (lbCrystal) { var pu = 0.5 + 0.5 * Math.sin(t * 1.6); lbCrystal.rotation.y = t * 0.3; lbCrystal.position.y = 0.82 + Math.sin(t * 1.2) * 0.02; lbCrystal.userData.light.intensity = 0.4 + pu * 0.5; }
-    lbLights.forEach(function (l, i) { l.intensity = 0.6 * (1 + Math.sin(t * 2.4 + i * 2) * 0.04); });
+    lbHolo.forEach(function (h) { h.m.opacity = 0.8 + Math.sin(t * 3 + h.k * 1.7) * 0.06 + (Math.sin(t * 37 + h.k) > 0.97 ? -0.2 : 0); });   // (the holograms shimmer, now and then flickering)
+    lbArms.forEach(function (a) { var f = t * 0.7 + a.k * 2; a.b.rotation.y = a.ry + Math.sin(f) * 0.9; a.s1.rotation.z = 0.5 + Math.sin(f * 1.3) * 0.25; a.s2.rotation.z = -1.2 + Math.sin(f * 1.7) * 0.35; a.s3.rotation.z = -0.6 + Math.sin(f * 2.1) * 0.3; });
+    lbChambers.forEach(function (g, i) { g.emissiveIntensity = 0.2 + 0.1 * Math.sin(t * 1.5 + i); });
+    lbLights.forEach(function (l, i) { l.intensity = 0.45 * (1 + Math.sin(t * 2 + i * 2) * 0.02); });
   }
   function updateLabOutside(t) {
     var nt = labNight(); lbGlow.emissiveIntensity = 0.4 + nt * 0.8; lbGreen.emissiveIntensity = 0.6 + nt * 0.6;
     lbLamps.forEach(function (L, i) { L.m.emissiveIntensity = 0.3 + nt * 1.2; L.g.material.opacity = nt * (0.35 + Math.sin(t * 3 + i * 2) * 0.03); });
     lbSmoke.forEach(function (s) { var f = (t * 0.18 + s.k / 6) % 1; s.m.position.set(-LAB_HW + 1.0 + Math.sin(f * 6 + s.k) * 0.15, LAB_H + 2.3 + f * 2.2, -0.9 + f * 0.4); s.m.scale.setScalar(0.6 + f * 1.6); s.m.material.opacity = 0.45 * Math.sin(f * Math.PI); });
-    if (lbTele) lbTele.rotation.z = Math.sin(t * 0.12) * 0.3;            // (the telescope, slowly sweeping the sky)
   }
   function labDoorUse(goIn) {                                          // through Atom & Alembic's door, in or out
     if (doorBusy) return;
@@ -534,13 +537,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     }, 380);
   }
   window.everdawnLab = { counter: function () { if (!inLab) return false; var lx = player.position.x - LBI_X - LB_COUNTER[0], lz = player.position.z - LBI_Z - LB_COUNTER[1]; return Math.abs(lx) < LB_COUNTER_W / 2 + 0.2 && lz < -0.3 && lz > -1.35; } };   // (for the shop to come: whether you're at its counter)
-  clothDrawOnMap = (function (base) { return function (g, K, label) {   // (on the world map: its slate roof, its round tower in copper green, and its name)
+  clothDrawOnMap = (function (base) { return function (g, K, label) {   // (on the world map: its slate roof and its name)
     base.apply(this, arguments);
     var p = mapXY(LAB_X, LAB_Z); g.save(); g.translate(p[0], p[1]); g.rotate(-LAB_TURN);
     g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(-LAB_HW * K + 6, -LAB_HD * K + 8, LAB_HW * K * 2, LAB_HD * K * 2);
     g.fillStyle = '#3a404c'; g.fillRect(-LAB_HW * K - 3, -LAB_HD * K - 3, LAB_HW * K * 2 + 6, LAB_HD * K * 2 + 6);
     g.fillStyle = '#4c5464'; g.fillRect(-LAB_HW * K, -2, LAB_HW * K * 2, 4);
-    g.fillStyle = '#5fa38c'; g.beginPath(); g.arc((LAB_HW - 1.1) * K, (-LAB_HD - 0.6) * K, 1.45 * K, 0, Math.PI * 2); g.fill();
     g.restore();
     label('Atom & Alembic', LAB_X, LAB_Z, LAB_HD * K + 30);
   }; })(clothDrawOnMap);
