@@ -395,11 +395,11 @@ EVERDAWN_PARTS.push(function (THREE) {
     wall(-LAB_HW + 0.6, LAB_HD + 0.75, 0.35); wall(LAB_HW - 0.7, LAB_HD + 0.75, 0.4);              // (the barrel and the fern)
     layTownPath(lbLine);
   })();
-  // ---- inside: a bright, modern laboratory. White panelled walls and gleaming floor ringed with light, glowing strips along
-  // the ceiling, a U of white lab benches in the middle with holographic screens floating over them, tablets and a robotic
+  // ---- inside: a bright, modern laboratory. White panelled walls and gleaming floor ringed with light, light strips along
+  // the wall tops, a U of white lab benches in the middle with holographic screens floating over them, tablets and a robotic
   // arm at work; machines along the back wall, a wall of plants growing in lit tubes, and by the big window onto a night
   // city, a row of glass growth chambers. The counter by the door is ready for the shop to come ----
-  var labScene = new THREE.Scene(); labScene.background = new THREE.Color(0xdfe6ee);
+  var labScene = new THREE.Scene(); labScene.background = new THREE.Color(0x1a2130);
   var LBI_X = -1200, LBI_Z = 1000, LBI_W = LAB_HW * 2, LBI_D = LAB_HD * 2, LBI_H = 3.2, LBI_EXIT_Z = LBI_D / 2 - 0.6, inLab = false;
   var labRoom = new THREE.Group(); labRoom.position.set(LBI_X, 0, LBI_Z); labScene.add(labRoom);
   labScene.add(new THREE.HemisphereLight(0xeef4ff, 0x7a889c, 0.5));
@@ -429,8 +429,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       p(new THREE.BoxGeometry(w[3] - 0.4, 0.05, 0.05), lightM, 0, H - 0.35, 0.05, 0, 0, 0, g); p(new THREE.BoxGeometry(w[3], 0.12, 0.06), pale, 0, 0.06, 0.03, 0, 0, 0, g);
       lbWalls.push({ g: g, n: w[1] ? new THREE.Vector3(0, 0, w[1] < 0 ? -1 : 1) : new THREE.Vector3(w[0] < 0 ? -1 : 1, 0, 0), d: w[1] ? D : W });
     });
-    p(new THREE.PlaneGeometry(LBI_W, LBI_D), rMat(0xf6f8fb, { roughness: 0.5, side: THREE.DoubleSide }), 0, H, 0, Math.PI / 2, 0, 0);   // (the ceiling, with a glowing frame in a recessed panel)
-    [[0, -1.3, 3.8, 0.08], [0, 1.3, 3.8, 0.08], [-1.9, 0, 0.08, 2.6], [1.9, 0, 0.08, 2.6]].forEach(function (s) { p(new THREE.BoxGeometry(s[2], 0.05, s[3]), lightM, s[0], H - 0.03, s[1]); });
     // (the lab benches in the middle, a U open toward the door: white cabinets with drawers, pale tops)
     function bench(x, z, lx, lz) {
       p(new THREE.BoxGeometry(lx, 0.82, lz), white, x, 0.41, z); p(new THREE.BoxGeometry(lx + 0.08, 0.05, lz + 0.08), pale, x, 0.85, z);
