@@ -318,12 +318,54 @@ EVERDAWN_PARTS.push(function (THREE) {
   var labGroup = new THREE.Group(); labGroup.position.set(LAB_X, LAB_FY, LAB_Z); labGroup.rotation.y = LAB_TURN; scene.add(labGroup);
   var lbLamps = [], lbSmoke = [];
   function lbP(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || labGroup); }
-  function lbLamp(par, x, y, z) {                                       // (a little iron lantern, glowing after dark)
-    lbP(new THREE.BoxGeometry(0.2, 0.28, 0.2), lbIron, x, y, z, 0, 0, 0, par);
-    var m = rMat(0xffe0a0, { emissive: 0xffc060, emissiveIntensity: 0.3 }); lbP(new THREE.BoxGeometry(0.15, 0.2, 0.15), m, x, y, z, 0, 0, 0, par);
-    lbP(new THREE.ConeGeometry(0.16, 0.12, 4), lbIron, x, y + 0.2, z, 0, Math.PI / 4, 0, par);
-    var halo = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0, depthWrite: false })); halo.position.set(x, y, z); par.add(halo);
-    lbLamps.push({ m: m, g: halo });
+  var lbBlack = rMat(0x18171c, { metalness: 0.75, roughness: 0.32, envMap: rubyEnv, envMapIntensity: 0.9 });   // (blackened wrought iron, with a soft sheen)
+  var lbHaloTex = cpTex(128, 128, function (g, w, h) { var r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, 'rgba(255,236,190,1)'); r.addColorStop(0.18, 'rgba(255,200,120,0.55)'); r.addColorStop(0.5, 'rgba(255,170,80,0.16)'); r.addColorStop(1, 'rgba(255,150,60,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });
+  function lbLamp(par, x, y, z) {                                       // (a wrought-iron carriage lantern on a scrolled wall bracket, a candle burning inside)
+    var L = new THREE.Group(); L.position.set(x, y, z); L.scale.setScalar(1.15); par.add(L);
+    function P(geo, m, px, py, pz, rx, ry, rz) { return lbP(geo, m, px, py, pz, rx, ry, rz, L); }
+    function tube(pts, r, m) { return P(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })), 40, r, 6, false), m, 0, 0, 0); }
+    // (the backplate on the wall: a shaped iron plate, bolted on)
+    var bp = new THREE.Shape(); bp.moveTo(0, -0.17); bp.quadraticCurveTo(0.085, -0.1, 0.055, 0.02); bp.quadraticCurveTo(0.095, 0.12, 0, 0.2); bp.quadraticCurveTo(-0.095, 0.12, -0.055, 0.02); bp.quadraticCurveTo(-0.085, -0.1, 0, -0.17);
+    P(new THREE.ExtrudeGeometry(bp, { depth: 0.012, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.004, bevelSegments: 2, curveSegments: 10 }), lbBlack, 0, 0.33, 0).scale.set(0.72, 0.72, 1);
+    [0.42, 0.25].forEach(function (by) { P(new THREE.SphereGeometry(0.01, 8, 6), lbBrass, 0, by, 0.018); });
+    // (the bracket: an arm out from the wall, braced underneath by a curving strut with a curl of iron in the corner)
+    tube([[0, 0.42, 0.005], [0, 0.425, 0.15], [0, 0.42, 0.31]], 0.011, lbBlack);
+    P(new THREE.SphereGeometry(0.018, 10, 8), lbBrass, 0, 0.42, 0.325); P(new THREE.ConeGeometry(0.008, 0.03, 8), lbBrass, 0, 0.42, 0.35, Math.PI / 2, 0, 0);
+    tube([[0, 0.21, 0.005], [0, 0.25, 0.08], [0, 0.31, 0.15], [0, 0.4, 0.21]], 0.0085, lbBlack);
+    var sp = []; for (var k = 0; k <= 30; k++) { var u = k / 30, ang = Math.PI * 0.5 + u * Math.PI * 3, rr = 0.045 * (1 - u * 0.8); sp.push([0, 0.34 + Math.sin(ang) * rr, 0.075 + Math.cos(ang) * rr]); }
+    sp.unshift([0, 0.4, 0.075]); tube(sp, 0.0055, lbBlack);
+    [[0.42, 0.24], [0.42, 0.13]].forEach(function (c) { P(new THREE.TorusGeometry(0.012, 0.004, 6, 12), lbBlack, 0, c[0] - 0.012, c[1], 0, Math.PI / 2, 0); });
+    // (it hangs from the arm by a hook and two chain links)
+    var cz = 0.26;
+    P(new THREE.TorusGeometry(0.013, 0.0035, 6, 12), lbBlack, 0, 0.395, cz, 0, 0, 0); P(new THREE.TorusGeometry(0.013, 0.0035, 6, 12), lbBlack, 0, 0.37, cz, 0, Math.PI / 2, 0);
+    P(new THREE.TorusGeometry(0.013, 0.0035, 6, 12), lbBlack, 0, 0.345, cz, 0, 0, 0); P(new THREE.TorusGeometry(0.02, 0.005, 8, 16), lbBrass, 0, 0.31, cz, 0, Math.PI / 2, 0);
+    // (the top: a brass finial, a little vented chimney cap and a flared, six-sided roof with balls at its corners)
+    P(new THREE.SphereGeometry(0.02, 12, 10), lbBrass, 0, 0.28, cz); P(new THREE.CylinderGeometry(0.012, 0.022, 0.03, 12), lbBrass, 0, 0.255, cz);
+    P(new THREE.ConeGeometry(0.06, 0.05, 6), lbBlack, 0, 0.215, cz); P(new THREE.CylinderGeometry(0.045, 0.05, 0.035, 6), lbBlack, 0, 0.175, cz);
+    for (var v = 0; v < 6; v++) { var va = v * Math.PI / 3 + Math.PI / 6; P(new THREE.BoxGeometry(0.018, 0.016, 0.004), rMat(0x050505), Math.sin(va) * 0.046, 0.175, cz + Math.cos(va) * 0.046, 0, va, 0); }
+    P(new THREE.CylinderGeometry(0.06, 0.06, 0.012, 6), lbBlack, 0, 0.152, cz);
+    P(new THREE.ConeGeometry(0.135, 0.075, 6, 1, true), lbBlack, 0, 0.112, cz); P(new THREE.CylinderGeometry(0.137, 0.137, 0.012, 6), lbBrass, 0, 0.072, cz);
+    for (var c = 0; c < 6; c++) { var ca = c * Math.PI / 3; P(new THREE.SphereGeometry(0.012, 8, 6), lbBrass, Math.sin(ca) * 0.14, 0.072, cz + Math.cos(ca) * 0.14); P(new THREE.ConeGeometry(0.006, 0.03, 6), lbBlack, Math.sin(ca) * 0.14, 0.098, cz + Math.cos(ca) * 0.14); }
+    // (the body: six glass panes between slim iron posts, with frames top and bottom and a little band of fretwork)
+    P(new THREE.CylinderGeometry(0.1, 0.1, 0.022, 6), lbBlack, 0, 0.055, cz);
+    var gl = new THREE.MeshStandardMaterial({ color: 0xfff1d6, transparent: true, opacity: 0.22, metalness: 0, roughness: 0.05, envMap: rubyEnv, envMapIntensity: 1.6, emissive: 0xffb050, emissiveIntensity: 0, side: THREE.DoubleSide, depthWrite: false });
+    P(new THREE.CylinderGeometry(0.088, 0.074, 0.19, 6, 1, true), gl, 0, -0.05, cz);
+    for (var q = 0; q < 6; q++) { var qa = q * Math.PI / 3; var post = P(new THREE.BoxGeometry(0.011, 0.2, 0.011), lbBlack, Math.sin(qa) * 0.082, -0.05, cz + Math.cos(qa) * 0.082, 0, qa, 0); post.rotation.x = Math.cos(qa) * -0.07; post.rotation.z = Math.sin(qa) * 0.07; }
+    P(new THREE.CylinderGeometry(0.086, 0.086, 0.008, 6, 1, true), lbBlack, 0, 0.022, cz);
+    for (var fr = 0; fr < 6; fr++) { var fa = fr * Math.PI / 3 + Math.PI / 6; P(new THREE.TorusGeometry(0.012, 0.0028, 5, 10), lbBlack, Math.sin(fa) * 0.083, 0.008, cz + Math.cos(fa) * 0.083, 0, fa, 0); }
+    P(new THREE.CylinderGeometry(0.082, 0.082, 0.026, 6), lbBlack, 0, -0.155, cz); P(new THREE.CylinderGeometry(0.084, 0.084, 0.008, 6), lbBrass, 0, -0.142, cz);
+    // (underneath: a tapering base with a brass drop finial)
+    P(new THREE.ConeGeometry(0.08, 0.06, 6), lbBlack, 0, -0.198, cz, Math.PI, 0, 0); P(new THREE.SphereGeometry(0.017, 12, 10), lbBrass, 0, -0.235, cz); P(new THREE.ConeGeometry(0.008, 0.03, 8), lbBrass, 0, -0.262, cz, Math.PI, 0, 0);
+    // (inside: a brass cup, a creamy candle with a drip of wax, a wick and a flickering flame with a bright heart)
+    P(new THREE.CylinderGeometry(0.032, 0.026, 0.016, 14), lbBrass, 0, -0.134, cz);
+    var wax = rMat(0xf4ead2, { roughness: 0.55, emissive: 0x3a2410, emissiveIntensity: 0.4 });
+    P(new THREE.CylinderGeometry(0.018, 0.019, 0.075, 14), wax, 0, -0.088, cz); P(new THREE.SphereGeometry(0.006, 6, 5), wax, 0.016, -0.065, cz + 0.008).scale.set(1, 2.2, 1);
+    P(new THREE.CylinderGeometry(0.0015, 0.0015, 0.012, 4), rMat(0x111111), 0, -0.045, cz);
+    var m = rMat(0xffe0a0, { emissive: 0xffb040, emissiveIntensity: 0.3, roughness: 0.3 });
+    var flame = P(new THREE.SphereGeometry(0.012, 12, 10), m, 0, -0.022, cz); flame.scale.set(1, 1.9, 1); flame.castShadow = false;
+    var core = P(new THREE.SphereGeometry(0.0055, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfffbe8 }), 0, -0.028, cz); core.scale.set(1, 1.7, 1);
+    var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: lbHaloTex, color: 0xffd090, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); halo.position.set(0, -0.03, cz); halo.scale.set(0.85, 0.85, 1); L.add(halo);
+    lbLamps.push({ m: m, g: halo, f: flame, gl: gl });
   }
   (function (G) {
     var W = LAB_HW, D = LAB_HD, H = LAB_H;
@@ -345,15 +387,77 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (the chimney, smoking a little green)
     lbP(new THREE.BoxGeometry(0.6, 1.9, 0.6), lbStone, -W + 1.0, H + 1.2, -0.9); lbP(new THREE.BoxGeometry(0.72, 0.14, 0.72), lbWood, -W + 1.0, H + 2.18, -0.9);
     for (var k = 0; k < 6; k++) { var sm = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcfe8d8, transparent: true, opacity: 0, depthWrite: false })); G.add(sm); lbSmoke.push({ m: sm, k: k }); }
-    // (the arched front door, studded, under a round stone arch)
+    // (the front door: oak planks under a dressed-stone arch with a keystone, in a dark timber frame, with wrought-iron strap
+    // hinges, clout-nail studs, a little barred speaking window, a brass ring knocker and a latch with a keyhole)
     var door = new THREE.Group(); door.position.set(0, 0, D + 0.12); G.add(door);
-    var arch = new THREE.Shape(); arch.moveTo(-0.6, 0); arch.lineTo(0.6, 0); arch.lineTo(0.6, 1.6); arch.absarc(0, 1.6, 0.6, 0, Math.PI, false); arch.lineTo(-0.6, 0);   // (the door: arched at the top)
-    lbP(new THREE.ExtrudeGeometry(arch, { depth: 0.1, bevelEnabled: false, curveSegments: 16 }), lbOak, 0, 0, -0.05, 0, 0, 0, door);
-    for (var y = 0.35; y < 1.9; y += 0.42) [-0.4, 0, 0.4].forEach(function (x) { lbP(new THREE.SphereGeometry(0.03, 6, 4), lbIron, x, y, 0.06, 0, 0, 0, door); });
-    [0.45, 1.35].forEach(function (y) { lbP(new THREE.BoxGeometry(1.2, 0.07, 0.03), lbIron, 0, y, 0.06, 0, 0, 0, door); });
-    lbP(new THREE.TorusGeometry(0.08, 0.015, 6, 14), lbBrass, 0.38, 1.0, 0.09, 0, 0, 0, door);
-    lbP(new THREE.TorusGeometry(0.68, 0.1, 8, 24, Math.PI), lbStone, 0, 1.6, 0.05, 0, 0, 0, door);
-    lbLamp(G, -1.05, 1.75, D + 0.28); lbLamp(G, 1.05, 1.75, D + 0.28);
+    function dP(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, door); }
+    function archShape(hw, rh, sh) { sh = sh || new THREE.Shape(); sh.moveTo(-hw, 0); sh.lineTo(hw, 0); sh.lineTo(hw, rh); sh.absarc(0, rh, hw, 0, Math.PI, false); sh.lineTo(-hw, 0); return sh; }
+    var DHW = 0.54, DRH = 1.5, FR = 0.64;                               // (the door's half-width and the height where its arch begins; the frame's outer edge)
+    dP(new THREE.BoxGeometry(1.5, 2.25, 0.06), lbStone, 0, 1.125, -0.13);   // (stone behind, so no gap shows round the arch)
+    var plankTex = cpTex(256, 512, function (g, w, h) {                  // (five oak planks: grain, knots, dark seams, weathered at the foot)
+      var pw = w / 5;
+      for (var i = 0; i < 5; i++) {
+        var x0 = i * pw, tone = [0, 10, -8, 6, -4][i]; g.fillStyle = 'rgb(' + (128 + tone) + ',' + (86 + tone * 0.7) + ',' + (52 + tone * 0.4) + ')'; g.fillRect(x0, 0, pw, h);
+        for (var k = 0; k < 16; k++) { var gx = x0 + 3 + (k * 37 + i * 11) % (pw - 6), amp = 1.5 + (k % 3), ph = k * 1.7 + i;
+          g.strokeStyle = k % 2 ? 'rgba(70,40,18,0.28)' : 'rgba(190,140,90,0.18)'; g.lineWidth = k % 4 ? 1 : 2; g.beginPath();
+          for (var y = 0; y <= h; y += 8) { var xx = gx + Math.sin(y * 0.018 + ph) * amp; if (y) g.lineTo(xx, y); else g.moveTo(xx, y); } g.stroke(); }
+        var ky = 80 + ((i * 173) % 330); if (i !== 2) { g.save(); g.translate(x0 + pw * (0.35 + (i % 2) * 0.3), ky); for (var r = 9; r > 1; r -= 2) { g.strokeStyle = 'rgba(60,32,14,' + (0.25 + (9 - r) * 0.06) + ')'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(0, 0, r * 0.7, r * 1.8, 0, 0, Math.PI * 2); g.stroke(); } g.fillStyle = 'rgba(50,26,10,0.7)'; g.beginPath(); g.ellipse(0, 0, 2, 4, 0, 0, Math.PI * 2); g.fill(); g.restore(); }
+        g.fillStyle = 'rgba(255,220,170,0.12)'; g.fillRect(x0 + 3, 0, 2, h); g.fillStyle = 'rgba(30,15,5,0.25)'; g.fillRect(x0 + pw - 6, 0, 3, h);
+        g.fillStyle = '#26160c'; g.fillRect(x0 + pw - 3, 0, 3, h);
+      }
+      var fg = g.createLinearGradient(0, h, 0, h * 0.78); fg.addColorStop(0, 'rgba(40,26,14,0.55)'); fg.addColorStop(1, 'rgba(40,26,14,0)'); g.fillStyle = fg; g.fillRect(0, h * 0.78, w, h * 0.22);
+    });
+    plankTex.wrapS = plankTex.wrapT = THREE.RepeatWrapping; plankTex.repeat.set(1 / (DHW * 2), 1 / (DRH + DHW)); plankTex.offset.set(0.5, 0);
+    var leafM = new THREE.MeshStandardMaterial({ map: plankTex, bumpMap: plankTex, bumpScale: 0.012, roughness: 0.78, color: 0xe8dccb });
+    dP(new THREE.ExtrudeGeometry(archShape(DHW, DRH), { depth: 0.07, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2, curveSegments: 24 }), leafM, 0, 0, -0.06);
+    var frame = archShape(FR, DRH); frame.holes.push(archShape(DHW + 0.01, DRH, new THREE.Path()));
+    dP(new THREE.ExtrudeGeometry(frame, { depth: 0.17, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 1, curveSegments: 24 }), lbWood, 0, 0, -0.12);
+    // (the stone arch: dressed voussoirs fanned round, a proud keystone at the top, and quoined jambs down each side)
+    var dressed = [0xb8aa8f, 0xae9f84, 0xc0b296, 0xa89a80].map(function (c) { return rMat(c, { roughness: 0.9 }); });
+    for (var vs = 0; vs < 9; vs++) {
+      var a0 = vs / 9 * Math.PI + 0.012, a1 = (vs + 1) / 9 * Math.PI - 0.012, key = vs === 4, r0 = FR, r1 = key ? 0.93 : 0.86, vsh = new THREE.Shape();
+      vsh.moveTo(r0 * Math.cos(a0), r0 * Math.sin(a0)); vsh.lineTo(r1 * Math.cos(a0), r1 * Math.sin(a0)); vsh.absarc(0, 0, r1, a0, a1, false); vsh.lineTo(r0 * Math.cos(a1), r0 * Math.sin(a1)); vsh.absarc(0, 0, r0, a1, a0, true);
+      dP(new THREE.ExtrudeGeometry(vsh, { depth: key ? 0.2 : 0.16, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2, curveSegments: 6 }), dressed[vs % 4], 0, DRH, -0.06);
+    }
+    var jy = 0, jn = 0; [0.32, 0.28, 0.31, 0.29, 0.3].forEach(function (jh) { [-1, 1].forEach(function (sd) { var jw = (jn + (sd > 0 ? 1 : 0)) % 2 ? 0.26 : 0.2;
+      dP(new THREE.BoxGeometry(jw, jh - 0.018, 0.17), dressed[(jn + (sd > 0 ? 2 : 0)) % 4], sd * (FR + jw / 2 - 0.01), jy + jh / 2, 0.025); }); jy += jh; jn++; });
+    dP(new THREE.BoxGeometry(1.7, 0.1, 0.4), rMat(0x9c917d, { roughness: 0.95 }), 0, 0.05, 0.18);   // (a worn stone step)
+    dP(new THREE.BoxGeometry(1.3, 0.012, 0.3), rMat(0x8a8070, { roughness: 1 }), 0, 0.106, 0.19);
+    // (the strap hinges: long iron straps with spear tips and curls, riveted, swinging on pintles in the frame)
+    var strap = new THREE.Shape(); strap.moveTo(-0.6, -0.035); strap.lineTo(0.12, -0.028); strap.lineTo(0.2, -0.05); strap.lineTo(0.31, 0); strap.lineTo(0.2, 0.05); strap.lineTo(0.12, 0.028); strap.lineTo(-0.6, 0.035); strap.lineTo(-0.6, -0.035);
+    [0.38, 1.36].forEach(function (hy) {
+      dP(new THREE.ExtrudeGeometry(strap, { depth: 0.012, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 1 }), lbBlack, 0, hy, 0.022);
+      [1, -1].forEach(function (sd) { dP(new THREE.TorusGeometry(0.028, 0.006, 6, 14, Math.PI * 1.3), lbBlack, 0.05, hy + sd * 0.052, 0.03, 0, 0, sd > 0 ? -0.2 : Math.PI - 0.2); });
+      [-0.48, -0.3, -0.12, 0.05, 0.2].forEach(function (rx) { dP(new THREE.SphereGeometry(0.011, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lbBlack, rx, hy, 0.036, Math.PI / 2, 0, 0); });
+      dP(new THREE.CylinderGeometry(0.022, 0.022, 0.12, 10), lbBlack, -DHW - 0.04, hy, 0.03); dP(new THREE.BoxGeometry(0.09, 0.04, 0.012), lbBlack, -DHW - 0.08, hy, 0.055);
+      dP(new THREE.SphereGeometry(0.01, 6, 5), lbBlack, -DHW - 0.1, hy, 0.064);
+    });
+    // (studs: square clout nails down the planks, kept clear of the knocker, the latch and the window)
+    var stud = new THREE.ConeGeometry(0.019, 0.016, 4);
+    [0.14, 0.7, 0.98, 1.2, 1.62, 1.85].forEach(function (sy) { [-0.432, -0.216, 0, 0.216, 0.432].forEach(function (sx) {
+      var half = sy > DRH ? Math.sqrt(Math.max(0, DHW * DHW - (sy - DRH) * (sy - DRH))) - 0.07 : DHW - 0.05;
+      if (Math.abs(sx) > half || (Math.abs(sx) < 0.13 && sy > 0.85 && sy < 1.3) || (sx > 0.3 && sy > 0.75 && sy < 1.2) || (Math.abs(sx) < 0.17 && sy > 1.55)) return;
+      dP(stud, lbBlack, sx, sy, 0.032, Math.PI / 2, Math.PI / 4, 0); }); });
+    // (the speaking window: a little arched grille, warm light behind its iron bars, under a brass hood)
+    var gwin = new THREE.Shape(); gwin.moveTo(-0.085, 1.62); gwin.lineTo(0.085, 1.62); gwin.lineTo(0.085, 1.74); gwin.absarc(0, 1.74, 0.085, 0, Math.PI, false); gwin.lineTo(-0.085, 1.62);
+    dP(new THREE.ShapeGeometry(gwin, 12), rMat(0xffd89a, { emissive: 0xffb860, emissiveIntensity: 0.55, roughness: 0.3 }), 0, 0, 0.025);
+    var gring = new THREE.Shape(); gring.moveTo(-0.11, 1.6); gring.lineTo(0.11, 1.6); gring.lineTo(0.11, 1.74); gring.absarc(0, 1.74, 0.11, 0, Math.PI, false); gring.lineTo(-0.11, 1.6); gring.holes.push(gwin);
+    dP(new THREE.ExtrudeGeometry(gring, { depth: 0.016, bevelEnabled: true, bevelSize: 0.004, bevelThickness: 0.004, bevelSegments: 1, curveSegments: 12 }), lbBrass, 0, 0, 0.022);
+    [-0.045, 0, 0.045].forEach(function (bx) { dP(new THREE.CylinderGeometry(0.0065, 0.0065, bx ? 0.2 : 0.25, 8), lbBlack, bx, 1.72 + (bx ? -0.005 : 0.01), 0.035); });
+    dP(new THREE.CylinderGeometry(0.0065, 0.0065, 0.18, 8), lbBlack, 0, 1.71, 0.035, 0, 0, Math.PI / 2);
+    [-0.045, 0, 0.045].forEach(function (bx) { dP(new THREE.SphereGeometry(0.009, 6, 5), lbBrass, bx, 1.71, 0.036); });
+    // (the knocker: a brass rosette with a heavy ring hanging from a boss, and a strike plate beneath)
+    dP(new THREE.CylinderGeometry(0.068, 0.068, 0.012, 24), lbBrass, 0, 1.12, 0.03, Math.PI / 2, 0, 0);
+    for (var pe = 0; pe < 10; pe++) { var pa = pe / 10 * Math.PI * 2; dP(new THREE.SphereGeometry(0.013, 8, 6), lbBrass, Math.cos(pa) * 0.05, 1.12 + Math.sin(pa) * 0.05, 0.038).scale.set(1, 1, 0.6); }
+    dP(new THREE.SphereGeometry(0.026, 14, 10), lbBrass, 0, 1.12, 0.042); dP(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 8), lbBrass, 0, 1.105, 0.06, 0.4, 0, 0);
+    var ring = dP(new THREE.TorusGeometry(0.075, 0.012, 10, 28), lbBrass, 0, 1.045, 0.075, -0.32, 0, 0);
+    dP(new THREE.SphereGeometry(0.022, 12, 8), lbBrass, 0, 0.955, 0.035).scale.set(1, 1, 0.5);
+    // (the latch: a long brass escutcheon with a pull handle and a keyhole)
+    dP(new THREE.BoxGeometry(0.06, 0.22, 0.01), lbBrass, 0.4, 0.97, 0.03);
+    [1.08, 0.86].forEach(function (ey) { dP(new THREE.CylinderGeometry(0.03, 0.03, 0.01, 18), lbBrass, 0.4, ey, 0.03, Math.PI / 2, 0, 0); dP(new THREE.SphereGeometry(0.007, 6, 5), lbBlack, 0.4, ey, 0.037); });
+    dP(new THREE.TorusGeometry(0.055, 0.009, 8, 18, Math.PI), lbBrass, 0.4, 1.0, 0.035, 0, -Math.PI / 2, -Math.PI / 2);
+    dP(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 10), rMat(0x050505), 0.4, 0.915, 0.037, Math.PI / 2, 0, 0); dP(new THREE.BoxGeometry(0.006, 0.02, 0.006), rMat(0x050505), 0.4, 0.903, 0.037);
+    lbLamp(G, -1.22, 1.38, D + 0.15); lbLamp(G, 1.22, 1.38, D + 0.15);
     // (front windows, warm-lit, with bottles on their sills and a round window up in the gable)
     [-1, 1].forEach(function (s) {
       var wx = s * 2.5; lbP(new THREE.BoxGeometry(1.1, 1.1, 0.06), lbGlow, wx, 1.65, D + 0.16); lbP(new THREE.BoxGeometry(1.26, 0.1, 0.14), lbWood, wx, 1.05, D + 0.2); lbP(new THREE.BoxGeometry(1.26, 0.1, 0.12), lbWood, wx, 2.25, D + 0.18);
@@ -368,7 +472,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = '#f2d27a'; g.font = '600 52px Georgia, "Times New Roman", serif'; g.textBaseline = 'middle'; g.fillText('Atom & Alembic', 118, 68);
     });
     var signM = new THREE.MeshStandardMaterial({ map: sign, emissive: 0xffffff, emissiveMap: sign, emissiveIntensity: 0.25, roughness: 0.6 });
-    lbP(new THREE.BoxGeometry(2.4, 0.6, 0.06), signM, 0, H - 0.42, D + 0.22); lbP(new THREE.BoxGeometry(2.5, 0.68, 0.04), lbWood, 0, H - 0.42, D + 0.19);
+    lbP(new THREE.BoxGeometry(2.4, 0.54, 0.06), signM, 0, H - 0.28, D + 0.24); lbP(new THREE.BoxGeometry(2.5, 0.62, 0.04), lbWood, 0, H - 0.28, D + 0.21);
     // (a few things outside: a barrel of glowing bottles, a crate, and a potted fern)
     lbP(new THREE.CylinderGeometry(0.34, 0.3, 0.75, 14), lbOak, -W + 0.6, 0.38, D + 0.75); lbP(new THREE.TorusGeometry(0.34, 0.025, 6, 16), lbIron, -W + 0.6, 0.6, D + 0.75, Math.PI / 2, 0, 0); lbP(new THREE.TorusGeometry(0.33, 0.025, 6, 16), lbIron, -W + 0.6, 0.15, D + 0.75, Math.PI / 2, 0, 0);
     [[0.1, 0x5affb0], [-0.12, 0xff7ab0], [0.02, 0x7ab8ff]].forEach(function (b, i) { lbP(new THREE.CylinderGeometry(0.035, 0.04, 0.22, 8), rMat(b[1], { emissive: b[1], emissiveIntensity: 0.6 }), -W + 0.6 + b[0], 0.86, D + 0.75 + (i - 1) * 0.1); });
@@ -513,7 +617,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function updateLabOutside(t) {
     var nt = labNight(); lbGlow.emissiveIntensity = 0.4 + nt * 0.8; lbGreen.emissiveIntensity = 0.6 + nt * 0.6;
-    lbLamps.forEach(function (L, i) { L.m.emissiveIntensity = 0.3 + nt * 1.2; L.g.material.opacity = nt * (0.35 + Math.sin(t * 3 + i * 2) * 0.03); });
+    lbLamps.forEach(function (L, i) { var fl = Math.sin(t * 9 + i * 2) * 0.5 + Math.sin(t * 23 + i) * 0.3; L.m.emissiveIntensity = 0.5 + nt * (1.4 + fl * 0.3); L.f.scale.set(1 - fl * 0.06, 1.9 + fl * 0.18, 1 - fl * 0.06); L.gl.emissiveIntensity = nt * (0.12 + fl * 0.02); L.g.material.opacity = nt * (0.6 + fl * 0.06); });
     lbSmoke.forEach(function (s) { var f = (t * 0.18 + s.k / 6) % 1; s.m.position.set(-LAB_HW + 1.0 + Math.sin(f * 6 + s.k) * 0.15, LAB_H + 2.3 + f * 2.2, -0.9 + f * 0.4); s.m.scale.setScalar(0.6 + f * 1.6); s.m.material.opacity = 0.45 * Math.sin(f * Math.PI); });
   }
   function labDoorUse(goIn) {                                          // through Atom & Alembic's door, in or out
