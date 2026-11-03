@@ -303,9 +303,16 @@ EVERDAWN_PARTS.push(function (THREE) {
   function lbTex(w, h, paint, rx, ry) { var t = cpTex(w, h, paint); if (rx) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); } return t; }
   var lbStone = new THREE.MeshStandardMaterial({ roughness: 0.92, map: lbTex(256, 256, function (g, w, h) {   // (honey-coloured stone, laid in courses)
     g.fillStyle = '#8a7a64'; g.fillRect(0, 0, w, h);
-    for (var r = 0, y = 0; y < h; r++) { var hh = 26 + (r * 7) % 12; for (var x = -((r * 37) % 60); x < w; ) { var ww = 44 + ((r * 13 + x) % 36);
-      var c = 168 + ((r * 31 + x * 7) % 34); g.fillStyle = 'rgb(' + c + ',' + (c - 16) + ',' + (c - 42) + ')'; g.fillRect(x + 2, y + 2, ww - 4, hh - 4);
-      g.fillStyle = 'rgba(255,240,210,0.18)'; g.fillRect(x + 2, y + 2, ww - 4, 3); g.fillStyle = 'rgba(60,40,20,0.18)'; g.fillRect(x + 2, y + hh - 6, ww - 4, 4); x += ww; } y += hh; }
+    var rows = [30, 34, 30, 34, 32, 32, 30, 34];                       // (courses that add up to the full height, so the stone tiles with no seam)
+    for (var r = 0, y = 0; r < rows.length; r++) {
+      var hh = rows[r], x0 = (r * 37) % 60, ws = [], tot = 0;
+      while (tot < w) { var ww = 44 + ((r * 13 + tot * 7) % 36); if (w - tot - ww < 30) ww = w - tot; ws.push(ww); tot += ww; }   // (the last stone ends where the first begins)
+      for (var k = 0, x = x0; k < ws.length; x += ws[k], k++) { var c = 168 + ((r * 31 + k * 53) % 34);
+        [x, x - w].forEach(function (bx) {                               // (each stone drawn again one width over, so it wraps round the edge)
+          g.fillStyle = 'rgb(' + c + ',' + (c - 16) + ',' + (c - 42) + ')'; g.fillRect(bx + 2, y + 2, ws[k] - 4, hh - 4);
+          g.fillStyle = 'rgba(255,240,210,0.18)'; g.fillRect(bx + 2, y + 2, ws[k] - 4, 3); g.fillStyle = 'rgba(60,40,20,0.18)'; g.fillRect(bx + 2, y + hh - 6, ws[k] - 4, 4); }); }
+      y += hh;
+    }
   }, 2, 1.5) });
   var lbSlate = new THREE.MeshStandardMaterial({ roughness: 0.75, map: lbTex(128, 128, function (g, w, h) {   // (dark blue-grey slates, overlapping)
     g.fillStyle = '#2e3440'; g.fillRect(0, 0, w, h);
@@ -444,7 +451,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     [-1, 1].forEach(function (s) { lbP(new THREE.BoxGeometry(W * 2 + 0.7, 0.14, len + 0.1), lbSlate, 0, H + RH / 2, s * (D + 0.35) / 2, s * slope, 0, 0); });
     lbP(new THREE.BoxGeometry(W * 2 + 0.75, 0.16, 0.2), lbWood, 0, H + RH + 0.02, 0);   // (the ridge)
     var gab = new THREE.Shape(); gab.moveTo(-D, 0); gab.lineTo(D, 0); gab.lineTo(0, RH); gab.lineTo(-D, 0);
-    [-1, 1].forEach(function (s) { var gm = lbP(new THREE.ExtrudeGeometry(gab, { depth: 0.28, bevelEnabled: false }), lbStone, s * W - (s > 0 ? 0.14 : -0.14), H, 0, 0, Math.PI / 2, 0); gm.position.x = s > 0 ? W - 0.14 : -W - 0.14; });
+    var gabT = lbStone.map.clone(); gabT.needsUpdate = true; gabT.repeat.set(1 / 3.2, 1 / 2); gabT.offset.set(0, 0.5);   // (the gables' stone sized and lined up with the walls below)
+    var lbStoneG = new THREE.MeshStandardMaterial({ roughness: 0.92, map: gabT });
+    [-1, 1].forEach(function (s) { var gm = lbP(new THREE.ExtrudeGeometry(gab, { depth: 0.28, bevelEnabled: false }), lbStoneG, s * W - (s > 0 ? 0.14 : -0.14), H, 0, 0, Math.PI / 2, 0); gm.position.x = s > 0 ? W - 0.14 : -W - 0.14; });
     // (the chimney, smoking a little green)
     lbP(new THREE.BoxGeometry(0.6, 1.9, 0.6), lbStone, -W + 1.0, H + 1.2, -0.9); lbP(new THREE.BoxGeometry(0.72, 0.14, 0.72), lbWood, -W + 1.0, H + 2.18, -0.9);
     for (var k = 0; k < 6; k++) { var sm = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshBasicMaterial({ color: 0xcfe8d8, transparent: true, opacity: 0, depthWrite: false })); G.add(sm); lbSmoke.push({ m: sm, k: k }); }
