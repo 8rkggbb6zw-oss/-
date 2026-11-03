@@ -369,7 +369,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   // ---- apothecary glassware for the windowsills and the barrel: blown-glass bottles, flasks, jars and vials with glowing
   // potions inside, corks, twine and handwritten labels, and a few other bits of an alchemist's kit ----
-  var lbLiquids = [];
+  var lbLiquids = [], lbSignM, lbSignLampIn, lbSignGlows = [];
   var lbGlass = new THREE.MeshStandardMaterial({ color: 0xeef6ff, transparent: true, opacity: 0.3, roughness: 0.04, metalness: 0.1, envMap: rubyEnv, envMapIntensity: 2.2, side: THREE.DoubleSide, depthWrite: false });
   var lbCork = rMat(0xa47a4e, { roughness: 0.95 }), lbTwine = rMat(0xc9b48a, { roughness: 1 });
   var lbLabels = ['⚗', '☿', '☉', '☽', '♀', '♃'].map(function (sym, i) { return new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide, map: cpTex(128, 64, function (g, w, h) {
@@ -565,14 +565,76 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-0.6, 0.6].forEach(function (cx) { lbP(new THREE.BoxGeometry(0.11, 0.13, 0.15), dressed[3], wx + cx, 0.955, WZ + 0.07); lbP(new THREE.BoxGeometry(0.09, 0.05, 0.11), dressed[0], wx + cx, 0.87, WZ + 0.05); });
       winSets[s].forEach(function (it) { lbBottle(labGroup, it[0], wx + it[1], 1.098, WZ + 0.2, it[2], it[3], it[4]); });
     });
-    // (the sign over the door: an atom and the lab's name, in gold on dark wood)
-    var sign = cpTex(512, 128, function (g, w, h) {
-      g.fillStyle = '#2a1c14'; g.fillRect(0, 0, w, h); g.strokeStyle = '#c9a14a'; g.lineWidth = 6; g.strokeRect(6, 6, w - 12, h - 12);
-      g.save(); g.translate(64, 64); g.strokeStyle = '#e8c870'; g.lineWidth = 3; for (var i = 0; i < 3; i++) { g.save(); g.rotate(i * Math.PI / 3); g.beginPath(); g.ellipse(0, 0, 40, 14, 0, 0, Math.PI * 2); g.stroke(); g.restore(); } g.fillStyle = '#7affc0'; g.beginPath(); g.arc(0, 0, 7, 0, Math.PI * 2); g.fill(); g.restore();
-      g.fillStyle = '#f2d27a'; g.font = '600 52px Georgia, "Times New Roman", serif'; g.textBaseline = 'middle'; g.fillText('Atom & Alembic', 118, 68);
+    // (the sign over the door, made like the other shops' signs: a dark oak board with the name gilded in gold leaf, a gilded atom
+    // and alembic at its ends, in a moulded frame with a gold bead, lit by two brass gooseneck lamps)
+    function lbSignPaint(g, w, h, metalOnly) {
+      if (metalOnly) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); }
+      else {
+        var base = g.createLinearGradient(0, 0, 0, h); base.addColorStop(0, '#5a3420'); base.addColorStop(0.5, '#4a2a18'); base.addColorStop(1, '#3a2012'); g.fillStyle = base; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 300; i++) { var gy = isle2Hash(i * 1.7 + 290) * h, lite = isle2Hash(i * 3.1 + 290) > 0.5;
+          g.strokeStyle = lite ? 'rgba(210,150,100,' + (0.04 + isle2Hash(i + 9) * 0.06) + ')' : 'rgba(20,8,2,' + (0.08 + isle2Hash(i + 11) * 0.1) + ')'; g.lineWidth = 0.6 + isle2Hash(i * 5 + 7) * 1.6;
+          g.beginPath(); var x0 = isle2Hash(i * 2.3 + 290) * w * 0.7; g.moveTo(x0, gy); g.bezierCurveTo(x0 + 200, gy + (isle2Hash(i * 7 + 3) - 0.5) * 8, x0 + 420, gy - (isle2Hash(i * 9 + 3) - 0.5) * 8, x0 + 300 + isle2Hash(i * 11 + 3) * 600, gy + (isle2Hash(i * 13 + 3) - 0.5) * 5); g.stroke(); }
+        g.fillStyle = 'rgba(0,0,0,0.22)'; g.fillRect(0, h * 0.5 - 1, w, 2);
+        var vig = g.createLinearGradient(0, 0, 0, h); vig.addColorStop(0, 'rgba(0,0,0,0.3)'); vig.addColorStop(0.18, 'rgba(0,0,0,0)'); vig.addColorStop(0.82, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.38)'); g.fillStyle = vig; g.fillRect(0, 0, w, h);
+      }
+      function gold(y0, y1) { if (metalOnly) return '#fff'; var gg = g.createLinearGradient(0, y0, 0, y1); gg.addColorStop(0, '#fff5c8'); gg.addColorStop(0.3, '#ecc054'); gg.addColorStop(0.55, '#a87824'); gg.addColorStop(0.78, '#f2d06c'); gg.addColorStop(1, '#7e5814'); return gg; }
+      function gild(text, x, y, size, italic, spacing, maxW) {         // (gold-leaf letters with a shadow, shrunk if need be to fit maxW)
+        var chars, widths, total; if (window.everdawnTranslate) text = window.everdawnTranslate(text);   // (in the player's language, since it's drawn a letter at a time)
+        do { g.font = (italic ? 'italic ' : '') + 'bold ' + size + 'px Georgia, serif'; chars = text.split(''); widths = chars.map(function (c) { return g.measureText(c).width + (spacing || 0); }); total = widths.reduce(function (a2, b2) { return a2 + b2; }, 0) - (spacing || 0); size -= 4; } while (total > maxW && size > 20);
+        size += 4; g.textBaseline = 'middle'; var cx = x - total / 2;
+        chars.forEach(function (c, k) {
+          if (!metalOnly) { g.save(); g.shadowColor = 'rgba(0,0,0,0.65)'; g.shadowOffsetX = size * 0.04; g.shadowOffsetY = size * 0.06; g.shadowBlur = size * 0.08; g.fillStyle = '#4a3008'; g.fillText(c, cx + 1.5, y + 2); g.restore(); }
+          g.fillStyle = gold(y - size * 0.5, y + size * 0.5); g.fillText(c, cx, y);
+          if (!metalOnly) { g.strokeStyle = 'rgba(255,248,215,0.5)'; g.lineWidth = 1; g.strokeText(c, cx - 0.6, y - 1); }
+          cx += widths[k];
+        });
+        return total;
+      }
+      function rrect(m, r) { g.beginPath(); g.moveTo(m + r, m); g.lineTo(w - m - r, m); g.quadraticCurveTo(w - m, m, w - m, m + r); g.lineTo(w - m, h - m - r); g.quadraticCurveTo(w - m, h - m, w - m - r, h - m); g.lineTo(m + r, h - m); g.quadraticCurveTo(m, h - m, m, h - m - r); g.lineTo(m, m + r); g.quadraticCurveTo(m, m, m + r, m); g.stroke(); }
+      g.strokeStyle = metalOnly ? '#fff' : gold(0, h); g.lineWidth = 6; rrect(18, 26); g.lineWidth = 2; rrect(32, 18);
+      function atom(cx, cy, s) {                                       // (a gilded atom: three orbits and a glowing nucleus)
+        g.save(); g.translate(cx, cy); g.strokeStyle = metalOnly ? '#fff' : gold(-s, s); g.lineWidth = s * 0.09;
+        for (var i = 0; i < 3; i++) { g.save(); g.rotate(i * Math.PI / 3 + 0.3); g.beginPath(); g.ellipse(0, 0, s, s * 0.36, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = metalOnly ? '#fff' : gold(-s, s); g.beginPath(); g.arc(s, 0, s * 0.09, 0, Math.PI * 2); g.fill(); g.restore(); }
+        g.fillStyle = metalOnly ? '#fff' : gold(-s * 0.2, s * 0.2); g.beginPath(); g.arc(0, 0, s * 0.2, 0, Math.PI * 2); g.fill();
+        if (!metalOnly) { g.fillStyle = 'rgba(255,250,225,0.6)'; g.beginPath(); g.arc(-s * 0.06, -s * 0.06, s * 0.07, 0, Math.PI * 2); g.fill(); }
+        g.restore();
+      }
+      function alembic(cx, cy, s) {                                    // (a gilded alembic: a round still with its beak bending down to a little flask)
+        g.save(); g.translate(cx, cy); g.fillStyle = metalOnly ? '#fff' : gold(-s, s); g.strokeStyle = g.fillStyle;
+        g.beginPath(); g.arc(-s * 0.25, s * 0.3, s * 0.5, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.moveTo(-s * 0.45, -s * 0.12); g.quadraticCurveTo(-s * 0.4, -s * 0.75, -s * 0.05, -s * 0.72); g.quadraticCurveTo(s * 0.12, -s * 0.7, s * 0.05, -s * 0.12); g.fill();   // (the head)
+        g.lineWidth = s * 0.1; g.lineCap = 'round'; g.beginPath(); g.moveTo(-s * 0.05, -s * 0.62); g.quadraticCurveTo(s * 0.5, -s * 0.6, s * 0.72, s * 0.1); g.stroke();   // (the beak)
+        g.beginPath(); g.moveTo(s * 0.62, s * 0.2); g.lineTo(s * 0.82, s * 0.2); g.lineTo(s * 0.98, s * 0.72); g.lineTo(s * 0.46, s * 0.72); g.closePath(); g.fill();   // (the receiving flask)
+        if (!metalOnly) { g.fillStyle = 'rgba(70,40,8,0.55)'; g.beginPath(); g.arc(-s * 0.25, s * 0.42, s * 0.3, 0, Math.PI); g.fill(); g.fillStyle = 'rgba(255,250,225,0.55)'; g.beginPath(); g.arc(-s * 0.42, s * 0.12, s * 0.1, 0, Math.PI * 2); g.fill(); }
+        g.restore();
+      }
+      atom(170, h / 2, 96); alembic(w - 175, h / 2 + 2, 96);
+      gild('Atom & Alembic', w / 2, h / 2 - 34, 168, true, 2, w - 640);
+      var sub = gild('SCIENCE · ALCHEMY · SUPPLIES', w / 2, h / 2 + 108, 42, false, 10, w - 900);
+      g.strokeStyle = metalOnly ? '#fff' : '#c99a3a'; g.lineWidth = 3;
+      [-1, 1].forEach(function (d) { var ex = w / 2 + d * (sub / 2 + 40);
+        g.beginPath(); g.moveTo(ex, h / 2 + 108); g.lineTo(ex + d * 100, h / 2 + 108); g.stroke();
+        g.fillStyle = metalOnly ? '#fff' : '#e3b54c'; g.beginPath(); g.moveTo(ex + d * 116, h / 2 + 98); g.lineTo(ex + d * 126, h / 2 + 108); g.lineTo(ex + d * 116, h / 2 + 118); g.lineTo(ex + d * 106, h / 2 + 108); g.closePath(); g.fill(); });
+    }
+    var lbSignTex = paintTexture(2048, 360, function (g, w, h) { lbSignPaint(g, w, h, false); }), lbSignMetal = paintTexture(2048, 360, function (g, w, h) { lbSignPaint(g, w, h, true); });
+    lbSignTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    lbSignM = new THREE.MeshStandardMaterial({ map: lbSignTex, metalnessMap: lbSignMetal, metalness: 0.35, roughness: 0.4, emissive: 0xe8b54a, emissiveMap: lbSignMetal, emissiveIntensity: 0.25 });
+    var SG_Y = H - 0.29, SG_Z = D + 0.2, lbTrim = new THREE.MeshStandardMaterial({ color: 0x3a2012, roughness: 0.55 });
+    lbP(new THREE.BoxGeometry(3.0, 0.48, 0.05), new THREE.MeshStandardMaterial({ color: 0x4a2a18, roughness: 0.5 }), 0, SG_Y, SG_Z);
+    lbP(new THREE.PlaneGeometry(2.9, 0.43), lbSignM, 0, SG_Y, SG_Z + 0.027).castShadow = false;
+    [[0, 0.24, 3.1, 0.05], [0, -0.24, 3.1, 0.05], [-1.525, 0, 0.05, 0.53], [1.525, 0, 0.05, 0.53]].forEach(function (f) {   // (the moulded frame with a gold bead)
+      lbP(new THREE.BoxGeometry(f[2], f[3], 0.07), lbTrim, f[0], SG_Y + f[1], SG_Z + 0.035);
+      lbP(new THREE.BoxGeometry(f[2] > 1 ? 3.0 : 0.016, f[3] > 0.1 ? 0.43 : 0.016, 0.02), houseMats.gold, f[0] * 0.985, SG_Y + f[1] * 0.9, SG_Z + 0.065);
     });
-    var signM = new THREE.MeshStandardMaterial({ map: sign, emissive: 0xffffff, emissiveMap: sign, emissiveIntensity: 0.25, roughness: 0.6 });
-    lbP(new THREE.BoxGeometry(2.4, 0.54, 0.06), signM, 0, H - 0.28, D + 0.24); lbP(new THREE.BoxGeometry(2.5, 0.62, 0.04), lbWood, 0, H - 0.28, D + 0.21);
+    lbSignLampIn = new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0xffd9a0, emissiveIntensity: 0.2, side: THREE.BackSide });
+    [-1.05, 1.05].forEach(function (lx) {                              // (brass gooseneck lamps lighting the sign)
+      var y0 = SG_Y + 0.265, z0 = SG_Z + 0.05;
+      lbP(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 12), houseMats.gold, lx, y0 + 0.01, z0);
+      var neck = new THREE.CatmullRomCurve3([new THREE.Vector3(lx, y0, z0), new THREE.Vector3(lx, y0 + 0.09, z0 + 0.05), new THREE.Vector3(lx, y0 + 0.12, z0 + 0.2), new THREE.Vector3(lx, y0 + 0.07, z0 + 0.32)]);
+      lbP(new THREE.TubeGeometry(neck, 14, 0.011, 6), houseMats.gold, 0, 0, 0);
+      lbP(new THREE.ConeGeometry(0.065, 0.075, 14, 1, true), houseMats.gold, lx, y0 + 0.03, z0 + 0.32, 0.5, 0, 0); lbP(new THREE.ConeGeometry(0.061, 0.071, 14, 1, true), lbSignLampIn, lx, y0 + 0.03, z0 + 0.32, 0.5, 0, 0);
+      var lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffd08a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); lg.position.set(lx, y0 - 0.02, z0 + 0.3); lg.scale.set(0.55, 0.55, 1); G.add(lg); lbSignGlows.push(lg);
+    });
     // (a few things outside: an oak barrel and what sits on it, a crate, and a potted fern)
     (function () {
       var BR = new THREE.Group(); BR.position.set(-W + 0.6, 0, D + 0.75); BR.rotation.y = 0.4; G.add(BR);
@@ -825,6 +887,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateLabOutside(t) {
     var nt = labNight(); lbGlow.emissiveIntensity = 0.4 + nt * 0.8; lbGreen.emissiveIntensity = 0.6 + nt * 0.6;
     lbLiquids.forEach(function (m) { m.emissiveIntensity = 0.45 + nt * 0.55; });
+    if (lbSignM) { lbSignM.emissiveIntensity = 0.25 + nt * 0.45; lbSignLampIn.emissiveIntensity = 0.2 + nt * 1.6; lbSignGlows.forEach(function (gl) { gl.material.opacity = nt * 0.75; }); }
     lbLamps.forEach(function (L, i) { var fl = Math.sin(t * 9 + i * 2) * 0.5 + Math.sin(t * 23 + i) * 0.3; L.m.emissiveIntensity = 0.5 + nt * (1.4 + fl * 0.3); L.f.scale.set(1 - fl * 0.06, 1.9 + fl * 0.18, 1 - fl * 0.06); L.gl.emissiveIntensity = nt * (0.12 + fl * 0.02); L.g.material.opacity = nt * (0.6 + fl * 0.06); });
     lbSmoke.forEach(function (s) { var f = (t * 0.18 + s.k / 6) % 1; s.m.position.set(-LAB_HW + 1.0 + Math.sin(f * 6 + s.k) * 0.15, LAB_H + 2.3 + f * 2.2, -0.9 + f * 0.4); s.m.scale.setScalar(0.6 + f * 1.6); s.m.material.opacity = 0.45 * Math.sin(f * Math.PI); });
   }
