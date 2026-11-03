@@ -787,7 +787,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   labScene.add(new THREE.HemisphereLight(0xeef4ff, 0x7a889c, 0.5));
   var lbSun = new THREE.DirectionalLight(0xffffff, 0.35); lbSun.position.set(LBI_X - 2, 6, LBI_Z + 4); lbSun.target.position.set(LBI_X, 0, LBI_Z); labScene.add(lbSun); labScene.add(lbSun.target);
   var lbLights = [[-2, 0, 0xe8f2ff], [2, 0, 0xe8f2ff], [0, -1.8, 0x9ae8ff]].map(function (p) { var l = new THREE.PointLight(p[2], 0.45, 9); l.position.set(LBI_X + p[0], 2.8, LBI_Z + p[1]); labScene.add(l); return l; });
-  var labSolids = [], lbWalls = [], lbHolo = [], lbArms = [], lbChambers = [], LB_COUNTER = [2.7, 2.3], LB_COUNTER_W = 1.5;
+  var labSolids = [], lbWalls = [], lbHolo = [], lbArms = [], lbChambers = [], lbBubbles = [], LB_COUNTER = [2.7, 2.3], LB_COUNTER_W = 1.5;
   (function (R) {
     var W = LBI_W / 2, D = LBI_D / 2, H = LBI_H;
     function p(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || R); }
@@ -956,14 +956,85 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (i % 2) p(new THREE.CylinderGeometry(0.03, 0.03, 0.12, 8), cyanM, mc[0] + mc[2] * 0.35, 0.92 + mc[1] + 0.06, -D + 0.32);
     });
     for (var bx = -2.8; bx <= 2.8; bx += 0.7) labSolids.push([bx, -D + 0.35, 0.38]);
-    // (the left wall: a lit panel where plants grow in a grid of tubes)
+    // (the left wall: a vertical hydroponic garden. A white alcove frame with a glowing back panel, a bar of pink-violet grow
+    // lights above, six clear water columns held in steel clamps between a header pipe and a drain pipe, bubbles rising in them,
+    // and in each column four net pots of clay pebbles with roots trailing into the water: lettuces, basil, strawberries, mint,
+    // kale and microgreens. A control screen and a water tank with a level gauge beside it, and a drip tray beneath)
     var PW = new THREE.Group(); PW.position.set(-W + 0.06, 1.55, 0.3); PW.rotation.y = Math.PI / 2; R.add(PW);
-    p(new THREE.BoxGeometry(2.0, 2.0, 0.08), lightM, 0, 0, 0, 0, 0, 0, PW); p(new THREE.BoxGeometry(1.84, 1.84, 0.06), rMat(0xb8eefa, { emissive: 0x7ad8f0, emissiveIntensity: 0.7, roughness: 0.4 }), 0, 0, 0.02, 0, 0, 0, PW);
-    for (var c = 0; c < 6; c++) {
-      p(new THREE.CylinderGeometry(0.1, 0.1, 1.7, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, side: THREE.DoubleSide }), -0.75 + c * 0.3, 0, 0.12, 0, 0, 0, PW);
-      for (var r2 = 0; r2 < 4; r2++) { var py = -0.65 + r2 * 0.43; p(new THREE.CylinderGeometry(0.06, 0.05, 0.08, 10), white, -0.75 + c * 0.3, py, 0.12, 0, 0, 0, PW);
-        for (var lf = 0; lf < 4; lf++) { var la = lf / 4 * Math.PI * 2 + c + r2; p(new THREE.ConeGeometry(0.025, 0.16, 5), rMat([0x4aa860, 0x6cc070, 0x3a9050][(c + r2) % 3]), -0.75 + c * 0.3 + Math.sin(la) * 0.03, py + 0.12, 0.12 + Math.cos(la) * 0.03, Math.cos(la) * 0.5, 0, -Math.sin(la) * 0.5, PW); } }
+    function q(geo, m, x, y, z, rx, ry, rz) { return p(geo, m, x, y, z, rx, ry, rz, PW); }
+    var steelW = rMat(0xc8ccd2, { metalness: 0.9, roughness: 0.25, envMap: rubyEnv, envMapIntensity: 1.2 }), whiteW = rMat(0xeef1f5, { roughness: 0.3 }), glowW = new THREE.MeshBasicMaterial({ color: 0x7ae8ff });
+    var backTex = cpTex(256, 256, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#e8fbff'); gr.addColorStop(0.5, '#bff0f6'); gr.addColorStop(1, '#9ee0ea'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 1; for (var i = 0; i <= w; i += 16) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+      var rg = g.createRadialGradient(w / 2, h * 0.4, 10, w / 2, h * 0.4, w * 0.7); rg.addColorStop(0, 'rgba(255,255,255,0.5)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(0, 0, w, h); });
+    q(new THREE.BoxGeometry(2.3, 2.3, 0.06), whiteW, 0, 0.0, -0.02);                                   // (the alcove frame)
+    [[0, 1.12, 2.3, 0.06], [0, -1.12, 2.3, 0.06], [-1.12, 0, 0.06, 2.3], [1.12, 0, 0.06, 2.3]].forEach(function (f) { q(new THREE.BoxGeometry(f[2], f[3], 0.16), whiteW, f[0], f[1], 0.06); });
+    q(new THREE.PlaneGeometry(2.18, 2.18), new THREE.MeshBasicMaterial({ map: backTex }), 0, 0, 0.012);
+    [[0, 1.085, 2.18, 0.006], [0, -1.085, 2.18, 0.006], [-1.085, 0, 0.006, 2.18], [1.085, 0, 0.006, 2.18]].forEach(function (f) { q(new THREE.BoxGeometry(f[2], f[3], 0.01), glowW, f[0], f[1], 0.14); });
+    var growM = new THREE.MeshBasicMaterial({ color: 0xff8ae8 }), growW = new THREE.MeshBasicMaterial({ color: 0xfff4fb });   // (the grow-light bar)
+    q(new THREE.BoxGeometry(2.0, 0.08, 0.14), whiteW, 0, 1.0, 0.2); for (var gl2 = 0; gl2 < 16; gl2++) q(new THREE.BoxGeometry(0.1, 0.012, 0.08), gl2 % 3 === 1 ? growW : growM, -0.9 + gl2 * 0.12, 0.955, 0.2);
+    var glowCone = q(new THREE.CylinderGeometry(0.9, 1.15, 1.8, 4, 1, true), new THREE.MeshBasicMaterial({ color: 0xff9af0, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), 0, 0.05, 0.22, 0, Math.PI / 4, 0); glowCone.scale.z = 0.12; glowCone.castShadow = false;
+    [-0.95, 0.95].forEach(function (sx) { q(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 6), steelW, sx, 1.08, 0.2); });
+    // (the plumbing: a header pipe feeding every column, a drain pipe below, and a little pump)
+    q(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 16), whiteW, 0, 0.88, 0.13, 0, 0, Math.PI / 2); q(new THREE.CylinderGeometry(0.03, 0.03, 1.9, 16), whiteW, 0, -0.88, 0.13, 0, 0, Math.PI / 2);
+    [-0.95, 0.95].forEach(function (sx) { q(new THREE.SphereGeometry(0.032, 12, 8), whiteW, sx, 0.88, 0.13); q(new THREE.SphereGeometry(0.032, 12, 8), whiteW, sx, -0.88, 0.13); });
+    q(new THREE.CylinderGeometry(0.02, 0.02, 1.76, 12), whiteW, -1.0, 0, 0.13); q(new THREE.BoxGeometry(0.12, 0.1, 0.1), rMat(0x2a3038, { metalness: 0.4, roughness: 0.4 }), -0.95, -0.95, 0.14); q(new THREE.CircleGeometry(0.012, 10), new THREE.MeshBasicMaterial({ color: 0x6aff9a }), -0.92, -0.93, 0.191);
+    var waterM = new THREE.MeshStandardMaterial({ color: 0xbff4ff, transparent: true, opacity: 0.32, roughness: 0.05, emissive: 0x5ad8f0, emissiveIntensity: 0.25, depthWrite: false });
+    var tubeG = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, roughness: 0.03, envMap: rubyEnv, envMapIntensity: 2, side: THREE.DoubleSide, depthWrite: false });
+    var bubbleM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false });
+    var potM = rMat(0xf4f6f8, { roughness: 0.4, side: THREE.DoubleSide }), clayM = [0xc8643a, 0xb85a34, 0xd8784a].map(function (c) { return rMat(c, { roughness: 0.9 }); }), rootM = rMat(0xf2ead2, { roughness: 0.8 });
+    function leaf(par, x, y, z, len, wid, col, ry, tilt, curl) {         // (a leaf: a thin, curved oval blade)
+      var lg = new THREE.Group(); lg.position.set(x, y, z); lg.rotation.set(0, ry, 0); par.add(lg);
+      var o = p(new THREE.SphereGeometry(0.5, 10, 6), col, 0, 0, len * 0.5, 0, 0, 0, lg); o.scale.set(wid, wid * 0.12 + 0.002, len); lg.rotation.x = -tilt; o.rotation.x = curl || 0; o.castShadow = false; return lg;
     }
+    var greens = { lettuce: [0x9ad86a, 0x7ac85a, 0xb8e88a], basil: [0x3f9a3a, 0x4aa844], kale: [0x3a6a4a, 0x4a7a5a], mint: [0x5ab85a, 0x6ac86a], micro: [0x8ad86a, 0xa8e87a] };
+    function crop(kind, par, seed) {                                     // (what grows in a pot)
+      var k, n, m;
+      if (kind === 'lettuce') { n = 11; for (k = 0; k < n; k++) { var a = k * 2.4 + seed, r = k / n; m = rMat(greens.lettuce[k % 3], { roughness: 0.6, side: THREE.DoubleSide }); leaf(par, Math.sin(a) * 0.006, 0.01 + r * 0.02, Math.cos(a) * 0.006, 0.07 - r * 0.025, 0.06 - r * 0.02, m, a, 0.5 + r * 0.6, -0.4); } }
+      else if (kind === 'basil') { p(new THREE.CylinderGeometry(0.003, 0.004, 0.12, 5), rMat(0x5a8a3a), 0, 0.06, 0, 0, 0, 0, par); m = rMat(greens.basil[seed % 2], { roughness: 0.35, side: THREE.DoubleSide });
+        for (k = 0; k < 4; k++) { [0, Math.PI].forEach(function (sd) { leaf(par, 0, 0.03 + k * 0.03, 0, 0.045 - k * 0.006, 0.028 - k * 0.003, m, sd + k * Math.PI / 2, 0.4, -0.3); }); } }
+      else if (kind === 'strawberry') { m = rMat(0x4a9a44, { roughness: 0.5, side: THREE.DoubleSide });
+        for (k = 0; k < 3; k++) { var sa = k * 2.1 + seed; var st = leaf(par, 0, 0.01, 0, 0.05, 0.006, rMat(0x6a8a3a), sa, 0.6); [-0.5, 0, 0.5].forEach(function (lo) { leaf(st, 0, 0, 0.05, 0.035, 0.026, m, lo, -0.1); }); }
+        [[0.03, -0.01, 0.6], [-0.025, -0.02, 2.5]].forEach(function (bb) { var be = p(new THREE.SphereGeometry(0.014, 10, 8), rMat(0xd8202a, { roughness: 0.3 }), bb[0], bb[1], 0.02, 0, 0, Math.PI, par); be.scale.set(1, 1.3, 1);
+          p(new THREE.ConeGeometry(0.012, 0.008, 5), rMat(0x4a8a3a), bb[0], bb[1] + 0.017, 0.02, 0, 0, 0, par); for (var sd2 = 0; sd2 < 6; sd2++) p(new THREE.SphereGeometry(0.0018, 4, 3), rMat(0xf2d86a), bb[0] + Math.sin(sd2) * 0.012, bb[1] - 0.004 + (sd2 % 3) * 0.006, 0.02 + Math.cos(sd2) * 0.01, 0, 0, 0, par); }); }
+      else if (kind === 'mint') { m = rMat(greens.mint[seed % 2], { roughness: 0.55, side: THREE.DoubleSide });
+        for (k = 0; k < 3; k++) { var ma = k * 2.1 + seed, sx = Math.sin(ma) * 0.012, sz = Math.cos(ma) * 0.012; p(new THREE.CylinderGeometry(0.0025, 0.003, 0.09, 5), rMat(0x5a7a3a), sx, 0.045, sz, Math.cos(ma) * 0.2, 0, -Math.sin(ma) * 0.2, par);
+          for (var lv = 0; lv < 3; lv++) [0, Math.PI].forEach(function (sd) { leaf(par, sx, 0.03 + lv * 0.025, sz, 0.03, 0.022, m, ma + sd + lv, 0.5, -0.2); }); } }
+      else if (kind === 'kale') { m = rMat(greens.kale[seed % 2], { roughness: 0.6, side: THREE.DoubleSide });
+        for (k = 0; k < 6; k++) { var ka = k * 1.05 + seed; var kl = leaf(par, 0, 0.01, 0, 0.1, 0.035, m, ka, 0.25, -0.5); for (var fr = 0; fr < 4; fr++) leaf(kl, 0, 0.0, 0.03 + fr * 0.018, 0.02, 0.016, m, fr % 2 ? 1.3 : -1.3, 0.2); } }
+      else { m = rMat(greens.micro[seed % 2], { roughness: 0.5, side: THREE.DoubleSide }); var sm = rMat(0xe8f0d8);
+        for (k = 0; k < 16; k++) { var ua = k * 2.39 + seed, ur = 0.008 + (k % 4) * 0.006; p(new THREE.CylinderGeometry(0.0012, 0.0012, 0.035, 3), sm, Math.sin(ua) * ur, 0.018, Math.cos(ua) * ur, 0, 0, 0, par); [0, Math.PI].forEach(function (sd) { leaf(par, Math.sin(ua) * ur, 0.036, Math.cos(ua) * ur, 0.012, 0.01, m, ua + sd, 0.3); }); } }
+    }
+    var cropRows = [['lettuce', 'basil', 'strawberry', 'mint', 'kale', 'micro'], ['basil', 'lettuce', 'mint', 'strawberry', 'micro', 'kale'], ['strawberry', 'kale', 'lettuce', 'micro', 'basil', 'mint'], ['micro', 'mint', 'kale', 'basil', 'lettuce', 'strawberry']];
+    for (var c = 0; c < 6; c++) {
+      var cx3 = -0.75 + c * 0.3;
+      q(new THREE.CylinderGeometry(0.095, 0.095, 1.7, 18, 1, true), tubeG, cx3, 0, 0.13).renderOrder = 2;            // (the clear column)
+      q(new THREE.CylinderGeometry(0.088, 0.088, 1.62, 18), waterM, cx3, -0.02, 0.13).renderOrder = 1;              // (the water in it)
+      [0.82, -0.82, 0.0].forEach(function (cy) { q(new THREE.TorusGeometry(0.098, 0.009, 6, 20), steelW, cx3, cy, 0.13, Math.PI / 2, 0, 0); q(new THREE.BoxGeometry(0.03, 0.02, 0.06), steelW, cx3, cy, 0.05); });   // (steel clamps)
+      q(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 18), whiteW, cx3, 0.86, 0.13); q(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 18), whiteW, cx3, -0.86, 0.13);
+      q(new THREE.BoxGeometry(0.1, 0.035, 0.006), rMat(0x2a3038), cx3, -0.93, 0.232); q(new THREE.PlaneGeometry(0.085, 0.022), new THREE.MeshBasicMaterial({ map: screenTex(c * 13 + 9, 96, 32) }), cx3, -0.93, 0.2355);   // (a little readout tag)
+      for (var bb2 = 0; bb2 < 5; bb2++) { var bm3 = q(new THREE.SphereGeometry(0.008 + (bb2 % 3) * 0.003, 6, 5), bubbleM, cx3 + ((bb2 * 37) % 9 - 4) * 0.012, -0.8, 0.13 + ((bb2 * 17) % 7 - 3) * 0.01); bm3.castShadow = false; lbBubbles.push({ m: bm3, y0: -0.8, h: 1.58, v: 0.12 + (bb2 % 3) * 0.05, k: (c * 0.37 + bb2 * 0.21) % 1 }); }
+      for (var r2 = 0; r2 < 4; r2++) {
+        var py = -0.62 + r2 * 0.42, pot = new THREE.Group(); pot.position.set(cx3, py, 0.13 + 0.1); pot.rotation.x = 0.5; pot.scale.setScalar(1.2); PW.add(pot);   // (each pot set out through the front of its column)
+        lbP(lbLathe([[0, -0.04], [0.035, -0.04], [0.05, 0.02], [0.058, 0.025], [0.058, 0.032], [0.05, 0.032]], 16), potM, 0, 0, 0, 0, 0, 0, pot);   // (a white net pot)
+        for (var sl = 0; sl < 6; sl++) { var sla = sl / 6 * Math.PI * 2; lbP(new THREE.BoxGeometry(0.01, 0.04, 0.004), rMat(0x8a9aa8), Math.sin(sla) * 0.043, -0.01, Math.cos(sla) * 0.043, 0, sla, 0, pot); }
+        for (var pb = 0; pb < 7; pb++) { var pa = pb * 2.4; lbP(new THREE.SphereGeometry(0.011, 6, 5), clayM[pb % 3], Math.sin(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0.026, Math.cos(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0, 0, 0, pot); }
+        for (var rt = 0; rt < 4; rt++) { var ra = rt * 1.6 + c; lbP(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(Math.sin(ra) * 0.02, -0.04, Math.cos(ra) * 0.02), new THREE.Vector3(Math.sin(ra) * 0.03, -0.09, Math.cos(ra) * 0.02 - 0.02), new THREE.Vector3(Math.sin(ra + 1) * 0.025, -0.15 - rt * 0.015, -0.05)]), 8, 0.0025, 4), rootM, 0, 0, 0, 0, 0, 0, pot); }   // (roots trailing into the water)
+        var cg = new THREE.Group(); cg.position.y = 0.03; cg.rotation.x = -0.35; cg.scale.setScalar(1.6); pot.add(cg); crop(cropRows[r2][c], cg, c * 4 + r2);
+      }
+    }
+    // (beside it: a control screen on a steel arm, and a nutrient tank with a glowing level gauge)
+    var ctl = new THREE.Group(); ctl.position.set(1.42, 0.25, 0.08); PW.add(ctl);
+    lbP(new THREE.BoxGeometry(0.06, 0.06, 0.12), steelW, 0, 0, -0.02, 0, 0, 0, ctl); lbP(new THREE.BoxGeometry(0.36, 0.26, 0.025), rMat(0x2a3038, { metalness: 0.3, roughness: 0.4 }), 0, 0, 0.06, 0, 0, 0, ctl);
+    lbP(new THREE.PlaneGeometry(0.33, 0.23), new THREE.MeshBasicMaterial({ map: screenTex(64) }), 0, 0, 0.0735, 0, 0, 0, ctl); lbP(new THREE.SphereGeometry(0.006, 6, 4), new THREE.MeshBasicMaterial({ color: 0x6aff9a }), 0.16, -0.115, 0.075, 0, 0, 0, ctl);
+    var tank = new THREE.Group(); tank.position.set(1.42, -1.55, 0.2); PW.add(tank);
+    lbP(new THREE.BoxGeometry(0.34, 0.52, 0.3), whiteW, 0, 0.26, 0, 0, 0, 0, tank); lbP(new THREE.BoxGeometry(0.36, 0.03, 0.32), rMat(0xc8ced8), 0, 0.53, 0, 0, 0, 0, tank);
+    lbP(new THREE.BoxGeometry(0.05, 0.4, 0.006), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }), -0.1, 0.27, 0.153, 0, 0, 0, tank); lbP(new THREE.BoxGeometry(0.04, 0.26, 0.004), glowW, -0.1, 0.2, 0.152, 0, 0, 0, tank);
+    for (var tk = 0; tk < 5; tk++) lbP(new THREE.BoxGeometry(0.018, 0.003, 0.003), rMat(0x2a3038), -0.065, 0.1 + tk * 0.08, 0.154, 0, 0, 0, tank);
+    lbP(new THREE.CylinderGeometry(0.025, 0.025, 0.05, 14), rMat(0x2a6ad8, { roughness: 0.4 }), 0.08, 0.57, 0.0, 0, 0, 0, tank); lbP(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 8), whiteW, 0.12, 0.8, -0.08, 0, 0, 0, tank);
+    lbP(new THREE.BoxGeometry(0.16, 0.08, 0.004), labLabel(0), 0.06, 0.38, 0.152, 0, 0, 0, tank);
+    // (a drip tray along the foot of the garden)
+    q(new THREE.BoxGeometry(2.1, 0.08, 0.34), whiteW, 0, -1.48, 0.17); q(new THREE.BoxGeometry(2.0, 0.005, 0.28), waterM, 0, -1.445, 0.17); q(new THREE.BoxGeometry(2.08, 0.008, 0.008), glowW, 0, -1.52, 0.345);
+    labSolids.push([-W + 0.3, -0.7, 0.35], [-W + 0.3, 0.3, 0.35], [-W + 0.3, 1.3, 0.35], [-W + 0.3, -1.12, 0.3]);
     // (the right wall: a big window onto a city at night, and before it a row of glass growth chambers)
     var city = cpTex(512, 256, function (g, w, h) {
       var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a0f2a'); gr.addColorStop(1, '#2a1a4a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
@@ -1018,6 +1089,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   function updateLabInside(t) {
     lbLook.set(camera.position.x - LBI_X, 0, camera.position.z - LBI_Z);
     lbWalls.forEach(function (W) { W.g.visible = lbLook.dot(W.n) < W.d - 0.6; });   // (the wall between you and the camera steps aside)
+    lbBubbles.forEach(function (b) { var f = (t * b.v + b.k) % 1; b.m.position.y = b.y0 + f * b.h; b.m.scale.setScalar(0.6 + f * 0.6); });   // (bubbles rising up the grow tubes)
     lbHolo.forEach(function (h) { h.m.opacity = 0.8 + Math.sin(t * 3 + h.k * 1.7) * 0.06 + (Math.sin(t * 37 + h.k) > 0.97 ? -0.2 : 0); });   // (the holograms shimmer, now and then flickering)
     lbArms.forEach(function (a) { var f = t * 0.7 + a.k * 2; a.b.rotation.y = a.ry + Math.sin(f) * 0.9; a.s1.rotation.z = 0.5 + Math.sin(f * 1.3) * 0.25; a.s2.rotation.z = -1.2 + Math.sin(f * 1.7) * 0.35; a.s3.rotation.z = -0.6 + Math.sin(f * 2.1) * 0.3; });
     lbChambers.forEach(function (g, i) { g.emissiveIntensity = 0.2 + 0.1 * Math.sin(t * 1.5 + i); });
