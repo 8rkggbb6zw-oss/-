@@ -611,9 +611,91 @@ EVERDAWN_PARTS.push(function (THREE) {
       lbP(new THREE.CylinderGeometry(0.014, 0.014, 0.14, 12), rMat(0xe6d6ae, { roughness: 0.9 }), 0, 0, 0, 0, 0, Math.PI / 2, scroll); lbP(new THREE.TorusGeometry(0.0145, 0.002, 4, 12), rMat(0x8a3a4a), 0, 0, 0, 0, Math.PI / 2, 0, scroll);
       lbP(new THREE.SphereGeometry(0.007, 8, 6), rMat(0xa02a2a, { roughness: 0.4 }), 0, 0, 0.015, 0, 0, 0, scroll);
     })();
-    lbP(new THREE.BoxGeometry(0.6, 0.45, 0.5), lbOak, W - 0.7, 0.23, D + 0.75, 0, 0.3, 0);
-    lbP(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 12), rMat(0x8a4a34, { roughness: 0.9 }), W - 0.7, 0.65, D + 0.75);
-    for (var f = 0; f < 7; f++) { var fa = f / 7 * Math.PI * 2; lbP(new THREE.ConeGeometry(0.06, 0.55, 5), rMat(0x3f8a4a), W - 0.7 + Math.sin(fa) * 0.1, 1.05, D + 0.75 + Math.cos(fa) * 0.1, Math.cos(fa) * 0.5, 0, -Math.sin(fa) * 0.5); }
+    // (by the right-hand window: a slatted wooden crate packed with straw, and on it a terracotta pot with a big aloe in flower)
+    (function () {
+      var CR = new THREE.Group(); CR.position.set(W - 0.7, 0, D + 0.75); CR.rotation.y = 0.3; G.add(CR);
+      function P(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, CR); }
+      var grain = cpTex(256, 64, function (g, w, h) { g.fillStyle = '#a8794a'; g.fillRect(0, 0, w, h);
+        for (var k = 0; k < 14; k++) { g.strokeStyle = k % 2 ? 'rgba(90,55,25,0.3)' : 'rgba(220,180,130,0.25)'; g.lineWidth = 1 + (k % 3 === 0); g.beginPath(); var gy = 3 + (k * 17) % (h - 6); g.moveTo(0, gy); for (var x = 0; x <= w; x += 8) g.lineTo(x, gy + Math.sin(x * 0.03 + k) * 1.6); g.stroke(); }
+        g.fillStyle = 'rgba(60,35,15,0.5)'; g.beginPath(); g.ellipse(170, 30, 6, 3, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(40,20,8,0.35)'; g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); });
+      var slatM = new THREE.MeshStandardMaterial({ map: grain, bumpMap: grain, bumpScale: 0.006, roughness: 0.85 }), postM = rMat(0x7a5232, { roughness: 0.8 });
+      var CW = 0.6, CH = 0.45, CD = 0.5;
+      P(new THREE.BoxGeometry(CW - 0.06, CH - 0.04, CD - 0.06), rMat(0x1e140c, { roughness: 1 }), 0, CH / 2, 0);   // (the dark inside, seen through the gaps)
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { P(new THREE.BoxGeometry(0.05, CH, 0.05), postM, c[0] * (CW / 2 - 0.025), CH / 2, c[1] * (CD / 2 - 0.025)); });   // (corner posts)
+      [0.068, 0.218, 0.368].forEach(function (sy) {                        // (three slats a side, with nails at their ends)
+        [-1, 1].forEach(function (sd) {
+          P(new THREE.BoxGeometry(CW, 0.12, 0.018), slatM, 0, sy, sd * (CD / 2 + 0.004)); P(new THREE.BoxGeometry(0.018, 0.12, CD - 0.02), slatM, sd * (CW / 2 + 0.004), sy, 0, 0, 0, 0);
+          [-1, 1].forEach(function (e) { [-0.03, 0.03].forEach(function (ny) { P(new THREE.SphereGeometry(0.006, 6, 4), lbBlack, e * (CW / 2 - 0.025), sy + ny, sd * (CD / 2 + 0.014)); P(new THREE.SphereGeometry(0.006, 6, 4), lbBlack, sd * (CW / 2 + 0.014), sy + ny, e * (CD / 2 - 0.025)); }); });
+        });
+      });
+      [-0.21, -0.07, 0.07, 0.21].forEach(function (lx, i) { P(new THREE.BoxGeometry(0.125, 0.018, CD + 0.02), slatM, lx, CH + 0.009, 0, 0, 0, i % 2 ? 0.01 : -0.008); });   // (the lid)
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {          // (iron corner straps)
+        P(new THREE.BoxGeometry(0.08, 0.1, 0.006), lbBlack, c[0] * (CW / 2 - 0.035), CH - 0.05, c[1] * (CD / 2 + 0.016)); P(new THREE.BoxGeometry(0.006, 0.1, 0.08), lbBlack, c[0] * (CW / 2 + 0.016), CH - 0.05, c[1] * (CD / 2 - 0.035));
+        P(new THREE.BoxGeometry(0.08, 0.1, 0.006), lbBlack, c[0] * (CW / 2 - 0.035), 0.05, c[1] * (CD / 2 + 0.016)); P(new THREE.BoxGeometry(0.006, 0.1, 0.08), lbBlack, c[0] * (CW / 2 + 0.016), 0.05, c[1] * (CD / 2 - 0.035));
+      });
+      var stencil = cpTex(128, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(40,28,40,0.75)'; g.fillStyle = 'rgba(40,28,40,0.75)'; g.lineWidth = 4;   // (a stencilled flask and stars, a little worn)
+        g.beginPath(); g.moveTo(56, 10); g.lineTo(56, 26); g.lineTo(42, 52); g.lineTo(86, 52); g.lineTo(72, 26); g.lineTo(72, 10); g.stroke(); g.fillRect(52, 8, 24, 4); g.fillRect(46, 40, 36, 10);
+        [[20, 22], [104, 18], [110, 44], [16, 46]].forEach(function (st) { g.save(); g.translate(st[0], st[1]); g.beginPath(); for (var i = 0; i < 10; i++) { var r = i % 2 ? 3 : 7, a = i * Math.PI / 5 - Math.PI / 2; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.fill(); g.restore(); });
+        g.globalCompositeOperation = 'destination-out'; for (var k = 0; k < 120; k++) { g.fillRect((k * 37) % w, (k * 23) % h, 2, 2); } });
+      P(new THREE.PlaneGeometry(0.26, 0.13), new THREE.MeshStandardMaterial({ map: stencil, transparent: true, roughness: 0.9, depthWrite: false }), 0, 0.218, CD / 2 + 0.0145).renderOrder = 1;
+      var straw = rMat(0xe2c46a, { roughness: 0.9 });                     // (straw poking out between the slats)
+      [[0.2, 0.29, 1, 0.5], [-0.12, 0.29, 1, -0.6], [0.05, 0.144, 1, 0.9], [-0.26, 0.144, 1, -0.3], [0.31, 0.29, 0, 0.4], [-0.31, 0.144, 0, -0.7], [0.1, 0.44, 1, 1.2], [-0.18, 0.44, -1, -0.5]].forEach(function (st, i) {
+        for (var k = 0; k < 3; k++) { var len = 0.05 + ((i + k) % 3) * 0.02, sx = st[2] ? st[0] + k * 0.012 : st[0] + (st[0] > 0 ? 0.01 : -0.01), sz = st[2] ? st[2] * (CD / 2 + 0.01) : (k - 1) * 0.02;
+          P(new THREE.CylinderGeometry(0.0018, 0.0012, len, 4), straw, sx, st[1] + k * 0.004, sz, st[2] ? st[2] * (1.2 + k * 0.15) : 0, 0, st[3] + k * 0.3); } });
+      // (the pot: a rolled-rim terracotta pot, mottled and bloomed white with age, mossy at the foot, on a matching saucer)
+      var potTex = cpTex(256, 128, function (g, w, h) { g.fillStyle = '#b4613c'; g.fillRect(0, 0, w, h);
+        for (var k = 0; k < 260; k++) { var x = (k * 53) % w, y = (k * 29) % h, r = 2 + (k % 5); g.fillStyle = k % 3 ? 'rgba(150,70,40,0.25)' : 'rgba(210,130,90,0.22)'; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+        var bl = g.createLinearGradient(0, h, 0, h * 0.6); bl.addColorStop(0, 'rgba(240,235,220,0.55)'); bl.addColorStop(1, 'rgba(240,235,220,0)'); g.fillStyle = bl; g.fillRect(0, h * 0.6, w, h * 0.4);
+        for (var m = 0; m < 40; m++) { g.fillStyle = 'rgba(70,110,40,' + (0.25 + (m % 3) * 0.12) + ')'; g.beginPath(); g.arc((m * 71) % w, 4 + (m * 7) % 18, 3 + (m % 4) * 2, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = 'rgba(60,25,10,0.25)'; g.fillRect(0, h * 0.8, w, 3); });
+      var potM = new THREE.MeshStandardMaterial({ map: potTex, bumpMap: potTex, bumpScale: 0.006, roughness: 0.95, side: THREE.DoubleSide });
+      var PB = CH + 0.018;
+      P(lbLathe([[0, 0], [0.17, 0], [0.19, 0.008], [0.2, 0.035], [0.188, 0.038], [0.17, 0.016], [0, 0.016]], 32), potM, 0, PB, 0);
+      P(lbLathe([[0, 0.012], [0.135, 0.012], [0.15, 0.03], [0.185, 0.3], [0.19, 0.31], [0.215, 0.314], [0.222, 0.33], [0.222, 0.375], [0.214, 0.386], [0.2, 0.386], [0.196, 0.36], [0.19, 0.345], [0, 0.345]], 36), potM, 0, PB, 0);
+      var soilTex = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#3b2616'; g.fillRect(0, 0, w, h); for (var k = 0; k < 500; k++) { g.fillStyle = ['rgba(20,12,6,0.6)', 'rgba(90,60,35,0.5)', 'rgba(140,110,80,0.4)'][k % 3]; g.fillRect((k * 37) % w, (k * 61) % h, 1 + k % 3, 1 + k % 2); } });
+      P(new THREE.CircleGeometry(0.195, 32), new THREE.MeshStandardMaterial({ map: soilTex, roughness: 1 }), 0, PB + 0.35, 0, -Math.PI / 2, 0, 0);
+      var pebM = [0xcfc8bc, 0xa9a196, 0xe2dccf].map(function (c) { return rMat(c, { roughness: 0.7 }); });
+      for (var pb = 0; pb < 16; pb++) { var pa = pb * 2.39, pr = 0.09 + (pb % 4) * 0.025; P(new THREE.DodecahedronGeometry(0.011 + (pb % 3) * 0.004), pebM[pb % 3], Math.cos(pa) * pr, PB + 0.355, Math.sin(pa) * pr, pb, pb * 0.5, 0).scale.set(1, 0.6, 1); }
+      [[0.13, 0.4], [-0.1, 2.2], [0.05, 4.1]].forEach(function (ms) { P(new THREE.SphereGeometry(0.035, 10, 6), rMat(0x4f7a32, { roughness: 1 }), Math.cos(ms[1]) * ms[0], PB + 0.352, Math.sin(ms[1]) * ms[0]).scale.set(1, 0.25, 0.8); });
+      // (the aloe: three rings of thick, toothed, speckled leaves arching out from the middle, reddening at the tips)
+      var spec = cpTex(64, 256, function (g, w, h) { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); for (var k = 0; k < 90; k++) { g.fillStyle = 'rgba(235,250,225,0.9)'; g.beginPath(); g.ellipse((k * 23) % w, 20 + (k * 41) % (h - 60), 2 + k % 2, 1.2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(120,150,110,0.35)'; g.fillRect((k * 29) % w, (k * 13) % h, 1, 3); } });
+      spec.wrapS = spec.wrapT = THREE.RepeatWrapping;
+      var aloeM = new THREE.MeshStandardMaterial({ map: spec, vertexColors: true, roughness: 0.45, side: THREE.DoubleSide });
+      function leafGeo(len, wid, th, tilt, bend) {
+        var n = 18, pos = [], col = [], uv = [], idx = [], c0 = new THREE.Color(0xc6dfa8), c1 = new THREE.Color(0x5c9658), c2 = new THREE.Color(0x4a7c4a), c3 = new THREE.Color(0xa8603e);
+        var y = 0, z = 0;
+        for (var i = 0; i <= n; i++) {
+          var t = i / n, a = tilt + bend * t * t, dy = Math.cos(a), dz = Math.sin(a), ny = -dz, nz = dy;   // (n is the leaf's outer, under side)
+          var w = wid * Math.pow(1 - t, 0.75) * (i % 2 && t > 0.12 && t < 0.92 ? 1.14 : 0.97) + 0.001, h2 = th * Math.pow(1 - t, 0.7) + 0.0008;
+          [[-w, -h2 * 0.5], [0, -h2 * 0.15], [w, -h2 * 0.5], [0, h2 * 0.55]].forEach(function (cs, k) {   // (edge, a shallow groove on top, edge, the rounded back)
+            pos.push(cs[0], y + ny * cs[1], z + nz * cs[1]); uv.push(k === 1 || k === 3 ? 0.5 : k ? 1 : 0, t * 2);
+            var c = t < 0.35 ? c0.clone().lerp(c1, t / 0.35) : t < 0.8 ? c1.clone().lerp(c2, (t - 0.35) / 0.45) : c2.clone().lerp(c3, (t - 0.8) / 0.2); if (k === 3) c.multiplyScalar(0.85); col.push(c.r, c.g, c.b);
+          });
+          y += dy * len / n; z += dz * len / n;
+        }
+        for (var j = 0; j < n; j++) { var A = j * 4, Bq = A + 4; [[0, 1], [1, 2], [2, 3], [3, 0]].forEach(function (e) { idx.push(A + e[0], Bq + e[0], Bq + e[1], A + e[0], Bq + e[1], A + e[1]); }); }
+        var geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals(); return geo;
+      }
+      var AL = new THREE.Group(); AL.position.set(0, PB + 0.345, 0); CR.add(AL);
+      [[9, 0.44, 0.05, 0.7, 1.0, 0.05, 0], [7, 0.38, 0.045, 0.35, 0.9, 0.035, 0.4], [5, 0.3, 0.038, 0.12, 0.6, 0.02, 0.9], [3, 0.2, 0.03, 0.02, 0.3, 0.008, 1.7]].forEach(function (ring) {
+        for (var l = 0; l < ring[0]; l++) { var ang = l / ring[0] * Math.PI * 2 + ring[6], lg = new THREE.Group(); lg.rotation.y = ang; AL.add(lg);
+          var lm = lbP(leafGeo(ring[1] * (0.9 + (l % 3) * 0.07), ring[2], ring[2] * 0.55, ring[3] + (l % 2) * 0.08, ring[4]), aloeM, 0, 0, ring[5], 0, 0, 0, lg); lm.rotation.z = ((l * 7) % 5 - 2) * 0.03; }
+      });
+      // (a flower spike rising from the middle, hung with coral-orange tubular flowers, buds still green at the top)
+      var stalkPts = [[0, 0, 0], [0.02, 0.2, 0.01], [0.05, 0.42, 0.03], [0.06, 0.6, 0.05]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }), stalk = new THREE.CatmullRomCurve3(stalkPts);
+      lbP(new THREE.TubeGeometry(stalk, 24, 0.007, 6, false), rMat(0x6f8a4a, { roughness: 0.6 }), 0, 0, 0, 0, 0, 0, AL);
+      var flM = rMat(0xf0703c, { roughness: 0.5, emissive: 0x401000, emissiveIntensity: 0.3 }), flTip = rMat(0xf2d36a, { roughness: 0.5 }), budM = rMat(0x9ab35a, { roughness: 0.6 });
+      for (var fl = 0; fl < 22; fl++) { var ft = 0.62 + fl / 22 * 0.38, fp = stalk.getPoint(ft), fa2 = fl * 2.4, droop = 0.4 + (1 - fl / 22) * 1.6, fg = new THREE.Group();
+        fg.position.copy(fp); fg.rotation.set(0, fa2, Math.PI - droop * 0.5); AL.add(fg);
+        var bud = fl > 16, flen = bud ? 0.02 : 0.034;
+        lbP(new THREE.CylinderGeometry(bud ? 0.004 : 0.0055, 0.003, flen, 6), bud ? budM : flM, 0, -flen / 2 - 0.004, 0, 0, 0, 0, fg);
+        if (!bud) lbP(new THREE.SphereGeometry(0.0045, 6, 4), flTip, 0, -flen - 0.004, 0, 0, 0, 0, fg); }
+      lbP(new THREE.ConeGeometry(0.006, 0.02, 6), budM, stalk.getPoint(1).x, stalk.getPoint(1).y + 0.008, stalk.getPoint(1).z, 0, 0, 0, AL);
+      // (a little wooden plant stake with a parchment tag)
+      var stake = new THREE.Group(); stake.position.set(0.12, PB + 0.345, 0.11); stake.rotation.set(0.1, -0.4, -0.08); CR.add(stake);
+      lbP(new THREE.BoxGeometry(0.012, 0.16, 0.006), lbOak, 0, 0.06, 0, 0, 0, 0, stake); lbP(new THREE.BoxGeometry(0.06, 0.04, 0.003), lbLabels[1], 0, 0.13, 0.005, 0, 0, 0, stake);
+      lbP(new THREE.TorusGeometry(0.006, 0.0015, 4, 8), lbTwine, 0, 0.152, 0.006, 0, 0, 0, stake);
+    })();
     G.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   })(labGroup);
   // (no grass, flowers or pebbles growing up through it or its path; its walls and tower are solid, the doorway open)
