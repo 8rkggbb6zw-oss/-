@@ -983,8 +983,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bubbleM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false });
     var potM = rMat(0xf4f6f8, { roughness: 0.4, side: THREE.DoubleSide }), clayM = [0xc8643a, 0xb85a34, 0xd8784a].map(function (c) { return rMat(c, { roughness: 0.9 }); }), rootM = rMat(0xf2ead2, { roughness: 0.8 });
     function leaf(par, x, y, z, len, wid, col, ry, tilt, curl) {         // (a leaf: a thin, curved oval blade)
+      var back = par.userData.tubeX != null ? Math.cos(ry) : 1;           // (leaves reaching back toward the glass grow shorter and more upright, so none push into the column)
+      if (back < 0.3) { len *= 1 + (back - 0.3) * 0.55; tilt = tilt + (1.35 - tilt) * Math.min(1, (0.3 - back) * 0.9); }
       var lg = new THREE.Group(); lg.position.set(x, y, z); lg.rotation.set(0, ry, 0); par.add(lg);
-      var o = p(new THREE.SphereGeometry(0.5, 10, 6), col, 0, 0, len * 0.5, 0, 0, 0, lg); o.scale.set(wid, wid * 0.12 + 0.002, len); lg.rotation.x = -tilt; o.rotation.x = curl || 0; o.castShadow = false; return lg;
+      var o = p(new THREE.SphereGeometry(0.5, 10, 6), col, 0, 0, len * 0.5, 0, 0, 0, lg); o.scale.set(wid, wid * 0.12 + 0.002, len); lg.rotation.x = -tilt; o.rotation.x = curl || 0; o.castShadow = false; lg.userData.len = len; return lg;
     }
     var greens = { lettuce: [0x9ad86a, 0x7ac85a, 0xb8e88a], basil: [0x3f9a3a, 0x4aa844], kale: [0x3a6a4a, 0x4a7a5a], mint: [0x5ab85a, 0x6ac86a], micro: [0x8ad86a, 0xa8e87a] };
     function crop(kind, par, seed) {                                     // (what grows in a pot)
@@ -993,14 +995,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       else if (kind === 'basil') { p(new THREE.CylinderGeometry(0.003, 0.004, 0.12, 5), rMat(0x5a8a3a), 0, 0.06, 0, 0, 0, 0, par); m = rMat(greens.basil[seed % 2], { roughness: 0.35, side: THREE.DoubleSide });
         for (k = 0; k < 4; k++) { [0, Math.PI].forEach(function (sd) { leaf(par, 0, 0.03 + k * 0.03, 0, 0.045 - k * 0.006, 0.028 - k * 0.003, m, sd + k * Math.PI / 2, 0.4, -0.3); }); } }
       else if (kind === 'strawberry') { m = rMat(0x4a9a44, { roughness: 0.5, side: THREE.DoubleSide });
-        for (k = 0; k < 3; k++) { var sa = k * 2.1 + seed; var st = leaf(par, 0, 0.01, 0, 0.05, 0.006, rMat(0x6a8a3a), sa, 0.6); [-0.5, 0, 0.5].forEach(function (lo) { leaf(st, 0, 0, 0.05, 0.035, 0.026, m, lo, -0.1); }); }
+        for (k = 0; k < 3; k++) { var sa = k * 2.1 + seed; var st = leaf(par, 0, 0.01, 0, 0.05, 0.006, rMat(0x6a8a3a), sa, 0.6); [-0.5, 0, 0.5].forEach(function (lo) { leaf(st, 0, 0, st.userData.len, 0.035, 0.026, m, lo, -0.1); }); }
         [[0.03, -0.01, 0.6], [-0.025, -0.02, 2.5]].forEach(function (bb) { var be = p(new THREE.SphereGeometry(0.014, 10, 8), rMat(0xd8202a, { roughness: 0.3 }), bb[0], bb[1], 0.02, 0, 0, Math.PI, par); be.scale.set(1, 1.3, 1);
           p(new THREE.ConeGeometry(0.012, 0.008, 5), rMat(0x4a8a3a), bb[0], bb[1] + 0.017, 0.02, 0, 0, 0, par); for (var sd2 = 0; sd2 < 6; sd2++) p(new THREE.SphereGeometry(0.0018, 4, 3), rMat(0xf2d86a), bb[0] + Math.sin(sd2) * 0.012, bb[1] - 0.004 + (sd2 % 3) * 0.006, 0.02 + Math.cos(sd2) * 0.01, 0, 0, 0, par); }); }
       else if (kind === 'mint') { m = rMat(greens.mint[seed % 2], { roughness: 0.55, side: THREE.DoubleSide });
         for (k = 0; k < 3; k++) { var ma = k * 2.1 + seed, sx = Math.sin(ma) * 0.012, sz = Math.cos(ma) * 0.012; p(new THREE.CylinderGeometry(0.0025, 0.003, 0.09, 5), rMat(0x5a7a3a), sx, 0.045, sz, Math.cos(ma) * 0.2, 0, -Math.sin(ma) * 0.2, par);
           for (var lv = 0; lv < 3; lv++) [0, Math.PI].forEach(function (sd) { leaf(par, sx, 0.03 + lv * 0.025, sz, 0.03, 0.022, m, ma + sd + lv, 0.5, -0.2); }); } }
       else if (kind === 'kale') { m = rMat(greens.kale[seed % 2], { roughness: 0.6, side: THREE.DoubleSide });
-        for (k = 0; k < 6; k++) { var ka = k * 1.05 + seed; var kl = leaf(par, 0, 0.01, 0, 0.1, 0.035, m, ka, 0.25, -0.5); for (var fr = 0; fr < 4; fr++) leaf(kl, 0, 0.0, 0.03 + fr * 0.018, 0.02, 0.016, m, fr % 2 ? 1.3 : -1.3, 0.2); } }
+        for (k = 0; k < 6; k++) { var ka = k * 1.05 + seed; var kl = leaf(par, 0, 0.01, 0, 0.1, 0.035, m, ka, 0.25, -0.5); for (var fr = 0; fr < 4; fr++) leaf(kl, 0, 0.0, kl.userData.len * (0.3 + fr * 0.18), 0.02 * kl.userData.len / 0.1, 0.016, m, fr % 2 ? 1.3 : -1.3, 0.2); } }
       else { m = rMat(greens.micro[seed % 2], { roughness: 0.5, side: THREE.DoubleSide }); var sm = rMat(0xe8f0d8);
         for (k = 0; k < 16; k++) { var ua = k * 2.39 + seed, ur = 0.008 + (k % 4) * 0.006; p(new THREE.CylinderGeometry(0.0012, 0.0012, 0.035, 3), sm, Math.sin(ua) * ur, 0.018, Math.cos(ua) * ur, 0, 0, 0, par); [0, Math.PI].forEach(function (sd) { leaf(par, Math.sin(ua) * ur, 0.036, Math.cos(ua) * ur, 0.012, 0.01, m, ua + sd, 0.3); }); } }
     }
@@ -1014,12 +1016,13 @@ EVERDAWN_PARTS.push(function (THREE) {
       q(new THREE.BoxGeometry(0.1, 0.035, 0.006), rMat(0x2a3038), cx3, -0.93, 0.232); q(new THREE.PlaneGeometry(0.085, 0.022), new THREE.MeshBasicMaterial({ map: screenTex(c * 13 + 9, 96, 32) }), cx3, -0.93, 0.2355);   // (a little readout tag)
       for (var bb2 = 0; bb2 < 5; bb2++) { var bm3 = q(new THREE.SphereGeometry(0.008 + (bb2 % 3) * 0.003, 6, 5), bubbleM, cx3 + ((bb2 * 37) % 9 - 4) * 0.012, -0.8, 0.13 + ((bb2 * 17) % 7 - 3) * 0.01); bm3.castShadow = false; lbBubbles.push({ m: bm3, y0: -0.8, h: 1.58, v: 0.12 + (bb2 % 3) * 0.05, k: (c * 0.37 + bb2 * 0.21) % 1 }); }
       for (var r2 = 0; r2 < 4; r2++) {
-        var py = -0.62 + r2 * 0.42, pot = new THREE.Group(); pot.position.set(cx3, py, 0.13 + 0.1); pot.rotation.x = 0.5; pot.scale.setScalar(1.2); PW.add(pot);   // (each pot set out through the front of its column)
+        var py = -0.62 + r2 * 0.42, pot = new THREE.Group(); pot.position.set(cx3, py, 0.31); pot.rotation.x = 0.45; pot.scale.setScalar(1.2); PW.add(pot);   // (each pot held out in front of its column, clear of the glass)
+        q(new THREE.CylinderGeometry(0.026, 0.03, 0.12, 14), whiteW, cx3, py - 0.045, 0.225, Math.PI / 2 - 0.45, 0, 0); q(new THREE.TorusGeometry(0.03, 0.006, 6, 16), steelW, cx3, py - 0.04, 0.225 + 0.002, 0, 0, 0);   // (a white port out of the column, its steel collar where it meets the glass)
         lbP(lbLathe([[0, -0.04], [0.035, -0.04], [0.05, 0.02], [0.058, 0.025], [0.058, 0.032], [0.05, 0.032]], 16), potM, 0, 0, 0, 0, 0, 0, pot);   // (a white net pot)
         for (var sl = 0; sl < 6; sl++) { var sla = sl / 6 * Math.PI * 2; lbP(new THREE.BoxGeometry(0.01, 0.04, 0.004), rMat(0x8a9aa8), Math.sin(sla) * 0.043, -0.01, Math.cos(sla) * 0.043, 0, sla, 0, pot); }
         for (var pb = 0; pb < 7; pb++) { var pa = pb * 2.4; lbP(new THREE.SphereGeometry(0.011, 6, 5), clayM[pb % 3], Math.sin(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0.026, Math.cos(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0, 0, 0, pot); }
-        for (var rt = 0; rt < 4; rt++) { var ra = rt * 1.6 + c; lbP(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(Math.sin(ra) * 0.02, -0.04, Math.cos(ra) * 0.02), new THREE.Vector3(Math.sin(ra) * 0.03, -0.09, Math.cos(ra) * 0.02 - 0.02), new THREE.Vector3(Math.sin(ra + 1) * 0.025, -0.15 - rt * 0.015, -0.05)]), 8, 0.0025, 4), rootM, 0, 0, 0, 0, 0, 0, pot); }   // (roots trailing into the water)
-        var cg = new THREE.Group(); cg.position.y = 0.03; cg.rotation.x = -0.35; cg.scale.setScalar(1.6); pot.add(cg); crop(cropRows[r2][c], cg, c * 4 + r2);
+        for (var rt = 0; rt < 4; rt++) { var ra = rt * 1.6 + c, rx0 = Math.sin(ra) * 0.012; q(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(cx3 + rx0, py - 0.06, 0.19), new THREE.Vector3(cx3 + rx0 * 1.6, py - 0.11, 0.16), new THREE.Vector3(cx3 + Math.sin(ra + 1) * 0.03, py - 0.18 - rt * 0.02, 0.13 + Math.cos(ra) * 0.02)]), 8, 0.0025, 4), rootM, 0, 0, 0); }   // (roots trailing from the port down into the water inside the column)
+        var cg = new THREE.Group(); cg.position.y = 0.03; cg.rotation.x = -0.35; cg.scale.setScalar(1.6); cg.userData.tubeX = cx3; pot.add(cg); crop(cropRows[r2][c], cg, c * 4 + r2);
       }
     }
     // (beside it: a control screen on a steel arm, and a nutrient tank with a glowing level gauge)
