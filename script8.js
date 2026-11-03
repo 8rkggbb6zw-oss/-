@@ -611,7 +611,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       lbP(new THREE.CylinderGeometry(0.014, 0.014, 0.14, 12), rMat(0xe6d6ae, { roughness: 0.9 }), 0, 0, 0, 0, 0, Math.PI / 2, scroll); lbP(new THREE.TorusGeometry(0.0145, 0.002, 4, 12), rMat(0x8a3a4a), 0, 0, 0, 0, Math.PI / 2, 0, scroll);
       lbP(new THREE.SphereGeometry(0.007, 8, 6), rMat(0xa02a2a, { roughness: 0.4 }), 0, 0, 0.015, 0, 0, 0, scroll);
     })();
-    // (by the right-hand window: a slatted wooden crate packed with straw, and on it a terracotta pot with a big aloe in flower)
+    // (by the right-hand window: a slatted wooden crate packed with straw, and on it a terracotta pot with a big aloe)
     (function () {
       var CR = new THREE.Group(); CR.position.set(W - 0.7, 0, D + 0.75); CR.rotation.y = 0.3; G.add(CR);
       function P(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, CR); }
@@ -681,16 +681,6 @@ EVERDAWN_PARTS.push(function (THREE) {
         for (var l = 0; l < ring[0]; l++) { var ang = l / ring[0] * Math.PI * 2 + ring[6], lg = new THREE.Group(); lg.rotation.y = ang; AL.add(lg);
           var lm = lbP(leafGeo(ring[1] * (0.9 + (l % 3) * 0.07), ring[2], ring[2] * 0.55, ring[3] + (l % 2) * 0.08, ring[4]), aloeM, 0, 0, ring[5], 0, 0, 0, lg); lm.rotation.z = ((l * 7) % 5 - 2) * 0.03; }
       });
-      // (a flower spike rising from the middle, hung with coral-orange tubular flowers, buds still green at the top)
-      var stalkPts = [[0, 0, 0], [0.02, 0.2, 0.01], [0.05, 0.42, 0.03], [0.06, 0.6, 0.05]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }), stalk = new THREE.CatmullRomCurve3(stalkPts);
-      lbP(new THREE.TubeGeometry(stalk, 24, 0.007, 6, false), rMat(0x6f8a4a, { roughness: 0.6 }), 0, 0, 0, 0, 0, 0, AL);
-      var flM = rMat(0xf0703c, { roughness: 0.5, emissive: 0x401000, emissiveIntensity: 0.3 }), flTip = rMat(0xf2d36a, { roughness: 0.5 }), budM = rMat(0x9ab35a, { roughness: 0.6 });
-      for (var fl = 0; fl < 22; fl++) { var ft = 0.62 + fl / 22 * 0.38, fp = stalk.getPoint(ft), fa2 = fl * 2.4, droop = 0.4 + (1 - fl / 22) * 1.6, fg = new THREE.Group();
-        fg.position.copy(fp); fg.rotation.set(0, fa2, Math.PI - droop * 0.5); AL.add(fg);
-        var bud = fl > 16, flen = bud ? 0.02 : 0.034;
-        lbP(new THREE.CylinderGeometry(bud ? 0.004 : 0.0055, 0.003, flen, 6), bud ? budM : flM, 0, -flen / 2 - 0.004, 0, 0, 0, 0, fg);
-        if (!bud) lbP(new THREE.SphereGeometry(0.0045, 6, 4), flTip, 0, -flen - 0.004, 0, 0, 0, 0, fg); }
-      lbP(new THREE.ConeGeometry(0.006, 0.02, 6), budM, stalk.getPoint(1).x, stalk.getPoint(1).y + 0.008, stalk.getPoint(1).z, 0, 0, 0, AL);
       // (a little wooden plant stake with a parchment tag)
       var stake = new THREE.Group(); stake.position.set(0.12, PB + 0.345, 0.11); stake.rotation.set(0.1, -0.4, -0.08); CR.add(stake);
       lbP(new THREE.BoxGeometry(0.012, 0.16, 0.006), lbOak, 0, 0.06, 0, 0, 0, 0, stake); lbP(new THREE.BoxGeometry(0.06, 0.04, 0.003), lbLabels[1], 0, 0.13, 0.005, 0, 0, 0, stake);
