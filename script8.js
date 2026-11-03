@@ -367,6 +367,67 @@ EVERDAWN_PARTS.push(function (THREE) {
     var halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: lbHaloTex, color: 0xffd090, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); halo.position.set(0, -0.03, cz); halo.scale.set(0.85, 0.85, 1); L.add(halo);
     lbLamps.push({ m: m, g: halo, f: flame, gl: gl });
   }
+  // ---- apothecary glassware for the windowsills and the barrel: blown-glass bottles, flasks, jars and vials with glowing
+  // potions inside, corks, twine and handwritten labels, and a few other bits of an alchemist's kit ----
+  var lbLiquids = [];
+  var lbGlass = new THREE.MeshStandardMaterial({ color: 0xeef6ff, transparent: true, opacity: 0.3, roughness: 0.04, metalness: 0.1, envMap: rubyEnv, envMapIntensity: 2.2, side: THREE.DoubleSide, depthWrite: false });
+  var lbCork = rMat(0xa47a4e, { roughness: 0.95 }), lbTwine = rMat(0xc9b48a, { roughness: 1 });
+  var lbLabels = ['⚗', '☿', '☉', '☽', '♀', '♃'].map(function (sym, i) { return new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide, map: cpTex(128, 64, function (g, w, h) {
+    g.fillStyle = ['#efe2c0', '#e8d8b0', '#f2e8cf'][i % 3]; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(120,80,40,0.35)'; g.lineWidth = 3; g.strokeRect(4, 4, w - 8, h - 8);
+    g.fillStyle = '#4a2c1a'; g.font = '30px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(sym, 28, h / 2 + 1);
+    g.strokeStyle = 'rgba(74,44,26,0.7)'; g.lineWidth = 2; [22, 32, 42].forEach(function (ly, k) { g.beginPath(); g.moveTo(50, ly); for (var x = 50; x < 112 - k * 12; x += 4) g.lineTo(x, ly + Math.sin(x * 0.7 + i + k) * 1.2); g.stroke(); });
+    g.fillStyle = 'rgba(140,100,50,0.15)'; g.beginPath(); g.arc(100 - i * 6, 46, 9, 0, Math.PI * 2); g.fill();
+  }) }); });
+  function lbLiquid(c) { var m = rMat(c, { emissive: c, emissiveIntensity: 0.5, roughness: 0.12, metalness: 0.05 }); lbLiquids.push(m); return m; }
+  function lbLathe(pts, segs) { return new THREE.LatheGeometry(pts.map(function (q) { return new THREE.Vector2(q[0], q[1]); }), segs || 20); }
+  function lbGlassP(geo, x, y, z, par) { var o = lbP(geo, lbGlass, x, y, z, 0, 0, 0, par); o.renderOrder = 2; o.castShadow = false; return o; }
+  function lbBottle(par, kind, x, y, z, c, k, sc) {   // (one piece of glassware standing at x, y, z: k picks its label, sc its size)
+    var B = new THREE.Group(); B.position.set(x, y, z); B.scale.setScalar(sc || 1); B.rotation.y = (kind === 'vials' || kind === 'books' ? 0.15 : 1.3) * (k || 0); par.add(B);
+    function P(geo, m, px, py, pz, rx, ry, rz) { return lbP(geo, m, px, py, pz, rx, ry, rz, B); }
+    if (kind === 'potion') {                                          // (a tall shouldered bottle, corked and tied with twine, with a label)
+      lbGlassP(lbLathe([[0, 0], [0.034, 0], [0.04, 0.008], [0.041, 0.11], [0.034, 0.132], [0.014, 0.15], [0.013, 0.183], [0.017, 0.188], [0.016, 0.194], [0, 0.194]]), 0, 0, 0, B);
+      P(lbLathe([[0, 0.004], [0.036, 0.004], [0.037, 0.09], [0, 0.09]]), lbLiquid(c), 0, 0, 0);
+      P(new THREE.CylinderGeometry(0.0135, 0.0115, 0.034, 12), lbCork, 0, 0.198, 0); P(new THREE.TorusGeometry(0.0145, 0.0022, 5, 14), lbTwine, 0, 0.165, 0, Math.PI / 2, 0, 0);
+      P(new THREE.CylinderGeometry(0.0015, 0.0015, 0.05, 4), lbTwine, 0.012, 0.142, 0.012, 0.3, 0, 0.4);
+      P(new THREE.CylinderGeometry(0.0425, 0.0425, 0.05, 16, 1, true, -0.65, 1.3), lbLabels[(k || 0) % 6], 0, 0.06, 0);
+    } else if (kind === 'erlen') {                                    // (a conical flask, half full and bubbling)
+      lbGlassP(lbLathe([[0, 0], [0.058, 0], [0.062, 0.006], [0.021, 0.118], [0.019, 0.152], [0.023, 0.158], [0, 0.158]]), 0, 0, 0, B);
+      P(lbLathe([[0, 0.004], [0.055, 0.004], [0.036, 0.058], [0, 0.058]]), lbLiquid(c), 0, 0, 0);
+      [[0.012, 0.03, 0.01], [-0.015, 0.045, 0.008], [0.004, 0.07, 0.006]].forEach(function (bb) { P(new THREE.SphereGeometry(bb[2], 8, 6), lbGlass, bb[0], bb[1], 0.01); });
+    } else if (kind === 'flask') {                                    // (a round-bottomed flask resting in a cork ring)
+      P(new THREE.TorusGeometry(0.03, 0.011, 8, 18), lbCork, 0, 0.011, 0, Math.PI / 2, 0, 0);
+      lbGlassP(new THREE.SphereGeometry(0.062, 20, 16), 0, 0.07, 0, B); lbGlassP(new THREE.CylinderGeometry(0.016, 0.017, 0.085, 14, 1, true), 0, 0.165, 0, B);
+      P(new THREE.TorusGeometry(0.0175, 0.003, 6, 14), lbGlass, 0, 0.207, 0, Math.PI / 2, 0, 0);
+      P(new THREE.SphereGeometry(0.057, 18, 12, 0, Math.PI * 2, Math.PI * 0.42, Math.PI * 0.58), lbLiquid(c), 0, 0.07, 0);
+      P(new THREE.CircleGeometry(0.056, 18), lbLiquids[lbLiquids.length - 1], 0, 0.083, 0, -Math.PI / 2, 0, 0);
+      P(new THREE.CylinderGeometry(0.015, 0.013, 0.028, 12), lbCork, 0, 0.214, 0);
+    } else if (kind === 'jar') {                                      // (a squat jar of glowing crystals under a glass stopper)
+      lbGlassP(lbLathe([[0, 0], [0.046, 0], [0.051, 0.01], [0.051, 0.07], [0.04, 0.082], [0.032, 0.088], [0.032, 0.095], [0, 0.095]]), 0, 0, 0, B);
+      var cm = lbLiquid(c); for (var q = 0; q < 9; q++) { var qa = q * 2.4; P(new THREE.OctahedronGeometry(0.014 + (q % 3) * 0.004), cm, Math.cos(qa) * 0.026 * (q % 2 ? 1 : 0.5), 0.016 + (q % 4) * 0.011, Math.sin(qa) * 0.026 * (q % 2 ? 1 : 0.5), q, q * 0.7, 0); }
+      lbGlassP(new THREE.SphereGeometry(0.02, 14, 10), 0, 0.113, 0, B); P(new THREE.CylinderGeometry(0.034, 0.034, 0.006, 16), lbGlass, 0, 0.097, 0);
+      P(new THREE.CylinderGeometry(0.0515, 0.0515, 0.03, 16, 1, true, -0.6, 1.2), lbLabels[((k || 0) + 2) % 6], 0, 0.04, 0);
+    } else if (kind === 'vials') {                                    // (a little wooden rack of test tubes)
+      P(new THREE.BoxGeometry(0.16, 0.012, 0.05), lbOak, 0, 0.004, 0); P(new THREE.BoxGeometry(0.16, 0.012, 0.05), lbOak, 0, 0.075, 0);
+      [-0.075, 0.075].forEach(function (lx) { P(new THREE.BoxGeometry(0.01, 0.085, 0.05), lbWood, lx, 0.04, 0); });
+      [-0.045, 0, 0.045].forEach(function (vx, i) { lbGlassP(new THREE.CylinderGeometry(0.011, 0.011, 0.12, 12, 1, true), vx, 0.075, 0, B); lbGlassP(new THREE.SphereGeometry(0.011, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), vx, 0.015, 0, B);
+        P(new THREE.CylinderGeometry(0.0095, 0.0095, 0.04 + i * 0.015, 10), lbLiquid([0xff5a9a, 0x5ae0ff, 0xa8ff5a][(i + (k || 0)) % 3]), vx, 0.035 + i * 0.0075, 0); P(new THREE.CylinderGeometry(0.012, 0.01, 0.016, 10), lbCork, vx, 0.14, 0); });
+    } else if (kind === 'mortar') {                                   // (a stone mortar with its pestle, a few leaves beside it)
+      P(lbLathe([[0, 0], [0.04, 0], [0.05, 0.02], [0.055, 0.05], [0.05, 0.052], [0.042, 0.025], [0, 0.018]], 18), rMat(0x9a958c, { roughness: 0.95, side: THREE.DoubleSide }), 0, 0, 0);
+      P(new THREE.CylinderGeometry(0.009, 0.014, 0.1, 10), rMat(0xb8b2a6, { roughness: 0.9 }), 0.015, 0.07, 0, 0, 0, -0.5);
+      [[0.07, 0.02, 0.3], [0.075, -0.015, 1.4]].forEach(function (lf) { P(new THREE.SphereGeometry(0.018, 8, 4), rMat(0x5c8a3a, { roughness: 0.8 }), lf[0], 0.003, lf[1], 0, lf[2], 0).scale.set(1, 0.12, 0.45); });
+    } else if (kind === 'books') {                                    // (two old leather books, one with brass corners)
+      [[0x6b2a32, 0, 0.17, 0.12, 0.03], [0x2d4a5a, 0.032, 0.15, 0.11, 0.026]].forEach(function (bk, i) {
+        var bg = new THREE.Group(); bg.position.set(0, bk[1] + bk[4] / 2, 0); bg.rotation.y = i * 0.25; B.add(bg);
+        lbP(new THREE.BoxGeometry(bk[2], bk[4], bk[3]), rMat(bk[0], { roughness: 0.7 }), 0, 0, 0, 0, 0, 0, bg); lbP(new THREE.BoxGeometry(bk[2] - 0.01, bk[4] - 0.008, bk[3] - 0.004), rMat(0xeadfc4, { roughness: 1 }), 0.006, 0, 0, 0, 0, 0, bg);
+        lbP(new THREE.BoxGeometry(0.004, bk[4] + 0.002, bk[3] + 0.002), lbBrass, -bk[2] / 2 + 0.02, 0, 0, 0, 0, 0, bg);
+        if (!i) [[1, 1], [1, -1]].forEach(function (cc) { lbP(new THREE.BoxGeometry(0.018, bk[4] + 0.003, 0.018), lbBrass, cc[0] * (bk[2] / 2 - 0.007), 0, cc[1] * (bk[3] / 2 - 0.007), 0, 0, 0, bg); });
+      });
+    } else if (kind === 'succulent') {                                // (a small clay pot with a succulent)
+      P(new THREE.CylinderGeometry(0.035, 0.026, 0.05, 14), rMat(0xb0623e, { roughness: 0.95 }), 0, 0.025, 0); P(new THREE.CylinderGeometry(0.038, 0.038, 0.01, 14), rMat(0xa85a38, { roughness: 0.95 }), 0, 0.05, 0);
+      for (var lf2 = 0; lf2 < 9; lf2++) { var la = lf2 * 2.4, lr = lf2 < 5 ? 0.018 : 0.008; P(new THREE.SphereGeometry(0.012, 8, 6), rMat(0x7fa67a, { roughness: 0.6 }), Math.cos(la) * lr, 0.062 + (lf2 < 5 ? 0 : 0.012), Math.sin(la) * lr, 0, -la, lf2 < 5 ? 1.0 : 0.4).scale.set(0.6, 1.5, 0.6); }
+    }
+    return B;
+  }
   (function (G) {
     var W = LAB_HW, D = LAB_HD, H = LAB_H;
     lbP(new THREE.BoxGeometry(W * 2 + 0.6, 0.3, D * 2 + 0.6), rMat(0x6e6658, { roughness: 0.95 }), 0, -0.05, 0);   // (its stone footing)
@@ -458,12 +519,51 @@ EVERDAWN_PARTS.push(function (THREE) {
     dP(new THREE.TorusGeometry(0.055, 0.009, 8, 18, Math.PI), lbBrass, 0.4, 1.0, 0.035, 0, -Math.PI / 2, -Math.PI / 2);
     dP(new THREE.CylinderGeometry(0.009, 0.009, 0.006, 10), rMat(0x050505), 0.4, 0.915, 0.037, Math.PI / 2, 0, 0); dP(new THREE.BoxGeometry(0.006, 0.02, 0.006), rMat(0x050505), 0.4, 0.903, 0.037);
     lbLamp(G, -1.22, 1.38, D + 0.15); lbLamp(G, 1.22, 1.38, D + 0.15);
-    // (front windows, warm-lit, with bottles on their sills and a round window up in the gable)
+    // (front windows: stone surrounds with a keystone lintel and a deep sill on corbels, oak casements of small panes in front
+    // of a warm-lit room with curtains drawn back, and a row of glassware and bits of the alchemist's kit along each sill)
+    var lbRoomTex = cpTex(256, 256, function (g, w, h) {
+      var bg = g.createRadialGradient(w * 0.5, h * 0.45, 10, w * 0.5, h * 0.5, w * 0.75); bg.addColorStop(0, '#fff0c8'); bg.addColorStop(0.6, '#f0c47a'); bg.addColorStop(1, '#b07a3c'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgba(120,80,40,0.35)'; g.fillRect(0, 0, w, 26);
+      [[96, 0], [168, 1]].forEach(function (sh) {                         // (shelves of bottles inside)
+        g.fillStyle = '#6a4424'; g.fillRect(40, sh[0], 176, 8); g.fillStyle = 'rgba(60,30,10,0.35)'; g.fillRect(40, sh[0] + 8, 176, 6);
+        for (var b = 0; b < 9; b++) { var bx = 50 + b * 19 + sh[1] * 6, bh = 18 + (b * 7 + sh[1] * 5) % 16, cols = ['#ff6a9a', '#6ad8ff', '#9aff6a', '#c08aff', '#ffc85a', '#5affc0'];
+          g.fillStyle = cols[(b + sh[1] * 2) % 6]; g.globalAlpha = 0.75; g.fillRect(bx, sh[0] - bh, 11, bh); g.beginPath(); g.arc(bx + 5.5, sh[0] - bh, 5.5, Math.PI, 0); g.fill(); g.fillRect(bx + 3, sh[0] - bh - 10, 5, 6); g.globalAlpha = 1;
+          g.fillStyle = 'rgba(255,255,255,0.45)'; g.fillRect(bx + 2, sh[0] - bh + 2, 2, bh - 4); }
+      });
+      g.fillStyle = 'rgba(90,255,170,0.35)'; g.beginPath(); g.arc(128, 222, 26, 0, Math.PI * 2); g.fill(); g.fillStyle = '#3a2614'; g.fillRect(70, 236, 116, 20);   // (a glowing flask on a table)
+      [[0, 1], [w, -1]].forEach(function (cu) {                          // (velvet curtains, tied back)
+        for (var f = 0; f < 6; f++) { var x0 = cu[0] + cu[1] * f * 7; g.fillStyle = f % 2 ? '#5a2a6a' : '#6e3480'; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0 + cu[1] * 10, 0); g.quadraticCurveTo(x0 + cu[1] * 4, 130, x0 + cu[1] * 12, h); g.lineTo(x0 + cu[1] * 3, h); g.quadraticCurveTo(x0 - cu[1] * 4, 130, x0, 0); g.fill(); }
+        g.fillStyle = '#d9b05a'; g.fillRect(cu[1] > 0 ? 0 : w - 46, 138, 46, 7);
+      });
+    });
+    var lbRoomM = new THREE.MeshStandardMaterial({ map: lbRoomTex, emissive: 0xffffff, emissiveMap: lbRoomTex, emissiveIntensity: 0.4, roughness: 0.9 }); lbLiquids.push(lbRoomM);
+    var paneGlass = new THREE.MeshStandardMaterial({ color: 0xdfeeff, transparent: true, opacity: 0.16, roughness: 0.03, metalness: 0.2, envMap: rubyEnv, envMapIntensity: 2.4, depthWrite: false });
+    var winSets = { '-1': [['potion', -0.4, 0x5affb0, 1], ['flask', -0.2, 0xff5a9a, 0], ['vials', 0.02, 0, 1], ['books', 0.24, 0, 0], ['jar', 0.42, 0x7ab8ff, 3]],
+                    '1': [['erlen', -0.4, 0xc08aff, 0], ['mortar', -0.19, 0, 0], ['potion', 0.0, 0xffb84a, 4], ['succulent', 0.2, 0, 0], ['potion', 0.38, 0x5ad8ff, 2, 0.8]] };
     [-1, 1].forEach(function (s) {
-      var wx = s * 2.5; lbP(new THREE.BoxGeometry(1.1, 1.1, 0.06), lbGlow, wx, 1.65, D + 0.16); lbP(new THREE.BoxGeometry(1.26, 0.1, 0.14), lbWood, wx, 1.05, D + 0.2); lbP(new THREE.BoxGeometry(1.26, 0.1, 0.12), lbWood, wx, 2.25, D + 0.18);
-      lbP(new THREE.BoxGeometry(0.05, 1.1, 0.1), lbWood, wx, 1.65, D + 0.2); lbP(new THREE.BoxGeometry(1.1, 0.05, 0.1), lbWood, wx, 1.65, D + 0.2);
-      [[-0.35, 0xff5a8a], [-0.1, 0x5ad8ff], [0.2, 0x9aff5a], [0.38, 0xc08aff]].forEach(function (b) { var bm = rMat(b[1], { emissive: b[1], emissiveIntensity: 0.5, roughness: 0.2 }); lbP(new THREE.CylinderGeometry(0.04, 0.05, 0.16, 8), bm, wx + b[0], 1.18, D + 0.24); lbP(new THREE.SphereGeometry(0.03, 6, 4), bm, wx + b[0], 1.28, D + 0.24); });
-      lbP(new THREE.BoxGeometry(0.06, 1.1, 0.06), lbWood, s * 2.5 - s * 0.6, 1.65, D + 0.18);
+      var wx = s * 2.5, WY = 1.65, WZ = D + 0.15;
+      lbP(new THREE.PlaneGeometry(1.1, 1.1), lbRoomM, wx, WY, WZ + 0.005);                                  // (the room inside)
+      var pg = lbP(new THREE.PlaneGeometry(1.02, 1.02), paneGlass, wx, WY, WZ + 0.06); pg.renderOrder = 2; pg.castShadow = false;   // (the glass, catching the sky)
+      // (the casement frame: a deep outer frame, a centre mullion, and two leaves each of six small panes)
+      [[0, 0.53, 1.16, 0.07], [0, -0.53, 1.16, 0.07]].forEach(function (f) { lbP(new THREE.BoxGeometry(f[2], f[3], 0.1), lbWood, wx + f[0], WY + f[1], WZ + 0.05); });
+      [-0.545, 0.545].forEach(function (fx) { lbP(new THREE.BoxGeometry(0.07, 1.1, 0.1), lbWood, wx + fx, WY, WZ + 0.05); });
+      lbP(new THREE.BoxGeometry(0.06, 1.0, 0.09), lbWood, wx, WY, WZ + 0.06);
+      [-1, 1].forEach(function (lv) {
+        var lx = wx + lv * 0.26;
+        [[0, 0.47, 0.46, 0.035], [0, -0.47, 0.46, 0.035]].forEach(function (f) { lbP(new THREE.BoxGeometry(f[2], f[3], 0.05), lbOak, lx + f[0], WY + f[1], WZ + 0.075); });
+        [-0.215, 0.215].forEach(function (fx) { lbP(new THREE.BoxGeometry(0.035, 0.96, 0.05), lbOak, lx + fx, WY, WZ + 0.075); });
+        lbP(new THREE.BoxGeometry(0.02, 0.92, 0.035), lbOak, lx, WY, WZ + 0.07);
+        [-0.155, 0.155].forEach(function (my) { lbP(new THREE.BoxGeometry(0.42, 0.02, 0.035), lbOak, lx, WY + my, WZ + 0.07); });
+        lbP(new THREE.SphereGeometry(0.012, 8, 6), lbBrass, wx + lv * 0.05, WY - 0.02, WZ + 0.105); lbP(new THREE.BoxGeometry(0.014, 0.05, 0.008), lbBrass, wx + lv * 0.05, WY - 0.02, WZ + 0.1);   // (a brass catch)
+        [0.33, -0.33].forEach(function (hy) { lbP(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 8), lbBlack, wx + lv * 0.505, WY + hy, WZ + 0.105); });   // (hinge knuckles)
+      });
+      // (the stone surround: quoins up each side, a lintel of three stones with a proud keystone, and a sill on two corbels)
+      var qy = 1.02; [0.3, 0.26, 0.3, 0.28].forEach(function (qh, n) { [-1, 1].forEach(function (sd) { var qw = (n + (sd > 0 ? 1 : 0)) % 2 ? 0.2 : 0.15;
+        lbP(new THREE.BoxGeometry(qw, qh - 0.016, 0.13), dressed[(n + (sd > 0 ? 1 : 3)) % 4], wx + sd * (0.58 + qw / 2 - 0.01), qy + qh / 2, WZ + 0.05); }); qy += qh; });
+      [[-0.48, 0.42, 0.2, 0.13], [0.48, 0.42, 0.2, 0.13], [0, 0.22, 0.26, 0.17]].forEach(function (l, n) { lbP(new THREE.BoxGeometry(l[1] - 0.014, l[2], l[3]), dressed[n], wx + l[0], 2.32 + (n === 2 ? 0.02 : 0), WZ + l[3] / 2 - 0.015); });
+      lbP(new THREE.BoxGeometry(1.56, 0.075, 0.34), dressed[2], wx, 1.06, WZ + 0.14); lbP(new THREE.BoxGeometry(1.5, 0.03, 0.03), dressed[1], wx, 1.008, WZ + 0.29);
+      [-0.6, 0.6].forEach(function (cx) { lbP(new THREE.BoxGeometry(0.11, 0.13, 0.15), dressed[3], wx + cx, 0.955, WZ + 0.07); lbP(new THREE.BoxGeometry(0.09, 0.05, 0.11), dressed[0], wx + cx, 0.87, WZ + 0.05); });
+      winSets[s].forEach(function (it) { lbBottle(labGroup, it[0], wx + it[1], 1.098, WZ + 0.2, it[2], it[3], it[4]); });
     });
     // (the sign over the door: an atom and the lab's name, in gold on dark wood)
     var sign = cpTex(512, 128, function (g, w, h) {
@@ -473,9 +573,44 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     var signM = new THREE.MeshStandardMaterial({ map: sign, emissive: 0xffffff, emissiveMap: sign, emissiveIntensity: 0.25, roughness: 0.6 });
     lbP(new THREE.BoxGeometry(2.4, 0.54, 0.06), signM, 0, H - 0.28, D + 0.24); lbP(new THREE.BoxGeometry(2.5, 0.62, 0.04), lbWood, 0, H - 0.28, D + 0.21);
-    // (a few things outside: a barrel of glowing bottles, a crate, and a potted fern)
-    lbP(new THREE.CylinderGeometry(0.34, 0.3, 0.75, 14), lbOak, -W + 0.6, 0.38, D + 0.75); lbP(new THREE.TorusGeometry(0.34, 0.025, 6, 16), lbIron, -W + 0.6, 0.6, D + 0.75, Math.PI / 2, 0, 0); lbP(new THREE.TorusGeometry(0.33, 0.025, 6, 16), lbIron, -W + 0.6, 0.15, D + 0.75, Math.PI / 2, 0, 0);
-    [[0.1, 0x5affb0], [-0.12, 0xff7ab0], [0.02, 0x7ab8ff]].forEach(function (b, i) { lbP(new THREE.CylinderGeometry(0.035, 0.04, 0.22, 8), rMat(b[1], { emissive: b[1], emissiveIntensity: 0.6 }), -W + 0.6 + b[0], 0.86, D + 0.75 + (i - 1) * 0.1); });
+    // (a few things outside: an oak barrel and what sits on it, a crate, and a potted fern)
+    (function () {
+      var BR = new THREE.Group(); BR.position.set(-W + 0.6, 0, D + 0.75); BR.rotation.y = 0.4; G.add(BR);
+      function P(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, BR); }
+      function rad(y) { var u = (y - 0.38) / 0.38; return 0.285 + 0.05 * (1 - u * u); }   // (the barrel's bulge)
+      var stTex = cpTex(512, 128, function (g, w, h) {                  // (sixteen staves: grain, seams, a little wear)
+        for (var i = 0; i < 16; i++) { var x0 = i * w / 16, tone = [0, 8, -6, 4, -10, 6, -2, 10][i % 8]; g.fillStyle = 'rgb(' + (140 + tone) + ',' + (94 + tone * 0.7) + ',' + (56 + tone * 0.4) + ')'; g.fillRect(x0, 0, w / 16, h);
+          for (var k = 0; k < 7; k++) { g.strokeStyle = k % 2 ? 'rgba(70,40,18,0.3)' : 'rgba(200,150,100,0.2)'; g.lineWidth = 1; g.beginPath(); var gx = x0 + 3 + (k * 5 + i * 3) % 26; g.moveTo(gx, 0); for (var y = 0; y <= h; y += 8) g.lineTo(gx + Math.sin(y * 0.05 + i + k) * 1.5, y); g.stroke(); }
+          g.fillStyle = '#2c1a0e'; g.fillRect(x0, 0, 2, h); g.fillStyle = 'rgba(255,220,170,0.15)'; g.fillRect(x0 + 2, 0, 2, h); }
+        var dg = g.createLinearGradient(0, h, 0, h * 0.75); dg.addColorStop(0, 'rgba(30,20,10,0.5)'); dg.addColorStop(1, 'rgba(30,20,10,0)'); g.fillStyle = dg; g.fillRect(0, h * 0.75, w, h * 0.25);
+      });
+      var stM = new THREE.MeshStandardMaterial({ map: stTex, bumpMap: stTex, bumpScale: 0.01, roughness: 0.75, side: THREE.DoubleSide });
+      var prof = []; for (var k = 0; k <= 14; k++) { var py = k / 14 * 0.76; prof.push([rad(py), py]); }
+      P(lbLathe(prof, 32), stM, 0, 0, 0);
+      P(new THREE.CylinderGeometry(rad(0.72) - 0.012, rad(0.72) - 0.012, 0.012, 28), lbOak, 0, 0.72, 0); P(new THREE.CylinderGeometry(rad(0.02) - 0.01, rad(0.02) - 0.01, 0.01, 28), lbOak, 0, 0.02, 0);
+      [[-0.09, 0.005], [0.0, 0.004], [0.09, 0.006]].forEach(function (sq) { P(new THREE.BoxGeometry(0.004, 0.003, (rad(0.72) - 0.02) * 2 * Math.cos(Math.asin(sq[0] / rad(0.72)))), rMat(0x2c1a0e), sq[0], 0.727, 0); });   // (the seams of the lid's boards)
+      P(new THREE.TorusGeometry(rad(0.76) - 0.006, 0.01, 6, 32), lbOak, 0, 0.758, 0, Math.PI / 2, 0, 0);
+      [0.07, 0.2, 0.56, 0.69].forEach(function (hy) {                     // (four iron hoops, riveted)
+        P(new THREE.CylinderGeometry(rad(hy + 0.022) + 0.006, rad(hy - 0.022) + 0.006, 0.044, 32, 1, true), lbBlack, 0, hy, 0);
+        for (var r = 0; r < 8; r++) { var ra = r / 8 * Math.PI * 2 + hy * 3; P(new THREE.SphereGeometry(0.0065, 6, 5), lbBlack, Math.sin(ra) * (rad(hy) + 0.009), hy, Math.cos(ra) * (rad(hy) + 0.009)); }
+      });
+      P(new THREE.CylinderGeometry(0.026, 0.022, 0.03, 12), lbCork, 0, 0.38, rad(0.38) + 0.01, Math.PI / 2, 0, 0);   // (the bung, corked)
+      var sp = new THREE.Group(); sp.position.set(0, 0.14, rad(0.14)); BR.add(sp);   // (a brass tap near the foot, a drip of potion hanging from it)
+      lbP(new THREE.CylinderGeometry(0.024, 0.026, 0.02, 12), lbBrass, 0, 0, 0.004, Math.PI / 2, 0, 0, sp); lbP(new THREE.CylinderGeometry(0.012, 0.012, 0.07, 10), lbBrass, 0, 0, 0.045, Math.PI / 2, 0, 0, sp);
+      lbP(new THREE.CylinderGeometry(0.011, 0.008, 0.035, 10), lbBrass, 0, -0.016, 0.078, 0, 0, 0, sp); lbP(new THREE.BoxGeometry(0.05, 0.008, 0.012), lbBrass, 0, 0.022, 0.05, 0, 0, 0, sp);
+      lbP(new THREE.SphereGeometry(0.008, 8, 6), lbBrass, -0.026, 0.022, 0.05, 0, 0, 0, sp); lbP(new THREE.SphereGeometry(0.008, 8, 6), lbBrass, 0.026, 0.022, 0.05, 0, 0, 0, sp);
+      var drip = lbP(new THREE.SphereGeometry(0.007, 8, 6), lbLiquid(0x5affb0), 0, -0.04, 0.078, 0, 0, 0, sp); drip.scale.set(1, 1.5, 1);
+      // (on the lid: a square of linen, a tall potion and a round flask, a jar of crystals, a stub of candle on a brass dish, and a scroll)
+      var linen = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#e9dfc8'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(150,120,80,0.25)'; for (var i = 0; i < w; i += 3) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); } g.strokeStyle = '#8a3a4a'; g.lineWidth = 3; g.strokeRect(5, 5, w - 10, h - 10); });
+      P(new THREE.BoxGeometry(0.34, 0.004, 0.34), new THREE.MeshStandardMaterial({ map: linen, roughness: 1 }), 0.02, 0.729, 0.01, 0, 0.5, 0);
+      lbBottle(BR, 'potion', -0.09, 0.731, -0.06, 0x5affb0, 0, 1.15); lbBottle(BR, 'flask', 0.1, 0.731, -0.05, 0xff5a9a, 0, 1.05); lbBottle(BR, 'jar', -0.02, 0.731, 0.12, 0x7ab8ff, 5, 0.9);
+      P(new THREE.CylinderGeometry(0.04, 0.034, 0.008, 18), lbBrass, 0.14, 0.735, 0.12); P(new THREE.TorusGeometry(0.012, 0.003, 5, 10, Math.PI), lbBrass, 0.182, 0.74, 0.12, 0, 0, 0);
+      var wax = rMat(0xf4ead2, { roughness: 0.55 }); P(new THREE.CylinderGeometry(0.015, 0.017, 0.035, 12), wax, 0.14, 0.756, 0.12); P(new THREE.SphereGeometry(0.006, 6, 5), wax, 0.152, 0.748, 0.126).scale.set(1, 1.8, 1);
+      P(new THREE.CylinderGeometry(0.0013, 0.0013, 0.008, 4), rMat(0x111111), 0.14, 0.777, 0.12);
+      var scroll = new THREE.Group(); scroll.position.set(-0.17, 0.745, 0.1); scroll.rotation.y = 0.9; BR.add(scroll);
+      lbP(new THREE.CylinderGeometry(0.014, 0.014, 0.14, 12), rMat(0xe6d6ae, { roughness: 0.9 }), 0, 0, 0, 0, 0, Math.PI / 2, scroll); lbP(new THREE.TorusGeometry(0.0145, 0.002, 4, 12), rMat(0x8a3a4a), 0, 0, 0, 0, Math.PI / 2, 0, scroll);
+      lbP(new THREE.SphereGeometry(0.007, 8, 6), rMat(0xa02a2a, { roughness: 0.4 }), 0, 0, 0.015, 0, 0, 0, scroll);
+    })();
     lbP(new THREE.BoxGeometry(0.6, 0.45, 0.5), lbOak, W - 0.7, 0.23, D + 0.75, 0, 0.3, 0);
     lbP(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 12), rMat(0x8a4a34, { roughness: 0.9 }), W - 0.7, 0.65, D + 0.75);
     for (var f = 0; f < 7; f++) { var fa = f / 7 * Math.PI * 2; lbP(new THREE.ConeGeometry(0.06, 0.55, 5), rMat(0x3f8a4a), W - 0.7 + Math.sin(fa) * 0.1, 1.05, D + 0.75 + Math.cos(fa) * 0.1, Math.cos(fa) * 0.5, 0, -Math.sin(fa) * 0.5); }
@@ -617,6 +752,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function updateLabOutside(t) {
     var nt = labNight(); lbGlow.emissiveIntensity = 0.4 + nt * 0.8; lbGreen.emissiveIntensity = 0.6 + nt * 0.6;
+    lbLiquids.forEach(function (m) { m.emissiveIntensity = 0.45 + nt * 0.55; });
     lbLamps.forEach(function (L, i) { var fl = Math.sin(t * 9 + i * 2) * 0.5 + Math.sin(t * 23 + i) * 0.3; L.m.emissiveIntensity = 0.5 + nt * (1.4 + fl * 0.3); L.f.scale.set(1 - fl * 0.06, 1.9 + fl * 0.18, 1 - fl * 0.06); L.gl.emissiveIntensity = nt * (0.12 + fl * 0.02); L.g.material.opacity = nt * (0.6 + fl * 0.06); });
     lbSmoke.forEach(function (s) { var f = (t * 0.18 + s.k / 6) % 1; s.m.position.set(-LAB_HW + 1.0 + Math.sin(f * 6 + s.k) * 0.15, LAB_H + 2.3 + f * 2.2, -0.9 + f * 0.4); s.m.scale.setScalar(0.6 + f * 1.6); s.m.material.opacity = 0.45 * Math.sin(f * Math.PI); });
   }
