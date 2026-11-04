@@ -983,8 +983,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bubbleM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false });
     var potM = rMat(0xf4f6f8, { roughness: 0.4, side: THREE.DoubleSide }), clayM = [0xc8643a, 0xb85a34, 0xd8784a].map(function (c) { return rMat(c, { roughness: 0.9 }); }), rootM = rMat(0xf2ead2, { roughness: 0.8 });
     function leaf(par, x, y, z, len, wid, col, ry, tilt, curl) {         // (a leaf: a thin, curved oval blade)
-      var back = par.userData.tubeX != null ? Math.cos(ry) : 1;           // (leaves reaching back toward the glass grow shorter and more upright, so none push into the column)
-      if (back < 0.3) { len *= 1 + (back - 0.3) * 0.55; tilt = tilt + (1.35 - tilt) * Math.min(1, (0.3 - back) * 0.9); }
       var lg = new THREE.Group(); lg.position.set(x, y, z); lg.rotation.set(0, ry, 0); par.add(lg);
       var o = p(new THREE.SphereGeometry(0.5, 10, 6), col, 0, 0, len * 0.5, 0, 0, 0, lg); o.scale.set(wid, wid * 0.12 + 0.002, len); lg.rotation.x = -tilt; o.rotation.x = curl || 0; o.castShadow = false; lg.userData.len = len; return lg;
     }
@@ -1010,19 +1008,26 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var c = 0; c < 6; c++) {
       var cx3 = -0.75 + c * 0.3;
       q(new THREE.CylinderGeometry(0.095, 0.095, 1.7, 18, 1, true), tubeG, cx3, 0, 0.13).renderOrder = 2;            // (the clear column)
-      q(new THREE.CylinderGeometry(0.088, 0.088, 1.62, 18), waterM, cx3, -0.02, 0.13).renderOrder = 1;              // (the water in it)
+      q(new THREE.CylinderGeometry(0.088, 0.088, 0.1, 18), waterM, cx3, -0.79, 0.13).renderOrder = 1;               // (a reservoir of water at its foot)
+      for (var dr = 0; dr < 3; dr++) q(new THREE.CylinderGeometry(0.0025, 0.0025, 1.55, 5), waterM, cx3 + (dr - 1) * 0.05, 0.0, 0.13 - 0.06 + (dr % 2) * 0.012).renderOrder = 1;   // (thin trickles of water running down the inside)
       [0.82, -0.82, 0.0].forEach(function (cy) { q(new THREE.TorusGeometry(0.098, 0.009, 6, 20), steelW, cx3, cy, 0.13, Math.PI / 2, 0, 0); q(new THREE.BoxGeometry(0.03, 0.02, 0.06), steelW, cx3, cy, 0.05); });   // (steel clamps)
       q(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 18), whiteW, cx3, 0.86, 0.13); q(new THREE.CylinderGeometry(0.1, 0.1, 0.04, 18), whiteW, cx3, -0.86, 0.13);
       q(new THREE.BoxGeometry(0.1, 0.035, 0.006), rMat(0x2a3038), cx3, -0.93, 0.232); q(new THREE.PlaneGeometry(0.085, 0.022), new THREE.MeshBasicMaterial({ map: screenTex(c * 13 + 9, 96, 32) }), cx3, -0.93, 0.2355);   // (a little readout tag)
-      for (var bb2 = 0; bb2 < 5; bb2++) { var bm3 = q(new THREE.SphereGeometry(0.008 + (bb2 % 3) * 0.003, 6, 5), bubbleM, cx3 + ((bb2 * 37) % 9 - 4) * 0.012, -0.8, 0.13 + ((bb2 * 17) % 7 - 3) * 0.01); bm3.castShadow = false; lbBubbles.push({ m: bm3, y0: -0.8, h: 1.58, v: 0.12 + (bb2 % 3) * 0.05, k: (c * 0.37 + bb2 * 0.21) % 1 }); }
+      for (var bb2 = 0; bb2 < 5; bb2++) { var bm3 = q(new THREE.SphereGeometry(0.008 + (bb2 % 3) * 0.003, 6, 5), bubbleM, cx3 + ((bb2 * 37) % 9 - 4) * 0.012, -0.83, 0.13 + ((bb2 * 17) % 7 - 3) * 0.01); bm3.castShadow = false; lbBubbles.push({ m: bm3, y0: -0.835, h: 0.08, v: 0.12 + (bb2 % 3) * 0.05, k: (c * 0.37 + bb2 * 0.21) % 1 }); }
       for (var r2 = 0; r2 < 4; r2++) {
-        var py = -0.62 + r2 * 0.42, pot = new THREE.Group(); pot.position.set(cx3, py, 0.31); pot.rotation.x = 0.45; pot.scale.setScalar(1.2); PW.add(pot);   // (each pot held out in front of its column, clear of the glass)
-        q(new THREE.CylinderGeometry(0.026, 0.03, 0.12, 14), whiteW, cx3, py - 0.045, 0.225, Math.PI / 2 - 0.45, 0, 0); q(new THREE.TorusGeometry(0.03, 0.006, 6, 16), steelW, cx3, py - 0.04, 0.225 + 0.002, 0, 0, 0);   // (a white port out of the column, its steel collar where it meets the glass)
+        var py = -0.66 + r2 * 0.4, pot = new THREE.Group(); pot.position.set(cx3, py, 0.13); PW.add(pot);   // (each pot sits inside its column, on a clear shelf)
+        gl(new THREE.CylinderGeometry(0.088, 0.088, 0.008, 20), cx3, py - 0.044, 0.13, PW);
         lbP(lbLathe([[0, -0.04], [0.035, -0.04], [0.05, 0.02], [0.058, 0.025], [0.058, 0.032], [0.05, 0.032]], 16), potM, 0, 0, 0, 0, 0, 0, pot);   // (a white net pot)
         for (var sl = 0; sl < 6; sl++) { var sla = sl / 6 * Math.PI * 2; lbP(new THREE.BoxGeometry(0.01, 0.04, 0.004), rMat(0x8a9aa8), Math.sin(sla) * 0.043, -0.01, Math.cos(sla) * 0.043, 0, sla, 0, pot); }
         for (var pb = 0; pb < 7; pb++) { var pa = pb * 2.4; lbP(new THREE.SphereGeometry(0.011, 6, 5), clayM[pb % 3], Math.sin(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0.026, Math.cos(pa) * 0.025 * (pb % 2 ? 1 : 0.5), 0, 0, 0, pot); }
-        for (var rt = 0; rt < 4; rt++) { var ra = rt * 1.6 + c, rx0 = Math.sin(ra) * 0.012; q(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(cx3 + rx0, py - 0.06, 0.19), new THREE.Vector3(cx3 + rx0 * 1.6, py - 0.11, 0.16), new THREE.Vector3(cx3 + Math.sin(ra + 1) * 0.03, py - 0.18 - rt * 0.02, 0.13 + Math.cos(ra) * 0.02)]), 8, 0.0025, 4), rootM, 0, 0, 0); }   // (roots trailing from the port down into the water inside the column)
-        var cg = new THREE.Group(); cg.position.y = 0.03; cg.rotation.x = -0.35; cg.scale.setScalar(1.6); cg.userData.tubeX = cx3; pot.add(cg); crop(cropRows[r2][c], cg, c * 4 + r2);
+        for (var rt = 0; rt < 4; rt++) { var ra = rt * 1.6 + c; lbP(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(Math.sin(ra) * 0.02, -0.04, Math.cos(ra) * 0.02), new THREE.Vector3(Math.sin(ra) * 0.03, -0.07, Math.cos(ra) * 0.03), new THREE.Vector3(Math.sin(ra + 0.6) * 0.035, -0.1 - rt * 0.01, Math.cos(ra + 0.6) * 0.035)]), 8, 0.0025, 4), rootM, 0, 0, 0, 0, 0, 0, pot); }   // (roots hanging just below the shelf)
+        var cg = new THREE.Group(); cg.position.y = 0.03; cg.userData.tubeX = cx3; pot.add(cg); crop(cropRows[r2][c], cg, c * 4 + r2);
+        (function (g) {                                                    // (each plant is sized to fit inside its column: no leaf reaches the glass)
+          g.updateMatrixWorld(true); var inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), v = new THREE.Vector3(), mr = 0.001, my = 0.001;
+          g.traverse(function (o) { if (!o.isMesh) return; var m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld), ps = o.geometry.attributes.position;
+            for (var i = 0; i < ps.count; i++) { v.fromBufferAttribute(ps, i).applyMatrix4(m); mr = Math.max(mr, Math.hypot(v.x, v.z)); my = Math.max(my, v.y); } });
+          g.scale.setScalar(Math.min(1.7, 0.078 / mr, 0.24 / my));
+        })(cg);
       }
     }
     // (beside it: a control screen on a steel arm, and a nutrient tank with a glowing level gauge)
