@@ -1335,13 +1335,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var plum = new THREE.MeshStandardMaterial({ map: paintT, color: 0xb8a0d0, roughness: 0.38, metalness: 0.35, envMap: rubyEnv, envMapIntensity: 0.6 }), plumIn = new THREE.MeshStandardMaterial({ color: 0x2a1a38, roughness: 0.8, side: THREE.BackSide });
     var brass = new THREE.MeshStandardMaterial({ color: 0xd9b05a, metalness: 0.8, roughness: 0.3, envMap: rubyEnv, envMapIntensity: 1.6, emissive: 0x2a1a04 }), iron = houseMats.iron;
     var flagRed = new THREE.MeshStandardMaterial({ color: 0xc8283a, roughness: 0.45, metalness: 0.2 });
-    // (its foot: a ring of rounded stones, a bed of soil, lavender and a few pansies)
+    // (its foot: a ring of rounded stones, a bed of soil and a few pansies)
     var stoneM = [0x9a929c, 0xb0a8b4, 0x847c88].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 }); });
     for (var st = 0; st < 11; st++) { var sa = st / 11 * Math.PI * 2; var so = P(new THREE.DodecahedronGeometry(0.07 + (st % 3) * 0.012), stoneM[st % 3], Math.sin(sa) * 0.3, 0.03, Math.cos(sa) * 0.3, st, st * 0.7, 0); so.scale.y = 0.6; }
     P(new THREE.CylinderGeometry(0.27, 0.28, 0.05, 20), houseMats.soil, 0, 0.02, 0);
-    for (var lv = 0; lv < 9; lv++) { var la = lv / 9 * Math.PI * 2 + 0.3, lr = 0.17 + (lv % 2) * 0.05, lx = Math.sin(la) * lr, lz = Math.cos(la) * lr;
-      for (var sp = 0; sp < 4; sp++) { var tilt = (sp - 1.5) * 0.18; P(new THREE.CylinderGeometry(0.004, 0.005, 0.22, 4), houseMats.stem, lx + Math.sin(tilt) * 0.04, 0.14, lz, 0, 0, tilt);
-        for (var bud = 0; bud < 5; bud++) P(new THREE.SphereGeometry(0.011, 6, 4), houseMats.flowerLilac, lx + Math.sin(tilt) * (0.08 + bud * 0.018), 0.2 + bud * 0.018, lz + (bud % 2 ? 0.006 : -0.006)); } }
     [[0.12, -0.16], [-0.18, 0.08], [0.2, 0.12]].forEach(function (pz, i) { for (var pt = 0; pt < 5; pt++) { var pa = pt / 5 * Math.PI * 2; var pe = P(new THREE.SphereGeometry(0.022, 8, 5), [houseMats.flowerPink, houseMats.flowerWhite, houseMats.flowerBlue][i], pz[0] + Math.sin(pa) * 0.022, 0.08, pz[1] + Math.cos(pa) * 0.022); pe.scale.y = 0.3; }
       P(new THREE.SphereGeometry(0.01, 6, 4), houseMats.flowerHeart, pz[0], 0.088, pz[1]); });
     // (the post: square oak, chamfered, with turned collars, set on a stone footing)
