@@ -3582,7 +3582,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // The shipping bin, just outside the fence on the far right: a sleek, modern black bin. Matte black with a fluted front,
   // a recessed plinth so it seems to float, a flat lid with a brushed-steel bar handle, a steel hinge along the back,
   // and an engraved steel label (the lid swings open when you use it)
-  var BIN_X = FENCE_R + 1.15, BIN_Z = FRONT + 1.0, BIN_W = 1.2, BIN_H = 0.66, BIN_D = 0.78, BIN_FOOT = 0.07;
+  var BIN_X = FENCE_R - 1.50, BIN_Z = FRONT + 2.9, BIN_W = 1.2, BIN_H = 0.66, BIN_D = 0.78, BIN_FOOT = 0.07;
   function roundedBox(w, h, d, r) {                                   // a box with crisp but slightly softened edges
     var sh = new THREE.Shape(), x = -w / 2 + r, y = -h / 2 + r, iw = w - 2 * r, ih = h - 2 * r;
     sh.moveTo(x, y); sh.lineTo(x + iw, y); sh.lineTo(x + iw, y + ih); sh.lineTo(x, y + ih); sh.lineTo(x, y);
