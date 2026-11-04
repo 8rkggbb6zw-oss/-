@@ -1116,23 +1116,104 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (a drip tray along the foot of the garden)
     q(new THREE.BoxGeometry(2.1, 0.08, 0.34), whiteW, 0, -1.48, 0.17); q(new THREE.BoxGeometry(2.0, 0.005, 0.28), waterM, 0, -1.445, 0.17); q(new THREE.BoxGeometry(2.08, 0.008, 0.008), glowW, 0, -1.52, 0.345);
     labSolids.push([-W + 0.3, -0.7, 0.35], [-W + 0.3, 0.3, 0.35], [-W + 0.3, 1.3, 0.35], [-W + 0.3, -1.12, 0.3]);
-    // (the right wall: a big window onto a city at night, and before it a row of glass growth chambers)
-    var city = cpTex(512, 256, function (g, w, h) {
-      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0a0f2a'); gr.addColorStop(1, '#2a1a4a'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-      for (var i = 0; i < 40; i++) { g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect((i * 97) % w, (i * 31) % 70, 1.5, 1.5); }
-      for (var b = 0; b < 26; b++) { var bw = 14 + (b * 13) % 22, bh = 60 + (b * 47) % 150, bx2 = (b * 41) % (w - bw); g.fillStyle = ['#141a3a', '#1a1438', '#10203a'][b % 3]; g.fillRect(bx2, h - bh, bw, bh);
-        for (var wy = h - bh + 6; wy < h - 4; wy += 7) for (var wx = bx2 + 3; wx < bx2 + bw - 3; wx += 5) if ((wx * 7 + wy * 3 + b) % 5 < 2) { g.fillStyle = ['#ffd890', '#9ae8ff', '#ff8ad8'][(wx + wy) % 3]; g.fillRect(wx, wy, 2, 3); } }
-      g.fillStyle = '#ff5ab8'; g.fillRect(w * 0.62, h - 190, 4, 30); g.fillStyle = '#5ae8ff'; g.fillRect(w * 0.3, h - 150, 26, 3);
+    // (the right wall: a tall window onto a city at night, framed deep in white with slim mullions, a blind rolled up at its
+    // head and a lit sill; before it four growth chambers, each a glass column on a pedestal with a control screen, steel struts,
+    // a vented lid with hoses to the wall and mist curling at its foot, growing something strange and glowing)
+    var city = cpTex(1024, 448, function (g, w, h) {
+      var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#060a20'); gr.addColorStop(0.55, '#1a1440'); gr.addColorStop(1, '#3a1a50'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 140; i++) { g.fillStyle = 'rgba(255,255,255,' + (0.3 + (i % 5) * 0.12) + ')'; g.fillRect((i * 97) % w, (i * 31) % 150, i % 7 ? 1.2 : 2, i % 7 ? 1.2 : 2); }
+      var mg = g.createRadialGradient(w * 0.78, 70, 4, w * 0.78, 70, 70); mg.addColorStop(0, 'rgba(255,248,230,1)'); mg.addColorStop(0.35, 'rgba(255,240,220,0.9)'); mg.addColorStop(0.42, 'rgba(200,190,255,0.25)'); mg.addColorStop(1, 'rgba(120,100,255,0)'); g.fillStyle = mg; g.fillRect(w * 0.78 - 70, 0, 140, 140);
+      g.fillStyle = 'rgba(200,190,170,0.35)'; [[8, -6, 5], [-9, 4, 4], [3, 9, 3]].forEach(function (c) { g.beginPath(); g.arc(w * 0.78 + c[0], 70 + c[1], c[2], 0, Math.PI * 2); g.fill(); });
+      var haze = g.createLinearGradient(0, h * 0.5, 0, h); haze.addColorStop(0, 'rgba(255,90,200,0)'); haze.addColorStop(1, 'rgba(255,90,200,0.25)'); g.fillStyle = haze; g.fillRect(0, h * 0.5, w, h * 0.5);
+      function towers(n, minH, maxH, cols, lit, seed) {
+        for (var b = 0; b < n; b++) { var bw = 22 + (b * 13 + seed) % 40, bh = minH + (b * 47 + seed * 3) % (maxH - minH), bx = (b * 61 + seed * 17) % (w - bw); g.fillStyle = cols[b % cols.length]; g.fillRect(bx, h - bh, bw, bh);
+          if (b % 3 === 0) { g.fillRect(bx + bw * 0.2, h - bh - 14, bw * 0.6, 14); g.fillRect(bx + bw / 2 - 1, h - bh - 40, 2, 26); g.fillStyle = '#ff3a3a'; g.fillRect(bx + bw / 2 - 2, h - bh - 42, 4, 3); }   // (a crown and an antenna with its red light)
+          if (b % 4 === 1) { g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(bx, h - bh, 3, bh); }
+          for (var wy = h - bh + 6; wy < h - 4; wy += 7) for (var wx = bx + 3; wx < bx + bw - 3; wx += 5) if ((wx * 7 + wy * 3 + b + seed) % 7 < lit) { g.fillStyle = ['#ffd890', '#9ae8ff', '#ff8ad8', '#fff4d8'][(wx + wy) % 4]; g.globalAlpha = 0.55 + ((wx * wy) % 5) * 0.09; g.fillRect(wx, wy, 2, 3); g.globalAlpha = 1; } }
+      }
+      towers(34, 60, 180, ['#1c1a44', '#201848', '#18204a'], 1, 7);          // (the far skyline, dim)
+      towers(26, 110, 300, ['#121436', '#161032', '#0e1a34'], 2, 23);        // (the middle towers)
+      towers(12, 200, 380, ['#0a0c24', '#0c0a22'], 3, 41);                   // (tall towers close by)
+      [[0.18, 230, '#ff4ab8', 10, 46], [0.47, 180, '#4ae8ff', 50, 8], [0.63, 260, '#ffd24a', 8, 40], [0.86, 210, '#9a6aff', 40, 10]].forEach(function (n) {   // (neon signs, glowing)
+        g.save(); g.shadowColor = n[2]; g.shadowBlur = 14; g.fillStyle = n[2]; g.fillRect(w * n[0], h - n[1], n[3], n[4]); g.restore(); });
+      g.strokeStyle = 'rgba(120,230,255,0.6)'; g.lineWidth = 3; g.beginPath(); g.moveTo(w * 0.3, h - 170); g.lineTo(w * 0.42, h - 170); g.stroke();   // (a lit skybridge)
+      [[0.12, 120, 1], [0.55, 95, -1], [0.7, 140, 1]].forEach(function (f) { var fx = w * f[0], lg = g.createLinearGradient(fx, 0, fx + f[2] * 80, 0); lg.addColorStop(0, 'rgba(255,255,255,0.9)'); lg.addColorStop(1, 'rgba(255,120,200,0)');   // (flying cars, trailing light)
+        g.strokeStyle = lg; g.lineWidth = 2; g.beginPath(); g.moveTo(fx, f[1]); g.lineTo(fx + f[2] * 80, f[1] + 4); g.stroke(); g.fillStyle = '#fff'; g.fillRect(fx - 2, f[1] - 1, 4, 3); });
     });
     var WN = new THREE.Group(); WN.position.set(W - 0.03, 1.6, -0.3); WN.rotation.y = -Math.PI / 2; R.add(WN);
-    p(new THREE.PlaneGeometry(4.6, 1.9), new THREE.MeshBasicMaterial({ map: city }), 0, 0, 0, 0, 0, 0, WN);
-    [[0, 0.98, 4.7, 0.06], [0, -0.98, 4.7, 0.06], [-2.33, 0, 0.06, 2.0], [2.33, 0, 0.06, 2.0], [0, 0, 0.03, 1.9]].forEach(function (f) { p(new THREE.BoxGeometry(f[2], f[3], 0.05), white, f[0], f[1], 0.02, 0, 0, 0, WN); });
+    function wq(geo, m, x, y, z, rx, ry, rz) { return p(geo, m, x, y, z, rx, ry, rz, WN); }
+    wq(new THREE.PlaneGeometry(4.6, 1.9), new THREE.MeshBasicMaterial({ map: city }), 0, 0, 0.0);   // (the city beyond)
+    var pane = wq(new THREE.PlaneGeometry(4.6, 1.9), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, transparent: true, opacity: 0.1, roughness: 0.02, metalness: 0.3, envMap: rubyEnv, envMapIntensity: 1.5, depthWrite: false }), 0, 0, 0.05); pane.renderOrder = 2;
+    [[0, 1.0, 4.8, 0.1], [0, -1.0, 4.8, 0.1], [-2.35, 0, 0.1, 2.1], [2.35, 0, 0.1, 2.1]].forEach(function (f) { wq(new THREE.BoxGeometry(f[2], f[3], 0.2), white, f[0], f[1], 0.06); });   // (a deep white reveal)
+    [[-1.53, 0], [-0.77, 0], [0, 0], [0.77, 0], [1.53, 0]].forEach(function (m, i) { wq(new THREE.BoxGeometry(i === 2 ? 0.06 : 0.035, 1.9, 0.05), i === 2 ? white : pale, m[0], 0, 0.06); });   // (slim mullions)
+    wq(new THREE.BoxGeometry(4.6, 0.03, 0.05), pale, 0, 0.55, 0.06);                                      // (a transom near the top)
+    wq(new THREE.CylinderGeometry(0.06, 0.06, 4.6, 20), rMat(0xf0f2f6, { roughness: 0.6 }), 0, 0.88, 0.1, 0, 0, Math.PI / 2); wq(new THREE.BoxGeometry(4.66, 0.14, 0.03), white, 0, 0.9, 0.17);   // (the blind, rolled up in its box)
+    wq(new THREE.BoxGeometry(0.3, 0.02, 0.006), pale, 1.9, 0.79, 0.165); wq(new THREE.CylinderGeometry(0.003, 0.003, 0.35, 4), pale, 2.05, 0.62, 0.12);   // (its pull cord)
+    wq(new THREE.BoxGeometry(4.8, 0.05, 0.14), topM, 0, -1.03, 0.09); wq(new THREE.BoxGeometry(4.7, 0.008, 0.008), glowEdge, 0, -1.06, 0.16);   // (the sill, a glow beneath it)
+    [[-2.0, 'succulent', 0], [-1.15, 'jar', 0x9affd0], [1.2, 'erlen', 0xff8ad8], [2.05, 'succulent', 0]].forEach(function (it, i) { var sg2 = new THREE.Group(); sg2.position.set(it[0], -1.005, 0.1); WN.add(sg2); lbBottle(sg2, it[1], 0, 0, 0, it[2], i, 0.9); });
+    // (the growth chambers)
+    var mistM = new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0.07, depthWrite: false });
+    var chamberPlants = [
+      function (G2, y0) {                                                // (a bioluminescent fern, fronds glowing cyan)
+        var m = rMat(0x3ad8c8, { emissive: 0x2ae8ff, emissiveIntensity: 0.5, roughness: 0.5, side: THREE.DoubleSide }); m.userData.glow = 0.55; lbChambers.push(m);
+        for (var f = 0; f < 7; f++) { var fa = f / 7 * Math.PI * 2, fg = new THREE.Group(); fg.position.y = y0; fg.rotation.y = fa; G2.add(fg);
+          var pts = [], k; for (k = 0; k <= 8; k++) { var u = k / 8; pts.push(new THREE.Vector3(0, u * 0.5, Math.sin(u * 1.6) * 0.16)); } var cv = new THREE.CatmullRomCurve3(pts);
+          lbP(new THREE.TubeGeometry(cv, 10, 0.004, 4), m, 0, 0, 0, 0, 0, 0, fg);
+          for (k = 1; k < 12; k++) { var pp = cv.getPoint(k / 12), ll = 0.055 * (1 - k / 13); [-1, 1].forEach(function (sd) { var lf = lbP(new THREE.SphereGeometry(0.5, 6, 4), m, pp.x + sd * ll * 0.5, pp.y, pp.z, 0, 0, sd * 0.4, fg); lf.scale.set(ll, 0.004, 0.014); }); }
+          if (f % 2) lbP(new THREE.SphereGeometry(0.012, 8, 6), m, 0, 0.12, 0.02, 0, 0, 0, fg); }   // (a curled fiddlehead)
+      },
+      function (G2, y0) {                                                // (a cluster of glowing mushrooms, caps speckled)
+        function p(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, G2); }   // (built inside its own chamber)
+        var cap = rMat(0xff7ad8, { emissive: 0xff4ab8, emissiveIntensity: 0.5, roughness: 0.4 }), stem = rMat(0xf8eaf4, { emissive: 0x5a2a4a, emissiveIntensity: 0.3 }); cap.userData.glow = 0.5; lbChambers.push(cap);
+        [[0, 0, 0.32, 0.09], [0.09, 0.05, 0.22, 0.065], [-0.08, 0.06, 0.18, 0.055], [0.05, -0.1, 0.14, 0.045], [-0.1, -0.06, 0.1, 0.035], [0.12, -0.03, 0.08, 0.03]].forEach(function (mu, i) {
+          var mx = mu[0], mz = mu[1], mh = mu[2], mr = mu[3];
+          p(new THREE.CylinderGeometry(mr * 0.22, mr * 0.32, mh, 10), stem, mx, y0 + mh / 2, mz, (i % 3 - 1) * 0.08, 0, (i % 2 ? 1 : -1) * 0.06);
+          var c2 = p(new THREE.SphereGeometry(mr, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), cap, mx, y0 + mh, mz); c2.scale.y = 0.6; p(new THREE.CircleGeometry(mr * 0.97, 16), rMat(0xf0c8e0, { side: THREE.DoubleSide }), mx, y0 + mh + 0.002, mz, Math.PI / 2, 0, 0);
+          for (var sp2 = 0; sp2 < 5; sp2++) { var sa2 = sp2 * 2.4 + i; p(new THREE.SphereGeometry(mr * 0.12, 6, 4), new THREE.MeshBasicMaterial({ color: 0xfff0fa }), mx + Math.sin(sa2) * mr * 0.55, y0 + mh + mr * 0.42, mz + Math.cos(sa2) * mr * 0.55); }
+        });
+      },
+      function (G2, y0) {                                                // (crystal bellflowers: tall stalks hung with glowing violet bells)
+        function p(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, G2); }   // (built inside its own chamber)
+        var stalk = rMat(0x5a8a6a, { roughness: 0.5 }), bell = rMat(0xb88aff, { emissive: 0x8a4aff, emissiveIntensity: 0.5, roughness: 0.2, transparent: true, opacity: 0.9, side: THREE.DoubleSide }); bell.userData.glow = 0.55; lbChambers.push(bell);
+        for (var st2 = 0; st2 < 5; st2++) { var sa3 = st2 * 1.26, sx2 = Math.sin(sa3) * 0.06, sz2 = Math.cos(sa3) * 0.06, sh2 = 0.42 + (st2 % 3) * 0.08;
+          var cv2 = new THREE.CatmullRomCurve3([new THREE.Vector3(sx2, y0, sz2), new THREE.Vector3(sx2 * 1.5, y0 + sh2 * 0.6, sz2 * 1.5), new THREE.Vector3(sx2 * 2.4, y0 + sh2, sz2 * 2.4)]);
+          p(new THREE.TubeGeometry(cv2, 10, 0.005, 5), stalk, 0, 0, 0);
+          for (var bl = 0; bl < 4; bl++) { var bp = cv2.getPoint(0.55 + bl * 0.13); p(lbLathe([[0.002, 0.03], [0.012, 0.022], [0.02, 0.005], [0.026, -0.004]], 12), bell, bp.x + sx2 * 0.3, bp.y - 0.02, bp.z + sz2 * 0.3); p(new THREE.SphereGeometry(0.004, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), bp.x + sx2 * 0.3, bp.y - 0.028, bp.z + sz2 * 0.3); }
+          for (var lv2 = 0; lv2 < 2; lv2++) { var lp = cv2.getPoint(0.15 + lv2 * 0.2); var lf2 = p(new THREE.SphereGeometry(0.5, 8, 4), stalk, lp.x, lp.y, lp.z, 0, sa3 + lv2 * 2, 0.9); lf2.scale.set(0.02, 0.004, 0.08); } }
+      },
+      function (G2, y0) {                                                // (a golden spiral succulent studded with glowing seed-orbs)
+        function p(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, G2); }   // (built inside its own chamber)
+        var leafM = rMat(0x7aa86a, { roughness: 0.45 }), orb = rMat(0xffd25a, { emissive: 0xffb020, emissiveIntensity: 0.6, roughness: 0.2 }); orb.userData.glow = 0.6; lbChambers.push(orb);
+        for (var lv3 = 0; lv3 < 28; lv3++) { var u2 = lv3 / 28, a3 = lv3 * 2.39996, rr2 = 0.03 + u2 * 0.14, ly2 = y0 + 0.02 + (1 - u2) * 0.12;
+          var lfm = p(new THREE.SphereGeometry(0.5, 10, 6), leafM, Math.sin(a3) * rr2 * 0.6, ly2, Math.cos(a3) * rr2 * 0.6, 0, a3, 0); lfm.scale.set(0.035 + u2 * 0.03, 0.02, 0.07 + u2 * 0.09); lfm.rotation.x = -0.6 + u2 * 0.5; lfm.rotation.order = 'YXZ'; }
+        for (var ob = 0; ob < 7; ob++) { var oa = ob * 0.9; p(new THREE.SphereGeometry(0.014 + (ob % 3) * 0.004, 10, 8), orb, Math.sin(oa) * 0.04, y0 + 0.2 + (ob % 4) * 0.05, Math.cos(oa) * 0.04); p(new THREE.CylinderGeometry(0.002, 0.002, 0.1, 4), leafM, Math.sin(oa) * 0.03, y0 + 0.15 + (ob % 4) * 0.04, Math.cos(oa) * 0.03); }
+      }
+    ];
     [-1.6, -0.75, 0.1, 0.95].forEach(function (cz, i) {
-      var cx = W - 0.55; p(new THREE.CylinderGeometry(0.26, 0.28, 0.6, 20), white, cx, 0.3, cz); p(new THREE.CylinderGeometry(0.2, 0.2, 0.04, 20), cyanM, cx, 0.61, cz);
-      var gm = new THREE.MeshStandardMaterial({ color: 0xd8f8ff, transparent: true, opacity: 0.3, roughness: 0.05, emissive: 0x4ad8ff, emissiveIntensity: 0.25, depthWrite: false });
-      p(new THREE.CylinderGeometry(0.24, 0.24, 0.78, 20, 1, true), gm, cx, 1.02, cz); p(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 20), white, cx, 1.44, cz);
-      for (var lf = 0; lf < 9; lf++) { var la = lf * 2.39, rr = 0.03 + (lf % 3) * 0.04; p(new THREE.ConeGeometry(0.035, 0.36 + (lf % 4) * 0.06, 5), rMat([0x4ab868, 0x7ad070, 0x5aa8c8, 0xd86ab0][(i + lf) % 4]), cx + Math.sin(la) * rr, 0.85, cz + Math.cos(la) * rr, Math.cos(la) * 0.3, 0, -Math.sin(la) * 0.3); }
-      lbChambers.push(gm); labSolids.push([cx, cz, 0.3]);
+      var cx = W - 0.55, CG = new THREE.Group(); CG.position.set(cx, 0, cz); R.add(CG);
+      function cp2(geo, m, x, y, z, rx, ry, rz) { return lbP(geo, m, x, y, z, rx, ry, rz, CG); }
+      // (the pedestal: a dark plinth, a white drum with vents and a glowing band, a control screen facing the room)
+      cp2(new THREE.CylinderGeometry(0.3, 0.31, 0.06, 28), dark, 0, 0.03, 0); cp2(new THREE.CylinderGeometry(0.265, 0.285, 0.52, 28), white, 0, 0.32, 0);
+      cp2(new THREE.TorusGeometry(0.27, 0.006, 6, 32), glowEdge, 0, 0.08, 0, Math.PI / 2, 0, 0); cp2(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 28), pale, 0, 0.6, 0);
+      for (var vs2 = 0; vs2 < 5; vs2++) cp2(new THREE.BoxGeometry(0.004, 0.012, 0.16), dark, -0.272, 0.18 + vs2 * 0.03, 0, 0, 0, 0);
+      var pan = new THREE.Group(); pan.position.set(-0.27, 0.45, 0); pan.rotation.set(0, -Math.PI / 2, 0); CG.add(pan);
+      lbP(new THREE.BoxGeometry(0.2, 0.11, 0.02), dark, 0, 0, 0, -0.2, 0, 0, pan); lbP(new THREE.PlaneGeometry(0.18, 0.09), new THREE.MeshBasicMaterial({ map: screenTex(i * 19 + 101, 160, 80) }), 0, 0.002, 0.011, -0.2, 0, 0, pan);
+      lbP(new THREE.SphereGeometry(0.007, 6, 4), new THREE.MeshBasicMaterial({ color: [0x6aff9a, 0x6aff9a, 0xffc04a, 0x6aff9a][i] }), 0.085, -0.07, 0.012, 0, 0, 0, pan);
+      // (the chamber: glass between steel rings, three slim struts, a dark soil bed glowing faintly, and mist low inside)
+      var gm = new THREE.MeshStandardMaterial({ color: 0xd8f8ff, transparent: true, opacity: 0.22, roughness: 0.03, envMap: rubyEnv, envMapIntensity: 1.6, emissive: 0x4ad8ff, emissiveIntensity: 0.2, depthWrite: false, side: THREE.DoubleSide });
+      var gc = cp2(new THREE.CylinderGeometry(0.24, 0.24, 0.78, 28, 1, true), gm, 0, 1.01, 0); gc.renderOrder = 2; gc.castShadow = false;
+      [0.63, 1.39].forEach(function (ry2) { cp2(new THREE.TorusGeometry(0.245, 0.012, 8, 32), steel, 0, ry2, 0, Math.PI / 2, 0, 0); });
+      for (var su = 0; su < 3; su++) { var sa4 = su / 3 * Math.PI * 2 + 0.5; cp2(new THREE.CylinderGeometry(0.008, 0.008, 0.76, 6), steel, Math.sin(sa4) * 0.245, 1.01, Math.cos(sa4) * 0.245); }
+      cp2(new THREE.CylinderGeometry(0.23, 0.23, 0.03, 28), rMat(0x2a1c14, { roughness: 1, emissive: 0x0a2a2a, emissiveIntensity: 0.4 }), 0, 0.635, 0);
+      for (var ms = 0; ms < 3; ms++) { var mm = cp2(new THREE.SphereGeometry(0.11, 12, 8), mistM, Math.sin(ms * 2.1) * 0.09, 0.69, Math.cos(ms * 2.1) * 0.09); mm.scale.set(1.15, 0.22, 1.15); mm.castShadow = false; mm.renderOrder = 1; }
+      chamberPlants[i](CG, 0.65);
+      // (the lid: a white cap with a fan grille and a ring of light underneath, hoses running back to the wall)
+      cp2(new THREE.CylinderGeometry(0.26, 0.26, 0.07, 28), white, 0, 1.44, 0); cp2(new THREE.CylinderGeometry(0.2, 0.22, 0.03, 28), pale, 0, 1.49, 0);
+      cp2(new THREE.CircleGeometry(0.15, 24), dark, 0, 1.507, 0, -Math.PI / 2, 0, 0); [0.05, 0.1, 0.14].forEach(function (gr2) { cp2(new THREE.TorusGeometry(gr2, 0.004, 4, 24), steel, 0, 1.509, 0, Math.PI / 2, 0, 0); });
+      for (var fb = 0; fb < 5; fb++) cp2(new THREE.BoxGeometry(0.13, 0.003, 0.03), steel, 0, 1.51, 0, 0, fb / 5 * Math.PI * 2, 0.3);
+      cp2(new THREE.TorusGeometry(0.235, 0.006, 6, 32), glowEdge, 0, 1.403, 0, Math.PI / 2, 0, 0);
+      [-0.06, 0.06].forEach(function (hz) { cp2(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.12, 1.48, hz), new THREE.Vector3(0.3, 1.62, hz * 1.5), new THREE.Vector3(0.4, 1.56, hz * 2), new THREE.Vector3(0.44, 1.2, hz * 2.5)]), 16, 0.012, 6), hz > 0 ? rMat(0x2a6ad8, { roughness: 0.5 }) : dark, 0, 0, 0); });
+      gm.userData.glow = 0.2; lbChambers.push(gm); labSolids.push([cx, cz, 0.32]);
     });
     // (the shop counter by the door, for the shop to come: white, on a dark plinth with a glow beneath, its front fluted with a
     // glowing atom in the middle, a glowing edge under its top, and on it a till tablet, a glass dome over a glowing crystal,
@@ -1174,7 +1255,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     lbBubbles.forEach(function (b) { var f = (t * b.v + b.k) % 1; b.m.position.y = b.y0 + f * b.h; b.m.scale.setScalar(0.6 + f * 0.6); });   // (bubbles rising up the grow tubes)
     lbHolo.forEach(function (h) { h.m.opacity = 0.8 + Math.sin(t * 3 + h.k * 1.7) * 0.06 + (Math.sin(t * 37 + h.k) > 0.97 ? -0.2 : 0); });   // (the holograms shimmer, now and then flickering)
     lbArms.forEach(function (a) { var f = t * 0.7 + a.k * 2; a.b.rotation.y = a.ry + Math.sin(f) * 0.9; a.s1.rotation.z = 0.5 + Math.sin(f * 1.3) * 0.25; a.s2.rotation.z = -1.2 + Math.sin(f * 1.7) * 0.35; a.s3.rotation.z = -0.6 + Math.sin(f * 2.1) * 0.3; });
-    lbChambers.forEach(function (g, i) { g.emissiveIntensity = 0.2 + 0.1 * Math.sin(t * 1.5 + i); });
+    lbChambers.forEach(function (g, i) { var b = g.userData.glow || 0.2; g.emissiveIntensity = b + b * 0.5 * Math.sin(t * 1.5 + i); });   // (the chambers and their glowing plants pulse softly)
     lbLights.forEach(function (l, i) { l.intensity = 0.45 * (1 + Math.sin(t * 2 + i * 2) * 0.02); });
   }
   function updateLabOutside(t) {
