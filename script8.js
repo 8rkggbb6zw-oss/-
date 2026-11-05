@@ -1552,4 +1552,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     mail: function () { return mbMail; },
     isOpen: function () { return mbOpen; }
   };
+
+  // ===== the shop menus keep their place: picking an item (which redraws the list in some shops) no longer jumps the list,
+  // or the whole menu, back to the top. Each shop remembers how far you've scrolled while it's open, and puts the new list
+  // back there as it's redrawn; opening a shop again starts at the top =====
+  (function () {
+    var saved = new WeakMap();
+    function shopOf(el) { return el && el.closest ? el.closest('.inventory.shop') : null; }
+    document.addEventListener('scroll', function (e) {
+      var t = e.target, box = shopOf(t); if (!box) return;
+      var s = saved.get(box) || {}; if (t === box) s.box = t.scrollTop; else if (t.classList.contains('shop-tiles')) { s.tiles = t.scrollTop; s.el = t; } saved.set(box, s);
+    }, true);
+    var mo = new MutationObserver(function (muts) {
+      var boxes = []; muts.forEach(function (m) { var b = shopOf(m.target.nodeType === 1 ? m.target : m.target.parentNode); if (b && boxes.indexOf(b) < 0) boxes.push(b); });
+      boxes.forEach(function (box) {
+        if (box.hidden) { saved.delete(box); return; }                    // (closed: next time it opens at the top)
+        var s = saved.get(box); if (!s) return;
+        var tiles = box.querySelector('.shop-tiles');
+        if (tiles && s.tiles && tiles.scrollTop !== s.tiles) { tiles.scrollTop = s.tiles; s.el = tiles; }   // (a fresh list: back to where you were)
+        if (s.box && box.scrollTop !== s.box && box.scrollHeight - box.clientHeight >= s.box - 1) box.scrollTop = s.box;
+      });
+    });
+    function watch(box) { if (!box.__evKeep) { box.__evKeep = true; mo.observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] }); } }
+    [].slice.call(document.querySelectorAll('.inventory.shop')).forEach(watch);
+    new MutationObserver(function () { [].slice.call(canvas.parentNode.querySelectorAll('.inventory.shop')).forEach(watch); }).observe(canvas.parentNode, { childList: true });   // (and any shop added later)
+  })();
 });
