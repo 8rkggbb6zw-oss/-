@@ -1485,6 +1485,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     '.mailbox .mb-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}.mailbox .mb-item{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(160,120,220,.35);background:rgba(255,255,255,.55);cursor:pointer;font:inherit;color:inherit}' +
     '.mailbox .mb-item.new{border-color:#b07ae8;background:rgba(244,232,255,.9)}.mailbox .mb-item .mb-ic{font-size:1.5em}.mailbox .mb-item .mb-txt{flex:1;min-width:0}.mailbox .mb-item .mb-txt small{display:block;opacity:.7}' +
     '.mailbox .mb-letter{background:#fbf5e6;border-radius:12px;padding:14px 16px;margin-top:6px;box-shadow:inset 0 0 0 2px rgba(180,140,80,.25);color:#3d3157;white-space:pre-wrap;line-height:1.45}.mailbox .mb-letter h4{margin:0 0 2px}.mailbox .mb-letter .mb-from{opacity:.7;margin:0 0 10px}' +
+    '.ev-mini-pic{width:28px;height:28px;flex:none;overflow:hidden;display:inline-grid;place-items:center}.ev-mini-pic *{max-width:28px!important;max-height:28px!important;width:auto;height:auto}' +
+    '.mailbox .mb-parcel{display:flex;flex-direction:column;gap:4px;margin-top:8px}.mailbox .mb-pitem{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.6)}.mailbox .mb-pitem.taken{opacity:.5}.mailbox .mb-pitem>:first-child{width:30px;height:30px;flex:none;overflow:hidden;display:grid;place-items:center}.mailbox .mb-pitem>:first-child>*{max-width:100%;max-height:100%}' +
     '.mailbox .mb-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}.mailbox .mb-row button{padding:8px 14px;border-radius:999px;border:0;background:#8a5ad0;color:#fff;font:inherit;cursor:pointer}.mailbox .mb-row button.mb-quiet{background:rgba(120,90,170,.18);color:inherit}';
   document.head.appendChild(mbCss);
   var mbBtn = document.createElement('button'); mbBtn.type = 'button'; mbBtn.className = 'sleep-btn ship-btn mb-btn'; mbBtn.innerHTML = '📬 Mailbox <kbd>E</kbd>'; canvas.parentNode.appendChild(mbBtn);
@@ -1492,6 +1494,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   mbBox.innerHTML = '<div class="inv-head"><b>📬 Mailbox</b><button type="button" class="inv-close" aria-label="Close the mailbox">✕</button></div><div class="mb-body"></div>';
   canvas.parentNode.appendChild(mbBox);
   var mbBody = mbBox.querySelector('.mb-body');
+  function pcPic(id) { var w = document.createElement('span'); w.className = 'ev-mini-pic'; w.appendChild(itemPicture(id)); return w; }   // (a small item picture, kept to its square)
   function mbEl(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function renderMailbox() {
     mbBody.innerHTML = '';
@@ -1500,6 +1503,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       card.appendChild(mbEl('h4', '', L.subject || 'A letter')); card.appendChild(mbEl('p', 'mb-from', 'From ' + (L.from || 'someone in town')));
       card.appendChild(mbEl('div', '', L.body || '')); mbBody.appendChild(card);
       var row = mbEl('div', 'mb-row');
+      if (L.gifts && L.gifts.length) {                                  // (a parcel: everything in it, and a button to take it all)
+        var ul = mbEl('div', 'mb-parcel'); L.gifts.forEach(function (G) { if (!ITEMS[G.id]) return; var li = mbEl('div', 'mb-pitem' + (G.taken ? ' taken' : '')); li.appendChild(pcPic(G.id)); li.appendChild(mbEl('span', '', ITEMS[G.id].name + (G.count > 1 ? ' ×' + G.count : '') + (G.taken ? ' ✓' : ''))); ul.appendChild(li); }); mbBody.insertBefore(ul, null);
+        if (L.gifts.some(function (G) { return !G.taken; })) { var ta = mbEl('button', '', L.gifts.length > 1 ? 'Take everything' : 'Take it'); ta.type = 'button';
+          ta.addEventListener('click', function () { var got = 0, left = 0; L.gifts.forEach(function (G) { if (G.taken || !ITEMS[G.id]) return; if (addItem(G.id, G.count || 1)) { G.taken = true; got++; } else left++; });
+            if (got) { coinSound(4); renderBag(); showToast(left ? '🎁 Some of it went into your bag: your bag is full' : '🎁 It all went into your bag', 2200); } else showToast('Your bag is full', 2200); renderMailbox(); }); row.appendChild(ta); }
+      }
       if (L.gift && !L.taken && ITEMS[L.gift.id]) { var g = mbEl('button', '', 'Take the gift: ' + ITEMS[L.gift.id].name + (L.gift.count > 1 ? ' ×' + L.gift.count : '')); g.type = 'button';
         g.addEventListener('click', function () { if (addItem(L.gift.id, L.gift.count || 1)) { L.taken = true; coinSound(4); showToast('🎁 ' + ITEMS[L.gift.id].name + ' went into your bag'); renderBag(); } else showToast('Your bag is full', 2200); renderMailbox(); }); row.appendChild(g); }
       var back = mbEl('button', 'mb-quiet', 'Back'); back.type = 'button'; back.addEventListener('click', function () { mbReading = -1; renderMailbox(); }); row.appendChild(back);
@@ -1508,7 +1517,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     if (!mbMail.length) { var em = mbEl('div', 'mb-empty'); em.appendChild(mbEl('b', '', '📭')); em.appendChild(mbEl('p', '', 'Your mailbox is empty.')); em.appendChild(mbEl('p', '', 'Letters and parcels from the townsfolk will arrive here.')); mbBody.appendChild(em); }
     else { var list = mbEl('div', 'mb-list'); mbMail.forEach(function (L, i) { var b = mbEl('button', 'mb-item' + (L.read ? '' : ' new')); b.type = 'button';
-      b.appendChild(mbEl('span', 'mb-ic', L.gift && !L.taken ? '🎁' : L.read ? '✉️' : '💌')); var t = mbEl('span', 'mb-txt'); t.appendChild(mbEl('b', '', L.subject || 'A letter')); t.appendChild(mbEl('small', '', 'From ' + (L.from || 'someone in town'))); b.appendChild(t);
+      b.appendChild(mbEl('span', 'mb-ic', mbUntaken(L) ? (L.gifts ? '📦' : '🎁') : L.read ? '✉️' : '💌')); var t = mbEl('span', 'mb-txt'); t.appendChild(mbEl('b', '', L.subject || 'A letter')); t.appendChild(mbEl('small', '', 'From ' + (L.from || 'someone in town'))); b.appendChild(t);
       b.addEventListener('click', function () { L.read = true; mbReading = i; renderMailbox(); }); list.appendChild(b); }); mbBody.appendChild(list); }
     var cr = mbEl('div', 'mb-row'), cl = mbEl('button', 'mb-quiet', 'Close'); cl.type = 'button'; cl.addEventListener('click', function () { closeMailbox(); focusGame(); }); cr.appendChild(cl); mbBody.appendChild(cr);
   }
@@ -1519,7 +1528,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     mbDoorOpen = 1; doorSound();
   }
   function closeMailbox() { if (!mbOpen) return; mbOpen = false; mbBox.hidden = true; mbDoorOpen = 0; }
-  function mbRefresh() { var unread = mbMail.some(function (L) { return !L.read || (L.gift && !L.taken); }); mbFlagUp = unread ? 1 : 0; MB.userData.letters.forEach(function (o, i) { o.visible = i < mbMail.length; }); }
+  function mbUntaken(L) { return (L.gift && !L.taken) || (L.gifts && L.gifts.some(function (G) { return !G.taken; })); }
+  function mbRefresh() { var unread = mbMail.some(function (L) { return !L.read || mbUntaken(L); }); mbFlagUp = unread ? 1 : 0; MB.userData.letters.forEach(function (o, i) { o.visible = i < mbMail.length; }); }
   mbBox.querySelector('.inv-close').addEventListener('click', function () { closeMailbox(); focusGame(); });
   mbBtn.addEventListener('click', function () { openMailbox(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && mbOpen) { e.stopImmediatePropagation(); e.preventDefault(); if (mbReading >= 0) { mbReading = -1; renderMailbox(); } else closeMailbox(); } }, true);   // (Escape, or ○ / B on a controller: back, then shut)
@@ -1548,7 +1558,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }; })(loadGame);
   window.everdawnMailbox = {                                             // (for the townsfolk's mail, when it comes)
     spot: function () { return houseToWorld(MB_X, MB_Z + 0.7); },
-    deliver: function (letter) { mbMail.unshift({ from: letter.from, subject: letter.subject, body: letter.body, gift: letter.gift || null, read: false, day: state.day }); if (mbOpen) renderMailbox(); showToast('📬 You’ve got mail!', 2800); },
+    deliver: function (letter) { mbMail.unshift({ from: letter.from, subject: letter.subject, body: letter.body, gift: letter.gift || null, gifts: letter.gifts || null, read: false, day: state.day }); if (mbOpen) renderMailbox(); showToast('📬 You’ve got mail!', 2800); },
     mail: function () { return mbMail; },
     isOpen: function () { return mbOpen; }
   };
@@ -1685,4 +1695,128 @@ EVERDAWN_PARTS.push(function (THREE) {
     var show = atLabCounter() && !labShopOpen;
     if (labShopBtn.classList.contains('show') !== show) labShopBtn.classList.toggle('show', show);
   }; })(updateCarpenter);
+
+  // ===== the Computer, working: in your house, stand by it and press Interact (E, or Interact on a controller), or tap its
+  // button. Its screen shows a desktop with an icon for every shop; click one (with your mouse, or the left stick moves a
+  // pointer on a controller, ✕ / A / B clicks, the right stick scrolls) and that shop's menu opens on the screen. What you buy
+  // online comes by post: the coins go now, and it all arrives in a parcel in your mailbox the next morning (6 am). Buildings
+  // and creatures can't come by post, so those are still ordered in person =====
+  var pcOpen = false, pcShop = null, pcOrders = [], pcJustOrdered = false, pcLastDay = null, pcAt = null;
+  var PC_SHOPS = [
+    { key: 'seed', name: 'Whimsy & Bloom', icon: '🌱', col: '#7ac86a', open: function () { openShop(); }, isOpen: function () { return shopOpen; }, close: function () { closeShop(); } },
+    { key: 'barn', name: 'Fluff & Feather', icon: '🐾', col: '#e8a86a', open: function () { openBarnShop(); }, isOpen: function () { return barnShopOpen; }, close: function () { closeBarnShop(); } },
+    { key: 'carp', name: 'Oak & Ember', icon: '🪚', col: '#c8885a', open: function () { openCarpShop(); }, isOpen: function () { return carpShopOpen; }, close: function () { closeCarpShop(); } },
+    { key: 'cloth', name: 'Thread & Thimble', icon: '🧵', col: '#e88ab8', open: function () { openClothShop(); }, isOpen: function () { return clothShopOpen; }, close: function () { closeClothShop(); } },
+    { key: 'lab', name: 'Atom & Alembic', icon: '⚗️', col: '#7ae8ff', open: function () { openLabShop(); }, isOpen: function () { return labShopOpen; }, close: function () { closeLabShop(); } }
+  ];
+  function pcShopDef(k) { for (var i = 0; i < PC_SHOPS.length; i++) if (PC_SHOPS[i].key === k) return PC_SHOPS[i]; return null; }
+  // (while a shop is open on the computer, it counts as "at its counter", what you buy goes on your order, and your bag
+  // doesn't need room for it yet)
+  nearShop = (function (base) { return function () { return pcShop === 'seed' || base.apply(this, arguments); }; })(nearShop);
+  atBarnCounter = (function (base) { return function () { return pcShop === 'barn' || base.apply(this, arguments); }; })(atBarnCounter);
+  atCarpCounter = (function (base) { return function () { return pcShop === 'carp' || base.apply(this, arguments); }; })(atCarpCounter);
+  clothAtCounter = (function (base) { return function () { return pcShop === 'cloth' || base.apply(this, arguments); }; })(clothAtCounter);
+  atLabCounter = (function (base) { return function () { return pcShop === 'lab' || base.apply(this, arguments); }; })(atLabCounter);
+  addItem = (function (base) { return function (id, n) {
+    if (pcShop) { var sd = pcShopDef(pcShop); pcOrders.push({ shop: sd ? sd.name : 'the shops', id: id, count: n || 1 }); pcJustOrdered = true; return true; }
+    return base.apply(this, arguments);
+  }; })(addItem);
+  roomFor = (function (base) { return function () { return pcShop ? true : base.apply(this, arguments); }; })(roomFor);
+  document.addEventListener('click', function (e) {                       // (buildings and creatures can't come by post)
+    if (!pcShop) return; var t = e.target && e.target.closest && e.target.closest('button'); if (!t) return;
+    if (pcShop === 'carp' && t.matches('.coop-buy, .fbarn-buy, .mill-buy, .silo-buy')) { e.stopImmediatePropagation(); e.preventDefault(); showToast('🏡 Buildings are built on site: visit Oak & Ember in person to order one', 3200); return; }
+    if (pcShop === 'barn' && /-adopt\b/.test(t.className)) { e.stopImmediatePropagation(); e.preventDefault(); showToast('🐾 Creatures can’t come by post: visit Fluff & Feather in person to adopt one', 3200); return; }
+    setTimeout(function () { if (pcJustOrdered) { pcJustOrdered = false; renderPc(); showToast('🛒 Ordered! It will arrive in your mailbox tomorrow morning', 3000); } }, 0);
+  }, true);
+  // (the desktop)
+  var pcCss = document.createElement('style');
+  pcCss.textContent = '.inventory.pc-desk{z-index:5;width:min(780px,96%);padding:12px;background:#111116;border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.45),inset 0 0 0 2px #2a2a34}' +
+    '.pc-desk .pc-screen{position:relative;border-radius:12px;overflow:hidden;aspect-ratio:16/9.2;min-height:300px;background:radial-gradient(circle at 78% 26%,#fff4d8 0 4.5%,rgba(255,244,216,.25) 5.5%,transparent 12%),radial-gradient(circle at 81% 23%,#3a2470 0 4.2%,transparent 4.4%),linear-gradient(135deg,#1a1040 0%,#4a2a8a 55%,#d86aa8 100%);color:#fff;font:inherit}' +
+    '.pc-desk .pc-hills{position:absolute;left:0;right:0;bottom:34px;height:22%;background:#120a28;clip-path:polygon(0 60%,12% 40%,25% 55%,40% 30%,55% 50%,70% 28%,85% 48%,100% 35%,100% 100%,0 100%)}' +
+    '.pc-desk .pc-stars{position:absolute;inset:0;background-image:radial-gradient(1.5px 1.5px at 10% 15%,#fff,transparent),radial-gradient(1.5px 1.5px at 30% 8%,#fff,transparent),radial-gradient(1px 1px at 45% 22%,#fff,transparent),radial-gradient(1.5px 1.5px at 60% 12%,#fff,transparent),radial-gradient(1px 1px at 92% 40%,#fff,transparent),radial-gradient(1px 1px at 20% 35%,#fff,transparent),radial-gradient(1px 1px at 66% 38%,#fff,transparent);opacity:.8}' +
+    '.pc-desk .pc-icons{position:absolute;top:14px;left:14px;display:grid;grid-template-columns:repeat(auto-fill,92px);gap:10px;right:14px}' +
+    '.pc-desk .pc-icon{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:0;border-radius:12px;background:transparent;color:#fff;font:inherit;font-size:.82em;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.6)}' +
+    '.pc-desk .pc-icon:hover,.pc-desk .pc-icon.ev-padfocus{background:rgba(255,255,255,.16)}.pc-desk .pc-icon .pc-tile{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-size:30px;box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 0 0 2px rgba(255,255,255,.35)}' +
+    '.pc-desk .pc-win{position:absolute;right:16px;bottom:46px;width:min(270px,45%);max-height:calc(100% - 170px);overflow:auto;background:rgba(250,246,255,.94);color:#3d3157;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:.85em}' +
+    '.pc-desk .pc-win h5{margin:0;padding:8px 12px;background:linear-gradient(90deg,#8a5ad0,#d86aa8);color:#fff;border-radius:12px 12px 0 0;font-size:1em}.pc-desk .pc-win .pc-wb{padding:8px 12px}.pc-desk .pc-win .pc-wb p{margin:4px 0}.pc-desk .pc-ord{display:flex;align-items:center;gap:6px;margin:3px 0}.pc-desk .pc-ord>:first-child{width:26px;height:26px;flex:none;overflow:hidden;display:grid;place-items:center}.pc-desk .pc-ord>:first-child>*{max-width:100%;max-height:100%}' +
+    '.pc-desk .pc-bar{position:absolute;left:0;right:0;bottom:0;height:34px;background:rgba(10,6,24,.72);backdrop-filter:blur(6px);display:flex;align-items:center;gap:10px;padding:0 10px;font-size:.85em}' +
+    '.pc-desk .pc-bar .pc-orb{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#b88aff,#d86aa8);display:grid;place-items:center;font-size:13px}.pc-desk .pc-bar .pc-sp{flex:1}' +
+    '.pc-desk .pc-bar button{border:0;background:rgba(255,255,255,.14);color:#fff;font:inherit;border-radius:8px;padding:4px 10px;cursor:pointer}.pc-desk .pc-bar button:hover,.pc-desk .pc-bar button.ev-padfocus{background:rgba(255,120,150,.6)}' +
+    '.pc-desk .pc-stand{height:16px;width:22%;margin:8px auto 0;background:linear-gradient(#2a2a32,#16161c);border-radius:0 0 10px 10px}' +
+    '.ev-pc-ordering .inventory.shop .ship-hint::after{content:"  🛒 Shopping online: what you buy arrives in your mailbox tomorrow morning.";font-weight:600;color:#8a5ad0}';
+  document.head.appendChild(pcCss);
+  var pcBtn = document.createElement('button'); pcBtn.type = 'button'; pcBtn.className = 'sleep-btn ship-btn'; pcBtn.innerHTML = '🖥️ Computer <kbd>E</kbd>'; canvas.parentNode.appendChild(pcBtn);
+  var pcBox = document.createElement('div'); pcBox.className = 'inventory pc-desk ev-cursorbox'; pcBox.hidden = true;
+  pcBox.innerHTML = '<div class="pc-screen"><div class="pc-stars"></div><div class="pc-hills"></div><div class="pc-icons"></div><div class="pc-win"></div>' +
+    '<div class="pc-bar"><span class="pc-orb">⚗</span><span class="pc-sp"></span><span class="pc-coins"></span><span class="pc-clock"></span><button type="button" class="pc-off" aria-label="Shut down the computer">⏻ Shut down</button></div></div><div class="pc-stand"></div>';
+  canvas.parentNode.appendChild(pcBox);
+  var pcIcons = pcBox.querySelector('.pc-icons'), pcWin = pcBox.querySelector('.pc-win');
+  PC_SHOPS.forEach(function (sd) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'pc-icon';
+    b.innerHTML = '<span class="pc-tile" style="background:linear-gradient(135deg,' + sd.col + ',#3a2470)">' + sd.icon + '</span><span></span>'; b.lastChild.textContent = sd.name;
+    b.addEventListener('click', function (e) { e.stopPropagation(); pcOpenShop(sd.key); }); pcIcons.appendChild(b);
+  });
+  pcBox.querySelector('.pc-off').addEventListener('click', function (e) { e.stopPropagation(); closePc(); focusGame(); });
+  function pcTime() { var m = Math.floor(state.minutes) % 1440, h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + (h < 12 ? ' AM' : ' PM'); }
+  function renderPc() {
+    pcBox.querySelector('.pc-coins').textContent = '★ ' + state.coins.toLocaleString('en-US'); pcBox.querySelector('.pc-clock').textContent = pcTime();
+    pcWin.innerHTML = '<h5>🛒 Shop online</h5><div class="pc-wb"></div>'; var wb = pcWin.lastChild;
+    function para(t) { var p = document.createElement('p'); p.textContent = t; wb.appendChild(p); return p; }
+    para('Click a shop to open it. Everything you buy here comes by post: it arrives in your mailbox tomorrow morning.');
+    if (pcOrders.length) { para('On its way:').style.fontWeight = '700'; pcOrders.forEach(function (o) { if (!ITEMS[o.id]) return; var r = document.createElement('div'); r.className = 'pc-ord'; r.appendChild(pcPic(o.id)); var sp = document.createElement('span'); sp.textContent = ITEMS[o.id].name + (o.count > 1 ? ' ×' + o.count : ''); r.appendChild(sp); wb.appendChild(r); }); }
+    else para('Nothing on its way yet.');
+  }
+  function pcOpenShop(k) {
+    var sd = pcShopDef(k); if (!sd) return;
+    pcShop = k; document.body.classList.add('ev-pc-ordering'); sd.open(); menuOpenedAt = Date.now();
+  }
+  function pcLeaveShop() { if (!pcShop) return; var sd = pcShopDef(pcShop); pcShop = null; document.body.classList.remove('ev-pc-ordering'); if (sd && sd.isOpen()) sd.close(); renderPc(); }
+  function openPc() { if (pcOpen) return; toggleBag(false); pcOpen = true; menuOpenedAt = Date.now(); walkTarget = null; pcBox.hidden = false; renderPc(); }
+  function closePc() { pcLeaveShop(); pcOpen = false; pcBox.hidden = true; }
+  pcBtn.addEventListener('click', function () { openPc(); focusGame(); });
+  window.addEventListener('keydown', function (e) {                       // (Escape, or ○ / B: shuts the shop you're looking at, then the computer)
+    if (e.code !== 'Escape' || !pcOpen) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (pcShop) pcLeaveShop(); else closePc();
+  }, true);
+  function inMyHouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !decorMode; }
+  var pcV = new THREE.Vector3();
+  function nearPc() {                                                     // (the computer you're standing by, if any)
+    if (!inMyHouse()) return null; var best = null, bd = 1.35;
+    decorPlaced.forEach(function (p) { if (p.id !== 'decor_computer' || !p.g) return; p.g.getWorldPosition(pcV); var d = dist(player.position.x, player.position.z, pcV.x, pcV.z); if (d < bd) { bd = d; best = p; } });
+    return best;
+  }
+  interact = (function (base) { return function () {
+    if (pcOpen) { if (pcShop) { var sd = pcShopDef(pcShop); if (sd && sd.isOpen() && !menuJustOpened()) pcLeaveShop(); return; } if (!menuJustOpened()) closePc(); return; }
+    if (nearPc()) { openPc(); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
+  updateShipping = (function (base) { return function () {
+    base.apply(this, arguments);
+    var fd = farmDay(); if (pcLastDay === null) pcLastDay = fd;
+    if (fd !== pcLastDay) { pcLastDay = fd; pcDeliver(); }               // (a new morning: yesterday's orders arrive)
+    if (pcShop) { var sd = pcShopDef(pcShop); if (!sd || !sd.isOpen()) { pcShop = null; document.body.classList.remove('ev-pc-ordering'); renderPc(); } }   // (its shop closed: back to the desktop)
+    if (pcOpen && !nearPc()) closePc();                                    // (walked away)
+    if (pcOpen && !pcShop && Math.floor(state.minutes) !== pcAt) { pcAt = Math.floor(state.minutes); pcBox.querySelector('.pc-clock').textContent = pcTime(); pcBox.querySelector('.pc-coins').textContent = '★ ' + state.coins.toLocaleString('en-US'); }
+    var show = !pcOpen && !!nearPc();
+    if (pcBtn.classList.contains('show') !== show) pcBtn.classList.toggle('show', show);
+  }; })(updateShipping);
+  function pcDeliver() {                                                  // (each shop's orders come in one parcel)
+    if (!pcOrders.length) return;
+    var byShop = {}; pcOrders.forEach(function (o) { (byShop[o.shop] = byShop[o.shop] || []).push(o); }); pcOrders = [];
+    Object.keys(byShop).forEach(function (name) {
+      var gifts = []; byShop[name].forEach(function (o) { for (var i = 0; i < gifts.length; i++) if (gifts[i].id === o.id) { gifts[i].count += o.count; return; } gifts.push({ id: o.id, count: o.count }); });
+      window.everdawnMailbox.deliver({ from: name, subject: 'Your order has arrived!', body: 'Thank you for shopping with ' + name + '! Your order came this morning. Everything is in the parcel below.', gifts: gifts });
+    });
+  }
+  saveGame = (function (base) { return function () {                      // (orders on their way are kept in the save)
+    var r = base.apply(this, arguments);
+    try { var d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (d) { d.orders = pcOrders; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } } catch (err) {}
+    return r;
+  }; })(saveGame);
+  loadGame = (function (base) { return function () {
+    var r = base.apply(this, arguments);
+    try { var d = JSON.parse(localStorage.getItem(SAVE_KEY)); pcOrders = d && d.orders ? d.orders : []; } catch (err) { pcOrders = []; }
+    pcLastDay = null; closePc(); return r;
+  }; })(loadGame);
 });

@@ -79,6 +79,10 @@
     { name: 'Zoom Out Closet', section: 'Closet', ps: RSTICK_DOWN, xbox: RSTICK_DOWN, sw: RSTICK_DOWN, note: true },
     { name: 'Look Up and Down', section: 'Closet', ps: 'L2 / R2', xbox: 'LT / RT', sw: 'ZL / ZR', note: true },   // (zoomed in: the left trigger looks up her, the right one down)
     { name: 'Reset Closet View', section: 'Closet', ps: 'R3', xbox: 'RS', sw: 'RS', note: true },
+    { name: 'Move the Pointer', section: 'Computer', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },   // (on your computer: the left stick is its mouse pointer; worked in menuNav below)
+    { name: 'Click', section: 'Computer', ps: '✕', xbox: 'A', sw: 'B', note: true },
+    { name: 'Scroll', section: 'Computer', ps: RSTICK, xbox: RSTICK, sw: RSTICK, note: true },
+    { name: 'Back / Shut Down', section: 'Computer', ps: '○', xbox: 'B', sw: 'A', note: true },
     { name: 'Previous Tab', section: 'Menu', ps: 'L1', xbox: 'LB', sw: 'L', note: true },   // (the same in Settings and on the title screen: shown again under Menu)
     { name: 'Next Tab', section: 'Menu', ps: 'R1', xbox: 'RB', sw: 'R', note: true },
     { name: 'Cursor', section: 'Menu', ps: LSTICK, xbox: LSTICK, sw: LSTICK, note: true },
@@ -201,6 +205,20 @@
     var map = [].slice.call(document.querySelectorAll('.ev-mapbox')).filter(seen)[0];
     var sx = pad.axes[0] || 0, sy = pad.axes[1] || 0, mag = Math.hypot(sx, sy);
     if (back) { send('keydown', 'Escape'); send('keyup', 'Escape'); return true; }
+    var pcBox = [].slice.call(document.querySelectorAll('.ev-cursorbox')).filter(seen)[0];
+    if (pcBox && !map) {                                               // (your computer: the left stick moves a mouse pointer, ✕ / A / B clicks, the right stick scrolls)
+      if (focusEl) setFocus(null);
+      var pr = pcBox.getBoundingClientRect();
+      if (!cursorOn) { cx = pr.left + pr.width / 2; cy = pr.top + pr.height / 2; cursorOn = true; }
+      if (mag > 0.18) { var pk = (mag - 0.18) / (1 - 0.18) / mag * 650 * dt; cx = Math.max(2, Math.min(window.innerWidth - 6, cx + sx * pk)); cy = Math.max(2, Math.min(window.innerHeight - 6, cy + sy * pk)); }
+      cursor.hidden = true; var under = document.elementFromPoint(cx, cy); cursor.hidden = false;
+      if (under && mag > 0.18) pointAt(under, 'pointermove', cx, cy);
+      var psy = pad.axes[3] || 0;
+      if (Math.abs(psy) > 0.2 && under) { for (var sc = under; sc && sc !== document.body; sc = sc.parentElement) { if (sc.scrollHeight > sc.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(sc).overflowY)) { sc.scrollTop += psy * 900 * dt; break; } } }
+      cursor.style.transform = 'translate(' + cx + 'px,' + cy + 'px)';
+      if (press) { cursor.hidden = true; clickAt(cx, cy); cursor.hidden = false; }
+      return true;
+    }
     if (map) {                                                         // (the world map: a free cursor)
       if (focusEl) setFocus(null);
       var area = map.getBoundingClientRect();
