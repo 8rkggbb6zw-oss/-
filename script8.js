@@ -1487,6 +1487,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     '.mailbox .mb-letter{background:#fbf5e6;border-radius:12px;padding:14px 16px;margin-top:6px;box-shadow:inset 0 0 0 2px rgba(180,140,80,.25);color:#3d3157;white-space:pre-wrap;line-height:1.45}.mailbox .mb-letter h4{margin:0 0 2px}.mailbox .mb-letter .mb-from{opacity:.7;margin:0 0 10px}' +
     '.ev-mini-pic{width:28px;height:28px;flex:none;overflow:hidden;display:inline-grid;place-items:center}.ev-mini-pic *{max-width:28px!important;max-height:28px!important;width:auto;height:auto}' +
     '.mailbox .mb-parcel{display:flex;flex-direction:column;gap:4px;margin-top:8px}.mailbox .mb-pitem{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.6)}.mailbox .mb-pitem.taken{opacity:.5}.mailbox .mb-pitem>:first-child{width:30px;height:30px;flex:none;overflow:hidden;display:grid;place-items:center}.mailbox .mb-pitem>:first-child>*{max-width:100%;max-height:100%}' +
+    '.mailbox .mb-row button.mb-del{background:#d8344a;color:#fff}.mailbox .mb-row button.mb-del:hover,.mailbox .mb-row button.mb-del.ev-padfocus{background:#b81e34}' +
     '.mailbox .mb-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}.mailbox .mb-row button{padding:8px 14px;border-radius:999px;border:0;background:#8a5ad0;color:#fff;font:inherit;cursor:pointer}.mailbox .mb-row button.mb-quiet{background:rgba(120,90,170,.18);color:inherit}';
   document.head.appendChild(mbCss);
   var mbBtn = document.createElement('button'); mbBtn.type = 'button'; mbBtn.className = 'sleep-btn ship-btn mb-btn'; mbBtn.innerHTML = '📬 Mailbox <kbd>E</kbd>'; canvas.parentNode.appendChild(mbBtn);
@@ -1512,7 +1513,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (L.gift && !L.taken && ITEMS[L.gift.id]) { var g = mbEl('button', '', 'Take the gift: ' + ITEMS[L.gift.id].name + (L.gift.count > 1 ? ' ×' + L.gift.count : '')); g.type = 'button';
         g.addEventListener('click', function () { if (addItem(L.gift.id, L.gift.count || 1)) { L.taken = true; coinSound(4); showToast('🎁 ' + ITEMS[L.gift.id].name + ' went into your bag'); renderBag(); } else showToast('Your bag is full', 2200); renderMailbox(); }); row.appendChild(g); }
       var back = mbEl('button', 'mb-quiet', 'Back'); back.type = 'button'; back.addEventListener('click', function () { mbReading = -1; renderMailbox(); }); row.appendChild(back);
-      var del = mbEl('button', 'mb-quiet', 'Throw away'); del.type = 'button'; del.addEventListener('click', function () { mbMail.splice(mbReading, 1); mbReading = -1; renderMailbox(); }); row.appendChild(del);
+      var del = mbEl('button', 'mb-del', 'Delete'); del.type = 'button'; del.addEventListener('click', function () { mbMail.splice(mbReading, 1); mbReading = -1; renderMailbox(); }); row.appendChild(del);
       mbBody.appendChild(row); return;
     }
     if (!mbMail.length) { var em = mbEl('div', 'mb-empty'); em.appendChild(mbEl('b', '', '📭')); em.appendChild(mbEl('p', '', 'Your mailbox is empty.')); em.appendChild(mbEl('p', '', 'Letters and parcels from the townsfolk will arrive here.')); mbBody.appendChild(em); }
@@ -1529,7 +1530,21 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function closeMailbox() { if (!mbOpen) return; mbOpen = false; mbBox.hidden = true; mbDoorOpen = 0; }
   function mbUntaken(L) { return (L.gift && !L.taken) || (L.gifts && L.gifts.some(function (G) { return !G.taken; })); }
-  function mbRefresh() { var unread = mbMail.some(function (L) { return !L.read || mbUntaken(L); }); mbFlagUp = unread ? 1 : 0; MB.userData.letters.forEach(function (o, i) { o.visible = i < mbMail.length; }); }
+  // (a little speech bubble with an envelope floats over the mailbox, bobbing, while there's new mail in it)
+  var mbBubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: cpTex(128, 140, function (g, w, h) {
+    g.fillStyle = 'rgba(60,30,80,0.25)'; g.beginPath(); g.ellipse(w / 2, 62, 56, 54, 0, 0, Math.PI * 2); g.fill();   // (a soft shadow)
+    g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(w / 2, 58, 54, 52, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.moveTo(w / 2 - 14, 100); g.lineTo(w / 2 + 14, 100); g.lineTo(w / 2, 134); g.closePath(); g.fill();   // (its tail, pointing down at the box)
+    g.strokeStyle = '#b07ae8'; g.lineWidth = 4; g.beginPath(); g.ellipse(w / 2, 58, 52, 50, 0, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#fff4e0'; g.strokeStyle = '#8a5ad0'; g.lineWidth = 3.5; g.beginPath(); g.rect(30, 38, 68, 44); g.fill(); g.stroke();   // (the envelope)
+    g.beginPath(); g.moveTo(30, 38); g.lineTo(64, 64); g.lineTo(98, 38); g.stroke(); g.beginPath(); g.moveTo(30, 82); g.lineTo(54, 60); g.moveTo(98, 82); g.lineTo(74, 60); g.stroke();
+    g.fillStyle = '#e8344a'; g.beginPath(); g.moveTo(64, 74); g.bezierCurveTo(52, 64, 54, 54, 64, 60); g.bezierCurveTo(74, 54, 76, 64, 64, 74); g.fill();   // (a little heart seal)
+  }), transparent: true, depthWrite: false }));
+  mbBubble.scale.set(0.72, 0.79, 1); mbBubble.position.set(0, 2.0, 0); mbBubble.visible = false; mbBubble.renderOrder = 3; MB.add(mbBubble);
+  function mbRefresh() {
+    var unread = mbMail.some(function (L) { return !L.read || mbUntaken(L); }); mbFlagUp = unread ? 1 : 0; MB.userData.letters.forEach(function (o, i) { o.visible = i < mbMail.length; });
+    mbBubble.visible = unread && !mbOpen; if (mbBubble.visible) { var tb = performance.now() / 1000; mbBubble.position.y = 2.0 + Math.sin(tb * 2.4) * 0.07; var sc = 1 + Math.sin(tb * 4.8) * 0.03; mbBubble.scale.set(0.72 * sc, 0.79 * sc, 1); }
+  }
   mbBox.querySelector('.inv-close').addEventListener('click', function () { closeMailbox(); focusGame(); });
   mbBtn.addEventListener('click', function () { openMailbox(); focusGame(); });
   window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && mbOpen) { e.stopImmediatePropagation(); e.preventDefault(); if (mbReading >= 0) { mbReading = -1; renderMailbox(); } else closeMailbox(); } }, true);   // (Escape, or ○ / B on a controller: back, then shut)
