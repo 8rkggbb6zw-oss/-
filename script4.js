@@ -173,6 +173,22 @@ var everdawnTitle = (function () {
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); g.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
   resize(); window.addEventListener('resize', resize);
+  // (the title keeps itself the right size: if the page it's in changes size without saying so, as CodePen's preview can
+  // while it settles, or it was drawn while the page was still a sliver wide, its pictures are redrawn to fit, so nothing
+  // comes out stretched, zoomed in or half-drawn)
+  function titleSizeWrong() {
+    var dpr = Math.min(2, window.devicePixelRatio || 1), w = window.innerWidth, h = window.innerHeight;
+    if (!w || !h) return false;
+    if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || dpr !== DPR || Math.abs(cv.width - Math.round(w * dpr)) > 2 || Math.abs(cv.height - Math.round(h * dpr)) > 2) return true;
+    var cs = root.querySelectorAll('canvas');
+    for (var k = 0; k < cs.length; k++) { var c = cs[k], cw = c.clientWidth, ch = c.clientHeight; if (c !== cv && cw > 0 && ch > 0 && c.height > 0 && Math.abs(c.width / c.height - cw / ch) > 0.02) return true; }   // (the 3D picture of you, out of shape)
+    return false;
+  }
+  function refit() { if (root.classList.contains('ingame')) return; if (titleSizeWrong()) { try { window.dispatchEvent(new Event('resize')); } catch (err) { resize(); } } }
+  setInterval(refit, 500);
+  if (window.ResizeObserver) try { new ResizeObserver(refit).observe(root); } catch (err) {}
+  window.addEventListener('orientationchange', function () { setTimeout(refit, 300); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(refit, 100); });
   var glowCache = {};
   function glow(x, y, r, col, a) {                                   // (a soft round glow, from a little picture made once for each colour)
     if (a <= 0.003 || r <= 0) return;
