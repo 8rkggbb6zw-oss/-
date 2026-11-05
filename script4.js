@@ -1168,29 +1168,58 @@ var everdawnTitle = (function () {
     if (sett.classList.contains('open') && e.target && e.target.type === 'range' && /^Arrow|^Home$|^End$|^Page/.test(e.key)) { e.stopPropagation(); return; }   // (arrow keys on a slider move the slider, and never reach the game behind)
     if (sett.classList.contains('open')) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } else if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && !(e.target && e.target.type === 'range')) { e.preventDefault(); showSetPage(setPage + (e.code === 'ArrowLeft' ? -1 : 1)); } return; }   // (in Settings: Esc closes it, and the arrow keys flip the pages)   // (in the slot list, Enter just presses whichever slot you're on)
     if (e.target === optBtn || root.classList.contains('ingame')) return; if (root.isConnected && ready && (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter')) { e.preventDefault(); openSlots(); } }, true);
+  window.everdawnLoadTrouble = function (msg) { if (!ready) { setTip(msg || 'Something went wrong loading the game'); pctEl.textContent = ''; showRetry(); } };
   return {
     progress: function (p, tip) { target = Math.max(target, p); if (tip) { setTip(tip); tipAt = performance.now(); } },
     ready: function () { ready = true; target = 100; setTip('All ready!'); },
-    fail: function (msg) { setTip(msg); pctEl.textContent = ''; }
+    fail: function (msg) { setTip(msg); pctEl.textContent = ''; showRetry(); }
   };
+  function showRetry() {                                              // (when loading goes wrong: a button to try again, which reloads the page)
+    if (root.querySelector('.ev-retry')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'ev-retry'; b.textContent = '↻ Try again';
+    b.style.cssText = 'margin:14px auto 0;display:block;padding:10px 22px;border:0;border-radius:999px;background:linear-gradient(90deg,#8a5ad0,#d86aa8);color:#fff;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(120,60,180,.35);position:relative;z-index:5';
+    b.addEventListener('click', function () { try { location.reload(); } catch (err) {} });
+    (tipEl.parentNode || root).insertBefore(b, tipEl.nextSibling);
+  }
 })();
 
 (function () {
+  // Loading, made sturdier: the 3D engine and its model loader each have backup places to come from if the first is slow or
+  // down; if anything stops the game while it starts, or it's still not ready after a while, you're told and offered a
+  // Try again button (which reloads the page) instead of being left on a stuck screen
+  var THREE_URLS = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js', 'https://unpkg.com/three@0.128.0/build/three.min.js'];
+  var LOADER_URLS = ['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', 'https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js'];
+  function fetchScript(urls, done, ok) {                                // (tries each place in turn, giving each 12 seconds)
+    var n = 0;
+    (function next() {
+      if (ok()) { done(true); return; }
+      if (n >= urls.length) { done(false); return; }
+      var s = document.createElement('script'), finished = false; s.src = urls[n++];
+      function fin() { if (finished) return; finished = true; clearTimeout(t); if (ok()) done(true); else next(); }
+      var t = setTimeout(fin, 12000); s.onload = fin; s.onerror = fin; document.head.appendChild(s);
+    })();
+  }
+  setTimeout(function () { if (window.everdawnLoadTrouble && !window.EVERDAWN_STARTED) window.everdawnLoadTrouble('This is taking longer than it should. Try again?'); }, 45000);
   function build(THREE) {                                              // (let the title screen paint first, then build the island: that takes a moment)
     everdawnTitle.progress(55, 'Building the island…');
     requestAnimationFrame(function () { requestAnimationFrame(function () {
       setTimeout(function () {
-        try { startGame(THREE); } catch (err) { everdawnTitle.fail('Something went wrong loading the game'); throw err; }
+        try { startGame(THREE); window.EVERDAWN_STARTED = true; } catch (err) { everdawnTitle.fail('Something went wrong loading the game'); throw err; }
         everdawnTitle.progress(85, 'Opening the gate…');
         setTimeout(everdawnTitle.ready, 600);
       }, 60);
     }); });
   }
-  if (window.THREE) { build(window.THREE); return; }
+  function withLoader(THREE) {                                         // (the model loader, for you and your clothes: from a backup place if need be)
+    if (THREE.GLTFLoader) { build(THREE); return; }
+    everdawnTitle.progress(50, 'Fetching your witch…');
+    fetchScript(LOADER_URLS, function () { build(THREE); }, function () { return !!THREE.GLTFLoader; });
+  }
+  if (window.THREE) { withLoader(window.THREE); return; }
   var creep = setInterval(function () { everdawnTitle.progress(Math.min(45, 4 + (Date.now() - creepAt) / 120)); }, 200), creepAt = Date.now();   // (fetching the 3D engine)
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-  s.onload = function () { clearInterval(creep); build(window.THREE); };
-  s.onerror = function () { clearInterval(creep); everdawnTitle.fail('Could not load the 3D engine. Check your internet connection.'); showToast('Could not load the 3D engine. Check your internet connection.', 60000); };
-  document.head.appendChild(s);
+  fetchScript(THREE_URLS, function (got) {
+    clearInterval(creep);
+    if (got) { withLoader(window.THREE); return; }
+    everdawnTitle.fail('Could not load the 3D engine. Check your internet connection.'); showToast('Could not load the 3D engine. Check your internet connection.', 60000);
+  }, function () { return !!window.THREE; });
 })();

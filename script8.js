@@ -1834,4 +1834,25 @@ EVERDAWN_PARTS.push(function (THREE) {
     try { var d = JSON.parse(localStorage.getItem(SAVE_KEY)); pcOrders = d && d.orders ? d.orders : []; } catch (err) { pcOrders = []; }
     pcLastDay = null; closePc(); return r;
   }; })(loadGame);
+
+  // ===== keeping the game going: if anything goes wrong in one frame (say a model arriving half-way through a step), three.js
+  // would stop the whole game for good, leaving it frozen. Now that frame is skipped and the game carries on. And if the
+  // browser takes the graphics card back for a moment (it can, when a tab is in the background or memory runs low), the
+  // game waits for it and then picks up again; if it doesn't come back, you're offered a reload =====
+  (function () {
+    var errs = 0, lastErr = '', told = false;
+    renderer.setAnimationLoop(function (t, xr) {
+      try { frame(t, xr); }
+      catch (err) {
+        errs++; var m = err && err.message || String(err);
+        if (m !== lastErr && window.console) { console.error('Everdawn: a frame went wrong, carrying on', err); lastErr = m; }
+        if (errs > 600 && !told) { told = true; showToast('Something in the game keeps going wrong: saving and reloading the page should fix it', 6000); }
+      }
+    });
+    setInterval(function () { errs = Math.max(0, errs - 30); }, 1000);   // (only a steady stream of errors counts)
+    var lostAt = 0, cv = renderer.domElement;
+    cv.addEventListener('webglcontextlost', function (e) { e.preventDefault(); lostAt = Date.now(); showToast('The graphics are taking a short break… one moment', 4000);
+      setTimeout(function () { if (lostAt && Date.now() - lostAt >= 7900) { showToast('The graphics didn’t come back: save, then reload the page', 60000); } }, 8000); }, false);
+    cv.addEventListener('webglcontextrestored', function () { lostAt = 0; showToast('✦ Back again', 1600); }, false);
+  })();
 });
