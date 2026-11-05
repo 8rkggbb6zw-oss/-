@@ -1577,4 +1577,112 @@ EVERDAWN_PARTS.push(function (THREE) {
     [].slice.call(document.querySelectorAll('.inventory.shop')).forEach(watch);
     new MutationObserver(function () { [].slice.call(canvas.parentNode.querySelectorAll('.inventory.shop')).forEach(watch); }).observe(canvas.parentNode, { childList: true });   // (and any shop added later)
   })();
+
+  // ===== Atom & Alembic's shop, at the lab's counter: stand at the counter and press Interact (E, or Interact on a controller)
+  // or tap its button. For sale: a Computer (20,000 Star Coins), which comes with its own sleek black desk. It goes into
+  // your bag as furniture: inside your house, open Decor Mode to set it down like the rest of your furniture =====
+  var LAB_COMPUTER_COST = 20000, labShopOpen = false;
+  function buildComputerDesk() {                                         // (a black modern desk with a computer on it, facing +z)
+    var g = new THREE.Group(), matte = rMat(0x141418, { roughness: 0.5 }), gloss = rMat(0x0c0c10, { roughness: 0.15, metalness: 0.25, envMap: rubyEnv, envMapIntensity: 0.6 });
+    var steel = rMat(0x24242a, { metalness: 0.8, roughness: 0.3, envMap: rubyEnv, envMapIntensity: 0.8 }), edge = rMat(0x2c2c34, { metalness: 0.6, roughness: 0.3 });
+    // (the desk: a glossy black top with a slim bevelled edge, on two black steel sled legs joined by a crossbar, a cable tray
+    // under the back, and a handle-less drawer unit on the right)
+    decorMesh(new THREE.BoxGeometry(1.4, 0.035, 0.7), gloss, 0, 0.755, 0, g); decorMesh(new THREE.BoxGeometry(1.41, 0.012, 0.71), edge, 0, 0.732, 0, g);
+    [-0.64, 0.64].forEach(function (lx) {
+      decorMesh(new THREE.BoxGeometry(0.04, 0.72, 0.04), steel, lx, 0.37, -0.29, g); decorMesh(new THREE.BoxGeometry(0.04, 0.72, 0.04), steel, lx, 0.37, 0.29, g);
+      decorMesh(new THREE.BoxGeometry(0.04, 0.04, 0.62), steel, lx, 0.02, 0, g); decorMesh(new THREE.BoxGeometry(0.04, 0.03, 0.62), steel, lx, 0.715, 0, g);
+      [-0.29, 0.29].forEach(function (fz) { decorMesh(new THREE.CylinderGeometry(0.018, 0.018, 0.01, 10), rMat(0x0a0a0a), lx, 0.005, fz, g); });
+    });
+    decorMesh(new THREE.BoxGeometry(1.24, 0.03, 0.03), steel, 0, 0.18, -0.29, g);
+    decorMesh(new THREE.BoxGeometry(0.9, 0.06, 0.12), matte, -0.05, 0.69, -0.24, g);   // (the cable tray)
+    var dr = new THREE.Group(); dr.position.set(0.42, 0, 0.0); g.add(dr);
+    decorMesh(new THREE.BoxGeometry(0.4, 0.58, 0.6), matte, 0, 0.42, 0, dr);
+    [0.6, 0.42, 0.22].forEach(function (dy, i) { decorMesh(new THREE.BoxGeometry(0.38, i === 2 ? 0.26 : 0.16, 0.012), gloss, 0, dy, 0.306, dr); decorMesh(new THREE.BoxGeometry(0.2, 0.006, 0.006), edge, 0, dy + (i === 2 ? 0.12 : 0.07), 0.314, dr); });
+    // (under the left of the desk: a black PC tower with a glass side, glowing inside)
+    var pc = new THREE.Group(); pc.position.set(-0.45, 0, -0.04); g.add(pc);
+    decorMesh(new THREE.BoxGeometry(0.22, 0.46, 0.44), matte, 0, 0.25, 0, pc); decorMesh(new THREE.BoxGeometry(0.004, 0.4, 0.38), new THREE.MeshStandardMaterial({ color: 0x5a3a8a, transparent: true, opacity: 0.55, roughness: 0.05, emissive: 0x6a3ad8, emissiveIntensity: 0.6 }), 0.112, 0.26, 0, pc);
+    [0.38, 0.26, 0.14].forEach(function (fy) { decorMesh(new THREE.TorusGeometry(0.045, 0.006, 6, 20), rMat(0xb88aff, { emissive: 0xa070ff, emissiveIntensity: 1 }), 0.1, fy, 0.12, pc).rotation.y = Math.PI / 2; });
+    decorMesh(new THREE.BoxGeometry(0.2, 0.008, 0.008), rMat(0x9af2ff, { emissive: 0x6ae8ff, emissiveIntensity: 1.2 }), 0, 0.47, 0.222, pc); decorMesh(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 10), rMat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 1 }), 0.07, 0.43, 0.222, pc).rotation.x = Math.PI / 2;
+    [[-0.08, -0.18], [0.08, -0.18], [-0.08, 0.18], [0.08, 0.18]].forEach(function (f) { decorMesh(new THREE.BoxGeometry(0.03, 0.02, 0.03), steel, f[0], 0.01, f[1], pc); });
+    // (on the desk: a slim wide monitor on a steel stand, its screen lit, a keyboard, a mouse on a pad, a little speaker either side,
+    // a lamp, a mug and a small plant)
+    var scrTex = cpTex(512, 256, function (c, w, h) { var gr = c.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#1a1040'); gr.addColorStop(0.55, '#4a2a8a'); gr.addColorStop(1, '#d86aa8'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+      for (var i = 0; i < 60; i++) { c.fillStyle = 'rgba(255,255,255,' + (0.3 + (i % 4) * 0.15) + ')'; c.fillRect((i * 97) % w, (i * 53) % (h * 0.6), 2, 2); }
+      c.fillStyle = '#fff4d8'; c.beginPath(); c.arc(w * 0.72, h * 0.32, 34, 0, Math.PI * 2); c.fill(); c.fillStyle = '#4a2a8a'; c.beginPath(); c.arc(w * 0.72 + 14, h * 0.32 - 8, 30, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#120a28'; c.beginPath(); c.moveTo(0, h); for (var x = 0; x <= w; x += 16) c.lineTo(x, h - 40 - Math.sin(x * 0.02) * 16 - Math.sin(x * 0.05) * 8); c.lineTo(w, h); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(0, h - 18, w, 18); c.fillStyle = 'rgba(255,255,255,0.75)'; [[12, '◐'], [36, '✉'], [60, '♪'], [84, '⚗']].forEach(function (ic) { c.font = '13px sans-serif'; c.fillText(ic[1], ic[0], h - 5); }); c.fillText('9:41', w - 36, h - 5); });
+    var mon = new THREE.Group(); mon.position.set(-0.05, 0.773, -0.17); g.add(mon);
+    decorMesh(new THREE.BoxGeometry(0.26, 0.012, 0.18), steel, 0, 0.006, 0, mon); decorMesh(new THREE.BoxGeometry(0.05, 0.26, 0.025), steel, 0, 0.14, -0.06, mon);
+    decorMesh(new THREE.BoxGeometry(0.84, 0.38, 0.022), gloss, 0, 0.34, -0.04, mon);
+    var scr = decorMesh(new THREE.PlaneGeometry(0.81, 0.35), new THREE.MeshStandardMaterial({ map: scrTex, emissive: 0xffffff, emissiveMap: scrTex, emissiveIntensity: 0.9, roughness: 0.25 }), 0, 0.345, -0.028, mon); scr.castShadow = false;
+    decorMesh(new THREE.BoxGeometry(0.84, 0.03, 0.006), rMat(0x1c1c22, { roughness: 0.4 }), 0, 0.165, -0.027, mon); decorMesh(new THREE.SphereGeometry(0.004, 6, 4), rMat(0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.8 }), 0.38, 0.165, -0.023, mon);
+    var kb = new THREE.Group(); kb.position.set(-0.1, 0.773, 0.12); g.add(kb);
+    decorMesh(new THREE.BoxGeometry(0.44, 0.014, 0.14), matte, 0, 0.007, 0, kb);
+    for (var kr = 0; kr < 5; kr++) for (var kc = 0; kc < 14; kc++) decorMesh(new THREE.BoxGeometry(0.024, 0.008, 0.019), gloss, -0.195 + kc * 0.03, 0.017, -0.05 + kr * 0.025, kb);
+    decorMesh(new THREE.BoxGeometry(0.42, 0.003, 0.004), rMat(0xb88aff, { emissive: 0xa070ff, emissiveIntensity: 0.8 }), 0, 0.01, 0.071, kb);   // (a glow along its front)
+    decorMesh(new THREE.BoxGeometry(0.24, 0.003, 0.2), rMat(0x1e1a2a, { roughness: 0.9 }), 0.25, 0.774, 0.12, g); var mouse = decorMesh(new THREE.SphereGeometry(0.028, 14, 8), gloss, 0.25, 0.78, 0.13, g); mouse.scale.set(0.75, 0.42, 1.25);
+    [-0.53, 0.43].forEach(function (sx) { decorMesh(new THREE.BoxGeometry(0.08, 0.16, 0.08), matte, sx, 0.853, -0.2, g); decorMesh(new THREE.CylinderGeometry(0.026, 0.026, 0.004, 16), steel, sx, 0.87, -0.159, g).rotation.x = Math.PI / 2; decorMesh(new THREE.CylinderGeometry(0.012, 0.012, 0.004, 12), steel, sx, 0.81, -0.159, g).rotation.x = Math.PI / 2; });
+    var lamp = new THREE.Group(); lamp.position.set(0.58, 0.773, -0.2); g.add(lamp);
+    decorMesh(new THREE.CylinderGeometry(0.06, 0.065, 0.012, 20), steel, 0, 0.006, 0, lamp); decorMesh(new THREE.CylinderGeometry(0.008, 0.008, 0.34, 8), steel, 0, 0.17, 0, lamp);
+    decorMesh(new THREE.BoxGeometry(0.008, 0.008, 0.2), steel, 0, 0.34, 0.09, lamp); decorMesh(new THREE.BoxGeometry(0.03, 0.012, 0.16), matte, 0, 0.332, 0.15, lamp); decorMesh(new THREE.BoxGeometry(0.022, 0.003, 0.14), rMat(0xfff6e0, { emissive: 0xfff0d0, emissiveIntensity: 1.2 }), 0, 0.325, 0.15, lamp);
+    decorMesh(lbLathe([[0, 0], [0.034, 0], [0.038, 0.09], [0.034, 0.09], [0.03, 0.006], [0, 0.006]], 18), rMat(0xf2f2f6, { roughness: 0.35, side: THREE.DoubleSide }), 0.5, 0.773, 0.16, g);
+    decorMesh(new THREE.CircleGeometry(0.031, 16), rMat(0x5a3418, { roughness: 0.2 }), 0.5, 0.848, 0.16, g).rotation.x = -Math.PI / 2;
+    var pl = new THREE.Group(); pl.position.set(-0.58, 0.773, 0.18); g.add(pl); decorMesh(new THREE.CylinderGeometry(0.045, 0.035, 0.08, 16), rMat(0x2a2a30, { roughness: 0.5 }), 0, 0.04, 0, pl);
+    for (var lf = 0; lf < 8; lf++) { var la = lf * 2.4, lm = decorMesh(new THREE.SphereGeometry(0.5, 8, 5), rMat(lf % 2 ? 0x4a9a4a : 0x5aaa5a, { roughness: 0.6 }), Math.sin(la) * 0.02, 0.12, Math.cos(la) * 0.02, pl); lm.scale.set(0.02, 0.09, 0.006); lm.rotation.set(Math.cos(la) * 0.4, la, -Math.sin(la) * 0.4); }
+    return g;
+  }
+  DECOR.decor_computer = { name: 'Computer', icon: '🖥️', w: 1.42, d: 0.72, bumps: [[-0.4, 0, 0.4], [0.4, 0, 0.4]], make: buildComputerDesk };
+  ITEMS.decor_computer = { name: 'Computer', icon: '🖥️', info: 'A computer on a sleek black desk. Furniture for your house. Inside, press ' + everdawnKeyName(decorKey || 'KeyG') + ' for Decor Mode to place it.' };
+  var compShopIcon = (function () { var c = document.createElement('canvas'); c.width = c.height = 128; var x = c.getContext('2d');   // (a little picture of it for the shop)
+    x.fillStyle = '#16161c'; x.fillRect(14, 70, 100, 8); x.fillRect(18, 78, 5, 36); x.fillRect(105, 78, 5, 36); x.fillRect(80, 78, 24, 30);
+    var gr = x.createLinearGradient(24, 26, 104, 62); gr.addColorStop(0, '#2a1a60'); gr.addColorStop(1, '#d86aa8'); x.fillStyle = '#0c0c10'; x.fillRect(22, 22, 84, 44); x.fillStyle = gr; x.fillRect(25, 25, 78, 37);
+    x.fillStyle = '#fff4d8'; x.beginPath(); x.arc(84, 36, 6, 0, Math.PI * 2); x.fill(); x.fillStyle = '#2a2a32'; x.fillRect(60, 66, 8, 4); x.fillRect(52, 69, 24, 2); x.fillStyle = '#2a2a32'; x.fillRect(36, 66, 30, 3);
+    x.fillStyle = '#b88aff'; x.fillRect(30, 26, 0, 0); return c.toDataURL(); })();
+  var labShopBtn = document.createElement('button'); labShopBtn.type = 'button'; labShopBtn.className = 'sleep-btn ship-btn'; labShopBtn.innerHTML = '⚗️ Shop <kbd>E</kbd>'; canvas.parentNode.appendChild(labShopBtn);
+  var labShopBox = document.createElement('div'); labShopBox.className = 'inventory ship shop'; labShopBox.hidden = true;
+  labShopBox.innerHTML = '<div class="inv-head"><b>⚗️ Atom &amp; Alembic</b><button type="button" class="inv-close" aria-label="Close the shop">✕</button></div>' +
+    '<p class="ship-hint">Welcome to Atom &amp; Alembic! The finest science and technology for your home.</p>' +
+    '<div class="shop-item"><div class="slot shop-pic comp-pic"></div><div class="shop-text"><b>Computer</b><span>A sleek computer with a wide, glowing screen, a lit keyboard and mouse, little speakers and a desk lamp, a PC tower with a glass side glowing violet, a mug and a small plant. It comes with its own modern black desk, with steel legs and a drawer unit. It goes into your bag: inside your house, use Decor Mode to set it down.</span>' +
+    '<span class="shop-price"><img class="coin-icon" alt=""> ' + LAB_COMPUTER_COST.toLocaleString('en-US') + '</span></div></div>' +
+    '<div class="shop-buy"><button type="button" class="comp-buy">Buy</button></div>' +
+    '<p class="ship-total">You have <img class="coin-icon" alt=""> <b>0</b></p>';
+  canvas.parentNode.appendChild(labShopBox);
+  (function () { var pic = document.createElement('img'); pic.src = compShopIcon; pic.alt = ''; pic.style.width = '96%'; pic.style.pointerEvents = 'none'; labShopBox.querySelector('.comp-pic').appendChild(pic); })();
+  shopCards(labShopBox); labShopBox.querySelector('.shop-card').parentNode.insertBefore(shopHeading('Technology'), labShopBox.querySelector('.shop-card'));
+  var labTilesSync = shopCatalogue(labShopBox); labShopBox.classList.add('shop-wide');
+  var labShopCoins = labShopBox.querySelector('.ship-total b'), compBuyBtn = labShopBox.querySelector('.comp-buy');
+  function renderLabShop() {
+    labShopCoins.textContent = state.coins;
+    compBuyBtn.innerHTML = 'Buy · <img class="coin-icon" alt=""> ' + LAB_COMPUTER_COST.toLocaleString('en-US'); compBuyBtn.disabled = state.coins < LAB_COMPUTER_COST;
+    labTilesSync();
+  }
+  function openLabShop() { if (labShopOpen) return; toggleBag(false); labShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; labShopBox.hidden = false; renderLabShop(); }
+  function closeLabShop() { labShopOpen = false; labShopBox.hidden = true; }
+  labShopBox.querySelector('.inv-close').addEventListener('click', function () { closeLabShop(); focusGame(); });
+  labShopBtn.addEventListener('click', function () { openLabShop(); focusGame(); });
+  compBuyBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (state.coins < LAB_COMPUTER_COST) { showToast('Not enough Star Coins', 1800); return; }
+    if (!addItem('decor_computer', 1)) { showToast('Your bag is full', 1800); return; }
+    state.coins -= LAB_COMPUTER_COST; showCoins(true); coinSound(20); renderBag();
+    showToast('🖥️ Your Computer is in your bag! Inside your house, use Decor Mode to set it down: it comes with its own black desk', 4200);
+    renderLabShop();
+  });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && labShopOpen) { e.stopImmediatePropagation(); e.preventDefault(); closeLabShop(); } }, true);   // (Escape, or ○ / B on a controller)
+  function atLabCounter(margin) {                                         // (standing at the counter, on the customer's side)
+    if (!inLab) return false; var m = margin || 0, lx = player.position.x - LBI_X - LB_COUNTER[0], lz = player.position.z - LBI_Z - LB_COUNTER[1];
+    return Math.abs(lx) < LB_COUNTER_W / 2 + 0.2 + m && lz < -0.3 && lz > -1.35 - m;
+  }
+  interact = (function (base) { return function () {
+    if (labShopOpen) { if (!menuJustOpened()) closeLabShop(); return; }
+    if (atLabCounter() && !doorBusy) { openLabShop(); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
+  updateCarpenter = (function (base) { return function (t, night) {
+    base.apply(this, arguments);
+    if (labShopOpen && !atLabCounter(1.0)) closeLabShop();               // (it shuts if you walk away from the counter)
+    if (labShopOpen && labShopCoins.textContent !== String(state.coins)) renderLabShop();
+    var show = atLabCounter() && !labShopOpen;
+    if (labShopBtn.classList.contains('show') !== show) labShopBtn.classList.toggle('show', show);
+  }; })(updateCarpenter);
 });
