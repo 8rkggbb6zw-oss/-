@@ -1448,7 +1448,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-0.04, 0.022], [0.04, 0.022], [-0.04, -0.022], [0.04, -0.022]].forEach(function (sc) { P(new THREE.SphereGeometry(0.003, 5, 4), iron, sc[0], sc[1], 0.003, 0, 0, 0, plate); });
     // (inside: a little tray of letters waiting, seen when the door drops open)
     P(new THREE.BoxGeometry(MW * 2 - 0.03, 0.004, ML - 0.08), oakD, 0, 0.012, ML / 2 - 0.02, 0, 0, 0, boxG);
-    [[0, 0.02, 0xf2ead8, 0], [0.01, 0.026, 0xe8d8f0, 0.15], [-0.012, 0.031, 0xf8f0e0, -0.1]].forEach(function (lt) { var l = P(new THREE.BoxGeometry(0.15, 0.004, 0.1), new THREE.MeshStandardMaterial({ color: lt[2], roughness: 0.9 }), lt[0], lt[1], ML - 0.12, 0, lt[3], 0, boxG); P(new THREE.CircleGeometry(0.01, 10), flagRed, lt[0], lt[1] + 0.003, ML - 0.1, -Math.PI / 2, 0, 0, boxG); });
+    var letters = []; [[0, 0.02, 0xf2ead8, 0], [0.01, 0.026, 0xe8d8f0, 0.15], [-0.012, 0.031, 0xf8f0e0, -0.1]].forEach(function (lt) { var lg3 = new THREE.Group(); boxG.add(lg3); letters.push(lg3); var l = P(new THREE.BoxGeometry(0.15, 0.004, 0.1), new THREE.MeshStandardMaterial({ color: lt[2], roughness: 0.9 }), lt[0], lt[1], ML - 0.12, 0, lt[3], 0, lg3); P(new THREE.CircleGeometry(0.01, 10), flagRed, lt[0], lt[1] + 0.003, ML - 0.1, -Math.PI / 2, 0, 0, lg3); });   // (only there when you have mail)
     // (the flag gets a gilded star and rivets, and a little stop peg holds it level)
     P(new THREE.CircleGeometry(0.018, 5), houseMats.gold, 0.0125, 0.026, 0.205, 0, Math.PI / 2, 0, flag); P(new THREE.CircleGeometry(0.018, 5), houseMats.gold, 0.0035, 0.026, 0.205, 0, -Math.PI / 2, 0, flag);
     [0.06, 0.15].forEach(function (rz) { P(new THREE.SphereGeometry(0.004, 5, 4), brass, 0.013, 0, rz, 0, 0, 0, flag); });
@@ -1464,7 +1464,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var wg = P(new THREE.SphereGeometry(0.022, 10, 6), new THREE.MeshStandardMaterial({ color: 0x3a62b8, roughness: 0.6 }), sd * 0.022, 0.032, -0.006, 0, 0, 0, bird); wg.scale.set(0.3, 0.7, 1.3);
       P(new THREE.CylinderGeometry(0.0018, 0.0018, 0.014, 4), new THREE.MeshStandardMaterial({ color: 0xc8904a }), sd * 0.01, 0.004, 0.004, 0, 0, 0, bird); });
     var tail = P(new THREE.BoxGeometry(0.02, 0.004, 0.035), blue, 0, 0.03, -0.048, -0.35, 0, 0, bird);
-    MB.userData = { door: door, flag: flag, bird: bird, bY: bird.position.y };
+    MB.userData = { door: door, flag: flag, bird: bird, bY: bird.position.y, letters: letters };
   })();
   (function () { var w = houseToWorld(MB_X, MB_Z); solids.push({ x: w.x, z: w.z, r: 0.33 }); })();   // (you can't walk through it)
   updateCarpenter = (function (base) { return function (t, night) {     // (the flag swings up and the door drops open smoothly when asked)
@@ -1473,9 +1473,83 @@ EVERDAWN_PARTS.push(function (THREE) {
     MB.userData.flag.rotation.x = -mbFlagT * Math.PI / 2; MB.userData.door.rotation.x = mbDoorT * 1.45;
     var bd = MB.userData.bird; bd.rotation.y = 0.7 + Math.sin(t * 0.6) * 0.5 * (Math.sin(t * 0.23) > 0 ? 1 : 0.2); bd.position.y = MB.userData.bY + Math.max(0, Math.sin(t * 2.1)) * (Math.sin(t * 0.37) > 0.85 ? 0.02 : 0);   // (the bluebird looks about, and now and then hops)
   }; })(updateCarpenter);
-  window.everdawnMailbox = {                                             // (for the mail to come: where it stands, its flag and its door)
+  // ---- using the mailbox: stand by it and press Interact (E, or the controller's Interact button) to open it. It shows your
+  // letters; pick one to read it, take any gift that came with it, or throw it away. Nothing sends mail yet: the townsfolk
+  // will, through window.everdawnMailbox.deliver({ from, subject, body, gift: { id, count } }). Your mail is saved with the game ----
+  var mbMail = [], mbOpen = false, mbReading = -1, mbWorld = houseToWorld(MB_X, MB_Z);
+  function mbDist() { return dist(player.position.x, player.position.z, mbWorld.x, mbWorld.z); }
+  function nearMailbox(range) { return !indoors && !flying && mbDist() < (range || 1.5); }
+  function mailboxFirst() { return nearMailbox() && (!nearBin() || mbDist() <= dist(player.position.x, player.position.z, binWorld.x, binWorld.z)); }   // (beside the bin too: whichever you're closer to)
+  var mbCss = document.createElement('style');
+  mbCss.textContent = '.inventory.mailbox{width:min(460px,94%)}.mailbox .mb-empty{text-align:center;padding:18px 10px 8px;opacity:.85}.mailbox .mb-empty b{display:block;font-size:2.2em;margin-bottom:6px}' +
+    '.mailbox .mb-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}.mailbox .mb-item{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:9px 12px;border-radius:12px;border:2px solid rgba(160,120,220,.35);background:rgba(255,255,255,.55);cursor:pointer;font:inherit;color:inherit}' +
+    '.mailbox .mb-item.new{border-color:#b07ae8;background:rgba(244,232,255,.9)}.mailbox .mb-item .mb-ic{font-size:1.5em}.mailbox .mb-item .mb-txt{flex:1;min-width:0}.mailbox .mb-item .mb-txt small{display:block;opacity:.7}' +
+    '.mailbox .mb-letter{background:#fbf5e6;border-radius:12px;padding:14px 16px;margin-top:6px;box-shadow:inset 0 0 0 2px rgba(180,140,80,.25);color:#3d3157;white-space:pre-wrap;line-height:1.45}.mailbox .mb-letter h4{margin:0 0 2px}.mailbox .mb-letter .mb-from{opacity:.7;margin:0 0 10px}' +
+    '.mailbox .mb-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}.mailbox .mb-row button{padding:8px 14px;border-radius:999px;border:0;background:#8a5ad0;color:#fff;font:inherit;cursor:pointer}.mailbox .mb-row button.mb-quiet{background:rgba(120,90,170,.18);color:inherit}';
+  document.head.appendChild(mbCss);
+  var mbBtn = document.createElement('button'); mbBtn.type = 'button'; mbBtn.className = 'sleep-btn ship-btn mb-btn'; mbBtn.innerHTML = '📬 Mailbox <kbd>E</kbd>'; canvas.parentNode.appendChild(mbBtn);
+  var mbBox = document.createElement('div'); mbBox.className = 'inventory ship mailbox'; mbBox.hidden = true;
+  mbBox.innerHTML = '<div class="inv-head"><b>📬 Mailbox</b><button type="button" class="inv-close" aria-label="Close the mailbox">✕</button></div><div class="mb-body"></div>';
+  canvas.parentNode.appendChild(mbBox);
+  var mbBody = mbBox.querySelector('.mb-body');
+  function mbEl(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function renderMailbox() {
+    mbBody.innerHTML = '';
+    if (mbReading >= 0 && mbMail[mbReading]) {                         // (reading one letter)
+      var L = mbMail[mbReading], card = mbEl('div', 'mb-letter');
+      card.appendChild(mbEl('h4', '', L.subject || 'A letter')); card.appendChild(mbEl('p', 'mb-from', 'From ' + (L.from || 'someone in town')));
+      card.appendChild(mbEl('div', '', L.body || '')); mbBody.appendChild(card);
+      var row = mbEl('div', 'mb-row');
+      if (L.gift && !L.taken && ITEMS[L.gift.id]) { var g = mbEl('button', '', 'Take the gift: ' + ITEMS[L.gift.id].name + (L.gift.count > 1 ? ' ×' + L.gift.count : '')); g.type = 'button';
+        g.addEventListener('click', function () { if (addItem(L.gift.id, L.gift.count || 1)) { L.taken = true; coinSound(4); showToast('🎁 ' + ITEMS[L.gift.id].name + ' went into your bag'); renderBag(); } else showToast('Your bag is full', 2200); renderMailbox(); }); row.appendChild(g); }
+      var back = mbEl('button', 'mb-quiet', 'Back'); back.type = 'button'; back.addEventListener('click', function () { mbReading = -1; renderMailbox(); }); row.appendChild(back);
+      var del = mbEl('button', 'mb-quiet', 'Throw away'); del.type = 'button'; del.addEventListener('click', function () { mbMail.splice(mbReading, 1); mbReading = -1; renderMailbox(); }); row.appendChild(del);
+      mbBody.appendChild(row); return;
+    }
+    if (!mbMail.length) { var em = mbEl('div', 'mb-empty'); em.appendChild(mbEl('b', '', '📭')); em.appendChild(mbEl('p', '', 'Your mailbox is empty.')); em.appendChild(mbEl('p', '', 'Letters and parcels from the townsfolk will arrive here.')); mbBody.appendChild(em); }
+    else { var list = mbEl('div', 'mb-list'); mbMail.forEach(function (L, i) { var b = mbEl('button', 'mb-item' + (L.read ? '' : ' new')); b.type = 'button';
+      b.appendChild(mbEl('span', 'mb-ic', L.gift && !L.taken ? '🎁' : L.read ? '✉️' : '💌')); var t = mbEl('span', 'mb-txt'); t.appendChild(mbEl('b', '', L.subject || 'A letter')); t.appendChild(mbEl('small', '', 'From ' + (L.from || 'someone in town'))); b.appendChild(t);
+      b.addEventListener('click', function () { L.read = true; mbReading = i; renderMailbox(); }); list.appendChild(b); }); mbBody.appendChild(list); }
+    var cr = mbEl('div', 'mb-row'), cl = mbEl('button', 'mb-quiet', 'Close'); cl.type = 'button'; cl.addEventListener('click', function () { closeMailbox(); focusGame(); }); cr.appendChild(cl); mbBody.appendChild(cr);
+  }
+  function openMailbox() {
+    if (mbOpen) return;
+    toggleBag(false); if (binOpen) closeBin();
+    mbOpen = true; menuOpenedAt = Date.now(); walkTarget = null; mbReading = -1; mbBox.hidden = false; renderMailbox();
+    mbDoorOpen = 1; doorSound();
+  }
+  function closeMailbox() { if (!mbOpen) return; mbOpen = false; mbBox.hidden = true; mbDoorOpen = 0; }
+  function mbRefresh() { var unread = mbMail.some(function (L) { return !L.read || (L.gift && !L.taken); }); mbFlagUp = unread ? 1 : 0; MB.userData.letters.forEach(function (o, i) { o.visible = i < mbMail.length; }); }
+  mbBox.querySelector('.inv-close').addEventListener('click', function () { closeMailbox(); focusGame(); });
+  mbBtn.addEventListener('click', function () { openMailbox(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && mbOpen) { e.stopImmediatePropagation(); e.preventDefault(); if (mbReading >= 0) { mbReading = -1; renderMailbox(); } else closeMailbox(); } }, true);   // (Escape, or ○ / B on a controller: back, then shut)
+  interact = (function (base) { return function () {
+    if (mbOpen) { if (!menuJustOpened()) closeMailbox(); return; }
+    if (!binOpen && !shopOpen && !barnShopOpen && !doorBusy && mailboxFirst()) { openMailbox(); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
+  updateShipping = (function (base) { return function () {
+    base.apply(this, arguments);
+    if (mbOpen && !nearMailbox(3.2)) closeMailbox();                   // (it shuts if you walk away)
+    var first = !mbOpen && !binOpen && mailboxFirst();
+    if ((first || mbOpen) && shipBtn.classList.contains('show')) shipBtn.classList.remove('show');   // (by the mailbox, its button shows rather than the bin's)
+    if (mbBtn.classList.contains('show') !== first) mbBtn.classList.toggle('show', first);
+    mbRefresh();
+  }; })(updateShipping);
+  saveGame = (function (base) { return function () {                     // (your letters are kept in the save)
+    var r = base.apply(this, arguments);
+    try { var d = JSON.parse(localStorage.getItem(SAVE_KEY)); if (d) { d.mail = mbMail; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } } catch (err) {}
+    return r;
+  }; })(saveGame);
+  loadGame = (function (base) { return function () {
+    var r = base.apply(this, arguments);
+    try { var d = JSON.parse(localStorage.getItem(SAVE_KEY)); mbMail = d && d.mail ? d.mail : []; } catch (err) { mbMail = []; }
+    closeMailbox(); return r;
+  }; })(loadGame);
+  window.everdawnMailbox = {                                             // (for the townsfolk's mail, when it comes)
     spot: function () { return houseToWorld(MB_X, MB_Z + 0.7); },
-    flag: function (up) { mbFlagUp = up ? 1 : 0; },
-    open: function (yes) { mbDoorOpen = yes ? 1 : 0; }
+    deliver: function (letter) { mbMail.unshift({ from: letter.from, subject: letter.subject, body: letter.body, gift: letter.gift || null, read: false, day: state.day }); if (mbOpen) renderMailbox(); showToast('📬 You’ve got mail!', 2800); },
+    mail: function () { return mbMail; },
+    isOpen: function () { return mbOpen; }
   };
 });
