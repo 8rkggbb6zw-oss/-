@@ -1270,7 +1270,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     doorBusy = true; doorArmed = false; walkTarget = null; doorSound(); fadeBox.style.opacity = 1;
     setTimeout(function () {
       if (goIn) {
-        indoors = true; inShop = inClinic = inBarn = inCarp = inCoop = inFbarn = inCloth = false; inLab = true;
+        indoors = true; inShop = inClinic = inBarn = inCarp = inCoop = inFbarn = inCloth = inHide = false; inLab = true;
         labScene.add(player); player.position.set(LBI_X, 0, LBI_Z + LBI_EXIT_Z - 0.8); facing = Math.PI;
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = 0;
       } else {
@@ -1794,7 +1794,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     e.stopImmediatePropagation(); e.preventDefault();
     if (pcShop) pcLeaveShop(); else closePc();
   }, true);
-  function inMyHouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !decorMode; }
+  function inMyHouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !inHide && !decorMode; }
   var pcV = new THREE.Vector3();
   function nearPc() {                                                     // (the computer you're standing by, if any)
     if (!inMyHouse()) return null; var best = null, bd = 1.35;
@@ -1855,4 +1855,269 @@ EVERDAWN_PARTS.push(function (THREE) {
       setTimeout(function () { if (lostAt && Date.now() - lostAt >= 7900) { showToast('The graphics didn’t come back: save, then reload the page', 60000); } }, 8000); }, false);
     cv.addEventListener('webglcontextrestored', function () { lostAt = 0; showToast('✦ Back again', 1600); }, false);
   })();
+
+  // ===== The Hollow Fang: a secret adventurers' guild, hidden in a thicket in the far north-west corner of the Western Isle, away
+  // from every path, its door turned to face the island's edge. From outside it's only an
+  // overgrown mound under a dead tree, with an old cellar door half sunk in its side, a rusted lantern on a crooked post and,
+  // if you look closely, a fang-and-moon sigil scratched into the door. No path leads there and it isn't on the map. Stand by
+  // the door and press Interact to go down; inside, a stone den lit by a hearth and candles: a long table of maps and daggers,
+  // a weapon rack, guild banners, crates and casks, and the Errand Board, where guild errands will be posted =====
+  var HIDE_X = -128, HIDE_Z = -14, HIDE_TURN = -2.36, inHide = false;
+  function hideWorld(lx, lz) { var c = Math.cos(HIDE_TURN), s2 = Math.sin(HIDE_TURN); return { x: HIDE_X + lx * c + lz * s2, z: HIDE_Z - lx * s2 + lz * c }; }
+  function hideFront(d) { return hideWorld(0, 1.5 + d); }
+  var hideDoor = hideWorld(0, 1.9);
+  function hideSigil(g, cx, cy, r, col, lw) {                             // (the guild's mark: a crescent moon pierced by a long fang, in a ring)
+    g.save(); g.translate(cx, cy); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = lw; g.lineCap = 'round';
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+    g.beginPath(); g.arc(-r * 0.08, 0, r * 0.62, Math.PI * 0.35, Math.PI * 1.65); g.arc(r * 0.18, 0, r * 0.5, Math.PI * 1.55, Math.PI * 0.45, true); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(r * 0.12, -r * 0.82); g.quadraticCurveTo(r * 0.42, -r * 0.1, r * 0.06, r * 0.86); g.quadraticCurveTo(r * 0.2, -r * 0.05, r * 0.12, -r * 0.82); g.fill();
+    g.restore();
+  }
+  // ---- outside ----
+  var hideGroup = new THREE.Group(); hideGroup.position.set(HIDE_X, 0, HIDE_Z); hideGroup.rotation.y = HIDE_TURN; scene.add(hideGroup);
+  var hideWisp = null;
+  (function (G) {
+    function P(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || G); }
+    var turfT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#4e7a3a'; g.fillRect(0, 0, w, h); for (var k = 0; k < 900; k++) { g.fillStyle = ['rgba(30,60,24,0.5)', 'rgba(110,150,70,0.4)', 'rgba(70,60,40,0.35)'][k % 3]; g.fillRect((k * 37) % w, (k * 61) % h, 1 + k % 2, 2 + k % 3); } }, [3, 3]);
+    var turf = new THREE.MeshStandardMaterial({ map: turfT, roughness: 1 });
+    var moundG = new THREE.SphereGeometry(2.1, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), mp = moundG.attributes.position;   // (the mound, lumpy)
+    for (var i = 0; i < mp.count; i++) { var x = mp.getX(i), y = mp.getY(i), z = mp.getZ(i); var n = 1 + Math.sin(x * 2.3 + z * 1.7) * 0.06 + Math.sin(x * 5.1 - z * 3.3) * 0.03; mp.setXYZ(i, x * n, y * n, z * n); }
+    moundG.computeVertexNormals();
+    var mound = P(moundG, turf, 0, -0.05, -0.95); mound.scale.set(1, 0.62, 0.78);
+    var stoneM = [0x6e6a62, 0x5a5650, 0x7a746a].map(function (c) { return rMat(c, { roughness: 0.95 }); });
+    var oldWood = rMat(0x4a3a2a, { roughness: 0.95 }), darkWood = rMat(0x2e2418, { roughness: 1 }), rust = rMat(0x5a3a24, { metalness: 0.5, roughness: 0.75 });
+    // (the cellar door: an old stone surround half sunk in the mound, and two weathered leaves lying aslant, banded with rusty iron)
+    var CD = new THREE.Group(); CD.position.set(0, 0.02, 1.38); CD.rotation.x = -0.75; G.add(CD);
+    [[-0.68, 0.55, 0.16, 1.2], [0.68, 0.55, 0.16, 1.2], [0, 1.1, 1.52, 0.16], [0, 0.0, 1.52, 0.14]].forEach(function (b, k) { P(new THREE.BoxGeometry(b[2], b[3], 0.2), stoneM[k % 3], b[0], b[1], 0, 0, 0, 0, CD); });
+    P(new THREE.BoxGeometry(1.2, 1.04, 0.05), rMat(0x0a0806), 0, 0.55, -0.06, 0, 0, 0, CD);
+    var plankT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#5a4630'; g.fillRect(0, 0, w, h); for (var k = 0; k < 6; k++) { g.fillStyle = 'rgba(20,12,6,0.8)'; g.fillRect(k * (w / 6), 0, 2, h); }
+      for (var q = 0; q < 60; q++) { g.strokeStyle = q % 2 ? 'rgba(30,20,10,0.35)' : 'rgba(140,120,90,0.25)'; g.beginPath(); var gx = (q * 23) % w; g.moveTo(gx, 0); g.lineTo(gx + Math.sin(q) * 3, h); g.stroke(); }
+      for (var m2 = 0; m2 < 30; m2++) { g.fillStyle = 'rgba(70,110,50,' + (0.25 + (m2 % 3) * 0.12) + ')'; g.beginPath(); g.arc((m2 * 41) % w, h - (m2 * 7) % 30, 3 + m2 % 4, 0, Math.PI * 2); g.fill(); }   // (moss creeping up from the bottom)
+      hideSigil(g, w * 0.72, h * 0.42, 15, 'rgba(25,15,8,0.55)', 2); });   // (the sigil, scratched faintly into the wood)
+    var leafM = new THREE.MeshStandardMaterial({ map: plankT, roughness: 0.95 });
+    [-1, 1].forEach(function (sd) {
+      var L = new THREE.Group(); L.position.set(sd * 0.6, 0.55, 0.02); CD.add(L);
+      P(new THREE.BoxGeometry(0.58, 1.02, 0.06), leafM, -sd * 0.29, 0, 0, 0, sd < 0 ? Math.PI : 0, 0, L);
+      [-0.32, 0.32].forEach(function (by) { P(new THREE.BoxGeometry(0.56, 0.05, 0.012), rust, -sd * 0.29, by, 0.036, 0, 0, 0, L); for (var r2 = 0; r2 < 3; r2++) P(new THREE.SphereGeometry(0.012, 6, 4), rust, -sd * (0.08 + r2 * 0.2), by, 0.045, 0, 0, 0, L); });
+    });
+    P(new THREE.TorusGeometry(0.05, 0.01, 6, 14), rust, 0.1, 0.62, 0.07, 0, 0, 0, CD); P(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 8), rust, 0.1, 0.67, 0.06, Math.PI / 2, 0, 0, CD);
+    // (roots and ivy trailing over the doorway, moss on the stones)
+    var vine = rMat(0x3e5a2a, { roughness: 0.9 }), ivyL = rMat(0x3a6a34, { roughness: 0.7, side: THREE.DoubleSide });
+    for (var v = 0; v < 6; v++) { var vx = -0.7 + v * 0.28, pts = []; for (var k = 0; k <= 8; k++) { var u = k / 8; pts.push(new THREE.Vector3(vx + Math.sin(u * 4 + v) * 0.05, 1.18 + 0.02 - u * (0.25 + (v % 3) * 0.15), 0.12 + u * 0.02)); }
+      var cv = new THREE.CatmullRomCurve3(pts); P(new THREE.TubeGeometry(cv, 10, 0.008, 4), vine, 0, 0, 0, 0, 0, 0, CD);
+      for (var lf = 0; lf < 4; lf++) { var lp = cv.getPoint(0.15 + lf * 0.25); var lm = P(new THREE.SphereGeometry(0.5, 6, 4), ivyL, lp.x + 0.02, lp.y, lp.z + 0.01, 0, 0, lf, CD); lm.scale.set(0.05, 0.04, 0.01); } }
+    for (var ms = 0; ms < 10; ms++) { var mm = P(new THREE.SphereGeometry(0.06 + (ms % 3) * 0.02, 8, 5), rMat(0x4a7a34, { roughness: 1 }), -0.75 + (ms % 5) * 0.37, ms < 5 ? 1.18 : -0.02, 0.1, 0, 0, 0, CD); mm.scale.set(1.4, 0.35, 0.9); }
+    // (a crooked dead tree on top of the mound)
+    var bark = rMat(0x3a3028, { roughness: 1 });
+    function limb(pts, r) { var c = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })); P(new THREE.TubeGeometry(c, 12, r, 6), bark, 0, 0, 0); return c; }
+    limb([[-0.5, 0.9, -0.9], [-0.55, 1.6, -0.95], [-0.4, 2.3, -0.85], [-0.55, 2.9, -0.9]], 0.11);
+    limb([[-0.42, 2.0, -0.88], [-0.1, 2.4, -0.7], [0.3, 2.6, -0.6]], 0.045); limb([[-0.48, 2.5, -0.9], [-0.9, 2.9, -1.1], [-1.2, 3.0, -1.0]], 0.04);
+    limb([[-0.55, 2.8, -0.9], [-0.35, 3.3, -0.8]], 0.03); limb([[-0.5, 1.4, -0.95], [-0.9, 1.6, -0.6]], 0.035);
+    [[-0.5, 0.95, -0.6, 0.6], [-0.8, 0.85, -1.1, 2.0], [-0.2, 0.9, -1.2, 3.8]].forEach(function (rt) { limb([[-0.5, 1.0, -0.9], [rt[0], rt[1], rt[2]], [rt[0] + Math.sin(rt[3]) * 0.4, 0.3, rt[2] + Math.cos(rt[3]) * 0.4]], 0.04); });   // (roots gripping the mound)
+    // (a rusted lantern on a crooked post by the door: cold now, but a faint wisp of teal light glows in it after dark)
+    var post = new THREE.Group(); post.position.set(1.05, 0, 1.45); post.rotation.z = -0.08; G.add(post);
+    P(new THREE.CylinderGeometry(0.05, 0.065, 1.4, 6), oldWood, 0, 0.7, 0, 0, 0, 0, post); P(new THREE.BoxGeometry(0.36, 0.05, 0.05), oldWood, -0.14, 1.32, 0, 0, 0, 0.12, post);
+    P(new THREE.CylinderGeometry(0.004, 0.004, 0.12, 4), rust, -0.28, 1.22, 0, 0, 0, 0, post);
+    P(new THREE.ConeGeometry(0.08, 0.07, 6), rust, -0.28, 1.13, 0, 0, 0, 0, post); P(new THREE.CylinderGeometry(0.06, 0.055, 0.14, 6, 1, true), new THREE.MeshStandardMaterial({ color: 0x6a7a6a, transparent: true, opacity: 0.35, roughness: 0.3, side: THREE.DoubleSide, depthWrite: false }), -0.28, 1.03, 0, 0, 0, 0, post);
+    for (var lp2 = 0; lp2 < 6; lp2++) { var la = lp2 / 6 * Math.PI * 2; P(new THREE.BoxGeometry(0.008, 0.14, 0.008), rust, -0.28 + Math.sin(la) * 0.058, 1.03, Math.cos(la) * 0.058, 0, 0, 0, post); }
+    P(new THREE.CylinderGeometry(0.065, 0.06, 0.02, 6), rust, -0.28, 0.955, 0, 0, 0, 0, post);
+    hideWisp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x6affd8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); hideWisp.position.set(-0.28, 1.03, 0); hideWisp.scale.set(0.35, 0.35, 1); post.add(hideWisp);
+    // (a mossy fallen log, ferns, toadstools and long grass, so it all looks like part of the wood)
+    var lg = P(new THREE.CylinderGeometry(0.2, 0.24, 2.0, 10), bark, 1.5, 0.18, 0.4, 0, 0.6, Math.PI / 2); [-1, 1].forEach(function (e) { P(new THREE.CircleGeometry(0.2, 10), rMat(0x8a7050), 1.5 + Math.cos(0.6) * e * 1.0, 0.18, 0.4 - Math.sin(0.6) * e * 1.0, 0, 0.6 + (e > 0 ? Math.PI / 2 : -Math.PI / 2), 0); });
+    for (var ml = 0; ml < 5; ml++) { var mo = P(new THREE.SphereGeometry(0.14, 8, 5), rMat(0x4a7a34, { roughness: 1 }), 1.5 + Math.cos(0.6) * (ml - 2) * 0.35, 0.36, 0.4 - Math.sin(0.6) * (ml - 2) * 0.35); mo.scale.set(1.2, 0.35, 1); }
+    var fern = rMat(0x3f7a3a, { roughness: 0.8, side: THREE.DoubleSide });
+    [[-1.4, 1.0], [1.5, 0.9], [-1.7, -0.4], [0.9, -1.8], [-0.4, 1.9], [1.9, 0.2]].forEach(function (fp, k) { for (var f = 0; f < 7; f++) { var fa = f / 7 * Math.PI * 2 + k; var fr = P(new THREE.PlaneGeometry(0.12, 0.55), fern, fp[0] + Math.sin(fa) * 0.12, 0.22, fp[1] + Math.cos(fa) * 0.12, -0.9, fa, 0); fr.geometry.translate(0, 0.27, 0); } });
+    [[-1.1, 1.35, 0.06], [-1.25, 1.2, 0.04], [1.3, -0.6, 0.05], [0.4, 1.75, 0.035]].forEach(function (t) { P(new THREE.CylinderGeometry(t[2] * 0.3, t[2] * 0.4, t[2] * 1.4, 8), rMat(0xe8dcc0), t[0], t[2] * 0.7, t[1]); var cap = P(new THREE.SphereGeometry(t[2], 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), rMat(0x8a3a2a, { roughness: 0.6 }), t[0], t[2] * 1.4, t[1]); cap.scale.y = 0.6; });
+    var tuft = rMat(0x5a8a3a, { roughness: 0.9 });
+    for (var tf = 0; tf < 40; tf++) { var ta = tf * 2.39, tr = 0.4 + (tf % 7) * 0.24, tx = Math.sin(ta) * tr * 1.0, tz = -0.55 + Math.cos(ta) * tr * 0.9, ty = Math.max(0, 1.3 * Math.sqrt(Math.max(0, 1 - (tr * tr) / 4.4)) * 0.62 - 0.08);
+      if (tz > 0.6 && Math.abs(tx) < 0.9) continue; P(new THREE.ConeGeometry(0.02, 0.22 + (tf % 3) * 0.08, 4), tuft, tx, ty + 0.1, tz, (tf % 5 - 2) * 0.12, 0, (tf % 3 - 1) * 0.15); }
+    // (a thicket round it: hawthorn and holly bushes and a few young trees, so from the paths it's only a clump of green)
+    var bushM = [0x3e6a34, 0x4a7a3a, 0x355e2e].map(function (c) { return rMat(c, { roughness: 0.9 }); }), berryM = rMat(0xb0202a, { roughness: 0.5 });
+    function bush(x, z, r, k) { var bg = new THREE.Group(); bg.position.set(x, 0, z); G.add(bg);
+      for (var b = 0; b < 7; b++) { var ba = b * 2.4 + k, br = r * (0.5 + (b % 3) * 0.2); var bl = P(new THREE.IcosahedronGeometry(br, 1), bushM[(b + k) % 3], Math.sin(ba) * r * 0.55, br * 0.8 + (b % 2) * r * 0.25, Math.cos(ba) * r * 0.55, b, b * 0.7, 0, bg); bl.scale.y = 0.85; }
+      if (k % 2) for (var e = 0; e < 8; e++) { var ea = e * 2.1 + k; P(new THREE.SphereGeometry(0.035, 6, 4), berryM, Math.sin(ea) * r * 0.9, r * (0.6 + (e % 3) * 0.3), Math.cos(ea) * r * 0.9, 0, 0, 0, bg); } }
+    function sapling(x, z, h, k) { P(new THREE.CylinderGeometry(0.06, 0.09, h, 7), bark, x, h / 2, z);
+      for (var c2 = 0; c2 < 4; c2++) { var ca = c2 * 1.7 + k; P(new THREE.IcosahedronGeometry(0.55 - c2 * 0.06, 1), bushM[(c2 + k) % 3], x + Math.sin(ca) * 0.3, h + (c2 % 2) * 0.3 - 0.1, z + Math.cos(ca) * 0.3, c2, 0, 0); } }
+    [[-2.3, 0.6, 0.6], [-2.6, -0.8, 0.75], [-1.6, -2.3, 0.7], [0.2, -2.8, 0.8], [1.7, -2.2, 0.65], [2.5, -0.9, 0.7], [2.4, 0.9, 0.55], [-1.9, 1.9, 0.5], [2.0, 2.1, 0.5]].forEach(function (b2, k) { bush(b2[0], b2[1], b2[2], k); });
+    sapling(-2.9, 0.1, 2.0, 1); sapling(1.1, -3.1, 2.3, 2); sapling(3.0, -0.1, 1.8, 3); sapling(-0.9, -3.0, 1.9, 4);
+    G.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  })(hideGroup);
+  (function () {                                                          // (the woods cleared just enough round it; you can't walk into the mound)
+    allScenery.forEach(function (t) { var u = t.userData; if (u.gone) return; if (dist(u.solid.x, u.solid.z, HIDE_X, HIDE_Z) < 3.4 + u.solidR) { u.gone = true; u.state = 'gone'; u.solid.r = 0; setTreeGrowth(t, 0); } });
+    mineable.forEach(function (r) { if (r.gone) return; if (dist(r.x, r.z, HIDE_X, HIDE_Z) < 3.2 + r.size) { r.gone = true; r.state = 'gone'; r.solid.r = 0; setRock(r, 0); } });
+    var m4 = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0), cMid = hideWorld(0, -0.55);
+    scene.traverse(function (o) { if (!o.isInstancedMesh) return; for (var up = o.parent; up; up = up.parent) if (up === hideGroup) return; o.updateWorldMatrix(true, false); var ch = false;
+      for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); v.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld); if (Math.hypot(v.x - cMid.x, v.z - cMid.z) < 2.0 || Math.hypot(v.x - hideDoor.x, v.z - hideDoor.z) < 0.9) { o.setMatrixAt(i, zero); ch = true; } }
+      if (ch) o.instanceMatrix.needsUpdate = true; });
+    [[0, -0.95, 1.7], [-1.2, -0.5, 0.8], [1.2, -0.3, 0.8], [0, 0.55, 0.7], [1.5, 0.4, 0.5], [1.05, 1.45, 0.15], [-2.3, 0.6, 0.5], [-2.6, -0.8, 0.6], [-1.6, -2.3, 0.6], [0.2, -2.8, 0.6], [1.7, -2.2, 0.55], [2.5, -0.9, 0.6], [2.4, 0.9, 0.45], [-1.9, 1.9, 0.4], [2.0, 2.1, 0.4], [-2.9, 0.1, 0.2], [1.1, -3.1, 0.2], [3.0, -0.1, 0.2], [-0.9, -3.0, 0.2]].forEach(function (b) { var w = hideWorld(b[0], b[1]); solids.push({ x: w.x, z: w.z, r: b[2] }); });
+  })();
+  // ---- inside: a stone den under the wood ----
+  var hideScene = new THREE.Scene(); hideScene.background = new THREE.Color(0x0c0a0e);
+  var HDI_X = -1400, HDI_Z = 1000, HDI_W = 9, HDI_D = 7, HDI_H = 3.0, HDI_EXIT_Z = HDI_D / 2 - 0.55;
+  var hideRoom = new THREE.Group(); hideRoom.position.set(HDI_X, 0, HDI_Z); hideScene.add(hideRoom);
+  hideScene.add(new THREE.HemisphereLight(0x8a7a9a, 0x2a1e18, 0.32));
+  var hdFire = new THREE.PointLight(0xff8a3a, 1.1, 9, 1.6); hdFire.position.set(HDI_X + HDI_W / 2 - 0.9, 1.0, HDI_Z - 0.3); hideScene.add(hdFire);
+  var hdCandles = [[-1.2, 0.2], [0.6, -0.3], [0, -HDI_D / 2 + 0.8]].map(function (c) { var l = new THREE.PointLight(0xffc070, 0.45, 5, 1.8); l.position.set(HDI_X + c[0], 1.5, HDI_Z + c[1]); hideScene.add(l); return l; });
+  var hideSolids = [], hdWalls = [], hdFlames = [], HD_BOARD = [0, -HDI_D / 2 + 0.25];
+  (function (R) {
+    var W = HDI_W / 2, D = HDI_D / 2, H = HDI_H;
+    function p(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || R); }
+    var stoneT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#2a2622'; g.fillRect(0, 0, w, h);
+      for (var r = 0, y = 0; y < h; r++) { var hh = 28 + (r * 11) % 14; for (var x = -((r * 29) % 50); x < w; ) { var ww = 40 + ((r * 17 + x) % 40), c = 70 + ((r * 31 + x * 3) % 36); g.fillStyle = 'rgb(' + c + ',' + (c - 6) + ',' + (c - 12) + ')'; g.beginPath(); g.ellipse(x + ww / 2, y + hh / 2, ww / 2 - 2, hh / 2 - 2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,240,220,0.06)'; g.fillRect(x + 6, y + 4, ww - 12, 3); x += ww; } y += hh; } }, [3, 1.5]);
+    var wallM = new THREE.MeshStandardMaterial({ map: stoneT, roughness: 0.95 });
+    var floorT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#1e1a16'; g.fillRect(0, 0, w, h); for (var r = 0; r < 6; r++) for (var c = 0; c < 6; c++) { var v = 60 + ((r * 7 + c * 13) % 28); g.fillStyle = 'rgb(' + v + ',' + (v - 5) + ',' + (v - 10) + ')'; g.fillRect(c * 43 + 2 + (r % 2) * 10, r * 43 + 2, 39, 39); } }, [3, 2.4]);
+    p(new THREE.PlaneGeometry(HDI_W, HDI_D), new THREE.MeshStandardMaterial({ map: floorT, roughness: 0.9 }), 0, 0, 0, -Math.PI / 2, 0, 0);
+    var beam = rMat(0x3a2a1c, { roughness: 0.9 });
+    [[0, -D, 0, HDI_W], [0, D, Math.PI, HDI_W], [-W, 0, Math.PI / 2, HDI_D], [W, 0, -Math.PI / 2, HDI_D]].forEach(function (w) {   // (rough stone walls with timber posts; the one between you and the camera steps aside)
+      var g = new THREE.Group(); g.position.set(w[0], 0, w[1]); g.rotation.y = w[2]; R.add(g);
+      p(new THREE.PlaneGeometry(w[3], H), wallM, 0, H / 2, 0, 0, 0, 0, g);
+      for (var ps = -w[3] / 2 + 0.2; ps <= w[3] / 2 - 0.1; ps += w[3] / 3.5) p(new THREE.BoxGeometry(0.2, H, 0.18), beam, ps, H / 2, 0.08, 0, 0, 0, g);
+      p(new THREE.BoxGeometry(w[3], 0.22, 0.2), beam, 0, H - 0.11, 0.08, 0, 0, 0, g);
+      hdWalls.push({ g: g, n: w[1] ? new THREE.Vector3(0, 0, w[1] < 0 ? -1 : 1) : new THREE.Vector3(w[0] < 0 ? -1 : 1, 0, 0), d: w[1] ? D : W });
+    });
+    // (the stairs up to the cellar door, a sliver of daylight at the top)
+    for (var st = 0; st < 3; st++) p(new THREE.BoxGeometry(1.3, 0.12 * (st + 1), 0.3), rMat(0x4a4640, { roughness: 0.95 }), 0, 0.06 * (st + 1), D - 0.75 + st * 0.3);   // (worn stone steps up to the door)
+    p(new THREE.PlaneGeometry(1.1, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff0c8 }), 0, 2.4, D - 0.02, 0, Math.PI, 0);
+    // (the Errand Board on the back wall: a cork board in a dark frame, under a lantern, notices pinned all over it)
+    var BX = HD_BOARD[0], BZ = -D + 0.06;
+    p(new THREE.BoxGeometry(2.1, 1.4, 0.08), beam, BX, 1.55, BZ);
+    var corkT = cpTex(256, 176, function (g, w, h) { g.fillStyle = '#9a7048'; g.fillRect(0, 0, w, h); for (var k = 0; k < 1200; k++) { g.fillStyle = k % 2 ? 'rgba(60,36,18,0.35)' : 'rgba(200,160,110,0.3)'; g.fillRect((k * 37) % w, (k * 53) % h, 2, 2); }
+      g.fillStyle = '#2a1a10'; g.fillRect(w / 2 - 50, 6, 100, 22); g.fillStyle = '#e8c890'; g.font = 'bold 15px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ERRANDS', w / 2, 17); });
+    p(new THREE.PlaneGeometry(1.94, 1.24), new THREE.MeshStandardMaterial({ map: corkT, roughness: 1 }), BX, 1.55, BZ + 0.042);
+    var notes = [[-0.62, 1.78, 0.08, 0], [-0.2, 1.42, -0.06, 1], [0.35, 1.72, 0.05, 2], [0.68, 1.36, -0.1, 3], [-0.6, 1.22, 0.12, 4], [0.1, 1.15, 0.03, 5]];
+    var noteTex = notes.map(function (n2, k) { return cpTex(96, 128, function (g, w, h) { g.fillStyle = ['#e8dcb8', '#efe2c0', '#ddd0a8'][k % 3]; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(120,90,50,0.2)'; g.fillRect(0, h - 14, w, 14);
+      if (k === 2) { g.fillStyle = '#3a2416'; g.font = 'bold 13px Georgia, serif'; g.textAlign = 'center'; g.fillText('WANTED', w / 2, 18); g.strokeStyle = '#3a2416'; g.lineWidth = 2; g.strokeRect(20, 26, 56, 56); g.beginPath(); g.arc(48, 50, 12, 0, Math.PI * 2); g.moveTo(30, 80); g.quadraticCurveTo(48, 60, 66, 80); g.stroke(); }
+      else if (k === 4) { g.strokeStyle = '#6a4a2a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(10, 90); g.bezierCurveTo(30, 40, 60, 100, 86, 30); g.stroke(); g.fillStyle = '#b02a2a'; g.font = 'bold 18px sans-serif'; g.fillText('✕', 74, 40); }   // (a scrap of map, an X on it)
+      else { g.fillStyle = 'rgba(40,26,14,0.75)'; for (var l = 0; l < 7; l++) g.fillRect(12, 20 + l * 13, 40 + ((k * 17 + l * 23) % 32), 2.5); }
+      if (k % 2 === 0) { g.fillStyle = '#8a1e22'; g.beginPath(); g.arc(w - 18, h - 24, 8, 0, Math.PI * 2); g.fill(); } }); });
+    notes.forEach(function (n2, k) { var nm = p(new THREE.PlaneGeometry(0.34, 0.44), new THREE.MeshStandardMaterial({ map: noteTex[k], roughness: 1, side: THREE.DoubleSide }), BX + n2[0], n2[1], BZ + 0.05 + k * 0.002, 0, 0, n2[2]); nm.castShadow = false;
+      p(new THREE.SphereGeometry(0.018, 8, 6), rMat([0xb02a2a, 0x2a4ab0, 0xd8b030][k % 3], { roughness: 0.4 }), BX + n2[0] - Math.sin(n2[2]) * 0.18, n2[1] + Math.cos(n2[2]) * 0.18, BZ + 0.075); });
+    var dag = new THREE.Group(); dag.position.set(BX + 0.86, 1.95, BZ + 0.08); dag.rotation.z = -0.5; R.add(dag);   // (a dagger stuck through the corner of the board)
+    lbP(new THREE.BoxGeometry(0.02, 0.2, 0.006), rMat(0xc8ccd2, { metalness: 0.9, roughness: 0.3, envMap: rubyEnv }), 0, -0.1, 0, 0, 0, 0, dag); lbP(new THREE.BoxGeometry(0.08, 0.015, 0.02), rMat(0x2a2420), 0, 0.005, 0.01, 0, 0, 0, dag); lbP(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 8), rMat(0x3a2418), 0, 0.055, 0.01, 0, 0, 0, dag);
+    var lantM = rMat(0xffd890, { emissive: 0xffb050, emissiveIntensity: 1.2 }); hdFlames.push(lantM);
+    p(new THREE.BoxGeometry(0.04, 0.3, 0.04), rMat(0x1a1612, { metalness: 0.5 }), BX, 2.48, BZ + 0.12); p(new THREE.BoxGeometry(0.14, 0.16, 0.14), lantM, BX, 2.28, BZ + 0.2);
+    p(new THREE.ConeGeometry(0.11, 0.08, 4), rMat(0x1a1612, { metalness: 0.5 }), BX, 2.4, BZ + 0.2, 0, Math.PI / 4, 0);
+    hideSolids.push([BX - 0.6, -D + 0.35, 0.3], [BX, -D + 0.35, 0.3], [BX + 0.6, -D + 0.35, 0.3]);
+    // (the guild's banners either side of the board: black, its mark in crimson)
+    var banT = cpTex(128, 256, function (g, w, h) { g.fillStyle = '#141014'; g.fillRect(0, 0, w, h); g.fillStyle = '#5a1018'; g.fillRect(6, 0, 6, h); g.fillRect(w - 12, 0, 6, h); hideSigil(g, w / 2, h * 0.4, 40, '#b0202a', 5);
+      g.fillStyle = '#141014'; g.beginPath(); g.moveTo(0, h - 30); g.lineTo(w / 2, h); g.lineTo(w, h - 30); g.lineTo(w, h); g.lineTo(0, h); g.fill(); });
+    var banM = new THREE.MeshStandardMaterial({ map: banT, roughness: 0.9, side: THREE.DoubleSide, alphaTest: 0.5 });
+    [-1.9, 1.9].forEach(function (bx) { p(new THREE.PlaneGeometry(0.7, 1.5), banM, bx, 1.75, -D + 0.12); p(new THREE.CylinderGeometry(0.015, 0.015, 0.84, 8), rMat(0x2a2016, { metalness: 0.4 }), bx, 2.5, -D + 0.13, 0, 0, Math.PI / 2); [-1, 1].forEach(function (e) { p(new THREE.SphereGeometry(0.025, 8, 6), rMat(0x8a6a2a, { metalness: 0.7 }), bx + e * 0.42, 2.5, -D + 0.13); }); });
+    // (the long table: maps, a candle, a dagger driven into the wood, a coin purse, tankards)
+    var TX = -1.0, TZ = 0.4;
+    p(new THREE.BoxGeometry(2.6, 0.08, 1.0), rMat(0x4a3420, { roughness: 0.85 }), TX, 0.78, TZ);
+    [[-1.2, -0.42], [1.2, -0.42], [-1.2, 0.42], [1.2, 0.42]].forEach(function (l) { p(new THREE.BoxGeometry(0.1, 0.76, 0.1), beam, TX + l[0], 0.38, TZ + l[1]); });
+    p(new THREE.PlaneGeometry(4.2, 2.4), rMat(0x4a1a1e, { roughness: 1 }), TX, 0.005, TZ, -Math.PI / 2, 0, 0);   // (a worn red rug under it)
+    var mapT = cpTex(256, 176, function (g, w, h) { g.fillStyle = '#d8c89a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(90,60,30,0.7)'; g.lineWidth = 2; g.beginPath(); g.moveTo(30, 40); g.bezierCurveTo(80, 10, 150, 60, 220, 30); g.bezierCurveTo(240, 90, 200, 150, 120, 150); g.bezierCurveTo(60, 160, 20, 110, 30, 40); g.stroke();
+      g.setLineDash([4, 5]); g.strokeStyle = '#8a2a2a'; g.beginPath(); g.moveTo(60, 120); g.quadraticCurveTo(110, 70, 170, 90); g.stroke(); g.setLineDash([]); g.fillStyle = '#8a2a2a'; g.font = 'bold 22px sans-serif'; g.fillText('✕', 162, 98);
+      g.strokeStyle = 'rgba(90,60,30,0.6)'; for (var k = 0; k < 5; k++) { g.beginPath(); g.moveTo(70 + k * 25, 60); g.lineTo(78 + k * 25, 48); g.lineTo(86 + k * 25, 60); g.stroke(); } });
+    p(new THREE.PlaneGeometry(1.1, 0.75), new THREE.MeshStandardMaterial({ map: mapT, roughness: 1 }), TX - 0.3, 0.825, TZ, -Math.PI / 2, 0, 0.12);
+    p(new THREE.PlaneGeometry(0.5, 0.36), new THREE.MeshStandardMaterial({ map: mapT, roughness: 1 }), TX + 0.75, 0.826, TZ + 0.15, -Math.PI / 2, 0, -0.4);
+    var cdl = rMat(0xe8dcc0, { roughness: 0.6 }), flameM = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.4 }); hdFlames.push(flameM);
+    [[TX + 0.5, TZ - 0.3, 0.16], [TX - 1.05, TZ + 0.3, 0.1]].forEach(function (c) { p(new THREE.CylinderGeometry(0.035, 0.04, 0.012, 12), rMat(0x8a6a2a, { metalness: 0.7 }), c[0], 0.826, c[1]); p(new THREE.CylinderGeometry(0.022, 0.024, c[2], 10), cdl, c[0], 0.83 + c[2] / 2, c[1]); var fl = p(new THREE.SphereGeometry(0.014, 8, 6), flameM, c[0], 0.85 + c[2], c[1]); fl.scale.y = 1.8; fl.castShadow = false; });
+    var dg2 = new THREE.Group(); dg2.position.set(TX + 0.2, 0.9, TZ + 0.25); dg2.rotation.set(0.15, 0.4, 0.1); R.add(dg2);
+    lbP(new THREE.BoxGeometry(0.025, 0.22, 0.006), rMat(0xc8ccd2, { metalness: 0.9, roughness: 0.3, envMap: rubyEnv }), 0, -0.04, 0, 0, 0, 0, dg2); lbP(new THREE.BoxGeometry(0.1, 0.016, 0.024), rMat(0x8a6a2a, { metalness: 0.7 }), 0, 0.07, 0, 0, 0, 0, dg2); lbP(new THREE.CylinderGeometry(0.013, 0.013, 0.1, 8), rMat(0x2a1a12), 0, 0.13, 0, 0, 0, 0, dg2); lbP(new THREE.SphereGeometry(0.02, 8, 6), rMat(0x8a6a2a, { metalness: 0.7 }), 0, 0.19, 0, 0, 0, 0, dg2);
+    var purse = p(new THREE.SphereGeometry(0.07, 10, 8), rMat(0x5a3a22, { roughness: 0.9 }), TX + 0.95, 0.88, TZ - 0.28); purse.scale.set(1, 0.8, 1); p(new THREE.TorusGeometry(0.03, 0.008, 6, 12), rMat(0x8a6a2a), TX + 0.95, 0.93, TZ - 0.28, Math.PI / 2, 0, 0);
+    for (var cn = 0; cn < 5; cn++) p(new THREE.CylinderGeometry(0.018, 0.018, 0.005, 12), rMat(0xd8b040, { metalness: 0.8, roughness: 0.3 }), TX + 0.8 + cn * 0.03, 0.825 + cn * 0.005, TZ - 0.12 + (cn % 2) * 0.02);
+    [[TX - 0.85, TZ - 0.25], [TX + 1.1, TZ + 0.3]].forEach(function (m) { p(new THREE.CylinderGeometry(0.045, 0.05, 0.13, 12), rMat(0x6a5a4a, { roughness: 0.6, metalness: 0.3 }), m[0], 0.885, m[1]); p(new THREE.TorusGeometry(0.03, 0.008, 6, 12, Math.PI), rMat(0x6a5a4a, { metalness: 0.3 }), m[0] + 0.05, 0.89, m[1], 0, 0, -Math.PI / 2); });
+    [[-1.0, -0.2], [0, -0.2], [-1.0, 1.0], [0, 1.0]].forEach(function (b) { p(new THREE.BoxGeometry(0.45, 0.45, 0.4), beam, TX + b[0] + 0.5, 0.225, TZ + (b[1] < 0 ? -0.75 : 0.75)); });   // (stools)
+    for (var tsx = -1.2; tsx <= 1.21; tsx += 0.6) hideSolids.push([TX + tsx, TZ, 0.6]);
+    // (the hearth on the right wall: a rough stone fireplace with a fire burning low)
+    var FX = W - 0.35;
+    p(new THREE.BoxGeometry(0.7, 1.4, 1.6), rMat(0x3a3530, { roughness: 1 }), FX, 0.7, -0.3); p(new THREE.BoxGeometry(0.8, 0.12, 1.8), rMat(0x4a443e, { roughness: 1 }), FX - 0.05, 1.42, -0.3);
+    p(new THREE.BoxGeometry(0.1, 0.9, 1.0), rMat(0x0a0806), FX - 0.31, 0.5, -0.3);
+    var fireM = rMat(0xffb050, { emissive: 0xff7a20, emissiveIntensity: 1.6, transparent: true, opacity: 0.9 }); hdFlames.push(fireM);
+    var fireG = new THREE.Group(); fireG.position.set(FX - 0.45, 0.08, -0.3); R.add(fireG);
+    [[0, 0.22, 0.12], [-0.12, 0.16, 0.09], [0.12, 0.17, 0.09], [0.05, 0.12, 0.07]].forEach(function (f, k) { var fl = lbP(new THREE.ConeGeometry(f[2], f[1] * 2.2, 8), fireM, 0, f[1], f[0], 0, 0, 0, fireG); fl.castShadow = false; fl.userData.k = k; });
+    [[0.2, 0.4], [-0.2, -0.3], [0, 1.4]].forEach(function (lg2) { lbP(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8), rMat(0x3a2418), 0.0, 0.04, 0, Math.PI / 2, lg2[1], 0, fireG).position.z = lg2[0] * 0.5; });
+    hideSolids.push([FX, -0.8, 0.5], [FX, -0.3, 0.5], [FX, 0.2, 0.5]);
+    // (a weapon rack on the left wall: swords, an axe, a bow and a round shield)
+    var RX = -W + 0.15;
+    p(new THREE.BoxGeometry(0.1, 0.08, 1.8), beam, RX, 1.7, -1.2); p(new THREE.BoxGeometry(0.1, 0.08, 1.8), beam, RX, 0.5, -1.2);
+    var steelM = rMat(0xb8bcc2, { metalness: 0.9, roughness: 0.3, envMap: rubyEnv }), gripM = rMat(0x3a2418, { roughness: 0.8 });
+    [-1.8, -1.45, -1.1].forEach(function (sz) { p(new THREE.BoxGeometry(0.02, 1.0, 0.05), steelM, RX + 0.06, 1.1, sz); p(new THREE.BoxGeometry(0.04, 0.03, 0.2), rMat(0x8a6a2a, { metalness: 0.7 }), RX + 0.06, 1.62, sz); p(new THREE.CylinderGeometry(0.018, 0.018, 0.18, 8), gripM, RX + 0.06, 1.74, sz); });
+    p(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 8), gripM, RX + 0.06, 1.1, -0.75); p(new THREE.BoxGeometry(0.03, 0.22, 0.18), steelM, RX + 0.06, 1.55, -0.68);
+    var bowC = new THREE.CatmullRomCurve3([new THREE.Vector3(RX + 0.06, 0.5, -0.4), new THREE.Vector3(RX + 0.06, 1.1, -0.2), new THREE.Vector3(RX + 0.06, 1.7, -0.4)]); p(new THREE.TubeGeometry(bowC, 16, 0.015, 6), rMat(0x6a4422), 0, 0, 0);
+    p(new THREE.CylinderGeometry(0.002, 0.002, 1.2, 4), rMat(0xe8e0d0), RX + 0.06, 1.1, -0.4);
+    var sh = p(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 20), rMat(0x5a3a22, { roughness: 0.8 }), RX + 0.06, 1.1, 0.25, 0, 0, Math.PI / 2); p(new THREE.TorusGeometry(0.31, 0.02, 6, 24), steelM, RX + 0.09, 1.1, 0.25, 0, Math.PI / 2, 0); p(new THREE.SphereGeometry(0.06, 10, 8), steelM, RX + 0.1, 1.1, 0.25);
+    hideSolids.push([RX + 0.3, -1.2, 0.35], [RX + 0.3, 0.25, 0.35]);
+    // (crates, casks and sacks in the corners, and cobwebs up in them)
+    var crateM = rMat(0x5a4430, { roughness: 0.95 });
+    [[-W + 0.45, D - 0.5, 0.6, 0], [-W + 0.45, D - 1.1, 0.5, 0.3], [-W + 0.45, D - 0.5, 0.45, 0.1, 0.6], [W - 0.5, D - 0.6, 0.6, 0.2], [W - 1.2, -D + 0.45, 0.55, 0]].forEach(function (c) { p(new THREE.BoxGeometry(c[2], c[2], c[2]), crateM, c[0], (c[4] || 0) + c[2] / 2, c[1], 0, c[3], 0); hideSolids.push([c[0], c[1], c[2] * 0.75]); });
+    [[W - 0.55, D - 1.5], [W - 0.55, D - 2.2], [-W + 1.3, -D + 0.5]].forEach(function (k) { p(new THREE.CylinderGeometry(0.32, 0.32, 0.8, 14), rMat(0x5a3a22, { roughness: 0.8 }), k[0], 0.4, k[1]); [0.15, 0.65].forEach(function (hy) { p(new THREE.TorusGeometry(0.325, 0.015, 6, 20), rMat(0x2a2420, { metalness: 0.5 }), k[0], hy, k[1], Math.PI / 2, 0, 0); }); hideSolids.push([k[0], k[1], 0.4]); });
+    [[-W + 1.0, D - 0.4], [-W + 1.25, D - 0.55]].forEach(function (sk) { var sa = p(new THREE.SphereGeometry(0.22, 10, 8), rMat(0x8a7a5a, { roughness: 1 }), sk[0], 0.2, sk[1]); sa.scale.set(1, 1.2, 0.9); });
+    var webT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(230,230,240,0.55)'; g.lineWidth = 1; for (var k = 0; k < 7; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k / 6 * Math.PI / 2) * w, Math.sin(k / 6 * Math.PI / 2) * h); g.stroke(); } for (var r = 10; r < 64; r += 9) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI / 2); g.stroke(); } });
+    var webM = new THREE.MeshBasicMaterial({ map: webT, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    [[-W + 0.01, -D + 0.01, Math.PI / 4], [W - 0.01, -D + 0.01, -Math.PI / 4]].forEach(function (c) { var wm = p(new THREE.PlaneGeometry(0.7, 0.7), webM, c[0] + (c[0] < 0 ? 0.25 : -0.25), H - 0.4, c[1] + 0.25, 0, c[2], c[0] < 0 ? 0 : Math.PI / 2); wm.castShadow = false; });
+    R.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
+  })(hideRoom);
+  // ---- the Errand Board: stand before it and press Interact ----
+  var hdBoardOpen = false, hdErrands = [];
+  var hdBtn = document.createElement('button'); hdBtn.type = 'button'; hdBtn.className = 'sleep-btn ship-btn'; hdBtn.innerHTML = '📜 Errand Board <kbd>E</kbd>'; canvas.parentNode.appendChild(hdBtn);
+  var hdBox = document.createElement('div'); hdBox.className = 'inventory ship mailbox hd-board'; hdBox.hidden = true;
+  hdBox.innerHTML = '<div class="inv-head"><b>📜 Errand Board</b><button type="button" class="inv-close" aria-label="Close the Errand Board">✕</button></div><div class="mb-body"></div>';
+  canvas.parentNode.appendChild(hdBox);
+  function renderBoard() {
+    var b = hdBox.querySelector('.mb-body'); b.innerHTML = '';
+    var intro = document.createElement('p'); intro.className = 'ship-hint'; intro.textContent = 'The Hollow Fang takes the jobs no one else will. Take an errand from the board, see it done, and the guild will see you rewarded.'; b.appendChild(intro);
+    if (!hdErrands.length) { var em = document.createElement('div'); em.className = 'mb-empty'; em.innerHTML = '<b>🗡️</b>'; var p1 = document.createElement('p'); p1.textContent = 'No errands are posted right now.'; var p2 = document.createElement('p'); p2.textContent = 'Check back soon, adventurer.'; em.appendChild(p1); em.appendChild(p2); b.appendChild(em); }
+    else { var list = document.createElement('div'); list.className = 'mb-list'; hdErrands.forEach(function (e) { var it = document.createElement('div'); it.className = 'mb-item'; it.textContent = e.title || ''; list.appendChild(it); }); b.appendChild(list); }
+    var row = document.createElement('div'); row.className = 'mb-row'; var cl = document.createElement('button'); cl.type = 'button'; cl.className = 'mb-quiet'; cl.textContent = 'Close'; cl.addEventListener('click', function () { closeBoard(); focusGame(); }); row.appendChild(cl); b.appendChild(row);
+  }
+  function openBoard() { if (hdBoardOpen) return; toggleBag(false); hdBoardOpen = true; menuOpenedAt = Date.now(); walkTarget = null; hdBox.hidden = false; renderBoard(); }
+  function closeBoard() { hdBoardOpen = false; hdBox.hidden = true; }
+  hdBox.querySelector('.inv-close').addEventListener('click', function () { closeBoard(); focusGame(); });
+  hdBtn.addEventListener('click', function () { openBoard(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && hdBoardOpen) { e.stopImmediatePropagation(); e.preventDefault(); closeBoard(); } }, true);
+  function atBoard() { return inHide && Math.abs(player.position.x - HDI_X - HD_BOARD[0]) < 1.1 && player.position.z - HDI_Z < HD_BOARD[1] + 1.4; }
+  window.everdawnGuild = { errands: function () { return hdErrands; }, post: function (e) { hdErrands.push(e); if (hdBoardOpen) renderBoard(); } };   // (for the guild errands to come)
+  // ---- going down and coming back up ----
+  function hideDoorUse(goIn) {
+    if (doorBusy) return;
+    doorBusy = true; doorArmed = false; walkTarget = null; doorSound(); fadeBox.style.opacity = 1;
+    setTimeout(function () {
+      if (goIn) {
+        indoors = true; inShop = inClinic = inBarn = inCarp = inCoop = inFbarn = inCloth = inLab = false; inHide = true;
+        hideScene.add(player); player.position.set(HDI_X, 0, HDI_Z + HDI_EXIT_Z - 0.9); facing = Math.PI;
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = 0;
+      } else {
+        indoors = false; inHide = false; closeBoard(); scene.add(player);
+        var o = hideFront(1.6); player.position.set(o.x, 0, o.z); facing = HIDE_TURN;
+        if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
+      }
+      cam.target.set(player.position.x, 0.8, player.position.z);
+      fadeBox.style.opacity = 0;
+      setTimeout(function () { doorBusy = false; }, 380);
+    }, 380);
+  }
+  DOOR_NAMES.hide = 'The Hollow Fang';
+  var hdLook = new THREE.Vector3();
+  updateCarpenter = (function (base) { return function (t, night) {
+    base.apply(this, arguments);
+    if (inHide && player.parent !== hideScene) { inHide = false; closeBoard(); }   // (carried home or teleported away from inside)
+    if (inHide) {
+      hdLook.set(camera.position.x - HDI_X, 0, camera.position.z - HDI_Z); hdWalls.forEach(function (W) { W.g.visible = hdLook.dot(W.n) < W.d - 0.6; });
+      var fl = Math.sin(t * 11) * 0.5 + Math.sin(t * 27) * 0.3; hdFire.intensity = 1.05 + fl * 0.18; hdCandles.forEach(function (l, i) { l.intensity = 0.42 + Math.sin(t * 13 + i * 2) * 0.05; });
+      hdFlames.forEach(function (m, i) { m.emissiveIntensity = 1.3 + Math.sin(t * 9 + i) * 0.25; });
+    } else if (hideWisp) { var hr = state.minutes / 60, nt = hr < 5.5 || hr > 20 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr > 18.5 ? (hr - 18.5) / 1.5 : 0; hideWisp.material.opacity = nt * (0.55 + Math.sin(t * 2.2) * 0.2); }
+    if (hdBoardOpen && !atBoard()) closeBoard();
+    var show = atBoard() && !hdBoardOpen; if (hdBtn.classList.contains('show') !== show) hdBtn.classList.toggle('show', show);
+  }; })(updateCarpenter);
+  updateDoors = (function (base) { return function () {
+    var px = player.position.x, pz = player.position.z;
+    if (inHide) {                                                      // (inside: walking back up the stairs takes her out)
+      doorWasIn = true; doorNear = doorHinted = null;
+      if (!doorArmed) { if (dist(px, pz, HDI_X, HDI_Z + HDI_EXIT_Z) > 0.85) doorArmed = true; return; }
+      if (dist(px, pz, HDI_X, HDI_Z + HDI_EXIT_Z) < 0.5) hideDoorUse(false);
+      return;
+    }
+    base.apply(this, arguments);
+    if (!indoors && dist(px, pz, hideDoor.x, hideDoor.z) < DOOR_REACH && !doorNear) doorNear = doorHinted = 'hide';   // (outside: by the cellar door)
+  }; })(updateDoors);
+  interact = (function (base) { return function () {
+    if (hdBoardOpen) { if (!menuJustOpened()) closeBoard(); return; }
+    if (atBoard()) { openBoard(); return; }
+    if (!flying && !indoors && doorNear === 'hide' && !doorBusy && !binOpen && !shopOpen && !barnShopOpen) { doorNear = null; walkTarget = null; hideDoorUse(true); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
 });
