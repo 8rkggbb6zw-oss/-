@@ -1292,6 +1292,8 @@
     ["Check back soon, adventurer.", "Vuelve pronto, aventurera.", "Repasse bientôt, aventurière.", "Torna presto, avventuriera.", "Schau bald wieder vorbei, Abenteurerin.", "Volte em breve, aventureira."],
     ["ERRANDS", "ENCARGOS", "MISSIONS", "INCARICHI", "AUFTRÄGE", "TAREFAS"],
     ["WANTED", "SE BUSCA", "RECHERCHÉ", "RICERCATO", "GESUCHT", "PROCURA-SE"],
+    ["KEEP OUT", "PROHIBIDO PASAR", "DÉFENSE D'ENTRER", "VIETATO ENTRARE", "BETRETEN VERBOTEN", "NÃO ENTRE"],
+    ["THE HOLLOW FANG", "EL COLMILLO HUECO", "LE CROC CREUX", "LA ZANNA CAVA", "DER HOHLE FANG", "A PRESA OCA"],
     ["↻ Try again", "↻ Intentar de nuevo", "↻ Réessayer", "↻ Riprova", "↻ Nochmal versuchen", "↻ Tentar de novo"],
     ["This is taking longer than it should. Try again?", "Esto está tardando más de lo normal. ¿Intentar de nuevo?", "Ça prend plus de temps que prévu. Réessayer ?", "Ci sta mettendo più del solito. Riprovare?", "Das dauert länger als es sollte. Nochmal versuchen?", "Está demorando mais do que deveria. Tentar de novo?"],
     ["Fetching your witch…", "Trayendo a tu bruja…", "On va chercher ta sorcière…", "Arriva la tua strega…", "Deine Hexe wird geholt…", "Buscando sua bruxa…"],
