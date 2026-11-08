@@ -2578,7 +2578,49 @@ EVERDAWN_PARTS.push(function (THREE) {
       q(lb, new THREE.CylinderGeometry(0.0145, 0.016, 0.004, 14), sealM, 0.006, 0.107, 0.004); q(lb, new THREE.CylinderGeometry(0.008, 0.009, 0.003, 10), sealM, 0.017, 0.1065, 0.012);
       q(lb, new THREE.CircleGeometry(0.012, 16), new THREE.MeshStandardMaterial({ map: sealT, roughness: 0.35 }), 0.006, 0.1091, 0.004, -Math.PI / 2, 0, 0.6);
     })();
-    [[-1.0, -0.2], [0, -0.2], [-1.0, 1.0], [0, 1.0]].forEach(function (b) { p(new THREE.BoxGeometry(0.45, 0.45, 0.4), beam, TX + b[0] + 0.5, 0.225, TZ + (b[1] < 0 ? -0.75 : 0.75)); });   // (stools)
+    (function () {   // (the four chairs round the table: rough ladder-back chairs of dark oak, plank seats worn pale in the middle, turned legs
+      // braced with stretchers, backs leaning back with slats and an arched top rail cut with a diamond, knobbed finials, iron nails;
+      // pulled out at odd angles, a cloak thrown over one and a cushion on another)
+      var sd = 909; function cr() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+      function q(par, geo, m, px, py, pz, rx, ry, rz) { return cpPart(geo, m, px, py, pz, rx, ry, rz, par); }
+      function grain(base, worn) { return cpTex(128, 256, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); var i;
+        if (worn) { var wg = g.createRadialGradient(w / 2, h * 0.45, 6, w / 2, h * 0.45, 70); wg.addColorStop(0, 'rgba(170,130,90,0.35)'); wg.addColorStop(1, 'rgba(170,130,90,0)'); g.fillStyle = wg; g.fillRect(0, 0, w, h); }
+        for (i = 0; i < 34; i++) { var o = (i * 37) % 128; g.strokeStyle = 'rgba(25,14,6,' + (0.15 + (i % 5) * 0.07).toFixed(2) + ')'; g.lineWidth = 0.6 + (i % 3) * 0.5; g.beginPath(); for (var t = 0; t <= 256; t += 8) { var d = o + Math.sin(t / 256 * Math.PI * 2 + i) * 3; if (t) g.lineTo(d, t); else g.moveTo(d, t); } g.stroke(); }
+        if (worn) for (i = 0; i < 40; i++) { var sx = cr() * w, sy = cr() * h; g.strokeStyle = 'rgba(200,170,130,0.25)'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + (cr() - 0.5) * 20, sy + (cr() - 0.5) * 30); g.stroke(); }
+        g.fillStyle = 'rgba(15,8,4,0.7)'; g.fillRect(0, 0, 2, h); g.fillRect(w - 2, 0, 2, h); }); }
+      var seatM = new THREE.MeshStandardMaterial({ map: grain('#4e3620', true), roughness: 0.75 }), woodM = new THREE.MeshStandardMaterial({ map: grain('#3e2a18', false), roughness: 0.8 }), nailM = rMat(0x1c1a18, { metalness: 0.6, roughness: 0.5 });
+      var fLeg = lbLathe([[0.017, 0], [0.022, 0.015], [0.016, 0.05], [0.02, 0.14], [0.024, 0.19], [0.017, 0.23], [0.021, 0.33], [0.019, 0.42], [0.017, 0.44]], 10);
+      var rLeg = lbLathe([[0.017, 0], [0.022, 0.015], [0.016, 0.05], [0.02, 0.19], [0.016, 0.3], [0.02, 0.44], [0.018, 0.6], [0.021, 0.7], [0.016, 0.86], [0.019, 0.93], [0.013, 0.96], [0, 0.965]], 10);
+      var LEAN = 0.1, slatZ = function (y) { return -0.15 - Math.sin(LEAN) * y; };
+      var rail = new THREE.Shape(); rail.moveTo(-0.19, 0); rail.lineTo(0.19, 0); rail.lineTo(0.19, 0.055); rail.quadraticCurveTo(0, 0.11, -0.19, 0.055); rail.lineTo(-0.19, 0);
+      var hole = new THREE.Path(); hole.moveTo(0, 0.025); hole.lineTo(0.016, 0.05); hole.lineTo(0, 0.075); hole.lineTo(-0.016, 0.05); hole.lineTo(0, 0.025); rail.holes.push(hole);
+      var railG = new THREE.ExtrudeGeometry(rail, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1, curveSegments: 10 }); railG.translate(0, 0, -0.01);
+      function chair(cx, cz, ry, extra) { var c = new THREE.Group(); c.position.set(cx, 0, cz); c.rotation.y = ry; R.add(c);
+        [-1, 1].forEach(function (s) { q(c, fLeg, woodM, s * 0.18, 0, 0.17, -0.04, 0, s * 0.04); q(c, rLeg, woodM, s * 0.18, 0, -0.15, -LEAN, 0, s * 0.03);   // (legs and back posts, splayed a little)
+          q(c, new THREE.SphereGeometry(0.022, 10, 8), woodM, s * 0.18 - s * 0.03 * 0.97, 0.97, slatZ(0.97)); q(c, new THREE.SphereGeometry(0.013, 8, 6), woodM, s * 0.18 - s * 0.03, 0.995, slatZ(1.0));   // (finials)
+          q(c, new THREE.CylinderGeometry(0.011, 0.011, 0.32, 8), woodM, s * 0.183, 0.14, 0.01, Math.PI / 2, 0, 0); });   // (side stretchers)
+        q(c, new THREE.CylinderGeometry(0.011, 0.011, 0.37, 8), woodM, 0, 0.21, 0.172, 0, 0, Math.PI / 2); q(c, new THREE.CylinderGeometry(0.011, 0.011, 0.37, 8), woodM, 0, 0.21, -0.172, 0, 0, Math.PI / 2); q(c, new THREE.CylinderGeometry(0.01, 0.01, 0.37, 8), woodM, 0, 0.14, 0.01, 0, 0, Math.PI / 2);
+        for (var b = 0; b < 3; b++) q(c, new THREE.BoxGeometry(0.143, 0.035, 0.43), seatM, -0.148 + b * 0.148, 0.4575 + (b === 1 ? 0.002 : 0), 0.005, 0, 0, (b - 1) * 0.01);   // (the seat: three planks)
+        q(c, new THREE.CylinderGeometry(0.0175, 0.0175, 0.44, 8), seatM, 0, 0.4575, 0.22, 0, 0, Math.PI / 2);   // (its rounded front edge)
+        [[0, 0.42, 0.18, 0.38, 0.04, 0.02], [0, 0.42, -0.17, 0.38, 0.04, 0.02], [0.18, 0.42, 0, 0.02, 0.04, 0.32], [-0.18, 0.42, 0, 0.02, 0.04, 0.32]].forEach(function (a) { q(c, new THREE.BoxGeometry(a[3], a[4], a[5]), woodM, a[0], a[1], a[2]); });   // (the apron under it)
+        [-0.1, 0, 0.1].forEach(function (nx) { [0.16, -0.16].forEach(function (nz) { q(c, new THREE.CylinderGeometry(0.005, 0.005, 0.003, 6), nailM, nx + (nx < 0 ? -0.02 : nx > 0 ? 0.02 : 0), 0.4765, nz); }); });   // (nails in the seat)
+        [0.6, 0.72].forEach(function (sy) { q(c, new THREE.BoxGeometry(0.34, 0.05, 0.018), woodM, 0, sy, slatZ(sy), -LEAN, 0, 0); [-1, 1].forEach(function (s) { q(c, new THREE.SphereGeometry(0.0045, 6, 4), nailM, s * 0.16, sy, slatZ(sy) + 0.01); }); });   // (the slats)
+        q(c, railG, woodM, 0, 0.83, slatZ(0.86), -LEAN, 0, 0);   // (the arched top rail, a diamond cut through it)
+        if (extra === 'cloak') {   // (a dark wool cloak thrown over the back, hanging down front and back in folds)
+          var clT = cpTex(64, 128, function (g, w, h) { g.fillStyle = '#3a4a3c'; g.fillRect(0, 0, w, h); for (var i = 0; i < 600; i++) { g.fillStyle = i % 2 ? 'rgba(0,0,0,0.2)' : 'rgba(120,140,120,0.08)'; g.fillRect(cr() * w, cr() * h, 1, 2); } g.fillStyle = '#5a1a1c'; g.fillRect(0, h - 6, w, 4); });
+          var cg = new THREE.PlaneGeometry(0.44, 1, 12, 30), cp2 = cg.attributes.position, rz0 = slatZ(0.92);
+          for (var v = 0; v < cp2.count; v++) { var u = cp2.getX(v), t = cp2.getY(v) + 0.5, fold = (Math.sin(u * 30 + t * 2) * 0.022 + Math.sin(u * 13 + 1) * 0.01) * Math.min(1, Math.abs(t - 0.46) * 4), py, pz;
+            if (t < 0.42) { py = 0.93 - (0.42 - t) * 0.75 * (1 + Math.abs(u) * 0.3); pz = rz0 + 0.03 + (0.42 - t) * 0.12 + fold; }
+            else if (t < 0.5) { var a = (t - 0.42) / 0.08 * Math.PI; py = 0.93 + Math.sin(a) * 0.03; pz = rz0 + Math.cos(a) * 0.03 + fold * 0.3; }
+            else { py = 0.93 - (t - 0.5) * 0.7; pz = rz0 - 0.03 - (t - 0.5) * 0.1 + fold; }
+            cp2.setXYZ(v, u * (1 + (Math.abs(py - 0.93)) * 0.4), py, pz); }
+          q(c, new THREE.CylinderGeometry(0.014, 0.014, 0.006, 10), rMat(0x9a7a3a, { metalness: 0.8, roughness: 0.35 }), -0.08, 0.86, rz0 + 0.075, Math.PI / 2 - 0.3, 0, 0);   // (a brass clasp)
+          cg.computeVertexNormals(); q(c, cg, new THREE.MeshStandardMaterial({ map: clT, roughness: 1, side: THREE.DoubleSide }), 0, 0, 0); }
+        if (extra === 'cushion') { var cu = q(c, new THREE.SphereGeometry(0.2, 16, 10), rMat(0x5a1c22, { roughness: 1 }), 0, 0.49, 0.01); cu.scale.set(0.95, 0.15, 0.95);   // (a squashed red cushion, buttoned in the middle)
+          q(c, new THREE.SphereGeometry(0.01, 8, 6), rMat(0x2a0a0c), 0, 0.519, 0.01); [[0.18, 0.18], [-0.18, 0.18]].forEach(function (tt) { q(c, new THREE.CylinderGeometry(0.004, 0.004, 0.1, 5), rMat(0x8a6a3a), tt[0], 0.46, tt[1], 0.3, 0, 0); }); }
+      }
+      chair(TX - 0.5, TZ - 0.78, 0.12, 'cloak'); chair(TX + 0.5, TZ - 0.72, -0.08, ''); chair(TX - 0.5, TZ + 0.8, Math.PI - 0.15, 'cushion'); chair(TX + 0.5, TZ + 0.75, Math.PI + 0.06, '');
+    })();
     for (var tsx = -1.2; tsx <= 1.21; tsx += 0.6) hideSolids.push([TX + tsx, TZ, 0.6]);
     // (the hearth on the right wall: a rough stone fireplace with a fire burning low)
     var FX = W - 0.35;
