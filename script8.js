@@ -2258,44 +2258,26 @@ EVERDAWN_PARTS.push(function (THREE) {
       var brassM = rMat(0xa8843e, { metalness: 0.8, roughness: 0.32, envMap: rubyEnv }), ironM = rMat(0x2a2624, { metalness: 0.6, roughness: 0.55 }), darkBrass = rMat(0x7a6030, { metalness: 0.75, roughness: 0.4, envMap: rubyEnv });
       var waxM = rMat(0xece2c8, { roughness: 0.55 }), oldWax = rMat(0xd8caa0, { roughness: 0.6 }), wickM = rMat(0x141010, { roughness: 1 }), emberM = rMat(0x401000, { emissive: 0xff5010, emissiveIntensity: 1.2 });
       var flameM = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.4 }), flameB = new THREE.MeshBasicMaterial({ color: 0x6080ff, transparent: true, opacity: 0.55 }); hdFlames.push(flameM);
-      // ---- the rug: a great bear's pelt thrown under the table, legs splayed and paws clawed, a stub of a tail; dark along the
-      // spine and paler at the flanks, every hair drawn flowing out from the spine, the fur standing up in layers so it looks
-      // thick and shaggy, ragged at the edges, lumpy where it lies on the stone ----
+      // ---- the rug: a plain old woven rug, deep wine red with a dark border and a few thin stripes, the weave showing, a little
+      // faded and worn where the stools scrape, fringed at both ends ----
       function dia(g, cx, cy, rx, ry) { g.beginPath(); g.moveTo(cx, cy - ry); g.lineTo(cx + rx, cy); g.lineTo(cx, cy + ry); g.lineTo(cx - rx, cy); g.closePath(); }
-      var FW = 1024, FH = 700, fShapes = [[512, 350, 330, 190], [190, 350, 100, 105]];   // (the body and the neck, then the limbs and tail as runs of circles)
-      [[[330, 250], [260, 150], [215, 64]], [[330, 450], [260, 550], [215, 636]], [[700, 240], [790, 150], [850, 62]], [[700, 460], [790, 550], [850, 638]]].forEach(function (lg) {
-        for (var t = 0; t <= 1.001; t += 0.05) { var a = lg[0], b = lg[1], c = lg[2], u = 1 - t; fShapes.push([u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], u * u * a[1] + 2 * u * t * b[1] + t * t * c[1], 72 - t * 30, 72 - t * 30]); } });
-      for (var ts = 0; ts <= 1.001; ts += 0.08) fShapes.push([840 + ts * 150, 350 + Math.sin(ts * 3) * 14, 44 - ts * 24, 40 - ts * 22]);
-      var paws = [[215, 64, -1], [215, 636, 1], [850, 62, -1], [850, 638, 1]];
-      function fIn(px, py, grow) { for (var i = 0; i < fShapes.length; i++) { var s = fShapes[i], dx = (px - s[0]) / (s[2] + grow), dy = (py - s[1]) / (s[3] + grow); if (dx * dx + dy * dy < 1) return true; } return false; }
-      function fPath(g, grow) { g.beginPath(); fShapes.forEach(function (s) { g.moveTo(s[0] + s[2] + grow, s[1]); g.ellipse(s[0], s[1], s[2] + grow, s[3] + grow, 0, 0, Math.PI * 2); }); }
-      function fFlow(px, py) { var dx, dy; if (((px - 512) / 330) * ((px - 512) / 330) + ((py - 350) / 190) * ((py - 350) / 190) < 1) { dx = 1; dy = (py - 350) / 150; } else { dx = px - 512; dy = py - 350; } var l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; }
-      function tuft(g, px, py, f, L, W, curve) { var tx = px + f[0] * L - f[1] * curve * L, ty = py + f[1] * L + f[0] * curve * L;   // (a lock of fur: wide at the root, curving to a point)
-        g.beginPath(); g.moveTo(px - f[1] * W, py + f[0] * W); g.quadraticCurveTo(px + f[0] * L * 0.55 - f[1] * W * 0.6, py + f[1] * L * 0.55 + f[0] * W * 0.6, tx, ty); g.quadraticCurveTo(px + f[0] * L * 0.55 + f[1] * W * 0.6, py + f[1] * L * 0.55 - f[0] * W * 0.6, px + f[1] * W, py - f[0] * W); g.closePath(); return [tx, ty]; }
-      function zone(py) { return Math.min(1, Math.abs(py - 350) / 190); }   // (0 on the spine, 1 out at the flanks)
-      var furT = cpTex(FW, FH, function (g, w, h) { g.clearRect(0, 0, w, h); var i;   // (the fur's colour: dark roots, locks of fur in rich browns, black down the spine, paler at the flanks, silver-tipped guard hairs)
-        g.save(); fPath(g, 0); g.clip();
-        var lg = g.createLinearGradient(0, 120, 0, 580); [[0, '#3e2c1c'], [0.3, '#24180f'], [0.5, '#0e0906'], [0.7, '#24180f'], [1, '#3e2c1c']].forEach(function (s) { lg.addColorStop(s[0], s[1]); }); g.fillStyle = lg; g.fillRect(0, 0, w, h);
-        g.restore(); g.lineCap = 'round';
-        for (i = 0; i < 26000; i++) { var px = tr() * w, py = tr() * h; if (!fIn(px, py, 0)) continue; var f = fFlow(px, py), z = zone(py), L = 12 + tr() * 16, W = 1.2 + tr() * 1.6, r = tr();
-          var tip = r < 0.15 ? [16, 10, 6] : r < 0.85 ? [Math.round(48 + z * 40), Math.round(32 + z * 30), Math.round(20 + z * 18)] : [Math.round(96 + z * 30), Math.round(74 + z * 24), Math.round(50 + z * 16)];
-          var e = tuft(g, px, py, f, L, W, (tr() - 0.5) * 0.35), gr = g.createLinearGradient(px, py, e[0], e[1]); gr.addColorStop(0, 'rgba(8,5,3,0.75)'); gr.addColorStop(0.6, 'rgba(' + tip.join(',') + ',0.85)'); gr.addColorStop(1, 'rgba(' + tip.join(',') + ',0.25)'); g.fillStyle = gr; g.fill(); }
-        for (i = 0; i < 26000; i++) { var hx = tr() * w, hy = tr() * h; if (!fIn(hx, hy, 0)) continue; var hf = fFlow(hx, hy), hl = 4 + tr() * 7;   // (fine hairs between the locks)
-          g.strokeStyle = tr() < 0.6 ? 'rgba(10,6,4,0.4)' : 'rgba(90,66,44,0.3)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + hf[0] * hl, hy + hf[1] * hl); g.stroke(); }
-        for (i = 0; i < 7000; i++) { var ex = tr() * w, ey = tr() * h; if (!fIn(ex, ey, 0) || fIn(ex, ey, -14)) continue; var d = fFlow(ex, ey), ez = zone(ey);   // (shaggy locks spilling over the edges)
-          var ee = tuft(g, ex, ey, d, 14 + tr() * 16, 1.5 + tr() * 2, (tr() - 0.5) * 0.5), eg = g.createLinearGradient(ex, ey, ee[0], ee[1]); eg.addColorStop(0, 'rgba(14,9,6,0.95)'); eg.addColorStop(1, 'rgba(' + Math.round(70 + ez * 30) + ',' + Math.round(50 + ez * 24) + ',' + Math.round(32 + ez * 16) + ',0.9)'); g.fillStyle = eg; g.fill(); }
-        for (i = 0; i < 3500; i++) { var gx = 170 + tr() * 700, gy = 350 + (tr() - 0.5) * 150; if (!fIn(gx, gy, 0)) continue; var gf = fFlow(gx, gy), gl = 8 + tr() * 8; g.strokeStyle = 'rgba(205,190,165,' + (0.15 + tr() * 0.25).toFixed(2) + ')'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(gx + gf[0] * gl * 0.5, gy + gf[1] * gl * 0.5); g.lineTo(gx + gf[0] * gl, gy + gf[1] * gl); g.stroke(); }
-        paws.forEach(function (p3) { for (var c = 0; c < 4; c++) { var cx = p3[0] - 30 + c * 20, cy = p3[1] + p3[2] * 34; g.lineWidth = 4.5; g.strokeStyle = '#3a3026'; g.beginPath(); g.moveTo(cx, cy - p3[2] * 8); g.quadraticCurveTo(cx + 3, cy + p3[2] * 6, cx - 1, cy + p3[2] * 15); g.stroke(); g.lineWidth = 3; g.strokeStyle = '#d8ccb0'; g.stroke(); g.lineWidth = 1; g.strokeStyle = 'rgba(255,250,235,0.7)'; g.beginPath(); g.moveTo(cx - 0.8, cy - p3[2] * 6); g.quadraticCurveTo(cx + 2, cy + p3[2] * 5, cx - 1.5, cy + p3[2] * 13); g.stroke(); } });   // (the claws)
-      });
-      var furA = cpTex(FW / 2, FH / 2, function (g, w, h) { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.save(); g.scale(0.5, 0.5); fPath(g, -8); g.clip();   // (the locks for the fur's upper layers, so the fur stands up and leans the way it lies)
-        for (var i = 0; i < 14000; i++) { var px = tr() * FW, py = tr() * FH; if (!fIn(px, py, -8)) continue; var v = Math.floor(70 + tr() * 185); g.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')'; tuft(g, px, py, fFlow(px, py), 12 + tr() * 16, 1.5 + tr() * 2, (tr() - 0.5) * 0.35); g.fill(); }
-        for (i = 0; i < 12000; i++) { var v2 = Math.floor(60 + tr() * 140); g.fillStyle = 'rgb(' + v2 + ',' + v2 + ',' + v2 + ')'; g.beginPath(); g.arc(tr() * FW, tr() * FH, 1.4 + tr() * 1.6, 0, Math.PI * 2); g.fill(); }
-        g.restore(); });
-      var pg0 = new THREE.PlaneGeometry(4.2, 2.9, 42, 28), pp0 = pg0.attributes.position;
-      for (k = 0; k < pp0.count; k++) pp0.setZ(k, 0.008 * (1 + Math.sin(pp0.getX(k) * 2.7 + 1) * Math.sin(pp0.getY(k) * 3.3)));
-      pg0.computeVertexNormals();
-      quiet(q(R, pg0, new THREE.MeshStandardMaterial({ map: furT, bumpMap: furT, bumpScale: 0.01, alphaTest: 0.5, roughness: 1 }), TX - 0.05, 0.004, TZ, -Math.PI / 2, 0, 0.06));
-      for (k = 1; k <= 12; k++) { var sh = 0.55 + k * 0.045; quiet(q(R, pg0, new THREE.MeshStandardMaterial({ map: furT, alphaMap: furA, alphaTest: 0.28 + k * 0.055, color: new THREE.Color(sh, sh, sh), roughness: 1, side: THREE.DoubleSide }), TX - 0.05 + k * 0.0012, 0.004 + k * 0.0026, TZ, -Math.PI / 2, 0, 0.06)); }   // (twelve layers of fur, darker at the roots, each leaning a little further the way the fur lies)
+      var rugT = cpTex(1024, 584, function (g, w, h) { var i, x2, y2;
+        [[0, '#2a1416'], [30, '#8a6a44'], [36, '#2a1416'], [52, '#8a6a44'], [56, '#5a1c20'], [66, '#2a1416'], [72, '#6a2226']].forEach(function (b) { g.fillStyle = b[1]; g.fillRect(b[0], b[0], w - b[0] * 2, h - b[0] * 2); });
+        for (i = 0; i < 9; i++) { g.fillStyle = i % 3 === 1 ? 'rgba(120,36,40,0.25)' : i % 3 === 2 ? 'rgba(30,6,8,0.15)' : 'rgba(0,0,0,0)'; g.fillRect(72, 72 + i * (h - 144) / 9, w - 144, (h - 144) / 9 + 1); }   // (faint bands where the dye changed)
+        for (y2 = 0; y2 < h; y2 += 2) { g.fillStyle = 'rgba(0,0,0,0.13)'; g.fillRect(0, y2, w, 1); }   // (the weave)
+        for (x2 = 0; x2 < w; x2 += 3) { g.fillStyle = 'rgba(255,235,215,0.04)'; g.fillRect(x2, 0, 1, h); }
+        for (i = 0; i < 30000; i++) { g.fillStyle = i % 3 ? 'rgba(0,0,0,0.15)' : 'rgba(255,230,200,0.06)'; g.fillRect(tr() * w, tr() * h, 1 + (i % 4 === 0), 1); }
+        [[-122, -181, 100, 50], [122, -181, 100, 50], [-122, 181, 100, 50], [122, 181, 100, 50]].forEach(function (o) { var ex = w / 2 + o[0], ey = h / 2 + o[1], gr = g.createRadialGradient(ex, ey, 4, ex, ey, o[2]);   // (worn where the stools scrape)
+          gr.addColorStop(0, 'rgba(160,110,95,0.3)'); gr.addColorStop(1, 'rgba(160,110,95,0)'); g.fillStyle = gr; g.beginPath(); g.ellipse(ex, ey, o[2], o[3], 0, 0, Math.PI * 2); g.fill(); });
+        var vg = g.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, w * 0.6); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(10,6,4,0.3)'); g.fillStyle = vg; g.fillRect(0, 0, w, h); });
+      var rugB = cpTex(512, 292, function (g, w, h) { g.fillStyle = '#909090'; g.fillRect(0, 0, w, h); for (var y2 = 1; y2 < h; y2 += 2) { g.fillStyle = 'rgba(40,40,40,0.5)'; g.fillRect(0, y2, w, 1); } for (var x2 = 0; x2 < w; x2 += 2) { g.fillStyle = 'rgba(60,60,60,0.25)'; g.fillRect(x2, 0, 1, h); } });
+      quiet(q(R, new THREE.PlaneGeometry(4.2, 2.4), new THREE.MeshStandardMaterial({ map: rugT, bumpMap: rugB, bumpScale: 0.006, roughness: 1 }), TX, 0.012, TZ, -Math.PI / 2, 0, 0));
+      var rugEdge = rMat(0x2a1416, { roughness: 1 });   // (the rug's thickness)
+      [[0, -1.195, 4.2, 0.01], [0, 1.195, 4.2, 0.01], [-2.095, 0, 0.01, 2.4], [2.095, 0, 0.01, 2.4]].forEach(function (e) { quiet(q(R, new THREE.BoxGeometry(e[2], 0.012, e[3]), rugEdge, TX + e[0], 0.006, TZ + e[1])); });
+      var FN = 64, fr = new THREE.InstancedMesh(new THREE.BoxGeometry(0.075, 0.003, 0.009), rMat(0xc8b898, { roughness: 1 }), FN * 2), fm = new THREE.Matrix4(), fq = new THREE.Quaternion(), fe = new THREE.Euler(), fv = new THREE.Vector3(), fs = new THREE.Vector3();
+      for (k = 0; k < FN * 2; k++) { var side = k < FN ? -1 : 1, zr = -1.17 + (k % FN) / (FN - 1) * 2.34, len = 0.8 + tr() * 0.4;   // (the fringe)
+        fe.set(0, (tr() - 0.5) * 0.25, -side * 0.12); fq.setFromEuler(fe); fs.set(len, 1, 1); fv.set(TX + side * (2.1 + 0.0375 * len), 0.008, TZ + zr); fm.compose(fv, fq, fs); fr.setMatrixAt(k, fm); }
+      fr.receiveShadow = true; R.add(fr);
       // ---- the table: five thick oak planks with gaps between, dark with age, the grain flowing round knots; scratched, gouged and
       // carved (tally marks, a fang, a game of noughts and crosses), ringed by tankards, spotted with wax and ink, a scorch where a
       // candle burned down; cleated ends nailed on, iron corner plates, an apron, eight-sided legs with iron bands, braces and a
