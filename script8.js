@@ -2643,9 +2643,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     hideSolids.push([RX + 0.3, -1.2, 0.35], [RX + 0.3, 0.25, 0.35]);
     // (crates, casks and sacks in the corners, and cobwebs up in them)
     var crateM = rMat(0x5a4430, { roughness: 0.95 });
-    [[-W + 0.45, D - 0.5, 0.6, 0], [-W + 0.45, D - 1.1, 0.5, 0.3], [-W + 0.45, D - 0.5, 0.45, 0.1, 0.6], [W - 0.5, D - 0.6, 0.6, 0.2], [W - 1.2, -D + 0.45, 0.55, 0]].forEach(function (c) { p(new THREE.BoxGeometry(c[2], c[2], c[2]), crateM, c[0], (c[4] || 0) + c[2] / 2, c[1], 0, c[3], 0); hideSolids.push([c[0], c[1], c[2] * 0.75]); });
+    [[W - 0.5, D - 0.6, 0.6, 0.2], [W - 1.2, -D + 0.45, 0.55, 0]].forEach(function (c) { p(new THREE.BoxGeometry(c[2], c[2], c[2]), crateM, c[0], (c[4] || 0) + c[2] / 2, c[1], 0, c[3], 0); hideSolids.push([c[0], c[1], c[2] * 0.75]); });
     [[W - 0.55, D - 1.5], [W - 0.55, D - 2.2], [-W + 1.3, -D + 0.5]].forEach(function (k) { p(new THREE.CylinderGeometry(0.32, 0.32, 0.8, 14), rMat(0x5a3a22, { roughness: 0.8 }), k[0], 0.4, k[1]); [0.15, 0.65].forEach(function (hy) { p(new THREE.TorusGeometry(0.325, 0.015, 6, 20), rMat(0x2a2420, { metalness: 0.5 }), k[0], hy, k[1], Math.PI / 2, 0, 0); }); hideSolids.push([k[0], k[1], 0.4]); });
-    [[-W + 1.0, D - 0.4], [-W + 1.25, D - 0.55]].forEach(function (sk) { var sa = p(new THREE.SphereGeometry(0.22, 10, 8), rMat(0x8a7a5a, { roughness: 1 }), sk[0], 0.2, sk[1]); sa.scale.set(1, 1.2, 0.9); });
     var webT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(230,230,240,0.55)'; g.lineWidth = 1; for (var k = 0; k < 7; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k / 6 * Math.PI / 2) * w, Math.sin(k / 6 * Math.PI / 2) * h); g.stroke(); } for (var r = 10; r < 64; r += 9) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI / 2); g.stroke(); } });
     var webM = new THREE.MeshBasicMaterial({ map: webT, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     [[-W + 0.01, -D + 0.01, Math.PI / 4], [W - 0.01, -D + 0.01, -Math.PI / 4]].forEach(function (c) { var wm = p(new THREE.PlaneGeometry(0.7, 0.7), webM, c[0] + (c[0] < 0 ? 0.25 : -0.25), H - 0.4, c[1] + 0.25, 0, c[2], c[0] < 0 ? 0 : Math.PI / 2); wm.castShadow = false; });
@@ -2898,15 +2897,123 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[0.03, 1.08, -0.1, 0.1], [-0.08, 1.15, 0.15, -0.1], [0.06, 1.48, 0.05, 0.3], [-0.05, 0.98, 0.0, -0.2]].forEach(function (a) { var ar = new THREE.Group(); ar.position.set(a[0], a[1], 0.18); ar.rotation.set(a[2], a[3], 0); TD.add(ar);
       lbP(new THREE.CylinderGeometry(0.005, 0.005, 0.4, 5), rMat(0x8a6a3a), 0, 0, 0.2, Math.PI / 2, 0, 0, ar); [0, Math.PI / 2].forEach(function (fr) { lbP(new THREE.PlaneGeometry(0.03, 0.07), rMat(0xe8e0d0, { side: THREE.DoubleSide }), 0, 0, 0.38, Math.PI / 2, fr, 0, ar); }); });
     hideSolids.push([2.5, 0.9, 0.35]);
-    // (a bedroll with furs by the left wall, a pack and a lantern beside it)
-    var BR = new THREE.Group(); BR.position.set(-3.75, 0, 1.55); R.add(BR);
-    lbP(new THREE.BoxGeometry(0.75, 0.08, 1.7), rMat(0x4a3a5a, { roughness: 1 }), 0, 0.04, 0, 0, 0, 0, BR); var roll = lbP(new THREE.CylinderGeometry(0.11, 0.11, 0.75, 12), rMat(0x5a4a6a, { roughness: 1 }), 0, 0.11, -0.78, 0, 0, Math.PI / 2, BR);
-    var fur = rMat(0x8a7a6a, { roughness: 1 }); var fu = lbP(new THREE.BoxGeometry(0.78, 0.05, 1.0), fur, 0.02, 0.1, 0.3, 0, 0.05, 0.04, BR); for (var ft = 0; ft < 14; ft++) { var tf = lbP(new THREE.ConeGeometry(0.03, 0.06, 4), fur, -0.35 + (ft % 7) * 0.12, 0.13, -0.15 + Math.floor(ft / 7) * 0.9, 0, ft, 0.4, BR); tf.castShadow = false; }
-    var pack = lbP(new THREE.BoxGeometry(0.3, 0.38, 0.2), rMat(0x5a4028, { roughness: 0.9 }), 0.55, 0.19, -0.75, 0, 0.3, 0, BR); lbP(new THREE.CylinderGeometry(0.1, 0.1, 0.3, 10), rMat(0x4a3a5a), 0.55, 0.42, -0.75, 0, 0.3, Math.PI / 2, BR);
-    var bl = new THREE.Group(); bl.position.set(0.5, 0, 0.55); BR.add(bl);   // (a little lantern on the floor by the bedroll, lit)
-    var lmM = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.3 }); hdFlames.push(lmM);
-    lbP(new THREE.BoxGeometry(0.14, 0.02, 0.14), iron, 0, 0.01, 0, 0, 0, 0, bl); lbP(new THREE.BoxGeometry(0.1, 0.14, 0.1), lmM, 0, 0.09, 0, 0, 0, 0, bl); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { lbP(new THREE.BoxGeometry(0.012, 0.16, 0.012), iron, c[0] * 0.055, 0.09, c[1] * 0.055, 0, 0, 0, bl); });
-    lbP(new THREE.ConeGeometry(0.09, 0.06, 4), iron, 0, 0.19, 0, 0, Math.PI / 4, 0, bl); lbP(new THREE.TorusGeometry(0.03, 0.005, 5, 10), iron, 0, 0.24, 0, 0, 0, 0, bl);
+    // (the front-left corner, in great detail: three plank crates, nailed and braced, the guild's mark daubed on them, the top one
+    // prised open with straw spilling out; two burlap sacks tied off with rope, one slumped open with grain spilt across the floor;
+    // the bedroll: a quilted pad, a plaid blanket thrown back, a shaggy fur over the foot, a linen pillow and a rolled blanket
+    // strapped at the head; a leather pack with a buckled flap, side pocket and a tin cup hanging off it; and an iron lantern with
+    // glass panes, sooty at the top, a candle burning inside)
+    (function () {
+      var sd = 313; function cr() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+      function q(par, geo, m, x, y, z, rx, ry, rz) { return cpPart(geo, m, x, y, z, rx, ry, rz, par); }
+      function grp(x, y, z, ry, par) { var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry || 0; (par || R).add(g); return g; }
+      function quiet(o) { o.castShadow = false; return o; }
+      function grainT(base, lines, vert) { return cpTex(128, 128, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); for (var i = 0; i < lines; i++) { var o = (i * 41) % 128; g.strokeStyle = 'rgba(25,14,6,' + (0.12 + (i % 5) * 0.07).toFixed(2) + ')'; g.lineWidth = 0.6 + (i % 3) * 0.5; g.beginPath();
+        for (var t = 0; t <= 128; t += 8) { var d = o + Math.sin(t / 128 * Math.PI * 2 + i) * 2.5; if (vert) { if (t) g.lineTo(d, t); else g.moveTo(d, t); } else { if (t) g.lineTo(t, d); else g.moveTo(t, d); } } g.stroke(); }
+        for (i = 0; i < 6; i++) { g.fillStyle = 'rgba(20,10,4,0.35)'; g.beginPath(); g.ellipse(cr() * w, cr() * h, 4 + cr() * 4, 1.5 + cr() * 2, vert ? Math.PI / 2 : 0, 0, Math.PI * 2); g.fill(); }
+        g.fillStyle = 'rgba(10,5,2,0.6)'; if (vert) { g.fillRect(0, 0, 2, h); g.fillRect(w - 2, 0, 2, h); } else { g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); } }); }
+      var plankM = new THREE.MeshStandardMaterial({ map: grainT('#6a5034', 30, false), roughness: 0.9 }), postM = new THREE.MeshStandardMaterial({ map: grainT('#4a3420', 26, true), roughness: 0.9 }), nailM = rMat(0x1c1a18, { metalness: 0.6, roughness: 0.5 });
+      var markT = cpTex(128, 128, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(20,14,10,0.85)'; g.fillStyle = 'rgba(20,14,10,0.85)'; g.lineWidth = 7; g.lineCap = 'round';   // (the guild's mark, daubed on in black: a crescent and a fang)
+        g.beginPath(); g.arc(60, 64, 40, Math.PI * 0.3, Math.PI * 1.7); g.stroke(); g.beginPath(); g.moveTo(72, 22); g.quadraticCurveTo(96, 62, 70, 108); g.quadraticCurveTo(80, 62, 66, 26); g.closePath(); g.fill();
+        for (var i = 0; i < 30; i++) { g.clearRect(cr() * w, cr() * h, 2 + cr() * 5, 1 + cr() * 3); } });   // (flaked where it's worn)
+      var markM = new THREE.MeshStandardMaterial({ map: markT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
+      function crate(x, y, z, s, ry, open) { var c = grp(x, y, z, ry), n = 3, ph = (s - 0.012) / n - 0.008;
+        for (var sdI = 0; sdI < 4; sdI++) { var a = sdI * Math.PI / 2, f = new THREE.Group(); f.rotation.y = a; c.add(f);   // (each side: three planks with gaps, a diagonal brace, nails)
+          for (var k = 0; k < n; k++) { var py = 0.006 + ph / 2 + k * (ph + 0.008); q(f, new THREE.BoxGeometry(s - 0.04, ph, 0.016), plankM, 0, py, s / 2 - 0.008, 0, 0, (cr() - 0.5) * 0.01);
+            [-1, 1].forEach(function (e) { [-ph / 4, ph / 4].forEach(function (o) { q(f, new THREE.CylinderGeometry(0.0045, 0.0045, 0.003, 6), nailM, e * (s / 2 - 0.045), py + o, s / 2 + 0.001, Math.PI / 2, 0, 0); }); }); }
+          var dl = Math.hypot(s - 0.12, s - 0.08); q(f, new THREE.BoxGeometry(0.055, dl, 0.014), postM, 0, s / 2, s / 2 + 0.012, 0, 0, Math.atan2(s - 0.12, s - 0.08) * (sdI % 2 ? 1 : -1));
+          if (sdI === 0 || sdI === 3) quiet(q(f, new THREE.PlaneGeometry(s * 0.45, s * 0.45), markM, s * 0.18, s * 0.52, s / 2 + 0.021, 0, 0, (cr() - 0.5) * 0.3)); }
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (e) { q(c, new THREE.BoxGeometry(0.045, s, 0.045), postM, e[0] * (s / 2 - 0.022), s / 2, e[1] * (s / 2 - 0.022)); });   // (corner posts)
+        q(c, new THREE.BoxGeometry(s - 0.03, 0.01, s - 0.03), rMat(0x120c08, { roughness: 1 }), 0, s - 0.02, 0);   // (dark inside)
+        var lid = new THREE.Group(); c.add(lid);
+        if (open) { lid.position.set(-s / 2, s, 0); lid.rotation.z = 0.5; lid.rotation.y = 0.15; }
+        else lid.position.set(0, s, 0);
+        for (var lp = 0; lp < 3; lp++) { var lz = -s / 3 + lp * s / 3; q(lid, new THREE.BoxGeometry(s, 0.018, s / 3 - 0.008), plankM, open ? s / 2 : 0, 0.009, lz, 0, 0, 0); [-1, 1].forEach(function (e) { q(lid, new THREE.CylinderGeometry(0.0045, 0.0045, 0.003, 6), nailM, (open ? s / 2 : 0) + e * (s / 2 - 0.03), 0.0195, lz); }); }
+        [-1, 1].forEach(function (e) { q(lid, new THREE.BoxGeometry(0.05, 0.016, s - 0.02), postM, (open ? s / 2 : 0) + e * (s / 2 - 0.06), 0.026, 0); });
+        if (open) { var strawM = rMat(0xc8a860, { roughness: 1 });   // (straw spilling out over the rim)
+          for (var st = 0; st < 60; st++) { var sx = (cr() - 0.5) * (s - 0.08), sz = (cr() - 0.5) * (s - 0.08); quiet(q(c, new THREE.CylinderGeometry(0.003, 0.003, 0.1 + cr() * 0.12, 3), strawM, sx, s - 0.01 + cr() * 0.03, sz, (cr() - 0.5) * 2.4, cr() * 6, (cr() - 0.5) * 2.4)); }
+          for (st = 0; st < 14; st++) { var ea = cr() * 6.28; quiet(q(c, new THREE.CylinderGeometry(0.003, 0.003, 0.12, 3), strawM, Math.cos(ea) * s * 0.5, s - 0.02 - cr() * 0.06, Math.sin(ea) * s * 0.5, 0.3 + cr(), ea, 0.4)); }
+          q(c, new THREE.CylinderGeometry(0.03, 0.035, 0.12, 10), rMat(0x2a4a3a, { roughness: 0.15, transparent: true, opacity: 0.85 }), 0.06, s + 0.02, -0.05, 0.2, 0, 0.1);   // (a bottle nestled in the straw)
+          q(c, new THREE.CylinderGeometry(0.012, 0.012, 0.05, 8), rMat(0x2a4a3a, { roughness: 0.15 }), 0.068, s + 0.1, -0.045, 0.2, 0, 0.1); q(c, new THREE.CylinderGeometry(0.013, 0.012, 0.02, 8), rMat(0x8a6a4a, { roughness: 1 }), 0.07, s + 0.13, -0.04, 0.2, 0, 0.1); }
+      }
+      crate(-W + 0.45, 0, D - 0.5, 0.6, 0.02); crate(-W + 0.45, 0, D - 1.1, 0.5, 0.3); crate(-W + 0.47, 0.6, D - 0.52, 0.45, 0.12, true);
+      hideSolids.push([-W + 0.45, D - 0.5, 0.45], [-W + 0.45, D - 1.1, 0.38]);
+      // (the sacks)
+      var burT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#9a8460'; g.fillRect(0, 0, w, h); for (var y2 = 0; y2 < h; y2 += 2) { g.fillStyle = 'rgba(50,36,18,' + (y2 % 4 ? 0.12 : 0.22) + ')'; g.fillRect(0, y2, w, 1); } for (var x2 = 0; x2 < w; x2 += 2) { g.fillStyle = 'rgba(50,36,18,0.12)'; g.fillRect(x2, 0, 1, h); }
+        for (var i = 0; i < 500; i++) { g.fillStyle = i % 2 ? 'rgba(200,180,130,0.25)' : 'rgba(40,28,12,0.25)'; g.fillRect(cr() * w, cr() * h, 2, 1); }
+        for (i = 0; i < 4; i++) { var bx = cr() * w, by = cr() * h, bg = g.createRadialGradient(bx, by, 2, bx, by, 22); bg.addColorStop(0, 'rgba(40,28,14,0.3)'); bg.addColorStop(1, 'rgba(40,28,14,0)'); g.fillStyle = bg; g.fillRect(bx - 22, by - 22, 44, 44); } }, [4, 3]);
+      var burM = new THREE.MeshStandardMaterial({ map: burT, bumpMap: burT, bumpScale: 0.0015, roughness: 1, side: THREE.DoubleSide }), ropeM = rMat(0x9a7a4a, { roughness: 1 });
+      function sackGeo(pts, lean, lump) { var gg = lbLathe(pts, 20), pp = gg.attributes.position; for (var i = 0; i < pp.count; i++) { var x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i), a = Math.atan2(z, x), f = 1 + lump * (Math.sin(a * 3 + y * 14) * 0.6 + Math.sin(a * 5 - y * 9) * 0.4);
+        pp.setXYZ(i, x * f + y * y * lean, y, z * f * 0.85); } gg.computeVertexNormals(); return gg; }
+      var s1 = grp(-W + 1.0, 0, D - 0.4, 0.4);   // (a full sack, tied off at the neck, its top flopped over)
+      q(s1, sackGeo([[0, 0], [0.16, 0.005], [0.21, 0.06], [0.23, 0.18], [0.21, 0.3], [0.14, 0.39], [0.065, 0.44], [0.055, 0.47], [0.075, 0.51], [0.095, 0.55], [0.07, 0.58], [0.02, 0.585]], 0.25, 0.05), burM, 0, 0, 0);
+      q(s1, new THREE.TorusGeometry(0.062, 0.011, 6, 16), ropeM, 0.05, 0.46, 0, Math.PI / 2, 0, 0);
+      q(s1, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.1, 0.46, 0.04), new THREE.Vector3(0.16, 0.4, 0.08), new THREE.Vector3(0.2, 0.3, 0.1), new THREE.Vector3(0.23, 0.2, 0.08)]), 10, 0.009, 5), ropeM, 0, 0, 0);
+      q(s1, new THREE.SphereGeometry(0.014, 6, 5), ropeM, 0.23, 0.2, 0.08);
+      var s2 = grp(-W + 1.3, 0, D - 0.65, -0.5);   // (a sack slumped open, grain spilt out of it)
+      var s2g = q(s2, sackGeo([[0, 0], [0.17, 0.005], [0.22, 0.05], [0.235, 0.13], [0.22, 0.21], [0.19, 0.26], [0.2, 0.29], [0.24, 0.3], [0.27, 0.27], [0.27, 0.22]], -0.3, 0.09), burM, 0, 0, 0); s2g.rotation.z = 0.18;   // (its mouth rolled down and flopping open)
+      var grainM = rMat(0xd8b868, { roughness: 0.9 });
+      var gtop = quiet(q(s2, new THREE.SphereGeometry(0.17, 14, 8), grainM, -0.04, 0.235, 0)); gtop.scale.set(1, 0.32, 0.85); gtop.rotation.z = 0.18;   // (the grain heaped inside it)
+      var gpile = quiet(q(s2, new THREE.SphereGeometry(0.16, 14, 8), grainM, -0.3, 0.0, 0.02)); gpile.scale.set(1.1, 0.18, 0.8);
+      var gr = new THREE.InstancedMesh(new THREE.SphereGeometry(0.008, 5, 4), grainM, 160), gm = new THREE.Matrix4(), gq = new THREE.Quaternion(), gv = new THREE.Vector3(), gs = new THREE.Vector3(1, 0.7, 1.4);
+      for (var gi = 0; gi < 160; gi++) { var ga = cr() * 6.28, gd = 0.12 + Math.pow(cr(), 0.7) * 0.32; gq.setFromEuler(new THREE.Euler(0, cr() * 6, 0)); gv.set(-0.3 + Math.cos(ga) * gd * 1.2, 0.005, 0.02 + Math.sin(ga) * gd * 0.8); gm.compose(gv, gq, gs); gr.setMatrixAt(gi, gm); }
+      s2.add(gr);
+      q(s2, new THREE.TorusGeometry(0.03, 0.008, 5, 12, Math.PI * 1.4), ropeM, -0.48, 0.008, 0.18, Math.PI / 2, 0, 0.5);   // (its rope, dropped beside it)
+      // (the bedroll)
+      var BR = grp(-3.75, 0, 1.55, 0);
+      var quiltT = cpTex(128, 256, function (g, w, h) { var cols = ['#4a3a5a', '#5a4466', '#3e3048', '#54405a'];   // (a quilted pad: patches, diamond stitching)
+        for (var y2 = 0; y2 < 4; y2++) for (var x2 = 0; x2 < 2; x2++) { g.fillStyle = cols[(x2 + y2) % 4]; g.fillRect(x2 * 64, y2 * 64, 64, 64); }
+        g.strokeStyle = 'rgba(200,180,210,0.35)'; g.lineWidth = 1; g.setLineDash([3, 3]); for (var d = -256; d < 256; d += 22) { g.beginPath(); g.moveTo(d, 0); g.lineTo(d + 256, 256); g.stroke(); g.beginPath(); g.moveTo(d + 256, 0); g.lineTo(d, 256); g.stroke(); } g.setLineDash([]);
+        g.strokeStyle = 'rgba(20,14,24,0.6)'; g.lineWidth = 1.5; for (y2 = 0; y2 <= 4; y2++) { g.beginPath(); g.moveTo(0, y2 * 64); g.lineTo(w, y2 * 64); g.stroke(); } g.beginPath(); g.moveTo(64, 0); g.lineTo(64, h); g.stroke();
+        for (var i = 0; i < 300; i++) { g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(cr() * w, cr() * h, 2, 1); } });
+      var padSide = rMat(0x3a2e44, { roughness: 1 });
+      q(BR, new THREE.BoxGeometry(0.75, 0.07, 1.7), [padSide, padSide, new THREE.MeshStandardMaterial({ map: quiltT, roughness: 1 }), padSide, padSide, padSide], 0, 0.035, 0);
+      [-1, 1].forEach(function (s) { quiet(q(BR, new THREE.CylinderGeometry(0.035, 0.035, 1.7, 8), padSide, s * 0.375, 0.035, 0, Math.PI / 2, 0, 0)); });   // (its rolled edges)
+      var plaidT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#5a2228'; g.fillRect(0, 0, w, h);   // (a wool plaid blanket)
+        [[0, 24, 'rgba(30,40,30,0.75)'], [64, 24, 'rgba(30,40,30,0.75)'], [30, 4, 'rgba(200,170,110,0.5)'], [94, 4, 'rgba(200,170,110,0.5)'], [46, 10, 'rgba(20,14,16,0.5)'], [110, 10, 'rgba(20,14,16,0.5)']].forEach(function (b) { g.fillStyle = b[2]; g.fillRect(b[0], 0, b[1], h); g.fillRect(0, b[0], w, b[1]); });
+        for (var y2 = 0; y2 < h; y2 += 2) { g.fillStyle = 'rgba(0,0,0,0.1)'; g.fillRect(0, y2, w, 1); } for (var i = 0; i < 400; i++) { g.fillStyle = 'rgba(255,230,210,0.06)'; g.fillRect(cr() * w, cr() * h, 1, 2); } }, [2, 3]);
+      var bg0 = new THREE.PlaneGeometry(0.8, 1.15, 16, 24), bp = bg0.attributes.position;
+      for (var bi = 0; bi < bp.count; bi++) { var bx = bp.getX(bi), bz = -bp.getY(bi), by = 0.085 + Math.sin(bx * 9 + bz * 4) * 0.008 + Math.sin(bz * 13) * 0.006;
+        if (Math.abs(bx) > 0.36) by -= (Math.abs(bx) - 0.36) * 1.6;   // (draped over the sides)
+        var fold = bz < -0.47 ? (-0.47 - bz) : 0; if (fold > 0) { by += 0.03 + Math.sin(fold / 0.1 * Math.PI) * 0.025; bz = -0.47 + fold * 0.3; }   // (the top edge turned back)
+        bp.setXYZ(bi, bx, -bz, Math.max(0.012, by)); }
+      bg0.computeVertexNormals(); q(BR, bg0, new THREE.MeshStandardMaterial({ map: plaidT, roughness: 1, side: THREE.DoubleSide }), 0, 0, 0.27, -Math.PI / 2, 0, 0);
+      var pil = q(BR, new THREE.SphereGeometry(0.2, 16, 10), rMat(0xd8ccb0, { roughness: 1 }), 0.02, 0.1, -0.6); pil.scale.set(1.4, 0.32, 0.75); pil.rotation.y = 0.08;   // (a linen pillow, dented)
+      quiet(q(BR, new THREE.SphereGeometry(0.07, 10, 6), rMat(0xc8bc9e, { roughness: 1 }), 0.05, 0.155, -0.6)).scale.set(1.6, 0.25, 1);
+      q(BR, new THREE.CylinderGeometry(0.11, 0.11, 0.75, 16), new THREE.MeshStandardMaterial({ map: plaidT, roughness: 1 }), 0, 0.11, -0.86, 0, 0, Math.PI / 2);   // (a rolled blanket at the head, strapped)
+      [-0.24, 0.24].forEach(function (sx) { q(BR, new THREE.TorusGeometry(0.115, 0.009, 4, 20), rMat(0x3a2414, { roughness: 0.8 }), sx, 0.11, -0.86, 0, Math.PI / 2, 0); q(BR, new THREE.BoxGeometry(0.012, 0.03, 0.03), rMat(0x9a7a3a, { metalness: 0.8, roughness: 0.35 }), sx, 0.2, -0.79); });
+      var furT = cpTex(256, 192, function (g, w, h) { g.clearRect(0, 0, w, h); g.save(); g.beginPath(); g.ellipse(w / 2, h / 2, w * 0.44, h * 0.4, 0, 0, Math.PI * 2); g.fillStyle = '#4a3a2a'; g.fill(); g.restore();   // (a shaggy fur, ragged at its edges)
+        for (var i = 0; i < 9000; i++) { var a = cr() * 6.28, r = Math.sqrt(cr()) * 1.08, px = w / 2 + Math.cos(a) * r * w * 0.44, py = h / 2 + Math.sin(a) * r * h * 0.4, l = 3 + cr() * (r > 0.9 ? 9 : 5); g.strokeStyle = cr() < 0.5 ? 'rgba(30,22,14,0.6)' : cr() < 0.8 ? 'rgba(110,90,66,0.6)' : 'rgba(170,150,120,0.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py); g.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l + 2); g.stroke(); } });
+      var fg0 = new THREE.PlaneGeometry(0.85, 0.65, 14, 10), fp = fg0.attributes.position;
+      for (var fi = 0; fi < fp.count; fi++) { var fx = fp.getX(fi), fz = fp.getY(fi); fp.setZ(fi, Math.max(0.01, 0.105 + Math.sin(fx * 11) * 0.01 - Math.max(0, Math.abs(fx) - 0.34) * 1.4)); } fg0.computeVertexNormals();
+      for (var fl = 0; fl < 4; fl++) { var fsh = 0.7 + fl * 0.12; quiet(q(BR, fg0, new THREE.MeshStandardMaterial({ map: furT, alphaTest: 0.35 + fl * 0.15, color: new THREE.Color(fsh, fsh, fsh), roughness: 1, side: THREE.DoubleSide }), 0.02, fl * 0.006, 0.58, -Math.PI / 2, 0, 0.15)); }
+      // (the pack: stiff leather, a flap buckled down with two straps, a side pocket, shoulder straps, a blanket roll on top and a tin cup)
+      var lthT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#5a4028'; g.fillRect(0, 0, w, h); for (var i = 0; i < 400; i++) { g.fillStyle = i % 2 ? 'rgba(30,18,8,0.25)' : 'rgba(150,110,70,0.15)'; g.fillRect(cr() * w, cr() * h, 2, 1); }
+        for (i = 0; i < 12; i++) { var cx = cr() * w, cy = cr() * h; g.strokeStyle = 'rgba(25,12,4,0.4)'; g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx + 10, cy + (cr() - 0.5) * 20, cx + 24, cy + (cr() - 0.5) * 14); g.stroke(); }
+        g.setLineDash([3, 3]); g.strokeStyle = 'rgba(210,180,130,0.7)'; g.lineWidth = 1.2; g.strokeRect(5, 5, w - 10, h - 10); g.setLineDash([]); });
+      var lthM = new THREE.MeshStandardMaterial({ map: lthT, bumpMap: lthT, bumpScale: 0.002, roughness: 0.85 }), strapM = rMat(0x3a2414, { roughness: 0.8 }), buckM = rMat(0x9a7a3a, { metalness: 0.8, roughness: 0.35 });
+      var pk = grp(0.55, 0, -0.75, 0.3, BR);
+      q(pk, new THREE.BoxGeometry(0.3, 0.36, 0.18), lthM, 0, 0.18, 0); var top = q(pk, new THREE.CylinderGeometry(0.09, 0.09, 0.3, 14, 1, false, 0, Math.PI), lthM, 0, 0.36, 0, 0, 0, Math.PI / 2); top.scale.set(0.45, 1, 1);
+      var flap = new THREE.Shape(); flap.moveTo(-0.15, 0); flap.lineTo(0.15, 0); flap.lineTo(0.15, -0.14); flap.quadraticCurveTo(0, -0.2, -0.15, -0.14); flap.lineTo(-0.15, 0);
+      var fgeo = new THREE.ExtrudeGeometry(flap, { depth: 0.008, bevelEnabled: false }); q(pk, fgeo, lthM, 0, 0.38, 0.09, 0, 0, 0);   // (the flap, hanging down the front)
+      [-0.07, 0.07].forEach(function (sx) { q(pk, new THREE.BoxGeometry(0.025, 0.2, 0.006), strapM, sx, 0.25, 0.102); q(pk, new THREE.BoxGeometry(0.034, 0.03, 0.008), buckM, sx, 0.2, 0.106); q(pk, new THREE.BoxGeometry(0.01, 0.022, 0.004), strapM, sx, 0.2, 0.112); });
+      q(pk, new THREE.BoxGeometry(0.06, 0.16, 0.12), lthM, 0.175, 0.13, 0); q(pk, new THREE.BoxGeometry(0.062, 0.05, 0.122), lthM, 0.176, 0.215, 0, 0, 0, -0.1);   // (a side pocket)
+      [-0.08, 0.08].forEach(function (sx) { q(pk, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(sx, 0.34, -0.09), new THREE.Vector3(sx, 0.3, -0.16), new THREE.Vector3(sx * 1.1, 0.12, -0.15), new THREE.Vector3(sx, 0.03, -0.095)]), 12, 0.01, 5), strapM, 0, 0, 0); });
+      q(pk, new THREE.CylinderGeometry(0.075, 0.075, 0.34, 14), new THREE.MeshStandardMaterial({ map: plaidT, roughness: 1 }), 0, 0.47, 0, 0, 0, Math.PI / 2); [-0.1, 0.1].forEach(function (sx) { q(pk, new THREE.TorusGeometry(0.078, 0.007, 4, 18), strapM, sx, 0.47, 0, 0, Math.PI / 2, 0); });
+      var cup = grp(-0.17, 0.2, 0.02, 0, pk); q(cup, lbLathe([[0, 0], [0.032, 0], [0.034, 0.06], [0.031, 0.06], [0.029, 0.004], [0, 0.004]], 16), rMat(0x8a8c90, { metalness: 0.7, roughness: 0.4, side: THREE.DoubleSide }), 0, -0.03, 0, 0, 0, 0.15); q(cup, new THREE.TorusGeometry(0.016, 0.003, 5, 12, Math.PI), rMat(0x8a8c90, { metalness: 0.7, roughness: 0.4 }), 0.012, 0.02, 0, 0, 0, Math.PI / 2 + 0.15);
+      // (the lantern: an iron frame, glass panes sooty at the top, a candle burning inside, a vented cap and a ring to carry it)
+      var ln = grp(0.5, 0, 0.55, 0.4, BR), lnIron = rMat(0x24201e, { metalness: 0.6, roughness: 0.5 }), lmM2 = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.3 }); hdFlames.push(lmM2);
+      q(ln, lbLathe([[0, 0], [0.075, 0], [0.078, 0.008], [0.072, 0.016], [0, 0.016]], 4), lnIron, 0, 0, 0, 0, Math.PI / 4, 0);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { q(ln, new THREE.BoxGeometry(0.01, 0.17, 0.01), lnIron, c[0] * 0.05, 0.1, c[1] * 0.05); });
+      var sootT = cpTex(32, 64, function (g, w, h) { var sg = g.createLinearGradient(0, 0, 0, h); sg.addColorStop(0, 'rgba(20,14,8,0.75)'); sg.addColorStop(0.35, 'rgba(60,40,20,0.25)'); sg.addColorStop(1, 'rgba(255,240,210,0.12)'); g.fillStyle = sg; g.fillRect(0, 0, w, h); });
+      var glassM = new THREE.MeshStandardMaterial({ map: sootT, transparent: true, roughness: 0.1, depthWrite: false, side: THREE.DoubleSide });
+      for (var gp = 0; gp < 4; gp++) { var ga2 = gp * Math.PI / 2; quiet(q(ln, new THREE.PlaneGeometry(0.098, 0.16), glassM, Math.sin(ga2) * 0.049, 0.1, Math.cos(ga2) * 0.049, 0, ga2, 0)); }
+      q(ln, new THREE.BoxGeometry(0.004, 0.16, 0.004), lnIron, 0, 0.1, 0.051); q(ln, new THREE.BoxGeometry(0.1, 0.004, 0.004), lnIron, 0, 0.1, 0.051);   // (the door's bars)
+      q(ln, new THREE.CylinderGeometry(0.014, 0.015, 0.06, 10), rMat(0xece2c8, { roughness: 0.55 }), 0, 0.046, 0); q(ln, new THREE.CylinderGeometry(0.001, 0.001, 0.01, 4), rMat(0x141010), 0, 0.08, 0);
+      quiet(q(ln, new THREE.SphereGeometry(0.011, 8, 6), lmM2, 0, 0.096, 0)).scale.set(1, 2, 1); hdHalo(ln, 0, 0.1, 0, 0.36);
+      q(ln, new THREE.ConeGeometry(0.085, 0.07, 4), lnIron, 0, 0.215, 0, 0, Math.PI / 4, 0); q(ln, new THREE.CylinderGeometry(0.02, 0.024, 0.03, 8), lnIron, 0, 0.26, 0);
+      for (var vh = 0; vh < 6; vh++) { var va = vh / 6 * Math.PI * 2; q(ln, new THREE.BoxGeometry(0.006, 0.012, 0.002), rMat(0x050403), Math.cos(va) * 0.0225, 0.26, Math.sin(va) * 0.0225, 0, -va + Math.PI / 2, 0); }   // (vent holes)
+      q(ln, new THREE.TorusGeometry(0.03, 0.005, 6, 14), lnIron, 0, 0.3, 0);
+    })();
     var bLight = new THREE.PointLight(0xffb060, 0.5, 3.2, 1.8); bLight.position.set(HDI_X - 3.75 + 0.5, 0.4, HDI_Z + 1.55 + 0.55); hideScene.add(bLight); hdCandles.push(bLight);
     hideSolids.push([-3.75, 1.1, 0.35], [-3.75, 2.0, 0.35]);
     // (a barrel of arrows by the weapon rack)
