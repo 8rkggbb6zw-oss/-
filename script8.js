@@ -2350,7 +2350,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // a cauldron over the fire with firewood and fire irons, a mantel of skull, candles and jars under a set of antlers, herbs
   // drying; a bookshelf of old books, scrolls and bottles; an armour stand with a hooded cloak; a target dummy full of arrows;
   // a bedroll with furs; a barrel of arrows; a map of the isles on the wall; the table covered in an hourglass, quill and ink,
-  // dice, cards, a compass and a lockbox; straw on the floor and a trapdoor ----
+  // dice, cards, a compass and a lockbox; straw on the floor ----
   (function (R) {
     var W = HDI_W / 2, D = HDI_D / 2;
     function p(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || R); }
@@ -2473,13 +2473,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var cd = 0; cd < 5; cd++) { var card = p(new THREE.BoxGeometry(0.06, 0.002, 0.085), rMat(cd === 2 ? 0xb02a2a : 0xf0e8d8), -0.45 + cd * 0.025, TT + 0.002 + cd * 0.001, 0.42 + cd * 0.008, 0, -0.5 + cd * 0.22, 0); }
     var cp = new THREE.Group(); cp.position.set(-1.1, TT + 0.005, 0.32); R.add(cp); lbP(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 16), brass, 0, 0.006, 0, 0, 0, 0, cp); lbP(new THREE.CircleGeometry(0.033, 16), rMat(0xe8dcc0), 0, 0.0125, 0, -Math.PI / 2, 0, 0, cp); lbP(new THREE.BoxGeometry(0.004, 0.002, 0.05), rMat(0xb02a2a), 0, 0.014, 0, 0, 0.6, 0, cp);
     var lb = new THREE.Group(); lb.position.set(-2.12, TT, 0.42); lb.rotation.y = 0.2; R.add(lb); lbP(new THREE.BoxGeometry(0.16, 0.09, 0.11), iron, 0, 0.045, 0, 0, 0, 0, lb); lbP(new THREE.BoxGeometry(0.17, 0.02, 0.12), rMat(0x34302c, { metalness: 0.6 }), 0, 0.1, 0, 0, 0, 0, lb); lbP(new THREE.BoxGeometry(0.03, 0.035, 0.01), brass, 0, 0.06, 0.06, 0, 0, 0, lb);
-    // (straw scattered over the floor, and a trapdoor with an iron ring)
+    // (straw scattered over the floor)
     var strawM = rMat(0xc8a860, { roughness: 1 });
     for (var sw = 0; sw < 80; sw++) { var sx = -W + 0.5 + ((sw * 53) % 80) / 80 * (HDI_W - 1), sz = -D + 0.5 + ((sw * 37) % 60) / 60 * (HDI_D - 1.6); if (sx > -2.6 && sx < 0.6 && sz > -0.4 && sz < 1.2) continue;
       var sp2 = p(new THREE.CylinderGeometry(0.003, 0.003, 0.14, 3), strawM, sx, 0.006, sz, Math.PI / 2, sw, 0); sp2.castShadow = false; }
-    var TRD = new THREE.Group(); TRD.position.set(1.9, 0.004, 2.1); R.add(TRD);
-    for (var tp = 0; tp < 5; tp++) lbP(new THREE.BoxGeometry(0.14, 0.02, 0.75), oak, -0.3 + tp * 0.15, 0.01, 0, 0, 0, 0, TRD);
-    [-0.25, 0.25].forEach(function (bz) { lbP(new THREE.BoxGeometry(0.8, 0.025, 0.05), iron, 0, 0.022, bz, 0, 0, 0, TRD); }); lbP(new THREE.TorusGeometry(0.05, 0.01, 6, 14), iron, 0.15, 0.03, 0, Math.PI / 2, 0, 0, TRD);
     R.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
   })(hideRoom);
   updateCarpenter = (function (base) { return function (t, night) {     // (the rune and the crow outside; the cauldron's steam and the embers inside)
