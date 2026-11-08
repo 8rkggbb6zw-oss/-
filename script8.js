@@ -2938,4 +2938,45 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (hfCrow) { var hd = hfCrow.userData.head; var lookT = Math.floor(t / 2.6); hd.rotation.y = Math.sin(lookT * 12.9898) * 0.9; hd.rotation.x = Math.sin(t * 1.3) * 0.1; }
     }
   }; })(updateCarpenter);
+
+  // ===== The Hollow Fang's shop, at the long table in the den: stand by the table and press Interact (E, or Interact on a
+  // controller) or tap its button. It's the guild's own, so it isn't on the Computer. Nothing is for sale yet: wares go in
+  // HF_STOCK below, each { name, icon, price, info, buy: function () { ... return true if bought } } =====
+  var HF_STOCK = [], hfShopOpen = false, HF_TABLE = [-1.0, 0.4];
+  var hfShopBtn = document.createElement('button'); hfShopBtn.type = 'button'; hfShopBtn.className = 'sleep-btn ship-btn'; hfShopBtn.innerHTML = '🗡️ Guild Shop <kbd>E</kbd>'; canvas.parentNode.appendChild(hfShopBtn);
+  var hfShopBox = document.createElement('div'); hfShopBox.className = 'inventory ship mailbox hf-shop'; hfShopBox.hidden = true;
+  hfShopBox.innerHTML = '<div class="inv-head"><b>🗡️ Guild Shop</b><button type="button" class="inv-close" aria-label="Close the guild shop">✕</button></div><div class="mb-body"></div>';
+  canvas.parentNode.appendChild(hfShopBox);
+  function renderHfShop() {
+    var b = hfShopBox.querySelector('.mb-body'); b.innerHTML = '';
+    var intro = document.createElement('p'); intro.className = 'ship-hint'; intro.textContent = 'Gear for the guild\'s own, and no questions asked. Members only.'; b.appendChild(intro);
+    if (!HF_STOCK.length) { var em = document.createElement('div'); em.className = 'mb-empty'; em.innerHTML = '<b>🗡️</b>'; var p1 = document.createElement('p'); p1.textContent = 'Nothing is for sale yet.'; var p2 = document.createElement('p'); p2.textContent = 'Check back soon, adventurer.'; em.appendChild(p1); em.appendChild(p2); b.appendChild(em); }
+    else HF_STOCK.forEach(function (it) {
+      var row = document.createElement('div'); row.className = 'shop-item'; row.innerHTML = '<div class="slot shop-pic"></div><div class="shop-text"><b></b><span></span><span class="shop-price"><img class="coin-icon" alt=""> </span></div>';
+      row.querySelector('.shop-pic').textContent = it.icon || ''; row.querySelector('b').textContent = it.name; row.querySelector('.shop-text span').textContent = it.info || ''; row.querySelector('.shop-price').appendChild(document.createTextNode(it.price.toLocaleString('en-US')));
+      var buy = document.createElement('button'); buy.type = 'button'; buy.textContent = 'Buy'; buy.disabled = state.coins < it.price;
+      buy.addEventListener('click', function (e) { e.stopPropagation(); if (state.coins < it.price) { showToast('Not enough Star Coins', 1800); return; } if (it.buy && it.buy() === false) return; state.coins -= it.price; showCoins(true); coinSound(10); renderBag(); renderHfShop(); });
+      var bw = document.createElement('div'); bw.className = 'shop-buy'; bw.appendChild(buy); b.appendChild(row); b.appendChild(bw); });
+    var tot = document.createElement('p'); tot.className = 'ship-total'; tot.innerHTML = 'You have <img class="coin-icon" alt=""> <b></b>'; tot.querySelector('b').textContent = state.coins; b.appendChild(tot);
+    var r2 = document.createElement('div'); r2.className = 'mb-row'; var cl = document.createElement('button'); cl.type = 'button'; cl.className = 'mb-quiet'; cl.textContent = 'Close'; cl.addEventListener('click', function () { closeHfShop(); focusGame(); }); r2.appendChild(cl); b.appendChild(r2); paintCoinIcons(b);
+  }
+  function openHfShop() { if (hfShopOpen) return; toggleBag(false); hfShopOpen = true; menuOpenedAt = Date.now(); walkTarget = null; hfShopBox.hidden = false; renderHfShop(); }
+  function closeHfShop() { hfShopOpen = false; hfShopBox.hidden = true; }
+  hfShopBox.querySelector('.inv-close').addEventListener('click', function () { closeHfShop(); focusGame(); });
+  hfShopBtn.addEventListener('click', function () { openHfShop(); focusGame(); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape' && hfShopOpen) { e.stopImmediatePropagation(); e.preventDefault(); closeHfShop(); } }, true);   // (Escape, or ○ / B on a controller)
+  function atHfTable(margin) { if (!inHide) return false; var m = margin || 0; return Math.abs(player.position.x - HDI_X - HF_TABLE[0]) < 2.0 + m && Math.abs(player.position.z - HDI_Z - HF_TABLE[1]) < 1.3 + m; }
+  window.everdawnGuildShop = { stock: HF_STOCK, refresh: function () { if (hfShopOpen) renderHfShop(); } };   // (for the wares to come)
+  interact = (function (base) { return function () {
+    if (hfShopOpen) { if (!menuJustOpened()) closeHfShop(); return; }
+    if (atHfTable() && !doorBusy) { openHfShop(); return; }
+    return base.apply(this, arguments);
+  }; })(interact);
+  updateCarpenter = (function (base) { return function (t, night) {
+    base.apply(this, arguments);
+    if (hfShopOpen && !atHfTable(1.0)) closeHfShop();                     // (it shuts if you walk away from the table)
+    if (hfShopOpen) { var hc = hfShopBox.querySelector('.ship-total b'); if (hc && hc.textContent !== String(state.coins)) renderHfShop(); }
+    var show = atHfTable() && !hfShopOpen;
+    if (hfShopBtn.classList.contains('show') !== show) hfShopBtn.classList.toggle('show', show);
+  }; })(updateCarpenter);
 });
