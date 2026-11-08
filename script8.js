@@ -1958,6 +1958,11 @@ EVERDAWN_PARTS.push(function (THREE) {
   hideScene.add(new THREE.HemisphereLight(0x8a7a9a, 0x2a1e18, 0.32));
   var hdFire = new THREE.PointLight(0xff8a3a, 1.1, 9, 1.6); hdFire.position.set(HDI_X + HDI_W / 2 - 0.9, 1.0, HDI_Z - 0.3); hideScene.add(hdFire);
   var hdCandles = [[-1.2, 0.2], [0.6, -0.3], [0, -HDI_D / 2 + 0.8]].map(function (c) { var l = new THREE.PointLight(0xffc070, 0.45, 5, 1.8); l.position.set(HDI_X + c[0], 1.5, HDI_Z + c[1]); hideScene.add(l); return l; });
+  function hdHalo(par, x, y, z, size) {                                 // (a candle's soft halo of light, and its white-hot core)
+    var h = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb860, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false })); h.position.set(x, y, z); h.scale.set(size, size, 1); par.add(h); hdHalos.push(h);
+    var c = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xfff6e0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false })); c.position.set(x, y, z); c.scale.set(size * 0.22, size * 0.32, 1); par.add(c);
+  }
+  var hdHalos = [];
   var hideSolids = [], hdWalls = [], hdFlames = [], HD_BOARD = [0, -HDI_D / 2 + 0.25];
   (function (R) {
     var W = HDI_W / 2, D = HDI_D / 2, H = HDI_H;
@@ -2014,7 +2019,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     p(new THREE.PlaneGeometry(1.1, 0.75), new THREE.MeshStandardMaterial({ map: mapT, roughness: 1 }), TX - 0.3, 0.825, TZ, -Math.PI / 2, 0, 0.12);
     p(new THREE.PlaneGeometry(0.5, 0.36), new THREE.MeshStandardMaterial({ map: mapT, roughness: 1 }), TX + 0.75, 0.826, TZ + 0.15, -Math.PI / 2, 0, -0.4);
     var cdl = rMat(0xe8dcc0, { roughness: 0.6 }), flameM = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.4 }); hdFlames.push(flameM);
-    [[TX + 0.5, TZ - 0.3, 0.16], [TX - 1.05, TZ + 0.3, 0.1]].forEach(function (c) { p(new THREE.CylinderGeometry(0.035, 0.04, 0.012, 12), rMat(0x8a6a2a, { metalness: 0.7 }), c[0], 0.826, c[1]); p(new THREE.CylinderGeometry(0.022, 0.024, c[2], 10), cdl, c[0], 0.83 + c[2] / 2, c[1]); var fl = p(new THREE.SphereGeometry(0.014, 8, 6), flameM, c[0], 0.85 + c[2], c[1]); fl.scale.y = 1.8; fl.castShadow = false; });
+    [[TX + 0.5, TZ - 0.3, 0.16], [TX - 1.05, TZ + 0.3, 0.1]].forEach(function (c) { p(new THREE.CylinderGeometry(0.035, 0.04, 0.012, 12), rMat(0x8a6a2a, { metalness: 0.7 }), c[0], 0.826, c[1]); p(new THREE.CylinderGeometry(0.022, 0.024, c[2], 10), cdl, c[0], 0.83 + c[2] / 2, c[1]); var fl = p(new THREE.SphereGeometry(0.018, 8, 6), flameM, c[0], 0.855 + c[2], c[1]); fl.scale.y = 1.9; fl.castShadow = false; hdHalo(R, c[0], 0.86 + c[2], c[1], 0.32); });
     var dg2 = new THREE.Group(); dg2.position.set(TX + 0.2, 0.9, TZ + 0.25); dg2.rotation.set(0.15, 0.4, 0.1); R.add(dg2);
     lbP(new THREE.BoxGeometry(0.025, 0.22, 0.006), rMat(0xc8ccd2, { metalness: 0.9, roughness: 0.3, envMap: rubyEnv }), 0, -0.04, 0, 0, 0, 0, dg2); lbP(new THREE.BoxGeometry(0.1, 0.016, 0.024), rMat(0x8a6a2a, { metalness: 0.7 }), 0, 0.07, 0, 0, 0, 0, dg2); lbP(new THREE.CylinderGeometry(0.013, 0.013, 0.1, 8), rMat(0x2a1a12), 0, 0.13, 0, 0, 0, 0, dg2); lbP(new THREE.SphereGeometry(0.02, 8, 6), rMat(0x8a6a2a, { metalness: 0.7 }), 0, 0.19, 0, 0, 0, 0, dg2);
     var purse = p(new THREE.SphereGeometry(0.07, 10, 8), rMat(0x5a3a22, { roughness: 0.9 }), TX + 0.95, 0.88, TZ - 0.28); purse.scale.set(1, 0.8, 1); p(new THREE.TorusGeometry(0.03, 0.008, 6, 12), rMat(0x8a6a2a), TX + 0.95, 0.93, TZ - 0.28, Math.PI / 2, 0, 0);
@@ -2098,7 +2103,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inHide) {
       hdLook.set(camera.position.x - HDI_X, 0, camera.position.z - HDI_Z); hdWalls.forEach(function (W) { W.g.visible = hdLook.dot(W.n) < W.d - 0.6; });
       var fl = Math.sin(t * 11) * 0.5 + Math.sin(t * 27) * 0.3; hdFire.intensity = 1.05 + fl * 0.18; hdCandles.forEach(function (l, i) { l.intensity = 0.42 + Math.sin(t * 13 + i * 2) * 0.05; });
-      hdFlames.forEach(function (m, i) { m.emissiveIntensity = 1.3 + Math.sin(t * 9 + i) * 0.25; });
+      hdFlames.forEach(function (m, i) { m.emissiveIntensity = 2.0 + Math.sin(t * 9 + i) * 0.3; });
+      hdHalos.forEach(function (h, i) { h.material.opacity = (h.userData.o || (h.userData.o = h.material.opacity)) * (0.88 + Math.sin(t * 11 + i * 1.7) * 0.08 + Math.sin(t * 29 + i) * 0.04); });   // (the candles' halos flicker)
     } else if (hideWisp) { var hr = state.minutes / 60, nt = hr < 5.5 || hr > 20 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr > 18.5 ? (hr - 18.5) / 1.5 : 0; hideWisp.material.opacity = nt * (0.55 + Math.sin(t * 2.2) * 0.2); }
     if (hdBoardOpen && !atBoard()) closeBoard();
     var show = atBoard() && !hdBoardOpen; if (hdBtn.classList.contains('show') !== show) hdBtn.classList.toggle('show', show);
@@ -2196,7 +2202,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var steel = rMat(0xb8bcc2, { metalness: 0.9, roughness: 0.3, envMap: rubyEnv }), parch = rMat(0xe0d0a8, { roughness: 1 }), wax = rMat(0xe8dcc0, { roughness: 0.6 });
     var flameM = rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.4 }); hdFlames.push(flameM);
     function candle(x, y, z, h, par) { p(new THREE.CylinderGeometry(0.02, 0.022, h, 10), wax, x, y + h / 2, z, 0, 0, 0, par); var dr = p(new THREE.SphereGeometry(0.008, 6, 4), wax, x + 0.018, y + h * 0.7, z, 0, 0, 0, par); dr.scale.y = 2;
-      var f = p(new THREE.SphereGeometry(0.012, 8, 6), flameM, x, y + h + 0.02, z, 0, 0, 0, par); f.scale.y = 1.9; f.castShadow = false; }
+      var f = p(new THREE.SphereGeometry(0.016, 8, 6), flameM, x, y + h + 0.022, z, 0, 0, 0, par); f.scale.y = 1.9; f.castShadow = false; hdHalo(par || R, x, y + h + 0.025, z, 0.3); }
     // (the guild's name, carved and darkened, over the board)
     var nameT = cpTex(512, 80, function (g, w, h) { g.fillStyle = '#2a1c12'; g.fillRect(0, 0, w, h); g.strokeStyle = '#6a4a2a'; g.lineWidth = 4; g.strokeRect(4, 4, w - 8, h - 8);
       g.fillStyle = '#c8a060'; g.font = 'bold 34px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('THE HOLLOW FANG', w / 2, h / 2 + 2); hideSigil(g, 36, h / 2, 22, '#b0202a', 3); hideSigil(g, w - 36, h / 2, 22, '#b0202a', 3); });
@@ -2214,7 +2220,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     [[-W + 0.05, -2.6, Math.PI / 2], [-W + 0.05, 1.5, Math.PI / 2], [W - 0.05, 1.65, -Math.PI / 2], [-3.0, -D + 0.05, 0], [3.0, -D + 0.05, 0]].forEach(function (sc) {
       var g = new THREE.Group(); g.position.set(sc[0], 1.75, sc[1]); g.rotation.y = sc[2]; R.add(g);
       lbP(new THREE.BoxGeometry(0.12, 0.2, 0.02), iron, 0, 0, 0, 0, 0, 0, g); lbP(new THREE.BoxGeometry(0.02, 0.02, 0.16), iron, 0, -0.06, 0.08, 0, 0, 0, g); lbP(new THREE.CylinderGeometry(0.05, 0.04, 0.03, 10), iron, 0, -0.05, 0.16, 0, 0, 0, g);
-      candle(0, -0.035, 0.16, 0.12, g); var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb060, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })); gl.position.set(0, 0.12, 0.17); gl.scale.set(0.5, 0.5, 1); g.add(gl);
+      candle(0, -0.035, 0.16, 0.12, g); var gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffb060, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false })); gl.position.set(0, 0.12, 0.17); gl.scale.set(0.8, 0.8, 1); g.add(gl); hdHalos.push(gl);
     });
     // (the hearth: a cauldron on an iron crane over the fire, firewood stacked beside, fire irons, the mantel and its things)
     var FX = W - 0.35;
