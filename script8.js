@@ -2131,8 +2131,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   var hfRune = null, hfCrow = null, hfSteam = [], hfEmbers = null, hfCauldron = null;
   // ---- outside: worn flagstones down to the door, an open padlock hanging on a chain, a rune on the lintel that glows after
   // dark, stones poking up through the turf, wildflowers, moss hanging from the dead tree, a crow on its branch, a rope knotted
-  // round its trunk, a cold campfire ring, a half-buried crate under ivy, fallen leaves, a cobweb on the lantern and a
-  // weathered KEEP OUT sign ----
+  // round its trunk, a cold campfire ring, a half-buried crate under ivy, fallen leaves, and a cobweb on the lantern ----
   (function (G) {
     function P(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || G); }
     var stoneM = [0x6e6a62, 0x5a5650, 0x7a746a, 0x625e58].map(function (c) { return rMat(c, { roughness: 0.95 }); });
@@ -2183,10 +2182,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       var lm = P(new THREE.CircleGeometry(0.045, 5), rMat(leafC[lf % 4], { roughness: 1, side: THREE.DoubleSide }), lx, 0.012 + (lf % 3) * 0.002, lz, -Math.PI / 2 + (lf % 5 - 2) * 0.1, 0, la); lm.scale.y = 1.6; lm.castShadow = false; }
     var webT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(235,235,245,0.6)'; g.lineWidth = 1; for (var k = 0; k < 7; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k / 6 * Math.PI / 2) * w, Math.sin(k / 6 * Math.PI / 2) * h); g.stroke(); } for (var r = 10; r < 64; r += 9) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI / 2); g.stroke(); } });
     var wb = P(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: webT, transparent: true, depthWrite: false, side: THREE.DoubleSide }), 0.97, 1.2, 1.45, 0, Math.PI / 2, Math.PI); wb.castShadow = false;   // (a cobweb under the lantern's arm)
-    var signT = cpTex(160, 64, function (g, w, h) { g.fillStyle = '#5a4630'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(30,18,8,0.4)'; for (var k = 0; k < 5; k++) g.fillRect(0, k * 13, w, 1); g.fillStyle = '#e8dcc0'; g.font = 'bold 22px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('KEEP OUT', w / 2, h / 2 + 1);
-      g.strokeStyle = 'rgba(25,15,8,0.7)'; g.lineWidth = 2; for (var c3 = 0; c3 < 3; c3++) { g.beginPath(); g.moveTo(110 + c3 * 8, 6); g.lineTo(130 + c3 * 8, 58); g.stroke(); } });   // (with claw marks through it)
-    var sg = new THREE.Group(); sg.position.set(-0.85, 0, 2.0); sg.rotation.set(0, 0.5, 0.18); G.add(sg);
-    P(new THREE.BoxGeometry(0.04, 0.6, 0.04), rMat(0x4a3a2a, { roughness: 1 }), 0, 0.3, 0, 0, 0, 0, sg); P(new THREE.BoxGeometry(0.4, 0.16, 0.03), new THREE.MeshStandardMaterial({ map: signT, roughness: 1 }), 0, 0.52, 0.025, 0, 0, -0.08, sg);
     G.traverse(function (o) { if (o.isMesh && o.castShadow !== false) { o.castShadow = true; o.receiveShadow = true; } });
   })(hideGroup);
   [[-1.35, 2.6, 0.4], [2.25, -1.35, 0.35]].forEach(function (b) { var w = hideWorld(b[0], b[1]); solids.push({ x: w.x, z: w.z, r: b[2] }); });
