@@ -2103,9 +2103,60 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function (R) {
     var W = HDI_W / 2, D = HDI_D / 2, H = HDI_H;
     function p(geo, m, x, y, z, rx, ry, rz, par) { return cpPart(geo, m, x, y, z, rx, ry, rz, par || R); }
-    var stoneT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#2a2622'; g.fillRect(0, 0, w, h);
-      for (var r = 0, y = 0; y < h; r++) { var hh = 28 + (r * 11) % 14; for (var x = -((r * 29) % 50); x < w; ) { var ww = 40 + ((r * 17 + x) % 40), c = 70 + ((r * 31 + x * 3) % 36); g.fillStyle = 'rgb(' + c + ',' + (c - 6) + ',' + (c - 12) + ')'; g.beginPath(); g.ellipse(x + ww / 2, y + hh / 2, ww / 2 - 2, hh / 2 - 2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,240,220,0.06)'; g.fillRect(x + 6, y + 4, ww - 12, 3); x += ww; } y += hh; } }, [3, 1.5]);
-    var wallM = new THREE.MeshStandardMaterial({ map: stoneT, roughness: 0.95 });
+    // (the walls: rough fieldstone laid in uneven courses, every stone its own shape, size and colour (grey, brown, a few rusty or
+    // bluish), lit on its upper side and shadowed below, pitted, flecked and veined, a few cracked or patched with pale lichen;
+    // deep, crumbling mortar between them; and a height map so each stone stands out of the wall. It tiles seamlessly)
+    var WS = 1024, WH = 512, wsRnd = (function () { var sd = 11; return function () { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }; })();
+    var wStones = [], wy = 0, wRows = [58, 72, 64, 80, 60, 76, 52, 50];   // (courses that add up to the full height)
+    wRows.forEach(function (rh) { var x = -wsRnd() * 80; while (x < WS) { var ww = 54 + wsRnd() * 110; if (wsRnd() < 0.15) ww *= 0.6;
+      var pts = [], n = 14, cx = x + ww / 2, cy = wy + rh / 2, rx = ww / 2 - 4, ry = rh / 2 - 4, wob = wsRnd() * 10;
+      for (var k = 0; k < n; k++) { var aa = k / n * Math.PI * 2, r = 1 + (wsRnd() - 0.5) * 0.18 + Math.sin(aa * 3 + wob) * 0.05, sq = Math.pow(Math.abs(Math.cos(aa)), 0.7) * Math.sign(Math.cos(aa)), sq2 = Math.pow(Math.abs(Math.sin(aa)), 0.7) * Math.sign(Math.sin(aa)); pts.push([cx + sq * rx * r, cy + sq2 * ry * r]); }
+      var kind = wsRnd(); wStones.push({ pts: pts, cx: cx, cy: cy, rx: rx, ry: ry, col: kind < 0.6 ? [96, 90, 82] : kind < 0.82 ? [104, 88, 70] : kind < 0.92 ? [112, 80, 62] : [80, 88, 96], tone: 0.75 + wsRnd() * 0.5, crack: wsRnd() < 0.2, lichen: wsRnd() < 0.18 });
+      x += ww; } wy += rh; });
+    function wPath(g, st, ox, oy) { g.beginPath(); st.pts.forEach(function (q, k) { if (k) g.lineTo(q[0] + ox, q[1] + oy); else g.moveTo(q[0] + ox, q[1] + oy); }); g.closePath(); }
+    function wWrap(st, f) { [-WS, 0, WS].forEach(function (ox) { [-WH, 0, WH].forEach(function (oy) { if (st.cx + st.rx + ox < -8 || st.cx - st.rx + ox > WS + 8 || st.cy + st.ry + oy < -8 || st.cy - st.ry + oy > WH + 8) return; f(ox, oy); }); }); }
+    var stoneT = cpTex(WS, WH, function (g, w, h) {
+      g.fillStyle = '#2e2924'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 7000; k++) { g.fillStyle = ['rgba(70,62,52,0.6)', 'rgba(20,16,12,0.6)', 'rgba(110,100,86,0.35)'][k % 3]; g.fillRect(wsRnd() * w, wsRnd() * h, 1 + k % 3, 1 + k % 2); }   // (gritty, crumbling mortar)
+      wStones.forEach(function (st) { wWrap(st, function (ox, oy) {
+        var c = st.col, t = st.tone, cx = st.cx + ox, cy = st.cy + oy;
+        g.save(); wPath(g, st, ox, oy); g.clip();
+        var gr = g.createRadialGradient(cx - st.rx * 0.35, cy - st.ry * 0.45, 2, cx, cy, Math.max(st.rx, st.ry) * 1.15);   // (lit from above, shadowed below)
+        gr.addColorStop(0, 'rgb(' + Math.round(c[0] * t + 40) + ',' + Math.round(c[1] * t + 38) + ',' + Math.round(c[2] * t + 34) + ')'); gr.addColorStop(0.55, 'rgb(' + Math.round(c[0] * t) + ',' + Math.round(c[1] * t) + ',' + Math.round(c[2] * t) + ')'); gr.addColorStop(1, 'rgb(' + Math.round(c[0] * t * 0.5) + ',' + Math.round(c[1] * t * 0.5) + ',' + Math.round(c[2] * t * 0.5) + ')');
+        g.fillStyle = gr; g.fillRect(cx - st.rx - 6, cy - st.ry - 6, st.rx * 2 + 12, st.ry * 2 + 12);
+        for (var q = 0; q < 70; q++) { var px = cx + (wsRnd() - 0.5) * st.rx * 2, py = cy + (wsRnd() - 0.5) * st.ry * 2; g.fillStyle = q % 6 === 0 ? 'rgba(230,225,210,0.3)' : q % 2 ? 'rgba(20,16,12,0.3)' : 'rgba(160,150,135,0.2)'; g.beginPath(); g.arc(px, py, q % 6 === 0 ? 0.9 : 1.4, 0, Math.PI * 2); g.fill(); }   // (pits and flecks)
+        g.strokeStyle = 'rgba(30,24,18,0.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - st.rx, cy + (wsRnd() - 0.5) * st.ry); g.quadraticCurveTo(cx, cy + (wsRnd() - 0.5) * st.ry * 1.5, cx + st.rx, cy + (wsRnd() - 0.5) * st.ry); g.stroke();   // (a vein)
+        if (st.crack) { g.strokeStyle = 'rgba(10,8,5,0.85)'; g.lineWidth = 1.4; g.beginPath(); var kx = cx + (wsRnd() - 0.5) * st.rx, ky = cy - st.ry; g.moveTo(kx, ky); for (var t2 = 0; t2 < 6; t2++) { kx += (wsRnd() - 0.5) * 10; ky += st.ry / 3; g.lineTo(kx, ky); } g.stroke(); }
+        if (st.lichen) for (var l = 0; l < 5; l++) { g.fillStyle = 'rgba(' + (170 + l * 8) + ',' + (180 + l * 5) + ',140,' + (0.35 + wsRnd() * 0.3) + ')'; g.beginPath(); g.arc(cx + (wsRnd() - 0.5) * st.rx, cy + (wsRnd() - 0.5) * st.ry, 2 + wsRnd() * 6, 0, Math.PI * 2); g.fill(); }   // (pale lichen)
+        g.restore();
+        g.strokeStyle = 'rgba(0,0,0,0.45)'; g.lineWidth = 2.5; wPath(g, st, ox, oy); g.stroke();   // (its edge sunk in the mortar)
+      }); });
+    }, [3, 2]);
+    var stoneH = cpTex(WS / 2, WH / 2, function (g, w, h) {             // (the height map: each stone a rounded hump, the mortar deep)
+      g.fillStyle = '#181818'; g.fillRect(0, 0, w, h); g.save(); g.scale(0.5, 0.5);
+      wStones.forEach(function (st) { wWrap(st, function (ox, oy) { var gr = g.createRadialGradient(st.cx + ox - st.rx * 0.2, st.cy + oy - st.ry * 0.2, 2, st.cx + ox, st.cy + oy, Math.max(st.rx, st.ry)); gr.addColorStop(0, '#f0f0f0'); gr.addColorStop(0.7, '#a8a8a8'); gr.addColorStop(1, '#505050'); wPath(g, st, ox, oy); g.fillStyle = gr; g.fill(); }); });
+      g.restore(); }, [3, 2]);
+    var wallM = new THREE.MeshStandardMaterial({ map: stoneT, bumpMap: stoneH, bumpScale: 0.035, roughness: 0.92 });
+    // (on each wall: damp rising from the floor, moss along its foot, water stains running down from the top, roots pushing in
+    // between the stones up near the ceiling, and a few stones jutting out of the wall)
+    var dampT = cpTex(16, 128, function (g, w, h) { var gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, 'rgba(14,12,8,0.75)'); gr.addColorStop(0.5, 'rgba(14,12,8,0.3)'); gr.addColorStop(1, 'rgba(14,12,8,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    var dampM = new THREE.MeshBasicMaterial({ map: dampT, transparent: true, depthWrite: false });
+    var streakT = cpTex(32, 256, function (g, w, h) { g.clearRect(0, 0, w, h); for (var k = 0; k < 4; k++) { var x = 8 + k * 5, gr = g.createLinearGradient(0, 0, 0, h * (0.5 + k * 0.12)); gr.addColorStop(0, 'rgba(10,10,8,0.55)'); gr.addColorStop(1, 'rgba(10,10,8,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 2, 0); g.quadraticCurveTo(x + 3, h * 0.3, x - 1, h * (0.5 + k * 0.12)); g.lineTo(x + 1, h * (0.5 + k * 0.12)); g.quadraticCurveTo(x + 5, h * 0.3, x + 3, 0); g.fill(); } });
+    var streakM = new THREE.MeshBasicMaterial({ map: streakT, transparent: true, depthWrite: false });
+    var mossW = cpTex(128, 32, function (g, w, h) { g.clearRect(0, 0, w, h); for (var k = 0; k < 160; k++) { var x = wsRnd() * w, y = h - Math.pow(wsRnd(), 1.6) * h; g.fillStyle = 'rgba(' + (50 + k % 30) + ',' + (90 + k % 40) + ',40,' + (0.5 + wsRnd() * 0.4) + ')'; g.beginPath(); g.arc(x, y, 1 + wsRnd() * 3, 0, Math.PI * 2); g.fill(); } });
+    var mossWM = new THREE.MeshStandardMaterial({ map: mossW, transparent: true, roughness: 1, depthWrite: false });
+    var rootM = rMat(0x5a4632, { roughness: 1 }), jutM = [0x6a645a, 0x5a5448, 0x7a7266].map(function (c) { return rMat(c, { roughness: 0.95 }); });
+    function wallDetail(g, len, k) {
+      var dp = p(new THREE.PlaneGeometry(len, 0.9), dampM, 0, 0.45, 0.004, 0, 0, 0, g); dp.renderOrder = 1; dp.castShadow = false;
+      for (var mw = 0; mw < Math.round(len / 1.4); mw++) { var mp2 = p(new THREE.PlaneGeometry(0.9 + wsRnd() * 0.6, 0.22), mossWM, -len / 2 + 0.6 + mw * 1.4 + wsRnd() * 0.4, 0.12, 0.006, 0, 0, 0, g); mp2.renderOrder = 2; mp2.castShadow = false; }
+      for (var sk = 0; sk < Math.round(len / 2.2); sk++) { var sp2 = p(new THREE.PlaneGeometry(0.22, 1.2 + wsRnd() * 0.8), streakM, -len / 2 + 0.8 + sk * 2.2 + wsRnd() * 0.8, HDI_H - 0.25 - 0.8, 0.005, 0, 0, 0, g); sp2.renderOrder = 1; sp2.castShadow = false; }
+      for (var rt = 0; rt < 2 + (k % 2); rt++) { var rx = -len / 2 + 0.9 + wsRnd() * (len - 1.8), pts = [];   // (roots pushing in near the top)
+        for (var q = 0; q <= 8; q++) { var u = q / 8; pts.push(new THREE.Vector3(rx + Math.sin(u * 5 + rt) * 0.06, HDI_H - 0.28 - u * (0.4 + wsRnd() * 0.25), 0.015 + Math.sin(u * 3) * 0.02 + u * 0.01)); }
+        p(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.012, 5), rootM, 0, 0, 0, 0, 0, 0, g);
+        for (var sb = 0; sb < 3; sb++) { var bp = pts[2 + sb * 2], bpts = [bp, bp.clone().add(new THREE.Vector3((sb % 2 ? 1 : -1) * 0.06, -0.05, 0.01)), bp.clone().add(new THREE.Vector3((sb % 2 ? 1 : -1) * 0.1, -0.13, 0.02))]; p(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bpts), 6, 0.004, 4), rootM, 0, 0, 0, 0, 0, 0, g); } }
+      for (var js = 0; js < Math.round(len * 1.2); js++) { var jx = -len / 2 + 0.3 + wsRnd() * (len - 0.6), jy = 0.3 + wsRnd() * (HDI_H - 0.9), jr = 0.06 + wsRnd() * 0.07;   // (stones jutting out of the wall)
+        var jst = p(new THREE.DodecahedronGeometry(jr, 1), jutM[js % 3], jx, jy, 0.0, js, js * 0.7, 0, g); jst.scale.set(1.3, 0.8, 0.45); }
+    }
     // (the floor: old flagstones laid in running rows, each slab its own size and shade, their edges uneven and chipped, worn
     // pale and smooth where feet have passed, some cracked, flecked with mica and darker veins; the joints between them packed
     // with dark grit, with moss and a few weeds in them. A matching height map gives the slabs, joints and cracks real depth.
@@ -2163,7 +2214,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var beam = rMat(0x3a2a1c, { roughness: 0.9 });
     [[0, -D, 0, HDI_W], [0, D, Math.PI, HDI_W], [-W, 0, Math.PI / 2, HDI_D], [W, 0, -Math.PI / 2, HDI_D]].forEach(function (w) {   // (rough stone walls with timber posts; the one between you and the camera steps aside)
       var g = new THREE.Group(); g.position.set(w[0], 0, w[1]); g.rotation.y = w[2]; R.add(g);
-      p(new THREE.PlaneGeometry(w[3], H), wallM, 0, H / 2, 0, 0, 0, 0, g);
+      p(new THREE.PlaneGeometry(w[3], H), wallM, 0, H / 2, 0, 0, 0, 0, g); wallDetail(g, w[3], w[2] * 2 | 0);
       for (var ps = -w[3] / 2 + 0.2; ps <= w[3] / 2 - 0.1; ps += w[3] / 3.5) p(new THREE.BoxGeometry(0.2, H, 0.18), beam, ps, H / 2, 0.08, 0, 0, 0, g);
       p(new THREE.BoxGeometry(w[3], 0.22, 0.2), beam, 0, H - 0.11, 0.08, 0, 0, 0, g);
       hdWalls.push({ g: g, n: w[1] ? new THREE.Vector3(0, 0, w[1] < 0 ? -1 : 1) : new THREE.Vector3(w[0] < 0 ? -1 : 1, 0, 0), d: w[1] ? D : W });
