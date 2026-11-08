@@ -2106,8 +2106,60 @@ EVERDAWN_PARTS.push(function (THREE) {
     var stoneT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#2a2622'; g.fillRect(0, 0, w, h);
       for (var r = 0, y = 0; y < h; r++) { var hh = 28 + (r * 11) % 14; for (var x = -((r * 29) % 50); x < w; ) { var ww = 40 + ((r * 17 + x) % 40), c = 70 + ((r * 31 + x * 3) % 36); g.fillStyle = 'rgb(' + c + ',' + (c - 6) + ',' + (c - 12) + ')'; g.beginPath(); g.ellipse(x + ww / 2, y + hh / 2, ww / 2 - 2, hh / 2 - 2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(255,240,220,0.06)'; g.fillRect(x + 6, y + 4, ww - 12, 3); x += ww; } y += hh; } }, [3, 1.5]);
     var wallM = new THREE.MeshStandardMaterial({ map: stoneT, roughness: 0.95 });
-    var floorT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#1e1a16'; g.fillRect(0, 0, w, h); for (var r = 0; r < 6; r++) for (var c = 0; c < 6; c++) { var v = 60 + ((r * 7 + c * 13) % 28); g.fillStyle = 'rgb(' + v + ',' + (v - 5) + ',' + (v - 10) + ')'; g.fillRect(c * 43 + 2 + (r % 2) * 10, r * 43 + 2, 39, 39); } }, [3, 2.4]);
-    p(new THREE.PlaneGeometry(HDI_W, HDI_D), new THREE.MeshStandardMaterial({ map: floorT, roughness: 0.9 }), 0, 0, 0, -Math.PI / 2, 0, 0);
+    // (the floor: old flagstones laid in running rows, each slab its own size and shade, their edges uneven and chipped, worn
+    // pale and smooth where feet have passed, some cracked, flecked with mica and darker veins; the joints between them packed
+    // with dark grit, with moss and a few weeds in them. A matching height map gives the slabs, joints and cracks real depth.
+    // It tiles seamlessly over the room)
+    var FS = 1024, fsRnd = (function () { var sd = 7; return function () { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }; })();
+    var slabs = [], fy = 0, rowH = [150, 180, 160, 175, 165, 194];   // (rows that add up to the full height, so it tiles)
+    rowH.forEach(function (rh, ri) { var x = -fsRnd() * 120, widths = []; while (x < FS) { var ww = 120 + fsRnd() * 160; widths.push([x, Math.min(ww, FS + 200 - x)]); x += ww; }
+      widths.forEach(function (wd) { var j = function () { return (fsRnd() - 0.5) * 9; }; slabs.push({ pts: [[wd[0] + 5 + j(), fy + 5 + j()], [wd[0] + wd[1] - 5 + j(), fy + 5 + j()], [wd[0] + wd[1] - 5 + j(), fy + rh - 5 + j()], [wd[0] + 5 + j(), fy + rh - 5 + j()]],
+        tone: 0.75 + fsRnd() * 0.5, hue: fsRnd(), worn: fsRnd(), crack: fsRnd() < 0.35, chips: Math.floor(fsRnd() * 4), seed: fsRnd() * 1000, x: wd[0], y: fy, w: wd[1], h: rh }); }); fy += rh; });
+    function slabPath(g, sl, ox, oy) { g.beginPath(); sl.pts.forEach(function (q, k) { var px = q[0] + ox, py = q[1] + oy; if (k) g.lineTo(px, py); else g.moveTo(px, py); }); g.closePath(); }
+    function eachWrap(f) { [-FS, 0, FS].forEach(function (ox) { [-FS, 0, FS].forEach(function (oy) { f(ox, oy); }); }); }
+    var floorT = cpTex(FS, FS, function (g, w, h) {
+      g.fillStyle = '#17130f'; g.fillRect(0, 0, w, h);
+      for (var k = 0; k < 9000; k++) { g.fillStyle = ['rgba(60,50,38,0.6)', 'rgba(30,24,18,0.7)', 'rgba(90,80,64,0.4)'][k % 3]; g.fillRect(fsRnd() * w, fsRnd() * h, 1 + (k % 3), 1 + (k % 2)); }   // (grit in the joints)
+      slabs.forEach(function (sl) { eachWrap(function (ox, oy) {
+        if (sl.x + ox > w + 10 || sl.x + sl.w + ox < -10 || sl.y + oy > h + 10 || sl.y + sl.h + oy < -10) return;
+        g.save(); slabPath(g, sl, ox, oy); g.clip();
+        var v = Math.round(78 * sl.tone), warm = sl.hue < 0.5 ? 6 : -4;
+        var cx = sl.x + ox + sl.w * (0.3 + sl.worn * 0.4), cy = sl.y + oy + sl.h * 0.5, gr = g.createRadialGradient(cx, cy, 4, cx, cy, Math.max(sl.w, sl.h) * 0.75);
+        gr.addColorStop(0, 'rgb(' + (v + 26 + warm) + ',' + (v + 20) + ',' + (v + 12 - warm) + ')'); gr.addColorStop(0.6, 'rgb(' + (v + warm) + ',' + (v - 5) + ',' + (v - 12 - warm) + ')'); gr.addColorStop(1, 'rgb(' + (v - 22) + ',' + (v - 26) + ',' + (v - 30) + ')');
+        g.fillStyle = gr; g.fillRect(sl.x + ox - 10, sl.y + oy - 10, sl.w + 20, sl.h + 20);   // (worn pale in the middle, darker at the edges)
+        for (var q = 0; q < 260; q++) { var sx = sl.x + ox + fsRnd() * sl.w, sy = sl.y + oy + fsRnd() * sl.h; g.fillStyle = q % 7 === 0 ? 'rgba(235,230,215,0.35)' : q % 2 ? 'rgba(30,24,18,0.22)' : 'rgba(150,140,120,0.18)'; g.fillRect(sx, sy, q % 7 === 0 ? 1.5 : 2.5, q % 7 === 0 ? 1.5 : 2.5); }   // (flecks of mica and grit)
+        g.strokeStyle = 'rgba(40,32,24,0.28)'; g.lineWidth = 1.2; for (var vn = 0; vn < 3; vn++) { g.beginPath(); var vx = sl.x + ox + fsRnd() * sl.w, vy = sl.y + oy; g.moveTo(vx, vy); for (var t = 0; t < 8; t++) { vx += (fsRnd() - 0.5) * 30; vy += sl.h / 8; g.lineTo(vx, vy); } g.stroke(); }   // (veins in the stone)
+        if (sl.worn > 0.6) { g.fillStyle = 'rgba(210,200,180,0.08)'; g.beginPath(); g.ellipse(cx, cy, sl.w * 0.3, sl.h * 0.22, 0, 0, Math.PI * 2); g.fill(); }   // (polished by footsteps)
+        g.restore();
+        g.strokeStyle = 'rgba(255,245,225,0.16)'; g.lineWidth = 2; g.beginPath(); g.moveTo(sl.pts[3][0] + ox, sl.pts[3][1] + oy); g.lineTo(sl.pts[0][0] + ox, sl.pts[0][1] + oy); g.lineTo(sl.pts[1][0] + ox, sl.pts[1][1] + oy); g.stroke();   // (a lit top edge...)
+        g.strokeStyle = 'rgba(0,0,0,0.4)'; g.beginPath(); g.moveTo(sl.pts[1][0] + ox, sl.pts[1][1] + oy); g.lineTo(sl.pts[2][0] + ox, sl.pts[2][1] + oy); g.lineTo(sl.pts[3][0] + ox, sl.pts[3][1] + oy); g.stroke();   // (...and a shaded bottom one)
+        for (var c2 = 0; c2 < sl.chips; c2++) { var cp = sl.pts[c2 % 4]; g.fillStyle = '#1a1510'; g.beginPath(); g.moveTo(cp[0] + ox, cp[1] + oy); g.lineTo(cp[0] + ox + (c2 % 2 ? -1 : 1) * (8 + fsRnd() * 12), cp[1] + oy + 2); g.lineTo(cp[0] + ox + 2, cp[1] + oy + (c2 < 2 ? 1 : -1) * (6 + fsRnd() * 10)); g.fill(); }   // (chipped corners)
+        if (sl.crack) { g.strokeStyle = 'rgba(14,10,6,0.85)'; g.lineWidth = 1.6; g.beginPath(); var kx = sl.x + ox + sl.w * (0.2 + fsRnd() * 0.3), ky = sl.y + oy + 4; g.moveTo(kx, ky); for (var t2 = 0; t2 < 10; t2++) { kx += (fsRnd() - 0.3) * 18; ky += sl.h / 10; g.lineTo(kx, ky); if (t2 === 4) { g.stroke(); g.beginPath(); g.moveTo(kx, ky); var bx = kx, by = ky; for (var t3 = 0; t3 < 4; t3++) { bx += 10 + fsRnd() * 8; by += (fsRnd() - 0.5) * 10; g.lineTo(bx, by); } g.stroke(); g.beginPath(); g.moveTo(kx, ky); } } g.stroke(); }   // (a crack, forking)
+      }); });
+      for (var m = 0; m < 70; m++) { var s2 = slabs[Math.floor(fsRnd() * slabs.length)], e = s2.pts[Math.floor(fsRnd() * 4)]; g.fillStyle = 'rgba(' + (60 + m % 30) + ',' + (100 + m % 40) + ',40,' + (0.35 + fsRnd() * 0.35) + ')';   // (moss tufts in the joints)
+        for (var mt = 0; mt < 6; mt++) { g.beginPath(); g.arc(e[0] + (fsRnd() - 0.5) * 22, e[1] + (fsRnd() - 0.5) * 22, 1.5 + fsRnd() * 3, 0, Math.PI * 2); g.fill(); } }
+      for (var wd2 = 0; wd2 < 18; wd2++) { var s3 = slabs[Math.floor(fsRnd() * slabs.length)], e2 = s3.pts[Math.floor(fsRnd() * 4)]; g.strokeStyle = 'rgba(90,120,50,0.8)'; g.lineWidth = 1.5;   // (a few little weeds)
+        for (var bl = 0; bl < 4; bl++) { g.beginPath(); g.moveTo(e2[0], e2[1]); g.quadraticCurveTo(e2[0] + (bl - 1.5) * 4, e2[1] - 6, e2[0] + (bl - 1.5) * 7, e2[1] - 10 - fsRnd() * 4); g.stroke(); } }
+    }, [2.2, 1.7]);
+    var floorH = cpTex(FS / 2, FS / 2, function (g, w, h) {              // (the height map: slabs up, joints and cracks down)
+      g.fillStyle = '#202020'; g.fillRect(0, 0, w, h); g.save(); g.scale(0.5, 0.5);
+      slabs.forEach(function (sl) { eachWrap(function (ox, oy) { if (sl.x + ox > FS + 10 || sl.x + sl.w + ox < -10 || sl.y + oy > FS + 10 || sl.y + sl.h + oy < -10) return;
+        var v = 170 + Math.round(sl.tone * 40), gr = g.createLinearGradient(sl.x + ox, sl.y + oy, sl.x + ox + sl.w, sl.y + oy + sl.h); gr.addColorStop(0, 'rgb(' + v + ',' + v + ',' + v + ')'); gr.addColorStop(1, 'rgb(' + (v - 30) + ',' + (v - 30) + ',' + (v - 30) + ')');
+        slabPath(g, sl, ox, oy); g.fillStyle = gr; g.fill(); g.strokeStyle = 'rgba(60,60,60,0.9)'; g.lineWidth = 6; g.stroke(); }); });
+      g.restore(); }, [2.2, 1.7]);
+    var floorM = new THREE.MeshStandardMaterial({ map: floorT, bumpMap: floorH, bumpScale: 0.025, roughness: 0.82, metalness: 0.02 });
+    p(new THREE.PlaneGeometry(HDI_W, HDI_D), floorM, 0, 0, 0, -Math.PI / 2, 0, 0);
+    // (grime along the foot of the walls, a damp patch where water drips by the stairs, and loose grit and stones)
+    var grimeT = cpTex(64, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(8,6,4,0.75)'); gr.addColorStop(1, 'rgba(8,6,4,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    var grimeM = new THREE.MeshBasicMaterial({ map: grimeT, transparent: true, depthWrite: false });
+    [[0, -D + 0.18, HDI_W, 0], [0, D - 0.18, HDI_W, Math.PI], [-W + 0.18, 0, HDI_D, Math.PI / 2], [W - 0.18, 0, HDI_D, -Math.PI / 2]].forEach(function (gm) { var pl = p(new THREE.PlaneGeometry(gm[2], 0.36), grimeM, gm[0], 0.004, gm[1], -Math.PI / 2, 0, gm[3]); pl.castShadow = false; pl.renderOrder = 1; });
+    var damp = p(new THREE.CircleGeometry(0.55, 28), new THREE.MeshStandardMaterial({ color: 0x0c0a08, transparent: true, opacity: 0.45, roughness: 0.08, metalness: 0.1, envMap: rubyEnv, envMapIntensity: 0.6, depthWrite: false }), -1.25, 0.005, D - 0.85, -Math.PI / 2, 0, 0); damp.scale.set(1.3, 0.75, 1); damp.renderOrder = 1; damp.castShadow = false;
+    var pud = p(new THREE.CircleGeometry(0.22, 24), new THREE.MeshStandardMaterial({ color: 0x1a2028, transparent: true, opacity: 0.6, roughness: 0.02, metalness: 0.3, envMap: rubyEnv, envMapIntensity: 1.2, depthWrite: false }), -1.1, 0.006, D - 0.8, -Math.PI / 2, 0, 0.4); pud.scale.set(1.4, 0.8, 1); pud.renderOrder = 2; pud.castShadow = false;
+    var gritM = [0x5a5248, 0x4a4238, 0x6e665a, 0x3a342c].map(function (c) { return rMat(c, { roughness: 1 }); });
+    for (var gt = 0; gt < 70; gt++) { var ga = fsRnd(), gx = (fsRnd() - 0.5) * (HDI_W - 0.6), gz = (fsRnd() - 0.5) * (HDI_D - 0.6);
+      if (Math.abs(gx) < W - 0.9 && Math.abs(gz) < D - 0.9 && ga < 0.6) continue;   // (gathered mostly along the walls, where no one walks)
+      var pb = p(new THREE.DodecahedronGeometry(0.012 + fsRnd() * 0.03), gritM[gt % 4], gx, 0.008, gz, gt, gt * 0.7, 0); pb.scale.y = 0.45; pb.castShadow = false; }
+    [[3.6, -1.6, 0.09], [-3.5, -0.3, 0.07], [1.4, 2.6, 0.06]].forEach(function (cs, k) { var ch = p(new THREE.DodecahedronGeometry(cs[2], 0), gritM[k], cs[0], cs[2] * 0.4, cs[1], k, k * 1.3, 0.2); ch.scale.y = 0.5; });   // (a few broken bits of stone)
     var beam = rMat(0x3a2a1c, { roughness: 0.9 });
     [[0, -D, 0, HDI_W], [0, D, Math.PI, HDI_W], [-W, 0, Math.PI / 2, HDI_D], [W, 0, -Math.PI / 2, HDI_D]].forEach(function (w) {   // (rough stone walls with timber posts; the one between you and the camera steps aside)
       var g = new THREE.Group(); g.position.set(w[0], 0, w[1]); g.rotation.y = w[2]; R.add(g);
