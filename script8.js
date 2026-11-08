@@ -1938,10 +1938,59 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     P(new THREE.TorusGeometry(0.05, 0.01, 6, 14), rust, 0.1, 0.62, 0.07, 0, 0, 0, CD); P(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 8), rust, 0.1, 0.67, 0.06, Math.PI / 2, 0, 0, CD);
     // (roots and ivy trailing over the doorway, moss on the stones)
-    var vine = rMat(0x3e5a2a, { roughness: 0.9 }), ivyL = rMat(0x3a6a34, { roughness: 0.7, side: THREE.DoubleSide });
-    for (var v = 0; v < 6; v++) { var vx = -0.7 + v * 0.28, pts = []; for (var k = 0; k <= 8; k++) { var u = k / 8; pts.push(new THREE.Vector3(vx + Math.sin(u * 4 + v) * 0.05, 1.18 + 0.02 - u * (0.25 + (v % 3) * 0.15), 0.12 + u * 0.02)); }
-      var cv = new THREE.CatmullRomCurve3(pts); P(new THREE.TubeGeometry(cv, 10, 0.008, 4), vine, 0, 0, 0, 0, 0, 0, CD);
-      for (var lf = 0; lf < 4; lf++) { var lp = cv.getPoint(0.15 + lf * 0.25); var lm = P(new THREE.SphereGeometry(0.5, 6, 4), ivyL, lp.x + 0.02, lp.y, lp.z + 0.01, 0, 0, lf, CD); lm.scale.set(0.05, 0.04, 0.01); } }
+    // (ivy hanging over the doorway: a woody vine running along the top of the stone surround and over the keystone, and from
+    // it six strands trailing down over the doors, brown and thick where they start, green and fine at their tips, waving a
+    // little; real ivy leaves on short stalks, veined, glossy dark green below and fresh light green near the tips, side shoots,
+    // curling tendrils, little roots gripping the stone and a few clusters of tiny ivy flowers)
+    var ivyVein = cpTex(64, 64, function (g, w, h) { var gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#dfeedd'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(235,250,215,0.95)'; g.lineWidth = 1.6; [[0.5, 0.02], [0.08, 0.36], [0.92, 0.36], [0.0, 0.85], [1.0, 0.85]].forEach(function (v) { g.beginPath(); g.moveTo(w * 0.5, h); g.quadraticCurveTo(w * (0.5 + (v[0] - 0.5) * 0.4), h * (0.6 + v[1] * 0.2), w * v[0], h * v[1]); g.stroke(); }); });
+    ivyVein.offset.set(0.5, 0);
+    var ivyMs = [0x2c5e2e, 0x386e36, 0x4a8040, 0x6aa850].map(function (c) { return new THREE.MeshStandardMaterial({ map: ivyVein, color: c, roughness: 0.45, metalness: 0.05, side: THREE.DoubleSide }); });
+    var ivyS = new THREE.Shape(); ivyS.moveTo(0, 0);
+    [[-0.22, -0.04, -0.42, 0.1], [-0.5, 0.22, -0.32, 0.36], [-0.58, 0.55, -0.4, 0.66], [-0.26, 0.7, -0.14, 0.72], [-0.08, 0.92, 0, 1]].forEach(function (c) { ivyS.quadraticCurveTo(c[0], c[1], c[2], c[3]); });
+    [[0.08, 0.92, 0.14, 0.72], [0.26, 0.7, 0.4, 0.66], [0.58, 0.55, 0.32, 0.36], [0.5, 0.22, 0.42, 0.1], [0.22, -0.04, 0, 0]].forEach(function (c) { ivyS.quadraticCurveTo(c[0], c[1], c[2], c[3]); });
+    var ivyGeo = new THREE.ShapeGeometry(ivyS, 5);
+    (function () { var ps = ivyGeo.attributes.position; for (var i = 0; i < ps.count; i++) { var x = ps.getX(i), y = ps.getY(i); ps.setZ(i, -Math.abs(x) * 0.25 + Math.sin(y * 3) * 0.04); } ivyGeo.computeVertexNormals(); })();   // (each leaf cupped a little along its midrib)
+    var woody = rMat(0x5a4630, { roughness: 0.85 }), stemG = rMat(0x4a6a30, { roughness: 0.7 }), stemY = rMat(0x6a8a3c, { roughness: 0.7 }), rootM = rMat(0x7a6448, { roughness: 1 });
+    function stem(cv, u0, u1, r0, r1, n) {                                   // (a stem, thinning from r0 to r1, brown turning green)
+      var segs = n || 4; for (var k = 0; k < segs; k++) { var a0 = u0 + (u1 - u0) * k / segs, a1 = u0 + (u1 - u0) * (k + 1) / segs, pts = [];
+        for (var q = 0; q <= 6; q++) pts.push(cv.getPoint(a0 + (a1 - a0) * q / 6));
+        var f = k / Math.max(1, segs - 1); P(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, r0 + (r1 - r0) * (k + 0.5) / segs, 5), f < 0.3 ? woody : f < 0.7 ? stemG : stemY, 0, 0, 0, 0, 0, 0, CD); }
+    }
+    function leaf(at, out, sz, col, tilt, roll) {                           // (an ivy leaf on its stalk, facing out from the door)
+      var tip = at.clone().add(new THREE.Vector3(out.x * 0.03, -0.012 + out.y * 0.03, 0.025));
+      P(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([at, at.clone().lerp(tip, 0.5).add(new THREE.Vector3(0, 0.008, 0.005)), tip]), 4, 0.0018, 4), stemY, 0, 0, 0, 0, 0, 0, CD);
+      var lg = new THREE.Group(); lg.position.copy(tip); lg.rotation.order = 'ZXY'; lg.rotation.set(tilt, 0, Math.atan2(-out.x, out.y) + roll); CD.add(lg);
+      var lm = P(ivyGeo, ivyMs[col], 0, 0, 0, 0, 0, 0, lg); lm.scale.setScalar(sz);
+    }
+    function tendril(at, dir, len) { var pts = []; for (var q = 0; q <= 14; q++) { var u = q / 14, a = u * Math.PI * 3.2, r = 0.012 * (1 - u * 0.75); pts.push(at.clone().add(new THREE.Vector3(dir * u * len + Math.cos(a) * r * dir, -u * len * 0.3 + Math.sin(a) * r, 0.01 + u * 0.01))); }
+      P(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.0012, 3), stemY, 0, 0, 0, 0, 0, 0, CD); }
+    var flowerM = rMat(0xe8e8b8, { roughness: 0.6 }), budM = rMat(0x9ab060, { roughness: 0.6 });
+    function flowers(at) { for (var q = 0; q < 9; q++) { var a = q * 2.4, r = 0.012 + (q % 3) * 0.008; P(new THREE.CylinderGeometry(0.001, 0.001, 0.02, 3), stemY, at.x + Math.cos(a) * r * 0.5, at.y + Math.sin(a) * r * 0.5, at.z + 0.012, Math.PI / 2, 0, 0, CD); P(new THREE.SphereGeometry(0.0055, 6, 4), q % 3 ? flowerM : budM, at.x + Math.cos(a) * r, at.y + Math.sin(a) * r, at.z + 0.024, 0, 0, 0, CD); } }
+    // (the main vine along the top of the surround, rising over the keystone)
+    var topPts = []; for (var t = 0; t <= 24; t++) { var tx = -0.78 + t / 24 * 1.56, over = Math.max(0, 1 - Math.abs(tx) / 0.24); topPts.push(new THREE.Vector3(tx, 1.19 + Math.sin(t * 1.3) * 0.012 + over * 0.12, 0.105 + over * 0.075 + Math.cos(t * 0.9) * 0.006)); }
+    var topV = new THREE.CatmullRomCurve3(topPts);
+    stem(topV, 0, 0.5, 0.013, 0.01, 4); stem(topV, 0.5, 1, 0.01, 0.007, 4);
+    for (var tl = 0; tl < 26; tl++) { var u = 0.02 + tl / 26 * 0.96, pt = topV.getPoint(u), up = tl % 2 ? 1 : -1; if (Math.abs(pt.x) < 0.17) continue; leaf(pt, new THREE.Vector2(Math.sin(tl * 1.7) * 0.6, up), 0.05 + (tl % 3) * 0.012, tl % 4 === 3 ? 3 : tl % 3, 0.25 + (tl % 3) * 0.12, (tl % 2 ? 0.3 : -0.3)); }
+    for (var rt = 0; rt < 10; rt++) { var rp = topV.getPoint(0.05 + rt * 0.1); for (var rr = 0; rr < 3; rr++) P(new THREE.CylinderGeometry(0.0012, 0.0008, 0.025, 3), rootM, rp.x + (rr - 1) * 0.006, rp.y - 0.012, rp.z - 0.008, 0.6, 0, (rr - 1) * 0.4, CD); }   // (little roots gripping the stone)
+    flowers(topV.getPoint(0.12)); flowers(topV.getPoint(0.83));
+    // (six strands trailing down over the doors)
+    [[-0.68, 0.62, 0], [-0.47, 0.42, 1], [-0.27, 0.7, 2], [0.27, 0.5, 3], [0.48, 0.78, 4], [0.69, 0.4, 5]].forEach(function (sd) {
+      var x0 = sd[0], len = sd[1], k = sd[2], pts = [];
+      for (var q = 0; q <= 12; q++) { var u = q / 12; pts.push(new THREE.Vector3(x0 + Math.sin(u * 5 + k) * 0.045 * u + Math.sin(u * 13 + k * 2) * 0.008, 1.19 - u * len, 0.1 + u * 0.02 + Math.sin(u * 7 + k) * 0.006)); }
+      var cv = new THREE.CatmullRomCurve3(pts);
+      stem(cv, 0, 1, 0.008, 0.0028, 5);
+      var nl = Math.round(9 + len * 10);
+      for (var lf = 0; lf < nl; lf++) { var u2 = 0.06 + lf / nl * 0.92, lp = cv.getPoint(u2), sdir = lf % 2 ? 1 : -1;
+        leaf(lp, new THREE.Vector2(sdir * 0.9, -0.3 + (lf % 3) * 0.2), 0.065 * (1.05 - u2 * 0.55) * (0.85 + (lf % 3) * 0.1), u2 > 0.8 ? 3 : u2 > 0.55 ? 2 : (lf + k) % 2, 0.35 + (lf % 3) * 0.15, sdir * (0.2 + (lf % 4) * 0.1)); }
+      [0.3, 0.6].forEach(function (bu, n) { if ((k + n) % 2) return; var bp = cv.getPoint(bu), bd = n % 2 ? 1 : -1, bpts = [];   // (a side shoot or two)
+        for (var q2 = 0; q2 <= 6; q2++) { var w = q2 / 6; bpts.push(bp.clone().add(new THREE.Vector3(bd * w * 0.09, -w * 0.07 - w * w * 0.04, 0.01 * w))); }
+        var bc = new THREE.CatmullRomCurve3(bpts); stem(bc, 0, 1, 0.003, 0.0018, 2);
+        for (var bl = 0; bl < 4; bl++) leaf(bc.getPoint(0.25 + bl * 0.22), new THREE.Vector2(bd, bl % 2 ? 0.4 : -0.5), 0.04 - bl * 0.004, 2 + (bl % 2), 0.4, bd * 0.3); });
+      tendril(cv.getPoint(0.45), k % 2 ? 1 : -1, 0.05); tendril(cv.getPoint(0.82), k % 2 ? -1 : 1, 0.04);
+      var tp = cv.getPoint(1); P(new THREE.SphereGeometry(0.006, 6, 4), stemY, tp.x, tp.y - 0.004, tp.z, 0, 0, 0, CD);   // (a curled new shoot at its tip)
+      if (k === 1 || k === 4) flowers(cv.getPoint(0.35));
+    });
     for (var ms = 0; ms < 10; ms++) { var mm = P(new THREE.SphereGeometry(0.06 + (ms % 3) * 0.02, 8, 5), rMat(0x4a7a34, { roughness: 1 }), -0.75 + (ms % 5) * 0.37, ms < 5 ? 1.18 : -0.02, 0.1, 0, 0, 0, CD); mm.scale.set(1.4, 0.35, 0.9); }
     // (a crooked dead tree on top of the mound)
     var bark = rMat(0x3a3028, { roughness: 1 });
