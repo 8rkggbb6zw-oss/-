@@ -2057,8 +2057,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     Q(new THREE.CylinderGeometry(0.035, 0.038, 0.008, 12), stub, LX, 0.876, 0); Q(new THREE.CylinderGeometry(0.017, 0.02, 0.035, 10), stub, LX, 0.897, 0);
     [[0.016, 0.89, 0.005], [-0.012, 0.886, 0.012]].forEach(function (d) { var dr = Q(new THREE.SphereGeometry(0.006, 6, 4), stub, LX + d[0], d[1], d[2]); dr.scale.y = 1.8; });
     Q(new THREE.CylinderGeometry(0.0015, 0.0015, 0.012, 4), rMat(0x111111), LX, 0.92, 0);
-    var webT2 = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(235,235,245,0.55)'; g.lineWidth = 1; for (var q = 0; q < 6; q++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(q / 5 * Math.PI / 2) * w, Math.sin(q / 5 * Math.PI / 2) * h); g.stroke(); } for (var r = 12; r < 64; r += 10) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI / 2); g.stroke(); } });
-    var wb2 = Q(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ map: webT2, transparent: true, depthWrite: false, side: THREE.DoubleSide }), LX + 0.035, 0.92, 0.02, 0, 0.5, Math.PI); wb2.castShadow = false;   // (a tiny web inside, across the broken pane)
     hideWisp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x6affd8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); hideWisp.position.set(-0.3, 0.93, 0); hideWisp.scale.set(0.35, 0.35, 1); post.add(hideWisp);
     // (a mossy fallen log, ferns, toadstools and long grass, so it all looks like part of the wood)
     var lg = P(new THREE.CylinderGeometry(0.2, 0.24, 2.0, 10), bark, 1.5, 0.18, 0.4, 0, 0.6, Math.PI / 2); [-1, 1].forEach(function (e) { P(new THREE.CircleGeometry(0.2, 10), rMat(0x8a7050), 1.5 + Math.cos(0.6) * e * 1.0, 0.18, 0.4 - Math.sin(0.6) * e * 1.0, 0, 0.6 + (e > 0 ? Math.PI / 2 : -Math.PI / 2), 0); });
@@ -2345,8 +2343,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     var leafC = [0x8a5a2a, 0xa86a2a, 0x6a4a22, 0xb88a3a];   // (fallen leaves scattered over the ground)
     for (var lf = 0; lf < 60; lf++) { var la = lf * 2.39, lr = 1.6 + (lf % 11) * 0.17, lx = Math.sin(la) * lr, lz = -0.4 + Math.cos(la) * lr; if (lz > 1.6 && lz < 3.3 && Math.abs(lx) < 0.6) continue;
       var lm = P(new THREE.CircleGeometry(0.045, 5), rMat(leafC[lf % 4], { roughness: 1, side: THREE.DoubleSide }), lx, 0.012 + (lf % 3) * 0.002, lz, -Math.PI / 2 + (lf % 5 - 2) * 0.1, 0, la); lm.scale.y = 1.6; lm.castShadow = false; }
-    var webT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(235,235,245,0.6)'; g.lineWidth = 1; for (var k = 0; k < 7; k++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(k / 6 * Math.PI / 2) * w, Math.sin(k / 6 * Math.PI / 2) * h); g.stroke(); } for (var r = 10; r < 64; r += 9) { g.beginPath(); g.arc(0, 0, r, 0, Math.PI / 2); g.stroke(); } });
-    var wb = P(new THREE.PlaneGeometry(0.3, 0.3), new THREE.MeshBasicMaterial({ map: webT, transparent: true, depthWrite: false, side: THREE.DoubleSide }), 0.97, 1.2, 1.45, 0, Math.PI / 2, Math.PI); wb.castShadow = false;   // (a cobweb under the lantern's arm)
     G.traverse(function (o) { if (o.isMesh && o.castShadow !== false) { o.castShadow = true; o.receiveShadow = true; } });
   })(hideGroup);
   [[-1.35, 2.6, 0.4], [2.25, -1.35, 0.35]].forEach(function (b) { var w = hideWorld(b[0], b[1]); solids.push({ x: w.x, z: w.z, r: b[2] }); });
