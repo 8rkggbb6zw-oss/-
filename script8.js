@@ -1892,13 +1892,49 @@ EVERDAWN_PARTS.push(function (THREE) {
     P(new THREE.BoxGeometry(1.2, 1.04, 0.05), rMat(0x0a0806), 0, 0.55, -0.06, 0, 0, 0, CD);
     var plankT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#5a4630'; g.fillRect(0, 0, w, h); for (var k = 0; k < 6; k++) { g.fillStyle = 'rgba(20,12,6,0.8)'; g.fillRect(k * (w / 6), 0, 2, h); }
       for (var q = 0; q < 60; q++) { g.strokeStyle = q % 2 ? 'rgba(30,20,10,0.35)' : 'rgba(140,120,90,0.25)'; g.beginPath(); var gx = (q * 23) % w; g.moveTo(gx, 0); g.lineTo(gx + Math.sin(q) * 3, h); g.stroke(); }
-      for (var m2 = 0; m2 < 30; m2++) { g.fillStyle = 'rgba(70,110,50,' + (0.25 + (m2 % 3) * 0.12) + ')'; g.beginPath(); g.arc((m2 * 41) % w, h - (m2 * 7) % 30, 3 + m2 % 4, 0, Math.PI * 2); g.fill(); }   // (moss creeping up from the bottom)
-      hideSigil(g, w * 0.72, h * 0.42, 15, 'rgba(25,15,8,0.55)', 2); });   // (the sigil, scratched faintly into the wood)
+      for (var m2 = 0; m2 < 30; m2++) { g.fillStyle = 'rgba(70,110,50,' + (0.25 + (m2 % 3) * 0.12) + ')'; g.beginPath(); g.arc((m2 * 41) % w, h - (m2 * 7) % 30, 3 + m2 % 4, 0, Math.PI * 2); g.fill(); } });   // (moss creeping up from the bottom)
     var leafM = new THREE.MeshStandardMaterial({ map: plankT, roughness: 0.95 });
+    // (the two door leaves, built board by board: weathered oak planks with gaps between them, each its own shade, with knots,
+    // splits and moss creeping up from the bottom; two battens and a diagonal brace across the back; long iron strap hinges with
+    // spear tips and curled ends, nailed through; an iron kick plate at the foot, a ring pull on its rosette and a keyhole plate)
+    var boardT = cpTex(64, 256, function (g, w, h) { g.fillStyle = '#7a6044'; g.fillRect(0, 0, w, h);
+      for (var q = 0; q < 26; q++) { g.strokeStyle = q % 2 ? 'rgba(40,26,12,0.35)' : 'rgba(170,140,100,0.25)'; g.lineWidth = q % 4 ? 1 : 2; g.beginPath(); var gx = 2 + (q * 13) % (w - 4); g.moveTo(gx, 0); for (var y = 0; y <= h; y += 8) g.lineTo(gx + Math.sin(y * 0.03 + q) * 2.2, y); g.stroke(); }
+      [[22, 70], [44, 180]].forEach(function (k) { for (var r = 9; r > 1; r -= 2) { g.strokeStyle = 'rgba(40,22,10,' + (0.25 + (9 - r) * 0.07) + ')'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(k[0], k[1], r * 0.7, r * 1.7, 0, 0, Math.PI * 2); g.stroke(); } g.fillStyle = 'rgba(35,20,8,0.75)'; g.beginPath(); g.ellipse(k[0], k[1], 2, 4, 0, 0, Math.PI * 2); g.fill(); });   // (knots)
+      g.fillStyle = 'rgba(255,230,190,0.12)'; g.fillRect(2, 0, 2, h); g.fillStyle = 'rgba(25,14,6,0.3)'; g.fillRect(w - 5, 0, 4, h);   // (light on one edge, shade on the other)
+      var fg = g.createLinearGradient(0, h, 0, h * 0.72); fg.addColorStop(0, 'rgba(30,40,20,0.65)'); fg.addColorStop(1, 'rgba(30,40,20,0)'); g.fillStyle = fg; g.fillRect(0, h * 0.72, w, h * 0.28);   // (damp and dark at the foot)
+      var tg = g.createLinearGradient(0, 0, 0, h * 0.12); tg.addColorStop(0, 'rgba(30,20,10,0.35)'); tg.addColorStop(1, 'rgba(30,20,10,0)'); g.fillStyle = tg; g.fillRect(0, 0, w, h * 0.12); });
+    var boardMs = [0xe8dccb, 0xd8c8b0, 0xf0e2cc, 0xc8b8a0, 0xe0d0b8].map(function (c, k) { var t = boardT.clone(); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.offset.set((k * 0.37) % 1, (k * 0.23) % 1); return new THREE.MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 0.006, color: c, roughness: 0.92 }); });
+    var battenM = rMat(0x4a3826, { roughness: 0.95 }), ironD = rMat(0x2a221c, { metalness: 0.6, roughness: 0.55 }), crackM = rMat(0x140c06), mossD = rMat(0x3e6a2c, { roughness: 1 });
+    var nailG = new THREE.ConeGeometry(0.012, 0.012, 4);
     [-1, 1].forEach(function (sd) {
       var L = new THREE.Group(); L.position.set(sd * 0.6, 0.55, 0.02); CD.add(L);
-      P(new THREE.BoxGeometry(0.58, 1.02, 0.06), leafM, -sd * 0.29, 0, 0, 0, sd < 0 ? Math.PI : 0, 0, L);
-      [-0.32, 0.32].forEach(function (by) { P(new THREE.BoxGeometry(0.56, 0.05, 0.012), rust, -sd * 0.29, by, 0.036, 0, 0, 0, L); for (var r2 = 0; r2 < 3; r2++) P(new THREE.SphereGeometry(0.012, 6, 4), rust, -sd * (0.08 + r2 * 0.2), by, 0.045, 0, 0, 0, L); });
+      P(new THREE.BoxGeometry(0.58, 1.02, 0.02), rMat(0x0e0804), -sd * 0.29, 0, -0.01, 0, 0, 0, L);   // (dark behind the gaps)
+      for (var pl = 0; pl < 4; pl++) {                                   // (four planks, a hair apart, none quite the same)
+        var px = -sd * (0.075 + pl * 0.144), ph = 1.02 - ((pl * 7 + (sd > 0 ? 3 : 0)) % 4) * 0.008, pd = 0.046 + ((pl + (sd > 0 ? 1 : 0)) % 3) * 0.004;
+        P(new THREE.BoxGeometry(0.138, ph, pd), boardMs[(pl + (sd > 0 ? 2 : 0)) % 5], px, (ph - 1.02) / 2, 0.05 - pd / 2, 0, 0, ((pl * 3 + sd) % 3 - 1) * 0.004, L);
+        if ((pl + (sd > 0 ? 1 : 0)) % 2 === 0) P(new THREE.BoxGeometry(0.004, 0.16 + pl * 0.03, 0.004), crackM, px + 0.03 * sd, -0.12 + pl * 0.07, 0.051, 0, 0, 0.05 * sd, L);   // (a split in the wood)
+        for (var mo = 0; mo < 3; mo++) { var mm = P(new THREE.SphereGeometry(0.03 + (mo % 2) * 0.012, 6, 4), mossD, px + (mo - 1) * 0.04, -0.49 + (mo % 2) * 0.03, 0.05, 0, 0, 0, L); mm.scale.set(1.2, 0.8, 0.35); }   // (moss creeping up)
+      }
+      [0.14, 0.18].forEach(function (fy, k) { var fu = P(new THREE.SphereGeometry(0.03, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), rMat(0xc8a46a, { roughness: 0.8 }), -sd * (0.56 - k * 0.01), -0.3 + fy, 0.04, Math.PI / 2 - 0.2, 0, 0, L); fu.scale.set(1, 1, 0.45); });   // (little bracket fungi on its edge)
+      [-0.32, 0.32].forEach(function (by) { P(new THREE.BoxGeometry(0.54, 0.08, 0.024), battenM, -sd * 0.29, by, 0.062, 0, 0, 0, L); });   // (the battens)
+      var dl = Math.hypot(0.44, 0.56), da = Math.atan2(0.56, 0.44 * -sd);   // (the diagonal brace between them)
+      P(new THREE.BoxGeometry(dl, 0.06, 0.022), battenM, -sd * 0.29, 0, 0.061, 0, 0, da, L);
+      [-0.18, 0.18].forEach(function (t) { P(nailG, ironD, -sd * 0.29 + Math.cos(da) * t * dl, Math.sin(da) * t * dl, 0.078, Math.PI / 2, Math.PI / 4, 0, L); });
+      [-0.32, 0.32].forEach(function (by) {                               // (the strap hinges, nailed through the battens)
+        var strap = new THREE.Shape(); strap.moveTo(0, -0.024); strap.lineTo(0.4, -0.018); strap.lineTo(0.45, -0.034); strap.lineTo(0.52, 0); strap.lineTo(0.45, 0.034); strap.lineTo(0.4, 0.018); strap.lineTo(0, 0.024); strap.lineTo(0, -0.024);
+        var sm = P(new THREE.ExtrudeGeometry(strap, { depth: 0.008, bevelEnabled: true, bevelSize: 0.003, bevelThickness: 0.003, bevelSegments: 1 }), rust, 0, by, 0.074, 0, sd > 0 ? Math.PI : 0, 0, L);
+        if (sd > 0) sm.position.z = 0.074 + 0.008;
+        [1, -1].forEach(function (cv) { P(new THREE.TorusGeometry(0.022, 0.005, 5, 12, Math.PI * 1.25), rust, -sd * 0.43, by + cv * 0.036, 0.08, 0, 0, sd > 0 ? (cv > 0 ? -0.3 : Math.PI + 0.3) : (cv > 0 ? Math.PI + 0.3 : -0.3)); });
+        for (var nl = 0; nl < 6; nl++) P(nailG, ironD, -sd * (0.03 + nl * 0.075), by, 0.088, Math.PI / 2, Math.PI / 4, 0, L);
+        P(new THREE.CylinderGeometry(0.02, 0.02, 0.09, 8), rust, sd * 0.005, by, 0.06, 0, 0, 0, L);   // (its knuckle)
+      });
+      P(new THREE.BoxGeometry(0.56, 0.07, 0.008), rust, -sd * 0.29, -0.465, 0.054, 0, 0, 0, L);   // (an iron kick plate)
+      for (var kp = 0; kp < 5; kp++) P(new THREE.SphereGeometry(0.007, 6, 4), ironD, -sd * (0.05 + kp * 0.12), -0.465, 0.06, 0, 0, 0, L);
+      var rx = -sd * 0.5;                                                 // (a rosette by the inner edge for the ring pull)
+      P(new THREE.CylinderGeometry(0.045, 0.045, 0.008, 16), rust, rx, 0.07, 0.056, Math.PI / 2, 0, 0, L);
+      for (var pe = 0; pe < 8; pe++) { var pa = pe / 8 * Math.PI * 2; P(new THREE.SphereGeometry(0.008, 6, 4), rust, rx + Math.cos(pa) * 0.036, 0.07 + Math.sin(pa) * 0.036, 0.061, 0, 0, 0, L); }
+      if (sd < 0) { P(new THREE.TorusGeometry(0.05, 0.01, 6, 14), rust, rx, 0.02, 0.07, -0.15, 0, 0, L); P(new THREE.CylinderGeometry(0.016, 0.016, 0.02, 8), rust, rx, 0.07, 0.065, Math.PI / 2, 0, 0, L);
+        P(new THREE.BoxGeometry(0.05, 0.08, 0.006), rust, rx, -0.13, 0.055, 0, 0, 0, L); P(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 8), crackM, rx, -0.12, 0.059, Math.PI / 2, 0, 0, L); P(new THREE.BoxGeometry(0.005, 0.018, 0.004), crackM, rx, -0.135, 0.059, 0, 0, 0, L); }   // (and a keyhole plate on the left leaf)
     });
     P(new THREE.TorusGeometry(0.05, 0.01, 6, 14), rust, 0.1, 0.62, 0.07, 0, 0, 0, CD); P(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 8), rust, 0.1, 0.67, 0.06, Math.PI / 2, 0, 0, CD);
     // (roots and ivy trailing over the doorway, moss on the stones)
@@ -2128,7 +2164,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   }; })(interact);
 
   // ===== The Hollow Fang, in detail =====
-  var hfRune = null, hfCrow = null, hfSteam = [], hfEmbers = null, hfCauldron = null;
+  var hfRune = null, hfRuneGlow = null, hfCrow = null, hfSteam = [], hfEmbers = null, hfCauldron = null;
   // ---- outside: worn flagstones down to the door, an open padlock hanging on a chain, a rune on the lintel that glows after
   // dark, stones poking up through the turf, wildflowers, moss hanging from the dead tree, a crow on its branch, a rope knotted
   // round its trunk, a cold campfire ring, a half-buried crate under ivy, fallen leaves, and a cobweb on the lantern ----
@@ -2146,10 +2182,37 @@ EVERDAWN_PARTS.push(function (THREE) {
       P(new THREE.BoxGeometry(0.07, 0.06, 0.03), rust, 0.1, 0.39, 0.09, 0, 0, 0.25, CD); P(new THREE.TorusGeometry(0.024, 0.006, 6, 12, Math.PI), rust, 0.1, 0.43, 0.09, 0, 0, 0.6, CD);   // (...and an old padlock, hanging open)
       P(new THREE.CylinderGeometry(0.005, 0.005, 0.01, 6), rMat(0x0a0806), 0.1, 0.385, 0.106, Math.PI / 2, 0, 0, CD);
       [-0.72, 0.72].forEach(function (hx) { [0.2, 0.9].forEach(function (hy) { P(new THREE.BoxGeometry(0.14, 0.05, 0.02), rust, hx * 0.92, hy, 0.06, 0, 0, 0, CD); P(new THREE.CylinderGeometry(0.018, 0.018, 0.07, 8), rust, hx * 0.84, hy, 0.06, 0, 0, 0, CD); }); });   // (hinge straps)
-      var runeT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); hideSigil(g, w / 2, h / 2, 24, '#7affe0', 3); });
-      hfRune = new THREE.MeshBasicMaterial({ map: runeT, transparent: true, opacity: 0.15, depthWrite: false, blending: THREE.AdditiveBlending });
-      var rn = P(new THREE.PlaneGeometry(0.15, 0.15), hfRune, 0, 1.1, 0.106, 0, 0, 0, CD); rn.castShadow = false;
-      for (var sc = 0; sc < 8; sc++) P(new THREE.BoxGeometry(0.004, 0.06 + (sc % 3) * 0.02, 0.004), rMat(0x2a2016), -0.45 + sc * 0.012, 0.75 - (sc % 2) * 0.03, 0.045, 0, 0, 0.3 + (sc % 3) * 0.08, CD);   // (claw marks scored into the left door)
+      function crestShapes(g, c, r, carve) {                              // (the crest: a ring of runes round a crescent moon pierced by a long fang)
+        g.save(); g.translate(c, c);
+        g.lineWidth = r * 0.05; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); g.lineWidth = r * 0.03; g.beginPath(); g.arc(0, 0, r * 0.78, 0, Math.PI * 2); g.stroke();
+        for (var k = 0; k < 16; k++) { g.save(); g.rotate(k / 16 * Math.PI * 2); g.translate(0, -r * 0.89); g.lineWidth = r * 0.022; g.beginPath();   // (sixteen runes between the rings)
+          if (k % 4 === 0) { g.moveTo(-r * 0.04, r * 0.05); g.lineTo(0, -r * 0.05); g.lineTo(r * 0.04, r * 0.05); g.closePath(); g.fill(); }
+          else if (k % 4 === 2) { g.arc(0, 0, r * 0.035, 0, Math.PI * 2); g.fill(); }
+          else { g.moveTo(0, -r * 0.05); g.lineTo(0, r * 0.05); g.moveTo(-r * 0.03, -r * 0.01); g.lineTo(r * 0.03, r * 0.03); g.stroke(); }
+          g.restore(); }
+        g.beginPath(); g.arc(-r * 0.06, 0, r * 0.56, Math.PI * 0.32, Math.PI * 1.68); g.arc(r * 0.16, -r * 0.02, r * 0.45, Math.PI * 1.56, Math.PI * 0.44, true); g.closePath(); g.fill();   // (the crescent)
+        g.beginPath(); g.moveTo(r * 0.14, -r * 0.7); g.bezierCurveTo(r * 0.36, -r * 0.3, r * 0.3, r * 0.3, r * 0.06, r * 0.74); g.bezierCurveTo(r * 0.16, r * 0.25, r * 0.2, -r * 0.25, r * 0.08, -r * 0.62); g.closePath(); g.fill();   // (the fang)
+        if (!carve) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.moveTo(r * 0.15, -r * 0.6); g.bezierCurveTo(r * 0.26, -r * 0.3, r * 0.24, r * 0.1, r * 0.12, r * 0.4); g.lineTo(r * 0.14, -r * 0.6); g.fill(); }   // (a bright edge on the fang)
+        [[-r * 0.32, -r * 0.42, 0.05], [-r * 0.42, r * 0.2, 0.035], [r * 0.4, r * 0.42, 0.04]].forEach(function (st) { g.beginPath(); for (var q = 0; q < 8; q++) { var rr = q % 2 ? r * st[2] * 0.4 : r * st[2], aa = q * Math.PI / 4; g.lineTo(st[0] + Math.cos(aa) * rr, st[1] + Math.sin(aa) * rr); } g.closePath(); g.fill(); });   // (three little stars)
+        g.restore();
+      }
+      var carveT = cpTex(256, 256, function (g, w, h) {                  // (the stone face, the crest carved into it)
+        var bg = g.createRadialGradient(w * 0.4, h * 0.35, 10, w / 2, h / 2, w * 0.6); bg.addColorStop(0, '#9a948a'); bg.addColorStop(1, '#5e5850'); g.fillStyle = bg; g.fillRect(0, 0, w, h);
+        for (var k = 0; k < 500; k++) { g.fillStyle = k % 2 ? 'rgba(40,36,30,0.25)' : 'rgba(220,214,200,0.18)'; g.fillRect((k * 37) % w, (k * 61) % h, 2, 2); }
+        g.translate(2, 2); g.fillStyle = g.strokeStyle = 'rgba(255,250,235,0.35)'; crestShapes(g, 126, 110, true); g.translate(-4, -4); g.fillStyle = g.strokeStyle = 'rgba(15,12,10,0.85)'; crestShapes(g, 128, 110, true); });
+      var runeT = cpTex(256, 256, function (g, w, h) {                   // (the glowing inlay set into the carving)
+        g.clearRect(0, 0, w, h); g.shadowColor = '#5affe0'; g.shadowBlur = 16;
+        var gr = g.createRadialGradient(128, 128, 10, 128, 128, 120); gr.addColorStop(0, '#e8fffa'); gr.addColorStop(0.5, '#7affe8'); gr.addColorStop(1, '#2ac8b8'); g.fillStyle = g.strokeStyle = gr; crestShapes(g, 126, 110, false); });
+      hfRune = new THREE.MeshBasicMaterial({ map: runeT, transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending });
+      P(new THREE.BoxGeometry(0.32, 0.32, 0.22), stoneM[2], 0, 1.13, 0.05, 0, 0, 0, CD);   // (a keystone, set proud of the lintel)
+      P(new THREE.BoxGeometry(0.34, 0.03, 0.24), stoneM[1], 0, 1.3, 0.05, 0, 0, 0, CD); P(new THREE.BoxGeometry(0.3, 0.025, 0.22), stoneM[1], 0, 0.965, 0.06, 0, 0, 0, CD);
+      P(new THREE.CylinderGeometry(0.135, 0.14, 0.03, 40), stoneM[3], 0, 1.13, 0.175, Math.PI / 2, 0, 0, CD);   // (the crest's round boss, its rim moulded)
+      P(new THREE.TorusGeometry(0.135, 0.012, 8, 40), stoneM[0], 0, 1.13, 0.19, 0, 0, 0, CD);
+      P(new THREE.CircleGeometry(0.128, 40), new THREE.MeshStandardMaterial({ map: carveT, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), 0, 1.13, 0.198, 0, 0, 0, CD);
+      var rn = P(new THREE.CircleGeometry(0.128, 40), hfRune, 0, 1.13, 0.203, 0, 0, 0, CD); rn.castShadow = false;
+      hfRuneGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0x5affd8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); hfRuneGlow.position.set(0, 0.86, 0.5);   /* (the frame leans back, so this sits on the crest) */ hfRuneGlow.scale.set(0.55, 0.55, 1); CD.add(hfRuneGlow);
+      [[-0.12, 1.27], [0.11, 1.29], [0.14, 0.98]].forEach(function (m) { var ms2 = P(new THREE.SphereGeometry(0.035, 6, 4), mossM, m[0], m[1], 0.16, 0, 0, 0, CD); ms2.scale.set(1.4, 0.5, 0.6); });   // (moss on the keystone's corners)
+      for (var sc = 0; sc < 8; sc++) P(new THREE.BoxGeometry(0.004, 0.06 + (sc % 3) * 0.02, 0.004), rMat(0x2a2016), -0.32 + sc * 0.012, 0.78 - (sc % 2) * 0.03, 0.073, 0, 0, 0.3 + (sc % 3) * 0.08, CD);   // (claw marks scored into the left door)
     }
     var stones = [[0.9, 0.2], [-1.0, 0.4], [1.5, -0.9], [-1.4, -1.6], [0.4, -2.2], [-1.8, -0.5], [1.2, -1.8], [-0.4, 0.3], [0.2, -1.2], [1.8, -0.2]];   // (stones poking up through the mound)
     function moundY(x, z) { var dx = x / 2.1, dz = (z + 0.95) / (2.1 * 0.78), q = 1 - dx * dx - dz * dz; return q > 0 ? Math.sqrt(q) * 1.3 - 0.05 : -0.05; }
@@ -2328,7 +2391,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (hfEmbers) hfEmbers.emissiveIntensity = 1.0 + Math.sin(t * 5) * 0.3 + Math.sin(t * 17) * 0.15;
     } else {
       var hr = state.minutes / 60, nt = hr < 5.5 || hr > 20 ? 1 : hr < 7 ? (7 - hr) / 1.5 : hr > 18.5 ? (hr - 18.5) / 1.5 : 0;
-      if (hfRune) hfRune.opacity = 0.12 + nt * (0.6 + Math.sin(t * 1.7) * 0.2);
+      if (hfRune) hfRune.opacity = 0.3 + nt * (0.6 + Math.sin(t * 1.7) * 0.15);   // (the crest: a faint shimmer by day, glowing after dark)
+      if (hfRuneGlow) hfRuneGlow.material.opacity = 0.08 + nt * (0.55 + Math.sin(t * 1.7) * 0.12);
       if (hfCrow) { var hd = hfCrow.userData.head; var lookT = Math.floor(t / 2.6); hd.rotation.y = Math.sin(lookT * 12.9898) * 0.9; hd.rotation.x = Math.sin(t * 1.3) * 0.1; }
     }
   }; })(updateCarpenter);
