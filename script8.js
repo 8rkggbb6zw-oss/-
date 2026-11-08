@@ -1913,9 +1913,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var px = -sd * (0.075 + pl * 0.144), ph = 1.02 - ((pl * 7 + (sd > 0 ? 3 : 0)) % 4) * 0.008, pd = 0.046 + ((pl + (sd > 0 ? 1 : 0)) % 3) * 0.004;
         P(new THREE.BoxGeometry(0.138, ph, pd), boardMs[(pl + (sd > 0 ? 2 : 0)) % 5], px, (ph - 1.02) / 2, 0.05 - pd / 2, 0, 0, ((pl * 3 + sd) % 3 - 1) * 0.004, L);
         if ((pl + (sd > 0 ? 1 : 0)) % 2 === 0) P(new THREE.BoxGeometry(0.004, 0.16 + pl * 0.03, 0.004), crackM, px + 0.03 * sd, -0.12 + pl * 0.07, 0.051, 0, 0, 0.05 * sd, L);   // (a split in the wood)
-        for (var mo = 0; mo < 3; mo++) { var mm = P(new THREE.SphereGeometry(0.03 + (mo % 2) * 0.012, 6, 4), mossD, px + (mo - 1) * 0.04, -0.49 + (mo % 2) * 0.03, 0.05, 0, 0, 0, L); mm.scale.set(1.2, 0.8, 0.35); }   // (moss creeping up)
       }
-      [0.14, 0.18].forEach(function (fy, k) { var fu = P(new THREE.SphereGeometry(0.03, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), rMat(0xc8a46a, { roughness: 0.8 }), -sd * (0.56 - k * 0.01), -0.3 + fy, 0.04, Math.PI / 2 - 0.2, 0, 0, L); fu.scale.set(1, 1, 0.45); });   // (little bracket fungi on its edge)
       [-0.32, 0.32].forEach(function (by) { P(new THREE.BoxGeometry(0.54, 0.08, 0.024), battenM, -sd * 0.29, by, 0.062, 0, 0, 0, L); });   // (the battens)
       var dl = Math.hypot(0.44, 0.56), da = Math.atan2(0.56, 0.44 * -sd);   // (the diagonal brace between them)
       P(new THREE.BoxGeometry(dl, 0.06, 0.022), battenM, -sd * 0.29, 0, 0.061, 0, 0, da, L);
@@ -1991,7 +1989,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var tp = cv.getPoint(1); P(new THREE.SphereGeometry(0.006, 6, 4), stemY, tp.x, tp.y - 0.004, tp.z, 0, 0, 0, CD);   // (a curled new shoot at its tip)
       if (k === 1 || k === 4) flowers(cv.getPoint(0.35));
     });
-    for (var ms = 0; ms < 10; ms++) { var mm = P(new THREE.SphereGeometry(0.06 + (ms % 3) * 0.02, 8, 5), rMat(0x4a7a34, { roughness: 1 }), -0.75 + (ms % 5) * 0.37, ms < 5 ? 1.18 : -0.02, 0.1, 0, 0, 0, CD); mm.scale.set(1.4, 0.35, 0.9); }
+    for (var ms = 0; ms < 5; ms++) { var mm = P(new THREE.SphereGeometry(0.06 + (ms % 3) * 0.02, 8, 5), rMat(0x4a7a34, { roughness: 1 }), -0.75 + ms * 0.37, 1.18, 0.1, 0, 0, 0, CD); mm.scale.set(1.4, 0.35, 0.9); }
     // (a crooked dead tree on top of the mound)
     var bark = rMat(0x3a3028, { roughness: 1 });
     function limb(pts, r) { var c = new THREE.CatmullRomCurve3(pts.map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); })); P(new THREE.TubeGeometry(c, 12, r, 6), bark, 0, 0, 0); return c; }
