@@ -2614,8 +2614,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var RX = -W + 0.15;
     hideSolids.push([RX + 0.3, -1.2, 0.35], [RX + 0.3, 0.25, 0.35]);
     // (crates, casks and sacks in the corners, and cobwebs up in them)
-    var crateM = rMat(0x5a4430, { roughness: 0.95 });
-    [[W - 0.5, D - 0.6, 0.6, 0.2], [W - 1.2, -D + 0.45, 0.55, 0]].forEach(function (c) { p(new THREE.BoxGeometry(c[2], c[2], c[2]), crateM, c[0], (c[4] || 0) + c[2] / 2, c[1], 0, c[3], 0); hideSolids.push([c[0], c[1], c[2] * 0.75]); });
+    hideSolids.push([W - 0.5, D - 0.6, 0.45], [W - 1.2, -D + 0.45, 0.41]);   // (the crates: see the back-right corner, in great detail, further down)
     hideSolids.push([W - 0.55, D - 1.5, 0.4], [W - 0.55, D - 2.2, 0.4], [-W + 1.3, -D + 0.5, 0.4]);   // (the casks: see the back-left corner, in great detail, further down)
     R.traverse(function (o) { if (o.isMesh) o.receiveShadow = true; });
   })(hideRoom);
@@ -2912,19 +2911,98 @@ EVERDAWN_PARTS.push(function (THREE) {
     var herbC = [0x6a8a4a, 0x8a7a4a, 0x7a5a8a];   // (bundles of herbs drying from the mantel)
     for (var hb = 0; hb < 4; hb++) { var hz = -0.9 + hb * 0.38; p(new THREE.CylinderGeometry(0.002, 0.002, 0.15, 3), rMat(0x8a7450), FX - 0.43, 1.36, hz);
       for (var hs = 0; hs < 6; hs++) { var h = p(new THREE.ConeGeometry(0.012, 0.18, 4), rMat(herbC[hb % 3], { roughness: 0.9 }), FX - 0.43 + Math.sin(hs) * 0.02, 1.2, hz + Math.cos(hs) * 0.02, Math.PI + (hs - 2.5) * 0.08, 0, 0); h.castShadow = false; } }
-    // (a bookshelf of old books, scrolls and bottles on the right wall)
-    var BKX = W - 0.22, BKZ = -2.3;
-    p(new THREE.BoxGeometry(0.03, 2.0, 1.2), wood, BKX + 0.19, 1.0, BKZ); [-0.585, 0.585].forEach(function (e) { p(new THREE.BoxGeometry(0.4, 2.0, 0.03), wood, BKX, 1.0, BKZ + e); }); p(new THREE.BoxGeometry(0.42, 0.04, 1.22), wood, BKX, 2.0, BKZ);   // (an open shelf: back, sides and top)
-    var bookC = [0x5a1a1a, 0x1a3a2a, 0x2a2a4a, 0x4a3a1a, 0x3a1a3a, 0x6a4a2a];
-    [0.12, 0.6, 1.08, 1.56].forEach(function (sy, sh) { p(new THREE.BoxGeometry(0.38, 0.03, 1.12), oak, BKX - 0.01, sy, BKZ);
-      var z = BKZ - 0.5, k = 0; while (z < BKZ + 0.5) { var bw = 0.04 + ((sh * 7 + k * 3) % 4) * 0.012, bh = 0.26 + ((sh + k * 5) % 5) * 0.03, lean = (k * 11 + sh) % 9 === 0 ? 0.25 : 0;
-        if ((sh === 1 && k === 4) || (sh === 3 && k === 2)) { for (var sc2 = 0; sc2 < 3; sc2++) p(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 10), parch, BKX - 0.05, sy + 0.05 + sc2 * 0.06, z + 0.06, 0, 0, Math.PI / 2); z += 0.16; k++; continue; }   // (a pile of scrolls)
-        if (sh === 2 && k === 6) { [0x5ad8a0, 0x8a3a6a, 0xd8a03a].forEach(function (c, q) { p(lbLathe([[0, 0], [0.03, 0], [0.034, 0.08], [0.012, 0.11], [0.012, 0.14], [0, 0.14]], 10), new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity: 0.8, roughness: 0.1, emissive: c, emissiveIntensity: 0.15 }), BKX - 0.06, sy + 0.015, z + q * 0.07); }); z += 0.22; k++; continue; }
-        var bk = p(new THREE.BoxGeometry(0.28, bh, bw), rMat(bookC[(sh * 3 + k) % 6], { roughness: 0.75 }), BKX - 0.04, sy + 0.015 + bh / 2, z + bw / 2, lean, 0, 0);
-        p(new THREE.BoxGeometry(0.005, 0.02, bw + 0.002), brass, BKX - 0.181, sy + bh * 0.75, z + bw / 2); z += bw + 0.005 + lean * 0.1; k++; } });
-    var sk2 = new THREE.Group(); sk2.position.set(BKX - 0.05, 2.0, BKZ + 0.3); sk2.rotation.y = -Math.PI / 2; R.add(sk2); lbP(new THREE.SphereGeometry(0.06, 10, 8), bone, 0, 0.06, 0, 0, 0, 0, sk2); [-1, 1].forEach(function (sd) { lbP(new THREE.SphereGeometry(0.016, 6, 4), rMat(0x0a0806), sd * 0.025, 0.065, 0.05, 0, 0, 0, sk2); });   // (a small skull on top)
-    p(new THREE.CylinderGeometry(0.1, 0.11, 0.18, 12), rMat(0x5a3a22), BKX - 0.05, 2.09, BKZ - 0.3);
-    hideSolids.push([BKX - 0.1, BKZ - 0.4, 0.35], [BKX - 0.1, BKZ + 0.4, 0.35]);
+    // (the back-right corner, in great detail: the bookshelf, of dark oak with a carved crown and plinth, plank back and lipped
+    // shelves, crammed with old books (tooled spines, raised bands, gilt titles, some leaning, some stacked flat, a pair of iron
+    // bookends), scroll piles tied with ribbon, a row of potion bottles corked and labelled, a little web in its top corner; on
+    // top, a skull with its jaw and teeth, a candle stub melted onto it, and a glazed lidded jar; and the plank crates, nailed and
+    // braced, the guild's mark daubed on them)
+    (function () {
+      var sd = 2333; function cr() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+      function q(par, geo, m, x, y, z, rx, ry, rz) { return cpPart(geo, m, x, y, z, rx, ry, rz, par); }
+      function quiet(o) { o.castShadow = false; return o; }
+      function grainT(base, vert, lines) { return cpTex(128, 128, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); for (var i = 0; i < (lines || 30); i++) { var o = (i * 41) % 128; g.strokeStyle = 'rgba(25,14,6,' + (0.12 + (i % 5) * 0.07).toFixed(2) + ')'; g.lineWidth = 0.6 + (i % 3) * 0.5; g.beginPath();
+        for (var t = 0; t <= 128; t += 8) { var d = o + Math.sin(t / 128 * Math.PI * 2 + i) * 2.5; if (vert) { if (t) g.lineTo(d, t); else g.moveTo(d, t); } else { if (t) g.lineTo(t, d); else g.moveTo(t, d); } } g.stroke(); } }); }
+      var wV = new THREE.MeshStandardMaterial({ map: grainT('#3a2818', true), roughness: 0.85 }), wH = new THREE.MeshStandardMaterial({ map: grainT('#4a3420', false), roughness: 0.85 }), ironM = rMat(0x24201e, { metalness: 0.6, roughness: 0.5 }), brassM = rMat(0xa8843e, { metalness: 0.8, roughness: 0.3, envMap: rubyEnv });
+      var BKX = W - 0.22, BKZ = -2.3, sh = new THREE.Group(); sh.position.set(BKX, 0, BKZ); R.add(sh);   // (local: +x is the wall, -x faces the room, z along the wall)
+      for (var pk = 0; pk < 6; pk++) q(sh, new THREE.BoxGeometry(0.02, 1.92, 0.196), wV, 0.19, 1.0, -0.5 + pk * 0.2, 0, 0, 0);   // (a back of six planks)
+      [-0.585, 0.585].forEach(function (e) { q(sh, new THREE.BoxGeometry(0.4, 2.02, 0.035), wV, 0, 1.01, e); q(sh, new THREE.BoxGeometry(0.02, 1.9, 0.045), wV, -0.2, 1.0, e); });   // (sides, with a beaded front edge)
+      q(sh, new THREE.BoxGeometry(0.44, 0.12, 1.24), wH, -0.01, 0.06, 0); q(sh, new THREE.BoxGeometry(0.45, 0.025, 1.25), wV, -0.015, 0.125, 0);   // (the plinth)
+      [[2.02, 0.42, 1.22, 0.04], [2.06, 0.46, 1.27, 0.04], [2.1, 0.5, 1.32, 0.035]].forEach(function (c) { q(sh, new THREE.BoxGeometry(c[1], c[3], c[2]), wH, -(c[1] - 0.4) / 2, c[0], 0); });   // (the crown, stepping out)
+      for (var dt = 0; dt < 12; dt++) q(sh, new THREE.BoxGeometry(0.02, 0.025, 0.04), wH, -0.225, 2.0 - 0.0, -0.55 + dt * 0.1);   // (dentils under it)
+      var shelvesY = [0.14, 0.6, 1.08, 1.56];
+      shelvesY.forEach(function (sy) { q(sh, new THREE.BoxGeometry(0.38, 0.03, 1.14), wH, -0.01, sy, 0); q(sh, new THREE.BoxGeometry(0.02, 0.04, 1.14), wH, -0.2, sy + 0.005, 0); });   // (shelves, a lip along each)
+      [[2.1, -1], [2.1, 1]].forEach(function (c) { q(sh, new THREE.BoxGeometry(0.03, 0.08, 0.008), ironM, 0.17, c[0] - 0.08, c[1] * 0.6); });
+      // (the books)
+      var pageT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#e0d0a8'; g.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 2) { g.fillStyle = 'rgba(120,90,50,' + (0.08 + cr() * 0.1).toFixed(2) + ')'; g.fillRect(0, y, w, 1); } });
+      var pageM = new THREE.MeshStandardMaterial({ map: pageT, roughness: 1 });
+      var cols = ['#5a1a1a', '#1a3a2a', '#2a2a4a', '#4a3a1a', '#3a1a3a', '#6a4a2a', '#2a1a12', '#1e2e3a'];
+      var spines = cols.map(function (c, k) { var tex = cpTex(32, 128, function (g, w, h) { g.fillStyle = c; g.fillRect(0, 0, w, h); var sg = g.createLinearGradient(0, 0, w, 0); sg.addColorStop(0, 'rgba(0,0,0,0.45)'); sg.addColorStop(0.5, 'rgba(255,255,255,0.08)'); sg.addColorStop(1, 'rgba(0,0,0,0.45)'); g.fillStyle = sg; g.fillRect(0, 0, w, h);
+          [14, 40, 88, 114].forEach(function (by) { g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, by + 2, w, 2); g.fillStyle = 'rgba(255,240,210,0.18)'; g.fillRect(0, by, w, 2); });   // (raised bands)
+          g.fillStyle = '#c8a04a'; for (var t = 0; t < 3; t++) g.fillRect(8 + (t % 2) * 3, 52 + t * 8, 13 - (t % 2) * 4, 2);   // (a gilt title)
+          if (k % 3 === 0) { g.strokeStyle = '#c8a04a'; g.lineWidth = 1; g.beginPath(); g.arc(w / 2, 100, 5, 0, 6.28); g.stroke(); }
+          for (var s = 0; s < 14; s++) { g.fillStyle = 'rgba(200,180,140,0.18)'; g.fillRect(cr() * w, cr() * h, 2, 1 + cr() * 3); } });   // (scuffed)
+        var cov = rMat(new THREE.Color(c).getHex(), { roughness: 0.75 }), sp = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }); return [cov, sp, pageM, pageM, cov, cov]; });   // (spine faces the room; the page edges above and below)
+      function book(x, y, z, d, hgt, wd, k, rx, rz) { return q(sh, new THREE.BoxGeometry(d, hgt, wd), spines[k % spines.length], x, y, z, rx || 0, 0, rz || 0); }
+      shelvesY.forEach(function (sy, si) { var z = -0.52, k = si * 3, top = sy + 0.015;
+        while (z < 0.52) {
+          var r = cr();
+          if (si === 1 && z > 0.05 && z < 0.2) {   // (a row of potion bottles)
+            [[0x5ad8a0, 0], [0x8a3a6a, 1], [0xd8a03a, 2], [0x4a7ad8, 0]].forEach(function (b, bi) { var bz = z + bi * 0.075, px = -0.06;
+              var prof = b[1] === 0 ? [[0, 0], [0.03, 0], [0.036, 0.04], [0.03, 0.09], [0.011, 0.11], [0.011, 0.15], [0, 0.15]] : b[1] === 1 ? [[0, 0], [0.022, 0], [0.024, 0.13], [0.01, 0.15], [0.01, 0.18], [0, 0.18]] : [[0, 0], [0.034, 0], [0.036, 0.05], [0.02, 0.07], [0.012, 0.09], [0.012, 0.11], [0, 0.11]];
+              q(sh, lbLathe(prof, 14), new THREE.MeshStandardMaterial({ color: 0xd8e8e0, transparent: true, opacity: 0.35, roughness: 0.05, envMap: rubyEnv, depthWrite: false }), px, top, bz);
+              var liq = prof.map(function (p2) { return [p2[0] * 0.85, Math.min(p2[1], prof[prof.length - 2][1] * 0.55)]; }); q(sh, lbLathe(liq, 14), rMat(b[0], { emissive: b[0], emissiveIntensity: 0.25, roughness: 0.2, transparent: true, opacity: 0.85 }), px, top + 0.004, bz);
+              var nh = prof[prof.length - 2][1]; q(sh, new THREE.CylinderGeometry(0.012, 0.01, 0.025, 8), rMat(0x8a6a4a, { roughness: 1 }), px, top + nh + 0.005, bz);
+              quiet(q(sh, new THREE.PlaneGeometry(0.03, 0.025), rMat(0xe0d0a8, { roughness: 1 }), px - (b[1] === 1 ? 0.026 : 0.037), top + 0.045, bz, 0, -Math.PI / 2, 0)); });
+            z += 0.32; continue; }
+          if (si === 3 && z > -0.2 && z < -0.05 || si === 0 && z > 0.25 && z < 0.4) {   // (a pile of scrolls tied with ribbon)
+            for (var sc = 0; sc < 6; sc++) { var row = sc < 3 ? 0 : sc < 5 ? 1 : 2, ix = row === 0 ? sc : row === 1 ? sc - 3 : 0, sy2 = top + 0.03 + row * 0.052, szz = z + 0.03 + ix * 0.06 + row * 0.03;
+              q(sh, new THREE.CylinderGeometry(0.03, 0.03, 0.3, 12), rMat([0xe0d0a8, 0xd8c8a0, 0xe8dcb8][sc % 3], { roughness: 1 }), -0.04, sy2, szz, 0, 0, Math.PI / 2);
+              q(sh, new THREE.TorusGeometry(0.031, 0.004, 4, 12), rMat([0x8a1a20, 0x2a4a2a, 0x8a6a2a][sc % 3]), -0.04, sy2, szz, 0, Math.PI / 2, 0);
+              q(sh, new THREE.CircleGeometry(0.026, 12), rMat(0xc8b890, { roughness: 1 }), -0.191, sy2, szz, 0, -Math.PI / 2, 0); }
+            z += 0.24; continue; }
+          if (r < 0.12 && z < 0.35) {   // (a few lying flat in a stack)
+            var nb = 3 + Math.floor(cr() * 2), yy = top;
+            for (var s = 0; s < nb; s++) { var bh2 = 0.035 + cr() * 0.02; book(-0.05 + (cr() - 0.5) * 0.02, yy + bh2 / 2, z + 0.11, 0.24 + cr() * 0.04, bh2, 0.2 - s * 0.012, k++, 0, 0).rotation.y = (cr() - 0.5) * 0.15; yy += bh2; }
+            z += 0.24; continue; }
+          if (r < 0.2 && si !== 1) { q(sh, new THREE.BoxGeometry(0.12, 0.16, 0.012), ironM, -0.08, top + 0.08, z + 0.006); q(sh, new THREE.BoxGeometry(0.12, 0.012, 0.08), ironM, -0.08, top + 0.006, z + 0.04); z += 0.02; continue; }   // (an iron bookend)
+          var bw = 0.03 + cr() * 0.045, bh = 0.24 + cr() * 0.15, bd = 0.22 + cr() * 0.08, lean = cr() < 0.12 ? 0.22 : 0;
+          book(-0.19 + bd / 2 + cr() * 0.025, top + bh / 2 + (lean ? -0.01 : 0), z + bw / 2 + lean * 0.12, bd, bh, bw, k++, lean, 0);
+          z += bw + 0.004 + lean * 0.2; } });
+      var webT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(225,225,235,0.5)'; g.lineWidth = 0.8; for (var a = 0; a < 7; a++) { g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a / 6 * Math.PI / 2) * 64, Math.sin(a / 6 * Math.PI / 2) * 64); g.stroke(); } for (var r2 = 8; r2 < 64; r2 += 6 + cr() * 4) { g.beginPath(); g.arc(0, 0, r2, 0.05, Math.PI / 2 - 0.05); g.stroke(); } });
+      quiet(q(sh, new THREE.PlaneGeometry(0.25, 0.25), new THREE.MeshBasicMaterial({ map: webT, transparent: true, depthWrite: false, side: THREE.DoubleSide }), -0.05, 1.86, 0.44, 0, Math.PI / 2, Math.PI));   // (a small web in its top corner)
+      // (on top: the skull, a candle stub melted onto it, and a glazed jar)
+      var bone = rMat(0xd8ccb0, { roughness: 0.8 }), dark = rMat(0x0a0806, { roughness: 1 }), sk = new THREE.Group(); sk.position.set(-0.05, 2.12, 0.3); sk.rotation.y = -Math.PI / 2 - 0.3; sh.add(sk);
+      q(sk, new THREE.SphereGeometry(0.065, 16, 12), bone, 0, 0.07, -0.01).scale.set(0.9, 0.95, 1.1);
+      q(sk, new THREE.BoxGeometry(0.075, 0.04, 0.06), bone, 0, 0.03, 0.035); q(sk, new THREE.BoxGeometry(0.068, 0.03, 0.05), bone, 0, 0.008, 0.045, 0.15, 0, 0);   // (cheekbones and the jaw)
+      [-1, 1].forEach(function (s) { q(sk, new THREE.SphereGeometry(0.018, 8, 6), dark, s * 0.024, 0.06, 0.05).scale.set(1, 0.9, 0.6); q(sk, new THREE.SphereGeometry(0.012, 6, 5), bone, s * 0.045, 0.045, 0.03); });
+      q(sk, new THREE.ConeGeometry(0.008, 0.016, 3), dark, 0, 0.036, 0.064, Math.PI, 0, 0).scale.set(1, 1, 0.5);
+      for (var tt = 0; tt < 8; tt++) { q(sk, new THREE.BoxGeometry(0.007, 0.01, 0.006), rMat(0xe8dcc0), -0.0245 + tt * 0.007, 0.018, 0.07); q(sk, new THREE.BoxGeometry(0.007, 0.009, 0.006), rMat(0xe0d4b8), -0.0245 + tt * 0.007, 0.006, 0.066); }   // (teeth)
+      var wax = rMat(0xe4d8b8, { roughness: 0.6 }); q(sk, new THREE.CylinderGeometry(0.018, 0.02, 0.04, 10), wax, 0, 0.15, -0.01); q(sk, new THREE.CylinderGeometry(0.0015, 0.0015, 0.012, 4), rMat(0x141010), 0, 0.176, -0.01);
+      for (var dd = 0; dd < 6; dd++) { var da = dd * 1.05; quiet(q(sk, new THREE.SphereGeometry(0.007, 6, 5), wax, Math.cos(da) * 0.035, 0.11 - (dd % 3) * 0.02, -0.01 + Math.sin(da) * 0.04)).scale.set(0.8, 3, 0.8); }   // (wax run down over the skull)
+      var jarT = cpTex(128, 64, function (g, w, h) { g.fillStyle = '#3a4a3a'; g.fillRect(0, 0, w, h); [[14, '#c8b890'], [22, '#2a2420'], [44, '#c8b890']].forEach(function (b) { g.fillStyle = b[1]; g.fillRect(0, b[0], w, 3); }); for (var i = 0; i < 8; i++) { g.strokeStyle = '#c8b890'; g.lineWidth = 1.5; g.beginPath(); g.arc(i * 16 + 8, 33, 5, 0, Math.PI); g.stroke(); } for (i = 0; i < 80; i++) { g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(cr() * w, cr() * h, 2, 1); } });
+      var jar = new THREE.Group(); jar.position.set(-0.05, 2.12, -0.32); sh.add(jar); var jm = new THREE.MeshStandardMaterial({ map: jarT, roughness: 0.25, envMap: rubyEnv, envMapIntensity: 0.5 });
+      q(jar, lbLathe([[0, 0], [0.06, 0], [0.075, 0.04], [0.08, 0.1], [0.065, 0.16], [0.045, 0.18], [0.045, 0.2], [0, 0.2]], 20), jm, 0, 0, 0); q(jar, lbLathe([[0, 0], [0.05, 0], [0.052, 0.012], [0.03, 0.03], [0.012, 0.035], [0.014, 0.05], [0, 0.055]], 16), jm, 0, 0.2, 0);
+      // (the crates)
+      var plankM = new THREE.MeshStandardMaterial({ map: grainT('#6a5034', false), roughness: 0.9 }), postM = new THREE.MeshStandardMaterial({ map: grainT('#4a3420', true), roughness: 0.9 }), nailM = rMat(0x1c1a18, { metalness: 0.6, roughness: 0.5 });
+      var markT = cpTex(128, 128, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(20,14,10,0.85)'; g.fillStyle = 'rgba(20,14,10,0.85)'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.arc(60, 64, 40, Math.PI * 0.3, Math.PI * 1.7); g.stroke(); g.beginPath(); g.moveTo(72, 22); g.quadraticCurveTo(96, 62, 70, 108); g.quadraticCurveTo(80, 62, 66, 26); g.closePath(); g.fill(); for (var i = 0; i < 30; i++) g.clearRect(cr() * w, cr() * h, 2 + cr() * 5, 1 + cr() * 3); });
+      var markM = new THREE.MeshStandardMaterial({ map: markT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
+      function crate(x, z, s, ry) { var c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = ry; R.add(c); var ph = (s - 0.012) / 3 - 0.008;
+        for (var f = 0; f < 4; f++) { var fg = new THREE.Group(); fg.rotation.y = f * Math.PI / 2; c.add(fg);
+          for (var k = 0; k < 3; k++) { var py = 0.006 + ph / 2 + k * (ph + 0.008); q(fg, new THREE.BoxGeometry(s - 0.04, ph, 0.016), plankM, 0, py, s / 2 - 0.008, 0, 0, (cr() - 0.5) * 0.01);
+            [-1, 1].forEach(function (e) { q(fg, new THREE.CylinderGeometry(0.0045, 0.0045, 0.003, 6), nailM, e * (s / 2 - 0.045), py, s / 2 + 0.001, Math.PI / 2, 0, 0); }); }
+          var dl = Math.hypot(s - 0.12, s - 0.08); q(fg, new THREE.BoxGeometry(0.055, dl, 0.014), postM, 0, s / 2, s / 2 + 0.012, 0, 0, Math.atan2(s - 0.12, s - 0.08) * (f % 2 ? 1 : -1));
+          if (f % 2 === 0) quiet(q(fg, new THREE.PlaneGeometry(s * 0.45, s * 0.45), markM, s * 0.18, s * 0.52, s / 2 + 0.021, 0, 0, (cr() - 0.5) * 0.3)); }
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (e) { q(c, new THREE.BoxGeometry(0.045, s, 0.045), postM, e[0] * (s / 2 - 0.022), s / 2, e[1] * (s / 2 - 0.022)); });
+        for (var lp = 0; lp < 3; lp++) q(c, new THREE.BoxGeometry(s, 0.018, s / 3 - 0.008), plankM, 0, s + 0.009, -s / 3 + lp * s / 3);
+        [-1, 1].forEach(function (e) { q(c, new THREE.BoxGeometry(0.05, 0.016, s - 0.02), postM, e * (s / 2 - 0.06), s + 0.026, 0); });
+        return c; }
+      crate(W - 1.2, -D + 0.45, 0.55, 0.05); crate(W - 0.5, D - 0.6, 0.6, 0.2);
+      var lan = new THREE.Group(); lan.position.set(W - 1.1, 0.572, -D + 0.42); R.add(lan);   // (on the crate: a coil of rope and an oil can)
+      var rope = rMat(0x9a7a4a, { roughness: 1 }); for (var rc = 0; rc < 4; rc++) q(lan, new THREE.TorusGeometry(0.1 - rc * 0.004, 0.012, 6, 24), rope, -0.05, 0.012 + rc * 0.022, 0.0, Math.PI / 2, 0, 0);
+      q(lan, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.05, 0.08, 0), new THREE.Vector3(0.12, 0.05, 0.05), new THREE.Vector3(0.18, -0.1, 0.12), new THREE.Vector3(0.2, -0.3, 0.2)]), 12, 0.012, 6), rope, 0, 0, 0);
+      q(lan, lbLathe([[0, 0], [0.05, 0], [0.05, 0.1], [0.02, 0.13], [0.006, 0.18], [0, 0.18]], 14), rMat(0x5a5a50, { metalness: 0.6, roughness: 0.5 }), 0.15, 0, -0.12);
+    })();
+    hideSolids.push([(W - 0.22) - 0.1, (-2.3) - 0.4, 0.35], [(W - 0.22) - 0.1, (-2.3) + 0.4, 0.35]);
     hideSolids.push([2.3, -2.4, 0.35]);
     // (the back wall, in great detail: the Errand Board in a heavy pegged frame with iron corners, a carved ERRANDS plaque, old
     // cork pocked with pin holes and torn scraps, nine notices of every sort on brass tacks, a red thread sagging pin to pin, a
