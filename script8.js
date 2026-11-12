@@ -3791,7 +3791,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ps0 = 4141; function prr() { ps0 = (ps0 * 16807) % 2147483647; return (ps0 - 1) / 2147483646; }
     for (var pcz = 0; pcz < 160; pcz++) cr();   // (the same draws as before, so the rest of the beach stays where it was)
     var leafT = cpTex(1024, 256, function (g, w, h) { g.clearRect(0, 0, w, h); var i, mid = 10;   // (a frond, flattened: the rachis along the top edge, leaflets hanging from it, each a tapered blade with its own midrib)
-      for (i = 0; i < 230; i++) { var x = 2 + i * 4.4, L = (h - mid - 6) * Math.min(1, (x / w) * 7 + 0.15) * (1 - Math.pow(x / w, 3) * 0.55) * (0.88 + prr() * 0.12), lw = 3.2 + prr() * 1.4, bend = 7 + prr() * 7;
+      for (i = 0; i < 200; i++) { var x = 3 + i * 5.1, L = (h - mid - 6) * Math.min(1, (x / w) * 7 + 0.15) * (1 - Math.pow(x / w, 3) * 0.55) * (0.88 + prr() * 0.12), lw = 1.5 + prr() * 0.7, bend = 5 + prr() * 5;
         var ex = x + bend + 4, ey = mid + L, cx2 = x + bend * 0.4, cy2 = mid + L * 0.55, light = prr();
         var gr = g.createLinearGradient(x, mid, ex, ey); gr.addColorStop(0, '#b2e468'); gr.addColorStop(0.25, light < 0.5 ? '#6cc83e' : '#5cba34'); gr.addColorStop(0.75, light < 0.3 ? '#3e9c2a' : '#46a82e'); gr.addColorStop(1, prr() < 0.12 ? '#b89a40' : (prr() < 0.3 ? '#8ac040' : '#2e8a22'));
         g.fillStyle = gr; g.beginPath(); g.moveTo(x - lw * 0.3, mid); g.quadraticCurveTo(cx2 - lw, cy2, ex, ey); g.quadraticCurveTo(cx2 + lw, cy2 - 2, x + lw * 0.7, mid); g.closePath(); g.fill();   // (the blade, widest in its middle, to a point)
@@ -3809,12 +3809,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     var tuftM = new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb8f090, side: THREE.DoubleSide, roughness: 0.8 });
     function makeFrond(L, arch, hang) { var SEG = 26, ACR = 6, pos = [], uv = [], idx = [], i, j;   // (a frond: its rachis arching up and over; the leaflets hanging down from it on both sides)
       for (i = 0; i <= SEG; i++) { var u = i / SEG, s = u * L, ry = arch[0] * s - arch[1] * s * s / L, wd = hang * (1 - u * 0.45) * Math.min(1, (u + 0.04) * 6) * (1 - Math.pow(u, 5) * 0.55);
-        for (j = 0; j <= ACR; j++) { var v = j / ACR, sd = v < 0.5 ? -1 : 1, a = Math.abs(v - 0.5) * 2, hx = s + a * wd * 0.25, hy = ry - a * wd * 0.95 + Math.pow(a, 3) * wd * 0.12, hz = sd * (a * wd * 0.42 + Math.pow(a, 3) * wd * 0.18);   // (out from the rachis a little, then down)
+        for (j = 0; j <= ACR; j++) { var v = j / ACR, sd = v < 0.5 ? -1 : 1, a = Math.abs(v - 0.5) * 2, hx = s + a * wd * 0.38, hy = ry - a * wd * 0.22 - Math.pow(a, 2.5) * wd * 0.3, hz = sd * a * wd * 0.88;   // (fanning out flat to either side, tipping down at their ends)   // (out from the rachis a little, then down)
           pos.push(hx, hy, hz); uv.push(u, 1 - a); } }
       for (i = 0; i < SEG; i++) for (j = 0; j < ACR; j++) { var A = i * (ACR + 1) + j, B = A + ACR + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
       var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
     function rachis(L, arch) { var pts = []; for (var i = 0; i <= 12; i++) { var s = i / 12 * L; pts.push(new THREE.Vector3(s, arch[0] * s - arch[1] * s * s / L + 0.01, 0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, 0.02, 5); }
-    var FRONDS = [[3.0, [0.95, 1.85], 0.85], [2.6, [1.05, 1.6], 0.78], [1.9, [1.25, 1.2], 0.6]], frondGs = FRONDS.map(function (fd) { return makeFrond(fd[0], fd[1], fd[2]); }), rachGs = FRONDS.map(function (fd) { return rachis(fd[0], fd[1]); }), frondG = frondGs[0];
+    var FRONDS = [[3.0, [0.85, 1.55], 0.8], [2.5, [1.0, 1.35], 0.7], [1.9, [1.25, 1.2], 0.55]], frondGs = FRONDS.map(function (fd) { return makeFrond(fd[0], fd[1], fd[2]); }), rachGs = FRONDS.map(function (fd) { return rachis(fd[0], fd[1]); }), frondG = frondGs[0];
     function trunkGeo(cv, ht, r0) { var SEG = 60, RAD = 14, pos = [], uv = [], idx = [], fr = cv.computeFrenetFrames(SEG, false), P = new THREE.Vector3(), d = new THREE.Vector3(), i, j;
       for (i = 0; i <= SEG; i++) { var t = i / SEG, h = t * ht, ring = (h / 0.18) % 1, r = r0 * (1 - 0.32 * t) * (1 + 0.08 * Math.pow(1 - ring, 5)) + r0 * 1.3 * Math.pow(Math.max(0, 1 - h / 0.5), 2.4);   // (flared at the root, ridged at every ring)
         cv.getPointAt(t, P);
@@ -3826,8 +3826,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cv = new THREE.CatmullRomCurve3(pts); q(p, trunkGeo(cv, ht, 0.15 + ht * 0.004), trunkM, 0, 0, 0);
       var top = cv.getPoint(1), cw = grp(top.x, top.y, top.z, 0, p), lm = leafMs[k % 3], tw = prr() * 6.28;
       q(cw, new THREE.SphereGeometry(0.15, 10, 8), rMat(0x7a9a3a, { roughness: 0.7 }), 0, -0.05, 0).scale.set(1, 1.3, 1);   // (where the fronds spring from)
-      [[9, 0.32, 0, 0, -0.04], [3, 0.55, 1, 0.4, 0.03]].forEach(function (ring) {   // (a full, rounded crown: a ring of long fronds, a ring of shorter ones above, young fronds at the top)
-        for (var f = 0; f < ring[0]; f++) { var fr = grp(0, ring[4], 0, tw + ring[3] + (f + prr() * 0.25) / ring[0] * Math.PI * 2, cw); fr.rotation.z = ring[1] + (prr() - 0.5) * 0.12; quiet(q(fr, frondGs[ring[2]], lm, 0, 0, 0)); quiet(q(fr, rachGs[ring[2]], rachM, 0, 0, 0)); } });
+      [[8, 0.28, 0, 0, -0.04], [4, 0.7, 1, 0.4, 0.03]].forEach(function (ring) {   // (a full, rounded crown: a ring of long fronds, a ring of shorter ones above, young fronds at the top)
+        for (var f = 0; f < ring[0]; f++) { var fr = grp(0, ring[4], 0, tw + ring[3] + (f + prr() * 0.1) / ring[0] * Math.PI * 2, cw); fr.rotation.z = ring[1] + (prr() - 0.5) * 0.12; quiet(q(fr, frondGs[ring[2]], lm, 0, 0, 0)); quiet(q(fr, rachGs[ring[2]], rachM, 0, 0, 0)); } });
       for (var n = 0; n < 6; n++) { var na = n * 1.05 + prr() * 0.3, nr = 0.16 + prr() * 0.04, ny = -0.2 - (n % 2) * 0.1, nut = q(cw, new THREE.SphereGeometry(0.12, 12, 10), nutMs[n % 3], Math.cos(na) * nr, ny, Math.sin(na) * nr); nut.scale.set(1, 1.1, 1); }   // (coconuts clustered under the crown)
       palms.push({ c: cw, k: k * 1.7 + side }); }
     function palm(x, z, ht, lean, ry) { for (var cc = 0; cc < 10; cc++) cr();   // (the same draws as before)
