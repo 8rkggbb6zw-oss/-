@@ -3826,7 +3826,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var cv = new THREE.CatmullRomCurve3(pts); q(p, trunkGeo(cv, ht, 0.15 + ht * 0.004), trunkM, 0, 0, 0);
       var top = cv.getPoint(1), cw = grp(top.x, top.y, top.z, 0, p), lm = leafMs[k % 3], tw = prr() * 6.28;
       q(cw, new THREE.SphereGeometry(0.15, 10, 8), rMat(0x7a9a3a, { roughness: 0.7 }), 0, -0.05, 0).scale.set(1, 1.3, 1);   // (where the fronds spring from)
-      [[8, 0.28, 0, 0, -0.04], [4, 0.7, 1, 0.4, 0.03]].forEach(function (ring) {   // (a full, rounded crown: a ring of long fronds, a ring of shorter ones above, young fronds at the top)
+      [[8, 0.28, 0, 0, -0.04]].forEach(function (ring) {   // (a full, rounded crown: a ring of long fronds, a ring of shorter ones above, young fronds at the top)
         for (var f = 0; f < ring[0]; f++) { var fr = grp(0, ring[4], 0, tw + ring[3] + (f + prr() * 0.1) / ring[0] * Math.PI * 2, cw); fr.rotation.z = ring[1] + (prr() - 0.5) * 0.12; quiet(q(fr, frondGs[ring[2]], lm, 0, 0, 0)); quiet(q(fr, rachGs[ring[2]], rachM, 0, 0, 0)); } });
       for (var n = 0; n < 6; n++) { var na = n * 1.05 + prr() * 0.3, nr = 0.16 + prr() * 0.04, ny = -0.2 - (n % 2) * 0.1, nut = q(cw, new THREE.SphereGeometry(0.12, 12, 10), nutMs[n % 3], Math.cos(na) * nr, ny, Math.sin(na) * nr); nut.scale.set(1, 1.1, 1); }   // (coconuts clustered under the crown)
       palms.push({ c: cw, k: k * 1.7 + side }); }
