@@ -3659,11 +3659,51 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ocean = new THREE.Mesh(og, oceanMat); ocean.position.y = SEA_Y; ocean.renderOrder = 1; ocean.frustumCulled = false; G.add(ocean);
     var mists = [];   // (a soft bank of sea mist where the ocean ends, toward your island)
     for (var mi = 0; mi < 26; mi++) { var ma = Math.PI * 0.5 + (mi / 25) * Math.PI, mr = 72 + cr() * 10, ms = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffffff, transparent: true, opacity: 0.32 + cr() * 0.15, depthWrite: false, fog: true })); ms.position.set(122 + Math.cos(ma) * mr, SEA_Y + 0.5 + cr() * 2.5, B3_Z + Math.sin(ma) * mr / 0.8); var msc = 22 + cr() * 18; ms.scale.set(msc * 1.8, msc * 0.55, 1); ms.renderOrder = 2; G.add(ms); mists.push({ s: ms, k: cr() * 6, x: ms.position.x }); }
-    // ---- rocks along the bluff's foot and at the ends of the beach ----
-    var rockM = [0x7a7268, 0x6a645c, 0x8a8278].map(function (cc) { return rMat(cc, { roughness: 0.95 }); }), mossy = rMat(0x5a7a4a, { roughness: 1 });
-    function rock(x, z, s, k) { var y = beachH0(x, z); var rk = q(G, new THREE.DodecahedronGeometry(s, 1), rockM[k % 3], x, Math.max(y, SEA_Y - 0.6) + s * 0.25, z, cr() * 3, cr() * 3, cr() * 3); rk.scale.set(1.2, 0.7, 1); if (k % 3 === 0) quiet(q(G, new THREE.SphereGeometry(s * 0.6, 8, 5), mossy, x, Math.max(y, SEA_Y - 0.6) + s * 0.55, z)).scale.set(1.2, 0.3, 1); solids.push({ x: x, z: z, r: s * 1.1 }); }
-    for (var rb = 0; rb < 26; rb++) rock(81.6 + cr() * 1.6, B3_Z - 50 + rb * 4 + cr() * 2, 0.5 + cr() * 0.8, rb);
-    [[126, B3_Z - 47], [131, B3_Z - 44], [134, B3_Z - 40], [128, B3_Z + 48], [133, B3_Z + 45], [137, B3_Z + 41], [122, B3_Z - 50], [124, B3_Z + 51]].forEach(function (p2, k) { rock(p2[0], p2[1], 0.6 + cr() * 0.9, k); rock(p2[0] + 1.2, p2[1] + (cr() - 0.5) * 2, 0.3 + cr() * 0.4, k + 1); });
+    // ---- rocks along the bluff's foot and at the ends of the beach: weathered granite, each one its own chiselled shape, speckled and
+    // veined, crusted with lichen, mossy on top where the spray doesn't reach, dark and wet at the waterline with barnacles and a
+    // fringe of seaweed, pebbles gathered round their feet; small, and none in the way of the bridge ----
+    var rsd = 7717; function rkr() { rsd = (rsd * 16807) % 2147483647; return (rsd - 1) / 2147483646; }
+    var rockT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#a49e94'; g.fillRect(0, 0, w, h); var i;
+      for (i = 0; i < 14; i++) { var bx = rkr() * w, by = rkr() * h, br = 20 + rkr() * 50, bg = g.createRadialGradient(bx, by, 2, bx, by, br); bg.addColorStop(0, rkr() < 0.5 ? 'rgba(80,74,66,0.3)' : 'rgba(200,192,180,0.3)'); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(bx - br, by - br, br * 2, br * 2); }
+      for (i = 0; i < 9000; i++) { var r = rkr(); g.fillStyle = r < 0.45 ? 'rgba(40,36,32,0.55)' : r < 0.75 ? 'rgba(235,230,222,0.6)' : r < 0.9 ? 'rgba(190,140,120,0.45)' : 'rgba(20,18,16,0.8)'; g.fillRect(rkr() * w, rkr() * h, 1 + (i % 4 === 0), 1 + (i % 5 === 0)); }   // (granite speckle: dark mica, pale quartz, pink feldspar)
+      for (i = 0; i < 6; i++) { g.strokeStyle = 'rgba(70,64,58,0.35)'; g.lineWidth = 1.5; g.beginPath(); var y = rkr() * h; g.moveTo(0, y); for (var x = 0; x <= w; x += 16) g.lineTo(x, y + Math.sin(x * 0.05 + i) * 6); g.stroke(); }   // (faint strata)
+      for (i = 0; i < 4; i++) { g.strokeStyle = 'rgba(230,226,215,0.5)'; g.lineWidth = 2; g.beginPath(); var vx = rkr() * w; g.moveTo(vx, 0); g.bezierCurveTo(vx + 30, h * 0.3, vx - 30, h * 0.6, vx + 10, h); g.stroke(); }   // (quartz veins)
+      for (i = 0; i < 8; i++) { g.strokeStyle = 'rgba(20,16,12,0.7)'; g.lineWidth = 1; g.beginPath(); var cx = rkr() * w, cy = rkr() * h; g.moveTo(cx, cy); for (var k = 0; k < 5; k++) { cx += (rkr() - 0.5) * 30; cy += rkr() * 20; g.lineTo(cx, cy); } g.stroke(); }   // (cracks)
+      for (i = 0; i < 26; i++) { var lx = rkr() * w, ly = rkr() * h, lc = ['rgba(220,214,150,0.8)', 'rgba(232,150,70,0.75)', 'rgba(190,200,170,0.8)'][i % 3]; for (var b = 0; b < 7; b++) { g.fillStyle = lc; g.beginPath(); g.arc(lx + (rkr() - 0.5) * 12, ly + (rkr() - 0.5) * 12, 2 + rkr() * 4, 0, Math.PI * 2); g.fill(); } }   // (lichen)
+    }, [2, 2]);
+    var rockMat = new THREE.MeshStandardMaterial({ map: rockT, bumpMap: rockT, bumpScale: 0.02, vertexColors: true, roughness: 0.9 });
+    var tints = [[1, 0.97, 0.93], [0.88, 0.9, 0.93], [1, 0.95, 0.86], [0.8, 0.78, 0.76]], rc = new THREE.Color(), rv = new THREE.Vector3(), rn = new THREE.Vector3();
+    var peb = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), rMat(0xffffff, { roughness: 0.8 }), 900), pebN = 0, pbM = new THREE.Matrix4(), pbQ = new THREE.Quaternion(), pbE = new THREE.Euler(), pbS = new THREE.Vector3(), pbV = new THREE.Vector3(), pbC = new THREE.Color();
+    var weedM = rMat(0x2e5a2a, { roughness: 0.6, side: THREE.DoubleSide }), weedM2 = rMat(0x5a6a2a, { roughness: 0.6, side: THREE.DoubleSide });
+    function rockGeo() { var g = new THREE.IcosahedronGeometry(1, 3), p = g.attributes.position, a1 = rkr() * 6, a2 = rkr() * 6, a3 = rkr() * 6, fl = 0.5 + rkr() * 0.35, sx = 1 + rkr() * 0.5, sz = 0.8 + rkr() * 0.4, planes = [];
+      for (var pl = 0; pl < 5; pl++) { var th = rkr() * Math.PI * 2, ph = rkr() * 1.2 - 0.3; planes.push([new THREE.Vector3(Math.cos(th) * Math.cos(ph), Math.sin(ph), Math.sin(th) * Math.cos(ph)), 0.72 + rkr() * 0.22]); }   // (cut faces, as if split along its grain)
+      for (var i = 0; i < p.count; i++) { rv.fromBufferAttribute(p, i); var n = 1 + 0.16 * Math.sin(rv.x * 3.1 + a1) * Math.sin(rv.y * 2.7 + a2) + 0.09 * Math.sin(rv.z * 5.3 + a3 + rv.x * 2) + 0.04 * Math.sin(rv.x * 11 + rv.y * 9 + a1) + 0.02 * Math.sin(rv.z * 23 + rv.y * 17);
+        planes.forEach(function (pp) { var d = rv.dot(pp[0]); if (d > 0.01) n = Math.min(n, pp[1] / d + 0.03 * Math.sin(rv.x * 20 + rv.z * 13)); });
+        rv.multiplyScalar(n); rv.x *= sx; rv.z *= sz; rv.y *= fl; if (rv.y < -0.12) rv.y = -0.12 + (rv.y + 0.12) * 0.25; p.setXYZ(i, rv.x, rv.y, rv.z); }
+      g.computeVertexNormals(); return g; }
+    function rock(x, z, s, k) { cr(); cr(); cr();   // (the same draws as before, so the rest of the beach stays where it was)
+      if (x < 92 && Math.abs(z - B3_Z) < 6) return;   // (none in the way of the bridge)
+      var y0 = Math.max(beachH0(x, z), SEA_Y - 0.45), geo = rockGeo(), p = geo.attributes.position, nr = geo.attributes.normal, col = [], tn = tints[k % tints.length], ry = rkr() * 6.28, mossy = rkr() < 0.55;
+      for (var i = 0; i < p.count; i++) { rv.fromBufferAttribute(p, i); rn.fromBufferAttribute(nr, i); var wy = y0 + rv.y * s, hsh = Math.abs(Math.sin(rv.x * 91.7 + rv.y * 47.3 + rv.z * 13.1) * 43758.5) % 1, vv = 0.85 + hsh * 0.2;
+        rc.setRGB(tn[0] * vv, tn[1] * vv, tn[2] * vv);
+        if (wy < SEA_Y + 0.14) { rc.multiplyScalar(0.5); rc.lerp(new THREE.Color(0.22, 0.3, 0.2), Math.max(0, Math.min(0.6, (SEA_Y + 0.14 - wy) * 2))); }   // (dark and weedy below the tide line)
+        else if (wy < SEA_Y + 0.32) rc.multiplyScalar(0.72);   // (wet from the spray)
+        if (wy > SEA_Y - 0.15 && wy < SEA_Y + 0.28 && hsh > 0.82) rc.setRGB(0.92, 0.9, 0.84);   // (barnacles)
+        if (mossy && rn.y > 0.55 && wy > SEA_Y + 0.35 && Math.sin(rv.x * 7 + rv.z * 5) + hsh > 0.6) rc.lerp(new THREE.Color(0.42, 0.6, 0.3), 0.75);   // (moss on top)
+        col.push(rc.r, rc.g, rc.b); }
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      var m = q(G, geo, rockMat, x, y0 + s * 0.12, z, 0, ry, 0); m.scale.setScalar(s); m.receiveShadow = true;
+      for (var c = 0; c < 2; c++) { if (rkr() < 0.4) continue; var ca = rkr() * 6.28, cd = s * (1.0 + rkr() * 0.4), cs = s * (0.25 + rkr() * 0.25), cx = x + Math.cos(ca) * cd, cz = z + Math.sin(ca) * cd, cy = Math.max(beachH0(cx, cz), SEA_Y - 0.45);   // (a smaller stone or two beside it)
+        var cg = rockGeo(), cc = []; for (var j = 0; j < cg.attributes.position.count; j++) { var wy2 = cy + cg.attributes.position.getY(j) * cs, v2 = 0.85 + rkr() * 0.15; rc.setRGB(tn[0] * v2, tn[1] * v2, tn[2] * v2); if (wy2 < SEA_Y + 0.14) rc.multiplyScalar(0.5); cc.push(rc.r, rc.g, rc.b); }
+        cg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3)); var cm = q(G, cg, rockMat, cx, cy + cs * 0.12, cz, 0, rkr() * 6, 0); cm.scale.setScalar(cs); }
+      for (var pb = 0; pb < 14 && pebN < 900; pb++) { var pa = rkr() * 6.28, pd = s * (1.1 + rkr() * 1.4), px = x + Math.cos(pa) * pd, pz = z + Math.sin(pa) * pd, py = beachH0(px, pz); if (py < SEA_Y - 0.4) continue;   // (pebbles round its foot)
+        var ps = 0.025 + rkr() * 0.05; pbE.set(rkr() * 3, rkr() * 3, rkr() * 3); pbQ.setFromEuler(pbE); pbS.set(ps * 1.3, ps * 0.6, ps); pbV.set(px, Math.max(py, SEA_Y - 0.4) + ps * 0.3, pz); pbM.compose(pbV, pbQ, pbS); peb.setMatrixAt(pebN, pbM); var pv = 0.55 + rkr() * 0.4; pbC.setRGB(pv, pv * 0.97, pv * 0.92); peb.setColorAt(pebN, pbC); pebN++; }
+      if (y0 < SEA_Y + 0.1) for (var wd = 0; wd < 5; wd++) { var wa = rkr() * 6.28, wg = new THREE.PlaneGeometry(0.05, 0.32, 1, 4), wp = wg.attributes.position; for (var wi = 0; wi < wp.count; wi++) wp.setZ(wi, Math.sin((wp.getY(wi) + 0.16) * 9) * 0.03);   // (seaweed draped at the waterline)
+        quiet(q(G, wg, wd % 2 ? weedM : weedM2, x + Math.cos(wa) * s * 0.95, SEA_Y + 0.02, z + Math.sin(wa) * s * 0.95, 0.2, -wa + Math.PI / 2, 0.15)); }
+      solids.push({ x: x, z: z, r: s * 1.05 }); }
+    for (var rb = 0; rb < 26; rb++) rock(81.6 + cr() * 1.6, B3_Z - 50 + rb * 4 + cr() * 2, (0.5 + cr() * 0.8) * 0.45, rb);
+    [[126, B3_Z - 47], [131, B3_Z - 44], [134, B3_Z - 40], [128, B3_Z + 48], [133, B3_Z + 45], [137, B3_Z + 41], [122, B3_Z - 50], [124, B3_Z + 51]].forEach(function (p2, k) { rock(p2[0], p2[1], (0.6 + cr() * 0.9) * 0.5, k); rock(p2[0] + 1.2, p2[1] + (cr() - 0.5) * 2, (0.3 + cr() * 0.4) * 0.6, k + 1); });
+    peb.count = pebN; peb.frustumCulled = false; G.add(peb);
     // ---- the boardwalk and the pier ----
     var plankT = cpTex(256, 32, function (g, w, h) { g.fillStyle = '#b8a58a'; g.fillRect(0, 0, w, h); for (var i = 0; i < 24; i++) { g.strokeStyle = 'rgba(70,56,40,' + (0.15 + cr() * 0.25).toFixed(2) + ')'; g.lineWidth = 0.8; g.beginPath(); var y0 = cr() * h; g.moveTo(0, y0); g.bezierCurveTo(w * 0.3, y0 + (cr() - 0.5) * 6, w * 0.7, y0 + (cr() - 0.5) * 6, w, y0); g.stroke(); }
       for (i = 0; i < 4; i++) { g.fillStyle = 'rgba(60,46,32,0.5)'; g.beginPath(); g.ellipse(cr() * w, cr() * h, 4, 2, 0, 0, 6.28); g.fill(); } g.fillStyle = 'rgba(40,30,20,0.8)'; [6, w - 6].forEach(function (nx) { [8, h - 8].forEach(function (ny) { g.beginPath(); g.arc(nx, ny, 1.6, 0, 6.28); g.fill(); }); }); });
