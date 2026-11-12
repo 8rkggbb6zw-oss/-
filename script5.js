@@ -665,6 +665,7 @@
     ["Shipping Bin", "Caja de envíos", "Bac d'expédition", "Cassa spedizioni", "Versandkiste", "Caixa de Envio"],
     ["Bridge", "Puente", "Pont", "Ponte", "Brücke", "Ponte"],
     ["West Bridge", "Puente oeste", "Pont ouest", "Ponte ovest", "Westbrücke", "Ponte Oeste"],
+    ["East Bridge", "Puente este", "Pont est", "Ponte est", "Ostbrücke", "Ponte Leste"],
     ["Seashell Shore", "Costa de las Conchas", "Rivage des Coquillages", "Riva delle Conchiglie", "Muschelstrand", "Costa das Conchas"],
     ["Western Isle", "Isla del oeste", "Île de l'Ouest", "Isola occidentale", "Westinsel", "Ilha Ocidental"],
     ["Oak & Ember", "Oak & Ember", "Oak & Ember", "Oak & Ember", "Oak & Ember", "Oak & Ember"],

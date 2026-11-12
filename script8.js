@@ -3654,7 +3654,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         '  float surf = smoothstep(0.86, 1.0, sin(vDepth * 5.0 - uTime * 1.5 + sin(p.y * 0.2) * 0.6)) * smoothstep(1.7, 0.4, vDepth) * smoothstep(0.03, 0.25, vDepth);',   // (lines of surf rolling in)
         '  float fn = 0.6 + 0.4 * sin(p.x * 3.1 + p.y * 2.3 + uTime) * sin(p.x * 1.7 - p.y * 2.9);', '  foam = clamp((foam + surf * 0.7) * fn, 0.0, 1.0);',
         '  col = mix(col, vec3(0.96, 0.99, 1.0), foam * 0.85);', '  col *= mix(1.0, 0.55, uNight);',
-        '  float alpha = clamp(mix(0.35, 0.95, smoothstep(0.0, 1.8, vDepth)) + fres * 0.25 + spec + foam * 0.5, 0.0, 1.0);', '  float odz = (vWorld.z - 2.0) * 0.8, xe = 122.0 - sqrt(max(0.0, 5625.0 - odz * odz)) + sin(vWorld.z * 0.07) * 4.0 + sin(vWorld.z * 0.19 + 1.0) * 2.0;', '  alpha *= smoothstep(xe - 5.0, xe + 40.0, vWorld.x);',   // (fading away round its western side, toward your island)
+        '  float alpha = clamp(mix(0.35, 0.95, smoothstep(0.0, 1.8, vDepth)) + fres * 0.25 + spec + foam * 0.5, 0.0, 1.0);', '  float odz = (vWorld.z - 2.0) * 0.8, xe = 122.0 - 75.0 * exp(-odz * odz / 3600.0) + sin(vWorld.z * 0.07) * 4.0 + sin(vWorld.z * 0.19 + 1.0) * 2.0;', '  alpha *= smoothstep(xe - 5.0, xe + 40.0, vWorld.x);',   // (fading away round its western side, toward your island)
         '  gl_FragColor = vec4(col, alpha);', '  #include <fog_fragment>', '}'].join('\n') });
     var ocean = new THREE.Mesh(og, oceanMat); ocean.position.y = SEA_Y; ocean.renderOrder = 1; ocean.frustumCulled = false; G.add(ocean);
     var mists = [];   // (a soft bank of sea mist where the ocean ends, toward your island)
@@ -3866,11 +3866,51 @@ EVERDAWN_PARTS.push(function (THREE) {
       mists.forEach(function (m) { m.s.position.x = m.x + Math.sin(t * 0.05 + m.k) * 3; });
       gulls.forEach(function (g) { var a = t * g.sp + g.k; g.g.position.set(g.cx + Math.cos(a) * g.r, g.h + Math.sin(t * 0.7 + g.k) * 0.6, g.cz + Math.sin(a) * g.r); g.g.rotation.set(0, -a - (g.sp > 0 ? Math.PI / 2 : -Math.PI / 2), (g.sp > 0 ? 1 : -1) * 0.25); var fl = Math.sin(t * 6 + g.k) * 0.5; g.w[0].rotation.x = -fl; g.w[1].rotation.x = fl; });
     }; })(updateCarpenter);
-    // ---- on the map: the east bridge, and the way to the shore; and in the Teleport list ----
+    // ---- on the map: the map now runs far enough east to take in the east bridge, the whole of Seashell Shore and its sea. The
+    // land, sand, boardwalk and ocean are painted once into the map's base; the palms, gazebo, cabanas, umbrellas, lighthouse, boat
+    // and buoys are drawn over it with the rest of the map's buildings ----
+    MAP_X1 = 196; MAP_Z0 = -58; MAP_W = Math.round((MAP_X1 - MAP_X0) * MAP_S); MAP_H = Math.round((MAP_Z1 - MAP_Z0) * MAP_S); mapCanvas.width = MAP_W * 2; mapCanvas.height = MAP_H * 2; mapCanvas.style.width = MAP_W + 'px'; mapCanvas.style.height = MAP_H + 'px';
+    drawMapBase = (function (base) { return function () { var out = base(), o = out.getContext('2d'), BS = 3, X0 = 33;
+      var bw = Math.round((MAP_X1 - X0) * BS), bh = Math.round((MAP_Z1 - MAP_Z0) * BS), cv = document.createElement('canvas'); cv.width = bw; cv.height = bh;
+      var gx = cv.getContext('2d'), img = gx.createImageData(bw, bh), d = img.data;
+      function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
+      for (var py = 0; py < bh; py++) for (var px = 0; px < bw; px++) { var x = X0 + (px + 0.5) / BS, z = MAP_Z0 + (py + 0.5) / BS, i = (py * bw + px) * 4, c = null, al = 1, n = (isle2Hash(px * 5.3 + py * 2.9) - 0.5) * 8;
+        if (Math.abs(z - B3_Z) < BRIDGE_W / 2 + 0.3 && x > 33.5 && x < B3_DX + BRIDGE_Z1 + 1.5) { var acr = Math.abs(z - B3_Z); c = acr > BRIDGE_W / 2 - 0.15 ? [170, 160, 150] : (Math.floor(x * 1.5) % 2 === 0 ? [200, 190, 176] : [210, 200, 186]); n *= 0.4; }   // (the east bridge)
+        else if (x < 34.5) continue;
+        else { var h = x > 79 ? beachH(x, z) : -8, dk = x > 83 ? deckY(x, z, 0) : -99;
+          if (dk > -99) { c = (Math.floor(x * 4.2) + (Math.abs(z - B3_Z) < 1.6 ? 0 : Math.floor(z * 4.2))) % 2 ? [184, 156, 120] : [168, 140, 106]; n *= 0.4; }   // (the boardwalk's planks)
+          else if (h > SEA_Y) { var s = shoreS(x, z);
+            if (x < 83 && h < -0.1) c = [128, 122, 114];
+            else if (s < 2.6) c = mix([196, 172, 128], [232, 210, 166], Math.max(0, s / 2.6));
+            else { c = [242, 226, 186]; var gg = Math.max(0, Math.min(1, (s - 23) / 8)); if (gg > 0) c = mix(c, [128, 190, 96], gg); if (s > 9 && s < 26 && isle2Hash(px * 1.7 + py * 9.1) > 0.8) c = mix(c, [176, 180, 110], 0.6); } }   // (wet sand, dry sand, dune grass, the grassy bluff)
+          else { var dp = SEA_Y - h, odz = (z - B3_Z) * 0.8, xe = 122 - 75 * Math.exp(-odz * odz / 3600) + Math.sin(z * 0.07) * 4 + Math.sin(z * 0.19 + 1) * 2, t = Math.max(0, Math.min(1, (x - (xe - 5)) / 45));
+            al = t * t * (3 - 2 * t); if (al <= 0.01) continue;
+            c = dp < 1.4 ? mix([150, 232, 220], [40, 168, 196], dp / 1.4) : mix([40, 168, 196], [16, 74, 138], Math.min(1, (dp - 1.4) / 4.6));
+            if (dp < 0.09) c = mix(c, [244, 250, 252], 0.8); n = n * 0.5 + Math.sin(x * 0.9 + z * 0.4) * 3; } }   // (the sea: turquoise shallows, deep blue beyond, foam at the water's edge, fading out to the west)
+        d[i] = Math.max(0, Math.min(255, c[0] + n)); d[i + 1] = Math.max(0, Math.min(255, c[1] + n)); d[i + 2] = Math.max(0, Math.min(255, c[2] + n * 0.6)); d[i + 3] = Math.round(al * 255); }
+      gx.putImageData(img, 0, 0); var p0 = mapXY(X0, MAP_Z0); o.imageSmoothingEnabled = true; o.drawImage(cv, p0[0], p0[1], (MAP_X1 - X0) * MAP_S * 2, (MAP_Z1 - MAP_Z0) * MAP_S * 2);
+      var cp = mapXY(MAP_X1 - 5, MAP_Z0 + 5); o.save(); o.translate(cp[0], cp[1]);   // (the compass, back in the new corner)
+      o.beginPath(); o.arc(0, 0, 34, 0, Math.PI * 2); o.fillStyle = 'rgba(255,255,255,0.85)'; o.fill(); o.strokeStyle = '#b89a5a'; o.lineWidth = 3; o.stroke();
+      [0, 1, 2, 3].forEach(function (k) { o.save(); o.rotate(k * Math.PI / 2); o.beginPath(); o.moveTo(0, -28); o.lineTo(7, 0); o.lineTo(-7, 0); o.closePath(); o.fillStyle = k ? '#8a7aa8' : '#7b4fd6'; o.fill(); o.restore(); });
+      o.font = 'bold 16px Fredoka, sans-serif'; o.textAlign = 'center'; o.textBaseline = 'middle'; o.fillStyle = '#4a2f7a'; [['N', 0, -45], ['E', 45, 0], ['S', 0, 45], ['W', -45, 0]].forEach(function (dd) { o.fillText(dd[0], dd[1], dd[2]); }); o.restore();
+      return out; }; })(drawMapBase);
     clothDrawOnMap = (function (base) { return function (g, K, label) { base.apply(this, arguments);
-      var a = mapXY(34, B3_Z - BRIDGE_W / 2), b = mapXY(MAP_X1, B3_Z + BRIDGE_W / 2); g.fillStyle = '#d8ccbc'; g.fillRect(a[0], a[1], b[0] - a[0], b[1] - a[1]); g.strokeStyle = 'rgba(80,70,60,0.6)'; g.lineWidth = 2; g.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
-      var ar = mapXY(MAP_X1 - 1.2, B3_Z); g.fillStyle = '#2a6a8a'; g.beginPath(); g.moveTo(ar[0] + 4, ar[1]); g.lineTo(ar[0] - 30, ar[1] - 24); g.lineTo(ar[0] - 30, ar[1] + 24); g.closePath(); g.fill();
-      label('Seashell Shore', MAP_X1 - 7, B3_Z - 7, 0); }; })(clothDrawOnMap);
+      function at(x, z) { return mapXY(x, z); }
+      for (var bl = BRIDGE_Z0 + 6; bl < BRIDGE_Z1 - 3; bl += 9) [-1, 1].forEach(function (sdd) { var lp = at(B3_DX + bl, B3_Z + sdd * (BRIDGE_W / 2 + 0.9)), lg = g.createRadialGradient(lp[0], lp[1], 1, lp[0], lp[1], 12); lg.addColorStop(0, 'rgba(210,170,255,0.9)'); lg.addColorStop(1, 'rgba(210,170,255,0)'); g.fillStyle = lg; g.beginPath(); g.arc(lp[0], lp[1], 12, 0, Math.PI * 2); g.fill(); });   // (the bridge's lanterns)
+      [B3_DX + BRIDGE_Z0, B3_DX + BRIDGE_Z1].forEach(function (gx2) { [-1, 1].forEach(function (sdd) { var gp = at(gx2, B3_Z + sdd * (BRIDGE_W / 2 + 0.3)); g.fillStyle = '#d8ccbc'; g.fillRect(gp[0] - 6, gp[1] - 6, 12, 12); g.strokeStyle = 'rgba(80,70,60,0.6)'; g.lineWidth = 1.5; g.strokeRect(gp[0] - 6, gp[1] - 6, 12, 12); }); });   // (its gateways)
+      palms.forEach(function (p) { var pp = p.c.parent.position, q2 = at(pp.x, pp.z);   // (palms: a green star of fronds, seen from above)
+        g.beginPath(); g.ellipse(q2[0] + 8, q2[1] + 10, 22, 16, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.15)'; g.fill();
+        for (var f = 0; f < 9; f++) { var fa = f / 9 * Math.PI * 2; g.beginPath(); g.ellipse(q2[0] + Math.cos(fa) * 12, q2[1] + Math.sin(fa) * 12, 13, 4.5, fa, 0, Math.PI * 2); g.fillStyle = f % 2 ? '#3f8a3a' : '#58a84a'; g.fill(); }
+        g.beginPath(); g.arc(q2[0], q2[1], 4, 0, Math.PI * 2); g.fillStyle = '#6a4a2a'; g.fill(); });
+      var gp2 = at(GAZ_X, GAZ_Z); g.save(); g.translate(gp2[0], gp2[1]); g.beginPath(); for (var o8 = 0; o8 < 8; o8++) { var oa = o8 / 8 * Math.PI * 2 + Math.PI / 8, orr = (GAZ_R + 0.5) * K; if (o8) g.lineTo(Math.cos(oa) * orr, Math.sin(oa) * orr); else g.moveTo(Math.cos(oa) * orr, Math.sin(oa) * orr); } g.closePath(); g.fillStyle = 'rgba(0,0,0,0.2)'; g.save(); g.translate(8, 10); g.fill(); g.restore(); g.fillStyle = '#4a9a9a'; g.fill(); g.strokeStyle = '#2a6a6a'; g.lineWidth = 2; g.stroke();
+      for (o8 = 0; o8 < 8; o8++) { var oa2 = o8 / 8 * Math.PI * 2 + Math.PI / 8; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(oa2) * (GAZ_R + 0.5) * K, Math.sin(oa2) * (GAZ_R + 0.5) * K); g.stroke(); } g.beginPath(); g.arc(0, 0, 5, 0, Math.PI * 2); g.fillStyle = '#f2efe6'; g.fill(); g.restore();   // (the gazebo's teal roof)
+      [[114, '#3aa8a8'], [118.2, '#e8705a'], [122.4, '#e8b83a'], [126.6, '#9a7ac8']].forEach(function (cb) { var cp2 = at(cb[0], B3_Z + 20), hw = 1.25 * K; g.fillStyle = 'rgba(0,0,0,0.2)'; g.fillRect(cp2[0] - hw + 6, cp2[1] - hw + 8, hw * 2, hw * 2); g.fillStyle = '#fbf6ea'; g.fillRect(cp2[0] - hw, cp2[1] - hw, hw * 2, hw * 2);   // (the cabanas' striped roofs)
+        g.fillStyle = cb[1]; g.beginPath(); g.moveTo(cp2[0] - hw, cp2[1] - hw); g.lineTo(cp2[0], cp2[1]); g.lineTo(cp2[0] + hw, cp2[1] - hw); g.closePath(); g.fill(); g.beginPath(); g.moveTo(cp2[0] - hw, cp2[1] + hw); g.lineTo(cp2[0], cp2[1]); g.lineTo(cp2[0] + hw, cp2[1] + hw); g.closePath(); g.fill(); });
+      [[139, B3_Z - 11, '#e85a5a'], [140, B3_Z - 21, '#3aa8c8'], [139.5, B3_Z + 13, '#f2b83a'], [138.5, B3_Z + 24, '#7a5ab8']].forEach(function (u) { var up = at(u[0], u[1]); for (var w = 0; w < 8; w++) { g.beginPath(); g.moveTo(up[0], up[1]); g.arc(up[0], up[1], 1.25 * K, w / 8 * Math.PI * 2, (w + 1) / 8 * Math.PI * 2); g.closePath(); g.fillStyle = w % 2 ? '#fbf6ea' : u[2]; g.fill(); } });   // (the beach umbrellas)
+      var lp2 = at(180, B3_Z + 5.2); g.beginPath(); g.arc(lp2[0] + 6, lp2[1] + 8, 1.3 * K, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fill(); [[1.3, '#f6f2ea'], [1.0, '#c8342e'], [0.6, '#f6f2ea'], [0.35, '#ffd070']].forEach(function (r) { g.beginPath(); g.arc(lp2[0], lp2[1], r[0] * K, 0, Math.PI * 2); g.fillStyle = r[1]; g.fill(); });   // (the lighthouse, from above)
+      var bt = at(158, B3_Z - 3.6); g.save(); g.translate(bt[0], bt[1]); g.beginPath(); g.ellipse(0, 0, 1.7 * K, 0.62 * K, 0, 0, Math.PI * 2); g.fillStyle = '#f2efe6'; g.fill(); g.strokeStyle = '#2a6aa8'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#9a7a58'; g.fillRect(-0.7 * K, -0.5 * K, 0.22 * K, K); g.fillRect(0.3 * K, -0.5 * K, 0.22 * K, K); g.restore();   // (the rowboat)
+      [[150, B3_Z + 7, '#f2efe6'], [166, B3_Z - 9, '#d83a32'], [190, B3_Z + 3, '#f2efe6']].forEach(function (b) { var bp = at(b[0], b[1]); g.beginPath(); g.arc(bp[0], bp[1], 6, 0, Math.PI * 2); g.fillStyle = b[2]; g.fill(); g.strokeStyle = '#d83a32'; g.lineWidth = 2; g.stroke(); });   // (buoys)
+      label('East Bridge', B3_DX + (BRIDGE_Z0 + BRIDGE_Z1) / 2, B3_Z - 6, 0); label('Seashell Shore', 112, B3_Z - 36, 0, 30); }; })(clothDrawOnMap);
     TELEPORTS.push({ name: 'Seashell Shore', icon: '🐚', spot: function () { return { x: 90.5, z: B3_Z - 3.2, face: Math.PI / 2, view: Math.PI / 2 }; } });
   })();
 });
