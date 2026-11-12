@@ -3784,61 +3784,58 @@ EVERDAWN_PARTS.push(function (THREE) {
     var buoys = [];
     [[150, B3_Z + 7], [166, B3_Z - 9], [190, B3_Z + 3]].forEach(function (bp2, k) { var bu = grp(bp2[0], SEA_Y, bp2[1], 0, G); q(bu, new THREE.SphereGeometry(0.4, 14, 10), rMat(k % 2 ? 0xd83a32 : 0xf2efe6, { roughness: 0.5 }), 0, 0.1, 0).scale.set(1, 0.7, 1); q(bu, new THREE.CylinderGeometry(0.08, 0.2, 0.9, 10), rMat(k % 2 ? 0xf2efe6 : 0xd83a32), 0, 0.65, 0); q(bu, new THREE.SphereGeometry(0.09, 8, 6), rMat(0xffd070, { emissive: 0xffa040, emissiveIntensity: 0.6 }), 0, 1.15, 0); buoys.push({ g: bu, k: k * 2.1 }); });
     // ---- on the land: palms ----
-    // ---- the palms, in great detail: a trunk that flares at the root and tapers as it rises, ringed all the way up with the scars
-    // of old fronds, criss-crossed fibres between; a shaggy fibrous boot under the crown, a few dead fronds hanging brown; fourteen
-    // fronds in two whorls, the young ones reaching up, the old ones arching out and drooping, each a stiff yellow rachis with long
-    // leaflets folded down either side of it, some split, some browning at the tips; a cluster of green and brown coconuts on
-    // their stalks with a flower spathe, and the odd coconut fallen in the sand. They sway in the sea breeze ----
+    // ---- the palms, in great detail: slender trunks curving up out of a tuft of grass, orange-tan and ringed all the way with old
+    // leaf scars, flared at the root; a full, rounded crown of bright green fronds, each arching up and over, its fine leaflets
+    // hanging down either side like a curtain, lighter where the sun catches them; coconuts clustered under the crown; some grow
+    // in pairs from one root, curving apart. They sway in the sea breeze ----
     var ps0 = 4141; function prr() { ps0 = (ps0 * 16807) % 2147483647; return (ps0 - 1) / 2147483646; }
     for (var pcz = 0; pcz < 160; pcz++) cr();   // (the same draws as before, so the rest of the beach stays where it was)
-    var leafT = cpTex(512, 128, function (g, w, h) { g.clearRect(0, 0, w, h); var i, mid = h / 2;
-      for (i = 0; i < 64; i++) { var x = 6 + i * 7.8, L = (mid - 3) * Math.pow(Math.sin(Math.min(1, x / w * 1.08) * Math.PI), 0.7) * (0.85 + prr() * 0.15) + 4;
-        [-1, 1].forEach(function (sdd) { if (prr() < 0.05) return;   // (here and there a leaflet missing)
-          var ang = 0.45 + prr() * 0.15, ex = x + Math.cos(ang) * L * 1.25, ey = mid + sdd * Math.sin(ang) * L * 1.25, gr = g.createLinearGradient(x, mid, ex, ey), tip = prr() < 0.22 ? '#a8843a' : '#4a9a3e';
-          gr.addColorStop(0, '#3a7a30'); gr.addColorStop(0.55, prr() < 0.5 ? '#5aaa48' : '#4e9a40'); gr.addColorStop(1, tip); g.strokeStyle = gr; g.lineWidth = 3.6 + prr() * 1.2; g.lineCap = 'round';
-          g.beginPath(); g.moveTo(x, mid); g.quadraticCurveTo(x + Math.cos(ang) * L * 0.6, mid + sdd * Math.sin(ang) * L * 0.4, ex, ey); g.stroke();
-          g.strokeStyle = 'rgba(200,230,150,0.35)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x + 2, mid); g.quadraticCurveTo(x + Math.cos(ang) * L * 0.6, mid + sdd * Math.sin(ang) * L * 0.4, ex - 2, ey); g.stroke();   // (each leaflet's own pale midrib)
-          if (prr() < 0.12) { g.globalCompositeOperation = 'destination-out'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x + Math.cos(ang) * L * 0.7, mid + sdd * Math.sin(ang) * L * 0.6); g.lineTo(ex, ey); g.stroke(); g.globalCompositeOperation = 'source-over'; } }); }   // (some split)
-      var rg = g.createLinearGradient(0, 0, w, 0); rg.addColorStop(0, '#d8c870'); rg.addColorStop(1, '#a8b858'); g.strokeStyle = rg; g.lineWidth = 3; g.beginPath(); g.moveTo(0, mid); g.lineTo(w, mid); g.stroke(); });
-    var leafMs = [0xffffff, 0xe8f2c8, 0xd2e8b8].map(function (cc) { return new THREE.MeshStandardMaterial({ map: leafT, color: cc, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.65 }); }), leafM = leafMs[0];
-    var deadM = new THREE.MeshStandardMaterial({ map: leafT, color: 0xb88a4a, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9 }), rachM = rMat(0xc8c070, { roughness: 0.6 });
-    var trunkT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#9a8264'; g.fillRect(0, 0, w, h); var i;   // (two rings of leaf scars, fibres criss-crossed between)
-      for (var r = 0; r < 2; r++) { var y0 = r * h / 2; var gr = g.createLinearGradient(0, y0, 0, y0 + h / 2); gr.addColorStop(0, '#6a5640'); gr.addColorStop(0.18, '#b8a080'); gr.addColorStop(0.7, '#9a8264'); gr.addColorStop(1, '#5a4632'); g.fillStyle = gr; g.fillRect(0, y0, w, h / 2);
-        for (i = 0; i < 26; i++) { g.strokeStyle = 'rgba(60,44,28,0.35)'; g.lineWidth = 1; var x = prr() * w; g.beginPath(); g.moveTo(x, y0 + 6); g.lineTo(x + (prr() - 0.5) * 30, y0 + h / 2 - 6); g.stroke(); }
-        g.fillStyle = 'rgba(40,28,16,0.75)'; g.fillRect(0, y0 + h / 2 - 3, w, 3); for (i = 0; i < 6; i++) { g.fillStyle = 'rgba(40,28,16,0.5)'; g.beginPath(); g.ellipse(i * w / 6 + 10, y0 + h / 2 - 8, 9, 3, 0, 0, Math.PI * 2); g.fill(); } }
-      for (i = 0; i < 300; i++) { g.fillStyle = i % 2 ? 'rgba(220,200,170,0.25)' : 'rgba(40,30,20,0.25)'; g.fillRect(prr() * w, prr() * h, 1.5, 1.5); } }, [2, 1]);
-    var trunkM = new THREE.MeshStandardMaterial({ map: trunkT, bumpMap: trunkT, bumpScale: 0.02, vertexColors: true, roughness: 0.9 });
-    var fibT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#6a5034'; g.fillRect(0, 0, w, h); for (var i = 0; i < 160; i++) { g.strokeStyle = prr() < 0.5 ? 'rgba(40,28,16,0.6)' : 'rgba(170,140,100,0.5)'; g.lineWidth = 1; var x = prr() * w; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (prr() - 0.5) * 14, h); g.stroke(); } }, [3, 1]);
-    var fibM = new THREE.MeshStandardMaterial({ map: fibT, roughness: 1, side: THREE.DoubleSide }), nutMs = [rMat(0x5a8a2a, { roughness: 0.5 }), rMat(0x7a5a2a, { roughness: 0.6 }), rMat(0x8a9a3a, { roughness: 0.5 })], palms = [];
-    function makeFrond(L, W, droop, fold) { var fg = new THREE.PlaneGeometry(L, W, 22, 4), fp = fg.attributes.position;   // (a frond: along x from the crown, leaflets folded down either side)
-      for (var i = 0; i < fp.count; i++) { var s = fp.getX(i) + L / 2, y = fp.getY(i), u = s / L, wd = 1 - u * 0.55; fp.setX(i, s); fp.setY(i, y * wd); fp.setZ(i, droop[0] * s - droop[1] * s * s / L - Math.abs(y) * wd * fold); }
-      fg.rotateX(-Math.PI / 2); fg.computeVertexNormals(); return fg; }
-    var frondGs = [makeFrond(2.8, 0.66, [0.62, 1.15], 0.55), makeFrond(2.5, 0.6, [0.75, 0.95], 0.45), makeFrond(2.2, 0.55, [0.9, 0.6], 0.35)], frondG = frondGs[0];
-    function rachis(L, droop) { var pts = []; for (var i = 0; i <= 10; i++) { var s = i / 10 * L; pts.push(new THREE.Vector3(s, droop[0] * s - droop[1] * s * s / L + 0.01, 0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.022, 5); }
-    var rachGs = [rachis(2.8, [0.62, 1.15]), rachis(2.5, [0.75, 0.95]), rachis(2.2, [0.9, 0.6])];
-    function trunkGeo(cv, ht) { var SEG = 56, RAD = 14, pos = [], uv = [], col = [], idx = [], fr = cv.computeFrenetFrames(SEG, false), P = new THREE.Vector3(), d = new THREE.Vector3(), i, j;
-      for (i = 0; i <= SEG; i++) { var t = i / SEG, h = t * ht, ring = (h / 0.2) % 1, r = (0.125 + 0.055 * (1 - t)) * (1 + 0.075 * Math.pow(1 - ring, 4)) + 0.22 * Math.pow(Math.max(0, 1 - h / 0.55), 2.2);   // (flared at the root, ridged at every scar)
-        cv.getPointAt(t, P); var sh = 0.82 + 0.18 * t;
-        for (j = 0; j <= RAD; j++) { var a = j / RAD * Math.PI * 2; d.copy(fr.normals[i]).multiplyScalar(Math.cos(a)).addScaledVector(fr.binormals[i], Math.sin(a)); var rr2 = r * (1 + 0.025 * Math.sin(a * 3 + i * 0.7)); pos.push(P.x + d.x * rr2, P.y + d.y * rr2, P.z + d.z * rr2); uv.push(j / RAD, h / 0.4); col.push(sh, sh * 0.98, sh * 0.95); } }
+    var leafT = cpTex(1024, 256, function (g, w, h) { g.clearRect(0, 0, w, h); var i, mid = 10;   // (a frond, flattened: the rachis along the top edge, leaflets hanging from it, each a tapered blade with its own midrib)
+      for (i = 0; i < 230; i++) { var x = 2 + i * 4.4, L = (h - mid - 6) * Math.min(1, (x / w) * 7 + 0.15) * (1 - Math.pow(x / w, 3) * 0.55) * (0.88 + prr() * 0.12), lw = 3.2 + prr() * 1.4, bend = 7 + prr() * 7;
+        var ex = x + bend + 4, ey = mid + L, cx2 = x + bend * 0.4, cy2 = mid + L * 0.55, light = prr();
+        var gr = g.createLinearGradient(x, mid, ex, ey); gr.addColorStop(0, '#b2e468'); gr.addColorStop(0.25, light < 0.5 ? '#6cc83e' : '#5cba34'); gr.addColorStop(0.75, light < 0.3 ? '#3e9c2a' : '#46a82e'); gr.addColorStop(1, prr() < 0.12 ? '#b89a40' : (prr() < 0.3 ? '#8ac040' : '#2e8a22'));
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x - lw * 0.3, mid); g.quadraticCurveTo(cx2 - lw, cy2, ex, ey); g.quadraticCurveTo(cx2 + lw, cy2 - 2, x + lw * 0.7, mid); g.closePath(); g.fill();   // (the blade, widest in its middle, to a point)
+        g.strokeStyle = 'rgba(20,70,10,0.45)'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(x + lw * 0.7, mid); g.quadraticCurveTo(cx2 + lw, cy2 - 2, ex, ey); g.stroke();   // (its shaded edge)
+        g.strokeStyle = 'rgba(230,255,180,0.6)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x + lw * 0.2, mid); g.quadraticCurveTo(cx2, cy2 - 1, ex - 1, ey - 2); g.stroke();   // (its pale midrib)
+        if (prr() < 0.1) { g.globalCompositeOperation = 'destination-out'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(cx2 + 1, cy2 + L * 0.15); g.lineTo(ex, ey); g.stroke(); g.globalCompositeOperation = 'source-over'; } }   // (here and there one split)
+      var rg = g.createLinearGradient(0, 0, w, 0); rg.addColorStop(0, '#b8d070'); rg.addColorStop(1, '#80b444'); g.fillStyle = rg; g.fillRect(0, mid - 4, w, 6); g.fillStyle = 'rgba(255,255,220,0.5)'; g.fillRect(0, mid - 4, w, 1.5); });
+    var leafMs = [0xffffff, 0xf0ffe0, 0xe4f8d4].map(function (cc) { return new THREE.MeshStandardMaterial({ map: leafT, color: cc, alphaTest: 0.35, side: THREE.DoubleSide, roughness: 0.5, emissive: 0x1a3a0c, emissiveIntensity: 0.55 }); }), leafM = leafMs[0];
+    var rachM = rMat(0x9ac850, { roughness: 0.55 });
+    var trunkT = cpTex(64, 128, function (g, w, h) { var i;   // (two rings: a pale ridge where each old frond fell, the bark darkening into the next)
+      for (var r = 0; r < 2; r++) { var y0 = r * h / 2, gr = g.createLinearGradient(0, y0, 0, y0 + h / 2); gr.addColorStop(0, '#e8b47a'); gr.addColorStop(0.15, '#d8a066'); gr.addColorStop(0.75, '#c08048'); gr.addColorStop(0.92, '#8a5428'); gr.addColorStop(1, '#6a3e1e'); g.fillStyle = gr; g.fillRect(0, y0, w, h / 2);
+        for (i = 0; i < 16; i++) { g.strokeStyle = 'rgba(110,64,28,0.35)'; g.lineWidth = 1; var x = prr() * w; g.beginPath(); g.moveTo(x, y0 + 4); g.lineTo(x + (prr() - 0.5) * 6, y0 + h / 2 - 6); g.stroke(); } }
+      for (i = 0; i < 200; i++) { g.fillStyle = i % 2 ? 'rgba(255,230,190,0.2)' : 'rgba(80,46,20,0.2)'; g.fillRect(prr() * w, prr() * h, 1.5, 1.5); } }, [2, 1]);
+    var trunkM = new THREE.MeshStandardMaterial({ map: trunkT, bumpMap: trunkT, bumpScale: 0.015, roughness: 0.75 }), nutMs = [rMat(0x8a4e22, { roughness: 0.5 }), rMat(0x7a6a22, { roughness: 0.5 }), rMat(0xa8642a, { roughness: 0.5 })], palms = [];
+    var tuftM = new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xb8f090, side: THREE.DoubleSide, roughness: 0.8 });
+    function makeFrond(L, arch, hang) { var SEG = 26, ACR = 6, pos = [], uv = [], idx = [], i, j;   // (a frond: its rachis arching up and over; the leaflets hanging down from it on both sides)
+      for (i = 0; i <= SEG; i++) { var u = i / SEG, s = u * L, ry = arch[0] * s - arch[1] * s * s / L, wd = hang * (1 - u * 0.45) * Math.min(1, (u + 0.04) * 6) * (1 - Math.pow(u, 5) * 0.55);
+        for (j = 0; j <= ACR; j++) { var v = j / ACR, sd = v < 0.5 ? -1 : 1, a = Math.abs(v - 0.5) * 2, hx = s + a * wd * 0.25, hy = ry - a * wd * 0.95 + Math.pow(a, 3) * wd * 0.12, hz = sd * (a * wd * 0.42 + Math.pow(a, 3) * wd * 0.18);   // (out from the rachis a little, then down)
+          pos.push(hx, hy, hz); uv.push(u, 1 - a); } }
+      for (i = 0; i < SEG; i++) for (j = 0; j < ACR; j++) { var A = i * (ACR + 1) + j, B = A + ACR + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+    function rachis(L, arch) { var pts = []; for (var i = 0; i <= 12; i++) { var s = i / 12 * L; pts.push(new THREE.Vector3(s, arch[0] * s - arch[1] * s * s / L + 0.01, 0)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 18, 0.02, 5); }
+    var FRONDS = [[3.0, [0.95, 1.85], 0.85], [2.6, [1.05, 1.6], 0.78], [1.9, [1.25, 1.2], 0.6]], frondGs = FRONDS.map(function (fd) { return makeFrond(fd[0], fd[1], fd[2]); }), rachGs = FRONDS.map(function (fd) { return rachis(fd[0], fd[1]); }), frondG = frondGs[0];
+    function trunkGeo(cv, ht, r0) { var SEG = 60, RAD = 14, pos = [], uv = [], idx = [], fr = cv.computeFrenetFrames(SEG, false), P = new THREE.Vector3(), d = new THREE.Vector3(), i, j;
+      for (i = 0; i <= SEG; i++) { var t = i / SEG, h = t * ht, ring = (h / 0.18) % 1, r = r0 * (1 - 0.32 * t) * (1 + 0.08 * Math.pow(1 - ring, 5)) + r0 * 1.3 * Math.pow(Math.max(0, 1 - h / 0.5), 2.4);   // (flared at the root, ridged at every ring)
+        cv.getPointAt(t, P);
+        for (j = 0; j <= RAD; j++) { var a = j / RAD * Math.PI * 2; d.copy(fr.normals[i]).multiplyScalar(Math.cos(a)).addScaledVector(fr.binormals[i], Math.sin(a)); pos.push(P.x + d.x * r, P.y + d.y * r, P.z + d.z * r); uv.push(j / RAD, h / 0.36); } }
       for (i = 0; i < SEG; i++) for (j = 0; j < RAD; j++) { var A = i * (RAD + 1) + j, B = A + RAD + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
-      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+    function oneTree(p, ht, lean, side, k) {   // (one trunk and its crown, leaning `lean` along local +x)
+      var pts = []; for (var i = 0; i <= 6; i++) { var t = i / 6; pts.push(new THREE.Vector3(lean * Math.pow(t, 1.7) * ht * 0.4, t * ht, side * Math.sin(t * 2.2) * 0.25 * t)); }
+      var cv = new THREE.CatmullRomCurve3(pts); q(p, trunkGeo(cv, ht, 0.15 + ht * 0.004), trunkM, 0, 0, 0);
+      var top = cv.getPoint(1), cw = grp(top.x, top.y, top.z, 0, p), lm = leafMs[k % 3], tw = prr() * 6.28;
+      q(cw, new THREE.SphereGeometry(0.15, 10, 8), rMat(0x7a9a3a, { roughness: 0.7 }), 0, -0.05, 0).scale.set(1, 1.3, 1);   // (where the fronds spring from)
+      [[9, 0.32, 0, 0, -0.04], [3, 0.55, 1, 0.4, 0.03]].forEach(function (ring) {   // (a full, rounded crown: a ring of long fronds, a ring of shorter ones above, young fronds at the top)
+        for (var f = 0; f < ring[0]; f++) { var fr = grp(0, ring[4], 0, tw + ring[3] + (f + prr() * 0.25) / ring[0] * Math.PI * 2, cw); fr.rotation.z = ring[1] + (prr() - 0.5) * 0.12; quiet(q(fr, frondGs[ring[2]], lm, 0, 0, 0)); quiet(q(fr, rachGs[ring[2]], rachM, 0, 0, 0)); } });
+      for (var n = 0; n < 6; n++) { var na = n * 1.05 + prr() * 0.3, nr = 0.16 + prr() * 0.04, ny = -0.2 - (n % 2) * 0.1, nut = q(cw, new THREE.SphereGeometry(0.12, 12, 10), nutMs[n % 3], Math.cos(na) * nr, ny, Math.sin(na) * nr); nut.scale.set(1, 1.1, 1); }   // (coconuts clustered under the crown)
+      palms.push({ c: cw, k: k * 1.7 + side }); }
     function palm(x, z, ht, lean, ry) { for (var cc = 0; cc < 10; cc++) cr();   // (the same draws as before)
-      var y0 = beachH0(x, z), p = grp(x, y0 - 0.05, z, ry, G), pts = [], k = palms.length;
-      for (var i = 0; i <= 6; i++) { var t = i / 6; pts.push(new THREE.Vector3(lean * t * t * ht * 0.35, t * ht, Math.sin(t * 2.4 + k) * 0.08 * t)); }
-      var cv = new THREE.CatmullRomCurve3(pts); q(p, trunkGeo(cv, ht), trunkM, 0, 0, 0);
-      var top = cv.getPoint(1), cw = grp(top.x, top.y, top.z, 0, p);
-      quiet(q(cw, new THREE.CylinderGeometry(0.17, 0.25, 0.55, 12, 1, true), fibM, 0, -0.22, 0));   // (the fibrous boot under the crown)
-      for (var sb = 0; sb < 10; sb++) { var sba = sb / 10 * Math.PI * 2 + prr(); quiet(q(cw, new THREE.BoxGeometry(0.1, 0.3, 0.02), fibM, Math.cos(sba) * 0.24, -0.38, Math.sin(sba) * 0.24, 0, -sba, 0.25)); }   // (frayed old frond bases)
-      for (var df = 0; df < 3; df++) { var dfa = df / 3 * Math.PI * 2 + prr() * 2, dr = grp(0, -0.2, 0, dfa, cw); dr.rotation.z = -1.05 - prr() * 0.3; quiet(q(dr, frondGs[1], deadM, 0, 0, 0)); }   // (dead fronds hanging brown)
-      var lm = leafMs[k % 3];
-      for (var f = 0; f < 14; f++) { var inner = f >= 8, fa = inner ? (f - 8) / 6 * Math.PI * 2 + 0.3 : f / 8 * Math.PI * 2, fr = grp(0, inner ? 0.06 : 0, 0, fa + (prr() - 0.5) * 0.25, cw), gi = inner ? 2 : (f % 2);
-        fr.rotation.z = inner ? 0.55 + prr() * 0.35 : -0.05 + prr() * 0.25; fr.rotation.x = (prr() - 0.5) * 0.3; quiet(q(fr, frondGs[gi], lm, 0, 0, 0)); quiet(q(fr, rachGs[gi], rachM, 0, 0, 0)); }
-      q(cw, new THREE.SphereGeometry(0.1, 10, 8), rachM, 0, 0.05, 0).scale.set(1, 1.6, 1);   // (the heart of the crown)
-      for (var n = 0; n < 7; n++) { var na = n * 0.9 + prr() * 0.3, nr = 0.17 + prr() * 0.05, ny = -0.28 - (n % 3) * 0.07, nut = q(cw, new THREE.SphereGeometry(0.115, 12, 10), nutMs[n % 3], Math.cos(na) * nr, ny, Math.sin(na) * nr); nut.scale.set(1, 1.12, 1);   // (coconuts on their stalks)
-        quiet(q(cw, new THREE.CylinderGeometry(0.012, 0.012, 0.16, 5), rMat(0xa88a4a), Math.cos(na) * nr * 0.6, ny + 0.1, Math.sin(na) * nr * 0.6, Math.sin(na) * 0.6, 0, -Math.cos(na) * 0.6)); }
-      var sp2 = q(cw, new THREE.ConeGeometry(0.06, 0.5, 8), rMat(0x9a7a4a, { roughness: 0.8 }), 0.12, -0.42, -0.12, 0.4, 0, 0.7); sp2.scale.set(1, 1, 0.6);   // (a flower spathe)
-      if (k % 3 === 0) { var fa2 = prr() * 6.28, fd = 0.5 + prr() * 0.5, fx = x + Math.cos(fa2) * fd, fz = z + Math.sin(fa2) * fd; q(G, new THREE.SphereGeometry(0.11, 12, 10), nutMs[1], fx, beachH0(fx, fz) + 0.08, fz).scale.set(1, 0.95, 1.12); var hk = q(G, new THREE.SphereGeometry(0.1, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), fibM, fx + 0.3, beachH0(fx + 0.3, fz) + 0.02, fz + 0.1, Math.PI, 0, 0); hk.scale.set(1, 0.6, 1); }   // (a fallen coconut and a split husk)
-      palms.push({ c: cw, k: cr() * 6 }); solids.push({ x: x, z: z, r: 0.32 }); }
+      var y0 = beachH0(x, z), p = grp(x, y0 - 0.05, z, ry, G), k = palms.length, pair = k % 3 === 1;
+      if (pair) { oneTree(p, ht, Math.max(0.35, lean), 1, k); oneTree(p, ht * 0.82, -0.6, -1, k + 1); } else oneTree(p, ht, lean, 1, k);   // (a pair, curving apart, or a single palm)
+      for (var tf = 0; tf < 16; tf++) { var ta = tf / 16 * Math.PI * 2 + prr() * 0.3, tr2 = 0.12 + prr() * 0.25, bl = q(p, new THREE.ConeGeometry(0.03, 0.4 + prr() * 0.5, 4), tuftM, Math.cos(ta) * tr2, 0.2, Math.sin(ta) * tr2, Math.sin(ta) * 0.5, 0, -Math.cos(ta) * 0.5); }   // (a tuft of grass at its foot)
+      var tc = new THREE.Color(0x4aa83a); p.children.forEach(function (o) { if (o.material === tuftM) { var cg = o.geometry, cs = []; for (var v = 0; v < cg.attributes.position.count; v++) { var yy = cg.attributes.position.getY(v); var c2 = tc.clone().lerp(new THREE.Color(0xc8f080), Math.max(0, yy) * 2); cs.push(c2.r, c2.g, c2.b); } cg.setAttribute('color', new THREE.Float32BufferAttribute(cs, 3)); } });
+      cr(); solids.push({ x: x, z: z, r: 0.34 }); }
     [[86, B3_Z - 6, 6, 0.6], [87.5, B3_Z + 7, 5.4, -0.5], [93, B3_Z - 12, 6.5, 0.3], [96, B3_Z + 13, 5.8, 0.5], [101, B3_Z - 5, 6.2, -0.3], [100, B3_Z + 6, 5.6, 0.4], [118, B3_Z - 8, 6.8, 0.7], [121, B3_Z + 8, 6.4, -0.6], [126, B3_Z - 22, 6, 1.1], [124, B3_Z + 27, 6.3, 1.2],
       [131, B3_Z - 14, 5.6, 1.5], [133, B3_Z + 13, 6, 1.4], [115, B3_Z - 30, 6.6, 0.4], [104, B3_Z + 32, 5.9, 0.5], [92, B3_Z - 28, 6.2, 0.2], [110, B3_Z + 24, 5.5, 0.8]].forEach(function (pp) { palm(pp[0], pp[1], pp[2], pp[3], pp[3] > 1 ? 0 : cr() * 6.28); });
     // (beach grass on the dunes, shells and starfish on the sand, driftwood)
