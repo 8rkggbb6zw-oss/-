@@ -10283,7 +10283,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var sk = 0; sk < 90; sk++) { var s3 = glowSprite(sparkCols[sk % 5], 0.06, 0); s3.userData = { life: 99 }; TS.add(s3); sparks.push(s3); }
     var orbit = []; for (var ob = 0; ob < 18; ob++) { var o3 = glowSprite(sparkCols[ob % 5], 0.05, 0.9); TS.add(o3); orbit.push(o3); }
     var tipW = new THREE.Vector3(), palmW = new THREE.Vector3(), t3 = 0, shown = false;
-    function size() { var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight; R3.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); R3.setSize(w, h, false); cam3.aspect = w / h; cam3.fov = w / h < 0.8 ? 40 : 28; cam3.updateProjectionMatrix(); }
+    function size() { var w = cv.clientWidth || window.innerWidth, h = cv.clientHeight || window.innerHeight; R3.setPixelRatio(window.EVERDAWN_TITLE_DPR ? window.EVERDAWN_TITLE_DPR() : Math.min(2, window.devicePixelRatio || 1)); R3.setSize(w, h, false); cam3.aspect = w / h; cam3.fov = w / h < 0.8 ? 40 : 28; cam3.updateProjectionMatrix(); }
     size(); window.addEventListener('resize', size);
     function draw(dt) {
       t3 += dt;

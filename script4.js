@@ -168,8 +168,13 @@ var everdawnTitle = (function () {
   for (i = 0; i < 9; i++) clouds.push({ x: rnd(i + 40), y: [0.3, 0.42, 0.9][i % 3] + rnd(i + 60) * 0.1, w: 0.14 + rnd(i + 80) * 0.16, sp: 0.004 + rnd(i + 99) * 0.008, layer: i % 3 });
   for (i = 0; i < 70; i++) motes.push({ x: rnd(i + 3000), y: rnd(i + 3100), r: 0.6 + rnd(i + 3200) * 1.8, sp: 0.01 + rnd(i + 3300) * 0.03, p: rnd(i + 3400) * 6.28, hue: [320, 280, 45, 190][i % 4] });
   for (i = 0; i < 26; i++) flies.push({ x: rnd(i + 4000), y: 0.6 + rnd(i + 4100) * 0.38, p: rnd(i + 4200) * 6.28, sp: 0.3 + rnd(i + 4300) * 0.6 });
+  // (how sharp the title's two full-screen pictures are drawn: as sharp as the screen, but never more than about 2.4 million dots
+  // each, which an iPad's Safari can hold without dropping part of a picture; and less again if a picture ever comes out short)
+  var titleScale = 1;
+  function titleDPR() { var d = Math.min(2, window.devicePixelRatio || 1), w = window.innerWidth || 1, h = window.innerHeight || 1; return Math.max(0.75, Math.min(d, Math.sqrt(2400000 / (w * h))) * titleScale); }
+  window.EVERDAWN_TITLE_DPR = titleDPR;
   function resize() {
-    DPR = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight;
+    DPR = titleDPR(); W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); g.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
   resize(); window.addEventListener('resize', resize);
@@ -177,11 +182,14 @@ var everdawnTitle = (function () {
   // while it settles, or it was drawn while the page was still a sliver wide, its pictures are redrawn to fit, so nothing
   // comes out stretched, zoomed in or half-drawn)
   function titleSizeWrong() {
-    var dpr = Math.min(2, window.devicePixelRatio || 1), w = window.innerWidth, h = window.innerHeight;
+    var dpr = titleDPR(), w = window.innerWidth, h = window.innerHeight;
     if (!w || !h) return false;
     if (Math.abs(w - W) > 1 || Math.abs(h - H) > 1 || dpr !== DPR || Math.abs(cv.width - Math.round(w * dpr)) > 2 || Math.abs(cv.height - Math.round(h * dpr)) > 2) return true;
     var cs = root.querySelectorAll('canvas');
-    for (var k = 0; k < cs.length; k++) { var c = cs[k], cw = c.clientWidth, ch = c.clientHeight; if (c !== cv && cw > 0 && ch > 0 && c.height > 0 && Math.abs(c.width / c.height - cw / ch) > 0.02) return true; }   // (the 3D picture of you, out of shape)
+    for (var k = 0; k < cs.length; k++) { var c = cs[k], cw = c.clientWidth, ch = c.clientHeight; if (c === cv || !(cw > 0 && ch > 0 && c.height > 0)) continue;
+      if (Math.abs(c.width / c.height - cw / ch) > 0.02 || Math.abs(c.width - Math.round(cw * dpr)) > 2 || Math.abs(c.height - Math.round(ch * dpr)) > 2) return true;   // (the 3D picture of you, out of shape or the wrong size)
+      try { var gl = c.__evGl || (c.__evGl = c.getContext('webgl2') || c.getContext('webgl')); if (gl && (gl.drawingBufferWidth < c.width - 2 || gl.drawingBufferHeight < c.height - 2) && titleScale > 0.5) { titleScale *= 0.75; return true; } } catch (err) {}   // (the device couldn't give it all the dots it asked for: draw it less sharp)
+    }
     return false;
   }
   function refit() { if (root.classList.contains('ingame')) return; if (titleSizeWrong()) { try { window.dispatchEvent(new Event('resize')); } catch (err) { resize(); } } }
