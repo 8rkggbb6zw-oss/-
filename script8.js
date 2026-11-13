@@ -4174,9 +4174,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     function valTex(col) { return cpTex(256, 32, function (g, w, h) { var c = new THREE.Color(col).lerp(new THREE.Color(0xfbf6ea), 0.35); g.fillStyle = '#' + c.getHexString(); g.beginPath(); g.moveTo(0, 0); g.lineTo(w, 0);
       for (var i = 32; i > 0; i--) { var x0 = i * w / 32, x1 = (i - 1) * w / 32; g.lineTo(x0, h * 0.45); g.quadraticCurveTo((x0 + x1) / 2, h * 1.05, x1, h * 0.45); } g.closePath(); g.fill();
       g.fillStyle = '#' + new THREE.Color(col).multiplyScalar(0.75).getHexString(); g.fillRect(0, 0, w, 4); g.fillStyle = 'rgba(255,255,255,0.55)'; for (var x = 0; x < w; x += 6) g.fillRect(x, 7, 3, 1); }); }
-    function cushGeo(w, hgt, l, puff) { var geo = new THREE.BoxGeometry(w, hgt, l, 8, 2, 14), p = geo.attributes.position, v = new THREE.Vector3();
-      for (var i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); var fx = 1 - Math.pow(2 * v.x / w, 4), fz = 1 - Math.pow(2 * v.z / l, 4); if (v.y > 0) v.y += puff * fx * fz; else v.y -= puff * 0.3 * fx * fz; p.setXYZ(i, v.x, v.y, v.z); }
-      geo.computeVertexNormals(); return geo; }
+    // (lounger helpers: the curve its frame and cushion follow, from the head (up high, at the back) to the foot, and a sweep
+    // that builds a shape along it from a cross-section)
+    var loCurve = new THREE.CatmullRomCurve3([[-0.98, 0.9], [-0.8, 0.76], [-0.6, 0.58], [-0.44, 0.46], [-0.26, 0.41], [0.0, 0.405], [0.3, 0.425], [0.52, 0.45], [0.74, 0.43], [0.98, 0.4]].map(function (p) { return new THREE.Vector3(0, p[1], p[0]); }), false, 'centripetal');
+    function loFrame(curve, uu) { var p = curve.getPointAt(Math.min(1, Math.max(0, uu))), t = curve.getTangentAt(Math.min(1, Math.max(0, uu))); return { p: p, n: new THREE.Vector3(0, t.z, -t.y), rx: -Math.atan2(t.y, t.z) }; }
+    function loUAtZ(zz) { var best = 0, bd = 9; for (var i = 0; i <= 200; i++) { var d = Math.abs(loCurve.getPointAt(i / 200).z - zz); if (d < bd) { bd = d; best = i / 200; } } return best; }
+    var loHingeU = loUAtZ(-0.44);
+    function loSweep(curve, segs, ring, shape, uvRep) { var pos = [], uv = [], idx = [], L = curve.getLength();
+      for (var i = 0; i <= segs; i++) { var uu = i / segs, fr = loFrame(curve, uu); for (var k = 0; k <= ring; k++) { var a = k / ring * Math.PI * 2, xn = shape(uu, a); pos.push(xn[0], fr.p.y + fr.n.y * xn[1], fr.p.z + fr.n.z * xn[1]); uv.push(uu * L * uvRep, k / ring); } }
+      for (i = 0; i < segs; i++) for (k = 0; k < ring; k++) { var a0 = i * (ring + 1) + k, b0 = a0 + ring + 1; idx.push(a0, b0, a0 + 1, b0, b0 + 1, a0 + 1); }
+      var geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals(); return geo; }
+    function loCanvasT(col) { return cpTex(128, 128, function (g, w, h) { g.fillStyle = '#' + col.getHexString(); g.fillRect(0, 0, w, h);
+      for (var y = 0; y < h; y += 2) { g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(0, y, w, 1); } for (var x = 0; x < w; x += 2) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(x, 0, 1, h); }
+      g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(0, h * 0.4, w, h * 0.2); }, [1, 1]); }   // (a soft sheen along the middle of the top)
+    function loTowelT(col) { return cpTex(256, 64, function (g, w, h) { g.fillStyle = '#fbf6ea'; g.fillRect(0, 0, w, h); g.fillStyle = col; g.fillRect(w * 0.84, 0, w * 0.06, h); g.fillRect(w * 0.93, 0, w * 0.015, h);
+      for (var i = 0; i < 1600; i++) { g.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.06).toFixed(3) + ')'; g.fillRect(Math.random() * w, Math.random() * h, 1, 1); }
+      g.fillStyle = 'rgba(0,0,0,0.12)'; for (var x = w - 6; x < w; x += 2) g.fillRect(x, 0, 1, h); }, [1, 1]); }   // (terry loops, a coloured band near the end, a fringe)
+    var teakT = boardT(5151, '#b38152', { checks: false, knots: false, nails: false }), teakM = new THREE.MeshStandardMaterial({ map: teakT, bumpMap: teakT, bumpScale: 0.002, roughness: 0.6, side: THREE.DoubleSide });
     [[139, B3_Z - 11, '#e85a5a', 0.3], [140, B3_Z - 21, '#3aa8c8', -0.4], [139.5, B3_Z + 13, '#f2b83a', 0.2], [138.5, B3_Z + 24, '#7a5ab8', -0.2]].forEach(function (u, k) { var y = beachH(u[0], u[1]), ug = grp(u[0], y, u[1], u[3], G), ci, a;
       var colH = new THREE.Color(u[2]).getHex(), cloth = new THREE.MeshStandardMaterial({ map: canvasTex(u[2]), side: THREE.DoubleSide, roughness: 0.85 }), piping = rMat(new THREE.Color(u[2]).multiplyScalar(0.75).getHex(), { roughness: 0.8 });
       quiet(q(ug, new THREE.SphereGeometry(0.22, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), sandM, 0, -0.08, 0)).scale.y = 0.5;   // (the heap of sand the pole is driven into)
@@ -4193,23 +4207,50 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (ci = 0; ci < 8; ci++) { a = ci * UP; var sa = Math.sin(a), ca = Math.cos(a), tip = new THREE.Vector3(sa * (UMB_R - 0.02), -H / 2 - 0.02, ca * (UMB_R - 0.02)), mid = hub.clone().lerp(tip, 0.5).add(new THREE.Vector3(0, -0.025, 0));
         umbBar(cg, hub.clone().add(new THREE.Vector3(0, -0.025, 0)), tip, 0.009, umbRib); umbBar(cg, run, mid, 0.007, umbRib);   // (a rib, and its stretcher)
         quiet(q(cg, new THREE.SphereGeometry(0.018, 6, 5), umbWood, sa * UMB_R, -H / 2 - 0.02, ca * UMB_R)); }   // (the tip cap)
-      // (the lounger)
-      var lo = grp(-1.0, 0, 0.6, 0.25, ug), cush = rMat(colH, { roughness: 0.9 }), cream = rMat(0xfbf6ea, { roughness: 0.9 }), btn = rMat(new THREE.Color(u[2]).multiplyScalar(0.7).getHex(), { roughness: 0.6 }), z, s2;
-      [-1, 1].forEach(function (s) { q(lo, new THREE.BoxGeometry(0.045, 0.08, 1.36), teak, s * 0.3, 0.29, 0.1);   // (side rails)
-        q(lo, new THREE.BoxGeometry(0.05, 0.3, 0.05), teakDk, s * 0.28, 0.15, -0.48);   // (legs at the head end)
-        q(lo, new THREE.CylinderGeometry(0.07, 0.07, 0.035, 14), rubber, s * 0.34, 0.07, 0.68, 0, 0, Math.PI / 2); quiet(q(lo, new THREE.CylinderGeometry(0.03, 0.03, 0.04, 10), teak, s * 0.34, 0.07, 0.68, 0, 0, Math.PI / 2));   // (wheels at the foot)
-        q(lo, new THREE.BoxGeometry(0.04, 0.24, 0.05), teakDk, s * 0.3, 0.2, 0.6); });
-      q(lo, new THREE.BoxGeometry(0.6, 0.04, 0.04), teakDk, 0, 0.12, -0.48); q(lo, new THREE.CylinderGeometry(0.012, 0.012, 0.72, 6), umbBrass, 0, 0.07, 0.68, 0, 0, Math.PI / 2);   // (a stretcher, and the axle)
-      for (z = -0.5; z <= 0.72; z += 0.11) quiet(q(lo, new THREE.BoxGeometry(0.56, 0.022, 0.085), teak, 0, 0.335, z));   // (the seat's slats)
-      var bg = grp(0, 0.32, -0.55, 0, lo); bg.rotation.x = 0.75;   // (the backrest, propped up)
-      [-1, 1].forEach(function (s) { q(bg, new THREE.BoxGeometry(0.045, 0.06, 0.8), teak, s * 0.3, 0, -0.4); });
-      for (z = -0.06; z > -0.78; z -= 0.11) quiet(q(bg, new THREE.BoxGeometry(0.56, 0.022, 0.085), teak, 0, 0.02, z));
-      [-1, 1].forEach(function (s) { umbBar(lo, new THREE.Vector3(s * 0.25, 0.32 + 0.45 * Math.sin(0.75), -0.55 - 0.45 * Math.cos(0.75)), new THREE.Vector3(s * 0.25, 0.27, -0.25), 0.014, teakDk); });   // (the prop)
-      q(lo, cushGeo(0.54, 0.06, 1.2, 0.02), cush, 0, 0.375, 0.1); q(bg, cushGeo(0.54, 0.06, 0.74, 0.02), cush, 0, 0.06, -0.4);   // (the cushions)
-      [-1, 1].forEach(function (s) { quiet(q(lo, new THREE.CylinderGeometry(0.008, 0.008, 1.2, 5), piping, s * 0.27, 0.4, 0.1, Math.PI / 2, 0, 0)); quiet(q(bg, new THREE.CylinderGeometry(0.008, 0.008, 0.74, 5), piping, s * 0.27, 0.085, -0.4, Math.PI / 2, 0, 0)); });
-      for (z = -0.25; z <= 0.5; z += 0.25) for (s2 = -1; s2 <= 1; s2 += 2) quiet(q(lo, new THREE.SphereGeometry(0.014, 6, 4), btn, s2 * 0.12, 0.425, z));   // (buttons)
-      for (z = -0.2; z >= -0.6; z -= 0.2) for (s2 = -1; s2 <= 1; s2 += 2) quiet(q(bg, new THREE.SphereGeometry(0.014, 6, 4), btn, s2 * 0.12, 0.11, z));
-      var pil = q(bg, new THREE.SphereGeometry(0.2, 14, 8), cream, 0, 0.12, -0.62); pil.scale.set(1.0, 0.3, 0.38);   // (a pillow at the head)
+      // (the lounger: a contoured teak chaise. Its frame sweeps up into the backrest and over a soft rise under the knees, on
+      // slats; a deep cushion follows the curve, plump in the middle, buttoned in a diamond pattern, piped along its edges and
+      // stitched across where the backrest bends; a round bolster at the head; a towel folded over the foot; tapered legs at the
+      // foot, spoked wheels at the head, and a prop under the backrest)
+      var lo = grp(-1.0, 0, 0.6, 0.25, ug), lc = new THREE.Color(u[2]).lerp(new THREE.Color(0xfbf6ea), 0.18);
+      var cushM = new THREE.MeshStandardMaterial({ map: loCanvasT(lc), roughness: 0.92, side: THREE.DoubleSide }), pipeM = rMat(lc.clone().multiplyScalar(0.72).getHex(), { roughness: 0.8, side: THREE.DoubleSide }), btnM = rMat(lc.clone().multiplyScalar(0.62).getHex(), { roughness: 0.5 });
+      var LC = loCurve, LL = LC.getLength(), CW = 0.56, CH = 0.085, PUFF = 0.022, buttons = [];
+      for (var bu = 0.16; bu < 0.95; bu += 0.115) { var row = Math.round((bu - 0.16) / 0.115); (row % 2 ? [0] : [-0.14, 0.14]).forEach(function (bx) { buttons.push([bu, bx]); }); }   // (a diamond pattern of buttons)
+      var hingeU = loHingeU;
+      function topAt(x) { return CH / 2 + PUFF * (1 - Math.pow(2 * x / CW, 4)); }
+      function endF(uu) { var e = Math.min(1, Math.min(uu, 1 - uu) * LL / 0.06); return Math.sqrt(1 - (1 - e) * (1 - e)); }
+      var cushG = loSweep(LC, 90, 28, function (uu, a) { var c = Math.cos(a), s = Math.sin(a), f = endF(uu), x = CW / 2 * Math.sign(c) * Math.pow(Math.abs(c), 1 / 3) * (0.9 + 0.1 * f), n = CH / 2 * Math.sign(s) * Math.pow(Math.abs(s), 1 / 3) * f;
+        if (n > 0) { n += PUFF * (1 - Math.pow(2 * x / CW, 4)) * f; var d = 0; buttons.forEach(function (b) { var dz = (uu - b[0]) * LL, dx = x - b[1]; d += 0.014 * Math.exp(-(dz * dz + dx * dx) / 0.0016); }); d += 0.022 * Math.exp(-Math.pow((uu - hingeU) * LL, 2) / 0.0009); n -= d * Math.min(1, n / (CH / 2)); }
+        return [x, n]; }, 3);
+      q(lo, cushG, cushM, 0, 0, 0);
+      buttons.forEach(function (b) { var fr = loFrame(LC, b[0]), y = topAt(b[1]) - 0.014 + 0.004; var bm = q(lo, new THREE.SphereGeometry(0.016, 8, 6), btnM, b[1], fr.p.y + fr.n.y * y, fr.p.z + fr.n.z * y); bm.scale.set(1, 0.5, 1); bm.rotation.x = fr.rx; quiet(bm); });
+      [-1, 1].forEach(function (sd) { [0.62, -0.62].forEach(function (ty) {   // (piping along all four long edges)
+        quiet(q(lo, loSweep(LC, 70, 6, function (uu, a) { var f = endF(uu); return [sd * CW / 2 * 0.985 * (0.9 + 0.1 * f) + Math.cos(a) * 0.008, ty * CH / 2 * f + Math.sin(a) * 0.008]; }, 3), pipeM, 0, 0, 0)); }); });
+      var hf = loFrame(LC, hingeU); quiet(q(lo, new THREE.CylinderGeometry(0.006, 0.006, CW * 0.94, 5), pipeM, 0, hf.p.y + hf.n.y * (CH / 2 - 0.006), hf.p.z + hf.n.z * (CH / 2 - 0.006), 0, 0, Math.PI / 2));   // (the stitched seam where it bends)
+      // (the frame: two side rails swept along the curve, with slats across under the cushion)
+      [-1, 1].forEach(function (sd) { q(lo, loSweep(LC, 70, 16, function (uu, a) { var c = Math.cos(a), s = Math.sin(a); return [sd * 0.3 + 0.024 * Math.sign(c) * Math.pow(Math.abs(c), 0.5), -(CH / 2 + 0.045) + 0.04 * Math.sign(s) * Math.pow(Math.abs(s), 0.5)]; }, 1.2), teakM, 0, 0, 0); });
+      [0.0, 1.0].forEach(function (eu) { var fr = loFrame(LC, eu), o = -(CH / 2 + 0.045); q(lo, new THREE.BoxGeometry(0.66, 0.08, 0.05), teakM, 0, fr.p.y + fr.n.y * o, fr.p.z + fr.n.z * o, fr.rx, 0, 0); });   // (end rails)
+      for (var su = 0.05; su < 0.97; su += 0.06) { var sf = loFrame(LC, su), so = -(CH / 2 + 0.018); quiet(q(lo, new THREE.BoxGeometry(0.58, 0.016, 0.045), teakM, 0, sf.p.y + sf.n.y * so, sf.p.z + sf.n.z * so, sf.rx, 0, 0)); }
+      function railY(zz) { var fr = loFrame(LC, loUAtZ(zz)); return fr.p.y - (CH / 2 + 0.085); }
+      var fy = railY(0.78), wy = railY(-0.42);
+      [-1, 1].forEach(function (sd) {
+        var leg = q(lo, new THREE.CylinderGeometry(0.026, 0.018, fy, 4), teakDk, sd * 0.3, fy / 2, 0.78, 0, Math.PI / 4, 0); leg.scale.set(1.2, 1, 0.9);   // (tapered legs at the foot)
+        quiet(q(lo, new THREE.CylinderGeometry(0.024, 0.024, 0.012, 8), rubber, sd * 0.3, 0.006, 0.78));
+        q(lo, new THREE.BoxGeometry(0.04, wy - 0.085, 0.06), teakDk, sd * 0.3, 0.085 + (wy - 0.085) / 2, -0.42);   // (posts down to the wheels)
+        var wg = grp(sd * 0.345, 0.085, -0.42, 0, lo); wg.rotation.z = Math.PI / 2;
+        q(wg, new THREE.TorusGeometry(0.072, 0.016, 8, 22), rubber, 0, 0, 0, Math.PI / 2, 0, 0); q(wg, new THREE.CylinderGeometry(0.06, 0.06, 0.02, 22), teakM, 0, 0, 0);
+        for (var sp = 0; sp < 5; sp++) quiet(q(wg, new THREE.BoxGeometry(0.008, 0.026, 0.11), teakDk, 0, 0, 0, sp / 5 * Math.PI, 0, 0));
+        quiet(q(wg, new THREE.CylinderGeometry(0.018, 0.018, 0.03, 10), umbBrass, 0, 0, 0));   // (the hub)
+        umbBar(lo, new THREE.Vector3(sd * 0.28, railY(-0.78) + 0.02, -0.78), new THREE.Vector3(sd * 0.27, 0.005, -0.62), 0.016, teakDk); });   // (the backrest's prop)
+      q(lo, new THREE.BoxGeometry(0.6, 0.035, 0.035), teakDk, 0, 0.12, 0.78); q(lo, new THREE.CylinderGeometry(0.01, 0.01, 0.72, 6), umbBrass, 0, 0.085, -0.42, 0, 0, Math.PI / 2);   // (a stretcher, and the axle)
+      // (a round bolster at the head, gathered at its ends with a button)
+      var bf = loFrame(LC, 0.07), bo = topAt(0) + 0.055, bol = grp(0, bf.p.y + bf.n.y * bo, bf.p.z + bf.n.z * bo, 0, lo), bolM = rMat(0xfbf6ea, { roughness: 0.9 });
+      q(bol, new THREE.CylinderGeometry(0.065, 0.065, 0.42, 18), bolM, 0, 0, 0, 0, 0, Math.PI / 2);
+      [-1, 1].forEach(function (sd) { var cap = q(bol, new THREE.SphereGeometry(0.065, 16, 10), bolM, sd * 0.21, 0, 0); cap.scale.set(0.45, 1, 1); quiet(q(bol, new THREE.TorusGeometry(0.064, 0.006, 5, 20), pipeM, sd * 0.21, 0, 0, 0, Math.PI / 2, 0)); quiet(q(bol, new THREE.SphereGeometry(0.014, 8, 6), btnM, sd * 0.24, 0, 0)); });
+      // (a towel folded over the foot, hanging down past the end)
+      var tu0 = loUAtZ(0.5), tpts = [];
+      for (var ti = 0; ti <= 8; ti++) { var tfr = loFrame(LC, tu0 + (1 - tu0) * ti / 8), to = topAt(0) + 0.008; tpts.push(new THREE.Vector3(0, tfr.p.y + tfr.n.y * to, tfr.p.z + tfr.n.z * to)); }
+      var tend = tpts[tpts.length - 1]; tpts.push(new THREE.Vector3(0, tend.y - 0.03, tend.z + 0.05), new THREE.Vector3(0, tend.y - 0.14, tend.z + 0.07), new THREE.Vector3(0, tend.y - 0.24, tend.z + 0.065));
+      q(lo, loSweep(new THREE.CatmullRomCurve3(tpts), 40, 4, function (uu, a) { var c = Math.cos(a), s = Math.sin(a); return [0.21 * Math.sign(c) * Math.pow(Math.abs(c), 0.2) + Math.sin(uu * 18) * 0.004, 0.007 * s]; }, 1), new THREE.MeshStandardMaterial({ map: loTowelT(u[2]), roughness: 1, side: THREE.DoubleSide }), 0, 0, 0);
       // (a little round side table: a drink with a straw and a lemon slice, and a pair of sunglasses)
       var tb = grp(-1.65, 0, 0.2, 0, ug); q(tb, new THREE.CylinderGeometry(0.2, 0.2, 0.025, 18), teak, 0, 0.42, 0); quiet(q(tb, new THREE.TorusGeometry(0.2, 0.008, 4, 22), teakDk, 0, 0.42, 0, Math.PI / 2, 0, 0));
       [0, 2.1, 4.2].forEach(function (la) { umbBar(tb, new THREE.Vector3(Math.cos(la) * 0.05, 0.41, Math.sin(la) * 0.05), new THREE.Vector3(Math.cos(la) * 0.16, 0, Math.sin(la) * 0.16), 0.014, teakDk); });
