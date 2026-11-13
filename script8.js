@@ -4138,9 +4138,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var lid = new THREE.Mesh(lidG, new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true, side: THREE.DoubleSide })); lid.renderOrder = 0; boat.add(lid);
     var bowW = new THREE.Vector3(bow.x + 0.035, bow.y - 0.08, 0).applyAxisAngle(Y_AX, 0.08).add(new THREE.Vector3(158, SEA_Y, B3_Z - 3.6));
     q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(bowW, new THREE.Vector3(160.4, SEA_Y + 0.15, B3_Z - 2.4), new THREE.Vector3(161, DECK_Y - 0.05, B3_Z - 1.5)), 14, 0.02, 4), ropeM, 0, 0, 0);
-    // (three buoys)
-    var buoys = [];
-    [[150, B3_Z + 7], [166, B3_Z - 9], [190, B3_Z + 3]].forEach(function (bp2, k) { var bu = grp(bp2[0], SEA_Y, bp2[1], 0, G); q(bu, new THREE.SphereGeometry(0.4, 14, 10), rMat(k % 2 ? 0xd83a32 : 0xf2efe6, { roughness: 0.5 }), 0, 0.1, 0).scale.set(1, 0.7, 1); q(bu, new THREE.CylinderGeometry(0.08, 0.2, 0.9, 10), rMat(k % 2 ? 0xf2efe6 : 0xd83a32), 0, 0.65, 0); q(bu, new THREE.SphereGeometry(0.09, 8, 6), rMat(0xffd070, { emissive: 0xffa040, emissiveIntensity: 0.6 }), 0, 1.15, 0); buoys.push({ g: bu, k: k * 2.1 }); });
+    var buoys = [];   // (no buoys out in the water any more)
     // ---- on the land: palms ----
     // ---- the palms, built afresh: every frond made leaflet by leaflet. Its stalk rises out of the crown, arches over and sags at
     // the tip; along both sides of it hang a hundred-odd narrow, folded leaflets, short at the base, longest in the middle, short
@@ -4707,7 +4705,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       [[139, B3_Z - 11, '#e85a5a'], [140, B3_Z - 21, '#3aa8c8'], [139.5, B3_Z + 13, '#f2b83a'], [138.5, B3_Z + 24, '#7a5ab8']].forEach(function (u) { var up = at(u[0], u[1]); for (var w = 0; w < 8; w++) { g.beginPath(); g.moveTo(up[0], up[1]); g.arc(up[0], up[1], 1.25 * K, w / 8 * Math.PI * 2, (w + 1) / 8 * Math.PI * 2); g.closePath(); g.fillStyle = w % 2 ? '#fbf6ea' : u[2]; g.fill(); } });   // (the beach umbrellas)
       var lp2 = at(180, B3_Z + 5.2); g.beginPath(); g.arc(lp2[0] + 6, lp2[1] + 8, 1.3 * K, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.2)'; g.fill(); [[1.3, '#f6f2ea'], [1.0, '#c8342e'], [0.6, '#f6f2ea'], [0.35, '#ffd070']].forEach(function (r) { g.beginPath(); g.arc(lp2[0], lp2[1], r[0] * K, 0, Math.PI * 2); g.fillStyle = r[1]; g.fill(); });   // (the lighthouse, from above)
       var bt = at(158, B3_Z - 3.6); g.save(); g.translate(bt[0], bt[1]); g.beginPath(); g.ellipse(0, 0, 1.7 * K, 0.62 * K, 0, 0, Math.PI * 2); g.fillStyle = '#f2efe6'; g.fill(); g.strokeStyle = '#2a6aa8'; g.lineWidth = 3; g.stroke(); g.fillStyle = '#9a7a58'; g.fillRect(-0.7 * K, -0.5 * K, 0.22 * K, K); g.fillRect(0.3 * K, -0.5 * K, 0.22 * K, K); g.restore();   // (the rowboat)
-      [[150, B3_Z + 7, '#f2efe6'], [166, B3_Z - 9, '#d83a32'], [190, B3_Z + 3, '#f2efe6']].forEach(function (b) { var bp = at(b[0], b[1]); g.beginPath(); g.arc(bp[0], bp[1], 6, 0, Math.PI * 2); g.fillStyle = b[2]; g.fill(); g.strokeStyle = '#d83a32'; g.lineWidth = 2; g.stroke(); });   // (buoys)
       label('East Bridge', B3_DX + (BRIDGE_Z0 + BRIDGE_Z1) / 2, B3_Z - 6, 0); label('Seashell Shore', 112, B3_Z - 36, 0, 30); }; })(clothDrawOnMap);
     TELEPORTS.push({ name: 'Seashell Shore', icon: '🐚', spot: function () { return { x: 90.5, z: B3_Z - 3.2, face: Math.PI / 2, view: Math.PI / 2 }; } });
   })();
