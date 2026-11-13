@@ -1112,8 +1112,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     // you: a little witch's hat with a pointer showing the way you face (inside, you're shown at the door)
     var you = { x: player.position.x, z: player.position.z };
-    if (indoors) you = inHide ? hideFront(1.5) : inLab ? labFront(1.5) : inCloth ? clothFront(1.5) : inFbarn ? fbarnFront(1.5) : inCoop ? coopFront(1.5) : inCarp ? carpFront(1.5) : inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
-    var yp = mapXY(you.x, you.z), fa = indoors ? (inHide ? HIDE_TURN : inLab ? LAB_TURN : inCloth ? CLOTH_TURN : inFbarn || inCoop ? 0 : inCarp ? CARP_TURN : inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
+    if (indoors) you = inLh ? lhFront(1.5) : inHide ? hideFront(1.5) : inLab ? labFront(1.5) : inCloth ? clothFront(1.5) : inFbarn ? fbarnFront(1.5) : inCoop ? coopFront(1.5) : inCarp ? carpFront(1.5) : inBarn ? animalFront(1.5) : inClinic ? clinicFront(1.5) : inShop ? shopFront(1.5) : { x: OUT_DOOR_X, z: OUT_DOOR_Z + 1 };
+    var yp = mapXY(you.x, you.z), fa = indoors ? (inLh ? LH_TURN : inHide ? HIDE_TURN : inLab ? LAB_TURN : inCloth ? CLOTH_TURN : inFbarn || inCoop ? 0 : inCarp ? CARP_TURN : inBarn ? ANIMAL_TURN : inClinic ? CLINIC_TURN : inShop ? SHOP_TURN : 0) : facing, pulse = 1 + Math.sin(Date.now() / 250) * 0.15;
     var yg = g.createRadialGradient(yp[0], yp[1], 2, yp[0], yp[1], 34 * pulse); yg.addColorStop(0, 'rgba(255,255,255,0.9)'); yg.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = yg; g.beginPath(); g.arc(yp[0], yp[1], 34 * pulse, 0, Math.PI * 2); g.fill();
     g.save(); g.translate(yp[0], yp[1]); g.rotate(-fa + Math.PI);
@@ -5890,11 +5890,11 @@ EVERDAWN_PARTS.push(function (THREE) {
           if (d < min && d > 0.0001) { player.position.x = o.x + dx / d * min; player.position.z = o.z + dz / d * min; }
         });
       } else if (indoors) { // inside the farmhouse or the seed shop: stay between the walls and bump into the furniture
-        var rx0 = inHide ? HDI_X : inLab ? LBI_X : inCloth ? CLI_X : inFbarn ? FBI_X : inCoop ? COI_X : inCarp ? CPI_X : inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inHide ? HDI_Z : inLab ? LBI_Z : inCloth ? CLI_Z : inFbarn ? FBI_Z : inCoop ? COI_Z : inCarp ? CPI_Z : inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
-        var hw = (inHide ? HDI_W : inLab ? LBI_W : inCloth ? CLI_W : inFbarn ? FBARN_BW : inCoop ? COOP_BW : inCarp ? CPI_W : inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.45, hd = (inHide ? HDI_D : inLab ? LBI_D : inCloth ? CLI_D : inFbarn ? FBARN_BD : inCoop ? COOP_BD : inCarp ? CPI_D : inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.45;
+        var rx0 = inLh ? LHI_X : inHide ? HDI_X : inLab ? LBI_X : inCloth ? CLI_X : inFbarn ? FBI_X : inCoop ? COI_X : inCarp ? CPI_X : inBarn ? AB_X : inClinic ? CIN_X : inShop ? SIN_X : IN_X, rz0 = inLh ? LHI_Z : inHide ? HDI_Z : inLab ? LBI_Z : inCloth ? CLI_Z : inFbarn ? FBI_Z : inCoop ? COI_Z : inCarp ? CPI_Z : inBarn ? AB_Z : inClinic ? CIN_Z : inShop ? SIN_Z : IN_Z;
+        var hw = (inLh ? LHI_W : inHide ? HDI_W : inLab ? LBI_W : inCloth ? CLI_W : inFbarn ? FBARN_BW : inCoop ? COOP_BW : inCarp ? CPI_W : inBarn ? AB_W : inClinic ? CIN_W : inShop ? SIN_W : ROOM_W) / 2 - 0.45, hd = (inLh ? LHI_D : inHide ? HDI_D : inLab ? LBI_D : inCloth ? CLI_D : inFbarn ? FBARN_BD : inCoop ? COOP_BD : inCarp ? CPI_D : inBarn ? AB_D : inClinic ? CIN_D : inShop ? SIN_D : ROOM_D) / 2 - 0.45;
         player.position.x = Math.max(rx0 - hw, Math.min(rx0 + hw, player.position.x));
         player.position.z = Math.max(rz0 - hd, Math.min(rz0 + hd, player.position.z));
-        (inHide ? hideSolids : inLab ? labSolids : inCloth ? clothSolids : inFbarn ? fbarnSolids : inCoop ? coopSolids : inCarp ? carpSolids : inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
+        (inLh ? lhSolids : inHide ? hideSolids : inLab ? labSolids : inCloth ? clothSolids : inFbarn ? fbarnSolids : inCoop ? coopSolids : inCarp ? carpSolids : inBarn ? abSolids : inClinic ? ciSolids : inShop ? shopInSolids : inSolids).forEach(function (o) {
           var dx = player.position.x - (rx0 + o[0]), dz = player.position.z - (rz0 + o[1]);
           var d = Math.hypot(dx, dz), min = o[2] + 0.35;
           if (d < min && d > 0.0001) {
@@ -6178,6 +6178,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inCloth) { var clo = clothFront(1.6); px = clo.x; pz = clo.z; } // and Thread & Thimble
     if (inLab) { var lbo = labFront(1.6); px = lbo.x; pz = lbo.z; } // and Atom & Alembic
     if (inHide) { var hdo = hideFront(1.6); px = hdo.x; pz = hdo.z; } // and the hideout
+    if (inLh) { var lho = lhFront(1.6); px = lho.x; pz = lho.z; } // and the lighthouse
     if (inBoat) { var dko = dock.localToWorld(new THREE.Vector3(DOCK_LEN - 0.7, 0, 0.35)); px = dko.x; pz = dko.z; }   // sitting in the rowboat? stand at the end of the dock (and climb back in when loaded)
     var data = {
       v: 1, savedAt: Date.now(), name: saveName,                      // (the name you gave this save)
@@ -7806,7 +7807,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       inShop = false;
       inClinic = false;
       inBarn = false;
-      inCarp = inCoop = inFbarn = inCloth = inLab = inHide = false;
+      inCarp = inCoop = inFbarn = inCloth = inLab = inHide = inLh = false;
       scene.add(player);
       if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; }
     }
@@ -8172,7 +8173,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if ((e.code === 'Escape' || isPauseKey(e.code)) && !e.repeat) { e.preventDefault(); if (!pauseAsk.hidden) { pauseAsk.hidden = true; pauseMain.hidden = false; } else resumeGame(); }
     e.stopImmediatePropagation();                                      // (paused: no key reaches the game; Tab, Enter and Space still work the menu's buttons)
   }, true);
-  function sceneNow() { return indoors ? (inHide ? hideScene : inLab ? labScene : inCloth ? clothScene : inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene; }   // (wherever you are: outdoors, or inside a building)
+  function sceneNow() { return indoors ? (inLh ? lhScene : inHide ? hideScene : inLab ? labScene : inCloth ? clothScene : inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene; }   // (wherever you are: outdoors, or inside a building)
   var pauseBaseFrame = frame;                                          // (paused: nothing moves and the clock stands still, but the picture is still drawn)
   frame = function () {
     if (gamePaused) { clock.getDelta(); renderer.render(sceneNow(), camera); return; }
@@ -8419,7 +8420,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   (function () { var st = document.createElement('style'); st.textContent = '.ev-decor-hud-off body.ev-decor-on .topbar,.ev-decor-hud-off body.ev-decor-on .quest-hud,.ev-decor-hud-off body.ev-decor-on .controls,.ev-decor-hud-off body.ev-decor-on #toast{visibility:hidden!important}'; document.head.appendChild(st); })();
   window.everdawnSetDecorHud = function (on) { document.documentElement.classList.toggle('ev-decor-hud-off', !on); };
   try { window.everdawnSetDecorHud(localStorage.getItem('everdawn-decor-hud') !== 'off'); } catch (err) {}
-  function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !inHide; }
+  function inFarmhouse() { return indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !inHide && !inLh; }
   // (the room's floor: x from -4.5 to 4.5 and z from -3.5 to 3.5 around IN_X, IN_Z; the bed, the fireplace and the
   // way to the door are kept clear)
   var DECOR_FIXED = [[BX - BED_W / 2 - 0.05, HZ - 0.2, BX + BED_W / 2 + 0.2, FZ + 0.1], [FPX - 2.1, -ROOM_D / 2, FPX + 1.9, FZF + 0.55], [-0.9, EXIT_Z - 0.7, 0.9, ROOM_D / 2]];
@@ -10170,7 +10171,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     cullScene();
     var menuUp = (bagUi.box && !bagUi.box.hidden) || binOpen || shopOpen || barnShopOpen || glimNaming || carpShopOpen || clothShopOpen || coopPlacing;   // a menu is open: in full screen the button column steps aside, so taps on the menu don't land on the buttons behind it
     if (document.body.classList.contains('menu-open') !== menuUp) { document.body.classList.toggle('menu-open', menuUp); placeMenus(); }
-    if (indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !inHide) { camera.updateMatrixWorld(); drawHouseView(); }   // (your own house: its windows look out too)
+    if (indoors && !inShop && !inClinic && !inBarn && !inCarp && !inCoop && !inFbarn && !inCloth && !inLab && !inHide && !inLh) { camera.updateMatrixWorld(); drawHouseView(); }   // (your own house: its windows look out too)
     if (inShop) { camera.updateMatrixWorld(); drawShopView(); }
     if (inClinic) { camera.updateMatrixWorld(); drawClinicView(); }
     if (inBarn) { camera.updateMatrixWorld(); drawBarnView(); }
@@ -10178,7 +10179,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     if (inCoop) { camera.updateMatrixWorld(); drawCoopView(); }
     if (inFbarn) { camera.updateMatrixWorld(); drawFbarnView(); }
     if (inCloth) { camera.updateMatrixWorld(); drawClothView(); }
-    renderer.render(indoors ? (inHide ? hideScene : inLab ? labScene : inCloth ? clothScene : inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
+    renderer.render(indoors ? (inLh ? lhScene : inHide ? hideScene : inLab ? labScene : inCloth ? clothScene : inFbarn ? fbarnScene : inCoop ? coopScene : inCarp ? carpScene : inBarn ? abScene : inClinic ? clinicScene : inShop ? shopScene : interiorScene) : scene, camera); // inside the house, the shop or the clinic, only that room is drawn
   }
   // ---------- The title screen, in 3D ----------
   // While the title screen is up, the real you floats in the dawn sky over it: your own witch, her arm raised with a

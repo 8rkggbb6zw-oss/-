@@ -883,6 +883,7 @@
     ["the farmhouse", "la casa de la granja", "la ferme", "la casa", "das Bauernhaus", "a casa da fazenda"],
     ["the seed shop", "la tienda de semillas", "la boutique de graines", "il negozio di semi", "der Samenladen", "a loja de sementes"],
     ["the clinic", "la clínica", "la clinique", "la clinica", "die Praxis", "a clínica"],
+    ["the lighthouse", "el faro", "le phare", "il faro", "der Leuchtturm", "o farol"],
     ["your coop", "tu gallinero", "ton poulailler", "il tuo pollaio", "dein Hühnerstall", "seu galinheiro"],
     ["your barn", "tu establo", "ta grange", "la tua stalla", "deine Scheune", "seu celeiro"],
     ["Land your broom first (B)", "Primero aterriza con tu escoba (B)", "Pose d'abord ton balai (B)", "Prima fai atterrare la scopa (B)", "Lande zuerst mit deinem Besen (B)", "Pouse a vassoura primeiro (B)"],
