@@ -3831,7 +3831,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // round their heads and two ropes swagged between them; sand blown up over the first boards; life rings on the rails, a
     // cleat for the rowboat's line, and at the pier's end a coil of rope, a bait bucket and a fishing rod leaning on the rail ----
     var bwR = (function () { var s = 8821; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
-    var px, pz;
+    var px, pz, pq = new THREE.Quaternion(), pe = new THREE.Euler(), ps = new THREE.Vector3(), pv = new THREE.Vector3(), pm = new THREE.Matrix4(), pc = new THREE.Color();   // (pc is used again for the shells)
     var planks = []; function plank(x, y, z, len, along, tilt) { planks.push([x, y, z, len, along, tilt || 0]); }
     for (px = 84.1; px < 172; px += 0.24) { var dy = deckY(px, B3_Z, 0); if (dy < -90) continue; var tl = px < 89 ? Math.atan((DECK_Y - 0.06) / 5) : 0; plank(px, dy - 0.025, B3_Z, 3.0, 'z', tl); }
     for (pz = B3_Z - 7.9; pz < B3_Z + 7.95; pz += 0.24) plank(177, DECK_Y - 0.025, pz, 10, 'x');
@@ -3864,7 +3864,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var pkS = new THREE.Shape(), BW2 = 0.105, BH = 0.025, BR = 0.01; pkS.moveTo(-BW2, -BH); pkS.lineTo(BW2, -BH); pkS.lineTo(BW2, BH - BR); pkS.quadraticCurveTo(BW2, BH, BW2 - BR, BH); pkS.lineTo(-BW2 + BR, BH); pkS.quadraticCurveTo(-BW2, BH, -BW2, BH - BR); pkS.lineTo(-BW2, -BH);
     var pkG = new THREE.ExtrudeGeometry(pkS, { depth: 1, bevelEnabled: false, curveSegments: 3 }); pkG.translate(0, 0, -0.5); fixUV(pkG, function (pa, i) { return pa.getZ(i) + 0.5; }, function (pa, i) { return (pa.getX(i) + BW2) / (2 * BW2); });
     var pkSets = [[], [], []], pkCols = [[], [], []];
-    planks.forEach(function (p2) { var set = bwR() < 0.4 ? 0 : bwR() < 0.5 ? 1 : 2, roll = (bwR() - 0.5) * 0.012, yaw = (bwR() - 0.5) * 0.006, dyy = (bwR() - 0.5) * 0.005, m;
+    planks.forEach(function (p2) { var set = bwR() < 0.4 ? 0 : bwR() < 0.5 ? 1 : 2, roll = (bwR() - 0.5) * 0.012, yaw = (bwR() - 0.5) * 0.006 * Math.min(1, 2.6 / p2[3]),   /* (long boards kept true) */ dyy = (bwR() - 0.5) * 0.005, m;
       if (p2[4] === 'z') m = M4(p2[0], p2[1] + dyy, p2[2], 0, yaw, p2[5] + roll, 1, 1, p2[3]); else m = M4(p2[0], p2[1] + dyy, p2[2], roll, Math.PI / 2 + yaw, 0, 1, 1, p2[3]);
       var w = 0.82 + bwR() * 0.2, c = new THREE.Color(w, w * (0.97 + bwR() * 0.03), w * (0.93 + bwR() * 0.05)), u = bwR();
       if (u < 0.06) c.setRGB(1.05, 0.93, 0.78); else if (u < 0.11) c.multiplyScalar(0.78); else if (u < 0.24) { var gy = (c.r + c.g + c.b) / 3; c.setRGB(gy * 0.98, gy * 0.98, gy); }   // (a newer board, a damp one, a silvered one)
