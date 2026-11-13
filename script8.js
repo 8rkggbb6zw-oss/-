@@ -4951,4 +4951,39 @@ EVERDAWN_PARTS.push(function (THREE) {
       label('East Bridge', B3_DX + (BRIDGE_Z0 + BRIDGE_Z1) / 2, B3_Z - 6, 0); label('Seashell Shore', 112, B3_Z - 36, 0, 30); }; })(clothDrawOnMap);
     TELEPORTS.push({ name: 'Seashell Shore', icon: '🐚', spot: function () { return { x: 90.5, z: B3_Z - 3.2, face: Math.PI / 2, view: Math.PI / 2 }; } });
   })();
+  // ===== Steadier graphics. On some devices (iPads especially) the browser gives the game only a little graphics memory,
+  // and when it runs short, textures can come out black (the ground, say) or the picture can be lost altogether, and which
+  // ones fail changes from load to load. So: the one oversized texture (over 2048 pixels) is drawn at 2048, and on iPads and
+  // iPhones the game draws at a slightly lower resolution. For the first two minutes it watches for the graphics card
+  // saying it ran out of memory; if it does, the game switches to a lighter mode (plain resolution, a smaller shadow map)
+  // and sends every texture again, which brings back any that came out black, and it remembers to start in that mode on
+  // this device. If the browser drops the graphics altogether, they're brought back in the lighter mode; if they don't
+  // come back, a Reload button appears (your game is saved first) =====
+  (function () {
+    var gl = renderer.getContext(), KEY = 'everdawn-gfx-light', light = false;
+    try { light = localStorage.getItem(KEY) === '1'; } catch (err) {}
+    var mobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    function scenes() { return [scene, interiorScene, shopScene, clinicScene, abScene, carpScene, coopScene, fbarnScene, clothScene, labScene, hideScene, lhScene].filter(function (sc) { return sc && sc.isScene; }); }
+    function eachTexture(fn) { var seen = new Set(); scenes().forEach(function (sc) { sc.traverse(function (o) { var ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      ms.forEach(function (m) { for (var k in m) { var t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); fn(t); } } }); }); }); }
+    function shrinkHuge() { eachTexture(function (t) { var im = t.image; if (!im || !im.width || t.isDataTexture || (im.width <= 2048 && im.height <= 2048)) return;
+      var sc = 2048 / Math.max(im.width, im.height), c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+      try { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.image = c; t.needsUpdate = true; } catch (err) {} }); }
+    function resend() { eachTexture(function (t) { if (t.image) t.needsUpdate = true; }); }
+    function quality() { renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, light ? 1 : mobile ? 1.5 : 2)); if (light) { if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } sun.shadow.mapSize.set(1024, 1024); } }
+    function goLight() { if (light) return false; light = true; try { localStorage.setItem(KEY, '1'); } catch (err) {} quality(); return true; }
+    shrinkHuge(); quality(); setTimeout(shrinkHuge, 20000);   // (and again once you, the player, have loaded)
+    var checks = 0, watch = setInterval(function () {
+      if (++checks > 120) clearInterval(watch); if (gl.isContextLost()) return;
+      var e = gl.getError(); if (e !== gl.OUT_OF_MEMORY) return;
+      if (goLight()) showToast('Graphics memory was running low, so the game switched to a lighter mode.', 4000);
+      resend(); }, 1000);
+    var box = null, lostTimer = 0;
+    function showReload() { if (box) return; box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(28,20,44,0.75);font-family:Fredoka,system-ui,sans-serif';
+      box.innerHTML = '<div style="max-width:320px;margin:16px;padding:22px;border-radius:18px;background:#fff;color:#3d3157;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.3)"><p style="margin:0 0 14px;font-size:17px;line-height:1.4">The graphics stopped working. Reload to fix it: your game is saved first.</p><button type="button" style="font:600 18px Fredoka,system-ui,sans-serif;border:0;border-radius:14px;padding:12px 28px;background:#7b4fd6;color:#fff;cursor:pointer">Reload</button></div>';
+      box.querySelector('button').addEventListener('click', function () { try { autoSave(); } catch (err) {} location.reload(); }); document.body.appendChild(box); }
+    renderer.domElement.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); clearTimeout(lostTimer); lostTimer = setTimeout(showReload, 6000); }, false);
+    renderer.domElement.addEventListener('webglcontextrestored', function () { clearTimeout(lostTimer); if (box) { box.remove(); box = null; } goLight(); setTimeout(resend, 0); }, false);
+  })();
 });
