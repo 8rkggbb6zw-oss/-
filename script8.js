@@ -4042,13 +4042,69 @@ EVERDAWN_PARTS.push(function (THREE) {
     var beamG = new THREE.Group(); beamG.position.set(0, 6.2, 0); lh.add(beamG); var beamM2 = new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
     [0, Math.PI].forEach(function (ba) { var bc = new THREE.Mesh(new THREE.ConeGeometry(1.1, 16, 16, 1, true), beamM2); bc.rotation.set(0, 0, Math.PI / 2); bc.position.set(-8, 0, 0); var bg2 = new THREE.Group(); bg2.rotation.y = ba; bg2.add(bc); beamG.add(bg2); });
     solids.push({ x: 180, z: B3_Z + 5.2, r: 1.35 });
-    // (a rowboat tied up beside the pier, bobbing; three buoys)
-    var boat = grp(158, SEA_Y, B3_Z - 3.6, 0.08, G), hullM = rMat(0xf2efe6, { roughness: 0.6, side: THREE.DoubleSide }), trimM = rMat(0x2a6aa8, { roughness: 0.6 });
-    q(boat, new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), hullM, 0, 0.28, 0).scale.set(1.7, 0.5, 0.62); q(boat, new THREE.TorusGeometry(1, 0.05, 6, 28), trimM, 0, 0.28, 0, Math.PI / 2, 0, 0).scale.set(1.7, 0.62, 1);
-    q(boat, new THREE.SphereGeometry(0.99, 20, 6, 0, Math.PI * 2, Math.PI / 2, 0.25), trimM, 0, 0.27, 0).scale.set(1.71, 0.5, 0.63);
-    [-0.6, 0.4].forEach(function (sx) { q(boat, new THREE.BoxGeometry(0.22, 0.04, 1.0), benchM, sx, 0.2, 0); });
-    [-1, 1].forEach(function (s) { var oar = grp(-0.1, 0.32, s * 0.45, 0, boat); oar.rotation.set(s * 0.15, 0.35 * s, 0); q(oar, new THREE.CylinderGeometry(0.025, 0.025, 2.2, 6), benchM, 0, 0, 0, 0, 0, Math.PI / 2); q(oar, new THREE.BoxGeometry(0.5, 0.02, 0.16), benchM, -1.15, 0, 0); });
-    q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(159.6, SEA_Y + 0.35, B3_Z - 3.4), new THREE.Vector3(160.4, SEA_Y + 0.2, B3_Z - 2.4), new THREE.Vector3(161, DECK_Y - 0.05, B3_Z - 1.5)), 10, 0.02, 4), ropeM, 0, 0, 0);
+    // (a rowboat tied up beside the pier, bobbing: a clinker-built wooden dinghy. Its planks overlap down the sides, painted
+    // white above a navy boot stripe and red bottom paint, with a navy top strake; varnished inside, with steamed ribs,
+    // floorboards, three thwarts on knees and a stern seat; a varnished gunwale and inwale, a stem post and keel, a navy
+    // transom; brass oarlocks with a pair of oars shipped inside; a painter ring at the bow, a coil of line and a little
+    // grapnel anchor. An unseen lid over its open top keeps the sea from showing inside the hull)
+    var BL = 1.7, BW = 0.62;
+    function bHalf(u) { return u >= 0 ? BW * Math.pow(Math.max(0, 1 - u * u), 0.55) : BW * (1 - 0.32 * u * u); }
+    function bSheer(u) { return 0.4 + 0.1 * u * u + 0.08 * Math.pow(Math.max(0, u), 3); }
+    function bKeel(u) { return -0.2 + 0.06 * u * u + 0.22 * Math.pow(Math.max(0, u), 3); }
+    function hullPt(u, v, inset, lap) { var B = Math.max(0, bHalf(u) - inset), Sh = bSheer(u) - inset * 0.3, K = bKeel(u) + inset * 1.2, s = v * Math.PI / 2, y = K + (Sh - K) * (1 - Math.cos(s)), z = B * Math.pow(Math.sin(s), 0.55);
+      if (lap) z += 0.008 * ((v * 6) % 1) * Math.min(1, B / 0.1);   // (each plank lapping over the one below)
+      return new THREE.Vector3(u * BL + 0.12 * Math.pow(Math.max(0, u), 2) * v, y, z); }
+    function hullGeo(inset, lap) { var NU = 44, NV = 24, pos = [], uv = [], idx = [], sd, i, k;
+      for (sd = 0; sd < 2; sd++) for (i = 0; i <= NU; i++) for (k = 0; k <= NV; k++) { var u = -1 + 2 * i / NU, p = hullPt(u, k / NV, inset, lap); pos.push(p.x, p.y, sd ? -p.z : p.z); uv.push(i / NU, k / NV); }
+      for (sd = 0; sd < 2; sd++) for (i = 0; i < NU; i++) for (k = 0; k < NV; k++) { var o = sd * (NU + 1) * (NV + 1), a = o + i * (NV + 1) + k, b = a + NV + 1; if (sd) idx.push(a, a + 1, b, b, a + 1, b + 1); else idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      var geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+      var nz = geo.attributes.normal.getZ(Math.round(NU / 2) * (NV + 1) + Math.round(NV * 0.7)); if (nz < 0) { idx = idx.slice(); for (i = 0; i < idx.length; i += 3) { var t2 = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t2; } geo.setIndex(idx); geo.computeVertexNormals(); }   // (faces outward)
+      return geo; }
+    var hullOutT = cpTex(64, 256, function (g, w, h) { function band(v0, v1, c) { g.fillStyle = c; g.fillRect(0, h * (1 - v1), w, h * (v1 - v0)); }
+      band(0, 0.5, '#9a3a2c'); band(0.5, 0.56, '#23385e'); band(0.56, 0.86, '#f4f1e8'); band(0.86, 1, '#2a4a7a');
+      for (var k = 1; k < 6; k++) { var y = h * (1 - k / 6); g.fillStyle = 'rgba(0,0,0,0.28)'; g.fillRect(0, y, w, 2); g.fillStyle = 'rgba(255,255,255,0.18)'; g.fillRect(0, y - 2, w, 1); }   // (the plank laps)
+      for (var i = 0; i < 500; i++) { g.fillStyle = 'rgba(' + (Math.random() < 0.5 ? '0,0,0,' : '255,255,255,') + (Math.random() * 0.07).toFixed(3) + ')'; g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 6, 1); } });
+    var hullInT = cpTex(256, 128, function (g, w, h) { g.fillStyle = '#b07d4c'; g.fillRect(0, 0, w, h); for (var i = 0; i < 90; i++) { var y0 = Math.random() * h; g.strokeStyle = 'rgba(' + (Math.random() < 0.6 ? '70,44,22,' : '230,190,140,') + (0.08 + Math.random() * 0.18).toFixed(2) + ')'; g.lineWidth = 0.5 + Math.random(); g.beginPath(); g.moveTo(0, y0); g.bezierCurveTo(w * 0.3, y0 + (Math.random() - 0.5) * 4, w * 0.7, y0 + (Math.random() - 0.5) * 4, w, y0); g.stroke(); }
+      for (var k = 1; k < 6; k++) { g.fillStyle = 'rgba(40,24,10,0.5)'; g.fillRect(0, h * (1 - k / 6), w, 1.5); } });
+    var hullOutM = new THREE.MeshStandardMaterial({ map: hullOutT, roughness: 0.45 }), hullInM = new THREE.MeshStandardMaterial({ map: hullInT, roughness: 0.4, side: THREE.DoubleSide });
+    var varnM = new THREE.MeshStandardMaterial({ map: boardT(4141, '#a8743e', { checks: false, knots: false, nails: false }), roughness: 0.35 }), navyM = rMat(0x2a4a7a, { roughness: 0.45, side: THREE.DoubleSide }), brassM = rMat(0xc8a050, { metalness: 0.8, roughness: 0.3 });
+    var boat = grp(158, SEA_Y, B3_Z - 3.6, 0.08, G);
+    q(boat, hullGeo(0, true), hullOutM, 0, 0, 0); q(boat, hullGeo(0.022, false), hullInM, 0, 0, 0);
+    function bTube(pts, r, m, segs) { return q(boat, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs || 48, r, 6), m, 0, 0, 0); }
+    [-1, 1].forEach(function (sd) {   // (the gunwale outside, the inwale inside)
+      var gw = [], iw = []; for (var i = 0; i <= 40; i++) { var u = -1 + 2 * i / 40, p = hullPt(u, 1, 0, false), pi = hullPt(u, 1, 0.04, false); gw.push(new THREE.Vector3(p.x, p.y + 0.005, sd * (p.z + 0.012))); iw.push(new THREE.Vector3(pi.x, pi.y - 0.02, sd * pi.z)); }
+      bTube(gw, 0.026, varnM); bTube(iw, 0.016, varnM); });
+    var stem = []; for (var sv = 0; sv <= 10; sv++) stem.push(hullPt(1, sv / 10, 0, false)); var st = stem[stem.length - 1]; stem.push(new THREE.Vector3(st.x + 0.03, st.y + 0.07, 0)); bTube(stem, 0.032, varnM, 24);   // (the stem post)
+    var keelP = []; for (var ku = 0; ku <= 20; ku++) { var kp = hullPt(-1 + ku / 10 * 0.995, 0, 0, false); keelP.push(new THREE.Vector3(kp.x, kp.y - 0.02, 0)); } bTube(keelP, 0.028, varnM, 40);   // (the keel)
+    // (the transom: a flat navy board across the stern, capped with varnish)
+    var trS = new THREE.Shape(), tk; for (tk = 0; tk <= 12; tk++) { var tp = hullPt(-1, tk / 12, 0, false); if (tk === 0) trS.moveTo(tp.z, tp.y); else trS.lineTo(tp.z, tp.y); } for (tk = 12; tk >= 0; tk--) { var tp2 = hullPt(-1, tk / 12, 0, false); trS.lineTo(-tp2.z, tp2.y); }
+    q(boat, new THREE.ShapeGeometry(trS), navyM, -BL - 0.005, 0, 0, 0, Math.PI / 2, 0); q(boat, new THREE.BoxGeometry(0.05, 0.035, bHalf(-1) * 2 + 0.02), varnM, -BL + 0.01, bSheer(-1) + 0.01, 0);
+    // (ribs, steamed into curves on the inside, and floorboards over them)
+    for (var ru = -0.86; ru < 0.86; ru += 0.13) { var rp = []; for (var rv = 1; rv >= -1.001; rv -= 0.1) { var hp = hullPt(ru, Math.abs(rv), 0.03, false); rp.push(new THREE.Vector3(hp.x, hp.y, rv < 0 ? -hp.z : hp.z)); } quiet(bTube(rp, 0.012, varnM, 30)); }
+    function bZAt(u, y) { for (var vv = 0; vv <= 1; vv += 0.01) { var hp2 = hullPt(u, vv, 0.03, false); if (hp2.y >= y) return hp2.z; } return bHalf(u) - 0.03; }
+    [-0.16, -0.05, 0.06, 0.17].forEach(function (fz) { q(boat, new THREE.BoxGeometry(2.0, 0.02, 0.095), varnM, -0.25, -0.1, fz); });
+    // (each thwart only as wide as its narrower end allows, so no corner pokes through the hull)
+    function thwart(u, y, d) { var x = u * BL, du = d / 2 / BL, zw = Math.min(bZAt(u - du, y), bZAt(u + du, y), bZAt(u, y)) - 0.012; q(boat, new THREE.BoxGeometry(d, 0.035, zw * 2), varnM, x, y, 0);
+      [-1, 1].forEach(function (sd) { q(boat, new THREE.BoxGeometry(d * 0.6, 0.12, 0.025), varnM, x, y + 0.07, sd * (zw - 0.01)); }); }   // (and its knees)
+    thwart(-0.05, 0.2, 0.24); thwart(0.5, 0.24, 0.2); thwart(-0.82, 0.22, 0.36);
+    // (brass oarlocks, and a pair of oars shipped inside along the thwarts)
+    [-1, 1].forEach(function (sd) { var op = hullPt(-0.2, 1, 0, false); quiet(q(boat, new THREE.CylinderGeometry(0.012, 0.012, 0.08, 6), brassM, op.x, op.y + 0.02, sd * (op.z - 0.005)));
+      quiet(q(boat, new THREE.TorusGeometry(0.035, 0.008, 5, 12, Math.PI), brassM, op.x, op.y + 0.065, sd * (op.z - 0.005), 0, Math.PI / 2, 0));
+      var oar = grp(-0.2, 0.25, sd * 0.24, sd * 0.04, boat); q(oar, new THREE.CylinderGeometry(0.022, 0.022, 1.7, 8), varnM, 0, 0, 0, 0, 0, Math.PI / 2);
+      q(oar, new THREE.CylinderGeometry(0.016, 0.02, 0.25, 8), varnM, -0.97, 0, 0, 0, 0, Math.PI / 2); quiet(q(oar, new THREE.CylinderGeometry(0.026, 0.026, 0.16, 8), rMat(0x4a3020, { roughness: 0.9 }), -0.3, 0, 0, 0, 0, Math.PI / 2));   // (grip, and a leather collar)
+      var bl = q(oar, new THREE.CylinderGeometry(0.075, 0.075, 0.5, 14), varnM, 1.05, 0, 0, 0, 0, Math.PI / 2); bl.scale.set(1, 1, 0.16); quiet(q(oar, new THREE.BoxGeometry(0.14, 0.02, 0.11), navyM, 1.25, 0, 0)); });   // (blades, navy-tipped)
+    // (a painter ring at the bow, a coil of line and a little grapnel on the floor)
+    var bow = stem[stem.length - 2]; quiet(q(boat, new THREE.TorusGeometry(0.04, 0.008, 5, 14), brassM, bow.x + 0.035, bow.y - 0.08, 0, 0, Math.PI / 2, 0));
+    var lineM = rMat(0xd6c296, { roughness: 1 }); for (var lc2 = 0; lc2 < 3; lc2++) quiet(q(boat, new THREE.TorusGeometry(0.11 - lc2 * 0.02, 0.014, 5, 20), lineM, 0.95, -0.06 + lc2 * 0.025, 0.05, Math.PI / 2, 0, 0));
+    var an = grp(1.1, -0.04, -0.1, 0.6, boat); an.rotation.z = Math.PI / 2 - 0.15; quiet(q(an, new THREE.CylinderGeometry(0.01, 0.01, 0.3, 6), ironDk, 0, 0, 0)); quiet(q(an, new THREE.TorusGeometry(0.025, 0.006, 4, 10), ironDk, 0, 0.17, 0));
+    for (var aa = 0; aa < 4; aa++) { var arm = grp(0, -0.14, 0, aa * Math.PI / 2, an); quiet(q(arm, new THREE.TorusGeometry(0.06, 0.008, 4, 10, Math.PI / 2), ironDk, 0.06, 0, 0, 0, 0, Math.PI)); }
+    // (the lid over the open top: draws nothing, but hides the sea where it would show through inside the boat)
+    var lidP = [], lidI = []; for (var li = 0; li <= 40; li++) { var lu = -1 + 2 * li / 40, lp = hullPt(lu, 1, 0.025, false); lidP.push(lp.x, lp.y - 0.01, lp.z, lp.x, lp.y - 0.01, -lp.z); if (li) { var la = (li - 1) * 2; lidI.push(la, la + 1, la + 2, la + 1, la + 3, la + 2); } }
+    var lidG = new THREE.BufferGeometry(); lidG.setAttribute('position', new THREE.Float32BufferAttribute(lidP, 3)); lidG.setIndex(lidI);
+    var lid = new THREE.Mesh(lidG, new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true, transparent: true, side: THREE.DoubleSide })); lid.renderOrder = 0; boat.add(lid);
+    var bowW = new THREE.Vector3(bow.x + 0.035, bow.y - 0.08, 0).applyAxisAngle(Y_AX, 0.08).add(new THREE.Vector3(158, SEA_Y, B3_Z - 3.6));
+    q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(bowW, new THREE.Vector3(160.4, SEA_Y + 0.15, B3_Z - 2.4), new THREE.Vector3(161, DECK_Y - 0.05, B3_Z - 1.5)), 14, 0.02, 4), ropeM, 0, 0, 0);
+    // (three buoys)
     var buoys = [];
     [[150, B3_Z + 7], [166, B3_Z - 9], [190, B3_Z + 3]].forEach(function (bp2, k) { var bu = grp(bp2[0], SEA_Y, bp2[1], 0, G); q(bu, new THREE.SphereGeometry(0.4, 14, 10), rMat(k % 2 ? 0xd83a32 : 0xf2efe6, { roughness: 0.5 }), 0, 0.1, 0).scale.set(1, 0.7, 1); q(bu, new THREE.CylinderGeometry(0.08, 0.2, 0.9, 10), rMat(k % 2 ? 0xf2efe6 : 0xd83a32), 0, 0.65, 0); q(bu, new THREE.SphereGeometry(0.09, 8, 6), rMat(0xffd070, { emissive: 0xffa040, emissiveIntensity: 0.6 }), 0, 1.15, 0); buoys.push({ g: bu, k: k * 2.1 }); });
     // ---- on the land: palms ----
