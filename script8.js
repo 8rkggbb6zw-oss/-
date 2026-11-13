@@ -3822,43 +3822,158 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var rb = 0; rb < 26; rb++) rock(81.6 + cr() * 1.6, B3_Z - 50 + rb * 4 + cr() * 2, (0.5 + cr() * 0.8) * 0.45, rb);
     [[126, B3_Z - 47], [131, B3_Z - 44], [134, B3_Z - 40], [128, B3_Z + 48], [133, B3_Z + 45], [137, B3_Z + 41], [122, B3_Z - 50], [124, B3_Z + 51]].forEach(function (p2, k) { rock(p2[0], p2[1], (0.6 + cr() * 0.9) * 0.5, k); rock(p2[0] + 1.2, p2[1] + (cr() - 0.5) * 2, (0.3 + cr() * 0.4) * 0.6, k + 1); });
     peb.count = pebN; peb.frustumCulled = false; G.add(peb);
-    // ---- the boardwalk and the pier ----
-    var plankT = cpTex(256, 32, function (g, w, h) { g.fillStyle = '#b8a58a'; g.fillRect(0, 0, w, h); for (var i = 0; i < 24; i++) { g.strokeStyle = 'rgba(70,56,40,' + (0.15 + cr() * 0.25).toFixed(2) + ')'; g.lineWidth = 0.8; g.beginPath(); var y0 = cr() * h; g.moveTo(0, y0); g.bezierCurveTo(w * 0.3, y0 + (cr() - 0.5) * 6, w * 0.7, y0 + (cr() - 0.5) * 6, w, y0); g.stroke(); }
-      for (i = 0; i < 4; i++) { g.fillStyle = 'rgba(60,46,32,0.5)'; g.beginPath(); g.ellipse(cr() * w, cr() * h, 4, 2, 0, 0, 6.28); g.fill(); } g.fillStyle = 'rgba(40,30,20,0.8)'; [6, w - 6].forEach(function (nx) { [8, h - 8].forEach(function (ny) { g.beginPath(); g.arc(nx, ny, 1.6, 0, 6.28); g.fill(); }); }); });
-    var plankM = new THREE.MeshStandardMaterial({ map: plankT, roughness: 0.85 }), beamM = rMat(0x7a6650, { roughness: 0.9 }), pileM = rMat(0x6a5a46, { roughness: 0.95 }), wetM = rMat(0x3a4a3a, { roughness: 1 });
+    // ---- the boardwalk and the pier, in detail: every board its own, sun-silvered or honey-brown or a newer warm one put in
+    // since, grained and checked along its length, a knot here and there, the ends darker, nailed in pairs where it crosses the
+    // joists, with an eased top edge and a gap between each; a fascia board along every edge with galvanised bolts; under it the
+    // stringers and a cap beam on each pair of piles, the piles grained and grey, slimy green and crusted with barnacles at the
+    // tide line, cross-braced where they stand in the sea; along the pier, rails with square posts and pyramid caps, a broad
+    // handrail, a bottom rail and slim balusters, bolted at every joint; over the dunes, weathered round posts with rope wound
+    // round their heads and two ropes swagged between them; sand blown up over the first boards; life rings on the rails, a
+    // cleat for the rowboat's line, and at the pier's end a coil of rope, a bait bucket and a fishing rod leaning on the rail ----
+    var bwR = (function () { var s = 8821; return function () { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
+    var px, pz;
     var planks = []; function plank(x, y, z, len, along, tilt) { planks.push([x, y, z, len, along, tilt || 0]); }
-    for (var px = 84.1; px < 172; px += 0.24) { var dy = deckY(px, B3_Z, 0); if (dy < -90) continue; var tl = px < 89 ? Math.atan((DECK_Y - 0.06) / 5) : 0; plank(px, dy - 0.025, B3_Z, 3.0, 'z', tl); }
-    for (var pz = B3_Z - 7.9; pz < B3_Z + 7.95; pz += 0.24) plank(177, DECK_Y - 0.025, pz, 10, 'x');
+    for (px = 84.1; px < 172; px += 0.24) { var dy = deckY(px, B3_Z, 0); if (dy < -90) continue; var tl = px < 89 ? Math.atan((DECK_Y - 0.06) / 5) : 0; plank(px, dy - 0.025, B3_Z, 3.0, 'z', tl); }
+    for (pz = B3_Z - 7.9; pz < B3_Z + 7.95; pz += 0.24) plank(177, DECK_Y - 0.025, pz, 10, 'x');
     for (pz = B3_Z - 14.5; pz < B3_Z - 1.5; pz += 0.24) plank(108.3, DECK_Y - 0.025, pz, 2.6, 'x');
     for (pz = B3_Z + 1.62; pz < B3_Z + 15.95; pz += 0.24) plank(112.3, DECK_Y - 0.025, pz, 2.6, 'x');
     for (pz = GAZ_Z - GAZ_R + 0.1; pz < GAZ_Z + GAZ_R; pz += 0.24) { var hw = Math.sqrt(Math.max(0, GAZ_R * GAZ_R - (pz - GAZ_Z) * (pz - GAZ_Z))); if (hw > 0.3) plank(GAZ_X, DECK_Y - 0.025, pz, hw * 2, 'x'); }
-    var pkM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.05, 1), plankM, planks.length), pq = new THREE.Quaternion(), pe = new THREE.Euler(), ps = new THREE.Vector3(), pv = new THREE.Vector3(), pm = new THREE.Matrix4(), pc = new THREE.Color();
-    planks.forEach(function (p2, k) { if (p2[4] === 'z') { pe.set(0, 0, p2[5]); ps.set(0.215, 1, p2[3]); } else { pe.set(0, 0, 0); ps.set(p2[3], 1, 0.215); } pq.setFromEuler(pe); pv.set(p2[0], p2[1], p2[2]); pm.compose(pv, pq, ps); pkM.setMatrixAt(k, pm); var pw = 0.8 + cr() * 0.25; pc.setRGB(pw, pw * (0.97 + cr() * 0.03), pw * (0.93 + cr() * 0.05)); pkM.setColorAt(k, pc); });
-    pkM.castShadow = true; pkM.receiveShadow = true; G.add(pkM);
-    function beamsAlong(x0, x1, z0, z1, alongX) { [-1, 1].forEach(function (sdd) { if (alongX) q(G, new THREE.BoxGeometry(x1 - x0, 0.14, 0.12), beamM, (x0 + x1) / 2, DECK_Y - 0.12, sdd < 0 ? z0 + 0.06 : z1 - 0.06); else q(G, new THREE.BoxGeometry(0.12, 0.14, z1 - z0), beamM, sdd < 0 ? x0 + 0.06 : x1 - 0.06, DECK_Y - 0.12, (z0 + z1) / 2); }); }
+    for (var burn = 104 + planks.length * 3; burn > 0; burn--) cr();   // (the same draws as before, so the rest of the shore stays where it was)
+    function M4(x, y, z, rx, ry, rz, sx, sy, sz) { return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx || 0, ry || 0, rz || 0)), new THREE.Vector3(sx || 1, sy || 1, sz || 1)); }
+    function inst(geo, mat, ms, cols, shadow) { if (!ms.length) return null; var im = new THREE.InstancedMesh(geo, mat, ms.length); ms.forEach(function (m, k) { im.setMatrixAt(k, m); if (cols) im.setColorAt(k, cols[k]); });
+      im.castShadow = shadow !== false; im.receiveShadow = true; G.add(im); return im; }
+    // (the wood: long boards grained along their length; textures run along u)
+    function boardT(seed, base, o) { var s = seed; function r() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }
+      return cpTex(512, 64, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); var i, x;
+        for (i = 0; i < 80; i++) { var y0 = r() * h, a = r() * 2.5, f = 2 + r() * 6; g.strokeStyle = 'rgba(' + (r() < 0.62 ? '62,50,38,' : '232,220,200,') + (0.07 + r() * 0.2).toFixed(2) + ')'; g.lineWidth = 0.5 + r() * 1.3; g.beginPath(); g.moveTo(0, y0); for (x = 16; x <= w; x += 16) g.lineTo(x, y0 + Math.sin(x / w * f + i) * a); g.stroke(); }   // (grain)
+        for (i = 0; i < 700; i++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '40,32,24,' : '240,230,214,') + (r() * 0.14).toFixed(2) + ')'; g.fillRect(r() * w, r() * h, 1 + r() * 4, 1); }
+        if (o.checks) for (i = 0; i < 9; i++) { var cx = r() * w, cy = 8 + r() * (h - 16), cl = 18 + r() * 80; g.strokeStyle = 'rgba(34,26,18,' + (0.4 + r() * 0.3).toFixed(2) + ')'; g.lineWidth = 0.8 + r() * 1.2; g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx + cl / 2, cy + (r() - 0.5) * 4, cx + cl, cy + (r() - 0.5) * 3); g.stroke(); }   // (checks splitting along the grain)
+        if (o.knots) for (i = 0; i < 2; i++) { var kx = 40 + r() * (w - 80), ky = 14 + r() * (h - 28); for (var kk = 5; kk > 0; kk--) { g.strokeStyle = 'rgba(70,48,30,' + (0.18 + kk * 0.06).toFixed(2) + ')'; g.lineWidth = 1; g.beginPath(); g.ellipse(kx, ky, kk * 4.5, kk * 1.8, 0, 0, 6.28); g.stroke(); } g.fillStyle = 'rgba(52,34,20,0.85)'; g.beginPath(); g.ellipse(kx, ky, 4, 2.4, 0, 0, 6.28); g.fill(); }
+        var eg = g.createLinearGradient(0, 0, 0, h); eg.addColorStop(0, 'rgba(30,22,14,0.45)'); eg.addColorStop(0.12, 'rgba(30,22,14,0)'); eg.addColorStop(0.88, 'rgba(30,22,14,0)'); eg.addColorStop(1, 'rgba(30,22,14,0.45)'); g.fillStyle = eg; g.fillRect(0, 0, w, h);   // (the eased edges)
+        [[0, 10], [w, w - 10]].forEach(function (e) { var gg = g.createLinearGradient(e[0], 0, e[1], 0); gg.addColorStop(0, 'rgba(40,30,20,0.6)'); gg.addColorStop(1, 'rgba(40,30,20,0)'); g.fillStyle = gg; g.fillRect(Math.min(e[0], e[1]), 0, 10, h); });   // (the ends, darker)
+        if (o.nails) [0.025, 0.5, 0.975].forEach(function (u) { [0.3, 0.7].forEach(function (v) { var nx = u * w + (r() - 0.5) * 3, ny = v * h + (r() - 0.5) * 3, rg = g.createRadialGradient(nx, ny, 1, nx, ny, 7); rg.addColorStop(0, 'rgba(110,62,30,0.5)'); rg.addColorStop(1, 'rgba(110,62,30,0)'); g.fillStyle = rg; g.fillRect(nx - 7, ny - 7, 14, 14);
+          g.fillStyle = '#4a4440'; g.beginPath(); g.arc(nx, ny, 2.6, 0, 6.28); g.fill(); g.fillStyle = 'rgba(200,196,188,0.6)'; g.beginPath(); g.arc(nx - 0.7, ny - 0.7, 1, 0, 6.28); g.fill(); }); });   // (nail heads, a little rust round each)
+      }); }
+    var boardTs = [boardT(311, '#b6a386', { checks: true, knots: true, nails: true }), boardT(733, '#aaa292', { checks: true, knots: false, nails: true }), boardT(1291, '#bea684', { checks: true, knots: true, nails: true })];
+    var plankMs = boardTs.map(function (t) { return new THREE.MeshStandardMaterial({ map: t, bumpMap: t, bumpScale: 0.004, roughness: 0.88 }); }), plankM = plankMs[0];
+    var grainT = boardT(2003, '#8a7458', { checks: true }), grainGreyT = boardT(2777, '#7e7466', { checks: true });
+    var beamM = new THREE.MeshStandardMaterial({ map: grainGreyT, roughness: 0.92, color: 0xb0a898 }), fasciaM = new THREE.MeshStandardMaterial({ map: grainT, bumpMap: grainT, bumpScale: 0.003, roughness: 0.88, color: 0xe8ded0 });
+    var postM = new THREE.MeshStandardMaterial({ map: grainT, bumpMap: grainT, bumpScale: 0.003, roughness: 0.86, color: 0xf2e8d8 }), galvM = rMat(0x9a9c9e, { metalness: 0.7, roughness: 0.45 }), ironDk = rMat(0x2e2c2a, { metalness: 0.55, roughness: 0.5 });
+    function fixUV(gg, along, across, half) { var pa = gg.attributes.position, pu = gg.attributes.uv; for (var i = 0; i < pa.count; i++) pu.setXY(i, along(pa, i), across(pa, i)); pu.needsUpdate = true; return gg; }
+    // (the boards: an eased top edge, laid with a gap, each a touch out of true)
+    var pkS = new THREE.Shape(), BW2 = 0.105, BH = 0.025, BR = 0.01; pkS.moveTo(-BW2, -BH); pkS.lineTo(BW2, -BH); pkS.lineTo(BW2, BH - BR); pkS.quadraticCurveTo(BW2, BH, BW2 - BR, BH); pkS.lineTo(-BW2 + BR, BH); pkS.quadraticCurveTo(-BW2, BH, -BW2, BH - BR); pkS.lineTo(-BW2, -BH);
+    var pkG = new THREE.ExtrudeGeometry(pkS, { depth: 1, bevelEnabled: false, curveSegments: 3 }); pkG.translate(0, 0, -0.5); fixUV(pkG, function (pa, i) { return pa.getZ(i) + 0.5; }, function (pa, i) { return (pa.getX(i) + BW2) / (2 * BW2); });
+    var pkSets = [[], [], []], pkCols = [[], [], []];
+    planks.forEach(function (p2) { var set = bwR() < 0.4 ? 0 : bwR() < 0.5 ? 1 : 2, roll = (bwR() - 0.5) * 0.012, yaw = (bwR() - 0.5) * 0.006, dyy = (bwR() - 0.5) * 0.005, m;
+      if (p2[4] === 'z') m = M4(p2[0], p2[1] + dyy, p2[2], 0, yaw, p2[5] + roll, 1, 1, p2[3]); else m = M4(p2[0], p2[1] + dyy, p2[2], roll, Math.PI / 2 + yaw, 0, 1, 1, p2[3]);
+      var w = 0.82 + bwR() * 0.2, c = new THREE.Color(w, w * (0.97 + bwR() * 0.03), w * (0.93 + bwR() * 0.05)), u = bwR();
+      if (u < 0.06) c.setRGB(1.05, 0.93, 0.78); else if (u < 0.11) c.multiplyScalar(0.78); else if (u < 0.24) { var gy = (c.r + c.g + c.b) / 3; c.setRGB(gy * 0.98, gy * 0.98, gy); }   // (a newer board, a damp one, a silvered one)
+      pkSets[set].push(m); pkCols[set].push(c); });
+    pkSets.forEach(function (ms, k) { inst(pkG, plankMs[k], ms, pkCols[k]); });
+    // (under the boards: stringers along the edges and down the middle, and a fascia board, bolted, along every edge)
+    var boltG = new THREE.CylinderGeometry(0.016, 0.016, 0.012, 8), washG = new THREE.CylinderGeometry(0.03, 0.03, 0.005, 10), boltMs = [], washMs = [], Y_AX = new THREE.Vector3(0, 1, 0);
+    function bolt(x, y, z, n) { var qq = new THREE.Quaternion().setFromUnitVectors(Y_AX, n), v = new THREE.Vector3(x, y, z); washMs.push(new THREE.Matrix4().compose(v.clone().addScaledVector(n, 0.0025), qq, new THREE.Vector3(1, 1, 1))); boltMs.push(new THREE.Matrix4().compose(v.clone().addScaledVector(n, 0.009), qq, new THREE.Vector3(1, 1, 1))); }
+    function beamsAlong(x0, x1, z0, z1, alongX) { [-1, 0, 1].forEach(function (sdd) { if (alongX) q(G, new THREE.BoxGeometry(x1 - x0, 0.14, 0.12), beamM, (x0 + x1) / 2, DECK_Y - 0.12, sdd < 0 ? z0 + 0.06 : sdd > 0 ? z1 - 0.06 : (z0 + z1) / 2); else q(G, new THREE.BoxGeometry(0.12, 0.14, z1 - z0), beamM, sdd < 0 ? x0 + 0.06 : sdd > 0 ? x1 - 0.06 : (x0 + x1) / 2, DECK_Y - 0.12, (z0 + z1) / 2); }); }
     beamsAlong(89, 172, B3_Z - 1.5, B3_Z + 1.5, true); beamsAlong(172, 182, B3_Z - 8, B3_Z + 8, false); beamsAlong(107, 109.6, B3_Z - 14.6, B3_Z - 1.5, false); beamsAlong(111, 113.6, B3_Z + 1.5, B3_Z + 16, false);
-    function piling(x, z, rad) { var top = DECK_Y - 0.1, bot = beachH0(x, z) - 0.6, len = top - bot; q(G, new THREE.CylinderGeometry(rad || 0.11, (rad || 0.11) * 1.08, len, 8), pileM, x, (top + bot) / 2, z);
-      if (bot < SEA_Y) { var wl = SEA_Y + 0.12 - bot; q(G, new THREE.CylinderGeometry((rad || 0.11) * 1.06, (rad || 0.11) * 1.12, wl, 8), wetM, x, bot + wl / 2, z); }   // (dark and weedy below the tide line)
-      return top; }
-    for (px = 90; px < 172; px += 2.6) [-1, 1].forEach(function (sdd) { piling(px, B3_Z + sdd * 1.45); });
+    function fascia(x0, z0, x1, z1, nx, nz) { var L = Math.hypot(x1 - x0, z1 - z0), alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0), n = new THREE.Vector3(nx, 0, nz), cx = (x0 + x1) / 2 + nx * 0.02, cz = (z0 + z1) / 2 + nz * 0.02;
+      q(G, alongX ? new THREE.BoxGeometry(L, 0.2, 0.04) : new THREE.BoxGeometry(0.04, 0.2, L), fasciaM, cx, DECK_Y - 0.105, cz);
+      for (var t = 0.6; t < L - 0.3; t += 1.3) [-0.05, -0.15].forEach(function (oy) { var f = t / L; bolt(x0 + (x1 - x0) * f + nx * 0.04, DECK_Y + oy, z0 + (z1 - z0) * f + nz * 0.04, n); }); }
+    fascia(89, B3_Z - 1.5, 107, B3_Z - 1.5, 0, -1); fascia(109.6, B3_Z - 1.5, 172, B3_Z - 1.5, 0, -1); fascia(89, B3_Z + 1.5, 111, B3_Z + 1.5, 0, 1); fascia(113.6, B3_Z + 1.5, 172, B3_Z + 1.5, 0, 1);
+    fascia(172, B3_Z - 8, 182, B3_Z - 8, 0, -1); fascia(172, B3_Z + 8, 182, B3_Z + 8, 0, 1); fascia(182, B3_Z - 8, 182, B3_Z + 8, 1, 0); fascia(172, B3_Z - 8, 172, B3_Z - 1.5, -1, 0); fascia(172, B3_Z + 1.5, 172, B3_Z + 8, -1, 0);
+    fascia(107, B3_Z - 14.6, 107, B3_Z - 1.5, -1, 0); fascia(109.6, B3_Z - 14.6, 109.6, B3_Z - 1.5, 1, 0); fascia(111, B3_Z + 1.5, 111, B3_Z + 16, -1, 0); fascia(113.6, B3_Z + 1.5, 113.6, B3_Z + 16, 1, 0); fascia(111, B3_Z + 16, 113.6, B3_Z + 16, 0, 1);
+    var rmpA = Math.atan((DECK_Y - 0.06) / 5), rmpL = Math.hypot(5, DECK_Y - 0.06);   // (the ramp up from the bridge: its stringers and fascia slope with it)
+    [-1, 1].forEach(function (sdd) { q(G, new THREE.BoxGeometry(rmpL, 0.14, 0.12), beamM, 86.5, (0.06 + DECK_Y) / 2 - 0.12, B3_Z + sdd * 1.44, 0, 0, rmpA); q(G, new THREE.BoxGeometry(rmpL, 0.2, 0.04), fasciaM, 86.5, (0.06 + DECK_Y) / 2 - 0.105, B3_Z + sdd * 1.52, 0, 0, rmpA); });
+    // (the piles: grained and grey, set a touch out of plumb, slimy and barnacled at the tide line; a cap beam bolted across each pair)
+    var pileT = cpTex(128, 512, function (g, w, h) { g.fillStyle = '#7a6e5e'; g.fillRect(0, 0, w, h); for (var i = 0; i < 60; i++) { var x0 = (i * 37) % w + (i % 3); g.strokeStyle = 'rgba(' + (i % 3 ? '40,34,26,' : '170,160,146,') + (0.12 + (i % 5) * 0.05).toFixed(2) + ')'; g.lineWidth = 0.6 + (i % 3) * 0.6; g.beginPath(); g.moveTo(x0, 0); for (var y = 0; y <= h; y += 32) g.lineTo(x0 + Math.sin(y / h * 7 + i) * 2, y); g.stroke(); }
+      for (i = 0; i < 14; i++) { var cx = bwR() * w, cy = bwR() * h, cl = 30 + bwR() * 120; g.strokeStyle = 'rgba(26,20,14,0.6)'; g.lineWidth = 1.2 + bwR(); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + (bwR() - 0.5) * 4, cy + cl); g.stroke(); } }, [2, 1]);   // (deep checks running down them)
+    var pileM = new THREE.MeshStandardMaterial({ map: pileT, bumpMap: pileT, bumpScale: 0.006, roughness: 0.95 });
+    var wetT = cpTex(128, 128, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(70,84,58,0)'); gr.addColorStop(0.25, '#4a5a3a'); gr.addColorStop(0.6, '#34402c'); gr.addColorStop(1, '#262c22'); g.fillStyle = '#5a5244'; g.fillRect(0, 0, w, h); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 260; i++) { var bx = bwR() * w, by = h * 0.15 + bwR() * h * 0.6, br = 1 + bwR() * 2.4; g.fillStyle = 'rgba(220,214,196,' + (0.5 + bwR() * 0.4).toFixed(2) + ')'; g.beginPath(); g.arc(bx, by, br, 0, 6.28); g.fill(); g.fillStyle = 'rgba(60,56,48,0.8)'; g.beginPath(); g.arc(bx, by, br * 0.35, 0, 6.28); g.fill(); }   // (barnacles)
+      for (i = 0; i < 40; i++) { g.strokeStyle = 'rgba(60,110,50,' + (0.3 + bwR() * 0.4).toFixed(2) + ')'; g.lineWidth = 1 + bwR() * 2; var sx = bwR() * w; g.beginPath(); g.moveTo(sx, h * 0.5 + bwR() * 20); g.lineTo(sx + (bwR() - 0.5) * 8, h); g.stroke(); } }, [2, 1]);   // (weed trailing down)
+    var wetM = new THREE.MeshStandardMaterial({ map: wetT, bumpMap: wetT, bumpScale: 0.01, roughness: 0.6, transparent: true });
+    var pileG = new THREE.CylinderGeometry(1, 1.08, 1, 12), sleeveG = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), barnG = new THREE.ConeGeometry(0.02, 0.024, 6);
+    var pileMs = [], pileCols = [], sleeveMs = [], barnMs = [], capMs = [], pileAt = {};
+    function piling(x, z, rad) { var r = rad || 0.11, top = DECK_Y - 0.1, bot = beachH0(x, z) - 0.6, len = top - bot, lean = (bwR() - 0.5) * 0.012;
+      pileMs.push(M4(x, (top + bot) / 2, z, lean, 0, (bwR() - 0.5) * 0.012, r, len, r)); var pw = 0.85 + bwR() * 0.25; pileCols.push(new THREE.Color(pw, pw, pw * (0.96 + bwR() * 0.06)));
+      if (bot < SEA_Y) { var y0 = Math.max(bot, SEA_Y - 0.9), y1 = SEA_Y + 0.22; sleeveMs.push(M4(x, (y0 + y1) / 2, z, 0, bwR() * 6, 0, r * 1.04, y1 - y0, r * 1.04));
+        for (var b = 0; b < 26; b++) { var a = bwR() * 6.283, by = SEA_Y - 0.25 + bwR() * 0.42, s = 0.6 + bwR() * 0.8; if (by < bot) continue; barnMs.push(M4(x + Math.cos(a) * r * 1.03, by, z + Math.sin(a) * r * 1.03, 0, -a, -Math.PI / 2, s, s, s)); } }   // (barnacles crusted round the tide line)
+      pileAt[x.toFixed(2) + ',' + z.toFixed(2)] = bot; return top; }
+    for (px = 90; px < 172; px += 2.6) { [-1, 1].forEach(function (sdd) { piling(px, B3_Z + sdd * 1.45); }); capMs.push(M4(px, DECK_Y - 0.28, B3_Z, 0, 0, 0, 1, 1, 1)); [-1, 1].forEach(function (sdd) { [-1, 1].forEach(function (fx) { bolt(px + fx * 0.09, DECK_Y - 0.28, B3_Z + sdd * 1.45, new THREE.Vector3(fx, 0, 0)); }); }); }
     for (px = 172.2; px <= 182; px += 2.45) for (pz = B3_Z - 7.9; pz <= B3_Z + 8; pz += 3.95) piling(px, pz, 0.14);
     for (pz = B3_Z - 14; pz < -0.5 + B3_Z; pz += 2.6) [107.05, 109.55].forEach(function (xx) { piling(xx, pz); });
     for (pz = B3_Z + 3; pz < B3_Z + 16; pz += 2.6) [111.05, 113.55].forEach(function (xx) { piling(xx, pz); });
     for (var ga = 0; ga < 8; ga++) piling(GAZ_X + Math.cos(ga / 8 * Math.PI * 2) * (GAZ_R - 0.2), GAZ_Z + Math.sin(ga / 8 * Math.PI * 2) * (GAZ_R - 0.2), 0.13);
-    // (railings: rope looped post to post over the dunes; sturdy wooden rails along the pier)
-    var postM = rMat(0x8a7458, { roughness: 0.9 }), ropeM = rMat(0xd8c49a, { roughness: 1 });
+    inst(pileG, pileM, pileMs, pileCols); inst(sleeveG, wetM, sleeveMs, null, false); inst(barnG, rMat(0xd8d2c0, { roughness: 0.8 }), barnMs, null, false); inst(new THREE.BoxGeometry(0.18, 0.2, 3.25), beamM, capMs);
+    // (cross-bracing between the piles that stand in deep water, an X of planks bolted at each end)
+    var braceMs = [];
+    function brace(a, b, n) { var d = b.clone().sub(a), L = d.length(); d.normalize(); var yv = new THREE.Vector3().crossVectors(d, n).normalize(), m = new THREE.Matrix4().makeBasis(n, yv, d);
+      m.scale(new THREE.Vector3(1, 1, L)); m.setPosition(a.clone().add(b).multiplyScalar(0.5)); braceMs.push(m); bolt(a.x + n.x * 0.025, a.y, a.z + n.z * 0.025, n); bolt(b.x + n.x * 0.025, b.y, b.z + n.z * 0.025, n); }
+    function xBrace(x0, z0, x1, z1, r) { var g0 = beachH0(x0, z0), g1 = beachH0(x1, z1), tp = DECK_Y - 0.45, bt = Math.max(Math.max(g0, g1) + 0.3, DECK_Y - 2.6); if (tp - bt < 0.7) return;
+      var dx = x1 - x0, dz = z1 - z0, L = Math.hypot(dx, dz), n = new THREE.Vector3(-dz / L, 0, dx / L), o = r + 0.025;
+      brace(new THREE.Vector3(x0 + n.x * o, tp, z0 + n.z * o), new THREE.Vector3(x1 + n.x * o, bt, z1 + n.z * o), n);
+      var nn = n.clone().negate(); brace(new THREE.Vector3(x1 - n.x * o, tp, z1 - n.z * o), new THREE.Vector3(x0 - n.x * o, bt, z0 - n.z * o), nn); }
+    for (px = 90; px < 172; px += 2.6) { xBrace(px, B3_Z - 1.45, px, B3_Z + 1.45, 0.11); if (Math.round((px - 90) / 2.6) % 2 === 0 && px + 2.6 < 172) [-1, 1].forEach(function (sdd) { xBrace(px, B3_Z + sdd * 1.45, px + 2.6, B3_Z + sdd * 1.45, 0.11); }); }
+    for (px = 172.2; px + 2.45 <= 182.01; px += 2.45) [B3_Z - 7.9, B3_Z + 7.9].forEach(function (zz) { xBrace(px, zz, px + 2.45, zz, 0.14); });
+    [172.2, 182.0].forEach(function (xx) { for (pz = B3_Z - 7.9; pz + 3.95 <= B3_Z + 8.01; pz += 3.95) xBrace(xx, pz, xx, pz + 3.95, 0.14); });
+    inst(new THREE.BoxGeometry(0.045, 0.15, 1), beamM, braceMs);
+    // (railings along the pier: square posts capped with little pyramids, a broad handrail, a bottom rail, slim balusters, bolted)
+    var balG = new THREE.BoxGeometry(0.036, 0.73, 0.036), balMs = [], postG = new THREE.BoxGeometry(0.12, 1.14, 0.12), postMs = [], pCapG = new THREE.ConeGeometry(0.095, 0.08, 4), pCapMs = [], railPosts = [];
+    var hrS = new THREE.Shape(); hrS.moveTo(-0.075, -0.022); hrS.lineTo(0.075, -0.022); hrS.lineTo(0.075, 0.008); hrS.quadraticCurveTo(0.075, 0.022, 0.06, 0.022); hrS.lineTo(-0.06, 0.022); hrS.quadraticCurveTo(-0.075, 0.022, -0.075, 0.008); hrS.lineTo(-0.075, -0.022);
+    var hrG = new THREE.ExtrudeGeometry(hrS, { depth: 1, bevelEnabled: false, curveSegments: 3 }); hrG.translate(0, 0, -0.5); fixUV(hrG, function (pa, i) { return pa.getZ(i) + 0.5; }, function (pa, i) { return (pa.getX(i) + 0.075) / 0.15; });
+    var hrMs = [], railBMs = [];
+    function woodRail(x0, z0, x1, z1) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.6)), ang = Math.atan2(z1 - z0, x1 - x0), nrm = new THREE.Vector3(-(z1 - z0) / L, 0, (x1 - x0) / L), i;
+      for (i = 0; i <= n; i++) { var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; postMs.push(M4(x, DECK_Y + 0.57, z, 0, -ang, 0)); pCapMs.push(M4(x, DECK_Y + 1.18, z, 0, -ang + Math.PI / 4, 0)); solids.push({ x: x, z: z, r: 0.1 }); railPosts.push([x, z, nrm, i]);
+        [1, -1].forEach(function (s) { [DECK_Y + 0.12, DECK_Y + 0.93].forEach(function (yy) { bolt(x + nrm.x * 0.061 * s, yy, z + nrm.z * 0.061 * s, nrm.clone().multiplyScalar(s)); }); }); }
+      hrMs.push(M4((x0 + x1) / 2, DECK_Y + 1.022, (z0 + z1) / 2, 0, Math.PI / 2 - ang, 0, 1, 1, L + 0.16));
+      [[DECK_Y + 0.93, 0.08], [DECK_Y + 0.12, 0.08]].forEach(function (rb) { railBMs.push(M4((x0 + x1) / 2, rb[0], (z0 + z1) / 2, 0, -ang, 0, L, rb[1], 0.045)); });
+      for (i = 0; i < n; i++) { var a0 = i / n * L + 0.12, a1 = (i + 1) / n * L - 0.12, nb = Math.max(1, Math.round((a1 - a0) / 0.15)); for (var b = 0; b <= nb; b++) { var f = (a0 + (a1 - a0) * b / nb) / L; balMs.push(M4(x0 + (x1 - x0) * f, DECK_Y + 0.525, z0 + (z1 - z0) * f, 0, -ang, 0)); } } }
+    // (rope rails over the dunes: weathered round posts, rope wound round their heads, two ropes swagged between them)
+    var ropeT = cpTex(64, 16, function (g, w, h) { g.fillStyle = '#d6c296'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(120,96,60,0.55)'; g.lineWidth = 2.2; for (var x = -16; x < w + 16; x += 8) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 12, h); g.stroke(); } g.strokeStyle = 'rgba(250,240,214,0.5)'; g.lineWidth = 1; for (x = -14; x < w + 16; x += 8) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 12, h); g.stroke(); } }, [24, 1]);
+    var ropeM = new THREE.MeshStandardMaterial({ map: ropeT, bumpMap: ropeT, bumpScale: 0.004, roughness: 1 }), rpG = new THREE.CylinderGeometry(0.068, 0.078, 1, 12), rpMs = [], domeG = new THREE.SphereGeometry(0.07, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), domeMs = [], wrapG = new THREE.TorusGeometry(0.075, 0.018, 6, 16), wrapMs = [];
+    var rpT = cpTex(64, 256, function (g, w, h) { g.fillStyle = '#8e7a60'; g.fillRect(0, 0, w, h); for (var i = 0; i < 26; i++) { g.strokeStyle = 'rgba(' + (i % 3 ? '50,40,30,' : '190,176,156,') + '0.3)'; g.lineWidth = 0.6 + (i % 3) * 0.5; var x0 = (i * 23) % w; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0 + (i % 2 ? 2 : -2), h); g.stroke(); } var gr = g.createLinearGradient(0, h * 0.85, 0, h); gr.addColorStop(0, 'rgba(40,32,22,0)'); gr.addColorStop(1, 'rgba(40,32,22,0.6)'); g.fillStyle = gr; g.fillRect(0, h * 0.85, w, h * 0.15); });
+    var rpM = new THREE.MeshStandardMaterial({ map: rpT, bumpMap: rpT, bumpScale: 0.004, roughness: 0.95 });
     function ropeRail(x0, z0, x1, z1) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.4)), prev = null;
       for (var i = 0; i <= n; i++) { var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = Math.max(DECK_Y, deckY(x, z, -0.3)); if (y < -90) y = DECK_Y;
-        q(G, new THREE.CylinderGeometry(0.06, 0.07, 0.95, 8), postM, x, y + 0.45, z); q(G, new THREE.SphereGeometry(0.075, 8, 6), postM, x, y + 0.95, z);
-        if (prev) { var mid = new THREE.Vector3((prev.x + x) / 2, (prev.y + y) / 2 + 0.62, (prev.z + z) / 2); q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(prev.x, prev.y + 0.86, prev.z), mid, new THREE.Vector3(x, y + 0.86, z)), 10, 0.022, 5), ropeM, 0, 0, 0); }
+        rpMs.push(M4(x, y + 0.475, z, (bwR() - 0.5) * 0.02, bwR() * 6, (bwR() - 0.5) * 0.02, 1, 0.95, 1)); domeMs.push(M4(x, y + 0.95, z)); [0.86, 0.9].forEach(function (wy) { wrapMs.push(M4(x, y + wy, z, Math.PI / 2 + (bwR() - 0.5) * 0.15, 0, 0)); }); wrapMs.push(M4(x, y + 0.5, z, Math.PI / 2, 0, 0));
+        if (prev) [[0.88, 0.62], [0.5, 0.32]].forEach(function (hh) { var mid = new THREE.Vector3((prev.x + x) / 2, (prev.y + y) / 2 + hh[1], (prev.z + z) / 2); q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(prev.x, prev.y + hh[0], prev.z), mid, new THREE.Vector3(x, y + hh[0], z)), 14, 0.024, 6), ropeM, 0, 0, 0); });
         prev = { x: x, y: y, z: z }; solids.push({ x: x, z: z, r: 0.12 }); } }
-    function woodRail(x0, z0, x1, z1) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.6)), ang = Math.atan2(z1 - z0, x1 - x0);
-      for (var i = 0; i <= n; i++) { var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; q(G, new THREE.BoxGeometry(0.11, 1.0, 0.11), postM, x, DECK_Y + 0.5, z); solids.push({ x: x, z: z, r: 0.1 }); }
-      q(G, new THREE.BoxGeometry(L + 0.1, 0.08, 0.14), postM, (x0 + x1) / 2, DECK_Y + 1.0, (z0 + z1) / 2, 0, -ang, 0); q(G, new THREE.BoxGeometry(L, 0.05, 0.06), postM, (x0 + x1) / 2, DECK_Y + 0.55, (z0 + z1) / 2, 0, -ang, 0); }
     [-1, 1].forEach(function (sdd) { var ez = B3_Z + sdd * 1.42;
       ropeRail(89.2, ez, sdd < 0 ? 106.9 : 110.9, ez); ropeRail(sdd < 0 ? 109.7 : 113.7, ez, 136, ez); woodRail(136, ez, 172, ez); });
     ropeRail(106.9, B3_Z - 1.6, 106.9, B3_Z - 14.4); ropeRail(109.7, B3_Z - 1.6, 109.7, B3_Z - 14.4); ropeRail(110.9, B3_Z + 1.6, 110.9, B3_Z + 15.8); ropeRail(113.7, B3_Z + 1.6, 113.7, B3_Z + 15.8);
     woodRail(172, B3_Z - 7.9, 172, B3_Z - 1.6); woodRail(172, B3_Z + 1.6, 172, B3_Z + 7.9); woodRail(172, B3_Z - 7.9, 181.9, B3_Z - 7.9); woodRail(172, B3_Z + 7.9, 181.9, B3_Z + 7.9); woodRail(181.9, B3_Z - 7.9, 181.9, B3_Z + 7.9);
+    inst(postG, postM, postMs); inst(pCapG, postM, pCapMs); inst(hrG, fasciaM, hrMs); inst(new THREE.BoxGeometry(1, 1, 1), fasciaM, railBMs); inst(balG, postM, balMs);
+    inst(rpG, rpM, rpMs); inst(domeG, rpM, domeMs); inst(wrapG, ropeM, wrapMs);
+    // (sand blown up over the first boards where the walk leaves the dunes)
+    var sandT = cpTex(128, 128, function (g, w, h) { for (var i = 0; i < 1400; i++) { var x = bwR() * w, y = bwR() * h, d = Math.hypot(x - w / 2, y - h / 2) / (w / 2); if (bwR() > 1.15 - d * d) continue; g.fillStyle = 'rgba(' + (214 + bwR() * 30 | 0) + ',' + (190 + bwR() * 26 | 0) + ',' + (140 + bwR() * 24 | 0) + ',' + (0.5 + bwR() * 0.5).toFixed(2) + ')'; g.fillRect(x, y, 1 + bwR() * 2.5, 1 + bwR() * 2); } });
+    var sandM = new THREE.MeshStandardMaterial({ map: sandT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
+    [[89.9, B3_Z + 0.5, 1.8, 1.2, 0.3], [90.8, B3_Z - 0.8, 1.4, 1.0, -0.4], [92.6, B3_Z + 1.1, 0.9, 0.6, 0.8], [108.3, B3_Z - 14.0, 1.6, 0.9, 0.2], [112.3, B3_Z + 15.2, 1.5, 1.0, -0.3], [100.5, B3_Z - 1.05, 0.8, 0.5, 0]].forEach(function (s) { quiet(q(G, new THREE.PlaneGeometry(s[2], s[3]), sandM, s[0], DECK_Y + 0.006, s[1], -Math.PI / 2, 0, s[4])).receiveShadow = true; });
+    // (life rings hung on the rails, red and white, a grab line looped round them)
+    var lrT = cpTex(128, 16, function (g, w, h) { for (var i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f4f0e6' : '#d23a30'; g.fillRect(i * w / 8, 0, w / 8, h); } g.fillStyle = 'rgba(0,0,0,0.08)'; for (i = 0; i < 300; i++) g.fillRect(bwR() * w, bwR() * h, 1, 1); });
+    var lrM = new THREE.MeshStandardMaterial({ map: lrT, roughness: 0.55 });
+    function lifeRing(x, z, n) { var lr = new THREE.Group(); lr.position.set(x + n.x * 0.17, DECK_Y + 0.66, z + n.z * 0.17); lr.rotation.y = Math.atan2(n.x, n.z); G.add(lr);
+      q(lr, new THREE.TorusGeometry(0.23, 0.062, 12, 32), lrM, 0, 0, 0, 0, 0, Math.PI / 8); q(lr, new THREE.TorusGeometry(0.235, 0.008, 4, 40), ropeM, 0, 0, 0.066);
+      for (var k = 0; k < 4; k++) { var lg = new THREE.Group(); lg.rotation.z = k / 4 * Math.PI * 2 + Math.PI / 4; lr.add(lg); q(lg, new THREE.TorusGeometry(0.07, 0.009, 4, 10), ropeM, 0.23, 0, 0, Math.PI / 2, 0, 0); }
+      q(lr, new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), ironDk, 0, 0.15, -0.04, Math.PI / 2, 0, 0); }   // (and the peg it hangs on)
+    railPosts.forEach(function (rp) { var key = Math.round(rp[0] * 10) + ',' + Math.round(rp[1] * 10); if (['1463,' + Math.round((B3_Z - 1.42) * 10), '1591,' + Math.round((B3_Z + 1.42) * 10), '1819,' + Math.round((B3_Z) * 10)].indexOf(key) < 0) return;
+      var nn = rp[2].clone(); if (rp[1] < B3_Z - 0.5 || (Math.abs(rp[1] - B3_Z) < 0.5 && nn.x < 0)) nn.negate(); if (rp[1] < B3_Z - 0.5 && nn.z > 0) nn.negate(); lifeRing(rp[0], rp[1], nn); });
+    // (a cleat on the fascia for the rowboat's line)
+    q(G, new THREE.BoxGeometry(0.26, 0.032, 0.036), ironDk, 161, DECK_Y - 0.06, B3_Z - 1.6); [-1, 1].forEach(function (s) { q(G, new THREE.BoxGeometry(0.035, 0.03, 0.06), ironDk, 161 + s * 0.05, DECK_Y - 0.06, B3_Z - 1.565); });
+    // (at the pier's end: a coil of rope, a bait bucket, and a fishing rod leaning on the rail with its line down in the water)
+    var coilPts = [], CX = 178.8, CZ = B3_Z - 5.6; for (var cp = 0; cp <= 220; cp++) { var u = cp / 220, layer = u < 0.55 ? 0 : 1, uu = layer ? (u - 0.55) / 0.45 : u / 0.55, rr = layer ? 0.3 - uu * 0.16 : 0.12 + uu * 0.2, ca = cp * 0.22; coilPts.push(new THREE.Vector3(CX + Math.cos(ca) * rr, DECK_Y + 0.025 + layer * 0.045, CZ + Math.sin(ca) * rr)); }
+    coilPts.push(new THREE.Vector3(CX + 0.35, DECK_Y + 0.02, CZ + 0.3), new THREE.Vector3(CX + 0.6, DECK_Y + 0.02, CZ + 0.5));
+    q(G, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPts), 600, 0.024, 6), ropeM, 0, 0, 0); solids.push({ x: CX, z: CZ, r: 0.4 });
+    var bk = grp(180.2, DECK_Y, B3_Z - 6.6, 0.4, G), stT = cpTex(128, 32, function (g, w, h) { g.fillStyle = '#8a6a48'; g.fillRect(0, 0, w, h); for (var i = 0; i < 12; i++) { g.fillStyle = 'rgba(' + (i % 2 ? '60,42,26,' : '160,130,96,') + '0.35)'; g.fillRect(i * w / 12, 0, w / 12 - 1, h); g.fillStyle = 'rgba(30,20,10,0.8)'; g.fillRect(i * w / 12 + w / 12 - 1, 0, 1, h); } });
+    q(bk, new THREE.CylinderGeometry(0.17, 0.14, 0.3, 16, 1, true), new THREE.MeshStandardMaterial({ map: stT, roughness: 0.85, side: THREE.DoubleSide }), 0, 0.15, 0); q(bk, new THREE.CylinderGeometry(0.14, 0.14, 0.02, 16), rMat(0x5a4430), 0, 0.03, 0);
+    [0.06, 0.25].forEach(function (hy) { q(bk, new THREE.TorusGeometry(hy < 0.1 ? 0.146 : 0.166, 0.008, 4, 24), ironDk, 0, hy, 0, Math.PI / 2, 0, 0); });
+    q(bk, new THREE.CylinderGeometry(0.155, 0.155, 0.01, 16), rMat(0x2a4a4a, { roughness: 0.15, metalness: 0.2 }), 0, 0.24, 0);   // (sea water in it)
+    q(bk, new THREE.TorusGeometry(0.17, 0.006, 4, 16, Math.PI), ropeM, 0, 0.3, 0, 0, 0.3, 0); solids.push({ x: 180.2, z: B3_Z - 6.6, r: 0.25 });
+    var rodB = new THREE.Vector3(181.55, DECK_Y + 0.02, B3_Z - 4.9), rodT = new THREE.Vector3(182.33, DECK_Y + 2.3, B3_Z - 4.85), rodD = rodT.clone().sub(rodB), rodL = rodD.length(), rod = new THREE.Group(); rod.position.copy(rodB); rod.quaternion.setFromUnitVectors(Y_AX, rodD.clone().normalize()); G.add(rod);
+    q(rod, new THREE.CylinderGeometry(0.004, 0.013, rodL, 6), rMat(0x3a2a1c, { roughness: 0.4 }), 0, rodL / 2, 0); q(rod, new THREE.CylinderGeometry(0.018, 0.018, 0.3, 8), rMat(0x6a4a2c, { roughness: 0.9 }), 0, 0.2, 0);   // (the rod and its cork grip)
+    q(rod, new THREE.CylinderGeometry(0.035, 0.035, 0.03, 12), galvM, 0.04, 0.42, 0, 0, 0, Math.PI / 2); q(rod, new THREE.BoxGeometry(0.03, 0.012, 0.012), galvM, 0.02, 0.42, 0);   // (the reel)
+    for (var gd = 1; gd < 5; gd++) q(rod, new THREE.TorusGeometry(0.008, 0.0015, 4, 8), galvM, 0.012, rodL * gd / 5, 0, 0, Math.PI / 2, 0);
+    q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(rodT, new THREE.Vector3(182.8, DECK_Y + 1.0, B3_Z - 4.8), new THREE.Vector3(183.1, SEA_Y - 0.1, B3_Z - 4.75)), 12, 0.0015, 3), rMat(0xe8e8e0), 0, 0, 0);
+    q(G, new THREE.SphereGeometry(0.035, 8, 6), rMat(0xd83a32, { roughness: 0.4 }), 183.1, SEA_Y + 0.02, B3_Z - 4.75);   // (its float)
+    inst(boltG, galvM, boltMs, null, false); inst(washG, galvM, washMs, null, false);
     // (lamp posts along it, strung with lights between)
     var lampIron = rMat(0x2a3a3a, { metalness: 0.5, roughness: 0.45 }), glowM = rMat(0xfff0c8, { emissive: 0xffc870, emissiveIntensity: 0.5 }), lampGlows = [], bulbs = [], bulbM = [0xffd890, 0xffb0c0, 0xa8e0ff, 0xc8ffb0].map(function (cc) { return rMat(cc, { emissive: cc, emissiveIntensity: 0.4 }); });
     var lampPts = [];
