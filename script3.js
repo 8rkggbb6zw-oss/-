@@ -9154,13 +9154,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       cpPart(new THREE.CylinderGeometry(0.09, 0.1, 0.62, 14), clBlack, x, 0.31, D2 + 2.05, 0, 0, 0, G);
       cpPart(new THREE.CylinderGeometry(0.092, 0.092, 0.07, 14), lamp(G, x, 0.5, D2 + 2.05, 1.0), x, 0.5, D2 + 2.05, 0, 0, 0, G);
     });
-    var A = new THREE.Group(); A.position.set(-0.55, 0, D2 + 1.25); A.rotation.y = 0.35; G.add(A);
-    var chalk = new THREE.MeshStandardMaterial({ roughness: 0.9, map: cpTex(128, 192, function (g, w, h) {
-      g.fillStyle = '#2b2f2c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8a6a48'; g.lineWidth = 10; g.strokeRect(0, 0, w, h);
-      g.fillStyle = '#f4f0e6'; g.textAlign = 'center'; g.font = 'italic 22px Georgia, serif'; g.fillText('New', w / 2, 60); g.fillText('Season', w / 2, 88);
-      g.fillStyle = '#f2a6c2'; g.font = '26px Georgia, serif'; g.fillText('✿', w / 2, 130); g.fillStyle = '#f4f0e6'; g.font = '14px Georgia, serif'; g.fillText('come on in', w / 2, 162);
-    }) });
-    [-1, 1].forEach(function (s) { var p = cpPart(new THREE.BoxGeometry(0.46, 0.72, 0.025), chalk, 0, 0.36, s * 0.12, s * 0.17, 0, 0, A); if (s < 0) p.rotation.y = Math.PI; });
     // ===== the sides and back: windows with stone sills, a drainpipe, and a service door with its own light =====
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (sd) {
       var onSide = sd[1] === 1, x = onSide ? sd[0] * (W2 + 0.01) : sd[0], z = onSide ? 0 : -D2 - 0.01, ry = onSide ? sd[0] * Math.PI / 2 : Math.PI;
@@ -9194,7 +9187,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     for (var z = -CLOTH_HD; z <= CLOTH_HD + 0.01; z += 0.5) [-CLOTH_HW, CLOTH_HW].forEach(function (x2) { wall(x2, z); });
     var inner = clothWorld(0.6, -0.2); solids.push({ x: inner.x, z: inner.z, r: 2.6 });
-    [[-CLOTH_HW - 0.25, CLOTH_HD + 0.55, 0.4], [CLOTH_HW + 0.3, CLOTH_HD + 0.55, 0.4], [-0.55, CLOTH_HD + 1.25, 0.35]].concat([-4.3, -0.4, 1.9, 4.3].map(function (x) { return [x, CLOTH_HD + 2.05, 0.15]; })).forEach(function (o) {   // (the topiaries, the chalkboard and the bollards)
+    [[-CLOTH_HW - 0.25, CLOTH_HD + 0.55, 0.4], [CLOTH_HW + 0.3, CLOTH_HD + 0.55, 0.4]].concat([-4.3, -0.4, 1.9, 4.3].map(function (x) { return [x, CLOTH_HD + 2.05, 0.15]; })).forEach(function (o) {   // (the topiaries, the chalkboard and the bollards)
       var p = clothWorld(o[0], o[1]); solids.push({ x: p.x, z: p.z, r: o[2] });
     });
     layTownPath(clLine);                                               // (and its path, laid just like the town's others)
