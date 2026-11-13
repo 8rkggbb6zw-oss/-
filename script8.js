@@ -4021,12 +4021,46 @@ EVERDAWN_PARTS.push(function (THREE) {
     lamp(172.4, B3_Z - 7.5); lamp(172.4, B3_Z + 7.5);
     for (var lp = 0; lp < lampPts.length - 2; lp++) { var la = lampPts[lp], lb = lampPts[lp + 1], mid = la.clone().add(lb).multiplyScalar(0.5); mid.y -= 0.55; var cv = new THREE.QuadraticBezierCurve3(la, mid, lb);
       q(G, new THREE.TubeGeometry(cv, 16, 0.008, 3), lampIron, 0, 0, 0); for (var bb = 1; bb < 12; bb++) { var bp = cv.getPoint(bb / 12); bulbs.push(quiet(q(G, new THREE.SphereGeometry(0.04, 6, 5), bulbM[bb % 4], bp.x, bp.y - 0.05, bp.z))); } }
-    // (benches)
-    var benchM = rMat(0x9a7a58, { roughness: 0.85 }), ironB = rMat(0x2a2a2a, { metalness: 0.5, roughness: 0.5 });
-    function bench(x, z, ry) { var b = grp(x, DECK_Y, z, ry, G); for (var sl = 0; sl < 4; sl++) q(b, new THREE.BoxGeometry(1.6, 0.04, 0.09), benchM, 0, 0.45, -0.15 + sl * 0.1); for (sl = 0; sl < 3; sl++) q(b, new THREE.BoxGeometry(1.6, 0.09, 0.035), benchM, 0, 0.6 + sl * 0.12, -0.24, -0.15, 0, 0);
-      [-0.7, 0.7].forEach(function (lx) { q(b, new THREE.BoxGeometry(0.05, 0.45, 0.05), ironB, lx, 0.22, -0.18); q(b, new THREE.BoxGeometry(0.05, 0.45, 0.05), ironB, lx, 0.22, 0.15); q(b, new THREE.BoxGeometry(0.05, 0.5, 0.05), ironB, lx, 0.72, -0.25, -0.15, 0, 0); q(b, new THREE.BoxGeometry(0.05, 0.04, 0.42), ironB, lx, 0.62, -0.02); });
-      solids.push({ x: x, z: z, r: 0.5 }); }
+    // (benches, fancy: a park bench of varnished hardwood slats with rounded edges, the seat dished and rolling over at the front
+    // edge, the back curved to fit you; on ornate cast-iron ends painted deep green: a front leg and a back leg sweeping up into
+    // the backrest, an arm curling into a scroll under a wooden armrest, C-scrolls and a rosette between the legs, a low
+    // stretcher, and ball feet. Longer benches get a middle support, and a little brass plaque on the top rail)
+    var fbIron = rMat(0x1f2b26, { metalness: 0.55, roughness: 0.38 }), fbBrass = rMat(0xc8a050, { metalness: 0.8, roughness: 0.3 });
+    var fbWoodT = boardT(6262, '#a86e3c', { checks: false, knots: true, nails: false }), fbWood = new THREE.MeshStandardMaterial({ map: fbWoodT, bumpMap: fbWoodT, bumpScale: 0.002, roughness: 0.42 });
+    function fbV(p, x) { return new THREE.Vector3(x, p[1], p[0]); }
+    var fbSeat = new THREE.CatmullRomCurve3([[-0.2, 0.448], [-0.1, 0.452], [0.0, 0.456], [0.1, 0.458], [0.19, 0.452], [0.245, 0.425]].map(function (p) { return fbV(p, 0); }));
+    var fbBack = new THREE.CatmullRomCurve3([[-0.215, 0.5], [-0.245, 0.62], [-0.268, 0.75], [-0.295, 0.87], [-0.33, 0.98]].map(function (p) { return fbV(p, 0); }));
+    function fbFrame(c, uu) { var p = c.getPointAt(uu), t = c.getTangentAt(uu); return { p: p, n: new THREE.Vector3(0, t.z, -t.y), rx: -Math.atan2(t.y, t.z) }; }
+    function fbSlatGeo(L, W, T) { var s = new THREE.Shape(), r = Math.min(W, T) * 0.45, w = W / 2, h = T / 2; s.moveTo(-w + r, -h); s.lineTo(w - r, -h); s.quadraticCurveTo(w, -h, w, -h + r); s.lineTo(w, h - r); s.quadraticCurveTo(w, h, w - r, h); s.lineTo(-w + r, h); s.quadraticCurveTo(-w, h, -w, h - r); s.lineTo(-w, -h + r); s.quadraticCurveTo(-w, -h, -w + r, -h);
+      var g = new THREE.ExtrudeGeometry(s, { depth: L, bevelEnabled: false, curveSegments: 3 }); g.translate(0, 0, -L / 2); g.rotateY(Math.PI / 2); return g; }
+    function fbTube(par, pts, x, r) { return q(par, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(function (p) { return fbV(p, x); })), Math.max(8, pts.length * 6), r, 6), fbIron, 0, 0, 0); }
+    function fbScroll(par, x, cz, cy, r0, turns, a0, dir) { var pts = []; for (var i = 0; i <= 24; i++) { var t = i / 24, a = a0 + dir * t * turns * Math.PI * 2, r = r0 * (1 - t * 0.78); pts.push([cz + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+      quiet(fbTube(par, pts, x, 0.011)); quiet(q(par, new THREE.SphereGeometry(0.016, 8, 6), fbIron, x, pts[24][1], pts[24][0])); }
+    function fbEnd(par, x, arms) {   // (one cast-iron end)
+      fbTube(par, [[0.27, 0.03], [0.255, 0.16], [0.235, 0.3], [0.225, 0.43]], x, 0.019);   // (front leg)
+      fbTube(par, [[-0.26, 0.03], [-0.235, 0.2], [-0.215, 0.44], [-0.24, 0.6], [-0.27, 0.75], [-0.3, 0.88], [-0.345, 0.99], [-0.36, 1.03]], x, 0.019);   // (back leg, up the back)
+      var rail = []; for (var i = 0; i <= 6; i++) { var fr = fbFrame(fbSeat, i / 6); rail.push([fr.p.z + fr.n.z * -0.035, fr.p.y + fr.n.y * -0.035]); } fbTube(par, rail, x, 0.016);   // (under the seat)
+      fbTube(par, [[0.25, 0.1], [0.0, 0.085], [-0.24, 0.1]], x, 0.012);   // (a low stretcher, sagging into a curve)
+      fbScroll(par, x, 0.13, 0.27, 0.075, 0.9, Math.PI * 0.1, 1); fbScroll(par, x, -0.11, 0.27, 0.075, 0.9, Math.PI * 0.9, -1);   // (C-scrolls between the legs)
+      quiet(q(par, new THREE.TorusGeometry(0.03, 0.009, 6, 14), fbIron, x, 0.21, 0.01, 0, Math.PI / 2, 0)); quiet(q(par, new THREE.SphereGeometry(0.018, 8, 6), fbBrass, x, 0.21, 0.01));   // (a rosette, picked out in brass)
+      [[0.27, 0.03], [-0.26, 0.03]].forEach(function (f) { var ft = q(par, new THREE.SphereGeometry(0.035, 10, 8), fbIron, x, f[1] - 0.005, f[0]); ft.scale.set(1, 0.75, 1.2); });   // (ball feet)
+      if (!arms) return;
+      fbTube(par, [[-0.25, 0.66], [-0.1, 0.665], [0.08, 0.655], [0.2, 0.625], [0.245, 0.56], [0.235, 0.49], [0.225, 0.44]], x, 0.016);   // (the arm, curling down to the front leg)
+      fbScroll(par, x, 0.2, 0.555, 0.045, 1.1, 0, 1);   // (a scroll at the arm's front)
+      var ar = q(par, fbSlatGeo(0.48, 0.07, 0.032), fbWood, x, 0.69, -0.02); ar.rotation.y = Math.PI / 2; ar.rotation.x = 0.04;   // (the wooden armrest)
+      quiet(q(par, new THREE.CylinderGeometry(0.03, 0.03, 0.07, 14), fbWood, x, 0.685, 0.225, 0, 0, Math.PI / 2)); }   // (rolled at its front)
+    function fancyBench(par, L) { var i, fr, endX = L / 2 - 0.09;
+      for (i = 0; i < 6; i++) { fr = fbFrame(fbSeat, 0.06 + i * 0.176); var sl = q(par, fbSlatGeo(L, 0.062, 0.028), fbWood, 0, fr.p.y, fr.p.z); sl.rotation.x = fr.rx; }   // (seat slats)
+      for (i = 0; i < 5; i++) { fr = fbFrame(fbBack, 0.08 + i * 0.205); var bs = q(par, fbSlatGeo(L, 0.075, 0.026), fbWood, 0, fr.p.y + fr.n.y * 0.012, fr.p.z + fr.n.z * 0.012); bs.rotation.x = fr.rx; }   // (back slats)
+      fr = fbFrame(fbBack, 1); var top = q(par, fbSlatGeo(L + 0.06, 0.06, 0.05), fbWood, 0, fr.p.y + 0.035, fr.p.z - 0.01); top.rotation.x = fr.rx + 0.4;   // (a thicker top rail)
+      quiet(q(par, new THREE.BoxGeometry(0.16, 0.04, 0.004), fbBrass, 0, fr.p.y + 0.035, fr.p.z + 0.025, fr.rx + 0.4 - Math.PI / 2, 0, 0));   // (the plaque)
+      [-1, 1].forEach(function (s) { fbEnd(par, s * endX, true); });
+      if (L > 1.2) fbEnd(par, 0, false);   // (a middle support)
+      for (i = -1; i <= 1; i += 2) for (var k = 0; k < 2; k++) { var bp = fbFrame(fbSeat, k ? 0.2 : 0.8); quiet(q(par, new THREE.SphereGeometry(0.009, 6, 4), fbBrass, i * endX, bp.p.y + 0.016, bp.p.z)); } }   // (brass screw heads)
+    function bench(x, z, ry) { var b = grp(x, DECK_Y, z, ry, G); fancyBench(b, 1.6); solids.push({ x: x, z: z, r: 0.5 }); }
+    var benchM = rMat(0x9a7a58, { roughness: 0.85 });
     bench(150, B3_Z + 1.05, Math.PI); bench(160, B3_Z - 1.05, 0); bench(176, B3_Z + 7.2, Math.PI); bench(176, B3_Z - 7.2, 0);
+    if (typeof clBench !== 'undefined' && clBench) { clBench.children.slice().forEach(function (c) { clBench.remove(c); }); fancyBench(clBench, 1.5); }   // (and the bench outside the clinic)
     // (the lookout gazebo: see it, in great detail, further down; its white and its shingles are made here)
     var whiteM = rMat(0xf2efe6, { roughness: 0.7 });
     var shT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#4a9a9a'; g.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 12) for (var x = -((y / 12) % 2) * 8; x < w; x += 16) { g.fillStyle = 'rgba(' + (40 + cr() * 30) + ',' + (130 + cr() * 40) + ',' + (130 + cr() * 40) + ',1)'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 15, y); g.lineTo(x + 15, y + 10); g.quadraticCurveTo(x + 7.5, y + 14, x, y + 10); g.closePath(); g.fill(); g.strokeStyle = 'rgba(20,60,60,0.6)'; g.stroke(); } }, [3, 2]);
@@ -4553,12 +4587,32 @@ EVERDAWN_PARTS.push(function (THREE) {
     var chime = grp(0, 2.24, PR - 0.15, 0, gz); q(chime, new THREE.TorusGeometry(0.12, 0.012, 6, 16), driftM, 0, 0, 0, Math.PI / 2, 0, 0); q(chime, new THREE.CylinderGeometry(0.003, 0.003, 0.12, 3), ropeM, 0, 0.06, 0);
     for (var sh2 = 0; sh2 < 7; sh2++) { var sa2 = sh2 / 7 * Math.PI * 2, sl2 = 0.25 + (sh2 % 3) * 0.1; q(chime, new THREE.CylinderGeometry(0.002, 0.002, sl2, 3), ropeM, Math.cos(sa2) * 0.11, -sl2 / 2, Math.sin(sa2) * 0.11); var shl = q(chime, new THREE.ConeGeometry(0.035, 0.05, 9), rMat([0xf6dcd0, 0xfff4e8, 0xf2c2b0][sh2 % 3], { roughness: 0.5 }), Math.cos(sa2) * 0.11, -sl2 - 0.02, Math.sin(sa2) * 0.11, Math.PI, 0, 0); shl.scale.set(1, 1, 0.5); }
     gzSway.push(chime);
+    // (for the seats: painted panels, a solid teal cushion fabric with a fine weave, cream piping, and a cushion that puffs up)
+    var gzSeatDk = rMat(0xd8d2c4, { roughness: 0.7 }), gzSeatPanel = rMat(0xf8f5ee, { roughness: 0.6 }), gzPipeM = rMat(0xf4ecd8, { roughness: 0.8 });
+    var gzCushM = new THREE.MeshStandardMaterial({ map: cpTex(64, 64, function (g, w, h) { g.fillStyle = '#3a9ea0'; g.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 2) { g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(0, y, w, 1); } for (var x = 0; x < w; x += 2) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(x, 0, 1, h); } }, [4, 2]), roughness: 0.92 });
+    function gzPuff(w, h, d, puff) { var geo = new THREE.BoxGeometry(w, h, d, 12, 3, 8), p = geo.attributes.position, v = new THREE.Vector3();
+      for (var i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); var fx = 1 - Math.pow(2 * v.x / w, 6), fz2 = 1 - Math.pow(2 * v.z / d, 6), fy = Math.abs(2 * v.y / h); v.y += Math.sign(v.y) * puff * fx * fz2; v.x *= 1 - 0.03 * fy * fy; v.z *= 1 - 0.06 * fy * fy; p.setXYZ(i, v.x, v.y, v.z); }
+      geo.computeVertexNormals(); return geo; }
     // (cushioned benches round the inside, with pillows)
     var cushT = cpTex(64, 64, function (g, w, h) { for (var i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#fbf6ea' : '#3aa8a8'; g.fillRect(i * w / 8, 0, w / 8, h); } g.fillStyle = 'rgba(0,0,0,0.08)'; for (i = 0; i < 300; i++) g.fillRect(gzr() * w, gzr() * h, 1, 1); }, [2, 1]);
     var cushM = new THREE.MeshStandardMaterial({ map: cushT, roughness: 0.95 }), pillowC = [0xe8705a, 0xf2b83a, 0xfbf6ea, 0x3aa8a8];
     for (ga = 0; ga < 8; ga++) { if (ga === 1 || ga === 5) continue; var A2 = oct(ga), B2 = oct(ga + 1), L3 = Math.hypot(B2[0] - A2[0], B2[1] - A2[1]) * 0.78, an2 = Math.atan2(B2[1] - A2[1], B2[0] - A2[0]), bg = grp((A2[0] + B2[0]) / 2 * 0.86, 0, (A2[1] + B2[1]) / 2 * 0.86, -an2, gz);
-      q(bg, new THREE.BoxGeometry(L3, 0.05, 0.42), benchM, 0, 0.42, 0); q(bg, new THREE.BoxGeometry(L3, 0.38, 0.04), benchM, 0, 0.21, 0.18); [-1, 1].forEach(function (s) { q(bg, new THREE.BoxGeometry(0.05, 0.42, 0.4), benchM, s * (L3 / 2 - 0.03), 0.21, 0); });
-      var cu = q(bg, new THREE.BoxGeometry(L3 - 0.06, 0.08, 0.38), cushM, 0, 0.485, 0); for (var pw = 0; pw < 2; pw++) { var pl2 = q(bg, new THREE.SphereGeometry(0.16, 12, 8), rMat(pillowC[(ga + pw) % 4], { roughness: 0.95 }), (pw ? 1 : -1) * (L3 / 2 - 0.25), 0.66, 0.14, -0.35, (pw - 0.5) * 0.4, 0); pl2.scale.set(1, 0.85, 0.4); } }
+      // (each seat: a white box seat with a plinth, raised panels in moulded frames on its front, panelled ends, and a top board
+      // with a rounded nosing; on it a plump buttoned cushion, piped in cream, two upright back cushions against the railing, and
+      // two throw pillows)
+      var fz = 0.2, sw = L3;
+      q(bg, new THREE.BoxGeometry(sw, 0.06, 0.4), gzSeatDk, 0, 0.03, -0.005);   // (the plinth)
+      q(bg, new THREE.BoxGeometry(sw - 0.02, 0.33, 0.03), whiteM, 0, 0.225, fz - 0.025);   // (the front)
+      var np = Math.max(2, Math.round(sw / 0.42)), pw2 = (sw - 0.1) / np;
+      for (var pn = 0; pn < np; pn++) { var pxx = -sw / 2 + 0.05 + pw2 * (pn + 0.5); q(bg, new THREE.BoxGeometry(pw2 - 0.08, 0.2, 0.012), gzSeatPanel, pxx, 0.225, fz - 0.005);   // (a raised panel)
+        [[0, 0.115, pw2 - 0.05, 0.018], [0, -0.115, pw2 - 0.05, 0.018], [-(pw2 - 0.06) / 2, 0, 0.018, 0.25], [(pw2 - 0.06) / 2, 0, 0.018, 0.25]].forEach(function (m) { quiet(q(bg, new THREE.BoxGeometry(m[2], m[3], 0.014), whiteM, pxx + m[0], 0.225 + m[1], fz - 0.003)); }); }   // (its moulded frame)
+      [-1, 1].forEach(function (s) { q(bg, new THREE.BoxGeometry(0.035, 0.36, 0.4), whiteM, s * (sw / 2 - 0.0175), 0.21, 0); q(bg, new THREE.BoxGeometry(0.008, 0.22, 0.28), gzSeatPanel, s * (sw / 2 + 0.002), 0.22, 0); });   // (panelled ends)
+      q(bg, new THREE.BoxGeometry(sw + 0.04, 0.035, 0.42), whiteM, 0, 0.41, 0.005); quiet(q(bg, new THREE.CylinderGeometry(0.02, 0.02, sw + 0.04, 10), whiteM, 0, 0.41, fz + 0.012, 0, 0, Math.PI / 2));   // (the top, with a rounded nosing)
+      var cuG = gzPuff(sw - 0.04, 0.085, 0.38, 0.02); q(bg, cuG, gzCushM, 0, 0.47, 0.005);   // (the seat cushion)
+      [0.425, 0.515].forEach(function (py) { quiet(q(bg, new THREE.CylinderGeometry(0.008, 0.008, sw - 0.06, 6), gzPipeM, 0, py, fz - 0.005, 0, 0, Math.PI / 2)); });
+      for (var bt = 0; bt < Math.round(sw / 0.3); bt++) { var bxx = -sw / 2 + 0.15 + bt * (sw - 0.3) / Math.max(1, Math.round(sw / 0.3) - 1); [-0.08, 0.08].forEach(function (bzz, bi) { quiet(q(bg, new THREE.SphereGeometry(0.013, 6, 4), gzPipeM, bxx, 0.535, bzz)).scale.y = 0.5; }); }   // (buttons)
+      var nb = Math.max(2, Math.round(sw / 0.6)); for (var bc = 0; bc < nb; bc++) { var bcw = (sw - 0.06) / nb, bcu = q(bg, gzPuff(bcw - 0.03, 0.08, 0.36, 0.025), gzCushM, -sw / 2 + 0.03 + bcw * (bc + 0.5), 0.72, -0.16, Math.PI / 2 - 0.18, 0, 0); }   // (back cushions)
+      for (var pw = 0; pw < 2; pw++) { var pl2 = q(bg, new THREE.SphereGeometry(0.16, 14, 10), rMat(pillowC[(ga + pw) % 4], { roughness: 0.95 }), (pw ? 1 : -1) * (sw / 2 - 0.25), 0.66, -0.06, -0.3, (pw - 0.5) * 0.4, 0); pl2.scale.set(1, 0.85, 0.4); } }
     // (a woven jute rug)
     var rugT2 = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#c8a87a'; g.fillRect(0, 0, w, h); for (var r = 4; r < 64; r += 4) { g.strokeStyle = r % 16 === 0 ? '#3aa8a8' : (r % 8 === 0 ? '#a88a5a' : '#d8bc8e'); g.lineWidth = 3; g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.stroke(); } for (var i = 0; i < 600; i++) { g.fillStyle = 'rgba(80,60,30,0.2)'; g.fillRect(gzr() * w, gzr() * h, 1, 2); } });
     quiet(q(gz, new THREE.CircleGeometry(1.45, 40), new THREE.MeshStandardMaterial({ map: rugT2, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }), 0, 0.012, 0, -Math.PI / 2, 0, 0));
