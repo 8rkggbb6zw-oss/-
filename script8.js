@@ -2221,7 +2221,125 @@ EVERDAWN_PARTS.push(function (THREE) {
     });
     // (the stairs up to the cellar door, a sliver of daylight at the top)
     for (var st = 0; st < 3; st++) p(new THREE.BoxGeometry(1.3, 0.12 * (st + 1), 0.3), rMat(0x4a4640, { roughness: 0.95 }), 0, 0.06 * (st + 1), D - 0.75 + st * 0.3);   // (worn stone steps up to the door)
-    p(new THREE.PlaneGeometry(1.1, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff0c8 }), 0, 2.4, D - 0.02, 0, Math.PI, 0);
+    // (the door at the top of the stairs, out to the thicket: an arched door of six heavy oak planks, each its own shade, grained,
+    // knotted, scratched and dark with damp along the foot, in a surround of dressed stone (jamb blocks long and short, nine
+    // wedge stones round the arch, the keystone carved with the guild's mark, a drip moulding over it) on a worn stone sill;
+    // three long iron strap hinges ending in curled horns and spear tips, riveted, rust bleeding from the rivets, hung on
+    // pintles driven into the stone; rows of pyramid-headed nails; a ring pull on a petalled rose, a keyhole plate, a little
+    // barred grille to look out of, an iron kick plate along the foot; daylight showing in a sliver under the door; moss in
+    // the joints; and an iron lantern on a scrolled bracket beside it)
+    (function (P) {
+      var sd = 3301; function cr() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+      function q(par, geo, m, x, y, z, rx, ry, rz) { return cpPart(geo, m, x, y, z, rx, ry, rz, par); }
+      function quiet(o) { o.castShadow = false; return o; }
+      var TY = 0.40, DB = 0.413, SPRL = 1.52, R0 = 0.48, RI = 0.5, SY = DB + SPRL, F = 0.06;   // (sill top, foot of the door, spring of its arch, the opening)
+      function top(x) { return SPRL + Math.sqrt(Math.max(0, R0 * R0 - x * x)); }
+      // ---- textures ----
+      function woodT(seed, base) { var s2 = seed; function r() { s2 = (s2 * 16807) % 2147483647; return (s2 - 1) / 2147483646; }
+        return cpTex(128, 512, function (g, w, h) { g.fillStyle = base; g.fillRect(0, 0, w, h); var i, k;
+          for (i = 0; i < 46; i++) { var x0 = r() * w, a = 1 + r() * 3, f = 2 + r() * 4, ph = r() * 6; g.strokeStyle = 'rgba(' + (r() < 0.6 ? '28,16,8,' : '130,96,62,') + (0.12 + r() * 0.25).toFixed(2) + ')'; g.lineWidth = 0.6 + r() * 1.6; g.beginPath(); for (k = 0; k <= h; k += 8) { var xx = x0 + Math.sin(k / h * f + ph) * a; if (k) g.lineTo(xx, k); else g.moveTo(xx, k); } g.stroke(); }
+          for (i = 0; i < 2; i++) { var kx = 20 + r() * (w - 40), ky = 60 + r() * (h - 180); for (k = 7; k > 0; k--) { g.strokeStyle = 'rgba(40,22,10,' + (0.2 + k * 0.05).toFixed(2) + ')'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(kx, ky, k * 2.2, k * 5.5, 0, 0, 6.28); g.stroke(); } g.fillStyle = 'rgba(26,14,6,0.85)'; g.beginPath(); g.ellipse(kx, ky, 3, 6, 0, 0, 6.28); g.fill(); }   // (knots)
+          for (i = 0; i < 320; i++) { g.fillStyle = 'rgba(20,12,6,' + (r() * 0.3).toFixed(2) + ')'; g.fillRect(r() * w, r() * h, 1, 2 + r() * 6); }   // (open pores)
+          for (i = 0; i < 14; i++) { g.strokeStyle = 'rgba(200,176,140,' + (0.06 + r() * 0.1).toFixed(2) + ')'; g.lineWidth = 0.5 + r(); var sx = r() * w, sy = r() * h * 0.8; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + (r() - 0.5) * 30, sy + (r() - 0.5) * 14); g.stroke(); }   // (scratches)
+          var gr = g.createLinearGradient(0, h, 0, h * 0.72); gr.addColorStop(0, 'rgba(16,11,7,0.8)'); gr.addColorStop(1, 'rgba(16,11,7,0)'); g.fillStyle = gr; g.fillRect(0, h * 0.72, w, h * 0.28);   // (dark with damp along the foot)
+        }, [1 / 0.32, 1 / 2.1]); }
+      var woodTs = [woodT(71, '#5e4026'), woodT(313, '#6a482a'), woodT(977, '#54391f')];
+      var plankM = [0xffffff, 0xe6d8c8, 0xf4e6d2, 0xd8c8b4, 0xfff0e0, 0xe0d0bc].map(function (c, i) { return new THREE.MeshStandardMaterial({ map: woodTs[i % 3], bumpMap: woodTs[i % 3], bumpScale: 0.003, color: c, roughness: 0.85 }); });
+      var stoneT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#8c857a'; g.fillRect(0, 0, w, h); var i;
+        for (i = 0; i < 2600; i++) { var c = 0.75 + cr() * 0.5; g.fillStyle = 'rgba(' + Math.round(140 * c) + ',' + Math.round(133 * c) + ',' + Math.round(122 * c) + ',0.6)'; g.fillRect(cr() * w, cr() * h, 1 + cr() * 2, 1 + cr() * 2); }
+        for (i = 0; i < 40; i++) { g.strokeStyle = 'rgba(60,55,48,' + (0.15 + cr() * 0.2).toFixed(2) + ')'; g.lineWidth = 0.8; var x = cr() * w, y = cr() * h; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 6 + cr() * 6, y + 4 + cr() * 5); g.stroke(); }   // (tooling marks)
+        for (i = 0; i < 6; i++) { var bx = cr() * w, by = cr() * h, br = 8 + cr() * 18, bg = g.createRadialGradient(bx, by, 1, bx, by, br); bg.addColorStop(0, 'rgba(50,46,38,0.3)'); bg.addColorStop(1, 'rgba(50,46,38,0)'); g.fillStyle = bg; g.fillRect(bx - br, by - br, br * 2, br * 2); }
+        for (i = 0; i < 10; i++) { g.fillStyle = 'rgba(150,160,110,' + (0.15 + cr() * 0.2).toFixed(2) + ')'; g.beginPath(); g.arc(cr() * w, cr() * h, 1 + cr() * 2.5, 0, 6.28); g.fill(); }   // (lichen)
+      }, [3, 3]);
+      var stoneM = [0xffffff, 0xe8e0d4, 0xd6cec4, 0xf2e6d4].map(function (c) { return new THREE.MeshStandardMaterial({ map: stoneT, bumpMap: stoneT, bumpScale: 0.012, color: c, roughness: 0.93 }); });
+      var ironT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#2a2622'; g.fillRect(0, 0, w, h); for (var i = 0; i < 260; i++) { g.fillStyle = i % 3 ? 'rgba(10,8,6,0.4)' : 'rgba(110,60,30,' + (0.2 + cr() * 0.3).toFixed(2) + ')'; g.beginPath(); g.arc(cr() * w, cr() * h, 0.5 + cr() * 1.5, 0, 6.28); g.fill(); } }, [8, 8]);
+      var ironM = new THREE.MeshStandardMaterial({ map: ironT, bumpMap: ironT, bumpScale: 0.002, metalness: 0.6, roughness: 0.55, envMap: rubyEnv, envMapIntensity: 0.5 });
+      var rustT = cpTex(16, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(120,58,24,0.75)'); gr.addColorStop(0.4, 'rgba(110,56,24,0.35)'); gr.addColorStop(1, 'rgba(100,50,20,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(w * 0.2, 0); g.lineTo(w * 0.8, 0); g.lineTo(w * 0.6, h); g.lineTo(w * 0.4, h); g.fill(); });
+      var rustM = new THREE.MeshBasicMaterial({ map: rustT, transparent: true, depthWrite: false, color: 0x8a7a70 });
+      var voidM = new THREE.MeshBasicMaterial({ color: 0x0a0806 });
+      function rBlock(w, h, d, b) { var s = new THREE.Shape(), x = w / 2 - b, y = h / 2 - b; s.moveTo(-x, -y); s.lineTo(x, -y); s.lineTo(x, y); s.lineTo(-x, y); s.lineTo(-x, -y);
+        var gg = new THREE.ExtrudeGeometry(s, { depth: d - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 2 }); gg.translate(0, 0, b); return gg; }
+      // ---- the opening behind the door, dark ----
+      var op = new THREE.Shape(); op.moveTo(-RI, DB + 0.001); op.lineTo(RI, DB + 0.001); for (var a = 0; a <= 24; a++) { var an = a / 24 * Math.PI; op.lineTo(Math.cos(an) * RI, SY + Math.sin(an) * RI); } op.lineTo(-RI, DB + 0.001);
+      quiet(q(P, new THREE.ShapeGeometry(op, 24), voidM, 0, 0, 0.062));
+      quiet(q(P, new THREE.PlaneGeometry(0.94, 0.013), new THREE.MeshBasicMaterial({ color: 0xfff0c8 }), 0, TY + 0.0065, 0.064));   // (a sliver of daylight under the door)
+      var spT = cpTex(64, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,240,200,0.55)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+      quiet(q(P, new THREE.PlaneGeometry(0.9, 0.16), new THREE.MeshBasicMaterial({ map: spT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 }), 0, TY + 0.002, 0.145, -Math.PI / 2, 0, 0));   // (spilling a little onto the sill)
+      // ---- the sill: one long stone, worn hollow in the middle ----
+      var sg2 = new THREE.BoxGeometry(1.36, 0.04, 0.26, 28, 1, 8), sp = sg2.attributes.position;
+      for (var i = 0; i < sp.count; i++) if (sp.getY(i) > 0) sp.setY(i, sp.getY(i) - 0.007 * Math.exp(-Math.pow(sp.getX(i) / 0.32, 2)) * Math.exp(-Math.pow((sp.getZ(i) + 0.02) / 0.09, 2)));
+      sg2.computeVertexNormals(); q(P, sg2, stoneM[2], 0, TY - 0.02, 0.13);
+      // ---- the jambs: dressed blocks, long and short in turn, from the floor to the spring of the arch ----
+      [-1, 1].forEach(function (sdn) { var y = 0, k = 0;
+        while (y < SY - 0.05) { var hh = Math.min(0.24 + cr() * 0.08, SY - y); if (SY - y - hh < 0.12) hh = SY - y; var bw = (k + (sdn > 0 ? 1 : 0)) % 2 ? 0.15 : 0.2, dd = 0.16 + cr() * 0.012;
+          var bl = q(P, rBlock(bw, hh - 0.008, dd, 0.012), stoneM[(k * 3 + (sdn > 0 ? 1 : 0)) % 4], sdn * (RI + bw / 2), y + hh / 2, 0); bl.rotation.z = (cr() - 0.5) * 0.006; y += hh; k++; } });
+      // ---- the arch: nine wedge stones and a keystone that stands proud ----
+      for (var v = 0; v < 9; v++) { var a0 = v / 9 * Math.PI + 0.012, a1 = (v + 1) / 9 * Math.PI - 0.012, key = v === 4, ro = RI + (key ? 0.26 : v % 2 ? 0.17 : 0.2) - 0.01, ri = RI + 0.01, ws = new THREE.Shape(), s;
+        for (s = 0; s <= 6; s++) { var aa = a0 + (a1 - a0) * s / 6; if (s) ws.lineTo(Math.cos(aa) * ri, Math.sin(aa) * ri); else ws.moveTo(Math.cos(aa) * ri, Math.sin(aa) * ri); }
+        for (s = 6; s >= 0; s--) { var ab = a0 + (a1 - a0) * s / 6 + (key ? (s === 6 ? 0.02 : s === 0 ? -0.02 : 0) : 0); ws.lineTo(Math.cos(ab) * ro, Math.sin(ab) * ro); }
+        var vg = new THREE.ExtrudeGeometry(ws, { depth: (key ? 0.19 : 0.15), bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2, curveSegments: 6 }); vg.translate(0, 0, 0.01);
+        q(P, vg, stoneM[(v + 2) % 4], 0, SY, 0); }
+      var kT = cpTex(128, 128, function (g, w, h) { hideSigil(g, w / 2, h / 2, 40, 'rgba(34,28,22,0.85)', 6); });   // (the guild's mark, cut into the keystone)
+      quiet(q(P, new THREE.PlaneGeometry(0.15, 0.15), new THREE.MeshStandardMaterial({ map: kT, transparent: true, depthWrite: false, roughness: 1 }), 0, SY + RI + 0.13, 0.2125));
+      quiet(q(P, new THREE.TorusGeometry(0.705, 0.018, 6, 48, Math.PI - 0.3), stoneM[0], 0, SY, 0.18, 0, 0, 0.15));   // (the drip moulding over the arch, and its stops)
+      [-1, 1].forEach(function (sdn) { q(P, rBlock(0.05, 0.07, 0.05, 0.008), stoneM[1], sdn * 0.7 * Math.cos(0.15), SY + 0.7 * Math.sin(0.15) - 0.03, 0.155); });
+      for (var mo = 0; mo < 7; mo++) { var msd = mo % 2 ? 1 : -1, mm = quiet(q(P, new THREE.SphereGeometry(0.02 + cr() * 0.015, 7, 5), rMat([0x3e5a2a, 0x4e6a30, 0x34502a][mo % 3], { roughness: 1 }), msd * (RI + 0.04 + cr() * 0.14), TY + 0.03 + cr() * 0.5, 0.17)); mm.scale.set(1.6, 0.5, 0.35); }   // (moss in the joints)
+      // ---- the door ----
+      var LG = new THREE.Group(); LG.position.set(0, DB, 0.066); P.add(LG);
+      for (var pk = 0; pk < 6; pk++) { var x0 = -R0 + pk * 0.16 + 0.007, x1 = x0 + 0.16 - 0.014, ps = new THREE.Shape(); ps.moveTo(x0, 0.006); ps.lineTo(x1, 0.006);
+        for (var t = 0; t <= 6; t++) { var xx = x1 + (x0 - x1) * t / 6; ps.lineTo(xx, top(xx) - 0.007); } ps.lineTo(x0, 0.006);
+        var pg = new THREE.ExtrudeGeometry(ps, { depth: 0.048, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2 }); pg.translate(0, 0, 0.006);
+        q(LG, pg, plankM[pk], 0, 0, 0); }
+      // (the iron: three long strap hinges, curled and spear-tipped, riveted, on pintles in the stone)
+      var strap = new THREE.Shape(); strap.moveTo(-0.5, -0.032); strap.lineTo(0.3, -0.018); strap.lineTo(0.315, -0.026); strap.lineTo(0.4, 0); strap.lineTo(0.315, 0.026); strap.lineTo(0.3, 0.018); strap.lineTo(-0.5, 0.032); strap.lineTo(-0.5, -0.032);
+      var strapG = new THREE.ExtrudeGeometry(strap, { depth: 0.004, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.0015, bevelSegments: 1 }), rivG = new THREE.SphereGeometry(0.0085, 8, 5);
+      [0.2, 0.84, 1.6].forEach(function (yS, si) {
+        q(LG, strapG, ironM, 0, yS, F + 0.0015);
+        [-1, 1].forEach(function (s) { var pts = []; for (var t2 = 0; t2 <= 20; t2++) { var u = t2 / 20, a3 = -Math.PI / 2 + u * Math.PI * 2.4, r3 = 0.04 * (1 - 0.6 * u); pts.push(new THREE.Vector3(0.21 + r3 * Math.cos(a3) + 0.0, s * (0.06 + r3 * Math.sin(a3) - 0.0 + (1 - u) * 0.0), F + 0.004)); } pts[0].y = s * 0.016;
+          q(LG, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.0055, 6), ironM, 0, yS, 0); quiet(q(LG, rivG, ironM, 0.21, yS + s * 0.06, F + 0.006)).scale.z = 0.6; });   // (the curled horns)
+        for (var rx = -0.46; rx < 0.3; rx += 0.074) { quiet(q(LG, rivG, ironM, rx, yS, F + 0.0065)).scale.z = 0.6; if (cr() < 0.35) quiet(q(LG, new THREE.PlaneGeometry(0.014, 0.07 + cr() * 0.08), rustM, rx, yS - 0.06 - cr() * 0.02, F + 0.0008)); }
+        q(LG, new THREE.CylinderGeometry(0.02, 0.02, 0.08, 12), ironM, -0.495, yS, F - 0.022);   // (the hinge's knuckle,
+        q(LG, new THREE.BoxGeometry(0.06, 0.022, 0.03), ironM, -0.53, yS - 0.05, F - 0.02); q(LG, new THREE.CylinderGeometry(0.006, 0.006, 0.05, 6), ironM, -0.495, yS - 0.05, F - 0.022);   // the pintle it turns on, driven into the jamb)
+      });
+      // (rows of pyramid-headed nails down every plank, where the iron isn't)
+      var clG = new THREE.ConeGeometry(0.013, 0.012, 4);
+      [0.42, 0.62, 1.08, 1.3, 1.82, 2.0].forEach(function (cy) { for (var c = 0; c < 6; c++) { var cx = -0.4 + c * 0.16;
+        if (top(cx) < cy + 0.05) continue; if (cx > 0.15 && cy > 0.95 && cy < 1.45) continue; if (Math.abs(cx) < 0.16 && cy > 1.2 && cy < 1.55) continue;
+        quiet(q(LG, clG, ironM, cx, cy, F + 0.006, Math.PI / 2, Math.PI / 4, 0)); } });
+      // (the ring pull on its petalled rose, and the keyhole plate below it)
+      var RX = 0.28, RY = 1.32;
+      q(LG, new THREE.CylinderGeometry(0.036, 0.04, 0.007, 20), ironM, RX, RY, F + 0.0035, Math.PI / 2, 0, 0);
+      for (var pe = 0; pe < 8; pe++) { var pa = pe / 8 * Math.PI * 2; quiet(q(LG, new THREE.SphereGeometry(0.016, 8, 6), ironM, RX + Math.cos(pa) * 0.04, RY + Math.sin(pa) * 0.04, F + 0.004, 0, 0, pa)).scale.set(1, 0.7, 0.3); }
+      quiet(q(LG, new THREE.SphereGeometry(0.015, 10, 8), ironM, RX, RY, F + 0.009)).scale.z = 0.8; quiet(q(LG, new THREE.TorusGeometry(0.01, 0.004, 6, 10), ironM, RX, RY - 0.012, F + 0.016, 0, Math.PI / 2, 0));
+      q(LG, new THREE.TorusGeometry(0.062, 0.0095, 8, 28), ironM, RX, RY - 0.074, F + 0.02, -0.28, 0, 0);
+      var esc = new THREE.Shape(); esc.moveTo(0, 0.055); esc.quadraticCurveTo(0.03, 0.05, 0.028, 0.02); esc.lineTo(0.022, -0.035); esc.lineTo(0, -0.055); esc.lineTo(-0.022, -0.035); esc.lineTo(-0.028, 0.02); esc.quadraticCurveTo(-0.03, 0.05, 0, 0.055);
+      q(LG, new THREE.ExtrudeGeometry(esc, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.0015, bevelSegments: 1 }), ironM, RX, 1.07, F + 0.001);
+      var kh = new THREE.Shape(); kh.absarc(0, 0.01, 0.008, 0, Math.PI * 2, false); var kh2 = new THREE.Shape(); kh2.moveTo(-0.004, 0.006); kh2.lineTo(0.004, 0.006); kh2.lineTo(0.007, -0.022); kh2.lineTo(-0.007, -0.022); kh2.lineTo(-0.004, 0.006);
+      quiet(q(LG, new THREE.ShapeGeometry([kh, kh2]), voidM, RX, 1.07, F + 0.0065)); [-1, 1].forEach(function (s) { quiet(q(LG, rivG, ironM, RX, 1.07 + s * 0.042, F + 0.006)).scale.set(0.6, 0.6, 0.4); });
+      // (the little grille to look out of: an oak frame, the dark beyond, crossed iron bars studded where they meet)
+      var GY = 1.4;
+      [[0, 0.085, 0.24, 0.03], [0, -0.085, 0.24, 0.03], [-0.105, 0, 0.03, 0.2], [0.105, 0, 0.03, 0.2]].forEach(function (b) { q(LG, rBlock(b[2], b[3], 0.022, 0.004), plankM[(b[0] + b[1] > 0 ? 1 : 3)], b[0], GY + b[1], F); });
+      quiet(q(LG, new THREE.PlaneGeometry(0.18, 0.14), new THREE.MeshBasicMaterial({ color: 0x262418 }), 0, GY, F + 0.001));
+      [-0.045, 0, 0.045].forEach(function (bx) { q(LG, new THREE.CylinderGeometry(0.0065, 0.0065, 0.15, 8), ironM, bx, GY, F + 0.011); });
+      [-0.035, 0.035].forEach(function (by) { q(LG, new THREE.CylinderGeometry(0.0065, 0.0065, 0.19, 8), ironM, 0, GY + by, F + 0.013, 0, 0, Math.PI / 2); [-0.045, 0, 0.045].forEach(function (bx) { quiet(q(LG, rivG, ironM, bx, GY + by, F + 0.018)).scale.set(0.9, 0.9, 0.6); }); });
+      // (the iron kick plate along the foot, riveted top and bottom)
+      q(LG, new THREE.BoxGeometry(0.93, 0.11, 0.004), ironM, 0, 0.065, F + 0.002);
+      for (var kx = -0.43; kx <= 0.44; kx += 0.086) [0.017, 0.11].forEach(function (ky) { quiet(q(LG, rivG, ironM, kx, ky, F + 0.0045)).scale.set(0.8, 0.8, 0.5); });
+      // ---- the lantern beside the door, on a scrolled iron bracket ----
+      var LX = -1.14, LY = 2.05, bM = rMat(0x24201e, { metalness: 0.6, roughness: 0.5 });
+      q(P, new THREE.BoxGeometry(0.06, 0.14, 0.012), bM, LX, LY, 0.006); q(P, new THREE.BoxGeometry(0.016, 0.016, 0.24), bM, LX, LY + 0.02, 0.12);
+      q(P, new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(LX, LY - 0.06, 0.012), new THREE.Vector3(LX, LY - 0.07, 0.08), new THREE.Vector3(LX, LY - 0.02, 0.16), new THREE.Vector3(LX, LY + 0.015, 0.21)]), 16, 0.006, 5), bM, 0, 0, 0);
+      q(P, new THREE.TorusGeometry(0.028, 0.005, 5, 12), bM, LX, LY - 0.03, 0.09, 0, Math.PI / 2, 0); q(P, new THREE.SphereGeometry(0.013, 8, 6), bM, LX, LY + 0.02, 0.245);
+      for (var ch = 0; ch < 3; ch++) q(P, new THREE.TorusGeometry(0.012, 0.003, 4, 10), bM, LX, LY - ch * 0.02, 0.225, 0, ch % 2 ? Math.PI / 2 : 0, 0);
+      var lt = new THREE.Group(); lt.position.set(LX, LY - 0.3, 0.225); lt.rotation.y = Math.PI / 4; P.add(lt); var ltM = rMat(0xffd890, { emissive: 0xffb050, emissiveIntensity: 1.3 }); hdFlames.push(ltM);
+      q(lt, new THREE.TorusGeometry(0.022, 0.005, 5, 12), bM, 0, 0.24, 0); q(lt, new THREE.ConeGeometry(0.09, 0.075, 4), bM, 0, 0.185, 0); q(lt, new THREE.CylinderGeometry(0.018, 0.022, 0.03, 8), bM, 0, 0.22, 0);
+      q(lt, new THREE.BoxGeometry(0.13, 0.016, 0.13), bM, 0, 0, 0); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) { q(lt, new THREE.BoxGeometry(0.011, 0.15, 0.011), bM, c[0] * 0.058, 0.077, c[1] * 0.058); });
+      var lgT = cpTex(32, 64, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(20,14,8,0.7)'); gr.addColorStop(0.35, 'rgba(60,40,20,0.2)'); gr.addColorStop(1, 'rgba(255,240,210,0.1)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+      var lgM = new THREE.MeshStandardMaterial({ map: lgT, transparent: true, depthWrite: false, roughness: 0.1, side: THREE.DoubleSide });
+      for (var gp = 0; gp < 4; gp++) { var ga = gp * Math.PI / 2; quiet(q(lt, new THREE.PlaneGeometry(0.11, 0.135), lgM, Math.sin(ga) * 0.056, 0.077, Math.cos(ga) * 0.056, 0, ga, 0)); }
+      q(lt, new THREE.CylinderGeometry(0.015, 0.016, 0.065, 10), rMat(0xece2c8, { roughness: 0.55, emissive: 0x5a3c18, emissiveIntensity: 0.6 }), 0, 0.04, 0); quiet(q(lt, new THREE.SphereGeometry(0.012, 8, 6), ltM, 0, 0.094, 0)).scale.set(1, 2, 1);
+      hdHalo(lt, 0, 0.094, 0, 0.5);
+    })(hdWalls[1].g);
     // (the Errand Board, its frame, notices and lantern: see the back wall, in great detail, further down)
     var BX = HD_BOARD[0];
     hideSolids.push([BX - 0.6, -D + 0.35, 0.3], [BX, -D + 0.35, 0.3], [BX + 0.6, -D + 0.35, 0.3]);
