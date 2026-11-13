@@ -3871,7 +3871,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (beach grass on the dunes, shells and starfish on the sand, driftwood)
     var dg = new THREE.InstancedMesh(tuftGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, color: 0xe8dc98, side: THREE.DoubleSide, roughness: 0.9 }), 2600), dgn = 0, dm = new THREE.Matrix4(), dq = new THREE.Quaternion(), de = new THREE.Euler(), ds = new THREE.Vector3(), dv = new THREE.Vector3();
     for (var t2 = 0; t2 < 12000 && dgn < 2600; t2++) { var gx2 = 83 + cr() * 70, gz2 = B3_Z - 52 + cr() * 104, s2 = shoreS(gx2, gz2); if (s2 < 10 || deckY(gx2, gz2, -0.5) > -99 || cr() > Math.min(1, (s2 - 10) / 6)) continue;
-      de.set((cr() - 0.5) * 0.4, cr() * 6.28, (cr() - 0.5) * 0.4); dq.setFromEuler(de); var sc = 0.7 + cr() * 0.9; ds.set(sc, sc * (1.2 + cr() * 0.8), sc); dv.set(gx2, beachH(gx2, gz2), gz2); dm.compose(dv, dq, ds); dg.setMatrixAt(dgn++, dm); }
+      de.set((cr() - 0.5) * 0.4, cr() * 6.28, (cr() - 0.5) * 0.4); dq.setFromEuler(de); var sc = 0.7 + cr() * 0.9; ds.set(sc, sc * (1.2 + cr() * 0.8), sc); if (Math.abs(gz2 - B3_Z - 20) < 1.65 && [114, 118.2, 122.4, 126.6].some(function (px) { return Math.abs(gx2 - px) < 1.65; })) ds.set(0.001, 0.001, 0.001); dv.set(gx2, beachH(gx2, gz2), gz2); dm.compose(dv, dq, ds); dg.setMatrixAt(dgn++, dm); }
     dg.count = dgn; dg.frustumCulled = false; G.add(dg);
     var shellCols = [0xf6dcd0, 0xf2c2b0, 0xfff4e8, 0xe8b8a0, 0xd8c8e8], sh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.07, 0.04, 9), rMat(0xffffff, { roughness: 0.5 }), 320), shn = 0;
     for (t2 = 0; t2 < 4000 && shn < 320; t2++) { var sx2 = 120 + cr() * 32, sz2 = B3_Z - 50 + cr() * 100, ss2 = shoreS(sx2, sz2); if (ss2 < 0.3 || ss2 > 9 || deckY(sx2, sz2, -0.3) > -99) continue;
@@ -3897,14 +3897,178 @@ EVERDAWN_PARTS.push(function (THREE) {
     q(cs, new THREE.CylinderGeometry(0.55, 0.65, 0.22, 16), csM, 0, 0.11, 0); q(cs, new THREE.BoxGeometry(0.5, 0.24, 0.5), csM, 0, 0.34, 0);
     [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]].forEach(function (tp) { q(cs, new THREE.CylinderGeometry(0.1, 0.12, 0.36, 10), csM, tp[0], 0.4, tp[1]); q(cs, new THREE.ConeGeometry(0.11, 0.14, 10), csM, tp[0], 0.65, tp[1]); });
     q(cs, new THREE.CylinderGeometry(0.003, 0.003, 0.28, 3), rMat(0x8a6a4a), 0, 0.6, 0); q(cs, new THREE.PlaneGeometry(0.12, 0.07), rMat(0xe85a5a, { side: THREE.DoubleSide }), 0.06, 0.7, 0); q(cs, new THREE.TorusGeometry(0.75, 0.06, 4, 20), rMat(0xb49a6c), 0, 0.02, 0, Math.PI / 2, 0, 0);   // (a flag, and its moat)
-    // (striped cabanas on the dunes at the end of the south walk)
-    [[114, '#3aa8a8'], [118.2, '#e8705a'], [122.4, '#e8b83a'], [126.6, '#9a7ac8']].forEach(function (cb) { var cz = B3_Z + 20, y = beachH(cb[0], cz), cg = grp(cb[0], y, cz, 0, G), stM = new THREE.MeshStandardMaterial({ map: stripeT(cb[1], '#fbf6ea'), side: THREE.DoubleSide, roughness: 0.85 });
-      q(cg, new THREE.BoxGeometry(2.4, 0.12, 2.4), plankM, 0, 0.06, 0); [[-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1], [1.1, 1.1]].forEach(function (pp) { q(cg, new THREE.BoxGeometry(0.1, 2.2, 0.1), whiteM, pp[0], 1.15, pp[1]); });
-      q(cg, new THREE.PlaneGeometry(2.3, 2.0), stM, 0, 1.1, 1.14, 0, Math.PI, 0); [-1, 1].forEach(function (sdd) { q(cg, new THREE.PlaneGeometry(2.3, 2.0), stM, sdd * 1.14, 1.1, 0, 0, sdd * Math.PI / 2, 0); });
-      [-1, 1].forEach(function (sdd) { var cu = q(cg, new THREE.PlaneGeometry(0.5, 1.9, 1, 6), stM, sdd * 0.9, 1.1, -1.14, 0, 0, 0); cu.rotation.y = sdd * 0.6; });   // (front curtains tied back)
-      q(cg, new THREE.ConeGeometry(1.75, 0.9, 4), stM, 0, 2.7, 0, 0, Math.PI / 4, 0); q(cg, new THREE.SphereGeometry(0.08, 8, 6), whiteM, 0, 3.18, 0);
-      for (var vl = 0; vl < 12; vl++) q(cg, new THREE.CircleGeometry(0.1, 8, 0, Math.PI), stM, -1.1 + vl * 0.2, 2.25, -1.17, 0, 0, Math.PI);   // (a scalloped valance)
-      solids.push({ x: cb[0], z: cz + 0.6, r: 1.2 }); });
+    // (garden pavilions on the dunes at the end of the south walk, in place of the striped cabanas: four slim pale posts on a
+    // paved square, a cream valance all round, a dark two-tier roof with a vent between, sheer curtains hanging from every
+    // corner and tied back at the post, flaring to a darker hem; inside, a round rug, a black sofa heaped with white pillows, two
+    // black velvet tub chairs, a marble coffee table on a black base with red roses, books and a tray, a potted palm, a rattan
+    // globe lantern hanging from the roof and little lanterns at the front corners. The furniture is all black, the pillows white)
+    var cabPostM = rMat(0xd8d4cc, { roughness: 0.4, metalness: 0.3 }), cabRoofM = new THREE.MeshStandardMaterial({ color: 0x5a5048, roughness: 0.85, flatShading: true, side: THREE.DoubleSide }), cabVentM = rMat(0x3a332c, { roughness: 0.9 });
+    var cabFabT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#efe7d8'; g.fillRect(0, 0, w, h); for (var i = 0; i < 900; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,0.25)' : 'rgba(150,130,100,0.12)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 1); } }, [3, 1]);
+    var cabCreamM = new THREE.MeshStandardMaterial({ map: cabFabT, roughness: 0.9, side: THREE.DoubleSide }), cabTrimM = rMat(0x7a6e62, { roughness: 0.9 });
+    var cabSheerM = new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, roughness: 0.95 });
+    var cabPaveT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#d6cab4'; g.fillRect(0, 0, w, h); for (var y = 0; y < 4; y++) for (var x = 0; x < 4; x++) { var sh = 200 + ((x * 7 + y * 3) % 5) * 6; g.fillStyle = 'rgb(' + sh + ',' + (sh - 12) + ',' + (sh - 30) + ')'; g.fillRect(x * 64 + 2, y * 64 + 2, 60, 60); for (var i = 0; i < 40; i++) { g.fillStyle = 'rgba(120,100,70,0.12)'; g.fillRect(x * 64 + 2 + Math.random() * 58, y * 64 + 2 + Math.random() * 58, 2, 2); } } });
+    var cabPaveM = new THREE.MeshStandardMaterial({ map: cabPaveT, roughness: 0.8 });
+    var cabRugT = cpTex(256, 256, function (g, w, h) { var c = w / 2; g.clearRect(0, 0, w, h); [[126, '#e6dccb'], [118, '#d4c6ae'], [114, '#ece4d4'], [80, '#e2d6c2'], [76, '#ece4d4']].forEach(function (r) { g.fillStyle = r[1]; g.beginPath(); g.arc(c, c, r[0], 0, Math.PI * 2); g.fill(); }); for (var i = 0; i < 1500; i++) { var a = Math.random() * 6.28, rr = Math.random() * 124; g.fillStyle = 'rgba(160,140,110,0.1)'; g.fillRect(c + Math.cos(a) * rr, c + Math.sin(a) * rr, 1.5, 1.5); } });
+    var cabRugM = new THREE.MeshStandardMaterial({ map: cabRugT, transparent: true, alphaTest: 0.5, roughness: 1 });
+    var cabMarbT = cpTex(256, 256, function (g, w, h) { g.fillStyle = '#f4f2ee'; g.fillRect(0, 0, w, h); for (var i = 0; i < 14; i++) { g.strokeStyle = 'rgba(140,140,150,' + (0.15 + Math.random() * 0.25) + ')'; g.lineWidth = 0.6 + Math.random() * 1.4; g.beginPath(); var x = Math.random() * w, y = 0; g.moveTo(x, y); while (y < h) { x += (Math.random() - 0.5) * 30; y += 10 + Math.random() * 20; g.lineTo(x, y); } g.stroke(); } });
+    var cabMarbM = new THREE.MeshStandardMaterial({ map: cabMarbT, roughness: 0.15, metalness: 0.05 }), cabGoldM = rMat(0xe0b860, { roughness: 0.3, metalness: 0.35, emissive: 0x3a2808 }), cabSofaM = new THREE.MeshStandardMaterial({ map: cabFabT, color: 0x2e2c2a, roughness: 0.92 }), cabPilM = new THREE.MeshStandardMaterial({ map: cabFabT, color: 0xffffff, roughness: 0.95, emissive: 0x3a3a38 }), cabThrowM = new THREE.MeshStandardMaterial({ map: cabFabT, color: 0xf4efe6, roughness: 1 }), cabBlkM = rMat(0x161616, { roughness: 0.35, metalness: 0.6 });
+    var cabVelM = rMat(0x1a1a1a, { roughness: 0.6 }), cabLegM = rMat(0x3a2a1e, { roughness: 0.6 }), cabPotM = rMat(0xf2efe8, { roughness: 0.5 }), cabRoseM = rMat(0xfdfbf6, { roughness: 0.7 }), cabStemM = rMat(0x4a7a3a, { roughness: 0.7 });
+    var cabGlowM = rMat(0xffe0a0, { emissive: 0xffb050, emissiveIntensity: 0.9, roughness: 0.4 }), cabRatM = new THREE.MeshStandardMaterial({ color: 0xb8925a, roughness: 0.8, wireframe: true });
+    function cabRBox(w, h, d, r) { var b = r, W = w - 2 * b, H = h - 2 * b, c = Math.min(r * 0.8, W / 2, H / 2), s = new THREE.Shape();   // (a soft, rounded block: upholstery)
+      s.moveTo(-W / 2 + c, -H / 2); s.lineTo(W / 2 - c, -H / 2); s.quadraticCurveTo(W / 2, -H / 2, W / 2, -H / 2 + c); s.lineTo(W / 2, H / 2 - c); s.quadraticCurveTo(W / 2, H / 2, W / 2 - c, H / 2); s.lineTo(-W / 2 + c, H / 2); s.quadraticCurveTo(-W / 2, H / 2, -W / 2, H / 2 - c); s.lineTo(-W / 2, -H / 2 + c); s.quadraticCurveTo(-W / 2, -H / 2, -W / 2 + c, -H / 2);
+      var dd = Math.max(0.002, d - 2 * r), g = new THREE.ExtrudeGeometry(s, { depth: dd, bevelEnabled: true, bevelThickness: r, bevelSize: b, bevelSegments: 4, curveSegments: 5 }); g.translate(0, 0, -dd / 2); g.computeVertexNormals(); return g; }
+    function cabCurtain(W, H) { var NS = 14, NY = 18, pos = [], col = [], idx = [], i, j, sheer = new THREE.Color(0xfbf7ee), hem = new THREE.Color(0x8a7e72);   // (a curtain: hung from the top across W, gathered in at the tie, flaring out to the floor, softly pleated)
+      for (i = 0; i <= NY; i++) { var t = i / NY, y = H * (1 - t), sm = function (x) { return x * x * (3 - 2 * x); }, wf = t < 0.55 ? 1 - 0.93 * sm(t / 0.55) : 0.07 + 0.33 * Math.pow((t - 0.55) / 0.45, 1.2);
+        for (j = 0; j <= NS; j++) { var s = j / NS, x = s * W * wf, z = Math.sin(s * Math.PI * 7 + t * 2) * 0.03 * (0.4 + wf) + (t > 0.4 && t < 0.7 ? 0.04 * Math.sin((t - 0.4) / 0.3 * Math.PI) : 0), c = t > 0.84 ? hem : sheer, d = 0.9 + 0.1 * Math.cos(s * Math.PI * 7);
+          pos.push(x, y, z); col.push(c.r * d, c.g * d, c.b * d); } }
+      for (i = 0; i < NY; i++) for (j = 0; j < NS; j++) { var A = i * (NS + 1) + j, B = A + NS + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+    var cabCurG = cabCurtain(0.7, 2.0);
+    // (the coffee table's top, in fine detail, built once and set on every table: a bouquet of red roses, each one petal by
+    // petal, with buds, sepals, stems, serrated leaves, in a fluted gold vase; a stack of three cloth-bound books with gilt
+    // bands, page edges and a ribbon marker, reading glasses folded on top; a gold tray of fruit: two oranges, a red apple with
+    // its leaf, a lemon and a bunch of grapes; a pillar candle burning in a glass hurricane on a gold foot; and two glasses of
+    // rosé on a folded linen napkin)
+    var cabTop = (function () { var T = new THREE.Group(), E = new THREE.Euler(), Qq = new THREE.Quaternion(), V = new THREE.Vector3(), Sc = new THREE.Vector3(), Y = 0.425;
+      function mx(x, y, z, rx, ry, rz, sx, sy, sz) { E.set(rx || 0, ry || 0, rz || 0); Qq.setFromEuler(E); V.set(x, y, z); sx = sx || 1; Sc.set(sx, sy || sx, sz || sx); return new THREE.Matrix4().compose(V, Qq, Sc); }
+      function mxa(x, y, z, a, t, s) { Qq.setFromAxisAngle(new THREE.Vector3(Math.sin(a), 0, -Math.cos(a)), t); V.set(x, y, z); Sc.set(s || 1, s || 1, s || 1); return new THREE.Matrix4().compose(V, Qq, Sc); }   // (tipped by t outward toward angle a)
+      function merge(parts) { var pos = [], nor = [], uv = [], col = [], idx = [];   // (many pieces into one, keeping their shared corners)
+        parts.forEach(function (pt) { var g = pt[0].clone(), i, o = pos.length / 3; g.applyMatrix4(pt[1]); var a = g.attributes, n = a.position.count;
+          for (i = 0; i < n * 3; i++) { pos.push(a.position.array[i]); nor.push(a.normal.array[i]); col.push(a.color ? a.color.array[i] : 1); } for (i = 0; i < n * 2; i++) uv.push(a.uv ? a.uv.array[i] : 0);
+          if (g.index) for (i = 0; i < g.index.count; i++) idx.push(g.index.array[i] + o); else for (i = 0; i < n; i++) idx.push(o + i); });
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); return g; }
+      function add(geo, m, x, y, z, rx, ry, rz) { var o = new THREE.Mesh(geo, m); o.position.set(x || 0, y || 0, z || 0); o.rotation.set(rx || 0, ry || 0, rz || 0); o.castShadow = true; o.receiveShadow = true; T.add(o); return o; }
+      function lathe(pts, seg) { return new THREE.LatheGeometry(pts.map(function (p) { return new THREE.Vector2(p[0], p[1]); }), seg || 28); }
+      var rs = 77; function rn() { rs = (rs * 16807) % 2147483647; return (rs - 1) / 2147483646; }
+      var petalM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, side: THREE.DoubleSide, emissive: 0x1a0204 }), leafM2 = new THREE.MeshStandardMaterial({ color: 0x2e5a2a, roughness: 0.4, side: THREE.DoubleSide });
+      var glassM = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, roughness: 0.04, metalness: 0.2, depthWrite: false, side: THREE.DoubleSide }), roseWineM = new THREE.MeshStandardMaterial({ color: 0xf08a7a, transparent: true, opacity: 0.72, roughness: 0.1, depthWrite: false });
+      var dimT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); for (var i = 0; i < 500; i++) { g.fillStyle = i % 2 ? 'rgba(40,40,40,0.35)' : 'rgba(220,220,220,0.3)'; g.beginPath(); g.arc(rn() * w, rn() * h, 0.8 + rn(), 0, 6.3); g.fill(); } }, [3, 2]);   // (pitted peel)
+      var orangeM = new THREE.MeshStandardMaterial({ color: 0xf08a1a, roughness: 0.45, bumpMap: dimT, bumpScale: 0.004 }), lemonM = new THREE.MeshStandardMaterial({ color: 0xf2d43a, roughness: 0.4, bumpMap: dimT, bumpScale: 0.004 });
+      var appleM = rMat(0xb8202a, { roughness: 0.3 }), grapeM = rMat(0x4a2a5c, { roughness: 0.3 }), stemM2 = rMat(0x5a4028, { roughness: 0.8 }), fleafM = new THREE.MeshStandardMaterial({ color: 0x3e7a2e, roughness: 0.5, side: THREE.DoubleSide });
+      var pageT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#f2ead6'; g.fillRect(0, 0, w, h); for (var i = 0; i < h; i += 2) { g.fillStyle = 'rgba(150,130,100,0.25)'; g.fillRect(0, i, w, 1); } }), pageM = new THREE.MeshStandardMaterial({ map: pageT, roughness: 0.9 });
+      var candleM = rMat(0xf6f0e2, { roughness: 0.6, emissive: 0x3a2a10 }), flameM = new THREE.MeshBasicMaterial({ color: 0xffd070 }), flameInM = new THREE.MeshBasicMaterial({ color: 0xfff6d0 }), linenM = rMat(0xf4f1ea, { roughness: 1 });
+      // the roses, in fine detail: over thirty petals each, every one a little different in size, angle and twist, set round in
+      // a spiral; the innermost wrapped tight into a bud at the heart, each further out opening wider, cupped round the heart,
+      // its tip notched and gently ruffled, its edges rolling back; faint veins fanning up from a deep crimson base to bright red
+      // at the edges, darker on some; the outer guard petals browner at the base, one or two touched brown at the edge. Green
+      // sepals turned back beneath, stems down into the vase with thorns on them; a few roses still in bud,
+      // sepals hugging them; and sprays of five-leaflet rose leaves round the rim, toothed, veined, red at the very edge
+      function petal(L, W, open, curl, cup, roll, o) { var NU = 9, NV = 8, pos = [], col = [], idx = [], i, j, sy = [0], sz = [0], sp = [open], y = 0, z = 0, ph = open;
+        for (i = 1; i <= NU; i++) { var uu = i / NU; ph = open + curl * Math.pow(uu, 2.2); y += Math.cos(ph) * L / NU; z += Math.sin(ph) * L / NU; sy.push(y); sz.push(z); sp.push(ph); }   // (the petal's spine: up from the heart, opening and curling back)
+        var base = o.guard ? [0.36, 0.1, 0.05] : [0.42, 0.03, 0.05], edge = o.blush ? [0.62, 0.02, 0.06] : [0.8, 0.05, 0.09];
+        for (i = 0; i <= NU; i++) { var u = i / NU;
+          for (j = 0; j <= NV; j++) { var v = j / NV * 2 - 1, av = Math.abs(v), ue = Math.max(0, u - (u > 0.75 ? 0.07 * Math.pow(1 - av, 2) * (u - 0.75) / 0.25 : 0)), fi = ue * NU, i0 = Math.min(NU - 1, Math.floor(fi)), fr = fi - i0;   // (the tip notched in the middle)
+            var py = sy[i0] + (sy[i0 + 1] - sy[i0]) * fr, pz = sz[i0] + (sz[i0 + 1] - sz[i0]) * fr, pp = sp[i0] + (sp[i0 + 1] - sp[i0]) * fr;
+            var w = W * (0.28 + 0.72 * Math.sin(Math.PI * Math.min(1, 0.12 + u * 0.68))) * (u > 0.95 ? 0.86 : 1);   // (narrow at the base, broad and rounded above)
+            var cz = -cup * v * v * w + roll * v * v * Math.pow(u, 3) * w * 1.4 + 0.035 * w * Math.sin(v * 5.5 + o.s) * Math.pow(u, 2) + (u > 0.85 ? 0.03 * w * Math.cos(v * 9 + o.s) : 0);   // (cupped, the edges rolling back, softly waved, ruffled at the rim)
+            pos.push(v * w * (1 - 0.12 * v * v * cup), py - Math.sin(pp) * cz, pz + Math.cos(pp) * cz);
+            var t = Math.min(1, u * 1.3 + av * 0.35), vein = 1 - 0.07 * Math.pow(Math.abs(Math.cos(v * Math.PI * 3.5)), 10) * (1 - u * 0.6), br = o.brown && u > 0.82 && av > 0.6 ? 0.82 : 1;   // (faint veins, a browned edge)
+            col.push((base[0] + (edge[0] - base[0]) * t) * vein * br, (base[1] + (edge[1] - base[1]) * t) * vein * (br < 1 ? 0.76 : 1), (base[2] + (edge[2] - base[2]) * t) * vein * (br < 1 ? 0.6 : 1)); } }
+        for (i = 0; i < NU; i++) for (j = 0; j < NV; j++) { var A = i * (NV + 1) + j, B = A + NV + 1; idx.push(A, B, A + 1, A + 1, B, B + 1); }
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+      var sepG = new THREE.ConeGeometry(0.0026, 0.017, 4); sepG.translate(0, 0.0085, 0); sepG.scale(1, 1, 0.35); var recG = new THREE.SphereGeometry(0.006, 10, 8);
+      function roseHead(nP, op, sd, sz, bud, blush) { var pp = [], gp = [], k;
+        for (k = 0; k < nP; k++) { var f = k / (nP - 1), a = k * 2.39996 + sd + (rn() - 0.5) * 0.3, jl = 0.92 + rn() * 0.16, L = (0.011 + 0.017 * Math.pow(f, 0.7)) * sz * jl, W = (0.008 + 0.017 * Math.pow(f, 0.8)) * sz * (0.9 + rn() * 0.2), o2 = 0.04 + op * Math.pow(f, 1.6) + (rn() - 0.5) * 0.12 * f, cu = f > 0.45 ? 0.5 * (f - 0.45) / 0.55 * op * (0.8 + rn() * 0.4) : 0, r0 = (0.0012 + f * 0.0055) * sz, guard = !bud && k >= nP - 3;
+          pp.push([petal(L, W, o2, cu, 0.6 - f * 0.28, f > 0.5 ? (f - 0.5) * 1.3 : 0, { s: rn() * 6, guard: guard, blush: blush, brown: guard && rn() < 0.4 }), mx(Math.sin(a) * r0, -f * 0.006 * sz, Math.cos(a) * r0, 0, a, (rn() - 0.5) * 0.18)]); }   // (each petal turned and tipped a little its own way)
+        var hp = merge(pp);
+        for (k = 0; k < 5; k++) { var sa = k / 5 * Math.PI * 2 + sd; gp.push([sepG, mxa(Math.sin(sa) * 0.004, -0.008 * sz, Math.cos(sa) * 0.004, Math.PI / 2 - sa, bud ? 2.8 : 2.0 + (k % 2) * 0.3, sz)]); }   // (the sepals: hugging a bud, turned back under an open rose)
+        gp.push([recG, mx(0, -0.01 * sz, 0, 0, 0, 0, sz, sz * 0.9, sz)]); return { p: hp, g: gp }; }
+      var RH = [roseHead(34, 1.15, 0.3, 1), roseHead(36, 1.35, 1.7, 1.05, 0, 1), roseHead(30, 0.95, 2.9, 0.95), roseHead(32, 1.25, 4.1, 1, 0, 1)], RB = [roseHead(14, 0.1, 0.8, 0.85, 1), roseHead(15, 0.14, 2.2, 0.9, 1)];
+      var VX = 0.02, VZ = 0.06, VT = Y + 0.13, bq = [], gr = [], lv = [], stG = new THREE.CylinderGeometry(0.0018, 0.0022, 1, 6), thG = new THREE.ConeGeometry(0.0011, 0.0045, 5);
+      function put(h, M, sx, sy, sz2) { bq.push([h.p, M]); h.g.forEach(function (gpart) { gr.push([gpart[0], M.clone().multiply(gpart[1])]); });
+        var len = Math.hypot(sx - VX, sy - VT, sz2 - VZ); if (len > 0.03) { var mid = new THREE.Vector3((sx + VX) / 2, (sy + VT) / 2 - 0.01, (sz2 + VZ) / 2), dir = new THREE.Vector3(sx - VX, sy - VT + 0.02, sz2 - VZ).normalize(); gr.push([stG, new THREE.Matrix4().compose(mid, new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir), new THREE.Vector3(1, len, 1))]);
+          [0.3, 0.62].forEach(function (tt, ti) { var side = new THREE.Vector3(0, 1, 0).cross(dir).normalize().applyAxisAngle(dir, ti * 2.6 + rn()), tp = mid.clone().addScaledVector(dir, (tt - 0.5) * len).addScaledVector(side, 0.0018), td = side.clone().addScaledVector(dir, -0.6).normalize(); gr.push([thG, new THREE.Matrix4().compose(tp, new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), td), new THREE.Vector3(1, 1, 1))]); }); } }   // (a head, its sepals, and its stem down into the vase, thorned)
+      put(RH[0], mx(VX, VT + 0.062, VZ, 0, 0.3, 0), VX, VT + 0.062, VZ);
+      for (k = 0; k < 5; k++) { var a = k / 5 * Math.PI * 2 + 0.3, px = VX + Math.cos(a) * 0.047, pz = VZ + Math.sin(a) * 0.047; put(RH[(k + 1) % 4], mxa(px, VT + 0.05, pz, a, 0.5, 0.95 + rn() * 0.1), px, VT + 0.05, pz); }
+      for (k = 0; k < 7; k++) { a = k / 7 * Math.PI * 2; px = VX + Math.cos(a) * 0.083; pz = VZ + Math.sin(a) * 0.083; put(RH[k % 4], mxa(px, VT + 0.02, pz, a, 1.0, 0.86 + rn() * 0.14), px, VT + 0.02, pz); }
+      for (k = 0; k < 4; k++) { a = k / 4 * Math.PI * 2 + 0.9; px = VX + Math.cos(a) * 0.068; pz = VZ + Math.sin(a) * 0.068; put(RB[k % 2], mxa(px, VT + 0.075, pz, a, 0.6, 1), px, VT + 0.075, pz); }   // (buds standing up between them)
+      add(merge(bq), petalM); add(merge(gr), leafM2);
+      var veinT = cpTex(256, 128, function (g, w, h) { var gd = g.createLinearGradient(0, 0, w, 0); gd.addColorStop(0, '#3e6e30'); gd.addColorStop(1, '#2c5a26'); g.fillStyle = gd; g.fillRect(0, 0, w, h);   // (a rose leaflet: deep green, a pale midrib, veins curving out toward the tip, a red-brown edge)
+        g.strokeStyle = 'rgba(190,220,150,0.7)'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); g.lineWidth = 1.4; g.strokeStyle = 'rgba(170,205,130,0.45)';
+        for (var i = 0; i < 9; i++) { var x = 14 + i * 26; [-1, 1].forEach(function (s) { g.beginPath(); g.moveTo(x, h / 2); g.quadraticCurveTo(x + 18, h / 2 + s * h * 0.22, x + 30, h / 2 + s * h * 0.46); g.stroke(); }); }
+        g.fillStyle = 'rgba(150,60,40,0.55)'; g.fillRect(0, 0, w, 5); g.fillRect(0, h - 5, w, 5); for (i = 0; i < 400; i++) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); } });
+      var leafVM = new THREE.MeshStandardMaterial({ map: veinT, roughness: 0.35, side: THREE.DoubleSide });
+      function leaflet() { var NU = 28, NV = 4, pos = [], uv = [], idx = [], i, j;   // (a leaflet, finely toothed along both edges, folded along its midrib, its tip drooping)
+        for (i = 0; i <= NU; i++) { var u = i / NU, tooth = 1 + 0.13 * ((u * 13) % 1), hw = 0.0105 * Math.pow(Math.sin(Math.PI * Math.min(1, u * 0.94 + 0.04)), 0.8) * (u > 0.05 && u < 0.96 ? tooth : 1);
+          for (j = 0; j <= NV; j++) { var v = j / NV * 2 - 1, z = v * hw; pos.push(u * 0.03, -Math.abs(z) * 0.4 - u * u * 0.004, z); uv.push(u, (v + 1) / 2); } }
+        for (i = 0; i < NU; i++) for (j = 0; j < NV; j++) { var A = i * (NV + 1) + j, B = A + NV + 1; idx.push(A, A + 1, B, A + 1, B + 1, B); }
+        var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+      var lfG = leaflet(), spray = merge([[lfG, mx(0.034, -0.004, 0, 0, 0, 0)], [lfG, mx(0.024, -0.002, 0.003, 0, 1.0, 0, 0.75)], [lfG, mx(0.024, -0.002, -0.003, 0, -1.0, 0, 0.75)], [lfG, mx(0.011, 0, 0.003, 0, 1.15, 0, 0.6)], [lfG, mx(0.011, 0, -0.003, 0, -1.15, 0, 0.6)], [new THREE.CylinderGeometry(0.0012, 0.0016, 0.036, 4), mx(0.018, -0.001, 0, 0, 0, Math.PI / 2)]]);   // (five leaflets on a stalk)
+      for (k = 0; k < 14; k++) { a = k / 14 * Math.PI * 2 + rn() * 0.25; lv.push([spray, mx(VX + Math.cos(a) * 0.045, VT + 0.004, VZ + Math.sin(a) * 0.045, (rn() - 0.5) * 0.5, -a, -0.3 - rn() * 0.4, 1.1 + rn() * 0.3)]); }
+      add(merge(lv), leafVM);
+      add(lathe([[0, 0], [0.038, 0], [0.042, 0.004], [0.05, 0.03], [0.058, 0.06], [0.054, 0.09], [0.042, 0.112], [0.046, 0.128], [0.05, 0.132], [0.044, 0.134], [0.036, 0.122], [0, 0.122]], 24), cabGoldM, VX, Y, VZ);   // (the fluted gold vase)
+      // the books, stacked, turned a little each, with reading glasses on top
+      var BK = new THREE.Group(); BK.position.set(-0.19, Y, -0.13); BK.rotation.y = 0.35; T.add(BK); var by = 0;
+      [[0.21, 0.15, 0.026, 0x2a3a5a, 0], [0.19, 0.14, 0.022, 0xc8b48a, 0.12], [0.17, 0.12, 0.03, 0x7a3a30, -0.08]].forEach(function (bk) { var b = new THREE.Group(), w = bk[0], d = bk[1], h = bk[2], cm = rMat(bk[3], { roughness: 0.75 }); b.position.y = by; b.rotation.y = bk[4]; BK.add(b); by += h;
+        function bp(geo, m, x, y, z) { var o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; b.add(o); return o; }
+        bp(new THREE.BoxGeometry(w + 0.006, 0.003, d + 0.006), cm, 0.002, 0.0015, 0); bp(new THREE.BoxGeometry(w + 0.006, 0.003, d + 0.006), cm, 0.002, h - 0.0015, 0);   // (the boards)
+        bp(new THREE.BoxGeometry(0.004, h, d + 0.006), cm, -w / 2 - 0.001, h / 2, 0);   // (the spine)
+        bp(new THREE.BoxGeometry(w - 0.004, h - 0.006, d - 0.004), pageM, 0.001, h / 2, 0);   // (the pages)
+        [0.25, 0.75].forEach(function (f) { bp(new THREE.BoxGeometry(0.0045, h * 0.12, d * 0.08), cabGoldM, -w / 2 - 0.0015, h / 2, (f - 0.5) * d * 0.8); });   // (gilt bands on the spine)
+        bp(new THREE.BoxGeometry(0.0046, h * 0.4, d * 0.32), cabGoldM, -w / 2 - 0.0016, h / 2, 0); });
+      var rib = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.001, 0.05), rMat(0xb02a3a)); rib.position.set(0.02, 0.05, 0.08); rib.rotation.x = 0.9; BK.add(rib);   // (a ribbon marker hanging out)
+      var gl = [], lens = []; [-1, 1].forEach(function (s) { gl.push([new THREE.TorusGeometry(0.017, 0.0018, 6, 20), mx(s * 0.021, by + 0.003, 0, Math.PI / 2, 0, 0, 1, 0.82, 1)]); lens.push([new THREE.CircleGeometry(0.016, 18), mx(s * 0.021, by + 0.003, 0, -Math.PI / 2, 0, 0, 1, 0.82, 1)]);
+        gl.push([new THREE.BoxGeometry(0.003, 0.002, 0.05), mx(s * 0.034, by + 0.006, -0.026, 0, -s * 0.25, 0)]); });
+      gl.push([new THREE.TorusGeometry(0.006, 0.0016, 4, 8, Math.PI), mx(0, by + 0.003, -0.005, Math.PI / 2, 0, 0)]);
+      var gm = new THREE.Mesh(merge(gl), cabBlkM); BK.add(gm); BK.add(new THREE.Mesh(merge(lens), glassM));
+      // the tray of fruit
+      var TX = 0.19, TZ = -0.1, TY = Y + 0.006; add(lathe([[0, 0], [0.13, 0], [0.135, 0.004], [0.142, 0.018], [0.134, 0.019], [0.127, 0.007], [0, 0.007]], 40), cabGoldM, TX, Y, TZ);
+      [[-0.06, -0.02, 1], [-0.015, 0.06, 0.92]].forEach(function (o, i) { var r = 0.03 * o[2]; add(new THREE.SphereGeometry(r, 22, 16), orangeM, TX + o[0], TY + r * 0.95, TZ + o[1]).scale.set(1, 0.94, 1); add(new THREE.CylinderGeometry(0.003, 0.004, 0.004, 6), stemM2, TX + o[0], TY + r * 1.85, TZ + o[1]);
+        if (!i) add(new THREE.SphereGeometry(1, 8, 4), fleafM, TX + o[0] + 0.012, TY + r * 1.85, TZ + o[1], 0.2, 0.5, -0.25).scale.set(0.022, 0.002, 0.009); });
+      add(lathe([[0, 0.006], [0.012, 0], [0.024, 0.005], [0.031, 0.019], [0.03, 0.034], [0.023, 0.046], [0.011, 0.049], [0.004, 0.044], [0, 0.042]], 22), appleM, TX + 0.05, TY, TZ + 0.035);   // (a red apple)
+      add(new THREE.CylinderGeometry(0.0016, 0.002, 0.016, 5), stemM2, TX + 0.051, TY + 0.05, TZ + 0.035, 0.2, 0, 0.25); add(new THREE.SphereGeometry(1, 8, 4), fleafM, TX + 0.062, TY + 0.054, TZ + 0.035, 0, 0.4, 0.3).scale.set(0.018, 0.0015, 0.008);
+      add(merge([[new THREE.SphereGeometry(0.024, 20, 14), mx(0, 0, 0, 0, 0, 0, 1.25, 0.95, 0.95)], [new THREE.ConeGeometry(0.006, 0.01, 10), mx(0.033, 0, 0, 0, 0, -Math.PI / 2)], [new THREE.ConeGeometry(0.005, 0.008, 10), mx(-0.032, 0, 0, 0, 0, Math.PI / 2)]]), lemonM, TX + 0.06, TY + 0.022, TZ - 0.05, 0, 0.7, 0);   // (a lemon)
+      var gp = [], gG = new THREE.SphereGeometry(0.0105, 10, 8); for (k = 0; k < 24; k++) { var t = k / 23, cr0 = 0.026 * (1 - t * 0.75), ga = k * 2.4; gp.push([gG, mx(-0.005 + t * 0.075, 0.011 + (Math.sin(ga) + 1) * cr0 * 0.5, Math.cos(ga) * cr0, 0, 0, 0, 1, 1.08, 1)]); }   // (a bunch of grapes, lying across the tray)
+      add(merge(gp), grapeM, TX - 0.02, TY, TZ - 0.055, 0, -0.5, 0); add(new THREE.CylinderGeometry(0.0018, 0.0025, 0.03, 5), stemM2, TX - 0.03, TY + 0.03, TZ - 0.06, 0, -0.5, 1.2);
+      // the hurricane candle
+      var HX = -0.2, HZ = 0.17; add(new THREE.CylinderGeometry(0.04, 0.046, 0.012, 28), cabGoldM, HX, Y + 0.006, HZ); add(new THREE.CylinderGeometry(0.026, 0.026, 0.085, 24), candleM, HX, Y + 0.0545, HZ); add(new THREE.TorusGeometry(0.023, 0.004, 6, 20), candleM, HX, Y + 0.096, HZ, Math.PI / 2, 0, 0);
+      add(new THREE.CylinderGeometry(0.0012, 0.0012, 0.01, 4), stemM2, HX, Y + 0.102, HZ); add(new THREE.SphereGeometry(0.006, 10, 8), flameM, HX, Y + 0.114, HZ).scale.set(1, 2.4, 1); add(new THREE.SphereGeometry(0.003, 8, 6), flameInM, HX, Y + 0.11, HZ).scale.set(1, 2, 1);
+      add(lathe([[0.034, 0.012], [0.044, 0.05], [0.049, 0.11], [0.044, 0.16], [0.048, 0.175]], 32), glassM, HX, Y, HZ).renderOrder = 3;
+      // the glasses of rosé on a napkin
+      add(new THREE.BoxGeometry(0.17, 0.003, 0.12), linenM, 0.21, Y + 0.0015, 0.2, 0, 0.4, 0); add(new THREE.BoxGeometry(0.17, 0.002, 0.004), rMat(0xd8cfc0), 0.21, Y + 0.0035, 0.2, 0, 0.4, 0);   // (folded, with its crease)
+      [[0.25, 0.15], [0.16, 0.24]].forEach(function (wp) { add(lathe([[0, 0.078], [0.008, 0.078], [0.022, 0.09], [0.028, 0.105], [0, 0.105]], 24), roseWineM, wp[0], Y + 0.003, wp[1]).renderOrder = 2;
+        add(lathe([[0.027, 0], [0.026, 0.002], [0.004, 0.004], [0.003, 0.07], [0.006, 0.075], [0.024, 0.088], [0.032, 0.115], [0.029, 0.15]], 28), glassM, wp[0], Y + 0.003, wp[1]).renderOrder = 3; });
+      return T; })();
+    [[114, '#3aa8a8'], [118.2, '#e8705a'], [122.4, '#e8b83a'], [126.6, '#9a7ac8']].forEach(function (cb) { var cz = B3_Z + 20, y = beachH(cb[0], cz), cg = grp(cb[0], y, cz, 0, G), A = 1.3;
+      q(cg, new THREE.BoxGeometry(2.9, 0.12, 2.9), cabPaveM, 0, 0.04, 0); q(cg, new THREE.CircleGeometry(1.15, 40), cabRugM, 0, 0.105, 0.05, -Math.PI / 2, 0, 0);   // (the paving and the rug)
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (pp) { q(cg, new THREE.BoxGeometry(0.08, 2.3, 0.08), cabPostM, pp[0] * A, 1.25, pp[1] * A); q(cg, new THREE.BoxGeometry(0.16, 0.03, 0.16), cabPostM, pp[0] * A, 0.115, pp[1] * A);   // (the posts, on their feet)
+        [[-pp[0], 0], [0, -pp[1]]].forEach(function (d) { var cu = q(cg, cabCurG, cabSheerM, pp[0] * (A + 0.06), 0.1, pp[1] * (A + 0.06), 0, Math.atan2(-d[1], d[0]), 0); cu.castShadow = false; cu.renderOrder = 2; });   // (two curtains at each corner, one along each side)
+        q(cg, new THREE.TorusGeometry(0.07, 0.015, 6, 12), cabTrimM, pp[0] * (A + 0.04), 1.08, pp[1] * (A + 0.04), Math.PI / 2, 0, 0); });   // (the tie-back)
+      [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(function (sd) { var lx = sd[0] ? 0.04 : 2.76, lz = sd[0] ? 2.76 : 0.04;   // (the valance and its trim, all round)
+        q(cg, new THREE.BoxGeometry(lx, 0.34, lz), cabCreamM, sd[0] * (A + 0.08), 2.25, sd[1] * (A + 0.08)); q(cg, new THREE.BoxGeometry(lx + 0.01, 0.04, lz + 0.01), cabTrimM, sd[0] * (A + 0.08), 2.1, sd[1] * (A + 0.08)); q(cg, new THREE.BoxGeometry(sd[0] ? 0.06 : 2.7, 0.06, sd[0] ? 2.7 : 0.06), cabPostM, sd[0] * A, 2.38, sd[1] * A); });
+      q(cg, new THREE.PlaneGeometry(2.7, 2.7), cabCreamM, 0, 2.4, 0, Math.PI / 2, 0, 0);   // (the canvas ceiling)
+      q(cg, new THREE.CylinderGeometry(0.72 * Math.SQRT2, 1.62 * Math.SQRT2, 0.5, 4, 1, true), cabRoofM, 0, 2.66, 0, 0, Math.PI / 4, 0);   // (the lower roof)
+      q(cg, new THREE.BoxGeometry(1.36, 0.14, 1.36), cabVentM, 0, 2.96, 0);   // (the vent between)
+      q(cg, new THREE.ConeGeometry(0.92 * Math.SQRT2, 0.44, 4, 1, true), cabRoofM, 0, 3.24, 0, 0, Math.PI / 4, 0); q(cg, new THREE.CylinderGeometry(0.92 * Math.SQRT2, 0.92 * Math.SQRT2, 0.05, 4), cabTrimM, 0, 3.0, 0, 0, Math.PI / 4, 0);   // (the upper roof, edged)
+      q(cg, new THREE.CylinderGeometry(0.004, 0.004, 0.4, 3), cabTrimM, 0, 2.2, 0); q(cg, new THREE.SphereGeometry(0.17, 12, 8), cabRatM, 0, 1.9, 0); q(cg, new THREE.SphereGeometry(0.08, 10, 8), cabGlowM, 0, 1.9, 0);   // (a rattan globe lantern, glowing)
+      // the sofa, at the back, facing out: black, soft and deep, on slim black legs, with plump seat and back cushions,
+      // rounded track arms, a heap of white pillows and a white knit throw over one arm
+      var so = grp(0, 0.1, 0.82, Math.PI, cg);
+      [[-0.74, -0.27], [0.74, -0.27], [-0.74, 0.27], [0.74, 0.27]].forEach(function (lg) { q(so, new THREE.CylinderGeometry(0.022, 0.014, 0.09, 8), cabBlkM, lg[0], 0.045, lg[1]); });
+      q(so, cabRBox(1.72, 0.2, 0.76, 0.05), cabSofaM, 0, 0.19, 0);   // (the base)
+      q(so, cabRBox(1.72, 0.46, 0.16, 0.06), cabSofaM, 0, 0.5, -0.3);   // (the back)
+      [-1, 1].forEach(function (s) { q(so, cabRBox(0.17, 0.44, 0.78, 0.07), cabSofaM, s * 0.86, 0.4, 0.01);   // (the arms)
+        var sc = q(so, cabRBox(0.76, 0.15, 0.6, 0.06), cabSofaM, s * 0.39, 0.36, 0.06); sc.scale.set(1, 1, 1);   // (a seat cushion)
+        var bc = q(so, cabRBox(0.75, 0.42, 0.2, 0.08), cabSofaM, s * 0.39, 0.62, -0.17); bc.rotation.x = -0.14;   // (a back cushion, leaning back)
+        var p1 = q(so, cabRBox(0.4, 0.4, 0.13, 0.06), cabPilM, s * 0.58, 0.63, -0.04); p1.rotation.set(-0.22, 0, s * 0.12); p1.scale.set(1, 1, 0.9);   // (white pillows, big at the ends)
+        var p2 = q(so, cabRBox(0.32, 0.32, 0.12, 0.055), cabPilM, s * 0.26, 0.6, 0.0); p2.rotation.set(-0.3, 0, -s * 0.18); });   // (and smaller ones in front)
+      q(so, cabRBox(0.44, 0.22, 0.12, 0.05), cabPilM, 0, 0.53, 0.04).rotation.x = -0.25;   // (a long one in the middle)
+      q(so, cabRBox(0.24, 0.03, 0.56, 0.012), cabThrowM, -0.86, 0.635, 0.03); q(so, cabRBox(0.03, 0.34, 0.56, 0.012), cabThrowM, -0.96, 0.47, 0.03).rotation.z = 0.06;   // (the throw, folded over the arm)
+      // two velvet tub chairs at the front, turned in toward the table
+      [-1, 1].forEach(function (s) { var ch = grp(s * 0.72, 0.1, -0.55, s * -0.65, cg);
+        q(ch, new THREE.CylinderGeometry(0.34, 0.3, 0.42, 20, 1, true, Math.PI * 0.2, Math.PI * 1.6), cabVelM, 0, 0.5, 0, 0, Math.PI, 0).material.side = THREE.DoubleSide;   // (the curved back and arms)
+        q(ch, new THREE.TorusGeometry(0.32, 0.05, 6, 20, Math.PI * 1.6), cabVelM, 0, 0.71, 0, Math.PI / 2, 0, Math.PI * 1.7);   // (its rolled top edge)
+        q(ch, new THREE.CylinderGeometry(0.3, 0.3, 0.14, 20), cabVelM, 0, 0.33, 0); q(ch, new THREE.CylinderGeometry(0.27, 0.28, 0.07, 20), cabVelM, 0, 0.43, 0);   // (seat and cushion)
+        [0, 1, 2, 3].forEach(function (l) { var la = l / 4 * Math.PI * 2 + 0.78; q(ch, new THREE.CylinderGeometry(0.015, 0.012, 0.28, 6), cabBlkM, Math.cos(la) * 0.22, 0.13, Math.sin(la) * 0.22, Math.sin(la) * 0.2, 0, -Math.cos(la) * 0.2); }); });
+      // the coffee table: marble on a black base
+      var tb = grp(0, 0.1, 0.05, 0, cg); q(tb, new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), cabMarbM, 0, 0.4, 0); q(tb, new THREE.TorusGeometry(0.42, 0.012, 6, 32), cabBlkM, 0, 0.4, 0, Math.PI / 2, 0, 0);
+      q(tb, new THREE.TorusGeometry(0.34, 0.014, 6, 32), cabBlkM, 0, 0.02, 0, Math.PI / 2, 0, 0); for (var tl = 0; tl < 4; tl++) { var ta = tl / 4 * Math.PI * 2 + 0.4; q(tb, new THREE.CylinderGeometry(0.012, 0.012, 0.38, 6), cabBlkM, Math.cos(ta) * 0.34, 0.2, Math.sin(ta) * 0.34); }
+      tb.add(cabTop.clone());   // (and everything on it)
+      // a potted palm in the back corner, little lanterns at the front corners
+      var pt = grp(-1.0, 0.1, 1.0, 0.6, cg); q(pt, new THREE.CylinderGeometry(0.2, 0.15, 0.4, 18), cabPotM, 0, 0.2, 0); q(pt, new THREE.CylinderGeometry(0.18, 0.18, 0.02, 18), rMat(0x5a4030), 0, 0.39, 0);
+      for (var pf = 0; pf < 7; pf++) { var pfr = grp(0, 0.4, 0, pf / 7 * Math.PI * 2, pt); pfr.rotation.z = 0.7; pfr.scale.setScalar(0.24); quiet(q(pfr, frondG, leafM, 0, 0, 0)); }
+      [-1, 1].forEach(function (s) { var ln = grp(s * 1.05, 0.1, -1.55, 0, cg); q(ln, new THREE.BoxGeometry(0.16, 0.24, 0.16), cabGlowM, 0, 0.14, 0); [-1, 1].forEach(function (a) { [-1, 1].forEach(function (b) { q(ln, new THREE.BoxGeometry(0.02, 0.28, 0.02), cabVentM, a * 0.08, 0.14, b * 0.08); }); }); q(ln, new THREE.ConeGeometry(0.13, 0.08, 4), cabVentM, 0, 0.32, 0, 0, Math.PI / 4, 0); });
+      [[-A, -A, 0.14], [A, -A, 0.14], [-A, A, 0.14], [A, A, 0.14], [0, 0.82, 0.5], [-0.5, 0.82, 0.45], [0.5, 0.82, 0.45], [0, 0.05, 0.42], [-0.72, -0.55, 0.32], [0.72, -0.55, 0.32]].forEach(function (s2) { solids.push({ x: cb[0] + s2[0], z: cz + s2[1], r: s2[2] }); }); });
     // (a welcome sign where the bridge lands)
     var signT = cpTex(512, 160, function (g, w, h) { g.fillStyle = '#c8b090'; g.fillRect(0, 0, w, h); for (var i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#bca480' : '#c8b090'; g.fillRect(0, i * h / 4, w, h / 4); g.fillStyle = 'rgba(60,46,30,0.5)'; g.fillRect(0, i * h / 4, w, 2); }
       g.font = 'bold 64px Georgia, serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#2a6a8a'; g.fillText('Seashell Shore', w / 2, h / 2 + 4); g.fillStyle = '#f2b83a'; [[40, h / 2], [w - 40, h / 2]].forEach(function (p3) { g.beginPath(); g.moveTo(p3[0], p3[1] + 22); for (var k = 0; k <= 8; k++) { var a2 = Math.PI + k / 8 * Math.PI; g.lineTo(p3[0] + Math.cos(a2) * 24, p3[1] + Math.sin(a2) * 24); } g.closePath(); g.fill(); g.strokeStyle = '#c8862a'; g.lineWidth = 2; for (k = 0; k <= 4; k++) { g.beginPath(); g.moveTo(p3[0], p3[1] + 22); g.lineTo(p3[0] + Math.cos(Math.PI + k / 4 * Math.PI) * 22, p3[1] + Math.sin(Math.PI + k / 4 * Math.PI) * 22); g.stroke(); } }); });
