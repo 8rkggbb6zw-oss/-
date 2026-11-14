@@ -5140,9 +5140,9 @@ EVERDAWN_PARTS.push(function (THREE) {
       q(c, gzPuff(W - 0.06, 0.07, D - 0.06, 0.018), gzCushM, 0, SH + 0.035, 0.01); [-0.1, 0.1].forEach(function (bx) { quiet(q(c, new THREE.SphereGeometry(0.012, 6, 4), gzPipeM, bx, SH + 0.09, 0.01)).scale.y = 0.5; });   // (seat cushion, buttoned)
       var bc = q(c, gzPuff(W - 0.12, 0.06, 0.3, 0.015), gzCushM, 0, SH + 0.24, -D / 2 + 0.08); bc.rotation.x = Math.PI / 2 - 0.1;   // (back cushion)
       solids.push({ x: GAZ_X + ch[0], z: GAZ_Z + ch[1], r: 0.4 }); });
-    // (potted palms and hibiscus by the way in)
     var potM = rMat(0xc86a3a, { roughness: 0.8 });
-    [[-1, 0x4a8a3a], [1, 0xe8405a]].forEach(function (pp, k) { var ang = Math.PI / 2 + pp[0] * 0.62, pr = PR - 0.45, p = grp(Math.cos(ang) * pr, 0, Math.sin(ang) * pr, 0, gz);
+    // (no potted plants by the way in any more: they poked through the seats)
+    [].forEach(function (pp) { var k = pp[2]; var ang = Math.PI / 2 + pp[0] * 0.62, pr = PR - 0.45, p = grp(Math.cos(ang) * pr, 0, Math.sin(ang) * pr, 0, gz);
       q(p, lbLathe([[0, 0], [0.16, 0], [0.2, 0.3], [0.23, 0.32], [0.23, 0.36], [0.19, 0.36], [0, 0.34]], 14), potM, 0, 0, 0); q(p, new THREE.TorusGeometry(0.21, 0.015, 5, 16), rMat(0xe8e0d0), 0, 0.2, 0, Math.PI / 2, 0, 0);
       if (!k) for (var f3 = 0; f3 < 7; f3++) { var fr2 = grp(0, 0.34, 0, f3 / 7 * Math.PI * 2, p); fr2.rotation.z = 0.5; fr2.scale.setScalar(0.4); quiet(q(fr2, frondG, leafM, 0, 0, 0)); }
       else { for (var lf2 = 0; lf2 < 22; lf2++) { var la2 = gzr() * 6.28, lr2 = gzr() * 0.2, ly2 = 0.38 + gzr() * 0.5; q(p, new THREE.SphereGeometry(0.06, 6, 4), rMat(0x3a7a32, { roughness: 0.8 }), Math.cos(la2) * lr2, ly2, Math.sin(la2) * lr2).scale.set(1, 0.4, 1.7); }
