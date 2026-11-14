@@ -4128,7 +4128,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var LH_X = 188.5, LH_Z = B3_Z + 5, LH_RI = 2.5, LH_F = [0.24, 3.44, 6.64, 9.84, 13.04], TAU = Math.PI * 2, LH_NW = 16, LH_DA = TAU / LH_NW, F4 = LH_F[4];
     var LH_ARC = [0, 1, 2, 3].map(function (k) { return k % 2 ? [3.45, 5.75] : [0.3, 2.6]; }), LH_BAND = [[1.25, 2.45], [1.25, 2.45], [1.25, 2.45], [1.8, 2.45]];
     function lhRO(y) { return 3.1 - 0.4 * Math.max(0, Math.min(1, (y - 0.24) / 12.8)); }
-    lhFront = function (d) { return { x: LH_X - lhRO(0.24) - 0.9 - d, z: LH_Z }; };
+    var LH_FRONT_R = lhRO(0.24); lhFront = function (d) { return { x: LH_X - LH_FRONT_R - 0.9 - d, z: LH_Z }; };
     var lh = grp(LH_X, DECK_Y, LH_Z, 0, G);
     function lhP(a, r) { return [Math.cos(a) * r, Math.sin(a) * r]; }
     function lhGeo(pos, uv, idx) { var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
@@ -4229,7 +4229,13 @@ EVERDAWN_PARTS.push(function (THREE) {
     solids.push({ x: LH_X, z: LH_Z, r: 3.25 });
     barnRampHeight = (function (base) { return function (x, z) { var b = base(x, z), r = Math.hypot(x - LH_X, z - LH_Z); return r > 3.95 ? b : b + (r < 3.62 ? 0.24 : 0.12); }; })(barnRampHeight);   // (up the plinth's steps)
     var lhDoor = lhFront(-0.6);
-    // ---- inside: its own scene, a round room for each level, far apart ----
+    // ---- inside: its own scene, a round room for each level, far apart. The rooms inside are made roomier than the tower
+    // looks from outside: every wall is pushed out by LH_K, the stairs still hug the wall at the same width, and the furniture
+    // spreads out with the walls without growing; the lantern level is the outside top, simply widened ----
+    var LH_K = 1.45, LH_RI0 = LH_RI, LH_BAND0 = LH_BAND.map(function (b) { return b.slice(); }), lhRO0 = lhRO, lhFurn = [];
+    function lhBig() { LH_RI = LH_RI0 * LH_K; LH_BAND = LH_BAND0.map(function (b) { return [LH_RI - (LH_RI0 - b[0]), LH_RI - (LH_RI0 - b[1])]; }); lhRO = function (y) { return lhRO0(y) - LH_RI0 + LH_RI; }; }
+    function lhSmall() { LH_RI = LH_RI0; LH_BAND = LH_BAND0; lhRO = lhRO0; }
+    lhBig();
     lhScene = new THREE.Scene(); lhScene.background = new THREE.Color(0x1c1a22);
     var LHI_X0 = -1600, lhRoom = 0, lhArmed = false, lhArmAt = null; LHI_Z = 1000; LHI_X = LHI_X0;
     function lhRoomX(k) { return LHI_X0 + k * 150; }
@@ -4237,7 +4243,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var LH_R = [0, 1, 2, 3, 4].map(function (k) { var g = new THREE.Group(); g.position.set(lhRoomX(k), -LH_F[k], LHI_Z); lhScene.add(g); if (k < 4) { var pl = new THREE.PointLight(0xffd9a0, 0.55, 9); pl.position.set(0, LH_F[k] + 2.6, 0); g.add(pl); } return g; });
     var LH_SOLS = [[], [], [], [], []], lhWalls = [];
     function lhSol(k, x, z, rad) { LH_SOLS[k].push([x, z, rad]); }
-    function lhAt(k, a, r, turn) { var p2 = lhP(a, r); return grp(p2[0], LH_F[k], p2[1], -Math.PI / 2 - a + (turn || 0), LH_R[k]); }
+    function lhAt(k, a, r, turn) { var p2 = lhP(a, r), g = grp(p2[0], LH_F[k], p2[1], -Math.PI / 2 - a + (turn || 0), LH_R[k]); lhFurn.push(g); return g; }   // (spread out to the bigger room once everything is built)
     // (walls: sixteen wedges a level, so the ones nearest the camera can step aside; brick inside, the painted render outside, the stone top showing its thickness)
     for (lk = 0; lk < 4; lk++) for (var lw = 0; lw < LH_NW; lw++) { var la0 = (lw - 0.5) * LH_DA, la1 = (lw + 0.5) * LH_DA, ly0 = LH_F[lk], ly1 = LH_F[lk + 1] - 0.05, wg = grp(0, 0, 0, 0, LH_R[lk]), door = lk === 0 && lw === 8;
       var wy0 = door ? 2.62 : ly0; q(wg, lhShell(LH_RI, LH_RI, wy0, ly1, la0, la1, 4), lhInner, 0, 0, 0); q(wg, lhShell(lhRO(wy0), lhRO(ly1), wy0, ly1, la0, la1, 4), lk % 2 ? lhRed : lhWhite, 0, 0, 0);
@@ -4246,13 +4252,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       lhWalls.push({ g: wg, k: lk, a: lw * LH_DA }); }
     LH_WIN.forEach(function (wn) { var wedge = lhWalls[wn[0] * LH_NW + wn[1]].g; lhWindow(wedge, wn[1] * LH_DA, LH_RI - 0.01, LH_F[wn[0]] + 1.55, false, lhGlassIn); });
     for (lk = 0; lk < 4; lk++) for (var ca2 = 0; ca2 < TAU; ca2 += 0.13) { if (lk === 0 && Math.abs(ca2 - LH_DOOR_A) < 0.3) continue; var cp = lhP(ca2, LH_RI + 0.3); lhSol(lk, cp[0], cp[1], 0.25); }
+    var lhSolMark = LH_SOLS.map(function (a) { return a.length; });   // (every solid added after this is furniture, and spreads out with it)
     // (floors: flagstones at the bottom, boards above, each with a hole where the stairs come up from below, railed)
     q(LH_R[0], lhSector(0, LH_RI + 0.02, 0, TAU, LH_F[0] + 0.005, 48, 0.5), lhFlagM, 0, 0, 0);
     for (lk = 1; lk <= 3; lk++) { var hb = LH_BAND[lk - 1], ar = LH_ARC[lk - 1], fy = LH_F[lk], fl = LH_R[lk];
       q(fl, lhSector(0, hb[0], 0, TAU, fy, 48, 0.5), lhBoardM, 0, 0, 0); q(fl, lhSector(hb[0], LH_RI + 0.02, ar[1], ar[0] + TAU, fy, 36, 0.5), lhBoardM, 0, 0, 0);
       var hp = []; for (var hi = 0; hi <= 20; hi++) { var ha = ar[0] + (ar[1] - ar[0]) * hi / 20; hp.push(new THREE.Vector3(Math.cos(ha) * (hb[0] - 0.02), fy + 0.95, Math.sin(ha) * (hb[0] - 0.02))); }
       q(fl, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp), 40, 0.025, 6), lhBrass, 0, 0, 0); for (hi = 0; hi <= 20; hi += 2) quiet(q(fl, new THREE.CylinderGeometry(0.012, 0.012, 0.95, 5), lhIron, hp[hi].x, fy + 0.475, hp[hi].z)); }
-    for (lk = 1; lk <= 4; lk++) q(LH_R[lk], lhSector(0, LH_RI, LH_ARC[lk - 1][0] - 0.1, LH_ARC[lk - 1][1] + 0.1, LH_F[lk - 1] - 0.02, 24, 0.5), lhDark, 0, 0, 0);   // (the dark of the stairwell, going down)
+    for (lk = 1; lk <= 4; lk++) { if (lk === 4) lhSmall(); q(LH_R[lk], lhSector(0, LH_RI, LH_ARC[lk - 1][0] - 0.1, LH_ARC[lk - 1][1] + 0.1, LH_F[lk - 1] - 0.02, 24, 0.5), lhDark, 0, 0, 0); lhBig(); }   // (the dark of the stairwell, going down)
     // (the stairs: open cast-iron treads climbing round the wall, each on a bracket, with balusters and a brass handrail on the open side)
     var treadT = cpTex(32, 32, function (g, w, h) { g.fillStyle = '#26302e'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(150,160,150,0.4)'; for (var y = 2; y < h; y += 6) for (var x = (y / 6 | 0) % 2 * 3 + 1; x < w; x += 6) g.fillRect(x, y, 3, 1.5); }, [3, 1]), treadM = new THREE.MeshStandardMaterial({ map: treadT, metalness: 0.5, roughness: 0.45, side: THREE.DoubleSide });
     function lhFlight(par, k) { var sb = LH_BAND[k], ar = LH_ARC[k], NS = 16, rail = [];
@@ -4261,7 +4268,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var bp = lhP(sam, LH_RI - 0.2); quiet(q(par, new THREE.BoxGeometry(0.3, 0.16, 0.04), lhIron, bp[0], sy - 0.1, bp[1], 0, -sam, 0));
         var bal = lhP(sam, sb[0] + 0.04); quiet(q(par, new THREE.CylinderGeometry(0.012, 0.012, 0.9, 5), lhIron, bal[0], sy + 0.45, bal[1])); rail.push(new THREE.Vector3(bal[0], sy + 0.92, bal[1])); }
       q(par, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), 48, 0.025, 6), lhBrass, 0, 0, 0); }
-    for (lk = 0; lk < 4; lk++) { lhFlight(LH_R[lk], lk); lhFlight(LH_R[lk + 1], lk); }   // (each flight seen going up from its room, and going down from the one above)
+    for (lk = 0; lk < 4; lk++) { lhFlight(LH_R[lk], lk); if (lk === 3) lhSmall(); lhFlight(LH_R[lk + 1], lk); lhBig(); }   // (each flight seen going up from its room, and going down from the one above)
     // ---- the store room, in detail: three oak barrels of lamp oil, their staves bulging between pairs of iron hoops, a bung in
     // each and a planked lid; a stack of stencilled crates with battens and nail heads; a sturdy workbench with a vice, a drawer
     // and a lower shelf, on it an oil can with a long spout, a hammer, a coil of wick, a brass burner and a glass lamp chimney,
@@ -4318,7 +4325,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var boots = lhAt(0, 2.82, 2.05); [-0.1, 0.1].forEach(function (bx) { q(boots, new THREE.CylinderGeometry(0.055, 0.06, 0.32, 12), rMat(0x2a2a2a, { roughness: 0.5 }), bx, 0.17, 0); var ft = q(boots, new THREE.SphereGeometry(0.07, 10, 8), rMat(0x2a2a2a, { roughness: 0.5 }), bx, 0.04, 0.05); ft.scale.set(0.8, 0.55, 1.4); quiet(q(boots, new THREE.TorusGeometry(0.057, 0.008, 4, 14), rMat(0x8a2a22), bx, 0.32, 0, Math.PI / 2, 0, 0)); });   // (rubber boots)
     // (a coil of rope, a broom, and a storm lantern by the stairs)
     var rope = lhAt(0, 5.3, 1.25); for (var rc = 0; rc < 5; rc++) quiet(q(rope, new THREE.TorusGeometry(0.2 - rc * 0.006, 0.025, 6, 24), ropeM, 0, 0.025 + rc * 0.045, 0, Math.PI / 2, 0, rc)); var rp6 = lhP(5.3, 1.25); lhSol(0, rp6[0], rp6[1], 0.25);
-    var broom = lhAt(0, 2.4, 2.3); broom.rotation.z = 0.12; q(broom, new THREE.CylinderGeometry(0.014, 0.014, 1.2, 8), rMat(0xb08050), 0, 0.75, 0); q(broom, new THREE.ConeGeometry(0.12, 0.28, 12, 1, true), rMat(0xc8a860, { roughness: 1, side: THREE.DoubleSide }), 0, 0.14, 0); quiet(q(broom, new THREE.TorusGeometry(0.055, 0.008, 4, 12), rMat(0x8a2a22), 0, 0.27, 0, Math.PI / 2, 0, 0));
+    var broom = lhAt(0, 3.55, 2.3); broom.rotation.z = 0.12; q(broom, new THREE.CylinderGeometry(0.014, 0.014, 1.2, 8), rMat(0xb08050), 0, 0.75, 0); q(broom, new THREE.ConeGeometry(0.12, 0.28, 12, 1, true), rMat(0xc8a860, { roughness: 1, side: THREE.DoubleSide }), 0, 0.14, 0); quiet(q(broom, new THREE.TorusGeometry(0.055, 0.008, 4, 12), rMat(0x8a2a22), 0, 0.27, 0, Math.PI / 2, 0, 0));
     var sl2 = lhAt(0, 0.7, 1.15); quiet(q(sl2, new THREE.CylinderGeometry(0.004, 0.004, 0.8, 4), rustM, 0, 2.6, 0)); q(sl2, new THREE.CylinderGeometry(0.09, 0.1, 0.03, 12), rustM, 0, 1.98, 0); q(sl2, new THREE.CylinderGeometry(0.075, 0.075, 0.18, 12), glowM, 0, 2.08, 0);
     [0, 1, 2, 3].forEach(function (k) { var a = k / 4 * Math.PI * 2; quiet(q(sl2, new THREE.BoxGeometry(0.008, 0.2, 0.008), rustM, Math.cos(a) * 0.08, 2.08, Math.sin(a) * 0.08)); }); q(sl2, new THREE.ConeGeometry(0.1, 0.08, 12), rustM, 0, 2.21, 0); quiet(q(sl2, new THREE.TorusGeometry(0.03, 0.006, 4, 10), rustM, 0, 2.27, 0));   // (a storm lantern hung from a chain)
     // ---- the keeper's sitting room, in detail: a braided rag rug; a pot-bellied stove on a slate hearth, ribbed and nickel-
@@ -4448,10 +4455,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     var mir = lhFace(R2, 6.17, LH_RI - 0.04, F2 + 1.55, false); q(mir, new THREE.CylinderGeometry(0.2, 0.2, 0.03, 28), wardD, 0, 0, 0.015, Math.PI / 2, 0, 0); q(mir, new THREE.CircleGeometry(0.17, 28), rMat(0xc8dce8, { metalness: 0.9, roughness: 0.05 }), 0, 0, 0.032); mir.scale.y = 1.3;
     var sp11 = lhP(6.17, 1.95); lhSol(2, sp11[0], sp11[1], 0.42);
     // (a sea chest)
-    var chest = lhAt(2, 5.2, 2.05); q(chest, new THREE.BoxGeometry(0.75, 0.36, 0.42), wardM, 0, 0.18, 0); q(chest, new THREE.CylinderGeometry(0.21, 0.21, 0.75, 16, 1, false, 0, Math.PI), wardM, 0, 0.36, 0, 0, 0, Math.PI / 2); q(chest, new THREE.BoxGeometry(0.75, 0.01, 0.42), wardM, 0, 0.36, 0);
+    var chest = lhAt(2, 4.5, 1.15); q(chest, new THREE.BoxGeometry(0.75, 0.36, 0.42), wardM, 0, 0.18, 0); q(chest, new THREE.CylinderGeometry(0.21, 0.21, 0.75, 16, 1, false, 0, Math.PI), wardM, 0, 0.36, 0, 0, 0, Math.PI / 2); q(chest, new THREE.BoxGeometry(0.75, 0.01, 0.42), wardM, 0, 0.36, 0);
     [-0.28, 0.28].forEach(function (bx) { q(chest, new THREE.BoxGeometry(0.04, 0.37, 0.43), rMat(0x2a2a2a, { metalness: 0.5, roughness: 0.5 }), bx, 0.185, 0); q(chest, new THREE.TorusGeometry(0.213, 0.02, 4, 16, Math.PI), rMat(0x2a2a2a, { metalness: 0.5, roughness: 0.5 }), bx, 0.36, 0, 0, Math.PI / 2, 0); });
     q(chest, new THREE.BoxGeometry(0.08, 0.1, 0.02), lhBrass, 0, 0.32, 0.215); [-1, 1].forEach(function (sd) { quiet(q(chest, new THREE.TorusGeometry(0.04, 0.008, 4, 12, Math.PI), rMat(0x2a2a2a, { metalness: 0.5 }), sd * 0.38, 0.22, 0, 0, Math.PI / 2, Math.PI)); });
-    var sp12b = lhP(5.2, 2.05); lhSol(2, sp12b[0], sp12b[1], 0.4);
+    var sp12b = lhP(4.5, 1.15); lhSol(2, sp12b[0], sp12b[1], 0.4);
     // ---- the watch room, in detail: a round chart table with a brass-bound rim on a turned pedestal and claw feet, a sea
     // chart spread on it (coastline, soundings, a compass rose and a pencilled course), held flat by brass weights, with
     // brass dividers, a parallel rule, a sextant in its open box, a log book with a quill and an inkwell; a brass telescope on
@@ -4507,28 +4514,32 @@ EVERDAWN_PARTS.push(function (THREE) {
     var bin = lhFace(R3, 4.6, LH_RI - 0.04, F3 + 1.5, false); q(bin, new THREE.CylinderGeometry(0.006, 0.006, 0.08, 6), brassW, 0, 0.05, 0.04, Math.PI / 2, 0, 0); [-1, 1].forEach(function (sd) { q(bin, new THREE.CylinderGeometry(0.03, 0.035, 0.14, 12), rMat(0x1a1a1a, { roughness: 0.5 }), sd * 0.035, -0.08, 0.06); quiet(q(bin, new THREE.TorusGeometry(0.032, 0.005, 4, 12), brassW, sd * 0.035, -0.01, 0.06, Math.PI / 2, 0, 0)); }); quiet(q(bin, new THREE.TorusGeometry(0.06, 0.003, 3, 12, Math.PI), rMat(0x3a2a1c), 0, 0.0, 0.05, 0, 0, Math.PI));
     // (tall things and things on the wall go with the wall behind them, so they step aside with it when they're between you and the camera)
     function lhToWall(k, obj, a) { lhWalls[k * LH_NW + (Math.round(((a % TAU) + TAU) % TAU / LH_DA) % LH_NW)].g.add(obj); }
-    [[0, hook, 2.82], [0, rack, 3.98], [0, crate, 5.6], [0, broom, 2.4], [1, stove, 6.17], [1, shelf, 3.02], [1, clk, 3.02], [1, pnt, 0.2], [2, ward, 3.02], [2, wash, 6.17], [2, mir, 6.17], [3, desk, 3.02], [3, tel, 6.17], [3, baro, 3.02], [3, wc, 1.2], [3, bin, 4.6]].forEach(function (w) { lhToWall(w[0], w[1], w[2]); });
+    [[0, hook, 2.82], [0, rack, 3.98], [0, crate, 5.6], [0, broom, 3.55], [1, stove, 6.17], [1, shelf, 3.02], [1, clk, 3.02], [1, pnt, 0.2], [2, ward, 3.02], [2, wash, 6.17], [2, mir, 6.17], [3, desk, 3.02], [3, tel, 6.17], [3, baro, 3.02], [3, wc, 1.2], [3, bin, 4.6]].forEach(function (w) { lhToWall(w[0], w[1], w[2]); });
+    lhFurn.forEach(function (g) { g.position.x *= LH_K; g.position.z *= LH_K; });   // (the furniture spreads out to the bigger rooms)
+    for (lk = 0; lk < 4; lk++) for (var sm = lhSolMark[lk]; sm < LH_SOLS[lk].length; sm++) { LH_SOLS[lk][sm][0] *= LH_K; LH_SOLS[lk][sm][1] *= LH_K; }
     // ---- the lantern level: the top again, the tower falling away below it, and the sea far beneath ----
+    lhSmall();
     lhTopBuild(LH_R[4], true, LH_SOLS[4]);
     for (lk = 0; lk < 4; lk++) q(LH_R[4], lhShell(lhRO(LH_F[lk]), lhRO(LH_F[lk + 1]), LH_F[lk], LH_F[lk + 1], 0, TAU, 48), lk % 2 ? lhRed : lhWhite, 0, 0, 0);
     q(LH_R[4], lhShell(LH_RI, LH_RI, LH_F[3], F4 - 0.02, 0, TAU, 48), lhInner, 0, 0, 0);   // (the stairwell's brick lining, below the hatch)
     var lhSea = new THREE.Mesh(new THREE.CircleGeometry(140, 48), rMat(0x2a7ab0, { roughness: 0.25, metalness: 0.1 })); lhSea.rotation.x = -Math.PI / 2; lhSea.position.y = -0.6; LH_R[4].add(lhSea);
     var lhDeck = new THREE.Mesh(new THREE.CircleGeometry(9, 32), new THREE.MeshStandardMaterial({ map: lhFloorT, roughness: 0.7 })); lhDeck.rotation.x = -Math.PI / 2; lhDeck.position.y = 0.0; LH_R[4].add(lhDeck);   // (the pier's deck round its foot)
+    LH_R[4].scale.set(LH_K, 1, LH_K); LH_SOLS[4].forEach(function (o) { o[0] *= LH_K; o[1] *= LH_K; }); lhBig();   // (the lantern level, widened to match)
     // ---- going in, up, down and out ----
     function lhPlace(k, a, r, face) {   // (puts you in room k, at angle a and distance r from its middle; only the room you're in is shown)
-      lhRoom = k; LHI_X = lhRoomX(k); LHI_W = LHI_D = k === 4 ? 8.4 : 5.9; lhSolids.length = 0; LH_SOLS[k].forEach(function (o) { lhSolids.push(o); });
+      lhRoom = k; LHI_X = lhRoomX(k); LHI_W = LHI_D = k === 4 ? 8.4 * LH_K : 2 * (LH_RI + 0.45); lhSolids.length = 0; LH_SOLS[k].forEach(function (o) { lhSolids.push(o); });
       lhScene.background.set(k === 4 ? 0x9fd0f0 : 0x1c1a22); LH_R.forEach(function (g, j) { g.visible = j === k; }); var p = lhP(a, r); player.position.set(LHI_X + p[0], 0, LHI_Z + p[1]); facing = face; lhArmed = false; lhArmAt = { x: player.position.x, z: player.position.z };
       cam.target.set(player.position.x, 0.8, player.position.z); }
     function lhFade(fn) { if (doorBusy) return; doorBusy = true; doorArmed = false; walkTarget = null; doorSound(); fadeBox.style.opacity = 1;
       setTimeout(function () { fn(); fadeBox.style.opacity = 0; setTimeout(function () { doorBusy = false; }, 380); }, 380); }
     function lhDoorUse(goIn) { lhFade(function () {
       if (goIn) { indoors = true; inShop = inClinic = inBarn = inCarp = inCoop = inFbarn = inCloth = inLab = inHide = false; inLh = true; lhScene.add(player);
-        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = -Math.PI / 2; lhPlace(0, LH_DOOR_A, 1.5, Math.PI / 2); }
+        outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = -Math.PI / 2; lhPlace(0, LH_DOOR_A, LH_RI - 1.0, Math.PI / 2); }
       else { indoors = false; inLh = false; scene.add(player); var o = lhFront(0.4); player.position.set(o.x, 0, o.z); facing = LH_TURN; cam.target.set(o.x, 0.8, o.z);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; } } }); }
     // (walking the stairs: how far along a flight you are, 0 at its foot to 1 at its head, and so how high you stand)
     function lhStairAt(px, pz) { var dx = px - LHI_X, dz = pz - LHI_Z, r = Math.hypot(dx, dz), a = Math.atan2(dz, dx), k = lhRoom;
-      function along(f) { var b = LH_BAND[f]; if (r < b[0] - 0.1 || r > LH_RI + 0.1) return -1; var ar = LH_ARC[f], d = ((a - ar[0]) % TAU + TAU) % TAU; return d > ar[1] - ar[0] ? -1 : d / (ar[1] - ar[0]); }
+      function along(f) { var b = LH_BAND[f], ri = LH_RI; if (k === 4) { b = [LH_BAND0[3][0] * LH_K, 0]; ri = LH_RI0 * LH_K; } if (r < b[0] - 0.1 || r > ri + 0.1) return -1; var ar = LH_ARC[f], d = ((a - ar[0]) % TAU + TAU) % TAU; return d > ar[1] - ar[0] ? -1 : d / (ar[1] - ar[0]); }
       var t; if (k < 4 && (t = along(k)) >= 0) return { up: true, t: t, y: t * (LH_F[k + 1] - LH_F[k]) };
       if (k > 0 && (t = along(k - 1)) >= 0) return { up: false, t: t, y: (t - 1) * (LH_F[k] - LH_F[k - 1]) };
       return null; }
@@ -4555,10 +4566,10 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (inLh) { doorWasIn = true; doorNear = doorHinted = null; if (doorBusy) return;
         if (!lhArmed) { if (!lhArmAt || dist(px, pz, lhArmAt.x, lhArmAt.z) > 0.8) lhArmed = true; return; }
         var k = lhRoom, z;
-        if (k === 0) { z = lhZone(LH_DOOR_A, 2.15); if (dist(px, pz, z.x, z.z) < 0.5) { lhDoorUse(false); return; } }   // (out of the door)
+        if (k === 0) { z = lhZone(LH_DOOR_A, LH_RI - 0.35); if (dist(px, pz, z.x, z.z) < 0.5) { lhDoorUse(false); return; } }   // (out of the door)
         var sr = lhStairAt(px, pz);   // (you climb the stairs for real; at the top of a flight you come out in the room above, at the bottom in the room below)
-        if (sr && sr.up && sr.t > 0.95) { lhFade(function () { lhPlace(k + 1, LH_ARC[k][1] + 0.4, 1.85, -(LH_ARC[k][1] + 0.4)); }); return; }
-        if (sr && !sr.up && sr.t < 0.05) { lhFade(function () { lhPlace(k - 1, LH_ARC[k - 1][0] - 0.4, 1.85, Math.PI - (LH_ARC[k - 1][0] - 0.4)); }); return; }
+        if (sr && sr.up && sr.t > 0.95) { lhFade(function () { lhPlace(k + 1, LH_ARC[k][1] + 0.4, k === 3 ? 1.85 * LH_K : (LH_BAND[k][0] + LH_RI) / 2, -(LH_ARC[k][1] + 0.4)); }); return; }
+        if (sr && !sr.up && sr.t < 0.05) { lhFade(function () { lhPlace(k - 1, LH_ARC[k - 1][0] - 0.4, (LH_BAND[k - 1][0] + LH_RI) / 2, Math.PI - (LH_ARC[k - 1][0] - 0.4)); }); return; }
         return; }
       base.apply(this, arguments);
       if (!indoors && dist(px, pz, lhDoor.x, lhDoor.z) < DOOR_REACH && !doorNear) doorNear = doorHinted = 'lh';   // (outside: by its door)
