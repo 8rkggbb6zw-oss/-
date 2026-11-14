@@ -3936,17 +3936,41 @@ EVERDAWN_PARTS.push(function (THREE) {
     var ropeM = new THREE.MeshStandardMaterial({ map: ropeT, bumpMap: ropeT, bumpScale: 0.004, roughness: 1 }), rpG = new THREE.CylinderGeometry(0.068, 0.078, 1, 12), rpMs = [], domeG = new THREE.SphereGeometry(0.07, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), domeMs = [], wrapG = new THREE.TorusGeometry(0.075, 0.018, 6, 16), wrapMs = [];
     var rpT = cpTex(64, 256, function (g, w, h) { g.fillStyle = '#8e7a60'; g.fillRect(0, 0, w, h); for (var i = 0; i < 26; i++) { g.strokeStyle = 'rgba(' + (i % 3 ? '50,40,30,' : '190,176,156,') + '0.3)'; g.lineWidth = 0.6 + (i % 3) * 0.5; var x0 = (i * 23) % w; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0 + (i % 2 ? 2 : -2), h); g.stroke(); } var gr = g.createLinearGradient(0, h * 0.85, 0, h); gr.addColorStop(0, 'rgba(40,32,22,0)'); gr.addColorStop(1, 'rgba(40,32,22,0.6)'); g.fillStyle = gr; g.fillRect(0, h * 0.85, w, h * 0.15); });
     var rpM = new THREE.MeshStandardMaterial({ map: rpT, bumpMap: rpT, bumpScale: 0.004, roughness: 0.95 });
-    function ropeRail(x0, z0, x1, z1) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.4)), prev = null;
+    // (rope rails over the dunes, in detail: weathered round posts with a bevelled, domed top and a carved groove under it, a
+    // galvanised collar bolted round the foot and a galvanised eye bolt for each rope; two thick three-strand ropes swagged
+    // between them, each seized with whipping where it meets a post and tied round it in a turn of rope; the rails are now real
+    // barriers, and gaps are left as openings onto the beach, a taller gatepost either side with a rope coil hung on it and a
+    // wide step down onto the sand)
+    var eyeG = new THREE.TorusGeometry(0.03, 0.007, 6, 14), eyeMs = [], shankG = new THREE.CylinderGeometry(0.006, 0.006, 0.07, 6), shankMs = [], collarG = new THREE.CylinderGeometry(0.083, 0.083, 0.06, 14, 1, true), collarMs = [], boltHG = new THREE.CylinderGeometry(0.011, 0.011, 0.008, 6), boltHMs = [];
+    var grooveG = new THREE.TorusGeometry(0.068, 0.008, 5, 16), grooveMs = [], whipG = new THREE.CylinderGeometry(0.0325, 0.0325, 0.035, 10), whipMs = [], knotG = new THREE.TorusGeometry(0.085, 0.024, 8, 18), knotMs = [], gateMs = [];
+    var whipM = rMat(0x8a6e4e, { roughness: 0.95 });
+    function ropeRail(x0, z0, x1, z1, gateA, gateB) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.4)), prev = null, dir = new THREE.Vector3((x1 - x0) / L, 0, (z1 - z0) / L), ry = Math.atan2(-dir.z, dir.x);
       for (var i = 0; i <= n; i++) { var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = Math.max(DECK_Y, deckY(x, z, -0.3)); if (y < -90) y = DECK_Y;
-        rpMs.push(M4(x, y + 0.475, z, (bwR() - 0.5) * 0.02, bwR() * 6, (bwR() - 0.5) * 0.02, 1, 0.95, 1)); domeMs.push(M4(x, y + 0.95, z)); [0.86, 0.9].forEach(function (wy) { wrapMs.push(M4(x, y + wy, z, Math.PI / 2 + (bwR() - 0.5) * 0.15, 0, 0)); }); wrapMs.push(M4(x, y + 0.5, z, Math.PI / 2, 0, 0));
-        if (prev) [[0.88, 0.62], [0.5, 0.32]].forEach(function (hh) { var mid = new THREE.Vector3((prev.x + x) / 2, (prev.y + y) / 2 + hh[1], (prev.z + z) / 2); q(G, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(prev.x, prev.y + hh[0], prev.z), mid, new THREE.Vector3(x, y + hh[0], z)), 14, 0.024, 6), ropeM, 0, 0, 0); });
+        var gate = (i === 0 && gateA) || (i === n && gateB), ph = gate ? 1.2 : 0.95;
+        rpMs.push(M4(x, y + ph / 2, z, (bwR() - 0.5) * 0.02, bwR() * 6, (bwR() - 0.5) * 0.02, 1, ph, 1)); domeMs.push(M4(x, y + ph, z));
+        grooveMs.push(M4(x, y + ph - 0.07, z, Math.PI / 2, 0, 0)); collarMs.push(M4(x, y + 0.06, z)); for (var b = 0; b < 4; b++) { var ba = b / 4 * Math.PI * 2 + 0.4; boltHMs.push(M4(x + Math.cos(ba) * 0.085, y + 0.06, z + Math.sin(ba) * 0.085, 0, -ba, Math.PI / 2)); }
+        if (gate) { gateMs.push(M4(x, y + ph + 0.06, z)); [0.0, 0.035, 0.07].forEach(function (cy, ci) { knotMs.push(M4(x + dir.x * (gateA && i === 0 ? -0.1 : 0.1), y + 0.55 - cy, z + dir.z * (gateA && i === 0 ? -0.1 : 0.1), Math.PI / 2, 0, ry, 1.5 - ci * 0.15, 1.5 - ci * 0.15, 1)); }); }   // (a coil of rope hung on the gatepost)
+        [0.88, 0.5].forEach(function (hy) { [-1, 1].forEach(function (sd) { if ((i === 0 && sd < 0) || (i === n && sd > 0)) return;   // (an eye bolt each side where a rope comes in)
+          var ex = x + dir.x * sd * 0.1, ez = z + dir.z * sd * 0.1; eyeMs.push(M4(ex, y + hy, ez, 0, ry + Math.PI / 2, 0)); shankMs.push(M4(x + dir.x * sd * 0.07, y + hy, z + dir.z * sd * 0.07, 0, ry, Math.PI / 2)); }); });
+        if (prev) [[0.88, 0.62], [0.5, 0.32]].forEach(function (hh) { var a = new THREE.Vector3(prev.x + dir.x * 0.13, prev.y + hh[0], prev.z + dir.z * 0.13), c = new THREE.Vector3(x - dir.x * 0.13, y + hh[0], z - dir.z * 0.13), mid = a.clone().add(c).multiplyScalar(0.5); mid.y -= hh[1] * 0.22;
+            var cv = new THREE.CatmullRomCurve3([a, new THREE.Vector3((a.x * 3 + c.x) / 4, (a.y + mid.y) / 2 - 0.02, (a.z * 3 + c.z) / 4), mid, new THREE.Vector3((a.x + c.x * 3) / 4, (c.y + mid.y) / 2 - 0.02, (a.z + c.z * 3) / 4), c]);
+            q(G, new THREE.TubeGeometry(cv, 28, 0.03, 8), ropeM, 0, 0, 0);
+            [[a, 1], [c, -1]].forEach(function (e) { whipMs.push(new THREE.Matrix4().compose(e[0].clone().addScaledVector(dir, e[1] * 0.03), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir), new THREE.Vector3(1, 1, 1))); }); });   // (whipping where it's seized at each end)
+        if (prev) for (var sb = 0.3; sb < 1; sb += 0.3 / Math.hypot(x - prev.x, z - prev.z)) solids.push({ x: prev.x + (x - prev.x) * sb, z: prev.z + (z - prev.z) * sb, r: 0.08 });   // (the rope is a barrier now)
         prev = { x: x, y: y, z: z }; solids.push({ x: x, z: z, r: 0.12 }); } }
+    function beachStep(x, side) { var zE = B3_Z + side * 1.52, st = grp(x, 0, zE + side * 0.36, 0, G), gy = Math.max(SEA_Y, beachH(x, zE + side * 0.8));   // (a broad step down from the gap onto the sand)
+      var top = Math.max(gy + 0.08, (DECK_Y + gy) / 2); q(st, new THREE.BoxGeometry(1.5, 0.05, 0.62), plankMs[0], 0, top, 0); [-0.7, 0.7].forEach(function (sx) { q(st, new THREE.BoxGeometry(0.08, Math.max(0.05, top - gy + 0.15), 0.6), beamM, sx, (top + gy - 0.15) / 2, 0); });
+      for (var k = -2; k <= 2; k++) quiet(q(st, new THREE.BoxGeometry(0.015, 0.012, 0.6), rMat(0x5a4a3a), k * 0.3, top + 0.028, 0)); }
+    var OPEN_X0 = 121.2, OPEN_X1 = 123.2, BEACH_GAPS = [];
+    barnRampHeight = (function (base) { return function (x, z) { var b = base(x, z); if (x < OPEN_X0 - 0.2 || x > OPEN_X1 + 0.2) return b; var dz = Math.abs(z - B3_Z);
+      if (dz < 1.5 || dz > 2.15) return b; var gy = Math.max(SEA_Y, beachH(x, B3_Z + Math.sign(z - B3_Z) * 2.32)), top = Math.max(gy + 0.08, (DECK_Y + gy) / 2) + 0.025; return Math.max(b, top); }; })(barnRampHeight);   // (standing on the step)
     [-1, 1].forEach(function (sdd) { var ez = B3_Z + sdd * 1.42;
-      ropeRail(89.2, ez, sdd < 0 ? 106.9 : 110.9, ez); ropeRail(sdd < 0 ? 109.7 : 113.7, ez, 136, ez); woodRail(136, ez, 172, ez); });
+      ropeRail(89.2, ez, sdd < 0 ? 106.9 : 110.9, ez); ropeRail(sdd < 0 ? 109.7 : 113.7, ez, OPEN_X0, ez, false, true); ropeRail(OPEN_X1, ez, 136, ez, true, false); woodRail(136, ez, 172, ez);
+      beachStep((OPEN_X0 + OPEN_X1) / 2, sdd); BEACH_GAPS.push([OPEN_X0, OPEN_X1, sdd]); });   // (an opening onto the beach on each side)
     ropeRail(106.9, B3_Z - 1.6, 106.9, B3_Z - 14.4); ropeRail(109.7, B3_Z - 1.6, 109.7, B3_Z - 14.4); ropeRail(110.9, B3_Z + 1.6, 110.9, B3_Z + 15.8); ropeRail(113.7, B3_Z + 1.6, 113.7, B3_Z + 15.8);
     var PRX = PH_X1 - 0.1, PRZ = PH_HZ - 0.1; woodRail(172, B3_Z - PRZ, 172, B3_Z - 1.6); woodRail(172, B3_Z + 1.6, 172, B3_Z + PRZ); woodRail(172, B3_Z - PRZ, PRX, B3_Z - PRZ); woodRail(172, B3_Z + PRZ, PRX, B3_Z + PRZ); woodRail(PRX, B3_Z - PRZ, PRX, B3_Z + PRZ);
     inst(postG, postM, postMs); inst(pCapG, postM, pCapMs); inst(hrG, fasciaM, hrMs); inst(new THREE.BoxGeometry(1, 1, 1), fasciaM, railBMs); inst(balG, postM, balMs);
-    inst(rpG, rpM, rpMs); inst(domeG, rpM, domeMs); inst(wrapG, ropeM, wrapMs);
+    inst(rpG, rpM, rpMs); inst(domeG, rpM, domeMs); inst(grooveG, rpM, grooveMs); inst(collarG, galvM, collarMs); inst(boltHG, galvM, boltHMs, null, false); inst(eyeG, galvM, eyeMs, null, false); inst(shankG, galvM, shankMs, null, false); inst(whipG, whipM, whipMs, null, false); inst(knotG, ropeM, knotMs); inst(new THREE.SphereGeometry(0.06, 12, 8), rpM, gateMs);
     // (sand blown up over the first boards where the walk leaves the dunes)
     var sandT = cpTex(128, 128, function (g, w, h) { for (var i = 0; i < 1400; i++) { var x = bwR() * w, y = bwR() * h, d = Math.hypot(x - w / 2, y - h / 2) / (w / 2); if (bwR() > 1.15 - d * d) continue; g.fillStyle = 'rgba(' + (214 + bwR() * 30 | 0) + ',' + (190 + bwR() * 26 | 0) + ',' + (140 + bwR() * 24 | 0) + ',' + (0.5 + bwR() * 0.5).toFixed(2) + ')'; g.fillRect(x, y, 1 + bwR() * 2.5, 1 + bwR() * 2); } });
     var sandM = new THREE.MeshStandardMaterial({ map: sandT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
