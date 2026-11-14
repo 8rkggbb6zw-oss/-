@@ -5549,4 +5549,45 @@ EVERDAWN_PARTS.push(function (THREE) {
         px = o.x + dx / d * min; pz = o.z + dz / d * min; }
       player.position.x = px; player.position.z = pz; }; })(updateCarpenter);
   })();
+  // ===== Fish in the sea off Seashell Shore, swimming like the koi in the pond: the same shaped, scaled bodies with a swimming
+  // wave down them, fins and a tail that beat, lazy figure-of-eight loops, and now and then a leap with a splash and spray.
+  // These are sea fish: a blue tang, a clownfish orange with white bands, a yellow tang, a silver mackerel, a coral-pink
+  // snapper and a turquoise parrotfish, in all sizes, a few of them in shoals; their glow is soft by day and brighter at night ====
+  (function () {
+    var SEA_KINDS = [
+      { back: 0x1a4ab0, belly: 0x5a8ae0, patch: 0x101a3a, fin: 0xf2d040, glow: 0x3a7aff, hue: 0.6 },    // blue tang
+      { back: 0xf2701a, belly: 0xffa040, patch: 0xffffff, fin: 0xf28a3a, glow: 0xff9040, hue: 0.07 },   // clownfish
+      { back: 0xf6d81a, belly: 0xfff07a, patch: 0xf2c010, fin: 0xfff4a0, glow: 0xffe040, hue: 0.15 },   // yellow tang
+      { back: 0x4a6a7a, belly: 0xe8f0f4, patch: 0x2a3e4a, fin: 0xc8d8e0, glow: 0xa8e0ff, hue: 0.55 },   // mackerel
+      { back: 0xf27a7a, belly: 0xffd8c8, patch: 0xd84a5a, fin: 0xffb0a0, glow: 0xff7a8a, hue: 0.98 },   // snapper
+      { back: 0x1ab8a8, belly: 0x8af0d8, patch: 0x3a5ad8, fin: 0x6ae0f0, glow: 0x3af0d8, hue: 0.47 }    // parrotfish
+    ];
+    var seaFish = [], fr = (function () { var s2 = 7171; return function () { s2 = (s2 * 16807) % 2147483647; return (s2 - 1) / 2147483646; }; })(), FY = SEA_Y - 0.18;
+    function deep(x, z, d) { return x > 128 && x < 205 && Math.abs(z - B3_Z) < 50 && shoreS(x, z) < -d; }
+    function lp(f, a) { var lx = Math.cos(a) * f.rx, lz = Math.sin(2 * a) * f.rz * 0.5; return { x: f.hx + lx * Math.cos(f.turn) - lz * Math.sin(f.turn), z: f.hz + lx * Math.sin(f.turn) + lz * Math.cos(f.turn) }; }
+    function clear(f) { for (var i = 0; i < 24; i++) { var p = lp(f, i / 24 * Math.PI * 2); if (!deep(p.x, p.z, 2.5)) return false; } return true; }
+    for (var n = 0; n < 22; n++) { var kind = SEA_KINDS[n % SEA_KINDS.length], f = makeFish(kind, n * 2.3 + 11), ok = false, shoal = n >= 14 ? seaFish[(n - 14) % 6] : null;
+      for (var tr = 0; tr < 60 && !ok; tr++) {
+        if (shoal) { f.hx = shoal.hx + (fr() - 0.5) * 1.2; f.hz = shoal.hz + (fr() - 0.5) * 1.2; f.rx = shoal.rx; f.rz = shoal.rz; f.turn = shoal.turn; }   // (swimming along with a fish of its kind)
+        else { f.hx = 132 + fr() * 70; f.hz = B3_Z - 45 + fr() * 90; f.rx = 2.2 + fr() * 2.6; f.rz = 1.6 + fr() * 2.0; f.turn = fr() * Math.PI * 2; }
+        ok = deep(f.hx, f.hz, 3) && clear(f); }
+      if (!ok) { scene.remove(f.group); scene.remove(f.halo); continue; }
+      var sc = 0.7 + fr() * 0.7; f.group.scale.setScalar(sc); f.halo.scale.setScalar(sc * 0.8);
+      f.speed = shoal ? shoal.speed : (0.25 + fr() * 0.25) * (fr() < 0.5 ? 1 : -1); f.phase = shoal ? shoal.phase + 0.25 + fr() * 0.3 : fr() * Math.PI * 2;
+      f.depth = FY - fr() * 0.35; f.jumpIn = 6 + fr() * 14; f.jump = -1; seaFish.push(f); }
+    function splash(x, z, size, life, n) { ripple(x, z, 0xffffff, size, life); if (waves.length) waves[waves.length - 1].mesh.position.y = SEA_Y + 0.04; for (var b = 0; b < n; b++) sparkle(x, SEA_Y + 0.05, z, 0xe8f6ff, 1.3, 0.9); }
+    updateFish = (function (base) { return function (dt, t, night) { base.apply(this, arguments);
+      if (indoors) return; var px = player.position.x; if (px < 60) return;   // (only when you're out at the shore)
+      seaFish.forEach(function (f, n) { var a = t * f.speed + f.phase, p = lp(f, a), ah = lp(f, a + 0.05 * (f.speed > 0 ? 1 : -1)), g = f.group;
+        g.position.x = p.x; g.position.z = p.z; g.rotation.y = Math.atan2(-(ah.z - p.z), ah.x - p.x);
+        var pos = f.bodyGeo.attributes.position, base2 = f.basePos; for (var i = 0; i < pos.count; i++) { var tl = 0.5 - base2[i * 3] / FISH_LEN; pos.array[i * 3 + 2] = base2[i * 3 + 2] + swimBend(f, tl, t, n); } pos.needsUpdate = true;
+        var tip = swimBend(f, 1, t, n), nt = swimBend(f, 0.85, t, n); f.tail.position.z = tip; f.tail.rotation.y = Math.atan2(tip - nt, 0.15 * FISH_LEN) * 2.5; f.sideFins[0].rotation.z = Math.sin(t * 5 + n) * 0.35; f.sideFins[1].rotation.z = -Math.sin(t * 5 + n) * 0.35;
+        var y = f.depth + Math.sin(t * 1.1 + n) * 0.04, pitch = 0; f.jumpIn -= dt;
+        if (f.jump < 0 && f.jumpIn <= 0) { f.jump = 0; splash(p.x, p.z, 0.9, 1.0, 14); }
+        if (f.jump >= 0) { f.jump += dt / 1.1; y = SEA_Y - 0.1 + Math.sin(Math.PI * Math.min(f.jump, 1)) * 0.8; pitch = Math.cos(Math.PI * Math.min(f.jump, 1)) * 0.9; if (f.jump >= 1) { f.jump = -1; f.jumpIn = 10 + Math.random() * 16; splash(p.x, p.z, 1.1, 1.2, 20); } }
+        g.position.y = y; g.rotation.z = pitch;
+        var pulse = 0.5 + 0.5 * Math.sin(t * 2.2 + n); f.finMat.emissive.setHSL((f.kind.hue + Math.sin(t * 0.6 + n) * 0.08 + 1) % 1, 0.8, 0.55); f.finMat.emissiveIntensity = 0.25 + night * 0.8;
+        f.bodyMat.emissiveIntensity = 0.06 + pulse * 0.04 + night * 0.5; f.runeMat.opacity = 0.25 + 0.3 * pulse * night; f.aura.material.opacity = 0.1 + night * 0.35;
+        f.halo.position.set(p.x, SEA_Y + 0.012, p.z); f.halo.material.opacity = (0.08 + night * 0.4) * (f.jump >= 0 ? 0.4 : 1); }); }; })(updateFish);
+  })();
 });
