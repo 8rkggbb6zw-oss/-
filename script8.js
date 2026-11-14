@@ -4867,7 +4867,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // paved square, a cream valance all round, a dark two-tier roof with a vent between, sheer curtains hanging from every
     // corner and tied back at the post, flaring to a darker hem; inside, a round rug, a black sofa heaped with white pillows, two
     // black velvet tub chairs, a marble coffee table on a black base with red roses, books and a tray, a potted palm, a rattan
-    // globe lantern hanging from the roof and little lanterns at the front corners. The furniture is all black, the pillows white)
+    // globe lantern hanging from the roof. The furniture is all black, the pillows white)
     var cabPostM = rMat(0xd8d4cc, { roughness: 0.4, metalness: 0.3 }), cabRoofM = new THREE.MeshStandardMaterial({ color: 0x5a5048, roughness: 0.85, flatShading: true, side: THREE.DoubleSide }), cabVentM = rMat(0x3a332c, { roughness: 0.9 });
     var cabFabT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#efe7d8'; g.fillRect(0, 0, w, h); for (var i = 0; i < 900; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,0.25)' : 'rgba(150,130,100,0.12)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 1); } }, [3, 1]);
     var cabCreamM = new THREE.MeshStandardMaterial({ map: cabFabT, roughness: 0.9, side: THREE.DoubleSide }), cabTrimM = rMat(0x7a6e62, { roughness: 0.9 });
@@ -5040,8 +5040,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       var tb = grp(0, 0.1, 0.05, 0, cg); q(tb, new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), cabMarbM, 0, 0.4, 0); q(tb, new THREE.TorusGeometry(0.42, 0.012, 6, 32), cabBlkM, 0, 0.4, 0, Math.PI / 2, 0, 0);
       q(tb, new THREE.TorusGeometry(0.34, 0.014, 6, 32), cabBlkM, 0, 0.02, 0, Math.PI / 2, 0, 0); for (var tl = 0; tl < 4; tl++) { var ta = tl / 4 * Math.PI * 2 + 0.4; q(tb, new THREE.CylinderGeometry(0.012, 0.012, 0.38, 6), cabBlkM, Math.cos(ta) * 0.34, 0.2, Math.sin(ta) * 0.34); }
       tb.add(cabTop.clone());   // (and everything on it)
-      // little lanterns at the front corners
-      [-1, 1].forEach(function (s) { var ln = grp(s * 1.05, 0.1, -1.55, 0, cg); q(ln, new THREE.BoxGeometry(0.16, 0.24, 0.16), cabGlowM, 0, 0.14, 0); [-1, 1].forEach(function (a) { [-1, 1].forEach(function (b) { q(ln, new THREE.BoxGeometry(0.02, 0.28, 0.02), cabVentM, a * 0.08, 0.14, b * 0.08); }); }); q(ln, new THREE.ConeGeometry(0.13, 0.08, 4), cabVentM, 0, 0.32, 0, 0, Math.PI / 4, 0); });
       [[-A, -A, 0.14], [A, -A, 0.14], [-A, A, 0.14], [A, A, 0.14], [0, 0.82, 0.5], [-0.5, 0.82, 0.45], [0.5, 0.82, 0.45], [0, 0.05, 0.42], [-0.72, -0.55, 0.32], [0.72, -0.55, 0.32]].forEach(function (s2) { solids.push({ x: cb[0] + s2[0], z: cz + s2[1], r: s2[2] }); }); });
     // (a welcome sign where the bridge lands, in great detail: two weathered driftwood posts, grained and split, crusted with
     // barnacles at their feet and lashed to the board with rope; an arched board, bevelled, framed in rope, painted on its old
