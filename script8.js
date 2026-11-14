@@ -3944,17 +3944,29 @@ EVERDAWN_PARTS.push(function (THREE) {
     var eyeG = new THREE.TorusGeometry(0.03, 0.007, 6, 14), eyeMs = [], shankG = new THREE.CylinderGeometry(0.006, 0.006, 0.07, 6), shankMs = [], collarG = new THREE.CylinderGeometry(0.083, 0.083, 0.06, 14, 1, true), collarMs = [], boltHG = new THREE.CylinderGeometry(0.011, 0.011, 0.008, 6), boltHMs = [];
     var grooveG = new THREE.TorusGeometry(0.068, 0.008, 5, 16), grooveMs = [], whipG = new THREE.CylinderGeometry(0.0325, 0.0325, 0.035, 10), whipMs = [], knotG = new THREE.TorusGeometry(0.085, 0.024, 8, 18), knotMs = [], gateMs = [];
     var whipM = rMat(0x8a6e4e, { roughness: 0.95 });
+    // (and dressed up: each post wears a bronze cap with a polished brass ball finial on a turned neck, a band of rope wound
+    // four times round its head under the groove with a brass ring either side, and a brass band above its foot; the ropes are
+    // laid three-strand, the twist of each strand standing out along them)
+    var brassM = rMat(0xd0a850, { metalness: 0.85, roughness: 0.28 }), bronzeM = rMat(0x6a5038, { metalness: 0.6, roughness: 0.45 });
+    var capPG = new THREE.CylinderGeometry(0.09, 0.094, 0.03, 16), capPMs = [], neckG = new THREE.CylinderGeometry(0.018, 0.03, 0.05, 12), neckMs = [], ballG = new THREE.SphereGeometry(0.04, 16, 12), ballMs = [],
+      collarRG = new THREE.TorusGeometry(0.06, 0.008, 6, 16), collarRMs = [], turnG = new THREE.TorusGeometry(0.079, 0.0135, 6, 20), turnMs = [], ringG = new THREE.TorusGeometry(0.077, 0.006, 6, 20), ringMs = [], bandG = new THREE.CylinderGeometry(0.08, 0.08, 0.035, 16, 1, true), bandMs = [];
+    function laidRope(cv, len, rad) { var segs = Math.max(24, Math.round(len * 36)), rs = 12, geo = new THREE.TubeGeometry(cv, segs, rad, rs), p = geo.attributes.position, ctr = new THREE.Vector3(), v = new THREE.Vector3();
+      for (var i = 0; i <= segs; i++) { cv.getPointAt(i / segs, ctr); for (var j = 0; j <= rs; j++) { var k = i * (rs + 1) + j; v.fromBufferAttribute(p, k).sub(ctr); var th = j / rs * Math.PI * 2, f = 0.8 + 0.26 * Math.abs(Math.cos(th * 1.5 + i / segs * len * 26)); v.multiplyScalar(f).add(ctr); p.setXYZ(k, v.x, v.y, v.z); } }
+      geo.computeVertexNormals(); return geo; }
     function ropeRail(x0, z0, x1, z1, gateA, gateB) { var L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / 2.4)), prev = null, dir = new THREE.Vector3((x1 - x0) / L, 0, (z1 - z0) / L), ry = Math.atan2(-dir.z, dir.x);
       for (var i = 0; i <= n; i++) { var t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t, y = Math.max(DECK_Y, deckY(x, z, -0.3)); if (y < -90) y = DECK_Y;
         var gate = (i === 0 && gateA) || (i === n && gateB), ph = gate ? 1.2 : 0.95;
         rpMs.push(M4(x, y + ph / 2, z, (bwR() - 0.5) * 0.02, bwR() * 6, (bwR() - 0.5) * 0.02, 1, ph, 1)); domeMs.push(M4(x, y + ph, z));
+        if (!gate) { capPMs.push(M4(x, y + ph + 0.03, z)); collarRMs.push(M4(x, y + ph + 0.047, z, Math.PI / 2, 0, 0)); neckMs.push(M4(x, y + ph + 0.07, z)); ballMs.push(M4(x, y + ph + 0.125, z)); }   // (the bronze cap and brass finial)
+        for (var tw = 0; tw < 4; tw++) turnMs.push(M4(x, y + ph - 0.13 - tw * 0.026, z, Math.PI / 2 + (tw % 2 ? 0.05 : -0.05), 0, 0)); [ph - 0.105, ph - 0.235].forEach(function (ry2) { ringMs.push(M4(x, y + ry2, z, Math.PI / 2, 0, 0)); });   // (four turns of rope round its head, a brass ring either side)
+        bandMs.push(M4(x, y + 0.13, z));   // (a brass band above the foot)
         grooveMs.push(M4(x, y + ph - 0.07, z, Math.PI / 2, 0, 0)); collarMs.push(M4(x, y + 0.06, z)); for (var b = 0; b < 4; b++) { var ba = b / 4 * Math.PI * 2 + 0.4; boltHMs.push(M4(x + Math.cos(ba) * 0.085, y + 0.06, z + Math.sin(ba) * 0.085, 0, -ba, Math.PI / 2)); }
         if (gate) { gateMs.push(M4(x, y + ph + 0.06, z)); [0.0, 0.035, 0.07].forEach(function (cy, ci) { knotMs.push(M4(x + dir.x * (gateA && i === 0 ? -0.1 : 0.1), y + 0.55 - cy, z + dir.z * (gateA && i === 0 ? -0.1 : 0.1), Math.PI / 2, 0, ry, 1.5 - ci * 0.15, 1.5 - ci * 0.15, 1)); }); }   // (a coil of rope hung on the gatepost)
         [0.88, 0.5].forEach(function (hy) { [-1, 1].forEach(function (sd) { if ((i === 0 && sd < 0) || (i === n && sd > 0)) return;   // (an eye bolt each side where a rope comes in)
           var ex = x + dir.x * sd * 0.1, ez = z + dir.z * sd * 0.1; eyeMs.push(M4(ex, y + hy, ez, 0, ry + Math.PI / 2, 0)); shankMs.push(M4(x + dir.x * sd * 0.07, y + hy, z + dir.z * sd * 0.07, 0, ry, Math.PI / 2)); }); });
         if (prev) [[0.88, 0.62], [0.5, 0.32]].forEach(function (hh) { var a = new THREE.Vector3(prev.x + dir.x * 0.13, prev.y + hh[0], prev.z + dir.z * 0.13), c = new THREE.Vector3(x - dir.x * 0.13, y + hh[0], z - dir.z * 0.13), mid = a.clone().add(c).multiplyScalar(0.5); mid.y -= hh[1] * 0.22;
             var cv = new THREE.CatmullRomCurve3([a, new THREE.Vector3((a.x * 3 + c.x) / 4, (a.y + mid.y) / 2 - 0.02, (a.z * 3 + c.z) / 4), mid, new THREE.Vector3((a.x + c.x * 3) / 4, (c.y + mid.y) / 2 - 0.02, (a.z + c.z * 3) / 4), c]);
-            q(G, new THREE.TubeGeometry(cv, 28, 0.03, 8), ropeM, 0, 0, 0);
+            q(G, laidRope(cv, a.distanceTo(c), 0.034), ropeM, 0, 0, 0);
             [[a, 1], [c, -1]].forEach(function (e) { whipMs.push(new THREE.Matrix4().compose(e[0].clone().addScaledVector(dir, e[1] * 0.03), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir), new THREE.Vector3(1, 1, 1))); }); });   // (whipping where it's seized at each end)
         if (prev) for (var sb = 0.3; sb < 1; sb += 0.3 / Math.hypot(x - prev.x, z - prev.z)) solids.push({ x: prev.x + (x - prev.x) * sb, z: prev.z + (z - prev.z) * sb, r: 0.08 });   // (the rope is a barrier now)
         prev = { x: x, y: y, z: z }; solids.push({ x: x, z: z, r: 0.12 }); } }
@@ -3971,6 +3983,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var PRX = PH_X1 - 0.1, PRZ = PH_HZ - 0.1; woodRail(172, B3_Z - PRZ, 172, B3_Z - 1.6); woodRail(172, B3_Z + 1.6, 172, B3_Z + PRZ); woodRail(172, B3_Z - PRZ, PRX, B3_Z - PRZ); woodRail(172, B3_Z + PRZ, PRX, B3_Z + PRZ); woodRail(PRX, B3_Z - PRZ, PRX, B3_Z + PRZ);
     inst(postG, postM, postMs); inst(pCapG, postM, pCapMs); inst(hrG, fasciaM, hrMs); inst(new THREE.BoxGeometry(1, 1, 1), fasciaM, railBMs); inst(balG, postM, balMs);
     inst(rpG, rpM, rpMs); inst(domeG, rpM, domeMs); inst(grooveG, rpM, grooveMs); inst(collarG, galvM, collarMs); inst(boltHG, galvM, boltHMs, null, false); inst(eyeG, galvM, eyeMs, null, false); inst(shankG, galvM, shankMs, null, false); inst(whipG, whipM, whipMs, null, false); inst(knotG, ropeM, knotMs); inst(new THREE.SphereGeometry(0.06, 12, 8), rpM, gateMs);
+    inst(capPG, bronzeM, capPMs); inst(collarRG, brassM, collarRMs, null, false); inst(neckG, brassM, neckMs, null, false); inst(ballG, brassM, ballMs); inst(turnG, ropeM, turnMs, null, false); inst(ringG, brassM, ringMs, null, false); inst(bandG, brassM, bandMs, null, false);
     // (sand blown up over the first boards where the walk leaves the dunes)
     var sandT = cpTex(128, 128, function (g, w, h) { for (var i = 0; i < 1400; i++) { var x = bwR() * w, y = bwR() * h, d = Math.hypot(x - w / 2, y - h / 2) / (w / 2); if (bwR() > 1.15 - d * d) continue; g.fillStyle = 'rgba(' + (214 + bwR() * 30 | 0) + ',' + (190 + bwR() * 26 | 0) + ',' + (140 + bwR() * 24 | 0) + ',' + (0.5 + bwR() * 0.5).toFixed(2) + ')'; g.fillRect(x, y, 1 + bwR() * 2.5, 1 + bwR() * 2); } });
     var sandM = new THREE.MeshStandardMaterial({ map: sandT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
