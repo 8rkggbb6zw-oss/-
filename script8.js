@@ -4506,7 +4506,8 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (t2 = 0; t2 < 2000 && stn < 30; t2++) { var tx2 = 125 + cr() * 25, tz2 = B3_Z - 45 + cr() * 90, ts2 = shoreS(tx2, tz2); if (ts2 < 0.5 || ts2 > 5) continue; de.set(0, cr() * 6.28, 0); dq.setFromEuler(de); ds.set(1, 1, 1); dv.set(tx2, beachH(tx2, tz2) + 0.005, tz2); dm.compose(dv, dq, ds); stars.setMatrixAt(stn, dm); pc.setHex(starCols[stn % 4]); stars.setColorAt(stn, pc); stn++; }
     stars.count = stn; G.add(stars);
     var driftM = rMat(0xb8b0a4, { roughness: 1 });
-    [[138, B3_Z - 26, 0.4], [141, B3_Z + 30, -0.7], [128, B3_Z - 38, 1.2], [136, B3_Z + 20, 2.2]].forEach(function (dw) { var d = grp(dw[0], beachH(dw[0], dw[1]) + 0.1, dw[1], dw[2], G); q(d, new THREE.CylinderGeometry(0.12, 0.17, 2.4, 8), driftM, 0, 0, 0, 0, 0, Math.PI / 2 - 0.05); q(d, new THREE.CylinderGeometry(0.05, 0.08, 0.7, 6), driftM, 0.4, 0.15, 0.15, 0.8, 0, 0.3); q(d, new THREE.CylinderGeometry(0.04, 0.07, 0.5, 6), driftM, -0.7, 0.1, -0.12, -0.9, 0, -0.4); });
+    // (no driftwood logs on the beach any more)
+    [].forEach(function (dw) { var d = grp(dw[0], beachH(dw[0], dw[1]) + 0.1, dw[1], dw[2], G); q(d, new THREE.CylinderGeometry(0.12, 0.17, 2.4, 8), driftM, 0, 0, 0, 0, 0, Math.PI / 2 - 0.05); q(d, new THREE.CylinderGeometry(0.05, 0.08, 0.7, 6), driftM, 0.4, 0.15, 0.15, 0.8, 0, 0.3); q(d, new THREE.CylinderGeometry(0.04, 0.07, 0.5, 6), driftM, -0.7, 0.1, -0.12, -0.9, 0, -0.4); });
     // (beach umbrellas, each one solid canvas: eight panels sagging a little between their ribs, stitched seams, a scalloped
     // valance in a paler shade with piping, a little vented cap on top; under it, the ribs and stretchers on a runner, a wooden
     // pole in two parts with a brass tilt joint, set into a heap of sand. Beside each, a teak lounger of slats on a frame with
@@ -4613,7 +4614,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       quiet(q(tb, new THREE.CylinderGeometry(0.004, 0.004, 0.18, 4), rMat(0xe85a8a), 0.075, 0.57, 0.03, 0, 0, -0.25)); quiet(q(tb, new THREE.CylinderGeometry(0.03, 0.03, 0.006, 10, 1, false, 0, Math.PI), rMat(0xf6e050), 0.03, 0.56, 0.03, 0, 0, Math.PI / 2));
       [-1, 1].forEach(function (s) { quiet(q(tb, new THREE.CylinderGeometry(0.03, 0.03, 0.006, 12), rMat(0x1a1a1a, { roughness: 0.15, metalness: 0.3 }), -0.08 + s * 0.035, 0.437, -0.06)); }); quiet(q(tb, new THREE.BoxGeometry(0.014, 0.004, 0.004), rMat(0x1a1a1a), -0.08, 0.438, -0.06));
       solids.push({ x: u[0] + Math.cos(u[3]) * -1.65 + Math.sin(u[3]) * 0.2, z: u[1] - Math.sin(u[3]) * -1.65 + Math.cos(u[3]) * 0.2, r: 0.2 });
-      quiet(q(ug, new THREE.PlaneGeometry(0.8, 1.6), new THREE.MeshStandardMaterial({ map: stripeT('#fbf6ea', u[2]), roughness: 1 }), 0.9, 0.02, 0.4, -Math.PI / 2, 0, 0.3));
+      // (the towel, laid over the sand: every point of it follows the ground beneath, so none of it dips under the sand)
+      var twG = new THREE.PlaneGeometry(0.8, 1.6, 8, 16); twG.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0.3))); twG.translate(0.9, 0, 0.4);
+      ug.updateMatrixWorld(true); var twP = twG.attributes.position, twV = new THREE.Vector3();
+      for (var ti = 0; ti < twP.count; ti++) { twV.fromBufferAttribute(twP, ti); ug.localToWorld(twV); twP.setY(ti, Math.max(SEA_Y, beachH(twV.x, twV.z)) - y + 0.018 + 0.004 * Math.sin(ti * 1.7)); }
+      twG.computeVertexNormals(); var tw = quiet(q(ug, twG, new THREE.MeshStandardMaterial({ map: stripeT('#fbf6ea', u[2]), roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, side: THREE.DoubleSide }), 0, 0, 0)); tw.receiveShadow = true;
       solids.push({ x: u[0], z: u[1], r: 0.25 }); });
     // (a sandcastle)
     var cs = grp(141.5, beachH(141.5, B3_Z + 8.5), B3_Z + 8.5, 0.3, G), csM = rMat(0xe4cc98, { roughness: 1 });
