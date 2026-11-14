@@ -4404,14 +4404,12 @@ EVERDAWN_PARTS.push(function (THREE) {
     var R2 = LH_R[2], F2 = LH_F[2], wardM = new THREE.MeshStandardMaterial({ map: boardT(6161, '#7a4e2c', { checks: false, knots: false, nails: false }), roughness: 0.5 }), wardD = rMat(0x5a3820, { roughness: 0.55 }), whiteL = rMat(0xfbf8f0, { roughness: 0.95 });
     function lath2(pts, n) { return new THREE.LatheGeometry(pts.map(function (p) { return new THREE.Vector2(p[0], p[1]); }), n || 16); }
     var bed = lhAt(2, 1.95, 0.15, Math.PI / 2);
-    var quiltT = cpTex(256, 384, function (g, w, h) { g.fillStyle = '#b8322e'; g.fillRect(0, 0, w, h); g.fillStyle = '#f4ecd8'; g.fillRect(16, 16, w - 32, h - 32);
-      var B = 56, ox = (w - 4 * B) / 2, oy = (h - 6 * B) / 2;
-      for (var r = 0; r < 6; r++) for (var c = 0; c < 4; c++) { var x = ox + c * B, y = oy + r * B, cx = x + B / 2, cy = y + B / 2, dark = (r + c) % 2;
-        g.fillStyle = dark ? '#2a4a7a' : '#f4ecd8'; g.fillRect(x, y, B, B); g.fillStyle = dark ? '#f4ecd8' : '#3a6aa0';   // (a sawtooth star in each block)
-        for (var k = 0; k < 8; k++) { var a = k / 8 * Math.PI * 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a - 0.3) * B * 0.22, cy + Math.sin(a - 0.3) * B * 0.22); g.lineTo(cx + Math.cos(a) * B * 0.45, cy + Math.sin(a) * B * 0.45); g.lineTo(cx + Math.cos(a + 0.3) * B * 0.22, cy + Math.sin(a + 0.3) * B * 0.22); g.closePath(); g.fill(); }
-        g.fillStyle = '#d8a83a'; g.beginPath(); g.arc(cx, cy, B * 0.08, 0, Math.PI * 2); g.fill(); }
-      g.strokeStyle = 'rgba(255,255,255,0.55)'; g.setLineDash([3, 3]); g.lineWidth = 1; for (var y2 = oy; y2 <= oy + 6 * B; y2 += B) { g.beginPath(); g.moveTo(ox, y2); g.lineTo(ox + 4 * B, y2); g.stroke(); } for (var x2 = ox; x2 <= ox + 4 * B; x2 += B) { g.beginPath(); g.moveTo(x2, oy); g.lineTo(x2, oy + 6 * B); g.stroke(); }
-      g.strokeRect(10, 10, w - 20, h - 20); g.setLineDash([]); for (var i = 0; i < 2000; i++) { g.fillStyle = 'rgba(0,0,0,0.05)'; g.fillRect(Math.random() * w, Math.random() * h, 1, 1); } });
+    var quiltT = cpTex(256, 384, function (g, w, h) {   // (a plain quilt in soft dusty blue: no pattern, just fine diamond stitching puffing it up, a narrow band at the hem, and a soft woven texture)
+      g.fillStyle = '#7d93a8'; g.fillRect(0, 0, w, h); var i, x, y;
+      for (i = 0; i < 6000; i++) { g.fillStyle = 'rgba(' + (Math.random() < 0.5 ? '255,255,255,' : '0,0,0,') + (Math.random() * 0.06).toFixed(3) + ')'; g.fillRect(Math.random() * w, Math.random() * h, 1, 1); }
+      var D = 32; for (y = -h; y < h * 2; y += D) for (x = -w; x < w * 2; x += D) { var gr = g.createRadialGradient(x + D / 2, y + D / 2, 2, x + D / 2, y + D / 2, D * 0.7); gr.addColorStop(0, 'rgba(255,255,255,0.10)'); gr.addColorStop(1, 'rgba(0,0,0,0.10)'); g.fillStyle = gr; g.save(); g.translate(x + D / 2, y + D / 2); g.rotate(Math.PI / 4); g.fillRect(-D * 0.36, -D * 0.36, D * 0.72, D * 0.72); g.restore(); }   // (each diamond puffed)
+      g.strokeStyle = 'rgba(40,52,66,0.35)'; g.lineWidth = 1; g.setLineDash([2, 2]); for (i = -h; i < w + h; i += D * 0.707) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + h, h); g.stroke(); g.beginPath(); g.moveTo(i, h); g.lineTo(i + h, 0); g.stroke(); }   // (the stitching)
+      g.setLineDash([]); g.fillStyle = '#6a8096'; g.fillRect(0, h - 22, w, 22); g.fillStyle = 'rgba(255,255,255,0.5)'; for (x = 2; x < w; x += 6) g.fillRect(x, h - 24, 3, 1); });   // (a band at the hem)
     var tickT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#f2eee2'; g.fillRect(0, 0, w, h); for (var x = 0; x < w; x += 8) { g.fillStyle = '#5a7a9a'; g.fillRect(x, 0, 2, h); } }, [4, 1]);
     q(bed, new THREE.BoxGeometry(0.92, 0.2, 1.86), new THREE.MeshStandardMaterial({ map: tickT, roughness: 0.9 }), 0, 0.44, 0);   // (a ticking-striped mattress)
     q(bed, new THREE.BoxGeometry(0.9, 0.06, 0.12), rMat(0x8a6a48), 0, 0.31, 0.88); q(bed, new THREE.BoxGeometry(0.9, 0.06, 0.12), rMat(0x8a6a48), 0, 0.31, -0.88);   // (slats beneath)
