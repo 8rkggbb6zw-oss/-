@@ -4526,11 +4526,25 @@ EVERDAWN_PARTS.push(function (THREE) {
         outsideCam = { dist: cam.dist, pitch: cam.pitch, yaw: cam.yaw }; cam.dist = 8; cam.pitch = 0.85; cam.yaw = -Math.PI / 2; lhPlace(0, LH_DOOR_A, 1.5, Math.PI / 2); }
       else { indoors = false; inLh = false; scene.add(player); var o = lhFront(0.4); player.position.set(o.x, 0, o.z); facing = LH_TURN; cam.target.set(o.x, 0.8, o.z);
         if (outsideCam) { cam.dist = outsideCam.dist; cam.pitch = outsideCam.pitch; cam.yaw = outsideCam.yaw; } } }); }
+    // (walking the stairs: how far along a flight you are, 0 at its foot to 1 at its head, and so how high you stand)
+    function lhStairAt(px, pz) { var dx = px - LHI_X, dz = pz - LHI_Z, r = Math.hypot(dx, dz), a = Math.atan2(dz, dx), k = lhRoom;
+      function along(f) { var b = LH_BAND[f]; if (r < b[0] - 0.1 || r > LH_RI + 0.1) return -1; var ar = LH_ARC[f], d = ((a - ar[0]) % TAU + TAU) % TAU; return d > ar[1] - ar[0] ? -1 : d / (ar[1] - ar[0]); }
+      var t; if (k < 4 && (t = along(k)) >= 0) return { up: true, t: t, y: t * (LH_F[k + 1] - LH_F[k]) };
+      if (k > 0 && (t = along(k - 1)) >= 0) return { up: false, t: t, y: (t - 1) * (LH_F[k] - LH_F[k - 1]) };
+      return null; }
+    // (a flight can only be stepped onto at its foot or its head: a rail of solids along its open inner edge, and across the end that leads off the floor at the wrong height)
+    for (lk = 0; lk <= 4; lk++) { [[lk, true], [lk - 1, false]].forEach(function (fl) { var f = fl[0]; if (f < 0 || f > 3) return; var ar = LH_ARC[f], b = LH_BAND[f], rr = b[0] - 0.3, ca;
+        if (lk !== 4) for (ca = ar[0] + 0.25; ca <= ar[1] - 0.25; ca += 0.18) { var ip = lhP(ca, rr); lhSol(lk, ip[0], ip[1], 0); }
+        var endA = fl[1] ? ar[1] + 0.22 : ar[0] - 0.22; for (var er = b[0] + 0.05; er <= LH_RI - 0.1; er += 0.25) { var ep = lhP(endA, er); lhSol(lk, ep[0], ep[1], 0); } }); }
+    var lhLiftY = 0;
+    updateCamera = (function (base) { return function (dt) { base.apply(this, arguments); var goal = inLh ? player.position.y : 0; lhLiftY += (goal - lhLiftY) * Math.min(1, (dt || 0.016) * 8);
+      if (Math.abs(lhLiftY) > 0.005) { camera.position.y += lhLiftY; camera.lookAt(cam.target.x, cam.target.y + lhLiftY, cam.target.z); } }; })(updateCamera);
     function lhZone(a, r) { var p = lhP(a, r); return { x: LHI_X + p[0], z: LHI_Z + p[1] }; }
     DOOR_NAMES.lh = 'the lighthouse';
     var lhLook = new THREE.Vector3();
     updateCarpenter = (function (base) { return function (t, night) { base.apply(this, arguments); var nt = night || 0;
-      if (inLh && player.parent !== lhScene) inLh = false;            // (carried home or teleported away from inside)
+      if (inLh && player.parent !== lhScene) inLh = false;
+      if (inLh) { var srr = lhStairAt(player.position.x, player.position.z); player.position.y = srr ? srr.y : 0; }   // (standing on the stairs)            // (carried home or teleported away from inside)
       lhGlass.emissiveIntensity = nt * 0.55; lensMs.forEach(function (m) { m.emissiveIntensity = 0.4 + nt * 1.4; }); bullMs.forEach(function (m) { m.emissiveIntensity = 0.5 + nt * 1.4; });
       if (!inLh) return;
       lhLook.set(camera.position.x - LHI_X, 0, camera.position.z - LHI_Z).normalize();
@@ -4542,8 +4556,9 @@ EVERDAWN_PARTS.push(function (THREE) {
         if (!lhArmed) { if (!lhArmAt || dist(px, pz, lhArmAt.x, lhArmAt.z) > 0.8) lhArmed = true; return; }
         var k = lhRoom, z;
         if (k === 0) { z = lhZone(LH_DOOR_A, 2.15); if (dist(px, pz, z.x, z.z) < 0.5) { lhDoorUse(false); return; } }   // (out of the door)
-        if (k < 4) { z = lhZone(LH_ARC[k][0] + 0.22, 1.85); if (dist(px, pz, z.x, z.z) < 0.5) { lhFade(function () { lhPlace(k + 1, LH_ARC[k][1] + 0.4, 1.85, -(LH_ARC[k][1] + 0.4)); }); return; } }   // (up the stairs)
-        if (k > 0) { z = lhZone(LH_ARC[k - 1][1] - 0.22, 1.85); if (dist(px, pz, z.x, z.z) < 0.5) { lhFade(function () { lhPlace(k - 1, LH_ARC[k - 1][0] - 0.4, 1.85, Math.PI - (LH_ARC[k - 1][0] - 0.4)); }); return; } }   // (down them)
+        var sr = lhStairAt(px, pz);   // (you climb the stairs for real; at the top of a flight you come out in the room above, at the bottom in the room below)
+        if (sr && sr.up && sr.t > 0.95) { lhFade(function () { lhPlace(k + 1, LH_ARC[k][1] + 0.4, 1.85, -(LH_ARC[k][1] + 0.4)); }); return; }
+        if (sr && !sr.up && sr.t < 0.05) { lhFade(function () { lhPlace(k - 1, LH_ARC[k - 1][0] - 0.4, 1.85, Math.PI - (LH_ARC[k - 1][0] - 0.4)); }); return; }
         return; }
       base.apply(this, arguments);
       if (!indoors && dist(px, pz, lhDoor.x, lhDoor.z) < DOOR_REACH && !doorNear) doorNear = doorHinted = 'lh';   // (outside: by its door)
