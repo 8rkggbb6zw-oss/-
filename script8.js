@@ -5678,7 +5678,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // is drawn (once her arm and fingers have been posed for it) her wrist is turned so her thumb side faces up, and the
     // handle is laid along the hole her curled fingers make, from her little finger out past her thumb, its grip centred
     // between her palm and her finger pads; the net's bag hangs on the side she's facing)
-    var NB = null, nv = [0, 1, 2, 3, 4, 5].map(function () { return new THREE.Vector3(); }), nq1 = new THREE.Quaternion(), nq2 = new THREE.Quaternion(), nm = new THREE.Matrix4(), NET_GRIP = -0.05, NET_ROLL = 0.85;
+    var netDir = new THREE.Vector3(0, 1, 0), netDirTo = new THREE.Vector3(), NB = null, nv = [0, 1, 2, 3, 4, 5].map(function () { return new THREE.Vector3(); }), nq1 = new THREE.Quaternion(), nq2 = new THREE.Quaternion(), nm = new THREE.Matrix4(), NET_GRIP = -0.05;
     function netBone(n) { var f = null; player.traverse(function (o) { if (!f && o.isBone !== false && o.name && o.name.slice(-n.length) === n) f = o; }); return f; }
     function netGrip() {
       if (!netInHand() || heldShown !== 'bugNet' || !axeArm.visible) return;
@@ -5689,12 +5689,14 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (turn her wrist about its own length, whichever way lifts her thumb side)
       h.getWorldPosition(nv[0]); NB.m1.getWorldPosition(nv[1]); var axis = nv[1].clone().sub(nv[0]).normalize();
       NB.idx.getWorldPosition(nv[2]); NB.lit.getWorldPosition(nv[3]); var kn = nv[2].clone().sub(nv[3]).normalize();
-      var sgn = kn.clone().applyAxisAngle(axis, NET_ROLL).y >= kn.clone().applyAxisAngle(axis, -NET_ROLL).y ? 1 : -1;
-      h.getWorldQuaternion(nq1); nq2.setFromAxisAngle(axis, sgn * NET_ROLL).multiply(nq1); par.getWorldQuaternion(nq1).invert(); h.quaternion.copy(nq1.multiply(nq2)); h.updateMatrixWorld(true);
+      var D = netDir, kp = kn.clone().addScaledVector(axis, -axis.dot(kn)), dp = D.clone().addScaledVector(axis, -axis.dot(D)), roll = 0;   // (as far round as it takes to point her thumb side the way the net should go)
+      if (kp.lengthSq() > 1e-6 && dp.lengthSq() > 1e-6) roll = Math.atan2(axis.dot(kp.clone().cross(dp)), kp.dot(dp));
+      roll = Math.max(-1.75, Math.min(1.75, roll));
+      h.getWorldQuaternion(nq1); nq2.setFromAxisAngle(axis, roll).multiply(nq1); par.getWorldQuaternion(nq1).invert(); h.quaternion.copy(nq1.multiply(nq2)); h.updateMatrixWorld(true);
       // (the hole in her fist: between her palm and her curled finger pads)
       h.getWorldPosition(nv[0]); NB.m1.getWorldPosition(nv[1]); NB.m2.getWorldPosition(nv[2]); NB.m3.getWorldPosition(nv[3]); NB.idx.getWorldPosition(nv[4]); NB.lit.getWorldPosition(nv[5]);
       var palmP = nv[0].clone().lerp(nv[1], 0.7), hole = palmP.add(nv[1]).add(nv[2]).add(nv[3]).multiplyScalar(0.25);
-      var up = nv[4].clone().sub(nv[5]).normalize();                   // (along her fist, out past her thumb)
+      var up = nv[4].clone().sub(nv[5]).normalize().lerp(netDir, 0.2).normalize();   // (along her fist, out past her thumb)
       var fw = new THREE.Vector3(Math.sin(facing), 0, Math.cos(facing)), side = fw.clone().cross(up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); var zz = up.clone().cross(side).normalize();
       if (zz.dot(fw) < 0) { zz.negate(); side.negate(); }
       // (the handle's place in the world, then in her hand's frame)
@@ -5706,23 +5708,66 @@ EVERDAWN_PARTS.push(function (THREE) {
     }
     scene.onBeforeRender = (function (base) { return function () { if (base) base.apply(this, arguments); try { netGrip(); } catch (err) {} }; })(scene.onBeforeRender && scene.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender ? scene.onBeforeRender : null);
     function netCanSwing() { return netInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
-    var NET_TIME = 0.62, NET_HIT = 0.3, netT = 9;
-    window.bugNetSwept = function (x, y, z) {};                       // (the insects will listen here)
-    function swish() { if (!audioCtx) return; try { hissBurst(0.32, 'bandpass', 1800, 1.1, 0.09, 0.05, 0.22); slideTone('sine', 520, 820, 0.025, 0.18); } catch (err) {} }
+    // (using it: hold Interact and she lifts the net high, ready, and a glowing circle appears on the ground (or on the water)
+    // a little way ahead of her, going where she goes; while it's there she walks at half speed. Let go and she brings the net
+    // down over the circle: whatever is inside it when the net lands is caught. bugNetSwept(x, y, z, r, onWater) is called
+    // then, with the circle's middle, its radius and whether it's on the water: insects (on land) and sea creatures (in the
+    // sea) will listen there and check whether they're inside it)
+    var NET_R2 = 0.45, NET_AHEAD = 1.2, NET_LIFT = 0.22, NET_DOWN = 0.14, NET_BACK = 0.4;
+    var net = { state: 'idle', t: 0, key: null, x: 0, y: 0, z: 0, water: false };
+    window.bugNetSwept = function (x, y, z, r, onWater) {};          // (the insects and sea creatures will listen here)
+    function swish() { if (!audioCtx) return; try { hissBurst(0.3, 'bandpass', 1500, 1.1, 0.1, 0.04, 0.2); slideTone('sine', 760, 420, 0.025, 0.16); } catch (err) {} }
+    function netLand(water) { if (!audioCtx) return; try { if (water) { slideTone('sine', 560, 200, 0.12, 0.12); hissBurst(0.25, 'lowpass', 1600, 0.7, 0.08, 0.005, 0.2, 0.02); } else hissBurst(0.14, 'lowpass', 700, 0.8, 0.1, 0.003, 0.1); } catch (err) {} }
+    function netFloorY(x, z) { return onDock(x, z) ? DOCK_Y : onBridge(x, z) ? Math.max(groundHeight(x, z), bridgeY(z)) : onBridge2(x, z) ? Math.max(groundHeight(x, z), bridgeY(-x)) : groundHeight(x, z) + porchHeight(x, z) + shopStepHeight(x, z) + clinicStepHeight(x, z) + barnRampHeight(x, z); }
+    function netSpot() { var x = player.position.x + Math.sin(facing) * NET_AHEAD, z = player.position.z + Math.cos(facing) * NET_AHEAD, fy = netFloorY(x, z), wy = null;
+      try { wy = rodWater(x, z); } catch (err) {}
+      net.x = x; net.z = z; net.water = wy !== null && wy > fy - 0.02; net.y = net.water ? wy : fy; }
+    // (the circle: a soft glowing disc with a bright rim, a ring of little dashes turning round it, and sparkles rising)
+    var circ = new THREE.Group(); circ.visible = false; scene.add(circ);
+    var cDisc = new THREE.Mesh(new THREE.CircleGeometry(NET_R2, 48), new THREE.MeshBasicMaterial({ color: 0xffe6a8, transparent: true, opacity: 0.16, depthWrite: false })), cRim = new THREE.Mesh(new THREE.RingGeometry(NET_R2 - 0.035, NET_R2, 64), new THREE.MeshBasicMaterial({ color: 0xfff2c8, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }));
+    var cDash = new THREE.Group(); for (var dk = 0; dk < 16; dk++) { var dm = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.025), new THREE.MeshBasicMaterial({ color: 0xffb8e8, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); var da = dk / 16 * Math.PI * 2; dm.position.set(Math.cos(da) * (NET_R2 + 0.07), Math.sin(da) * (NET_R2 + 0.07), 0); dm.rotation.z = da + Math.PI / 2; cDash.add(dm); }
+    var cDot = new THREE.Mesh(new THREE.CircleGeometry(0.045, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }));
+    [cDisc, cRim, cDash, cDot].forEach(function (m) { m.rotation.x = -Math.PI / 2; m.renderOrder = 3; circ.add(m); }); cDash.rotation.x = -Math.PI / 2;
+    function circShow(dt) { netSpot(); circ.position.set(net.x, net.y + (net.water ? 0.03 : 0.025), net.z); circ.visible = true;
+      var k = net.state === 'aim' ? Math.min(1, net.t / 0.15) : 1, pulse = 0.5 + 0.5 * Math.sin(net.t * 6); circ.scale.setScalar(0.6 + 0.4 * k);
+      cRim.material.opacity = 0.65 + 0.3 * pulse; cDisc.material.opacity = (net.water ? 0.2 : 0.14) + 0.06 * pulse; cDisc.material.color.setHex(net.water ? 0xbfeaff : 0xffe6a8); cDash.rotation.z += dt * 0.9;
+      if (Math.random() < dt * 6) { var a = Math.random() * Math.PI * 2, rr = Math.random() * NET_R2; sparkle(net.x + Math.cos(a) * rr, net.y + 0.05, net.z + Math.sin(a) * rr, Math.random() < 0.5 ? 0xfff0c0 : 0xffd0f0, 0.4, 0.5); } }
+    function netStart(key) { if (net.state !== 'idle') return; net.state = 'aim'; net.t = 0; net.key = key; walkTarget = null; }
+    function netLetGo() { if (net.state !== 'aim') return; net.state = 'down'; net.t = 0; net.key = null; netSpot(); swish(); }
+    function netCancel() { net.state = 'idle'; net.key = null; circ.visible = false; }
+    window.addEventListener('keyup', function (e) { if (net.state === 'aim' && e.code === net.key) netLetGo(); });
+    window.addEventListener('blur', function () { netLetGo(); });
+    ui.btnAct.addEventListener('pointerdown', function (e) { if (e.button === 0 && net.state === 'idle' && netCanSwing()) netStart('pointer'); });   // (holding the Interact button)
+    window.addEventListener('pointerup', function () { if (net.key === 'pointer') netLetGo(); });
+    window.addEventListener('pointercancel', function () { if (net.key === 'pointer') netLetGo(); });
+    if (window.everdawnPadUseTool) window.everdawnPadUseTool = (function (base) { return function (on) {   // (the controller's Use Tool button, held and let go)
+      if (bag[selectedSlot] && bag[selectedSlot].id === 'bugNet') { if (on) { if (netCanSwing()) netStart('pad'); } else if (net.key === 'pad') netLetGo(); return; }
+      return base.apply(this, arguments); }; })(window.everdawnPadUseTool);
     interact = (function (base) { return function () {
-      if (netCanSwing()) { if (netT >= NET_TIME) { netT = 0; swish(); } return; }
+      if (net.state !== 'idle' && netInHand()) return;                // (already holding it up, or bringing it down)
+      if (netCanSwing()) { var ev = window.event; if (ev && ev.type === 'keydown') netStart(ev.code); else if (!(ev && /^pointer|^mouse|^click/.test(ev.type))) { netStart(null); netLetGo(); } return; }   // (a key held down: hold it up; anything else: one quick swing)
       return base.apply(this, arguments); }; })(interact);
+    updatePlayer = (function (base) { return function (dt) {          // (half speed while the circle's out)
+      if (net.state !== 'aim' || flying) return base.apply(this, arguments);
+      var s = SPEED; SPEED = s * 0.5; try { return base.apply(this, arguments); } finally { SPEED = s; } }; })(updatePlayer);
     updateTrees = (function (base) { return function (dt) { var r = base.apply(this, arguments);
-      if (netT >= NET_TIME) return r;
-      if (!netInHand()) { netT = 9; return r; }
-      var before = netT; netT += dt; var sw = Math.min(netT, NET_TIME);
-      var REST = 5.23, FWD = 4.55, OUT = -1.1, ACROSS = 0.95, ax, ay, tw;
+      var fs = Math.sin(facing), fc = Math.cos(facing), lift = net.state === 'aim' ? 0.3 : net.state === 'down' || net.state === 'back' ? -0.8 : 1.1;   // (which way the net points: up and ahead as she carries it, ahead when raised, down at the circle as she brings it down)
+      netDirTo.set(fs, lift, fc).normalize(); netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' ? 30 : 12))).normalize();
+      if (net.state === 'idle') return r;
+      if (!netInHand() || indoors || flying || teleporting || sleeping) { netCancel(); return r; }   // (put away, or off somewhere)
+      net.t += dt;
+      var REST = 5.23, UP = 2.75, HIT = 4.95, ax = REST, lean = 0;
       function eo(k) { return 1 - (1 - k) * (1 - k); }
-      if (sw < 0.16) { var a = eo(sw / 0.16); ax = REST + (FWD - REST) * a; ay = OUT * a; tw = -0.35 * a; }   // (draw it out to her side)
-      else if (sw < 0.38) { var c = (sw - 0.16) / 0.22; c = c * c * (3 - 2 * c); ax = FWD; ay = OUT + (ACROSS - OUT) * c; tw = -0.35 + 0.7 * c; }   // (and sweep it across in front of her)
-      else { var e = eo((sw - 0.38) / (NET_TIME - 0.38)); ax = FWD + (REST - FWD) * e; ay = ACROSS * (1 - e); tw = 0.35 * (1 - e); }   // (then back to her side)
-      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.y = tw;
-      if (before < NET_HIT && netT >= NET_HIT) { var m = heldItemGrp.getObjectByName('netMouth'); if (m) { var wp = new THREE.Vector3(); m.getWorldPosition(wp); window.bugNetSwept(wp.x, wp.y, wp.z); for (var sp = 0; sp < 5; sp++) sparkle(wp.x, wp.y, wp.z, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.5, 0.4); } }
+      if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; lean = -0.06 * a; circShow(dt); }   // (lifted high and held there, ready)
+      else if (net.state === 'down') {
+        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; lean = -0.06 + 0.2 * d;   // (brought down hard over the circle)
+        circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.9;
+        if (net.t >= NET_DOWN) { net.state = 'back'; net.t = 0; netLand(net.water); circ.visible = false;
+          for (var sp = 0; sp < 14; sp++) { var sa = sp / 14 * Math.PI * 2; sparkle(net.x + Math.cos(sa) * NET_R2, net.y + 0.06, net.z + Math.sin(sa) * NET_R2, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.6, 0.5); }
+          if (net.water) burst(net.x, net.y + 0.05, net.z, 0xd8f0ff, 10, 0.8, 1.1, -3);
+          try { window.bugNetSwept(net.x, net.y, net.z, NET_R2, net.water); } catch (err) {} } }
+      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; lean = 0.14 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
+      axeArm.rotation.x = ax; axeArm.rotation.y = 0; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.x = lean;
       return r; }; })(updateTrees);
   })();
 });
