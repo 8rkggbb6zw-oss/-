@@ -659,7 +659,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     slot.setAttribute('data-slot', i);
     if (bag[i]) {
       slot.appendChild(itemPicture(bag[i].id));
-      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail' || bag[i].id === 'shears' || bag[i].id === 'fishingRod'; // tools don't show a count
+      var isTool = bag[i].id === 'axe' || bag[i].id === 'pickaxe' || bag[i].id === 'trimmers' || bag[i].id === 'hoe' || bag[i].id === 'milkPail' || bag[i].id === 'shears' || bag[i].id === 'fishingRod' || bag[i].id === 'bugNet'; // tools don't show a count
       slot.setAttribute('aria-label', ITEMS[bag[i].id].name + (isTool ? '' : ', ' + bag[i].count));
       if (!isTool) {
         var count = document.createElement('span');

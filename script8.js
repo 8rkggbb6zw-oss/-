@@ -5606,4 +5606,92 @@ EVERDAWN_PARTS.push(function (THREE) {
         f.bodyMat.emissiveIntensity = 0.06 + pulse * 0.04 + night * 0.5; f.runeMat.opacity = 0.25 + 0.3 * pulse * night; f.aura.material.opacity = 0.1 + night * 0.35;
         f.halo.position.set(p.x, SEA_Y + 0.012, p.z); f.halo.material.opacity = (0.08 + night * 0.4) * (f.jump >= 0 ? 0.4 : 1); }); }; })(updateFish);
   })();
+  // ===== The Bug Net: a new tool for catching insects (the insects themselves come later). Every game gets one in the bag,
+  // like the Fishing Rod. Hold it and press Interact (or the controller's Use Tool button) and she sweeps it in a wide arc
+  // in front of her with a soft swish. It's a pretty thing: a honey-coloured wooden handle with a leather-wrapped grip and
+  // a brass end cap, a brass ferrule where it meets the hoop, a woven willow hoop, a soft white mesh bag that sags at its
+  // tip, and a pink ribbon tied in a bow at the neck. bugNetSwept(x, y, z) is called as the net sweeps through the air at
+  // the middle of its swing: the insects will listen for it there and be caught ====
+  (function () {
+    ITEMS.bugNet = { name: 'Bug Net', icon: '🦋', fill: 88, info: 'Hold it and press Interact to sweep it through the air and catch insects. Keep it in your bag; it never wears out.' };
+    ITEMS.bugNet.img = glimCanvas(96, 96, function (g) {
+      g.lineCap = 'round';
+      g.strokeStyle = '#7a5226'; g.lineWidth = 6; g.beginPath(); g.moveTo(12, 88); g.lineTo(52, 46); g.stroke();   // (the handle)
+      g.strokeStyle = '#d8a860'; g.lineWidth = 3; g.beginPath(); g.moveTo(12, 88); g.lineTo(52, 46); g.stroke();
+      g.strokeStyle = '#6a3e22'; g.lineWidth = 8; g.beginPath(); g.moveTo(10, 90); g.lineTo(24, 75); g.stroke();   // (the leather grip)
+      g.strokeStyle = 'rgba(255,220,180,0.4)'; g.lineWidth = 1; for (var k = 0; k < 5; k++) { g.beginPath(); g.moveTo(11 + k * 3, 84 - k * 3); g.lineTo(16 + k * 3, 89 - k * 3); g.stroke(); }
+      g.fillStyle = '#ffd56a'; g.beginPath(); g.arc(9, 91, 4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(52, 46, 4, 0, Math.PI * 2); g.fill();   // (brass cap and ferrule)
+      g.save(); g.translate(66, 30); g.rotate(-0.75);
+      var bg = g.createLinearGradient(0, -20, 0, 34); bg.addColorStop(0, 'rgba(255,255,255,0.9)'); bg.addColorStop(1, 'rgba(220,236,255,0.75)');
+      g.fillStyle = 'rgba(240,248,255,0.55)'; g.beginPath(); g.moveTo(-22, 0); g.quadraticCurveTo(-18, 30, 4, 36); g.quadraticCurveTo(20, 30, 22, 0); g.closePath(); g.fill();   // (the mesh bag)
+      g.save(); g.clip(); g.strokeStyle = 'rgba(150,170,200,0.7)'; g.lineWidth = 0.9; for (k = -40; k < 40; k += 5) { g.beginPath(); g.moveTo(k, -4); g.lineTo(k + 40, 40); g.stroke(); g.beginPath(); g.moveTo(k + 40, -4); g.lineTo(k, 40); g.stroke(); } g.restore();
+      g.strokeStyle = '#9a6a36'; g.lineWidth = 5; g.beginPath(); g.ellipse(0, 0, 22, 7, 0, 0, Math.PI * 2); g.stroke();   // (the willow hoop)
+      g.strokeStyle = '#e0b878'; g.lineWidth = 2; g.beginPath(); g.ellipse(0, 0, 22, 7, 0, 0, Math.PI * 2); g.stroke();
+      g.restore();
+      g.fillStyle = '#ff8ac0'; g.beginPath(); g.ellipse(48, 44, 6, 3.5, 0.8, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(56, 52, 6, 3.5, 0.8, 0, Math.PI * 2); g.fill();   // (the ribbon bow)
+      g.fillStyle = '#ffd0e8'; g.beginPath(); g.arc(52, 48, 2.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff6c8'; [[84, 64, 2.2], [78, 74, 1.4], [90, 52, 1.6]].forEach(function (d) { g.beginPath(); g.arc(d[0], d[1], d[2], 0, Math.PI * 2); g.fill(); });   // (a twinkle or two)
+    }).toDataURL();
+    isTool = (function (base) { return function (id) { return id === 'bugNet' || base(id); }; })(isTool);   // (no count, and it can't be sold or thrown away)
+    var meshT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,1)'; g.lineWidth = 3; for (var k = -w; k < w * 2; k += 16) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + h, h); g.stroke(); g.beginPath(); g.moveTo(k + h, 0); g.lineTo(k, h); g.stroke(); }
+      g.fillStyle = '#ffffff'; for (var x = 0; x < w; x += 8) for (var y = 0; y < h; y += 8) if ((x / 8 + y / 8) % 2 === 0) g.fillRect(x - 1.5, y - 1.5, 3, 3); }, [10, 5]);   // (soft netting, a knot at each crossing)
+    var NET_L = 0.95, NET_R = 0.17, NET_D = 0.38;
+    pickupModel = (function (base) {
+      return function (item) {
+        if (item !== 'bugNet') return base.apply(this, arguments);
+        var g = new THREE.Group(), palm = new THREE.Group(), r = new THREE.Group();
+        palm.rotation.x = 1.05; palm.position.y = 0.05; palm.scale.setScalar(0.55); g.add(palm);     // (undoes the arm's angle; a small, light net)
+        r.rotation.x = 0.7; palm.add(r);                                  // (held up and out ahead of her)
+        var wood = new THREE.MeshStandardMaterial({ color: 0xd8a868, roughness: 0.45, metalness: 0.05 }), brass = new THREE.MeshStandardMaterial({ color: 0xffd06a, metalness: 0.85, roughness: 0.28 }),
+          leather = new THREE.MeshStandardMaterial({ color: 0x6a3e22, roughness: 0.7 }), willow = new THREE.MeshStandardMaterial({ color: 0xb88848, roughness: 0.6 }), pink = new THREE.MeshStandardMaterial({ color: 0xff8ac0, roughness: 0.5, emissive: 0xff8ac0, emissiveIntensity: 0.12 });
+        var pole = new THREE.CylinderGeometry(0.011, 0.015, NET_L, 12); pole.translate(0, NET_L / 2 - 0.2, 0); var pm = new THREE.Mesh(pole, wood); pm.castShadow = true; r.add(pm);
+        var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.021, 0.26, 12), leather); grip.position.y = -0.06; r.add(grip);   // (a leather-wrapped grip)
+        var wrap = new THREE.Curve(); wrap.getPoint = function (t, o) { var a = t * Math.PI * 2 * 9; return (o || new THREE.Vector3()).set(Math.cos(a) * 0.021, -0.19 + t * 0.26, Math.sin(a) * 0.021); };
+        r.add(new THREE.Mesh(new THREE.TubeGeometry(wrap, 140, 0.0028, 4, false), new THREE.MeshStandardMaterial({ color: 0x4a2a14, roughness: 0.8 })));   // (its binding, wound round)
+        var cap = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 8), brass); cap.position.y = -0.2; r.add(cap);
+        [0.08, 0.1].forEach(function (y) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.008, 12), brass); b.position.y = y; r.add(b); });   // (brass bands above the grip)
+        var top = NET_L - 0.2, fer = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.06, 12), brass); fer.position.y = top - 0.01; r.add(fer);   // (the brass ferrule)
+        var head = new THREE.Group(); head.position.y = top + NET_R; r.add(head);
+        var hoop = new THREE.Mesh(new THREE.TorusGeometry(NET_R, 0.008, 8, 40), willow); hoop.rotation.y = Math.PI / 2; hoop.castShadow = true; head.add(hoop);   // (the willow hoop)
+        var weave = new THREE.Curve(); weave.getPoint = function (t, o) { var a = t * Math.PI * 2, b = t * Math.PI * 2 * 26; return (o || new THREE.Vector3()).set(Math.sin(b) * 0.007, Math.cos(a) * (NET_R + Math.cos(b) * 0.007), Math.sin(a) * (NET_R + Math.cos(b) * 0.007)); };
+        head.add(new THREE.Mesh(new THREE.TubeGeometry(weave, 300, 0.0032, 4, true), willow));   // (a willow withy woven round it)
+        var pts = []; for (var k = 0; k <= 16; k++) { var t = k / 16; pts.push(new THREE.Vector2(Math.max(0.004, NET_R * Math.pow(Math.cos(t * Math.PI / 2), 0.6)), -NET_D * t)); }
+        var bag = new THREE.LatheGeometry(pts, 28); bag.rotateZ(Math.PI / 2); var bp = bag.attributes.position;
+        for (k = 0; k < bp.count; k++) { var bx = bp.getX(k); bp.setY(k, bp.getY(k) - 0.6 * bx * bx); }   // (the bag sags at its tip)
+        bag.computeVertexNormals();
+        var bm = new THREE.Mesh(bag, new THREE.MeshStandardMaterial({ color: 0xf6faff, map: meshT, alphaTest: 0.35, transparent: false, side: THREE.DoubleSide, roughness: 0.9 })); bm.castShadow = true; head.add(bm);
+        var rim = new THREE.Mesh(new THREE.TorusGeometry(NET_R, 0.011, 6, 40), new THREE.MeshStandardMaterial({ color: 0xf2f4f8, roughness: 0.85 })); rim.rotation.y = Math.PI / 2; rim.position.x = 0.012; head.add(rim);   // (the bag's sewn cuff)
+        var bow = new THREE.Group(); bow.position.set(0, top + 0.035, 0.02); r.add(bow);   // (a pink ribbon bow at the neck)
+        [-1, 1].forEach(function (sd) { var l = new THREE.Mesh(new THREE.SphereGeometry(0.024, 10, 8), pink); l.scale.set(1, 0.55, 0.3); l.position.x = sd * 0.024; l.rotation.z = sd * 0.35; bow.add(l);
+          var tl = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.06, 0.003), pink); tl.position.set(sd * 0.012, -0.035, 0); tl.rotation.z = sd * 0.3; bow.add(tl); });
+        bow.add(new THREE.Mesh(new THREE.SphereGeometry(0.01, 8, 6), pink));
+        var mouth = new THREE.Object3D(); mouth.name = 'netMouth'; head.add(mouth);
+        return g;
+      };
+    })(pickupModel);
+    if (!bagCount('bugNet')) addItem('bugNet', 1);                      // (a new game starts with one)
+    loadGame = (function (base) { return function () { var r = base.apply(this, arguments);
+      if (!bagCount('bugNet') && addItem('bugNet', 1)) showToast('🦋 You have a new Bug Net in your bag! Hold it and press Interact to sweep it', 3600);
+      return r; }; })(loadGame);
+    function netInHand() { return !!(bag[selectedSlot] && bag[selectedSlot].id === 'bugNet'); }
+    function netCanSwing() { return netInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
+    var NET_TIME = 0.62, NET_HIT = 0.3, netT = 9;
+    window.bugNetSwept = function (x, y, z) {};                       // (the insects will listen here)
+    function swish() { if (!audioCtx) return; try { hissBurst(0.32, 'bandpass', 1800, 1.1, 0.09, 0.05, 0.22); slideTone('sine', 520, 820, 0.025, 0.18); } catch (err) {} }
+    interact = (function (base) { return function () {
+      if (netCanSwing()) { if (netT >= NET_TIME) { netT = 0; swish(); } return; }
+      return base.apply(this, arguments); }; })(interact);
+    updateTrees = (function (base) { return function (dt) { var r = base.apply(this, arguments);
+      if (netT >= NET_TIME) return r;
+      if (!netInHand()) { netT = 9; return r; }
+      var before = netT; netT += dt; var sw = Math.min(netT, NET_TIME);
+      var REST = 5.23, FWD = 4.55, OUT = -1.1, ACROSS = 0.95, ax, ay, tw;
+      function eo(k) { return 1 - (1 - k) * (1 - k); }
+      if (sw < 0.16) { var a = eo(sw / 0.16); ax = REST + (FWD - REST) * a; ay = OUT * a; tw = -0.35 * a; }   // (draw it out to her side)
+      else if (sw < 0.38) { var c = (sw - 0.16) / 0.22; c = c * c * (3 - 2 * c); ax = FWD; ay = OUT + (ACROSS - OUT) * c; tw = -0.35 + 0.7 * c; }   // (and sweep it across in front of her)
+      else { var e = eo((sw - 0.38) / (NET_TIME - 0.38)); ax = FWD + (REST - FWD) * e; ay = ACROSS * (1 - e); tw = 0.35 * (1 - e); }   // (then back to her side)
+      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.y = tw;
+      if (before < NET_HIT && netT >= NET_HIT) { var m = heldItemGrp.getObjectByName('netMouth'); if (m) { var wp = new THREE.Vector3(); m.getWorldPosition(wp); window.bugNetSwept(wp.x, wp.y, wp.z); for (var sp = 0; sp < 5; sp++) sparkle(wp.x, wp.y, wp.z, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.5, 0.4); } }
+      return r; }; })(updateTrees);
+  })();
 });
