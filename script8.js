@@ -5505,18 +5505,23 @@ EVERDAWN_PARTS.push(function (THREE) {
     function scenes() { return [scene, interiorScene, shopScene, clinicScene, abScene, carpScene, coopScene, fbarnScene, clothScene, labScene, hideScene, lhScene].filter(function (sc) { return sc && sc.isScene; }); }
     function eachTexture(fn) { var seen = new Set(); scenes().forEach(function (sc) { sc.traverse(function (o) { var ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       ms.forEach(function (m) { for (var k in m) { var t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); fn(t); } } }); }); }); }
-    function shrinkHuge() { eachTexture(function (t) { var im = t.image; if (!im || !im.width || t.isDataTexture || (im.width <= 2048 && im.height <= 2048)) return;
-      var sc = 2048 / Math.max(im.width, im.height), c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+    function texCap() { return light || mobile ? 1024 : 2048; }   // (the largest a texture may be: smaller on iPads and phones, and in the lighter mode)
+    function shrinkHuge() { var cap = texCap(); eachTexture(function (t) { var im = t.image; if (!im || !im.width || t.isDataTexture || t.isCubeTexture || (im.width <= cap && im.height <= cap)) return;
+      var sc = cap / Math.max(im.width, im.height), c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
       try { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.image = c; t.needsUpdate = true; } catch (err) {} }); }
     function resend() { eachTexture(function (t) { if (t.image) t.needsUpdate = true; }); }
     function quality() { renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, light ? 1 : mobile ? 1.5 : 2)); if (light) { if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } sun.shadow.mapSize.set(1024, 1024); } }
     function goLight() { if (light) return false; light = true; try { localStorage.setItem(KEY, '1'); } catch (err) {} quality(); return true; }
-    shrinkHuge(); quality(); setTimeout(shrinkHuge, 20000);   // (and again once you, the player, have loaded)
-    var checks = 0, watch = setInterval(function () {
-      if (++checks > 120) clearInterval(watch); if (gl.isContextLost()) return;
+    // (her outfits and her own textures are the biggest in the game, and they arrive after everything else: if one fails to
+    // upload it comes out see-through, so she vanishes and only her shadow is left. So textures are kept small enough, checked
+    // again every few seconds as new things load in (her clothes, say), and any that failed are sent again)
+    shrinkHuge(); quality(); setInterval(shrinkHuge, 8000);
+    var checks = 0; setInterval(function () { checks++; if (gl.isContextLost()) return;
       var e = gl.getError(); if (e !== gl.OUT_OF_MEMORY) return;
       if (goLight()) showToast('Graphics memory was running low, so the game switched to a lighter mode.', 4000);
-      resend(); }, 1000);
+      shrinkHuge(); resend(); }, 1000);
+    var playerSeen = 0; setInterval(function () { if (typeof player === 'undefined' || !player) return; var n = 0; player.traverse(function (o) { if (o.isMesh) n++; });   // (when her model or a new outfit arrives, send her textures again for good measure)
+      if (n !== playerSeen) { playerSeen = n; shrinkHuge(); player.traverse(function (o) { var ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; ms.forEach(function (m) { for (var k in m) { var t = m[k]; if (t && t.isTexture && t.image) t.needsUpdate = true; } m.needsUpdate = true; }); }); } }, 3000);
     var box = null, lostTimer = 0;
     function showReload() { if (box) return; box = document.createElement('div');
       box.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(28,20,44,0.75);font-family:Fredoka,system-ui,sans-serif';
