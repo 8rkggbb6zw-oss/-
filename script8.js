@@ -5645,11 +5645,11 @@ EVERDAWN_PARTS.push(function (THREE) {
         var wood = new THREE.MeshStandardMaterial({ color: 0xd8a868, roughness: 0.45, metalness: 0.05 }), brass = new THREE.MeshStandardMaterial({ color: 0xffd06a, metalness: 0.85, roughness: 0.28 }),
           leather = new THREE.MeshStandardMaterial({ color: 0x6a3e22, roughness: 0.7 }), willow = new THREE.MeshStandardMaterial({ color: 0xb88848, roughness: 0.6 }), pink = new THREE.MeshStandardMaterial({ color: 0xff8ac0, roughness: 0.5, emissive: 0xff8ac0, emissiveIntensity: 0.12 });
         var pole = new THREE.CylinderGeometry(0.011, 0.015, NET_L, 12); pole.translate(0, NET_L / 2 - 0.2, 0); var pm = new THREE.Mesh(pole, wood); pm.castShadow = true; r.add(pm);
-        var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.021, 0.26, 12), leather); grip.position.y = -0.06; r.add(grip);   // (a leather-wrapped grip)
-        var wrap = new THREE.Curve(); wrap.getPoint = function (t, o) { var a = t * Math.PI * 2 * 9; return (o || new THREE.Vector3()).set(Math.cos(a) * 0.021, -0.19 + t * 0.26, Math.sin(a) * 0.021); };
+        var grip = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.015, 0.26, 12), leather); grip.position.y = -0.06; r.add(grip);   // (a leather-wrapped grip)
+        var wrap = new THREE.Curve(); wrap.getPoint = function (t, o) { var a = t * Math.PI * 2 * 9; return (o || new THREE.Vector3()).set(Math.cos(a) * 0.015, -0.19 + t * 0.26, Math.sin(a) * 0.015); };
         r.add(new THREE.Mesh(new THREE.TubeGeometry(wrap, 140, 0.0028, 4, false), new THREE.MeshStandardMaterial({ color: 0x4a2a14, roughness: 0.8 })));   // (its binding, wound round)
-        var cap = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 8), brass); cap.position.y = -0.2; r.add(cap);
-        [0.08, 0.1].forEach(function (y) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.008, 12), brass); b.position.y = y; r.add(b); });   // (brass bands above the grip)
+        var cap = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 8), brass); cap.position.y = -0.2; r.add(cap);
+        [0.08, 0.1].forEach(function (y) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.008, 12), brass); b.position.y = y; r.add(b); });   // (brass bands above the grip)
         var top = NET_L - 0.2, fer = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.06, 12), brass); fer.position.y = top - 0.01; r.add(fer);   // (the brass ferrule)
         var head = new THREE.Group(); head.position.y = top + NET_R; head.rotation.y = Math.PI / 2; r.add(head);   // (turned so the hoop's open face looks ahead of her, the bag hanging behind it)
         var hoop = new THREE.Mesh(new THREE.TorusGeometry(NET_R, 0.008, 8, 40), willow); hoop.rotation.y = Math.PI / 2; hoop.castShadow = true; head.add(hoop);   // (the willow hoop)
@@ -5674,13 +5674,37 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (!bagCount('bugNet') && addItem('bugNet', 1)) showToast('🦋 You have a new Bug Net in your bag! Hold it and press Interact to sweep it', 3600);
       return r; }; })(loadGame);
     function netInHand() { return !!(bag[selectedSlot] && bag[selectedSlot].id === 'bugNet'); }
-    // (her hand round the grip: each frame the net is moved so its grip sits right in her closed fist)
-    var netBones = null, nv1 = new THREE.Vector3(), nv2 = new THREE.Vector3(), nv3 = new THREE.Vector3(), NET_GRIP = new THREE.Vector3(0, -0.04, 0);
-    function netIntoHand() { var pm = heldItemGrp.getObjectByName('netPalm'), hd = pm && pm.getObjectByName('netHandle'); if (!hd) return;
-      if (!netBones || !netBones.hand || !netBones.hand.parent) { netBones = {}; player.traverse(function (o) { if (/J_Bip_R_Hand$/.test(o.name)) netBones.hand = o; else if (/J_Bip_R_Middle1$/.test(o.name)) netBones.mid = o; }); }
-      if (!netBones.hand || !netBones.mid) return;
-      netBones.mid.updateWorldMatrix(true, false); heldItemGrp.updateWorldMatrix(true, true); netBones.hand.getWorldPosition(nv1); netBones.mid.getWorldPosition(nv2); nv1.lerp(nv2, 0.5);   // (the middle of her fist)
-      heldItemGrp.worldToLocal(nv1); hd.localToWorld(nv3.copy(NET_GRIP)); heldItemGrp.worldToLocal(nv3); pm.position.add(nv1.sub(nv3)); }
+    // (her hand round the grip, the handle through her fist without passing through her fingers: just before each picture
+    // is drawn (once her arm and fingers have been posed for it) her wrist is turned so her thumb side faces up, and the
+    // handle is laid along the hole her curled fingers make, from her little finger out past her thumb, its grip centred
+    // between her palm and her finger pads; the net's bag hangs on the side she's facing)
+    var NB = null, nv = [0, 1, 2, 3, 4, 5].map(function () { return new THREE.Vector3(); }), nq1 = new THREE.Quaternion(), nq2 = new THREE.Quaternion(), nm = new THREE.Matrix4(), NET_GRIP = -0.05, NET_ROLL = 0.85;
+    function netBone(n) { var f = null; player.traverse(function (o) { if (!f && o.isBone !== false && o.name && o.name.slice(-n.length) === n) f = o; }); return f; }
+    function netGrip() {
+      if (!netInHand() || heldShown !== 'bugNet' || !axeArm.visible) return;
+      var hd = heldItemGrp.getObjectByName('netHandle'); if (!hd) return;
+      if (!NB || !NB.hand || !NB.hand.parent) NB = { hand: netBone('J_Bip_R_Hand'), idx: netBone('J_Bip_R_Index1'), lit: netBone('J_Bip_R_Little1'), m1: netBone('J_Bip_R_Middle1'), m2: netBone('J_Bip_R_Middle2'), m3: netBone('J_Bip_R_Middle3') };
+      if (!NB.hand || !NB.idx || !NB.lit || !NB.m1 || !NB.m2 || !NB.m3) return;
+      var h = NB.hand, par = h.parent; h.updateWorldMatrix(true, true);
+      // (turn her wrist about its own length, whichever way lifts her thumb side)
+      h.getWorldPosition(nv[0]); NB.m1.getWorldPosition(nv[1]); var axis = nv[1].clone().sub(nv[0]).normalize();
+      NB.idx.getWorldPosition(nv[2]); NB.lit.getWorldPosition(nv[3]); var kn = nv[2].clone().sub(nv[3]).normalize();
+      var sgn = kn.clone().applyAxisAngle(axis, NET_ROLL).y >= kn.clone().applyAxisAngle(axis, -NET_ROLL).y ? 1 : -1;
+      h.getWorldQuaternion(nq1); nq2.setFromAxisAngle(axis, sgn * NET_ROLL).multiply(nq1); par.getWorldQuaternion(nq1).invert(); h.quaternion.copy(nq1.multiply(nq2)); h.updateMatrixWorld(true);
+      // (the hole in her fist: between her palm and her curled finger pads)
+      h.getWorldPosition(nv[0]); NB.m1.getWorldPosition(nv[1]); NB.m2.getWorldPosition(nv[2]); NB.m3.getWorldPosition(nv[3]); NB.idx.getWorldPosition(nv[4]); NB.lit.getWorldPosition(nv[5]);
+      var palmP = nv[0].clone().lerp(nv[1], 0.7), hole = palmP.add(nv[1]).add(nv[2]).add(nv[3]).multiplyScalar(0.25);
+      var up = nv[4].clone().sub(nv[5]).normalize();                   // (along her fist, out past her thumb)
+      var fw = new THREE.Vector3(Math.sin(facing), 0, Math.cos(facing)), side = fw.clone().cross(up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); var zz = up.clone().cross(side).normalize();
+      if (zz.dot(fw) < 0) { zz.negate(); side.negate(); }
+      // (the handle's place in the world, then in her hand's frame)
+      var pp = hd.parent; pp.updateWorldMatrix(true, false); pp.getWorldScale(nv[0]);
+      nm.makeBasis(side.clone().multiplyScalar(nv[0].x), up.clone().multiplyScalar(nv[0].y), zz.clone().multiplyScalar(nv[0].z));   // (x across, y along the handle, z: the side the bag hangs)
+      var off = up.clone().multiplyScalar(NET_GRIP * nv[0].y); nm.setPosition(hole.sub(off));
+      nm.premultiply(new THREE.Matrix4().copy(pp.matrixWorld).invert());
+      nm.decompose(hd.position, hd.quaternion, nv[1]); hd.updateMatrixWorld(true);
+    }
+    scene.onBeforeRender = (function (base) { return function () { if (base) base.apply(this, arguments); try { netGrip(); } catch (err) {} }; })(scene.onBeforeRender && scene.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender ? scene.onBeforeRender : null);
     function netCanSwing() { return netInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
     var NET_TIME = 0.62, NET_HIT = 0.3, netT = 9;
     window.bugNetSwept = function (x, y, z) {};                       // (the insects will listen here)
@@ -5689,7 +5713,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (netCanSwing()) { if (netT >= NET_TIME) { netT = 0; swish(); } return; }
       return base.apply(this, arguments); }; })(interact);
     updateTrees = (function (base) { return function (dt) { var r = base.apply(this, arguments);
-      if (netInHand()) netIntoHand();
       if (netT >= NET_TIME) return r;
       if (!netInHand()) { netT = 9; return r; }
       var before = netT; netT += dt; var sw = Math.min(netT, NET_TIME);
@@ -5698,7 +5721,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (sw < 0.16) { var a = eo(sw / 0.16); ax = REST + (FWD - REST) * a; ay = OUT * a; tw = -0.35 * a; }   // (draw it out to her side)
       else if (sw < 0.38) { var c = (sw - 0.16) / 0.22; c = c * c * (3 - 2 * c); ax = FWD; ay = OUT + (ACROSS - OUT) * c; tw = -0.35 + 0.7 * c; }   // (and sweep it across in front of her)
       else { var e = eo((sw - 0.38) / (NET_TIME - 0.38)); ax = FWD + (REST - FWD) * e; ay = ACROSS * (1 - e); tw = 0.35 * (1 - e); }   // (then back to her side)
-      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.y = tw; netIntoHand();
+      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.y = tw;
       if (before < NET_HIT && netT >= NET_HIT) { var m = heldItemGrp.getObjectByName('netMouth'); if (m) { var wp = new THREE.Vector3(); m.getWorldPosition(wp); window.bugNetSwept(wp.x, wp.y, wp.z); for (var sp = 0; sp < 5; sp++) sparkle(wp.x, wp.y, wp.z, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.5, 0.4); } }
       return r; }; })(updateTrees);
   })();
