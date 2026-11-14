@@ -5218,7 +5218,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (the lookout gazebo, in great detail: eight turned white columns on plinths, carved brackets and a scalloped valance under a
     // moulded beam, a railing of turned balusters, a two-tier teal shingled roof with ridge caps and a little windowed cupola, a
     // gilded weathervane, a planked ceiling; inside, cushioned benches with pillows, a woven rug, a tiled table set with lemonade,
-    // a pineapple and fruit and a hurricane candle, two wicker armchairs, potted palms and hibiscus, a lantern and a shell chime)
+    // a pineapple and fruit and a hurricane candle, two wicker armchairs, potted palms and hibiscus and a lantern)
     var gz = grp(GAZ_X, DECK_Y, GAZ_Z, 0, G);
     var gs0 = 9091; function gzr() { gs0 = (gs0 * 16807) % 2147483647; return (gs0 - 1) / 2147483646; }
     var PR = GAZ_R - 0.25, gzTrim = rMat(0xfaf8f2, { roughness: 0.55 }), gzSway = [];
@@ -5282,10 +5282,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     q(gz, new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), lampIron, 0, 2.2, 0); q(gz, new THREE.CylinderGeometry(0.11, 0.08, 0.24, 8), glowM, 0, 1.75, 0); q(gz, new THREE.ConeGeometry(0.16, 0.14, 8), lampIron, 0, 1.94, 0); q(gz, new THREE.CylinderGeometry(0.1, 0.1, 0.03, 8), lampIron, 0, 1.62, 0);
     [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(function (d) { q(gz, new THREE.BoxGeometry(0.012, 0.24, 0.012), lampIron, d[0] * 0.1, 1.75, d[1] * 0.1); });
     var gzs = new THREE.Sprite(new THREE.SpriteMaterial({ map: dawnGlowTex, color: 0xffc070, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false })); gzs.position.set(0, 1.75, 0); gzs.scale.set(1.4, 1.4, 1); gz.add(gzs); lampGlows.push(gzs);
-    // (the shell chime, by the way in, turning in the breeze)
-    var chime = grp(0, 2.24, PR - 0.15, 0, gz); q(chime, new THREE.TorusGeometry(0.12, 0.012, 6, 16), driftM, 0, 0, 0, Math.PI / 2, 0, 0); q(chime, new THREE.CylinderGeometry(0.003, 0.003, 0.12, 3), ropeM, 0, 0.06, 0);
-    for (var sh2 = 0; sh2 < 7; sh2++) { var sa2 = sh2 / 7 * Math.PI * 2, sl2 = 0.25 + (sh2 % 3) * 0.1; q(chime, new THREE.CylinderGeometry(0.002, 0.002, sl2, 3), ropeM, Math.cos(sa2) * 0.11, -sl2 / 2, Math.sin(sa2) * 0.11); var shl = q(chime, new THREE.ConeGeometry(0.035, 0.05, 9), rMat([0xf6dcd0, 0xfff4e8, 0xf2c2b0][sh2 % 3], { roughness: 0.5 }), Math.cos(sa2) * 0.11, -sl2 - 0.02, Math.sin(sa2) * 0.11, Math.PI, 0, 0); shl.scale.set(1, 1, 0.5); }
-    gzSway.push(chime);
     // (for the seats: painted panels, a solid teal cushion fabric with a fine weave, cream piping, and a cushion that puffs up)
     var gzSeatDk = rMat(0xd8d2c4, { roughness: 0.7 }), gzSeatPanel = rMat(0xf8f5ee, { roughness: 0.6 }), gzPipeM = rMat(0xf4ecd8, { roughness: 0.8 });
     var gzCushM = new THREE.MeshStandardMaterial({ map: cpTex(64, 64, function (g, w, h) { g.fillStyle = '#3a9ea0'; g.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 2) { g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(0, y, w, 1); } for (var x = 0; x < w; x += 2) { g.fillStyle = 'rgba(255,255,255,0.05)'; g.fillRect(x, 0, 1, h); } }, [4, 2]), roughness: 0.92 });
