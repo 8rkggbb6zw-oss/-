@@ -4400,7 +4400,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // ticking stripes and a turned-down white sheet, two plump pillows, and a hand-stitched quilt in a nautical pattern (blue and
     // cream star blocks, a red border, a stitched anchor in the middle); a bedside table with a candlestick, a book and a pair of
     // spectacles; a wardrobe with panelled doors, a carved cornice, brass handles and a mirror; a washstand with a marble top,
-    // a jug in a basin, a towel on its rail and a little mirror above; a rag rug by the bed and a sea chest ----
+    // a jug in a basin, a towel on its rail and a little mirror above; and a sea chest ----
     var R2 = LH_R[2], F2 = LH_F[2], wardM = new THREE.MeshStandardMaterial({ map: boardT(6161, '#7a4e2c', { checks: false, knots: false, nails: false }), roughness: 0.5 }), wardD = rMat(0x5a3820, { roughness: 0.55 }), whiteL = rMat(0xfbf8f0, { roughness: 0.95 });
     function lath2(pts, n) { return new THREE.LatheGeometry(pts.map(function (p) { return new THREE.Vector2(p[0], p[1]); }), n || 16); }
     var bed = lhAt(2, 1.95, 0.15, Math.PI / 2);
@@ -4420,9 +4420,6 @@ EVERDAWN_PARTS.push(function (THREE) {
       [hgt - 0.1, hgt - 0.38, 0.32].forEach(function (ry2) { quiet(q(bed, new THREE.CylinderGeometry(0.016, 0.016, 0.96, 8), lhBrass, 0, ry2, ez, 0, 0, Math.PI / 2)); });
       for (var bx2 = -0.36; bx2 <= 0.37; bx2 += 0.12) { quiet(q(bed, new THREE.CylinderGeometry(0.01, 0.01, 0.28, 6), lhBrass, bx2, hgt - 0.24, ez)); quiet(q(bed, new THREE.SphereGeometry(0.016, 8, 6), lhBrass, bx2, hgt - 0.24, ez)); } });   // (spindles with little knobs)
     [-0.6, 0, 0.6].forEach(function (bz) { var p6 = new THREE.Vector3(0, 0, bz).applyAxisAngle(Y_AX, bed.rotation.y).add(bed.position); lhSol(2, p6.x, p6.z, 0.48); });
-    // (a rag rug beside the bed)
-    var ragT = cpTex(128, 64, function (g, w, h) { var cols = ['#c8504a', '#4a7aa8', '#e8d8b0', '#6a9a6a', '#d8a83a']; for (var y = 0; y < h; y += 4) { for (var x = 0; x < w; x += 6) { g.fillStyle = cols[(x * 7 + y * 3) % 5]; g.fillRect(x, y, 6, 4); } } });
-    var rr = new THREE.Vector3(0.75, 0, 0).applyAxisAngle(Y_AX, bed.rotation.y).add(bed.position); q(R2, new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshStandardMaterial({ map: ragT, roughness: 1 }), rr.x, F2 + 0.006, rr.z, -Math.PI / 2, 0, bed.rotation.y);
     // (a bedside table with a candlestick, a book and spectacles)
     var bt = lhAt(2, 1.38, 1.0); q(bt, new THREE.BoxGeometry(0.42, 0.04, 0.38), wardM, 0, 0.62, 0); q(bt, new THREE.BoxGeometry(0.38, 0.14, 0.34), wardM, 0, 0.53, 0); q(bt, new THREE.BoxGeometry(0.3, 0.1, 0.01), wardD, 0, 0.53, 0.172); quiet(q(bt, new THREE.SphereGeometry(0.014, 8, 6), lhBrass, 0, 0.53, 0.18));
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (l) { q(bt, new THREE.CylinderGeometry(0.018, 0.012, 0.46, 8), wardM, l[0] * 0.17, 0.23, l[1] * 0.15); });
