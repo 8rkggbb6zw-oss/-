@@ -4976,13 +4976,34 @@ EVERDAWN_PARTS.push(function (THREE) {
     for (var hp = 0; hp < 8; hp++) { var ha = hp / 8 * Math.PI * 2 + Math.PI / 8, r0 = GAZ_R + 0.55, r1 = 1.6, p0 = new THREE.Vector3(Math.cos(ha) * r0, 2.66, Math.sin(ha) * r0), p1 = new THREE.Vector3(Math.cos(ha) * r1, 3.7, Math.sin(ha) * r1);
       q(gz, new THREE.TubeGeometry(new THREE.LineCurve3(p0, p1), 4, 0.045, 6), whiteM, 0, 0, 0);
       var r2 = 1.75; q(gz, new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(Math.cos(ha) * r2, 3.81, Math.sin(ha) * r2), new THREE.Vector3(0, 4.85, 0)), 4, 0.04, 6), whiteM, 0, 0, 0); }   // (ridge caps on the hips)
-    var cup = grp(0, 4.7, 0, Math.PI / 8, gz);   // (a little windowed cupola on top, and a gilded weathervane)
-    q(cup, new THREE.CylinderGeometry(0.42, 0.46, 0.5, 8), whiteM, 0, 0.25, 0); for (var cw = 0; cw < 8; cw++) { var ca = cw / 8 * Math.PI * 2 + Math.PI / 8; quiet(q(cup, new THREE.PlaneGeometry(0.18, 0.26), rMat(0x2a4a5a, { roughness: 0.1, metalness: 0.3, envMap: rubyEnv }), Math.cos(ca) * 0.425, 0.27, Math.sin(ca) * 0.425, 0, -ca + Math.PI / 2, 0)); }
-    q(cup, new THREE.ConeGeometry(0.58, 0.5, 8), roofM, 0, 0.75, 0); q(cup, new THREE.SphereGeometry(0.07, 10, 8), rMat(0xd8b048, { metalness: 0.8, roughness: 0.3, envMap: rubyEnv }), 0, 1.04, 0);
-    var vane = grp(0, 1.04, 0, 0.6, cup), goldV = rMat(0xd8b048, { metalness: 0.8, roughness: 0.3, envMap: rubyEnv }); q(vane, new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6), goldV, 0, 0.3, 0);
-    [[0, 0], [Math.PI / 2, 1]].forEach(function (d) { q(vane, new THREE.BoxGeometry(0.34, 0.012, 0.012), goldV, 0, 0.36, 0, 0, d[0], 0); });
-    var fishS = new THREE.Shape(); fishS.moveTo(-0.22, 0); fishS.quadraticCurveTo(-0.05, 0.1, 0.16, 0.02); fishS.lineTo(0.26, 0.08); fishS.lineTo(0.24, 0); fishS.lineTo(0.26, -0.08); fishS.lineTo(0.16, -0.02); fishS.quadraticCurveTo(-0.05, -0.1, -0.22, 0);
-    q(vane, new THREE.ExtrudeGeometry(fishS, { depth: 0.012, bevelEnabled: false }), goldV, 0, 0.55, -0.006); var vaneSpin = vane;
+    // (a little louvred cupola on top: a flared octagonal skirt on the roof's peak, eight slim white posts with bases and
+    // capitals, an arched opening between each pair filled with angled louvre slats, a cornice with dentils, a bell-shaped
+    // teal-shingled roof with white ribs down its corners and a trim ring at its eave, a gilded collar, ball and spire, and a
+    // weathervane: compass arms with gold balls at their ends and a gilded fish)
+    var cup = grp(0, 4.66, 0, 0, gz), CR = 0.5, CH = 0.62, CA = Math.PI / 4, cupGold = rMat(0xd8b048, { metalness: 0.8, roughness: 0.3, envMap: rubyEnv });
+    function cupAt(a, r, y) { return grp(Math.cos(a) * r, y, Math.sin(a) * r, Math.PI / 2 - a, cup); }   // (+z facing out at angle a)
+    q(cup, new THREE.CylinderGeometry(CR + 0.06, CR + 0.2, 0.2, 8), roofM, 0, 0.0, 0, 0, Math.PI / 8, 0);   // (a flared skirt of shingles down onto the roof)
+    q(cup, new THREE.CylinderGeometry(CR + 0.08, CR + 0.08, 0.07, 8), whiteM, 0, 0.13, 0, 0, Math.PI / 8, 0); q(cup, new THREE.CylinderGeometry(CR + 0.03, CR + 0.03, 0.05, 8), gzTrim, 0, 0.19, 0, 0, Math.PI / 8, 0);   // (the sill, and a moulding)
+    var louvM = rMat(0xf4f1e8, { roughness: 0.6 }), shadowM = rMat(0x3a4a52, { roughness: 0.9 });
+    q(cup, new THREE.CylinderGeometry(CR * 0.88, CR * 0.88, CH, 8), shadowM, 0, 0.21 + CH / 2, 0, 0, Math.PI / 8, 0);   // (the dark of the inside, behind the louvres)
+    for (var ck = 0; ck < 8; ck++) { var cAng = ck * CA, cpst = grp(Math.cos(cAng + CA / 2) * CR, 0.21, Math.sin(cAng + CA / 2) * CR, 0, cup);   // (a corner post)
+      q(cpst, new THREE.BoxGeometry(0.07, CH, 0.07), whiteM, 0, CH / 2, 0, 0, -(cAng + CA / 2), 0); q(cpst, new THREE.BoxGeometry(0.1, 0.04, 0.1), whiteM, 0, 0.02, 0, 0, -(cAng + CA / 2), 0); q(cpst, new THREE.BoxGeometry(0.1, 0.04, 0.1), whiteM, 0, CH - 0.02, 0, 0, -(cAng + CA / 2), 0);
+      var face = cupAt(cAng, CR * Math.cos(CA / 2) - 0.01, 0.21), fw = 2 * CR * Math.sin(CA / 2) - 0.08;   // (the opening on this face)
+      q(face, new THREE.CircleGeometry(fw / 2, 16, 0, Math.PI), shadowM, 0, CH - 0.17, -0.02); quiet(q(face, new THREE.TorusGeometry(fw / 2, 0.018, 6, 16, Math.PI), louvM, 0, CH - 0.17, 0.0));   // (its arched head)
+      for (var sl = 0; sl < 6; sl++) quiet(q(face, new THREE.BoxGeometry(fw, 0.012, 0.06), louvM, 0, 0.08 + sl * 0.065, 0.0, 0.55, 0, 0));   // (louvre slats, angled to shed the rain)
+      q(face, new THREE.BoxGeometry(fw + 0.02, 0.025, 0.05), louvM, 0, 0.04, 0.01); }
+    q(cup, new THREE.CylinderGeometry(CR + 0.1, CR + 0.04, 0.09, 8), whiteM, 0, 0.21 + CH + 0.045, 0, 0, Math.PI / 8, 0);   // (the cornice)
+    for (var dn2 = 0; dn2 < 32; dn2++) { var dA = dn2 / 32 * Math.PI * 2; quiet(q(cup, new THREE.BoxGeometry(0.03, 0.035, 0.03), whiteM, Math.cos(dA) * (CR + 0.02), 0.21 + CH - 0.012, Math.sin(dA) * (CR + 0.02), 0, -dA, 0)); }   // (dentils under it)
+    var bellP = [[0.68, 0], [0.66, 0.05], [0.56, 0.14], [0.42, 0.24], [0.3, 0.36], [0.24, 0.48], [0.18, 0.56], [0.1, 0.6], [0.04, 0.62], [0.0, 0.625]].map(function (p) { return new THREE.Vector2(p[0], p[1]); }), bellY = 0.21 + CH + 0.09;
+    q(cup, new THREE.LatheGeometry(bellP, 8, Math.PI / 8 - Math.PI / 2), roofM, 0, bellY, 0);   // (a bell-shaped roof)
+    for (var rb = 0; rb < 8; rb++) { var rbA = rb * CA + CA / 2, rbP = bellP.map(function (p) { return new THREE.Vector3(Math.cos(rbA) * (p.x + 0.012), bellY + p.y + 0.008, Math.sin(rbA) * (p.x + 0.012)); }); q(cup, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rbP), 20, 0.018, 5), whiteM, 0, 0, 0); }   // (white ribs down its corners)
+    q(cup, new THREE.TorusGeometry(0.68, 0.025, 6, 8), whiteM, 0, bellY + 0.005, 0, Math.PI / 2, 0, Math.PI / 8);   // (the trim at its eave)
+    var fin = grp(0, bellY + 0.6, 0, 0, cup); q(fin, new THREE.CylinderGeometry(0.05, 0.07, 0.06, 12), cupGold, 0, 0.03, 0); q(fin, new THREE.SphereGeometry(0.075, 14, 10), cupGold, 0, 0.13, 0); q(fin, new THREE.CylinderGeometry(0.03, 0.045, 0.05, 10), cupGold, 0, 0.22, 0);
+    q(fin, new THREE.SphereGeometry(0.04, 12, 8), cupGold, 0, 0.27, 0); q(fin, new THREE.ConeGeometry(0.018, 0.22, 8), cupGold, 0, 0.41, 0);   // (collar, ball, a smaller ball and a spire)
+    var vane = grp(0, bellY + 0.6, 0, 0.6, cup), goldV = cupGold; q(vane, new THREE.CylinderGeometry(0.01, 0.01, 0.7, 6), goldV, 0, 0.55, 0);
+    [0, Math.PI / 2].forEach(function (ra) { var arm = grp(0, 0.5, 0, ra, vane); q(arm, new THREE.BoxGeometry(0.46, 0.012, 0.012), goldV, 0, 0, 0); [-1, 1].forEach(function (sd) { q(arm, new THREE.SphereGeometry(0.022, 8, 6), goldV, sd * 0.24, 0, 0); }); });   // (compass arms)
+    var fishS = new THREE.Shape(); fishS.moveTo(-0.26, 0); fishS.quadraticCurveTo(-0.05, 0.13, 0.18, 0.025); fishS.lineTo(0.3, 0.1); fishS.lineTo(0.27, 0); fishS.lineTo(0.3, -0.1); fishS.lineTo(0.18, -0.025); fishS.quadraticCurveTo(-0.05, -0.13, -0.26, 0);
+    q(vane, new THREE.ExtrudeGeometry(fishS, { depth: 0.014, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 }), goldV, 0, 0.78, -0.007); [-1, 1].forEach(function (sd) { quiet(q(vane, new THREE.SphereGeometry(0.012, 6, 5), rMat(0x2a2a2a), -0.17, 0.795, sd * 0.012)); }); var vaneSpin = vane;   // (a gilded fish, and its eyes)
     // (the lantern, hanging from the ceiling over the table)
     q(gz, new THREE.CylinderGeometry(0.008, 0.008, 0.7, 4), lampIron, 0, 2.2, 0); q(gz, new THREE.CylinderGeometry(0.11, 0.08, 0.24, 8), glowM, 0, 1.75, 0); q(gz, new THREE.ConeGeometry(0.16, 0.14, 8), lampIron, 0, 1.94, 0); q(gz, new THREE.CylinderGeometry(0.1, 0.1, 0.03, 8), lampIron, 0, 1.62, 0);
     [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(function (d) { q(gz, new THREE.BoxGeometry(0.012, 0.24, 0.012), lampIron, d[0] * 0.1, 1.75, d[1] * 0.1); });
