@@ -5304,4 +5304,31 @@ EVERDAWN_PARTS.push(function (THREE) {
     renderer.domElement.addEventListener('webglcontextlost', function (ev) { ev.preventDefault(); clearTimeout(lostTimer); lostTimer = setTimeout(showReload, 6000); }, false);
     renderer.domElement.addEventListener('webglcontextrestored', function () { clearTimeout(lostTimer); if (box) { box.remove(); box = null; } goLight(); setTimeout(resend, 0); }, false);
   })();
+  // ===== No flying through buildings. In the air you used to pass over anything once you were more than a couple of metres
+  // up, so you could fly straight through the lighthouse, the houses and the shops. Now everything solid also knows how tall
+  // it is (worked out from what's built there), and while you're flying you're kept out of anything whose top is above your
+  // feet: you have to fly over it, or go round =====
+  (function () {
+    var CELL = 2, grid = null, builtAt = -1e9, box = new THREE.Box3(), clock0 = Date.now();
+    function skip(o) { if (!o.isMesh || o.isSprite || o.isPoints || o.isLine) return true; var m = Array.isArray(o.material) ? o.material[0] : o.material;
+      if (!m || (m.blending === THREE.AdditiveBlending) || (m.transparent && m.depthWrite === false) || m.colorWrite === false) return true; return !o.visible; }
+    function build() { grid = {}; builtAt = Date.now(); scene.updateMatrixWorld(true);
+      scene.traverse(function (o) { if (skip(o) || o === player) return; for (var p = o.parent; p; p = p.parent) { if (p === player || !p.visible) return; }
+        if (o.isInstancedMesh) return;   // (grass, pebbles, boards and the like: low, and too many to count)
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); box.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+        if (box.max.x - box.min.x > 30 || box.max.z - box.min.z > 30 || box.max.y - box.min.y > 40) return;   // (the ground, the sea, the sky)
+        for (var gx = Math.floor(box.min.x / CELL); gx <= Math.floor(box.max.x / CELL); gx++) for (var gz = Math.floor(box.min.z / CELL); gz <= Math.floor(box.max.z / CELL); gz++) { var k = gx + ',' + gz; (grid[k] || (grid[k] = [])).push([box.min.x, box.max.x, box.min.z, box.max.z, box.max.y]); } }); }
+    function topAt(o) { var top = -99, r = o.r + 0.05;
+      for (var gx = Math.floor((o.x - r) / CELL); gx <= Math.floor((o.x + r) / CELL); gx++) for (var gz = Math.floor((o.z - r) / CELL); gz <= Math.floor((o.z + r) / CELL); gz++) { var c = grid[gx + ',' + gz]; if (!c) continue;
+        for (var i = 0; i < c.length; i++) { var b = c[i]; if (o.x + r > b[0] && o.x - r < b[1] && o.z + r > b[2] && o.z - r < b[3] && b[4] > top) top = b[4]; } }
+      return top; }
+    updateCarpenter = (function (base) { return function (t) { base.apply(this, arguments);
+      if (!flying || indoors || !solids.length) return;
+      if (!grid || Date.now() - builtAt > 20000) { if (Date.now() - clock0 < 3000) return; build(); solids.forEach(function (o) { o.top = undefined; }); }
+      var feet = player.position.y + 0.15, px = player.position.x, pz = player.position.z;
+      for (var i = 0; i < solids.length; i++) { var o = solids[i]; if (o.young) continue; var dx = px - o.x, dz = pz - o.z, min = o.r + 0.35; if (Math.abs(dx) > min || Math.abs(dz) > min) continue;
+        var d = Math.hypot(dx, dz); if (d >= min || d < 0.0001) continue; if (o.top === undefined) o.top = topAt(o); if (feet >= o.top) continue;
+        px = o.x + dx / d * min; pz = o.z + dz / d * min; }
+      player.position.x = px; player.position.z = pz; }; })(updateCarpenter);
+  })();
 });
