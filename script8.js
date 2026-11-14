@@ -5040,23 +5040,85 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (a woven jute rug)
     var rugT2 = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#c8a87a'; g.fillRect(0, 0, w, h); for (var r = 4; r < 64; r += 4) { g.strokeStyle = r % 16 === 0 ? '#3aa8a8' : (r % 8 === 0 ? '#a88a5a' : '#d8bc8e'); g.lineWidth = 3; g.beginPath(); g.arc(64, 64, r, 0, Math.PI * 2); g.stroke(); } for (var i = 0; i < 600; i++) { g.fillStyle = 'rgba(80,60,30,0.2)'; g.fillRect(gzr() * w, gzr() * h, 1, 2); } });
     quiet(q(gz, new THREE.CircleGeometry(1.45, 40), new THREE.MeshStandardMaterial({ map: rugT2, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }), 0, 0.012, 0, -Math.PI / 2, 0, 0));
-    // (the table: a turned pedestal and a tiled top, set with lemonade, a pineapple and fruit, and a hurricane candle)
+    // (the table: a turned pedestal and a tiled top)
     var tileT = cpTex(128, 128, function (g, w, h) { g.fillStyle = '#e8e0d0'; g.fillRect(0, 0, w, h); for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) { g.fillStyle = ['#3aa8a8', '#fbf6ea', '#e8b83a', '#5ac8c0'][(x * 3 + y * 5) % 4]; g.fillRect(x * 16 + 1, y * 16 + 1, 14, 14); } g.strokeStyle = '#2a6a6a'; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 58, 0, Math.PI * 2); g.stroke(); });
     var tb = grp(0, 0, -0.15, 0, gz), darkWood = rMat(0x6a4a2a, { roughness: 0.7 });
     q(tb, lbLathe([[0, 0], [0.32, 0], [0.32, 0.04], [0.2, 0.08], [0.08, 0.14], [0.06, 0.3], [0.09, 0.4], [0.055, 0.6], [0.1, 0.68], [0.1, 0.7], [0, 0.7]], 16), darkWood, 0, 0, 0);
     q(tb, new THREE.CylinderGeometry(0.62, 0.62, 0.05, 32), [darkWood, new THREE.MeshStandardMaterial({ map: tileT, roughness: 0.4 }), darkWood], 0, 0.725, 0); q(tb, new THREE.TorusGeometry(0.62, 0.02, 6, 40), darkWood, 0, 0.725, 0, Math.PI / 2, 0, 0);
-    var TY = 0.75, glassM2 = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, roughness: 0.05, envMap: rubyEnv, depthWrite: false }), lemM = rMat(0xf6e27a, { roughness: 0.2, transparent: true, opacity: 0.85 });
-    q(tb, lbLathe([[0, 0], [0.07, 0], [0.08, 0.1], [0.07, 0.2], [0.06, 0.24], [0.075, 0.26], [0.072, 0.27], [0.055, 0.25], [0, 0.25]], 16), glassM2, -0.25, TY, -0.12); q(tb, new THREE.CylinderGeometry(0.068, 0.07, 0.16, 16), lemM, -0.25, TY + 0.085, -0.12);   // (a jug of lemonade)
-    q(tb, new THREE.TorusGeometry(0.06, 0.012, 6, 12, Math.PI), glassM2, -0.17, TY + 0.15, -0.12, 0, 0, -Math.PI / 2);
-    [[-0.05, 0.22], [0.25, 0.28]].forEach(function (gp) { q(tb, lbLathe([[0, 0], [0.035, 0], [0.04, 0.12], [0.036, 0.12], [0.031, 0.006], [0, 0.006]], 12), glassM2, gp[0], TY, gp[1]); q(tb, new THREE.CylinderGeometry(0.032, 0.031, 0.08, 12), lemM, gp[0], TY + 0.045, gp[1]);   // (two glasses, a lemon slice on each, a straw)
-      q(tb, new THREE.CylinderGeometry(0.03, 0.03, 0.006, 12, 1, false, 0, Math.PI), rMat(0xf2d84a), gp[0] + 0.03, TY + 0.11, gp[1], 0, 0, Math.PI / 2); q(tb, new THREE.CylinderGeometry(0.004, 0.004, 0.18, 5), rMat(0xe85a5a), gp[0] - 0.01, TY + 0.1, gp[1], 0.25, 0, 0.1); });
-    var bowl = grp(0.2, TY, -0.2, 0, tb); q(bowl, lbLathe([[0, 0], [0.08, 0], [0.16, 0.05], [0.19, 0.09], [0.18, 0.095], [0.15, 0.06], [0, 0.03]], 18), rMat(0x8a5a32, { roughness: 0.6, side: THREE.DoubleSide }), 0, 0, 0);   // (a bowl of fruit with a pineapple)
-    var pinT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#c88a2a'; g.fillRect(0, 0, w, h); for (var y = 0; y < h; y += 8) for (var x = (y / 8 % 2) * 4; x < w; x += 8) { g.fillStyle = '#e8b04a'; g.beginPath(); g.moveTo(x + 4, y); g.lineTo(x + 8, y + 4); g.lineTo(x + 4, y + 8); g.lineTo(x, y + 4); g.closePath(); g.fill(); g.fillStyle = '#6a4a1a'; g.fillRect(x + 3, y + 3, 2, 2); } });
-    q(bowl, new THREE.SphereGeometry(0.075, 14, 10), new THREE.MeshStandardMaterial({ map: pinT, roughness: 0.7 }), 0, 0.15, 0).scale.set(1, 1.35, 1);
-    for (var pf = 0; pf < 9; pf++) { var pfa = pf / 9 * Math.PI * 2; q(bowl, new THREE.ConeGeometry(0.018, 0.16, 4), rMat(0x4a8a3a), Math.cos(pfa) * 0.02, 0.32, Math.sin(pfa) * 0.02, Math.sin(pfa) * 0.35, 0, -Math.cos(pfa) * 0.35); }
-    [[0.1, 0.06, 0.06, 0xf2902a], [-0.09, 0.05, 0.08, 0xf2902a], [0.03, 0.05, -0.12, 0xe8c83a], [-0.1, 0.06, -0.07, 0x8ab83a]].forEach(function (f2) { q(bowl, new THREE.SphereGeometry(0.045, 10, 8), rMat(f2[3], { roughness: 0.5 }), f2[0], f2[1], f2[2]); });
-    var hur = grp(0.02, TY, 0.0, 0, tb); q(hur, new THREE.CylinderGeometry(0.06, 0.06, 0.02, 12), darkWood, 0, 0.01, 0); q(hur, new THREE.CylinderGeometry(0.03, 0.03, 0.08, 12), rMat(0xfaf4e6, { emissive: 0x5a3c18, emissiveIntensity: 0.6 }), 0, 0.06, 0);   // (a hurricane candle)
-    q(hur, lbLathe([[0.05, 0.02], [0.07, 0.08], [0.06, 0.16], [0.05, 0.2], [0.052, 0.21]], 16), glassM2, 0, 0, 0); var hfl = quiet(q(hur, new THREE.SphereGeometry(0.012, 8, 6), rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.6 }), 0, 0.115, 0)); hfl.scale.y = 2;
+    // (set on it, in detail: a wooden serving tray with handles holding a glass jug of lemonade, ice and lemon wheels floating
+    // in it, a moulded handle and lip; two tumblers of lemonade with ice, a lemon wheel on the rim, a striped paper straw and a
+    // sprig of mint, each on a woven coaster; a turned wooden bowl of fruit: a pineapple with raised diamond scales and a
+    // layered crown, dimpled oranges with a leaf, a lime, a lemon, a bunch of bananas and a cluster of grapes; a hurricane
+    // lantern with a brass base, a dripping pillar candle and a flickering flame inside a tall glass chimney; a folded linen
+    // napkin with a teal stripe, a little dish of lemon wedges, and a conch shell)
+    var TY = 0.75, glassM2 = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.28, roughness: 0.05, envMap: rubyEnv, depthWrite: false, side: THREE.DoubleSide }), lemM = rMat(0xf6e27a, { roughness: 0.15, transparent: true, opacity: 0.82 });
+    var iceM = rMat(0xf4fbff, { roughness: 0.05, transparent: true, opacity: 0.6, envMap: rubyEnv }), pithM = rMat(0xfbf6dc, { roughness: 0.5 }), rindM = rMat(0xf2d030, { roughness: 0.45 }), mintM = rMat(0x3aa04a, { roughness: 0.6, side: THREE.DoubleSide });
+    var wheelT = cpTex(64, 64, function (g) { g.fillStyle = '#f2d030'; g.beginPath(); g.arc(32, 32, 31, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fbf6dc'; g.beginPath(); g.arc(32, 32, 27, 0, Math.PI * 2); g.fill();
+      for (var s = 0; s < 9; s++) { var a0 = s / 9 * Math.PI * 2; g.fillStyle = '#f8e070'; g.beginPath(); g.moveTo(32, 32); g.arc(32, 32, 24, a0 + 0.06, a0 + Math.PI * 2 / 9 - 0.06); g.closePath(); g.fill(); } g.fillStyle = '#fbf6dc'; g.beginPath(); g.arc(32, 32, 3, 0, Math.PI * 2); g.fill(); });
+    var wheelM = new THREE.MeshStandardMaterial({ map: wheelT, roughness: 0.4, side: THREE.DoubleSide });
+    function lemonWheel(par, x, y, z, r, rx, rz) { var w = grp(x, y, z, 0, par); w.rotation.set(rx || 0, 0, rz || 0); q(w, new THREE.CylinderGeometry(r, r, 0.006, 20), [rindM, wheelM, wheelM], 0, 0, 0); return w; }
+    function ice(par, x, y, z, s, k) { var c = q(par, new THREE.BoxGeometry(s, s, s), iceM, x, y, z, k, k * 1.7, k * 0.6); c.castShadow = false; return c; }
+    // (the tray)
+    var tray = grp(-0.24, TY, -0.14, 0.2, tb), trayW = new THREE.MeshStandardMaterial({ map: boardT(8181, '#b88a5a', { checks: false, knots: false, nails: false }), roughness: 0.45 });
+    q(tray, new THREE.BoxGeometry(0.36, 0.012, 0.26), trayW, 0, 0.006, 0); [[0, 0.135, 0.36, 0.012], [0, -0.135, 0.36, 0.012]].forEach(function (e) { q(tray, new THREE.BoxGeometry(e[2], 0.03, e[3]), trayW, e[0], 0.02, e[1]); });
+    [-1, 1].forEach(function (sd) { q(tray, new THREE.BoxGeometry(0.012, 0.05, 0.26), trayW, sd * 0.18, 0.03, 0); quiet(q(tray, new THREE.TorusGeometry(0.035, 0.007, 5, 12, Math.PI), trayW, sd * 0.18, 0.055, 0, 0, Math.PI / 2, 0)); });   // (raised ends with cut-out handles)
+    // (the jug)
+    var jug = grp(-0.03, 0.012, 0, -0.3, tray), jugP = [[0, 0], [0.068, 0], [0.074, 0.01], [0.082, 0.08], [0.08, 0.16], [0.068, 0.22], [0.06, 0.25], [0.066, 0.27], [0.07, 0.28], [0.066, 0.282], [0.056, 0.26], [0.074, 0.15], [0.064, 0.008], [0, 0.008]];
+    q(jug, lbLathe(jugP, 24), glassM2, 0, 0, 0); q(jug, new THREE.CylinderGeometry(0.074, 0.07, 0.17, 24), lemM, 0, 0.095, 0); quiet(q(jug, new THREE.CircleGeometry(0.074, 24), rMat(0xfaea90, { roughness: 0.1, transparent: true, opacity: 0.9 }), 0, 0.181, 0, -Math.PI / 2, 0, 0));
+    var spout = q(jug, new THREE.ConeGeometry(0.03, 0.05, 12, 1, true, 0, Math.PI), glassM2, 0.07, 0.27, 0, 0, 0, Math.PI / 2 + 0.4); spout.scale.set(1, 1, 0.8);
+    var hp = []; for (var hi = 0; hi <= 12; hi++) { var ha = -Math.PI / 2 + hi / 12 * Math.PI; hp.push(new THREE.Vector3(-0.075 - Math.cos(ha) * 0.05, 0.15 + Math.sin(ha) * 0.075, 0)); } q(jug, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(hp), 20, 0.011, 8), glassM2, 0, 0, 0);   // (its handle)
+    [[0.03, 0.17, 0.02, 0.4, 0.2], [-0.03, 0.172, -0.025, -0.3, 0.6]].forEach(function (lw) { lemonWheel(jug, lw[0], lw[1], lw[2], 0.032, lw[3], lw[4]); });
+    [[0, 0.17, 0.035], [-0.035, 0.168, 0.01], [0.035, 0.165, -0.03], [0.01, 0.12, -0.02], [-0.02, 0.07, 0.03]].forEach(function (ic, k) { ice(jug, ic[0], ic[1], ic[2], 0.026, k); });
+    for (var cd = 0; cd < 14; cd++) { var ca = cd * 2.4, cy = 0.03 + (cd * 0.37) % 0.14; quiet(q(jug, new THREE.SphereGeometry(0.003, 4, 3), iceM, Math.cos(ca) * 0.081, cy, Math.sin(ca) * 0.081)); }   // (condensation)
+    // (two tumblers on woven coasters)
+    var coastT = cpTex(64, 64, function (g) { for (var r = 30; r > 0; r -= 3) { g.beginPath(); g.arc(32, 32, r, 0, Math.PI * 2); g.fillStyle = r % 6 ? '#c8a06a' : '#a8804a'; g.fill(); } }), coastM = new THREE.MeshStandardMaterial({ map: coastT, roughness: 0.9 }), strawM = new THREE.MeshStandardMaterial({ map: cpTex(16, 64, function (g, w, h) { for (var y = 0; y < h; y += 8) { g.fillStyle = (y / 8) % 2 ? '#fbf6ea' : '#e85a6a'; g.fillRect(0, y, w, 8); } }, [1, 3]), roughness: 0.5 });
+    [[-0.08, 0.26, 0.4], [0.27, 0.3, -0.6]].forEach(function (gp, k) { var gl = grp(gp[0], TY, gp[1], gp[2], tb);
+      q(gl, new THREE.CylinderGeometry(0.055, 0.055, 0.006, 24), coastM, 0, 0.003, 0);
+      q(gl, lbLathe([[0, 0.006], [0.036, 0.006], [0.042, 0.13], [0.039, 0.13], [0.032, 0.014], [0, 0.014]], 20), glassM2, 0, 0, 0); q(gl, new THREE.CylinderGeometry(0.036, 0.032, 0.095, 20), lemM, 0, 0.062, 0);
+      [[0.012, 0.1, 0.01], [-0.012, 0.105, -0.01], [0.0, 0.08, -0.012]].forEach(function (ic, j) { ice(gl, ic[0], ic[1], ic[2], 0.02, j + k); });
+      var lw2 = lemonWheel(gl, 0.04, 0.125, 0, 0.032, 0, Math.PI / 2 - 0.15);   // (a lemon wheel on the rim)
+      var st = q(gl, new THREE.CylinderGeometry(0.004, 0.004, 0.2, 8), strawM, -0.012, 0.13, 0.008, 0.18, 0, 0.12); st.castShadow = false;
+      for (var ml = 0; ml < 4; ml++) { var mlf = q(gl, new THREE.SphereGeometry(0.014, 8, 5), mintM, 0.01 + Math.cos(ml * 1.6) * 0.012, 0.11 + ml * 0.006, -0.012 + Math.sin(ml * 1.6) * 0.012, 0.4, ml * 1.6, 0); mlf.scale.set(1, 0.18, 1.6); } });   // (a sprig of mint)
+    // (the fruit bowl: turned wood with a darker rim)
+    var bowl = grp(0.22, TY, -0.2, 0, tb), bowlW = rMat(0x8a5a32, { roughness: 0.45, side: THREE.DoubleSide });
+    q(bowl, lbLathe([[0, 0], [0.06, 0], [0.065, 0.012], [0.08, 0.02], [0.16, 0.06], [0.195, 0.1], [0.19, 0.106], [0.15, 0.07], [0, 0.04]], 32), bowlW, 0, 0, 0); q(bowl, new THREE.TorusGeometry(0.193, 0.006, 6, 40), rMat(0x5a3a1e, { roughness: 0.5 }), 0, 0.103, 0, Math.PI / 2, 0, 0);
+    // (a pineapple: a body of raised diamond scales, each with a little point, and a crown of leaves in layers)
+    var pinG = new THREE.SphereGeometry(0.075, 36, 26), pp = pinG.attributes.position, pv = new THREE.Vector3(), pcols = [], pcc = new THREE.Color();
+    for (var pi = 0; pi < pp.count; pi++) { pv.fromBufferAttribute(pp, pi); var pa = Math.atan2(pv.z, pv.x), py = Math.asin(Math.max(-1, Math.min(1, pv.y / 0.075))), u = pa * 8 / Math.PI + py * 6, w2 = pa * 8 / Math.PI - py * 6, d = Math.abs(Math.sin(u * Math.PI / 2)) * Math.abs(Math.sin(w2 * Math.PI / 2)), k = 1 + 0.07 * d;
+      pp.setXYZ(pi, pv.x * k, pv.y * 1.35, pv.z * k); pcc.setHex(0x9a6a1e).lerp(new THREE.Color(0xe8b448), d).lerp(new THREE.Color(0x5a7a2a), Math.max(0, -pv.y / 0.075 - 0.4) * 0.6); if (d > 0.85) pcc.setHex(0x4a3418); pcols.push(pcc.r, pcc.g, pcc.b); }
+    pinG.setAttribute('color', new THREE.Float32BufferAttribute(pcols, 3)); pinG.computeVertexNormals(); q(bowl, pinG, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), 0, 0.165, 0);
+    var leafG = new THREE.ConeGeometry(0.014, 1, 3); leafG.translate(0, 0.5, 0); leafG.scale(1, 1, 0.3);
+    [[9, 0.16, 0.75, 0x3a7a3a], [7, 0.13, 0.45, 0x4a8a3a], [5, 0.1, 0.2, 0x5a9a42]].forEach(function (ring, ri) { for (var lf = 0; lf < ring[0]; lf++) { var la = lf / ring[0] * Math.PI * 2 + ri * 0.4, lg = grp(0, 0.262, 0, -la, bowl); var lm = q(lg, leafG, rMat(ring[3], { roughness: 0.6 }), 0.008, 0, 0, 0, 0, -ring[2]); lm.scale.y = ring[1]; } });
+    // (oranges, dimpled, one with a leaf; a lime, a lemon)
+    var dimT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); for (var i = 0; i < 500; i++) { g.fillStyle = 'rgba(40,40,40,0.5)'; g.beginPath(); g.arc(Math.random() * w, Math.random() * h, 0.9, 0, Math.PI * 2); g.fill(); } }, [3, 2]);
+    function fruit(x, y, z, r, col, sx, leaf) { var f = q(bowl, new THREE.SphereGeometry(r, 18, 14), new THREE.MeshStandardMaterial({ color: col, roughness: 0.45, bumpMap: dimT, bumpScale: 0.002 }), x, y, z); f.scale.set(sx || 1, 1, 1);
+      quiet(q(bowl, new THREE.CylinderGeometry(0.003, 0.004, 0.012, 5), rMat(0x5a4a2a), x, y + r, z)); if (leaf) { var lf2 = q(bowl, new THREE.SphereGeometry(0.02, 8, 5), mintM, x + 0.012, y + r + 0.004, z, 0, 0.6, 0.3); lf2.scale.set(1.6, 0.15, 0.8); } }
+    fruit(0.11, 0.08, 0.07, 0.045, 0xf2902a, 1, true); fruit(-0.1, 0.075, 0.08, 0.044, 0xee8a24); fruit(0.04, 0.075, -0.13, 0.04, 0xf2d43a, 1.3); fruit(-0.12, 0.08, -0.06, 0.038, 0x7ab83a);
+    // (a bunch of bananas over the rim)
+    var ban = grp(0.02, 0.09, -0.11, 0.2, bowl); ban.rotation.z = 0.15; ban.scale.setScalar(0.8); for (var bn = 0; bn < 4; bn++) { var bp = []; for (var bi = 0; bi <= 10; bi++) { var t = bi / 10; bp.push(new THREE.Vector3(t * 0.17, Math.sin(t * Math.PI) * 0.04 - t * 0.03, (bn - 1.5) * 0.024 + Math.sin(t * 2) * 0.005)); }
+      var bc = new THREE.CatmullRomCurve3(bp), bg2 = new THREE.TubeGeometry(bc, 16, 0.016, 6), bpos = bg2.attributes.position; q(ban, bg2, rMat(0xf2d84a, { roughness: 0.5 }), 0, 0, 0); var tip = bc.getPoint(1); quiet(q(ban, new THREE.SphereGeometry(0.008, 6, 4), rMat(0x4a3a1a), tip.x, tip.y, tip.z)); }
+    q(ban, new THREE.CylinderGeometry(0.012, 0.014, 0.05, 6), rMat(0x6a8a3a), -0.01, 0.01, 0, 0, 0, Math.PI / 2 + 0.6);   // (the stem)
+    // (a cluster of grapes)
+    var grp2 = grp(-0.05, 0.12, 0.02, 0, bowl), grapeM = rMat(0x6a3a7a, { roughness: 0.25 }); for (var gr = 0; gr < 22; gr++) { var gy = -(gr % 6) * 0.014, ga = gr * 2.4, gr2 = 0.026 * (1 - (gr % 6) / 7); q(grp2, new THREE.SphereGeometry(0.0125, 10, 8), grapeM, Math.cos(ga) * gr2, gy + 0.03, Math.sin(ga) * gr2); }
+    quiet(q(grp2, new THREE.CylinderGeometry(0.003, 0.003, 0.04, 4), rMat(0x5a4a2a), 0, 0.055, 0, 0.3, 0, 0));
+    // (a hurricane lantern: a brass base, a pillar candle with drips, a flickering flame in a tall glass chimney)
+    var hur = grp(0.02, TY, 0.0, 0, tb), brassH = rMat(0xc8a050, { metalness: 0.8, roughness: 0.3 });
+    q(hur, lbLathe([[0, 0], [0.075, 0], [0.078, 0.008], [0.07, 0.016], [0.06, 0.02], [0.06, 0.03], [0, 0.03]], 24), brassH, 0, 0, 0);
+    var candle = q(hur, new THREE.CylinderGeometry(0.028, 0.03, 0.09, 18), rMat(0xfaf4e6, { roughness: 0.6, emissive: 0x5a3c18, emissiveIntensity: 0.4 }), 0, 0.075, 0);
+    for (var dr = 0; dr < 6; dr++) { var da = dr / 6 * Math.PI * 2, dl = 0.012 + (dr % 3) * 0.01; quiet(q(hur, new THREE.CylinderGeometry(0.004, 0.005, dl, 6), rMat(0xf6eedc, { roughness: 0.5 }), Math.cos(da) * 0.029, 0.12 - dl / 2, Math.sin(da) * 0.029)); }   // (wax drips)
+    quiet(q(hur, new THREE.CylinderGeometry(0.0015, 0.0015, 0.012, 4), rMat(0x221a12), 0, 0.126, 0)); var hfl = quiet(q(hur, new THREE.SphereGeometry(0.011, 10, 8), rMat(0xffd890, { emissive: 0xffa040, emissiveIntensity: 1.8 }), 0, 0.143, 0)); hfl.scale.y = 2.2;
+    quiet(q(hur, new THREE.SphereGeometry(0.006, 8, 6), rMat(0xffffff, { emissive: 0xfff4c0, emissiveIntensity: 2 }), 0, 0.137, 0)).scale.y = 1.6;   // (the bright core)
+    q(hur, lbLathe([[0.052, 0.03], [0.07, 0.07], [0.078, 0.13], [0.07, 0.2], [0.058, 0.25], [0.056, 0.27], [0.062, 0.275]], 24), glassM2, 0, 0, 0); quiet(q(hur, new THREE.TorusGeometry(0.06, 0.004, 5, 24), brassH, 0, 0.275, 0, Math.PI / 2, 0, 0));
+    // (a folded linen napkin with a teal stripe)
+    var napT = cpTex(64, 64, function (g, w, h) { g.fillStyle = '#fbf8f0'; g.fillRect(0, 0, w, h); g.fillStyle = '#3aa8a8'; g.fillRect(0, 48, w, 6); for (var i = 0; i < w; i += 2) { g.fillStyle = 'rgba(0,0,0,0.04)'; g.fillRect(i, 0, 1, h); } });
+    var nap = grp(0.36, TY, 0.12, -0.5, tb), napM = new THREE.MeshStandardMaterial({ map: napT, roughness: 0.95 }); q(nap, new THREE.BoxGeometry(0.14, 0.008, 0.14), napM, 0, 0.004, 0); q(nap, new THREE.BoxGeometry(0.14, 0.008, 0.07), napM, 0, 0.012, -0.035, 0.05, 0, 0); quiet(q(nap, new THREE.CylinderGeometry(0.006, 0.006, 0.14, 8), napM, 0, 0.012, 0.0, 0, 0, Math.PI / 2));
+    // (a little dish of lemon wedges)
+    var dish = grp(-0.32, TY, 0.18, 0, tb); q(dish, lbLathe([[0, 0], [0.04, 0], [0.06, 0.015], [0.065, 0.02], [0.05, 0.012], [0, 0.008]], 20), rMat(0xfbf6ea, { roughness: 0.2 }), 0, 0, 0);
+    for (var wd = 0; wd < 3; wd++) { var wg = grp(Math.cos(wd * 2.1) * 0.02, 0.02, Math.sin(wd * 2.1) * 0.02, wd * 2.1, dish); q(wg, new THREE.CylinderGeometry(0.025, 0.025, 0.02, 12, 1, false, 0, Math.PI / 2), [rindM, wheelM, wheelM], 0, 0, 0, Math.PI / 2, 0, 0); }
+    // (a conch shell)
+    var conch = grp(-0.36, TY + 0.02, -0.38, -0.6, tb), cg = new THREE.ConeGeometry(0.035, 0.12, 24, 14), cpp = cg.attributes.position, cvv = new THREE.Vector3();
+    for (var ci = 0; ci < cpp.count; ci++) { cvv.fromBufferAttribute(cpp, ci); var tw = (cvv.y + 0.06) * 70, kk = 1 + 0.2 * Math.sin(tw + Math.atan2(cvv.z, cvv.x)) + 0.12 * Math.sin(Math.atan2(cvv.z, cvv.x) * 6) * (cvv.y < 0 ? 1 : 0); cpp.setXYZ(ci, cvv.x * kk, cvv.y, cvv.z * kk); } cg.computeVertexNormals();
+    q(conch, cg, rMat(0xf2dcc0, { roughness: 0.4 }), 0, 0, 0, 0, 0, Math.PI / 2); var lip = q(conch, new THREE.SphereGeometry(0.035, 14, 10), rMat(0xf6a890, { roughness: 0.25 }), -0.05, -0.005, 0.01); lip.scale.set(1.0, 0.55, 1.2);
     solids.push({ x: GAZ_X, z: GAZ_Z - 0.15, r: 0.7 });
     // (two wooden armchairs drawn up to the table: square tapered legs joined by stretchers, a seat frame with an apron, a
     // slatted back between two posts with a curved top rail, flat arms on turned supports, and a buttoned seat cushion and a
