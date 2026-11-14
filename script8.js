@@ -4777,12 +4777,22 @@ EVERDAWN_PARTS.push(function (THREE) {
         var p2 = q(so, cabRBox(0.32, 0.32, 0.12, 0.055), cabPilM, s * 0.26, 0.6, 0.0); p2.rotation.set(-0.3, 0, -s * 0.18); });   // (and smaller ones in front)
       q(so, cabRBox(0.44, 0.22, 0.12, 0.05), cabPilM, 0, 0.53, 0.04).rotation.x = -0.25;   // (a long one in the middle)
       q(so, cabRBox(0.24, 0.03, 0.56, 0.012), cabThrowM, -0.86, 0.635, 0.03); q(so, cabRBox(0.03, 0.34, 0.56, 0.012), cabThrowM, -0.96, 0.47, 0.03).rotation.z = 0.06;   // (the throw, folded over the arm)
-      // two velvet tub chairs at the front, turned in toward the table
-      [-1, 1].forEach(function (s) { var ch = grp(s * 0.72, 0.1, -0.55, s * -0.65, cg);
-        q(ch, new THREE.CylinderGeometry(0.34, 0.3, 0.42, 20, 1, true, Math.PI * 0.2, Math.PI * 1.6), cabVelM, 0, 0.5, 0, 0, Math.PI, 0).material.side = THREE.DoubleSide;   // (the curved back and arms)
-        q(ch, new THREE.TorusGeometry(0.32, 0.05, 6, 20, Math.PI * 1.6), cabVelM, 0, 0.71, 0, Math.PI / 2, 0, Math.PI * 1.7);   // (its rolled top edge)
-        q(ch, new THREE.CylinderGeometry(0.3, 0.3, 0.14, 20), cabVelM, 0, 0.33, 0); q(ch, new THREE.CylinderGeometry(0.27, 0.28, 0.07, 20), cabVelM, 0, 0.43, 0);   // (seat and cushion)
-        [0, 1, 2, 3].forEach(function (l) { var la = l / 4 * Math.PI * 2 + 0.78; q(ch, new THREE.CylinderGeometry(0.015, 0.012, 0.28, 6), cabBlkM, Math.cos(la) * 0.22, 0.13, Math.sin(la) * 0.22, Math.sin(la) * 0.2, 0, -Math.cos(la) * 0.2); }); });
+      // two black velvet armchairs at the front, turned in toward the table: a boxy upholstered frame on slim tapered legs with
+      // brass feet, a plump seat cushion, a padded back with a buttoned cushion against it, rounded arms, and piping on the edges
+      function cabPuff(w, h, d, pf) { var geo = new THREE.BoxGeometry(w, h, d, 10, 3, 10), pa = geo.attributes.position, v = new THREE.Vector3();
+        for (var k = 0; k < pa.count; k++) { v.fromBufferAttribute(pa, k); var fx = 1 - Math.pow(2 * v.x / w, 6), fz = 1 - Math.pow(2 * v.z / d, 6), fy = Math.abs(2 * v.y / h); v.y += Math.sign(v.y) * pf * fx * fz; v.x *= 1 - 0.05 * fy * fy; v.z *= 1 - 0.05 * fy * fy; pa.setXYZ(k, v.x, v.y, v.z); }
+        geo.computeVertexNormals(); return geo; }
+      var cabBrassM = rMat(0xc8a050, { metalness: 0.8, roughness: 0.3 }), cabPipeM = rMat(0x1a1a1e, { roughness: 0.6 });
+      [-1, 1].forEach(function (s) { var ch = grp(s * 0.72, 0.1, -0.55, s * -0.65, cg), W = 0.66, D = 0.62;   // (local +z faces the table)
+        [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (l) { var lg = q(ch, new THREE.CylinderGeometry(0.018, 0.01, 0.2, 8), cabBlkM, l[0] * (W / 2 - 0.06), 0.1, l[1] * (D / 2 - 0.06), l[1] * -0.12, 0, l[0] * 0.12); quiet(q(ch, new THREE.CylinderGeometry(0.011, 0.011, 0.025, 8), cabBrassM, l[0] * (W / 2 - 0.045), 0.012, l[1] * (D / 2 - 0.045))); });   // (tapered legs, brass feet)
+        q(ch, cabPuff(W, 0.16, D, 0.01), cabVelM, 0, 0.27, 0);   // (the base)
+        q(ch, cabPuff(W - 0.2, 0.1, D - 0.12, 0.03), cabVelM, 0, 0.39, 0.04);   // (seat cushion)
+        q(ch, cabPuff(W, 0.5, 0.13, 0.015), cabVelM, 0, 0.55, -D / 2 + 0.065, -0.08, 0, 0);   // (the back)
+        var bc = q(ch, cabPuff(W - 0.22, 0.3, 0.1, 0.025), cabVelM, 0, 0.6, -D / 2 + 0.16, -0.14, 0, 0); [-0.1, 0.1].forEach(function (bx) { [0.55, 0.68].forEach(function (by) { quiet(q(ch, new THREE.SphereGeometry(0.012, 6, 4), cabPipeM, bx, by, -D / 2 + 0.21 + (by - 0.55) * -0.14)); }); });   // (back cushion, buttoned)
+        [-1, 1].forEach(function (sd) { var ax = sd * (W / 2 - 0.05); q(ch, cabPuff(0.1, 0.24, D, 0.012), cabVelM, ax, 0.43, 0); var top = q(ch, new THREE.CylinderGeometry(0.055, 0.055, D, 14), cabVelM, ax, 0.56, 0, Math.PI / 2, 0, 0);   // (arms, rolled on top)
+          quiet(q(ch, new THREE.TorusGeometry(0.055, 0.006, 5, 16), cabPipeM, ax, 0.56, D / 2, 0, 0, 0)); });
+        [[0, 0.19, D / 2, W, 0], [0, 0.35, D / 2, W, 0]].forEach(function (pp) { quiet(q(ch, new THREE.CylinderGeometry(0.006, 0.006, pp[3], 5), cabPipeM, pp[0], pp[1], pp[2], 0, 0, Math.PI / 2)); });   // (piping along the front)
+      });
       // the coffee table: marble on a black base
       var tb = grp(0, 0.1, 0.05, 0, cg); q(tb, new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), cabMarbM, 0, 0.4, 0); q(tb, new THREE.TorusGeometry(0.42, 0.012, 6, 32), cabBlkM, 0, 0.4, 0, Math.PI / 2, 0, 0);
       q(tb, new THREE.TorusGeometry(0.34, 0.014, 6, 32), cabBlkM, 0, 0.02, 0, Math.PI / 2, 0, 0); for (var tl = 0; tl < 4; tl++) { var ta = tl / 4 * Math.PI * 2 + 0.4; q(tb, new THREE.CylinderGeometry(0.012, 0.012, 0.38, 6), cabBlkM, Math.cos(ta) * 0.34, 0.2, Math.sin(ta) * 0.34); }
