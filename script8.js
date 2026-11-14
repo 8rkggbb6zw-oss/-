@@ -5640,7 +5640,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       return function (item) {
         if (item !== 'bugNet') return base.apply(this, arguments);
         var g = new THREE.Group(), palm = new THREE.Group(), r = new THREE.Group();
-        palm.rotation.x = 1.05; palm.position.y = 0.05; palm.scale.setScalar(0.55); g.add(palm);     // (undoes the arm's angle; a small, light net)
+        palm.rotation.x = 1.05; palm.position.y = 0.05; palm.scale.setScalar(0.36); g.add(palm);     // (undoes the arm's angle; a small, light net)
         r.rotation.x = 0.7; palm.add(r);                                  // (held up and out ahead of her)
         var wood = new THREE.MeshStandardMaterial({ color: 0xd8a868, roughness: 0.45, metalness: 0.05 }), brass = new THREE.MeshStandardMaterial({ color: 0xffd06a, metalness: 0.85, roughness: 0.28 }),
           leather = new THREE.MeshStandardMaterial({ color: 0x6a3e22, roughness: 0.7 }), willow = new THREE.MeshStandardMaterial({ color: 0xb88848, roughness: 0.6 }), pink = new THREE.MeshStandardMaterial({ color: 0xff8ac0, roughness: 0.5, emissive: 0xff8ac0, emissiveIntensity: 0.12 });
