@@ -4048,8 +4048,25 @@ EVERDAWN_PARTS.push(function (THREE) {
       solids.push({ x: x, z: z, r: 0.2 }); lampPts.push(new THREE.Vector3(x, y + 2.7, z)); }
     for (px = 92; px < 172; px += 12) lamp(px, B3_Z + ((px / 12 | 0) % 2 ? 1.25 : -1.25));
     lamp(172.4, B3_Z - 7.5); lamp(172.4, B3_Z + 7.5);
-    for (var lp = 0; lp < lampPts.length - 2; lp++) { var la = lampPts[lp], lb = lampPts[lp + 1], mid = la.clone().add(lb).multiplyScalar(0.5); mid.y -= 0.55; var cv = new THREE.QuadraticBezierCurve3(la, mid, lb);
-      q(G, new THREE.TubeGeometry(cv, 16, 0.008, 3), lampIron, 0, 0, 0); for (var bb = 1; bb < 12; bb++) { var bp = cv.getPoint(bb / 12); bulbs.push(quiet(q(G, new THREE.SphereGeometry(0.04, 6, 5), bulbM[bb % 4], bp.x, bp.y - 0.05, bp.z))); } }
+    // (strung between the lamp posts: a festoon of vintage bulbs. A dark twisted cable sagging in a soft curve, clipped to a
+    // hook on each post; every 40 cm a short drop to a black socket with a ribbed collar, and a pear-shaped glass bulb in warm
+    // white, rose, sky blue or mint, a glowing filament inside, and a soft halo around it that brightens at dusk)
+    var cableM = rMat(0x1c1c1c, { roughness: 0.6 }), sockM = rMat(0x161616, { roughness: 0.4, metalness: 0.3 }), bulbGlassG = new THREE.LatheGeometry([[0, -0.07], [0.018, -0.066], [0.032, -0.05], [0.036, -0.032], [0.03, -0.012], [0.016, 0.0], [0.014, 0.008]].map(function (p) { return new THREE.Vector2(p[0], p[1]); }), 14);
+    var sockG = new THREE.CylinderGeometry(0.016, 0.014, 0.034, 10), ribG = new THREE.TorusGeometry(0.0155, 0.0025, 4, 10), dropG = new THREE.CylinderGeometry(0.0025, 0.0025, 1, 4), filG = new THREE.TorusGeometry(0.008, 0.0015, 4, 8, Math.PI);
+    var fsSock = [], fsRib = [], fsDrop = [], fsBulb = [[], [], [], []], fsFil = [], filM = rMat(0xffe0a0, { emissive: 0xffb050, emissiveIntensity: 1.5 });
+    bulbM.forEach(function (bm2) { bm2.transparent = true; bm2.opacity = 0.9; bm2.roughness = 0.15; });
+    var haloT = dawnGlowTex, halos = [];
+    for (var lp = 0; lp < lampPts.length - 2; lp++) { var la = lampPts[lp], lb = lampPts[lp + 1], span = la.distanceTo(lb), mid = la.clone().add(lb).multiplyScalar(0.5); mid.y -= 0.32 + span * 0.025;
+      var cv = new THREE.CatmullRomCurve3([la, la.clone().lerp(mid, 0.5).add(new THREE.Vector3(0, -0.05, 0)), mid, lb.clone().lerp(mid, 0.5).add(new THREE.Vector3(0, -0.05, 0)), lb]);
+      q(G, new THREE.TubeGeometry(cv, 48, 0.006, 5), cableM, 0, 0, 0); q(G, new THREE.TubeGeometry(cv, 48, 0.0035, 4), cableM, 0.004, 0.004, 0);   // (two twisted cores)
+      var nb = Math.max(4, Math.round(span / 0.42));
+      for (var bb = 1; bb < nb; bb++) { var bp = cv.getPointAt(bb / nb), drop = 0.05 + (bb % 2) * 0.03, cy = bp.y - drop, k2 = (lp * 7 + bb) % 4;
+        fsDrop.push(M4(bp.x, bp.y - drop / 2, bp.z, 0, 0, 0, 1, drop, 1)); fsSock.push(M4(bp.x, cy - 0.017, bp.z)); [0.0, -0.012, -0.024].forEach(function (ry2) { fsRib.push(M4(bp.x, cy + ry2 - 0.004, bp.z, Math.PI / 2, 0, 0)); });
+        fsBulb[k2].push(M4(bp.x, cy - 0.034, bp.z)); fsFil.push(M4(bp.x, cy - 0.072, bp.z, 0, bb, 0));
+        if (bb % 2 === 0) { var hs = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloT, color: bulbM[k2].color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); hs.position.set(bp.x, cy - 0.07, bp.z); hs.scale.set(0.45, 0.45, 1); G.add(hs); halos.push(hs); } } }
+    inst(dropG, cableM, fsDrop, null, false); inst(sockG, sockM, fsSock, null, false); inst(ribG, sockM, fsRib, null, false); inst(filG, filM, fsFil, null, false);
+    fsBulb.forEach(function (ms, k3) { var im = inst(bulbGlassG, bulbM[k3], ms, null, false); if (im) bulbs.push(im); });
+    updateCarpenter = (function (base) { return function (t, night) { base.apply(this, arguments); var nt = night || 0; halos.forEach(function (h, i) { h.material.opacity = nt * (0.55 + Math.sin(t * 2 + i * 1.3) * 0.08); }); filM.emissiveIntensity = 0.8 + nt * 1.5; }; })(updateCarpenter);
     // (benches, fancy: a park bench of varnished hardwood slats with rounded edges, the seat dished and rolling over at the front
     // edge, the back curved to fit you; on ornate cast-iron ends painted deep green: a front leg and a back leg sweeping up into
     // the backrest, an arm curling into a scroll under a wooden armrest, C-scrolls and a rosette between the legs, a low
