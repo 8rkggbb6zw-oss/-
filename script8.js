@@ -4797,9 +4797,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var tb = grp(0, 0.1, 0.05, 0, cg); q(tb, new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), cabMarbM, 0, 0.4, 0); q(tb, new THREE.TorusGeometry(0.42, 0.012, 6, 32), cabBlkM, 0, 0.4, 0, Math.PI / 2, 0, 0);
       q(tb, new THREE.TorusGeometry(0.34, 0.014, 6, 32), cabBlkM, 0, 0.02, 0, Math.PI / 2, 0, 0); for (var tl = 0; tl < 4; tl++) { var ta = tl / 4 * Math.PI * 2 + 0.4; q(tb, new THREE.CylinderGeometry(0.012, 0.012, 0.38, 6), cabBlkM, Math.cos(ta) * 0.34, 0.2, Math.sin(ta) * 0.34); }
       tb.add(cabTop.clone());   // (and everything on it)
-      // a potted palm in the back corner, little lanterns at the front corners
-      var pt = grp(-1.0, 0.1, 1.0, 0.6, cg); q(pt, new THREE.CylinderGeometry(0.2, 0.15, 0.4, 18), cabPotM, 0, 0.2, 0); q(pt, new THREE.CylinderGeometry(0.18, 0.18, 0.02, 18), rMat(0x5a4030), 0, 0.39, 0);
-      for (var pf = 0; pf < 7; pf++) { var pfr = grp(0, 0.4, 0, pf / 7 * Math.PI * 2, pt); pfr.rotation.z = 0.7; pfr.scale.setScalar(0.24); quiet(q(pfr, frondG, leafM, 0, 0, 0)); }
+      // little lanterns at the front corners
       [-1, 1].forEach(function (s) { var ln = grp(s * 1.05, 0.1, -1.55, 0, cg); q(ln, new THREE.BoxGeometry(0.16, 0.24, 0.16), cabGlowM, 0, 0.14, 0); [-1, 1].forEach(function (a) { [-1, 1].forEach(function (b) { q(ln, new THREE.BoxGeometry(0.02, 0.28, 0.02), cabVentM, a * 0.08, 0.14, b * 0.08); }); }); q(ln, new THREE.ConeGeometry(0.13, 0.08, 4), cabVentM, 0, 0.32, 0, 0, Math.PI / 4, 0); });
       [[-A, -A, 0.14], [A, -A, 0.14], [-A, A, 0.14], [A, A, 0.14], [0, 0.82, 0.5], [-0.5, 0.82, 0.45], [0.5, 0.82, 0.45], [0, 0.05, 0.42], [-0.72, -0.55, 0.32], [0.72, -0.55, 0.32]].forEach(function (s2) { solids.push({ x: cb[0] + s2[0], z: cz + s2[1], r: s2[2] }); }); });
     // (a welcome sign where the bridge lands, in great detail: two weathered driftwood posts, grained and split, crusted with
