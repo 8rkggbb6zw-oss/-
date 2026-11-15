@@ -3691,7 +3691,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   var SEA_Y = -0.55, B3_Z = 2, B3_DX = 2.5, DECK_Y = 0.55;
   function onBridge3(x, z) { return Math.abs(z - B3_Z) < BRIDGE_W / 2 - 0.45 && x > 32 && x < B3_DX + BRIDGE_Z1 + 1; }
   function bridge3Y(x) { return bridgeY(x - B3_DX); }
-  function shoreS(x, z) { var dz = z - B3_Z; return Math.min(146 - 0.0085 * dz * dz - x, (50 - Math.abs(dz)) * 1.3) + noise(x * 0.05 + 7, z * 0.05 - 3) * 3.5; }   // (how far in from the shore)
+  function shoreS(x, z) { var dz = z - B3_Z, u = Math.max(0, 1 - (x - 83) / 20), half = 50 - 13 * u * u + 2.8 * Math.sin(x * 0.105 + (dz > 0 ? 0.7 : 2.9)) + 1.5 * Math.sin(x * 0.29 + (dz > 0 ? 2.1 : 0.4));   // (how far in from the shore. The north and south shores
+    // aren't straight: they wander in little bays and points, and round off at the west end into the bluff instead of meeting it in square corners)
+    return Math.min(146 - 0.0085 * dz * dz - x, (half - Math.abs(dz)) * 1.3) + noise(x * 0.05 + 7, z * 0.05 - 3) * 3.5 + noise(x * 0.16 - 2, z * 0.16 + 5) * 1.2; }
   var PH_X1 = 198, PH_HZ = 14, PH_DX = PH_X1 - 182;   // (the platform at the pier's end: out to x = 198, 14 either side)
   var BW_DECKS = [[89, 182, B3_Z - 1.5, B3_Z + 1.5], [172, PH_X1, B3_Z - PH_HZ, B3_Z + PH_HZ], [107, 109.6, B3_Z - 14.6, B3_Z - 1.4], [111, 113.6, B3_Z + 1.4, B3_Z + 16]], GAZ_X = 108.3, GAZ_Z = B3_Z - 18, GAZ_R = 3.6;
   function deckY(x, z, m) {                                            // the boardwalk's height here (m in from its edges), or -99 off it
@@ -3703,8 +3705,9 @@ EVERDAWN_PARTS.push(function (THREE) {
   }
   function beachH0(x, z) {
     var s = shoreS(x, z), h;
-    if (s < 0) h = SEA_Y + s * 0.085 - Math.max(0, -s - 14) * 0.15;   // (the seabed, shelving away and then dropping off)
-    else { h = SEA_Y + Math.min(1, s / 9) * 0.68; var du = Math.max(0, Math.min(1, (s - 9) / 12)); du = du * du * (3 - 2 * du);
+    if (s < 0) h = SEA_Y + s * 0.085 - Math.max(0, -s - 8) * 0.38;   // (the seabed, shelving away and then dropping off into the deep, so the shallows fade out all round)
+    // (the sand thins out to nothing at the water's edge)
+    else { h = SEA_Y + Math.pow(Math.min(1, s / 11), 1.5) * 0.68; var du = Math.max(0, Math.min(1, (s - 9) / 12)); du = du * du * (3 - 2 * du);
       h += du * (0.32 + 0.22 * Math.sin(x * 0.35 + z * 0.12) * Math.sin(z * 0.27 - x * 0.08) + noise(x * 0.15, z * 0.15) * 0.15); }   // (the beach, then rolling dunes)
     var wd = Math.max(0, Math.min(1, (82.6 - x) / 2.4)); h = h * (1 - wd) - 5 * wd;   // (the bluff's rocky west face)
     var bl = Math.max(0, Math.min(1, 1 - (Math.hypot(x - 84, z - B3_Z) - 3) / 4)); h = h * (1 - bl) + 0.06 * bl;   // (level where the bridge lands)
@@ -3745,7 +3748,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       pos.push(x, h, z); uv.push(x * 0.3, z * 0.3);
       if (x < 83 && h < -0.1) c.copy(cRock).multiplyScalar(0.85 + noise(x * 0.9, z * 0.9) * 0.15);
       else if (h < SEA_Y - 0.02) c.copy(cUnder).lerp(cWet, Math.min(1, (SEA_Y - h) / 3) * 0.6).multiplyScalar(1 - Math.min(0.35, (SEA_Y - h) * 0.06));   // (wet sand under the shallows, darker deeper)
-      else if (s < 2.6) c.copy(cWet).lerp(cSand2, Math.max(0, s / 2.6));
+      else if (s < 4.5) c.copy(cWet).lerp(cSand2, Math.pow(Math.max(0, s / 4.5), 0.7));
       else { c.copy(cSand).lerp(cSand2, noise(x * 0.4, z * 0.4) * 0.5 + 0.5); var gg = Math.max(0, Math.min(1, (s - 23) / 8)) * (0.6 + 0.4 * (noise(x * 0.2 + 3, z * 0.2) * 0.5 + 0.5)); if (gg > 0) c.lerp(cGrass, gg).lerp(cGrass2, gg * (noise(x * 0.5 - 4, z * 0.5) * 0.5 + 0.4)); }
       col.push(c.r, c.g, c.b); }
     for (iz = 0; iz < NZ; iz++) for (ix = 0; ix < NX; ix++) { var a = iz * (NX + 1) + ix, b = a + 1, d = a + NX + 1, e = d + 1; idx.push(a, d, b, b, d, e); }
