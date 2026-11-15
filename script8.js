@@ -5771,12 +5771,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       return r; }; })(updateTrees);
   })();
   // ===== Reel & Wing: a little tackle-and-net shop on the sand at Seashell Shore, just north of the opening in the boardwalk's
-  // rope rails, where one day (once there's a story) you'll be given your Fishing Rod and your Bug Net. Outside: a seafoam
-  // shiplap beach shack on stilts, a gable front with a painted sign, a slate-blue shingled roof with a little stovepipe, a
-  // coral door with a porthole, windows with louvred coral shutters and flower boxes, round portholes in its sides, and a
-  // porch under a scalloped canvas awning, with white railings, a bench, a barrel of rods and nets, buoys, a life ring, a
+  // rope rails, where one day (once there's a story) you'll be given your Fishing Rod and your Bug Net. Outside: a weathered
+  // driftwood shiplap beach shack on stilts with cream trim, a gable front with a painted sign, a charcoal shingled roof with
+  // a little stovepipe, a sage-green door with a porthole, windows with louvred sage shutters and flower boxes, round
+  // portholes in its sides, and a porch under a sand-coloured scalloped awning, with railings, a bench, a barrel of rods and nets, buoys, a life ring, a
   // lantern and a net hung with cork floats; steps down to the sand and a path of flat stones to the boardwalk. Inside (its
-  // own screen, like every other building): a plank floor, seafoam beadboard under white shiplap, a counter with a brass
+  // own screen, like every other building): a plank floor, sage beadboard under cream shiplap, a counter with a brass
   // till and bell, shelves of tackle boxes, bait jars and spools of line, a rack of fishing rods, bug nets on the wall,
   // framed butterflies, a mounted fish, jars of fireflies, barrels and a crate of buoys. Nothing is sold yet ====
   (function () {
