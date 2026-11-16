@@ -39,6 +39,13 @@ window.everdawnFetchModel = function (urls, onLoad, name) {
   } catch (err) { attempt(0); }
 };
 
+// (an iPad allows only so much memory for drawing canvases all together; past that, a new canvas comes out 0 by 0, and
+// copying one of those onto another throws an error that stops whatever was being drawn. So drawing an empty canvas, or
+// a picture that failed to load, now simply draws nothing)
+(function () { var C = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype; if (!C || C.everdawnSafe) return; var base = C.drawImage;
+  C.drawImage = function (src) { if (src && ((src.tagName === 'CANVAS' || (window.OffscreenCanvas && src instanceof window.OffscreenCanvas)) && (!src.width || !src.height) || src.tagName === 'IMG' && src.complete && !src.naturalWidth)) return; return base.apply(this, arguments); };
+  C.everdawnSafe = true; })();
+
 EVERDAWN_PARTS.push(function (THREE) {
   // ---- Victorian Vengeance's bejewelled blood: blood poured round where its skirt meets the corset and dripping down
   // the skirt, every bit of it encrusted with little ruby rhinestones of all sizes, packed close and sparkling ----
@@ -5555,7 +5562,9 @@ EVERDAWN_PARTS.push(function (THREE) {
     function eachTexture(fn) { var seen = new Set(); scenes().forEach(function (sc) { sc.traverse(function (o) { var ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       ms.forEach(function (m) { for (var k in m) { var t = m[k]; if (t && t.isTexture && !seen.has(t)) { seen.add(t); fn(t); } } }); }); }); }
     function texCap() { return light || mobile ? 1024 : 2048; }   // (the largest a texture may be: smaller on iPads and phones, and in the lighter mode)
-    function shrinkHuge() { var cap = texCap(); eachTexture(function (t) { var im = t.image; if (!im || !im.width || t.isDataTexture || t.isCubeTexture || (im.width <= cap && im.height <= cap)) return;
+    // (only pictures that came downloaded are shrunk, never the game's own drawn canvases: those are still being drawn on
+    // (her skin, the map, the signs), and a shrunk copy of one would only add to the canvas memory an iPad is allowed)
+    function shrinkHuge() { var cap = texCap(); eachTexture(function (t) { var im = t.image; if (!im || !im.width || t.isDataTexture || t.isCubeTexture || im.tagName === 'CANVAS' || (im.width <= cap && im.height <= cap)) return;
       var sc = cap / Math.max(im.width, im.height), c = document.createElement('canvas'); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
       try { c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.image = c; t.needsUpdate = true; } catch (err) {} }); }
     function resend() { eachTexture(function (t) { if (t.image) t.needsUpdate = true; }); }
