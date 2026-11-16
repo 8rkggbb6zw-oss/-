@@ -1,6 +1,44 @@
 // Everdawn, part 5 of 5 (see the note at the top of script.js). More for you, the player, carrying on from script7.js
 // (which was nearly full): it joins on after the other parts, so it shares all their variables
 
+// (her model and her clothes, fetched sturdily: script7.js asks for them through this. Each download place is tried in
+// turn; a download that stalls (nothing arriving for 25 seconds) is given up and the next place tried; and it never
+// stops trying, waiting a little longer each round, so a bad moment on the internet can't leave her missing for good.
+// Once a file has come down it's kept in the browser's own storage, so the next time the game opens she's there at once,
+// without downloading her again (if the file in the repo changes, the kept copy is noticed to be out of date and
+// replaced))
+window.everdawnFetchModel = function (urls, onLoad, name) {
+  var STORE = 'everdawn-models-v1', key = 'https://everdawn.models/' + encodeURIComponent(name || urls[0]), done = false, THREE = window.THREE;
+  function parse(buf, fromStore, onBad, onGood) { try { new THREE.GLTFLoader().parse(buf, '', function (g) { if (done) return; done = true; if (onGood) onGood(); onLoad(g); if (fromStore) checkFresh(); }, function (err) { if (window.console) console.warn('Everdawn: ' + name + ' would not open', err); onBad(); }); } catch (err) { onBad(); } }
+  function keep(buf, tag) { try { if (!window.caches) return; caches.open(STORE).then(function (c) { return c.put(key, new Response(buf, { headers: { 'x-everdawn-tag': tag || '' } })); }).catch(function () {}); } catch (err) {} }
+  function forget() { try { if (window.caches) caches.open(STORE).then(function (c) { return c['delete'](key); }).catch(function () {}); } catch (err) {} }
+  function tagOf(r) { return (r.headers.get('etag') || '') + '|' + (r.headers.get('content-length') || ''); }
+  function checkFresh() {                                               // (a quick look at whether the repo's copy has changed since it was kept)
+    setTimeout(function () { try { caches.open(STORE).then(function (c) { return c.match(key); }).then(function (r) { if (!r) return; var had = r.headers.get('x-everdawn-tag');
+      if (!had) return; return fetch(urls[urls.length > 1 && /raw\.githubusercontent/.test(urls[1]) ? 1 : 0], { method: 'HEAD', cache: 'no-store' }).then(function (h) { if (h.ok && tagOf(h) !== had && tagOf(h) !== '|') forget(); }); }).catch(function () {}); } catch (err) {} }, 15000); }
+  function attempt(n) {
+    if (done) return;
+    var url = urls[n % urls.length], round = Math.floor(n / urls.length), ctl = window.AbortController ? new AbortController() : null, timer = null, tag = '';
+    function retry() { if (timer) clearTimeout(timer); if (done) return; setTimeout(function () { attempt(n + 1); }, (n + 1) % urls.length ? 300 : Math.min(30000, 2000 * Math.pow(2, round))); }
+    function stall() { if (timer) clearTimeout(timer); timer = setTimeout(function () { if (ctl) ctl.abort(); }, 25000); }
+    if (!window.fetch) { new THREE.GLTFLoader().load(url, function (g) { if (!done) { done = true; onLoad(g); } }, undefined, retry); return; }
+    stall();
+    fetch(url, ctl ? { signal: ctl.signal } : {}).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status); tag = tagOf(r);
+      if (!r.body || !r.body.getReader) return r.arrayBuffer();
+      var rd = r.body.getReader(), parts = [], size = 0;
+      return (function pump() { return rd.read().then(function (x) { if (x.done) { var out = new Uint8Array(size), at = 0; parts.forEach(function (p) { out.set(p, at); at += p.length; }); return out.buffer; } parts.push(x.value); size += x.value.length; stall(); return pump(); }); })();
+    }).then(function (buf) { if (timer) clearTimeout(timer); if (!buf || buf.byteLength < 1000) throw new Error('empty');
+      parse(buf, false, retry, function () { keep(buf, tag); });   // (kept only once it's opened properly)
+    }).catch(function () { retry(); });
+  }
+  try {
+    if (!window.caches) { attempt(0); return; }
+    caches.open(STORE).then(function (c) { return c.match(key); }).then(function (r) { if (!r) { attempt(0); return; }
+      return r.arrayBuffer().then(function (buf) { parse(buf, true, function () { forget(); attempt(0); }); }); }).catch(function () { if (!done) attempt(0); });
+  } catch (err) { attempt(0); }
+};
+
 EVERDAWN_PARTS.push(function (THREE) {
   // ---- Victorian Vengeance's bejewelled blood: blood poured round where its skirt meets the corset and dripping down
   // the skirt, every bit of it encrusted with little ruby rhinestones of all sizes, packed close and sparkling ----

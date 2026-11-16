@@ -13,6 +13,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     'https://cdn.jsdelivr.net/gh/8rkggbb6zw-oss/-@claude/coding-conversation-f08c0n/Witch.vrm'].filter(Boolean);
   var you = null;
   (function load(n) {
+    if (window.everdawnFetchModel && !n) { everdawnFetchModel(MODEL_URLS, function (gltf) { try { you = dressUp(gltf); } catch (err) { if (window.console) console.error(err); } }, 'Witch.vrm'); return; }   // (sturdily: see script8.js)
     if (!THREE.GLTFLoader || n >= MODEL_URLS.length * 2) { if (window.console) console.warn('Everdawn: your character could not be loaded, so the chibi witch stands in'); return; }   // (each place is tried twice)
     new THREE.GLTFLoader().load(MODEL_URLS[n % MODEL_URLS.length], function (gltf) { try { you = dressUp(gltf); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { setTimeout(function () { load(n + 1); }, n + 1 >= MODEL_URLS.length ? 2500 : 0); });
   })(0);
@@ -1175,6 +1176,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     var f = encodeURIComponent(file), urls = [typeof window.EVERDAWN_FILES === 'string' ? window.EVERDAWN_FILES + f : null, 'https://raw.githubusercontent.com/8rkggbb6zw-oss/-/claude/coding-conversation-f08c0n/' + f,
       'https://cdn.jsdelivr.net/gh/8rkggbb6zw-oss/-@claude/coding-conversation-f08c0n/' + f].filter(Boolean);
     (function load(n) {
+      if (window.everdawnFetchModel && !n) { everdawnFetchModel(urls, function (g) { try { var k = outfitKinds[file]; o.g = g; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g, k && k.tex, k); } catch (err) { if (window.console) console.error(err); } }, file); return; }
       if (!THREE.GLTFLoader || n >= urls.length * 2) { if (window.console) console.warn('Everdawn: ' + file + ' could not be loaded'); return; }
       new THREE.GLTFLoader().load(urls[n % urls.length], function (g) { try { var k = outfitKinds[file]; o.g = g; o.made = k && k.kind === 'shoes' ? you.shoes(g, k.tex) : you.outfit(g, k && k.tex, k); } catch (err) { if (window.console) console.error(err); } }, undefined, function () { setTimeout(function () { load(n + 1); }, n + 1 >= urls.length ? 2500 : 0); });
     })(0);
