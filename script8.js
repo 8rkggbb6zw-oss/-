@@ -5701,7 +5701,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var cap = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 8), brass); cap.position.y = -0.2; r.add(cap);
         [0.08, 0.1].forEach(function (y) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.008, 12), brass); b.position.y = y; r.add(b); });   // (brass bands above the grip)
         var top = NET_L - 0.2, fer = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.06, 12), brass); fer.position.y = top - 0.01; r.add(fer);   // (the brass ferrule)
-        var head = new THREE.Group(); head.position.y = top + NET_R; head.rotation.y = Math.PI / 2; r.add(head);   // (turned so the hoop's open face looks ahead of her, the bag hanging behind it)
+        var head = new THREE.Group(); head.name = 'netHead'; head.position.y = top + NET_R; head.rotation.y = Math.PI / 2; r.add(head); head.userData.p0 = head.position.clone(); head.userData.q0 = head.quaternion.clone(); head.userData.top = top;   // (turned so the hoop's open face looks ahead of her, the bag hanging behind it)
         var hoop = new THREE.Mesh(new THREE.TorusGeometry(NET_R, 0.008, 8, 40), willow); hoop.rotation.y = Math.PI / 2; hoop.castShadow = true; head.add(hoop);   // (the willow hoop)
         var weave = new THREE.Curve(); weave.getPoint = function (t, o) { var a = t * Math.PI * 2, b = t * Math.PI * 2 * 26; return (o || new THREE.Vector3()).set(Math.sin(b) * 0.007, Math.cos(a) * (NET_R + Math.cos(b) * 0.007), Math.sin(a) * (NET_R + Math.cos(b) * 0.007)); };
         head.add(new THREE.Mesh(new THREE.TubeGeometry(weave, 300, 0.0032, 4, true), willow));   // (a willow withy woven round it)
@@ -5728,7 +5728,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // is drawn (once her arm and fingers have been posed for it) her wrist is turned so her thumb side faces up, and the
     // handle is laid along the hole her curled fingers make, from her little finger out past her thumb, its grip centred
     // between her palm and her finger pads; the net's bag hangs on the side she's facing)
-    var netDir = new THREE.Vector3(0, 1, 0), netDirTo = new THREE.Vector3(), NB = null, nv = [0, 1, 2, 3, 4, 5].map(function () { return new THREE.Vector3(); }), nq1 = new THREE.Quaternion(), nq2 = new THREE.Quaternion(), nm = new THREE.Matrix4(), NET_GRIP = -0.05;
+    var netDir = new THREE.Vector3(0, 1, 0), netDirTo = new THREE.Vector3(), netBlend = 0.2, netFlat = 0, NB = null, nv = [0, 1, 2, 3, 4, 5].map(function () { return new THREE.Vector3(); }), nq1 = new THREE.Quaternion(), nq2 = new THREE.Quaternion(), nm = new THREE.Matrix4(), NET_GRIP = -0.05;
     function netBone(n) { var f = null; player.traverse(function (o) { if (!f && o.isBone !== false && o.name && o.name.slice(-n.length) === n) f = o; }); return f; }
     function netGrip() {
       if (!netInHand() || heldShown !== 'bugNet' || !axeArm.visible) return;
@@ -5746,7 +5746,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (the hole in her fist: between her palm and her curled finger pads)
       h.getWorldPosition(nv[0]); NB.m1.getWorldPosition(nv[1]); NB.m2.getWorldPosition(nv[2]); NB.m3.getWorldPosition(nv[3]); NB.idx.getWorldPosition(nv[4]); NB.lit.getWorldPosition(nv[5]);
       var palmP = nv[0].clone().lerp(nv[1], 0.7), hole = palmP.add(nv[1]).add(nv[2]).add(nv[3]).multiplyScalar(0.25);
-      var up = nv[4].clone().sub(nv[5]).normalize().lerp(netDir, 0.2).normalize();   // (along her fist, out past her thumb)
+      var up = nv[4].clone().sub(nv[5]).normalize().lerp(netDir, netBlend).normalize();   // (along her fist, out past her thumb; held up or swung, it follows her arm's swing more)
       var fw = new THREE.Vector3(Math.sin(facing), 0, Math.cos(facing)), side = fw.clone().cross(up); if (side.lengthSq() < 1e-4) side.set(1, 0, 0); side.normalize(); var zz = up.clone().cross(side).normalize();
       if (zz.dot(fw) < 0) { zz.negate(); side.negate(); }
       // (the handle's place in the world, then in her hand's frame)
@@ -5755,6 +5755,12 @@ EVERDAWN_PARTS.push(function (THREE) {
       var off = up.clone().multiplyScalar(NET_GRIP * nv[0].y); nm.setPosition(hole.sub(off));
       nm.premultiply(new THREE.Matrix4().copy(pp.matrixWorld).invert());
       nm.decompose(hd.position, hd.quaternion, nv[1]); hd.updateMatrixWorld(true);
+      // (as the net comes down, its hoop tips over to lie flat, its open side down over the circle, the bag trailing up)
+      var hh = hd.getObjectByName('netHead'); if (hh && hh.userData.q0) { hh.position.copy(hh.userData.p0); hh.quaternion.copy(hh.userData.q0);
+        if (netFlat > 0.01) { var wq = hd.getWorldQuaternion(new THREE.Quaternion()).invert(), Bl = new THREE.Vector3(0, 1, 0).applyQuaternion(wq).normalize(), cur = new THREE.Vector3(1, 0, 0).applyQuaternion(hh.userData.q0).normalize();
+          var fq = new THREE.Quaternion().setFromUnitVectors(cur, Bl), qq = new THREE.Quaternion().slerp(fq, netFlat), A = new THREE.Vector3(0, hh.userData.top, 0);
+          hh.quaternion.premultiply(qq); hh.position.copy(hh.userData.p0).sub(A).applyQuaternion(qq).add(A); }
+        hh.updateMatrixWorld(true); }
     }
     scene.onBeforeRender = (function (base) { return function () { if (base) base.apply(this, arguments); try { netGrip(); } catch (err) {} }; })(scene.onBeforeRender && scene.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender ? scene.onBeforeRender : null);
     function netCanSwing() { return netInHand() && !indoors && !flying && flyH <= 0 && !teleporting && !sleeping && !doorBusy && !doorNear && !binOpen && !shopOpen && !barnShopOpen && !nearBin() && !nearShop() && !atBarnCounter(); }
@@ -5763,7 +5769,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // down over the circle: whatever is inside it when the net lands is caught. bugNetSwept(x, y, z, r, onWater) is called
     // then, with the circle's middle, its radius and whether it's on the water: insects (on land) and sea creatures (in the
     // sea) will listen there and check whether they're inside it)
-    var NET_R2 = 0.45, NET_AHEAD = 1.2, NET_LIFT = 0.22, NET_DOWN = 0.14, NET_BACK = 0.4;
+    var NET_R2 = 0.45, NET_AHEAD = 0.8, NET_LIFT = 0.22, NET_DOWN = 0.14, NET_BACK = 0.4;
     var net = { state: 'idle', t: 0, key: null, x: 0, y: 0, z: 0, water: false };
     window.bugNetSwept = function (x, y, z, r, onWater) {};          // (the insects and sea creatures will listen here)
     function swish() { if (!audioCtx) return; try { hissBurst(0.3, 'bandpass', 1500, 1.1, 0.1, 0.04, 0.2); slideTone('sine', 760, 420, 0.025, 0.16); } catch (err) {} }
@@ -5801,22 +5807,25 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (net.state !== 'aim' || flying) return base.apply(this, arguments);
       var s = SPEED; SPEED = s * 0.5; try { return base.apply(this, arguments); } finally { SPEED = s; } }; })(updatePlayer);
     updateTrees = (function (base) { return function (dt) { var r = base.apply(this, arguments);
-      var fs = Math.sin(facing), fc = Math.cos(facing), lift = net.state === 'aim' ? 0.3 : net.state === 'down' || net.state === 'back' ? -0.8 : 1.1;   // (which way the net points: up and ahead as she carries it, ahead when raised, down at the circle as she brings it down)
-      netDirTo.set(fs, lift, fc).normalize(); netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' ? 30 : 12))).normalize();
+      var fs = Math.sin(facing), fc = Math.cos(facing), lift = net.state === 'aim' ? 2.6 : net.state === 'down' || net.state === 'back' ? -1.15 : 1.1;   // (which way the net points: up and ahead as she carries it, ahead when raised, down at the circle as she brings it down)
+      netDirTo.set(fs, lift, fc).normalize(); if (net.state === 'down' || net.state === 'back') { heldItemGrp.getWorldPosition(netDirTo); netDirTo.set(net.x - netDirTo.x, net.y - netDirTo.y, net.z - netDirTo.z).normalize(); }   // (swung straight down at the circle)
+      netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' ? 30 : 12))).normalize();
+      var bTo = net.state === 'aim' ? 0.8 : net.state === 'down' || net.state === 'back' ? 0.9 : 0.2, fTo = net.state === 'down' || (net.state === 'back' && net.t < 0.12) ? 1 : 0;   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
+      netBlend += (bTo - netBlend) * Math.min(1, dt * 14); netFlat += (fTo - netFlat) * Math.min(1, dt * (fTo ? 22 : 8));
       if (net.state === 'idle') return r;
       if (!netInHand() || indoors || flying || teleporting || sleeping) { netCancel(); return r; }   // (put away, or off somewhere)
       net.t += dt;
-      var REST = 5.23, UP = 2.75, HIT = 4.95, ax = REST, lean = 0;
+      var REST = 5.23, UP = 2.75, HIT = 5.2, ax = REST, lean = 0;   // (HIT: reaching down low in front of her)
       function eo(k) { return 1 - (1 - k) * (1 - k); }
       if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; lean = -0.06 * a; circShow(dt); }   // (lifted high and held there, ready)
       else if (net.state === 'down') {
-        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; lean = -0.06 + 0.2 * d;   // (brought down hard over the circle)
+        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; lean = -0.06 + 0.44 * d;   // (bending forward over it)   // (brought down hard over the circle)
         circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.9;
         if (net.t >= NET_DOWN) { net.state = 'back'; net.t = 0; netLand(net.water); circ.visible = false;
           for (var sp = 0; sp < 14; sp++) { var sa = sp / 14 * Math.PI * 2; sparkle(net.x + Math.cos(sa) * NET_R2, net.y + 0.06, net.z + Math.sin(sa) * NET_R2, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.6, 0.5); }
           if (net.water) burst(net.x, net.y + 0.05, net.z, 0xd8f0ff, 10, 0.8, 1.1, -3);
           try { window.bugNetSwept(net.x, net.y, net.z, NET_R2, net.water); } catch (err) {} } }
-      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; lean = 0.14 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
+      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; lean = 0.38 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
       axeArm.rotation.x = ax; axeArm.rotation.y = 0; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.x = lean;
       return r; }; })(updateTrees);
   })();
