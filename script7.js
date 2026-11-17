@@ -32,7 +32,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     function toon(m) {
       if (/Eye(Iris|Highlight|White)/.test(m.name)) return m;           // (her eyes, as bright as ever)
       return new THREE.MeshToonMaterial({ name: m.name, color: m.color, map: m.map, gradientMap: GRAD, transparent: m.transparent, alphaTest: m.alphaTest, side: m.side, depthWrite: m.depthWrite, opacity: m.opacity,
-        emissive: 0xffffff, emissiveMap: m.map, emissiveIntensity: 0.18, skinning: m.skinning, morphTargets: m.morphTargets, morphNormals: m.morphNormals });   // (a gentle glow, so she never looks grey in the shade; and bending with her bones and her expressions)
+        emissive: 0xffffff, emissiveMap: m.map, emissiveIntensity: 0.18, skinning: m.skinning, morphTargets: !!m.morphTargets, morphNormals: !!m.morphNormals });   // (a gentle glow, so she never looks grey in the shade; and bending with her bones and her expressions)
     }
     root.traverse(function (o) {
       if (!o.isMesh) return;
