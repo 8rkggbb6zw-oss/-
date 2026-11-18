@@ -5815,18 +5815,18 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (net.state === 'idle') return r;
       if (!netInHand() || indoors || flying || teleporting || sleeping) { netCancel(); return r; }   // (put away, or off somewhere)
       net.t += dt;
-      var REST = 5.23, UP = 2.75, HIT = 5.2, ax = REST, lean = 0;   // (HIT: reaching down low in front of her)
+      var REST = 5.23, UP = 2.75, HIT = 5.2, ACROSS = 0.42, ax = REST, ay = 0, lean = 0;   // (HIT: reaching down low in front of her)
       function eo(k) { return 1 - (1 - k) * (1 - k); }
       if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; lean = -0.06 * a; circShow(dt); }   // (lifted high and held there, ready)
       else if (net.state === 'down') {
-        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; lean = -0.06 + 0.44 * d;   // (bending forward over it)   // (brought down hard over the circle)
+        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; ay = ACROSS * d; lean = -0.06 + 0.44 * d;   // (and in toward her middle, so it goes straight out in front of her)   // (bending forward over it)   // (brought down hard over the circle)
         circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.9;
         if (net.t >= NET_DOWN) { net.state = 'back'; net.t = 0; netLand(net.water); circ.visible = false;
           for (var sp = 0; sp < 14; sp++) { var sa = sp / 14 * Math.PI * 2; sparkle(net.x + Math.cos(sa) * NET_R2, net.y + 0.06, net.z + Math.sin(sa) * NET_R2, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.6, 0.5); }
           if (net.water) burst(net.x, net.y + 0.05, net.z, 0xd8f0ff, 10, 0.8, 1.1, -3);
           try { window.bugNetSwept(net.x, net.y, net.z, NET_R2, net.water); } catch (err) {} } }
-      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; lean = 0.38 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
-      axeArm.rotation.x = ax; axeArm.rotation.y = 0; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.x = lean;
+      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; ay = ACROSS * (1 - e); lean = 0.38 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
+      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.x = lean;
       return r; }; })(updateTrees);
   })();
   // ===== Reel & Wing: a little tackle-and-net shop on the sand at Seashell Shore, just north of the opening in the boardwalk's
