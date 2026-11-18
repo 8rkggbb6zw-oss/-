@@ -5769,7 +5769,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // down over the circle: whatever is inside it when the net lands is caught. bugNetSwept(x, y, z, r, onWater) is called
     // then, with the circle's middle, its radius and whether it's on the water: insects (on land) and sea creatures (in the
     // sea) will listen there and check whether they're inside it)
-    var NET_R2 = 0.45, NET_AHEAD = 0.8, NET_LIFT = 0.22, NET_DOWN = 0.14, NET_BACK = 0.4;
+    var NET_R2 = 0.45, NET_AHEAD = 0.95, NET_LIFT = 0.25, NET_DOWN = 0.2, NET_REST = 0.22, NET_BACK = 0.42;
     var net = { state: 'idle', t: 0, key: null, x: 0, y: 0, z: 0, water: false };
     window.bugNetSwept = function (x, y, z, r, onWater) {};          // (the insects and sea creatures will listen here)
     function swish() { if (!audioCtx) return; try { hissBurst(0.3, 'bandpass', 1500, 1.1, 0.1, 0.04, 0.2); slideTone('sine', 760, 420, 0.025, 0.16); } catch (err) {} }
@@ -5807,26 +5807,30 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (net.state !== 'aim' || flying) return base.apply(this, arguments);
       var s = SPEED; SPEED = s * 0.5; try { return base.apply(this, arguments); } finally { SPEED = s; } }; })(updatePlayer);
     updateTrees = (function (base) { return function (dt) { var r = base.apply(this, arguments);
-      var fs = Math.sin(facing), fc = Math.cos(facing), lift = net.state === 'aim' ? 2.6 : net.state === 'down' || net.state === 'back' ? -1.15 : 1.1;   // (which way the net points: up and ahead as she carries it, ahead when raised, down at the circle as she brings it down)
-      netDirTo.set(fs, lift, fc).normalize(); if (net.state === 'down' || net.state === 'back') { heldItemGrp.getWorldPosition(netDirTo); netDirTo.set(net.x - netDirTo.x, net.y - netDirTo.y, net.z - netDirTo.z).normalize(); }   // (swung straight down at the circle)
-      netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' ? 30 : 12))).normalize();
-      var bTo = net.state === 'aim' ? 0.8 : net.state === 'down' || net.state === 'back' ? 0.9 : 0.2, fTo = net.state === 'down' || (net.state === 'back' && net.t < 0.12) ? 1 : 0;   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
+      var fs = Math.sin(facing), fc = Math.cos(facing), onGround = net.state === 'down' || (net.state === 'back' && net.t < NET_REST), lift = net.state === 'aim' ? 5 : onGround ? -1.15 : 1.1;   // (which way the net points: up and ahead as she carries it, ahead when raised, down at the circle as she brings it down)
+      netDirTo.set(fs, lift, fc).normalize(); if (onGround) { heldItemGrp.getWorldPosition(netDirTo); netDirTo.set(net.x - netDirTo.x, net.y - netDirTo.y, net.z - netDirTo.z).normalize(); }   // (swung straight down at the circle)
+      netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' ? 20 : 9))).normalize();
+      var bTo = net.state === 'aim' ? 0.85 : net.state === 'down' || net.state === 'back' ? 0.95 : 0.2, fTo = net.state === 'down' || (net.state === 'back' && net.t < NET_REST + 0.1) ? 1 : 0;   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
       netBlend += (bTo - netBlend) * Math.min(1, dt * 14); netFlat += (fTo - netFlat) * Math.min(1, dt * (fTo ? 22 : 8));
       if (net.state === 'idle') return r;
       if (!netInHand() || indoors || flying || teleporting || sleeping) { netCancel(); return r; }   // (put away, or off somewhere)
       net.t += dt;
-      var REST = 5.23, UP = 2.75, HIT = 5.2, ACROSS = 0.42, ax = REST, ay = 0, lean = 0;   // (HIT: reaching down low in front of her)
-      function eo(k) { return 1 - (1 - k) * (1 - k); }
-      if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; lean = -0.06 * a; circShow(dt); }   // (lifted high and held there, ready)
+      // (the pose, like someone really using a net: held up high, her arm raised up and forward with her shoulders turned a
+      // little back, winding up; then a smooth swing, her body turning into it and leaning in as her arm reaches forward and
+      // down, the net carrying on the line of her arm to the ground; it rests there a moment over the circle, then she
+      // lifts it and straightens up)
+      var REST = 5.23, UP = 3.55, HIT = 5.3, ax = REST, ay = 0, lean = 0, tw = 0;
+      function eo(k) { return 1 - (1 - k) * (1 - k); } function ss(k) { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); }
+      if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; lean = -0.05 * a; tw = -0.18 * a; circShow(dt); }   // (lifted high and held there, ready)
       else if (net.state === 'down') {
-        var d = Math.min(1, net.t / NET_DOWN); d = d * d; ax = UP + (HIT - UP) * d; ay = ACROSS * d; lean = -0.06 + 0.44 * d;   // (and in toward her middle, so it goes straight out in front of her)   // (bending forward over it)   // (brought down hard over the circle)
+        var d = ss(net.t / NET_DOWN); ax = UP + (HIT - UP) * d; ay = 0.14 * d; lean = -0.05 + 0.27 * d; tw = -0.18 + 0.42 * d;   // (swung down over the circle)
         circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.9;
         if (net.t >= NET_DOWN) { net.state = 'back'; net.t = 0; netLand(net.water); circ.visible = false;
           for (var sp = 0; sp < 14; sp++) { var sa = sp / 14 * Math.PI * 2; sparkle(net.x + Math.cos(sa) * NET_R2, net.y + 0.06, net.z + Math.sin(sa) * NET_R2, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.6, 0.5); }
           if (net.water) burst(net.x, net.y + 0.05, net.z, 0xd8f0ff, 10, 0.8, 1.1, -3);
           try { window.bugNetSwept(net.x, net.y, net.z, NET_R2, net.water); } catch (err) {} } }
-      else { var e = eo(Math.min(1, net.t / NET_BACK)); ax = HIT + (REST - HIT) * e; ay = ACROSS * (1 - e); lean = 0.38 * (1 - e); if (net.t >= NET_BACK) net.state = 'idle'; }   // (and lifted back to her side)
-      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) body.rotation.x = lean;
+      else { var e = ss((net.t - NET_REST) / NET_BACK); ax = HIT + (REST - HIT) * e; ay = 0.14 * (1 - e); lean = 0.22 * (1 - e); tw = 0.24 * (1 - e); if (net.t >= NET_REST + NET_BACK) net.state = 'idle'; }   // (a moment resting on the ground, then lifted back to her side)
+      axeArm.rotation.x = ax; axeArm.rotation.y = ay; if (typeof body !== 'undefined' && body && body.rotation) { body.rotation.x = lean; body.rotation.y = tw; }
       return r; }; })(updateTrees);
   })();
   // ===== Reel & Wing: a little tackle-and-net shop on the sand at Seashell Shore, just north of the opening in the boardwalk's
