@@ -5683,9 +5683,11 @@ EVERDAWN_PARTS.push(function (THREE) {
       g.fillStyle = '#fff6c8'; [[84, 64, 2.2], [78, 74, 1.4], [90, 52, 1.6]].forEach(function (d) { g.beginPath(); g.arc(d[0], d[1], d[2], 0, Math.PI * 2); g.fill(); });   // (a twinkle or two)
     }).toDataURL();
     isTool = (function (base) { return function (id) { return id === 'bugNet' || base(id); }; })(isTool);   // (no count, and it can't be sold or thrown away)
+    makeSlot = (function (base) { return function (i) { var sl = base.apply(this, arguments);   // (no number on its slot in the bag or the hotbar, like the other tools)
+      if (bag[i] && bag[i].id === 'bugNet') { var c = sl.querySelector('.count'); if (c) c.remove(); sl.setAttribute('aria-label', ITEMS.bugNet.name); } return sl; }; })(makeSlot);
     var meshT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,1)'; g.lineWidth = 3; for (var k = -w; k < w * 2; k += 16) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + h, h); g.stroke(); g.beginPath(); g.moveTo(k + h, 0); g.lineTo(k, h); g.stroke(); }
       g.fillStyle = '#ffffff'; for (var x = 0; x < w; x += 8) for (var y = 0; y < h; y += 8) if ((x / 8 + y / 8) % 2 === 0) g.fillRect(x - 1.5, y - 1.5, 3, 3); }, [10, 5]);   // (soft netting, a knot at each crossing)
-    var NET_L = 2.55, NET_R = 0.17, NET_D = 0.38;   // (a long handle and a small hoop, like a real butterfly net, so it reaches the ground)
+    var NET_L = 1.75, NET_R = 0.17, NET_D = 0.38;   // (a handle long enough to reach the ground as she bends to it, and a small hoop)
     pickupModel = (function (base) {
       return function (item) {
         if (item !== 'bugNet') return base.apply(this, arguments);
@@ -5759,7 +5761,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var hh = hd.getObjectByName('netHead'); if (hh && hh.userData.q0) { hh.position.copy(hh.userData.p0); hh.quaternion.copy(hh.userData.q0);
         if (netFlat > 0.5) {   // (the hoop set right on the ground: the handle slides a little through her hand so its end meets the ground exactly)
           var tip0 = hd.localToWorld(new THREE.Vector3(0, hh.userData.top, 0)), dd = hd.localToWorld(new THREE.Vector3(0, hh.userData.top + 1, 0)).sub(tip0).normalize();
-          if (dd.y < -0.2) { var sl = Math.max(-0.6, Math.min(0.6, (net.y + 0.012 - tip0.y) / dd.y)), hw0 = hd.getWorldPosition(new THREE.Vector3()).addScaledVector(dd, sl); hd.position.copy(hd.parent.worldToLocal(hw0)); hd.updateMatrixWorld(true); } }
+          if (dd.y < -0.2) { var sl = Math.max(-0.45, Math.min(0.45, (net.y + 0.012 - tip0.y) / dd.y)), hw0 = hd.getWorldPosition(new THREE.Vector3()).addScaledVector(dd, sl); hd.position.copy(hd.parent.worldToLocal(hw0)); hd.updateMatrixWorld(true); } }
         if (netFlat > 0.5) {   // (set straight in the world: the hoop flat at the end of the handle, carrying on ahead, the bag trailing up)
           var ws = hd.getWorldScale(new THREE.Vector3()), sc = Math.abs(ws.y), Aw = hd.localToWorld(new THREE.Vector3(0, hh.userData.top, 0)), hdir = hd.localToWorld(new THREE.Vector3(0, hh.userData.top + 1, 0)).sub(Aw); hdir.y = 0;
           if (hdir.lengthSq() < 1e-6) hdir.set(Math.sin(facing), 0, Math.cos(facing)); hdir.normalize();
