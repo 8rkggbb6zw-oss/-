@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Everdawn</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <h1>Everdawn <span class="spark">&#x2726;</span></h1>
+        <div class="stats">
+          <div class="stat" title="Time on the island"><span id="clock">&#x263C; 6:00 AM</span> &middot; <span id="day">Day 1</span></div>
+          <div class="mana-wrap">
+            <div class="mana" title="Mana">
+              <div class="mana-fill" id="mana"></div>
+              <span>Mana</span>
+            </div>
+            <div class="mana-num" id="manaNum">100 / 100</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="frame">
+        <canvas id="game"></canvas>
+        <div id="toast" class="toast"></div>
+        <div id="inventory" class="inventory" hidden>
+          <div class="inv-head">
+            <b>&#x1F392; Bag</b>
+            <button id="btnCloseBag" class="inv-close" type="button" aria-label="Close bag">&#x2715;</button>
+          </div>
+          <div id="invGrid" class="inv-grid"></div>
+          <p id="invInfo" class="inv-info">Tap an item to see what it is.</p>
+        </div>
+        <div class="hotbar">
+          <div id="hotbarSlots" class="hotbar-slots"></div>
+          <button id="btnRow" class="row-btn" type="button" aria-label="Show the next row of your bag">1/3 &#x21C5;</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="btnAct" type="button">Interact <kbd>E</kbd></button>
+        <button id="btnSpell" type="button">Dawn Bloom <kbd>Q</kbd></button>
+        <button id="btnBag" type="button">Bag <kbd>I</kbd></button>
+        <button id="btnSave" type="button">&#x1F4BE; Save</button>
+        <button id="btnLoad" type="button">&#x1F4C2; Load</button>
+        <button id="btnFull" type="button">&#x26F6; Full screen <kbd>F</kbd></button>
+      </div>
+
+      <p class="help">
+        <b>WASD / Arrows</b> or <b>tap the ground</b> to move &middot; <b>E / Space</b> to till, plant, water &amp; harvest &middot;
+        <b>Q</b> casts Dawn Bloom (waters every crop) &middot; <b>T</b> teleports you home, to the Dawn Tree, to a shop, to the clinic or to Fluff &amp; Feather &middot; <b>I</b> opens your bag, <b>Tab</b> flips through your items, <b>1&ndash;4</b> pick a slot, <b>R</b> switches the hotbar row &middot; <b>Drag</b> to turn the camera, <b>Scroll / pinch</b> to zoom &middot;
+        Visit the glowing tree to refill mana, and the lake to rest.
+      </p>
+    </main>
+
+    <!-- three.js is loaded here, so the game needs no imports. script5.js (the Language setting) comes first, so every word
+         is in the chosen language from the start; the game itself is split over six files (CodePen won't save one over
+         1 MB), script7.js and script8.js being you, the player, loaded from Witch.vrm with the GLTFLoader. script6.js is the controller. They must stay in this order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="script5.js"></script>
+    <script src="script.js"></script>
+    <script src="script2.js"></script>
+    <script src="script3.js"></script>
+    <script src="script7.js"></script>
+    <script src="script8.js"></script>
+    <script src="script4.js"></script>
+    <script src="script6.js"></script>
+  </body>
+</html>
