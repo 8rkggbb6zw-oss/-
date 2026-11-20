@@ -5687,7 +5687,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (bag[i] && bag[i].id === 'bugNet') { var c = sl.querySelector('.count'); if (c) c.remove(); sl.setAttribute('aria-label', ITEMS.bugNet.name); } return sl; }; })(makeSlot);
     var meshT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,1)'; g.lineWidth = 3; for (var k = -w; k < w * 2; k += 16) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + h, h); g.stroke(); g.beginPath(); g.moveTo(k + h, 0); g.lineTo(k, h); g.stroke(); }
       g.fillStyle = '#ffffff'; for (var x = 0; x < w; x += 8) for (var y = 0; y < h; y += 8) if ((x / 8 + y / 8) % 2 === 0) g.fillRect(x - 1.5, y - 1.5, 3, 3); }, [10, 5]);   // (soft netting, a knot at each crossing)
-    var NET_L = 1.4, NET_R = 0.17, NET_D = 0.38;   // (a handle long enough to reach the ground as she bends to it, and a small hoop)
+    var NET_L = 0.95, NET_R = 0.17, NET_D = 0.38;   // (a handle long enough to reach the ground as she bends to it, and a small hoop)
     pickupModel = (function (base) {
       return function (item) {
         if (item !== 'bugNet') return base.apply(this, arguments);
