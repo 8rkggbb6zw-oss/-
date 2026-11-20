@@ -5760,8 +5760,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (as the net comes down, its hoop tips over to lie flat, its open side down over the circle, the bag trailing up)
       var hh = hd.getObjectByName('netHead'); if (hh && hh.userData.q0) { hh.position.copy(hh.userData.p0); hh.quaternion.copy(hh.userData.q0);
         if (netFlat > 0.5) {   // (set straight in the world: the hoop flat at the end of the handle, carrying on ahead, the bag trailing up)
-          var ws = hd.getWorldScale(new THREE.Vector3()), sc = Math.abs(ws.y), Aw = hd.localToWorld(new THREE.Vector3(0, hh.userData.top, 0)), hdir = hd.localToWorld(new THREE.Vector3(0, hh.userData.top + 1, 0)).sub(Aw); hdir.y = 0;
-          if (hdir.lengthSq() < 1e-6) hdir.set(Math.sin(facing), 0, Math.cos(facing)); hdir.normalize();
+          var ws = hd.getWorldScale(new THREE.Vector3()), sc = Math.abs(ws.y), Aw = hd.localToWorld(new THREE.Vector3(0, hh.userData.top, 0)), hdir = hd.localToWorld(new THREE.Vector3(0, hh.userData.top + 1, 0)).sub(Aw), fwd = new THREE.Vector3(Math.sin(facing), 0, Math.cos(facing));
+          hdir = fwd.multiplyScalar(hdir.dot(fwd) >= 0 ? 1 : -1);   // (always in line with the way she faces, ahead or behind: never off to the side)
           var Xw = new THREE.Vector3(0, 1, 0), Yw = hdir, Zw = new THREE.Vector3().crossVectors(Xw, Yw), Mw = new THREE.Matrix4().makeBasis(Xw.multiplyScalar(sc), Yw.clone().multiplyScalar(sc), Zw.multiplyScalar(sc));
           Mw.setPosition(Aw.add(hdir.multiplyScalar(NET_R * sc))); Mw.premultiply(new THREE.Matrix4().copy(hd.matrixWorld).invert()); Mw.decompose(hh.position, hh.quaternion, hh.scale); }
         else hh.scale.set(1, 1, 1);
@@ -5774,7 +5774,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // down over the circle: whatever is inside it when the net lands is caught. bugNetSwept(x, y, z, r, onWater) is called
     // then, with the circle's middle, its radius and whether it's on the water: insects (on land) and sea creatures (in the
     // sea) will listen there and check whether they're inside it)
-    var NET_R2 = 0.45, NET_AHEAD = 0.95, NET_LIFT = 0.25, NET_DOWN = 0.2, NET_SWEEP = 0.3, NET_BACK = 0.38, netReach = 0.2;
+    var NET_R2 = 0.45, NET_AHEAD = 0.95, NET_LIFT = 0.25, NET_DOWN = 0.2, NET_SWEEP = 0.2, NET_BACK = 0.38, netReach = 0.2;
     var net = { state: 'idle', t: 0, key: null, x: 0, y: 0, z: 0, water: false };
     window.bugNetSwept = function (x, y, z, r, onWater) {};          // (the insects and sea creatures will listen here)
     function swish() { if (!audioCtx) return; try { hissBurst(0.3, 'bandpass', 1500, 1.1, 0.1, 0.04, 0.2); slideTone('sine', 760, 420, 0.025, 0.16); } catch (err) {} }
@@ -5816,8 +5816,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       // (which way the net points: up and ahead as she carries it, straight up when raised, forward and down onto the circle as
       // she brings it down, then swiping back along the ground under her as she sweeps it back, and up to her side again)
       var fs = Math.sin(facing), fc = Math.cos(facing), sweeping = net.state === 'back' && net.t < NET_SWEEP, sk = sweeping ? Math.max(0, Math.min(1, net.t / NET_SWEEP)) : 0;
-      if (net.state === 'aim') netDirTo.set(fs, 5, fc); else if (net.state === 'down') netDirTo.set(fs, -0.5, fc); else if (sweeping) netDirTo.set(fs * (1 - 1.2 * sk), -0.5 - 0.6 * sk, fc * (1 - 1.2 * sk)); else netDirTo.set(fs, 1.1, fc);
-      netDirTo.normalize(); netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' || sweeping ? 24 : 9))).normalize();
+      if (net.state === 'aim') netDirTo.set(fs, 5, fc); else if (net.state === 'down') netDirTo.set(fs, -0.5, fc); else if (sweeping) netDirTo.set(fs * (1 - 1.8 * sk), -0.5 - 0.3 * Math.sin(sk * Math.PI), fc * (1 - 1.8 * sk));   // (swiped back past her, behind her) else netDirTo.set(fs, 1.1, fc);
+      netDirTo.normalize(); netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' || sweeping ? 40 : 9))).normalize();
       var bTo = net.state === 'aim' ? 0.85 : net.state === 'down' || sweeping ? 0.95 : 0.2, fTo = net.state === 'down' || sweeping ? 1 : 0;   // (while she swipes it, the hoop's open side faces the ground)   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
       netBlend += (bTo - netBlend) * Math.min(1, dt * 14); netFlat += (fTo - netFlat) * Math.min(1, dt * (fTo ? 22 : 8));
       if (net.state === 'idle') return r;
@@ -5825,7 +5825,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       net.t += dt;
       // (the pose: held up high, her arm raised up and forward; then she swipes the net forward in front of her, swipes it
       // back towards her, and carries it at her side again. She stands straight the whole time: no leaning)
-      var REST = 5.23, UP = 3.55, HIT = 4.75, SWEPT = 5.6, ax = REST, ay = 0, lean = 0, tw = 0;
+      var REST = 5.23, UP = 3.55, HIT = 4.75, SWEPT = 5.95, ax = REST, ay = 0, lean = 0, tw = 0;
       function eo(k) { return 1 - (1 - k) * (1 - k); } function ss(k) { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); }
       if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; circShow(dt); }   // (lifted high and held there, ready)
       else if (net.state === 'down') {
