@@ -5703,7 +5703,7 @@ EVERDAWN_PARTS.push(function (THREE) {
         var cap = new THREE.Mesh(new THREE.SphereGeometry(0.019, 12, 8), brass); cap.position.y = -0.2; r.add(cap);
         [0.08, 0.1].forEach(function (y) { var b = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.008, 12), brass); b.position.y = y; r.add(b); });   // (brass bands above the grip)
         var top = NET_L - 0.2, fer = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.06, 12), brass); fer.position.y = top - 0.01; r.add(fer);   // (the brass ferrule)
-        var head = new THREE.Group(); head.name = 'netHead'; head.position.y = top + NET_R; head.rotation.y = -Math.PI / 2; r.add(head); head.userData.p0 = head.position.clone(); head.userData.q0 = head.quaternion.clone(); head.userData.top = top;   // (turned so the hoop's open face looks ahead of her, the bag hanging behind it)
+        var head = new THREE.Group(); head.name = 'netHead'; head.position.y = top + NET_R; head.rotation.y = Math.PI / 2; r.add(head); head.userData.p0 = head.position.clone(); head.userData.q0 = head.quaternion.clone(); head.userData.top = top;   // (turned so the hoop's open face looks ahead of her, the bag hanging behind it)
         var hoop = new THREE.Mesh(new THREE.TorusGeometry(NET_R, 0.008, 8, 40), willow); hoop.rotation.y = Math.PI / 2; hoop.castShadow = true; head.add(hoop);   // (the willow hoop)
         var weave = new THREE.Curve(); weave.getPoint = function (t, o) { var a = t * Math.PI * 2, b = t * Math.PI * 2 * 26; return (o || new THREE.Vector3()).set(Math.sin(b) * 0.007, Math.cos(a) * (NET_R + Math.cos(b) * 0.007), Math.sin(a) * (NET_R + Math.cos(b) * 0.007)); };
         head.add(new THREE.Mesh(new THREE.TubeGeometry(weave, 300, 0.0032, 4, true), willow));   // (a willow withy woven round it)
@@ -5818,7 +5818,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       var fs = Math.sin(facing), fc = Math.cos(facing), sweeping = net.state === 'back' && net.t < NET_SWEEP, sk = sweeping ? Math.max(0, Math.min(1, net.t / NET_SWEEP)) : 0;
       if (net.state === 'aim') netDirTo.set(fs, 5, fc); else if (net.state === 'down') netDirTo.set(fs, -0.5, fc); else if (sweeping) netDirTo.set(fs * (1 - 1.2 * sk), -0.5 - 0.6 * sk, fc * (1 - 1.2 * sk)); else netDirTo.set(fs, 1.1, fc);
       netDirTo.normalize(); netDir.lerp(netDirTo, Math.min(1, dt * (net.state === 'down' || sweeping ? 24 : 9))).normalize();
-      var bTo = net.state === 'aim' ? 0.85 : net.state === 'down' || sweeping ? 0.95 : 0.2, fTo = 0;   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
+      var bTo = net.state === 'aim' ? 0.85 : net.state === 'down' || sweeping ? 0.95 : 0.2, fTo = net.state === 'down' || sweeping ? 1 : 0;   // (while she swipes it, the hoop's open side faces the ground)   // (how far the net follows her swing rather than her fist, and how flat its hoop lies)
       netBlend += (bTo - netBlend) * Math.min(1, dt * 14); netFlat += (fTo - netFlat) * Math.min(1, dt * (fTo ? 22 : 8));
       if (net.state === 'idle') return r;
       if (!netInHand() || indoors || flying || teleporting || sleeping) { netCancel(); return r; }   // (put away, or off somewhere)
