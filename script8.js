@@ -5784,16 +5784,16 @@ EVERDAWN_PARTS.push(function (THREE) {
       var x = player.position.x + Math.sin(facing) * NET_AHEAD + Math.cos(facing) * lat, z = player.position.z + Math.cos(facing) * NET_AHEAD - Math.sin(facing) * lat, fy = netFloorY(x, z), wy = null;
       try { wy = rodWater(x, z); } catch (err) {}
       net.x = x; net.z = z; net.water = wy !== null && wy > fy - 0.02; net.y = net.water ? wy : fy; }
-    // (the circle: a soft glowing disc with a bright rim, a ring of little dashes turning round it, and sparkles rising)
+    // (the circle: a faint disc with a thin white rim, nothing more)
     var circ = new THREE.Group(); circ.visible = false; scene.add(circ);
-    var cDisc = new THREE.Mesh(new THREE.CircleGeometry(NET_R2, 48), new THREE.MeshBasicMaterial({ color: 0xffe6a8, transparent: true, opacity: 0.16, depthWrite: false })), cRim = new THREE.Mesh(new THREE.RingGeometry(NET_R2 - 0.035, NET_R2, 64), new THREE.MeshBasicMaterial({ color: 0xfff2c8, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }));
+    var cDisc = new THREE.Mesh(new THREE.CircleGeometry(NET_R2, 48), new THREE.MeshBasicMaterial({ color: 0xffe6a8, transparent: true, opacity: 0.16, depthWrite: false })), cRim = new THREE.Mesh(new THREE.RingGeometry(NET_R2 - 0.018, NET_R2, 64), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
     var cDash = new THREE.Group(); for (var dk = 0; dk < 16; dk++) { var dm = new THREE.Mesh(new THREE.PlaneGeometry(0.09, 0.025), new THREE.MeshBasicMaterial({ color: 0xffb8e8, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })); var da = dk / 16 * Math.PI * 2; dm.position.set(Math.cos(da) * (NET_R2 + 0.07), Math.sin(da) * (NET_R2 + 0.07), 0); dm.rotation.z = da + Math.PI / 2; cDash.add(dm); }
     var cDot = new THREE.Mesh(new THREE.CircleGeometry(0.045, 16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }));
+    cDash.visible = cDot.visible = false;   // (kept simple: just a soft disc and a thin rim)
     [cDisc, cRim, cDash, cDot].forEach(function (m) { m.rotation.x = -Math.PI / 2; m.renderOrder = 3; circ.add(m); }); cDash.rotation.x = -Math.PI / 2;
     function circShow(dt) { netSpot(); circ.position.set(net.x, net.y + (net.water ? 0.03 : 0.025), net.z); circ.visible = true;
-      var k = net.state === 'aim' ? Math.min(1, net.t / 0.15) : 1, pulse = 0.5 + 0.5 * Math.sin(net.t * 6); circ.scale.setScalar(0.6 + 0.4 * k);
-      cRim.material.opacity = 0.65 + 0.3 * pulse; cDisc.material.opacity = (net.water ? 0.2 : 0.14) + 0.06 * pulse; cDisc.material.color.setHex(net.water ? 0xbfeaff : 0xffe6a8); cDash.rotation.z += dt * 0.9;
-      if (Math.random() < dt * 6) { var a = Math.random() * Math.PI * 2, rr = Math.random() * NET_R2; sparkle(net.x + Math.cos(a) * rr, net.y + 0.05, net.z + Math.sin(a) * rr, Math.random() < 0.5 ? 0xfff0c0 : 0xffd0f0, 0.4, 0.5); } }
+      var k = net.state === 'aim' ? Math.min(1, net.t / 0.15) : 1; circ.scale.setScalar(0.6 + 0.4 * k);
+      cRim.material.opacity = 0.5; cDisc.material.opacity = 0.08; cDisc.material.color.setHex(0xffffff); }
     function netStart(key) { if (net.state !== 'idle') return; net.state = 'aim'; net.t = 0; net.key = key; walkTarget = null; }
     function netLetGo() { if (net.state !== 'aim') return; net.state = 'down'; net.t = 0; net.key = null; netSpot(); swish(); }
     function netCancel() { net.state = 'idle'; net.key = null; circ.visible = false; }
@@ -5830,9 +5830,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       if (net.state === 'aim') { var a = eo(Math.min(1, net.t / NET_LIFT)); ax = REST + (UP - REST) * a; circShow(dt); }   // (lifted high and held there, ready)
       else if (net.state === 'down') {
         var d = ss(net.t / NET_DOWN); ax = UP + (HIT - UP) * d;   // (swiped forward)
-        circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.9;
+        circ.visible = true; circ.position.set(net.x, net.y + 0.025, net.z); cRim.material.opacity = 0.5;
         if (net.t >= NET_DOWN) { net.state = 'back'; net.t = 0; netLand(net.water); circ.visible = false;
-          for (var sp = 0; sp < 14; sp++) { var sa = sp / 14 * Math.PI * 2; sparkle(net.x + Math.cos(sa) * NET_R2, net.y + 0.06, net.z + Math.sin(sa) * NET_R2, sp % 2 ? 0xfff0c0 : 0xffd0f0, 0.6, 0.5); }
           if (net.water) burst(net.x, net.y + 0.05, net.z, 0xd8f0ff, 10, 0.8, 1.1, -3);
           try { window.bugNetSwept(net.x, net.y, net.z, NET_R2, net.water); } catch (err) {} } }
       else if (sweeping) { var w = ss(sk); ax = HIT + (SWEPT - HIT) * w; }   // (swiped back towards her)
