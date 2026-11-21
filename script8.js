@@ -5893,7 +5893,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (i = 0; i < 4; i++) { g.strokeStyle = 'rgba(30,20,14,0.8)'; g.lineWidth = 1.4; var cx = rnd() * w, cy = rnd() * h * 0.7; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + (rnd() - 0.5) * 3, cy + 30 + rnd() * 50); g.stroke(); }   // (splits)
       var gr = g.createLinearGradient(0, h * 0.72, 0, h); gr.addColorStop(0, 'rgba(40,28,18,0)'); gr.addColorStop(1, 'rgba(40,28,18,0.65)'); g.fillStyle = gr; g.fillRect(0, h * 0.72, w, h * 0.28); });   // (damp at the foot)
     var pileM = new THREE.MeshStandardMaterial({ map: pileT, bumpMap: pileT, bumpScale: 0.006, roughness: 0.92 }), galvM2 = rMat(0xb4b8bc, { metalness: 0.25, roughness: 0.5 }), sandMoundM = new THREE.MeshStandardMaterial({ color: 0xa88e6c, roughness: 1 });
-    var POSTS = [[-2.3, BD + PORCH], [0, BD + PORCH], [2.3, BD + PORCH], [-2.3, 0.2], [2.3, 0.2], [-2.3, -BD], [0, -BD], [2.3, -BD]];
+    var PX = 2.2, PF = BD + PORCH - 0.12, PB = -BD + 0.12;   // (set in a little from the porch's edge boards, so they stand right under the floor)
+    var POSTS = [[-PX, PF], [0, PF], [PX, PF], [-PX, 0.2], [PX, 0.2], [-PX, PB], [0, PB], [PX, PB]];
     POSTS.forEach(function (s) { var sy = beachH(S_X + s[0], S_Z + s[1]) - FY, len = -0.12 - sy + 0.15, pg = G(sg, s[0], 0, s[1], rnd() * 6);
       P(pg, new THREE.CylinderGeometry(0.08, 0.09, len, 14, 1), pileM, 0, -0.12 - len / 2, 0);
       [0.06, 0.2].forEach(function (d) { P(pg, new THREE.CylinderGeometry(0.093, 0.093, 0.035, 16, 1, true), galvM2, 0, -0.12 - d, 0); for (var b = 0; b < 3; b++) { var ba = b / 3 * Math.PI * 2; Q(P(pg, new THREE.CylinderGeometry(0.012, 0.012, 0.012, 6), galvM2, Math.cos(ba) * 0.098, -0.12 - d, Math.sin(ba) * 0.098, 0, -ba, Math.PI / 2)); } });   // (straps and bolts)
@@ -5919,8 +5920,8 @@ EVERDAWN_PARTS.push(function (THREE) {
       });
       for (var c1 = -hh; c1 < W; c1 += S) for (var c2 = 0; c2 < W + hh; c2 += S) { var vv2 = (c2 - c1) / 2, uu2 = (c1 + c2) / 2; if (vv2 < 0.01 || vv2 > hh - 0.01 || uu2 < 0.01 || uu2 > W - 0.01 || nN >= 1500) continue;   // (a nail where each pair of slats cross)
         so5.position.set(uu2, yb + vv2, out * 0.013); so5.rotation.set(Math.PI / 2, 0, 0); so5.scale.set(1, 1, 1); so5.updateMatrix(); nailIM.setMatrixAt(nN++, tmpM.multiplyMatrices(panW, so5.matrix)); } }
-    var FZ = BD + PORCH; lattice(-2.3, FZ, 0, FZ, 1); lattice(0, FZ, 2.3, FZ, 1); lattice(2.3, -BD, 0, -BD, 1); lattice(0, -BD, -2.3, -BD, 1);
-    lattice(-2.3, -BD, -2.3, 0.2, 1); lattice(-2.3, 0.2, -2.3, FZ, 1); lattice(2.3, FZ, 2.3, 0.2, 1); lattice(2.3, 0.2, 2.3, -BD, 1);
+    lattice(-PX, PF, 0, PF, 1); lattice(0, PF, PX, PF, 1); lattice(PX, PB, 0, PB, 1); lattice(0, PB, -PX, PB, 1);
+    lattice(-PX, PB, -PX, 0.2, 1); lattice(-PX, 0.2, -PX, PF, 1); lattice(PX, PF, PX, 0.2, 1); lattice(PX, 0.2, PX, PB, 1);
     slatIM.count = sN; nailIM.count = nN; [slatIM, nailIM].forEach(function (im) { im.castShadow = false; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; sg.add(im); }); if (slatIM.instanceColor) slatIM.instanceColor.needsUpdate = true;
     // (the walls: shiplap, the front and back gabled, the door and windows cut through, white corner boards)
     function wallShape(w, gable, holes) { var s = new THREE.Shape(); s.moveTo(-w, 0); s.lineTo(w, 0); s.lineTo(w, EAVE); if (gable) s.lineTo(0, APEX); s.lineTo(-w, EAVE); s.lineTo(-w, 0);
