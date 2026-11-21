@@ -6006,7 +6006,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var fr = 0; fr < 9; fr++) { var fa = fr / 9 * Math.PI * 2, lf = Q(P(pot, new THREE.ConeGeometry(0.05, 0.42, 4), rMat(0x4a9a4a, { roughness: 0.7 }), Math.cos(fa) * 0.08, 0.45, Math.sin(fa) * 0.08)); lf.rotation.set(Math.sin(fa) * 0.6, 0, -Math.cos(fa) * 0.6); lf.scale.set(1, 1, 0.25); } });
     // (a path of flat stones across the sand to the step down from the boardwalk)
     // (the path: it winds gently from the boardwalk's step to the shop, a walk of weathered planks on sleepers, sand banked
-    // along its edges, a low rope rail either side on driftwood posts, small stones and beach pebbles round it, and shells,
+    // along its edges, detailed beach pebbles round it, and shells,
     // a starfish and tufts of dune grass beside it)
     var pa = { x: 122.2, z: B3_Z - 1.9 }, pb = { x: S_X, z: S_Z + PZ + 0.2 + stepY.length * 0.3 + 0.75 };
     if (stepY.length) pb.z = S_Z + stepY[stepY.length - 1][0] + 0.3;
@@ -6048,24 +6048,43 @@ EVERDAWN_PARTS.push(function (THREE) {
       for (var k = 0; k < 500; k++) { g.fillStyle = 'rgba(' + (200 + rnd() * 50 | 0) + ',' + (176 + rnd() * 40 | 0) + ',' + (130 + rnd() * 30 | 0) + ',' + (rnd() * 0.6).toFixed(2) + ')'; g.fillRect(w * 0.2 + rnd() * w * 0.6, rnd() * h, 1, 1); } }), bankM = new THREE.MeshStandardMaterial({ map: bankT, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -4 });
     [-1, 1].forEach(function (sd) { for (var bk = 0; bk < 16; bk++) { var tb = (bk + 0.5) / 16, cb = pathAt(tb), db = pathDir(tb), lb = sd * (PW / 2 - 0.02), xb = cb.x - db.z * lb, zb = cb.z + db.x * lb;
       Q(P(scene, new THREE.PlaneGeometry(0.16 + rnd() * 0.08, pLen / 16 + 0.08), bankM, xb, beachH(xb, zb) + 0.067, zb, -Math.PI / 2, 0, -Math.atan2(db.x, db.z))); } });
-    // (a low rope rail along each side: short driftwood posts wound with rope at the top, a rope swagged between them)
-    var postM2 = new THREE.MeshStandardMaterial({ map: plkT[0], color: 0xb8ac9a, roughness: 0.95 }), ropeM3 = new THREE.MeshStandardMaterial({ color: 0xd4c098, roughness: 1 });
-    [-1, 1].forEach(function (sd) { var prev = null, np = Math.max(2, Math.round(pLen / 0.9)); for (var pk2 = 0; pk2 <= np; pk2++) { var tq = 0.04 + 0.86 * pk2 / np, cq = pathAt(tq), dq = pathDir(tq), lq = sd * (PW / 2 + 0.16), xq = cq.x - dq.z * lq, zq = cq.z + dq.x * lq, yq = beachH(xq, zq);
-      var pg = G(scene, xq, yq, zq, rnd() * 6); P(pg, new THREE.CylinderGeometry(0.035, 0.042, 0.46, 9), postM2, 0, 0.2, 0, (rnd() - 0.5) * 0.06, 0, (rnd() - 0.5) * 0.06); P(pg, new THREE.SphereGeometry(0.036, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), postM2, 0, 0.43, 0);
-      for (var wr = 0; wr < 3; wr++) Q(P(pg, new THREE.TorusGeometry(0.04, 0.008, 5, 12), ropeM3, 0, 0.34 + wr * 0.018, 0, Math.PI / 2, 0, 0));
-      var top = new THREE.Vector3(xq, yq + 0.36, zq);
-      if (prev) { var mid = prev.clone().lerp(top, 0.5); mid.y -= 0.07; Q(P(scene, new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(prev, mid, top), 14, 0.011, 5), ropeM3, 0, 0, 0)); }
-      prev = top; solids.push({ x: xq, z: zq, r: 0.06 }); } });
-    // (small stones scattered round the edges of the planks)
-    var smallIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ roughness: 0.5 }), 140), so3 = new THREE.Object3D(), sc3 = new THREE.Color(), SC3 = [0x7a746e, 0xa49c90, 0xc8c0b2, 0x5e5a58, 0xd8d0c4, 0x8e8478, 0xb8a890, 0xe6e0d6];
-    for (var si3 = 0; si3 < 140; si3++) { var t3 = rnd(), c3 = pathAt(t3), d3 = pathDir(t3), l3 = (rnd() < 0.5 ? -1 : 1) * (PW / 2 + 0.03 + Math.pow(rnd(), 2) * 0.35), x3 = c3.x - d3.z * l3, z3 = c3.z + d3.x * l3, r3 = 0.012 + Math.pow(rnd(), 2) * 0.03;
-      so3.position.set(x3, beachH(x3, z3) + r3 * 0.3, z3); so3.rotation.set(0, rnd() * 6, 0); so3.scale.set(r3 * (1 + rnd() * 0.5), r3 * (0.5 + rnd() * 0.25), r3 * (0.8 + rnd() * 0.3)); so3.updateMatrix(); smallIM.setMatrixAt(si3, so3.matrix); smallIM.setColorAt(si3, sc3.setHex(SC3[Math.floor(rnd() * SC3.length)])); }
-    smallIM.castShadow = false; smallIM.receiveShadow = true; scene.add(smallIM);
-    // (rounded beach pebbles lining both edges)
-    var edgeN = Math.round(pLen / 0.085) * 2, edgeIM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 10), new THREE.MeshStandardMaterial({ roughness: 0.45 }), edgeN), eo2 = new THREE.Object3D(), ecol = new THREE.Color(), EC = [0x7a746e, 0xa49c90, 0xc8c0b2, 0x5e5a58, 0xd8d0c4, 0x8e8478];
-    for (var en = 0; en < edgeN; en++) { var side = en % 2 ? 1 : -1, te = Math.min(1, (Math.floor(en / 2) + rnd() * 0.6) / (edgeN / 2)), ce = pathAt(te), de = pathDir(te), le = side * (PW / 2 + 0.04 + rnd() * 0.1), xe = ce.x - de.z * le, ze = ce.z + de.x * le, re = 0.02 + rnd() * 0.022;
-      eo2.position.set(xe, beachH(xe, ze) + re * 0.35, ze); eo2.rotation.set(0, rnd() * 6, 0); eo2.scale.set(re * (1.1 + rnd() * 0.5), re * (0.45 + rnd() * 0.2), re * (0.8 + rnd() * 0.3)); eo2.updateMatrix(); edgeIM.setMatrixAt(en, eo2.matrix); edgeIM.setColorAt(en, ecol.setHex(EC[Math.floor(rnd() * EC.length)])); }
-    edgeIM.castShadow = false; edgeIM.receiveShadow = true; scene.add(edgeIM);
+    // (small stones round the walk, each a real beach pebble: a dozen shapes, eggs, flattened ovals and rounded
+    // wedges, each a little lumpy and with the odd sea-worn flat, sitting low with the sand round their feet; their stone
+    // granite flecked with black, white and pink grains, speckled grey basalt, banded sandstone or smooth dark slate,
+    // some wrapped round by a white quartz vein or two, a few with a ring of quartz dots; a soft sheen on top, damp and
+    // darker underneath; some lying alone, some in little clusters, smaller ones scattered further out)
+    function pebTex(kind) { return cpTex(128, 128, function (g, w, h) { var i, P2 = [['#d8d0c8', ['rgba(30,28,30,', 'rgba(252,250,246,', 'rgba(214,146,124,', 'rgba(110,104,100,']], ['#8a8a8c', ['rgba(40,40,44,', 'rgba(200,200,200,', 'rgba(70,70,74,']], ['#cdbba4', ['rgba(140,110,84,', 'rgba(244,232,210,', 'rgba(104,86,70,']], ['#6e7480', ['rgba(50,54,62,', 'rgba(150,156,166,']]][kind];
+      g.fillStyle = P2[0]; g.fillRect(0, 0, w, h);
+      if (kind === 2) for (i = 0; i < 14; i++) { g.fillStyle = 'rgba(' + (i % 2 ? '160,130,100,' : '246,236,216,') + '0.12)'; g.fillRect(0, rnd() * h, w, 1 + rnd() * 3); }   // (sandstone's bands)
+      if (kind === 3) for (i = 0; i < 20; i++) { g.strokeStyle = 'rgba(160,168,180,0.18)'; g.lineWidth = 0.6; var y = rnd() * h; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + (rnd() - 0.5) * 6); g.stroke(); }   // (slate's fine layers)
+      for (i = 0; i < (kind === 3 ? 600 : 4200); i++) { var c = P2[1][Math.floor(rnd() * P2[1].length)], sz = kind === 0 ? 0.7 + rnd() * 2.2 : 0.6 + rnd() * 1.2; g.fillStyle = c + (0.3 + rnd() * 0.6).toFixed(2) + ')'; g.fillRect(rnd() * w, rnd() * h, sz, sz * (0.6 + rnd() * 0.8)); } }, [1, 1]); }
+    var PT = [0, 1, 2, 3].map(pebTex), pebMs = PT.map(function (t, k) { return new THREE.MeshStandardMaterial({ map: t, vertexColors: true, roughness: [0.45, 0.55, 0.7, 0.35][k], metalness: 0.02 }); });
+    var cVein = new THREE.Color(0xf8f6f0), cDamp = new THREE.Color(0x4a3c2e), cW = new THREE.Color(), vv = new THREE.Vector3();
+    function pebShape(k) {   // (one pebble's shape and markings, made once and laid down many times)
+      var geo = new THREE.SphereGeometry(1, 26, 18), pp = geo.attributes.position, uv = geo.attributes.uv, n = pp.count, col = new Float32Array(n * 3), a = rnd() * 6, egg = (rnd() - 0.5) * 0.35, wedge = rnd() < 0.3 ? 0.25 : 0, fl = 0.4 + rnd() * 0.25,
+        veins = rnd() < 0.45 ? 1 + (rnd() < 0.3) : 0, vd1 = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(), vd2 = new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).normalize(), dots = rnd() < 0.15;
+      for (var i = 0; i < n; i++) { vv.fromBufferAttribute(pp, i);
+        var e = 1 + egg * vv.x + wedge * vv.z * vv.x + 0.05 * Math.sin(vv.x * 3 + a) * Math.sin(vv.z * 3.3 - a) + 0.025 * Math.sin(vv.x * 7 + vv.y * 5 + a);   // (egg, wedge, gently lumpy)
+        var face = Math.max(0, Math.abs(Math.sin(Math.atan2(vv.z, vv.x) * 1.5 + a)) - 0.9) * 0.4; e -= face;   // (a worn flat)
+        var y = vv.y * e * fl; if (y < 0) y *= 0.5; pp.setXYZ(i, vv.x * e * 1.25, y, vv.z * e); uv.setXY(i, vv.x * 1.6 + a + vv.y * 0.4, vv.z * 1.6 - vv.y * 0.4);
+        cW.setRGB(1, 1, 1).multiplyScalar(0.86 + 0.2 * Math.max(0, vv.y));   // (lighter on top)
+        if (veins && (Math.abs(vv.dot(vd1)) < 0.045 || (veins > 1 && Math.abs(vv.dot(vd2)) < 0.03))) cW.lerp(cVein, 0.92);   // (quartz veins)
+        if (dots && vv.y > 0 && Math.abs(Math.sqrt(vv.x * vv.x + vv.z * vv.z) - 0.55) < 0.05 && Math.sin(Math.atan2(vv.z, vv.x) * 14) > 0.3) cW.lerp(cVein, 0.85);   // (a ring of dots)
+        if (vv.y < 0) cW.lerp(cDamp, Math.min(0.6, -vv.y * 1.4));   // (damp underneath)
+        col[i * 3] = cW.r; col[i * 3 + 1] = cW.g; col[i * 3 + 2] = cW.b; }
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.computeVertexNormals(); return geo; }
+    var PEB_T = [[0xffffff, 0xf2e6e0, 0xe0dcd8], [0xffffff, 0xd8d8dc, 0xb8b8c0], [0xffffff, 0xf4ece0, 0xe8dccc], [0xffffff, 0xc8ccd4, 0xa0a6b0]];   // (tints for each kind of stone)
+    var pebSpots = [];
+    for (var si3 = 0; si3 < 110; si3++) { var t3 = rnd(), c3 = pathAt(t3), d3 = pathDir(t3), l3 = (rnd() < 0.5 ? -1 : 1) * (PW / 2 + 0.03 + Math.pow(rnd(), 2) * 0.4), x3 = c3.x - d3.z * l3, z3 = c3.z + d3.x * l3, r3 = 0.012 + Math.pow(rnd(), 2) * 0.03;
+      pebSpots.push([x3, z3, r3]); if (rnd() < 0.25) for (var cl = 0; cl < 3; cl++) pebSpots.push([x3 + (rnd() - 0.5) * 0.09, z3 + (rnd() - 0.5) * 0.09, 0.01 + rnd() * 0.014]); }   // (alone, or in little clusters)
+    for (var en = 0; en < Math.round(pLen / 0.1) * 2; en++) { var te = Math.min(1, (Math.floor(en / 2) + rnd() * 0.6) / Math.round(pLen / 0.1)), ce = pathAt(te), de = pathDir(te), le = (en % 2 ? 1 : -1) * (PW / 2 + 0.03 + rnd() * 0.08);   // (a looser line of them right along both edges)
+      pebSpots.push([ce.x - de.z * le, ce.z + de.x * le, 0.018 + rnd() * 0.02]); }
+    var NSH = 12, pebGeos = []; for (var gk = 0; gk < NSH; gk++) pebGeos.push(pebShape(gk));
+    var buckets = {}; pebSpots.forEach(function (sp) { var key = Math.floor(rnd() * NSH) + '_' + [0, 0, 1, 2, 3][Math.floor(rnd() * 5)]; (buckets[key] = buckets[key] || []).push(sp); });
+    var po4 = new THREE.Object3D(), pc4 = new THREE.Color();
+    Object.keys(buckets).forEach(function (key) { var gi = +key.split('_')[0], kind = +key.split('_')[1], list = buckets[key], im = new THREE.InstancedMesh(pebGeos[gi], pebMs[kind], list.length);
+      list.forEach(function (sp, i) { var y = beachH(sp[0], sp[1]); po4.position.set(sp[0], y + sp[2] * 0.12, sp[1]); po4.rotation.set((rnd() - 0.5) * 0.15, rnd() * 6, (rnd() - 0.5) * 0.15); po4.scale.setScalar(sp[2]); po4.updateMatrix(); im.setMatrixAt(i, po4.matrix); im.setColorAt(i, pc4.setHex(PEB_T[kind][Math.floor(rnd() * 3)])); });
+      im.castShadow = false; im.receiveShadow = true; im.userData.peb = true; scene.add(im); });
     // (shells, a starfish and tufts of dune grass at the edges)
     var shellM2 = [rMat(0xf6e6d6, { roughness: 0.5 }), rMat(0xf2c2a8, { roughness: 0.5 }), rMat(0xe8d8b8, { roughness: 0.5 })];
     for (var sh4 = 0; sh4 < 9; sh4++) { var ts = rnd(), cs = pathAt(ts), ds = pathDir(ts), ls = (rnd() < 0.5 ? -1 : 1) * (PW / 2 + 0.12 + rnd() * 0.2), xs = cs.x - ds.z * ls, zs = cs.z + ds.x * ls, sc4 = 0.6 + rnd() * 0.5;
@@ -6080,7 +6099,7 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (no dune grass growing up through the porch, the steps or the path)
     (function () { var m4 = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0), zx0 = S_X - 2.8, zx1 = S_X + 2.8, zz0 = S_Z - BD - 0.4, zz1 = S_Z + PZ + 0.3 + stepY.length * 0.3 + 0.4;
       function onPath(x, z) { for (var k = 0; k <= 30; k++) { var c = pathAt(k / 30); if (Math.hypot(x - c.x, z - c.z) < PW / 2 + 0.15) return true; } return false; }   // (along the winding path)
-      scene.traverse(function (o) { if (!o.isInstancedMesh || o === edgeIM) return; for (var pp = o.parent; pp; pp = pp.parent) if (pp === sg) return; o.updateWorldMatrix(true, false); var ch = false;
+      scene.traverse(function (o) { if (!o.isInstancedMesh || o.userData.peb) return; for (var pp = o.parent; pp; pp = pp.parent) if (pp === sg) return; o.updateWorldMatrix(true, false); var ch = false;
         for (var i = 0; i < o.count; i++) { o.getMatrixAt(i, m4); v.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld); if (v.y > FY + 0.5 || v.y < -2) continue;
           if ((v.x > zx0 && v.x < zx1 && v.z > zz0 && v.z < zz1) || (v.y < DECK_Y - 0.15 && onPath(v.x, v.z))) { o.setMatrixAt(i, zero); ch = true; } }
         if (ch) o.instanceMatrix.needsUpdate = true; }); })();
