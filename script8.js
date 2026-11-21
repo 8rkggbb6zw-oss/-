@@ -5883,12 +5883,45 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (the platform, its edge boards and the stilts under it, a lattice skirt between)
     P(sg, new THREE.BoxGeometry(4.9, 0.12, BD * 2 + PORCH + 0.1), plankM, 0, -0.06, (PORCH) / 2);
     [[0, BD + PORCH + 0.05, 4.95, 0], [0, -BD - 0.05, 4.95, 0], [-2.45, PORCH / 2, BD * 2 + PORCH + 0.2, Math.PI / 2], [2.45, PORCH / 2, BD * 2 + PORCH + 0.2, Math.PI / 2]].forEach(function (e) { P(sg, new THREE.BoxGeometry(e[2], 0.2, 0.05), whiteM, e[0], -0.1, e[1], 0, e[3], 0); });
-    var latT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.strokeStyle = '#f4f0e6'; g.lineWidth = 7; for (var k = -w; k < w * 2; k += 32) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + h, h); g.stroke(); g.beginPath(); g.moveTo(k + h, 0); g.lineTo(k, h); g.stroke(); } }, [1, 1]);
-    [[-2.3, BD + PORCH], [0, BD + PORCH], [2.3, BD + PORCH], [-2.3, 0.2], [2.3, 0.2], [-2.3, -BD], [0, -BD], [2.3, -BD]].forEach(function (s) { var sy = beachH(S_X + s[0], S_Z + s[1]) - FY, len = -0.12 - sy + 0.15;
-      P(sg, new THREE.CylinderGeometry(0.08, 0.09, len, 10), darkWoodM, s[0], -0.12 - len / 2 + 0.0, s[1]); });
-    [['f', 0, BD + PORCH, 4.6, 0], ['l', -2.3, PORCH / 2 - 0.05, BD * 2 + PORCH - 0.1, Math.PI / 2], ['r', 2.3, PORCH / 2 - 0.05, BD * 2 + PORCH - 0.1, Math.PI / 2]].forEach(function (s) { var ht = FY - Math.min(beachH(S_X + s[1], S_Z + s[2]), beachH(S_X + s[1] * 0.5, S_Z + s[2])) - 0.12 + 0.12;
-      var lt = latT.clone(); lt.needsUpdate = true; lt.wrapS = lt.wrapT = THREE.RepeatWrapping; lt.repeat.set(s[3] / 0.45, ht / 0.45);
-      var m = Q(P(sg, new THREE.PlaneGeometry(s[3], ht), new THREE.MeshStandardMaterial({ map: lt, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.8 }), s[1], -0.12 - ht / 2, s[2] - (s[0] === 'f' ? 0.02 : 0), 0, s[4], 0)); });
+    // (under the porch, in detail: the stilts are stout round posts of weathered wood, grained and split along their length,
+    // darker and damp where they go into the sand, a little mound of sand heaped round each foot, two galvanised straps
+    // bolted round each top where it carries the floor; and between them a proper lattice skirt: real crossed slats in two
+    // layers, nailed where they cross, painted cream and weathered, the paint worn to grey wood at the edges here and there,
+    // framed by a top rail and a kickboard half sunk in the sand, with the cool shadow of the space under the shack behind)
+    var pileT = cpTex(64, 256, function (g, w, h) { g.fillStyle = '#7a6250'; g.fillRect(0, 0, w, h); var i;
+      for (i = 0; i < 40; i++) { var x = rnd() * w; g.strokeStyle = 'rgba(' + (rnd() < 0.5 ? '50,36,26,' : '170,150,130,') + (0.15 + rnd() * 0.3).toFixed(2) + ')'; g.lineWidth = 0.6 + rnd() * 1.4; g.beginPath(); g.moveTo(x, 0); for (var y = 0; y <= h; y += 16) g.lineTo(x + Math.sin(y * 0.04 + i) * 2, y); g.stroke(); }   // (grain)
+      for (i = 0; i < 4; i++) { g.strokeStyle = 'rgba(30,20,14,0.8)'; g.lineWidth = 1.4; var cx = rnd() * w, cy = rnd() * h * 0.7; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + (rnd() - 0.5) * 3, cy + 30 + rnd() * 50); g.stroke(); }   // (splits)
+      var gr = g.createLinearGradient(0, h * 0.72, 0, h); gr.addColorStop(0, 'rgba(40,28,18,0)'); gr.addColorStop(1, 'rgba(40,28,18,0.65)'); g.fillStyle = gr; g.fillRect(0, h * 0.72, w, h * 0.28); });   // (damp at the foot)
+    var pileM = new THREE.MeshStandardMaterial({ map: pileT, bumpMap: pileT, bumpScale: 0.006, roughness: 0.92 }), galvM2 = rMat(0xb4b8bc, { metalness: 0.25, roughness: 0.5 }), sandMoundM = new THREE.MeshStandardMaterial({ color: 0xa88e6c, roughness: 1 });
+    var POSTS = [[-2.3, BD + PORCH], [0, BD + PORCH], [2.3, BD + PORCH], [-2.3, 0.2], [2.3, 0.2], [-2.3, -BD], [0, -BD], [2.3, -BD]];
+    POSTS.forEach(function (s) { var sy = beachH(S_X + s[0], S_Z + s[1]) - FY, len = -0.12 - sy + 0.15, pg = G(sg, s[0], 0, s[1], rnd() * 6);
+      P(pg, new THREE.CylinderGeometry(0.08, 0.09, len, 14, 1), pileM, 0, -0.12 - len / 2, 0);
+      [0.06, 0.2].forEach(function (d) { P(pg, new THREE.CylinderGeometry(0.093, 0.093, 0.035, 16, 1, true), galvM2, 0, -0.12 - d, 0); for (var b = 0; b < 3; b++) { var ba = b / 3 * Math.PI * 2; Q(P(pg, new THREE.CylinderGeometry(0.012, 0.012, 0.012, 6), galvM2, Math.cos(ba) * 0.098, -0.12 - d, Math.sin(ba) * 0.098, 0, -ba, Math.PI / 2)); } });   // (straps and bolts)
+      var md = Q(P(pg, new THREE.CylinderGeometry(0.095, 0.2, 0.05, 24, 1, true), sandMoundM, 0, sy + 0.012, 0)); md.receiveShadow = true; });   // (a mound of sand round its foot)
+    var slatT = cpTex(128, 16, function (g, w, h) { g.fillStyle = '#f2ecdf'; g.fillRect(0, 0, w, h); for (var i = 0; i < 60; i++) { g.fillStyle = 'rgba(' + (rnd() < 0.5 ? '150,140,124,' : '255,255,250,') + (rnd() * 0.25).toFixed(2) + ')'; g.fillRect(rnd() * w, rnd() * h, 4 + rnd() * 18, 1); }
+      for (i = 0; i < 3; i++) { g.fillStyle = 'rgba(140,124,104,0.55)'; g.fillRect(rnd() * w, rnd() < 0.5 ? 0 : h - 3, 6 + rnd() * 16, 3); } }, [1, 1]);   // (paint worn to wood at the edges)
+    var slatM = new THREE.MeshStandardMaterial({ map: slatT, roughness: 0.75 }), slatG = new THREE.BoxGeometry(1, 0.034, 0.011), nailG2 = new THREE.CylinderGeometry(0.0032, 0.0032, 0.003, 6), nailM3 = rMat(0xa8a29a, { metalness: 0.2, roughness: 0.55 });
+    var slatIM = new THREE.InstancedMesh(slatG, slatM, 900), nailIM = new THREE.InstancedMesh(nailG2, nailM3, 1500), sN = 0, nN = 0, so5 = new THREE.Object3D(), sc5 = new THREE.Color(), panW = new THREE.Matrix4(), tmpM = new THREE.Matrix4();
+    var shadeM = new THREE.MeshBasicMaterial({ color: 0x2e2822 }), railM = new THREE.MeshStandardMaterial({ map: slatT, roughness: 0.75 });
+    function lattice(x0, z0, x1, z1, out) {   // (one panel between two posts; out: which way is outside)
+      var W = Math.hypot(x1 - x0, z1 - z0), mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, sandY = Math.min(beachH(S_X + x0, S_Z + z0), beachH(S_X + mx, S_Z + mz), beachH(S_X + x1, S_Z + z1)) - FY, yT = -0.2, yB = sandY - 0.04, H = yT - yB;
+      if (H < 0.05) return; var ang = Math.atan2(-(z1 - z0), x1 - x0), pnl = G(sg, x0, 0, z0, ang); pnl.updateMatrixWorld(true); panW.copy(pnl.matrix);
+      Q(P(pnl, new THREE.PlaneGeometry(W, H), shadeM, W / 2, yB + H / 2, -out * 0.16));   // (the shadowy space behind)
+      P(pnl, new THREE.BoxGeometry(W, 0.05, 0.03), railM, W / 2, yT - 0.025, out * 0.012); P(pnl, new THREE.BoxGeometry(W, 0.09, 0.03), railM, W / 2, sandY + 0.025, out * 0.012);   // (top rail, kickboard)
+      var S = 0.11, yb = sandY + 0.06, hh = yT - 0.05 - yb; if (hh < 0.02) return;
+      [1, -1].forEach(function (dir, layer) { for (var c = -hh; c < W + hh; c += S) {   // (slats on the line u - dir*v = c, clipped to the panel)
+        var ua = c, va = 0, ub = c + dir * hh, vb = hh; if (dir < 0) { ua = c; va = 0; ub = c - hh; vb = hh; }
+        var p0 = [ua, va], p1 = [ub, vb], du = p1[0] - p0[0], dv = p1[1] - p0[1], t0 = 0, t1 = 1;
+        [[-du, p0[0]], [du, W - p0[0]]].forEach(function (q) { if (q[0] === 0) { if (q[1] < 0) t1 = -1; return; } var r = q[1] / q[0]; if (q[0] < 0) t0 = Math.max(t0, r); else t1 = Math.min(t1, r); });
+        if (t1 <= t0 || sN >= 900) continue; var a0 = [p0[0] + du * t0, p0[1] + dv * t0], a1 = [p0[0] + du * t1, p0[1] + dv * t1], L = Math.hypot(a1[0] - a0[0], a1[1] - a0[1]);
+        so5.position.set((a0[0] + a1[0]) / 2, yb + (a0[1] + a1[1]) / 2, out * (layer ? -0.006 : 0.006)); so5.rotation.set(0, 0, Math.atan2(a1[1] - a0[1], a1[0] - a0[0])); so5.scale.set(L, 1, 1); so5.updateMatrix();
+        slatIM.setMatrixAt(sN, tmpM.multiplyMatrices(panW, so5.matrix)); slatIM.setColorAt(sN++, sc5.setHSL(0.1, 0.2, (layer ? 0.8 : 0.92) + (rnd() - 0.5) * 0.06)); }
+      });
+      for (var c1 = -hh; c1 < W; c1 += S) for (var c2 = 0; c2 < W + hh; c2 += S) { var vv2 = (c2 - c1) / 2, uu2 = (c1 + c2) / 2; if (vv2 < 0.01 || vv2 > hh - 0.01 || uu2 < 0.01 || uu2 > W - 0.01 || nN >= 1500) continue;   // (a nail where each pair of slats cross)
+        so5.position.set(uu2, yb + vv2, out * 0.013); so5.rotation.set(Math.PI / 2, 0, 0); so5.scale.set(1, 1, 1); so5.updateMatrix(); nailIM.setMatrixAt(nN++, tmpM.multiplyMatrices(panW, so5.matrix)); } }
+    var FZ = BD + PORCH; lattice(-2.3, FZ, 0, FZ, 1); lattice(0, FZ, 2.3, FZ, 1); lattice(2.3, -BD, 0, -BD, 1); lattice(0, -BD, -2.3, -BD, 1);
+    lattice(-2.3, -BD, -2.3, 0.2, 1); lattice(-2.3, 0.2, -2.3, FZ, 1); lattice(2.3, FZ, 2.3, 0.2, 1); lattice(2.3, 0.2, 2.3, -BD, 1);
+    slatIM.count = sN; nailIM.count = nN; [slatIM, nailIM].forEach(function (im) { im.castShadow = false; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; sg.add(im); }); if (slatIM.instanceColor) slatIM.instanceColor.needsUpdate = true;
     // (the walls: shiplap, the front and back gabled, the door and windows cut through, white corner boards)
     function wallShape(w, gable, holes) { var s = new THREE.Shape(); s.moveTo(-w, 0); s.lineTo(w, 0); s.lineTo(w, EAVE); if (gable) s.lineTo(0, APEX); s.lineTo(-w, EAVE); s.lineTo(-w, 0);
       (holes || []).forEach(function (hh) { var hp = new THREE.Path(); if (hh.r) hp.absarc(hh.x, hh.y, hh.r, 0, Math.PI * 2, true); else { hp.moveTo(hh.x - hh.w / 2, hh.y); hp.lineTo(hh.x - hh.w / 2, hh.y + hh.h); hp.lineTo(hh.x + hh.w / 2, hh.y + hh.h); hp.lineTo(hh.x + hh.w / 2, hh.y); hp.lineTo(hh.x - hh.w / 2, hh.y); } s.holes.push(hp); }); return s; }
