@@ -6,7 +6,7 @@ EVERDAWN_PARTS.push(function (THREE) {
   // holding up the awning, railings of turned balusters on newel posts, and everything sitting on it: a slatted bench with a
   // cushion, pillows, a folded blanket and a tackle box; a staved barrel of fishing rods and bug nets with a coil of rope;
   // a brass lantern on a scrolled iron bracket by the
-  // door, lit after dark; and two terracotta pots of agave on their saucers ====
+  // door and its twin on the other side, lit after dark; detailed windows with flower boxes and a panelled door; and two terracotta pots of agave on their saucers ====
   (function () {
     if (!rwShop) return;
     var R = rwShop, sg = R.sg, G = R.G, P = R.P, Q = R.Q, rnd = R.rnd, BD = R.BD, PZ = R.PZ, FZ = PZ - 0.1;
@@ -102,14 +102,110 @@ EVERDAWN_PARTS.push(function (THREE) {
     var coil = G(sg, 1.05, 0, FZ - 0.25, 0); for (var cl = 0; cl < 5; cl++) Q(P(coil, new THREE.TorusGeometry(0.12 - cl * 0.012, 0.014, 6, 26), R.ropeM, 0, 0.014 + cl * 0.022, 0, Math.PI / 2, 0, cl * 0.4));   // (a coil of rope)
 
 
-    // ---- the lantern by the door: a scrolled iron bracket, a brass lantern hanging from it with glass panes and a candle ----
-    var lan = G(sg, 0.72, 1.62, BD + 0.02, 0), lanGlowM = new THREE.MeshStandardMaterial({ color: 0xffe0a0, emissive: 0xffb050, emissiveIntensity: 0.3, transparent: true, opacity: 0.5, roughness: 0.1 }), flameM = new THREE.MeshBasicMaterial({ color: 0xffd070 });
-    P(lan, new THREE.BoxGeometry(0.08, 0.14, 0.02), R.ironM, 0, 0.18, 0.01); var scr = new THREE.TubeGeometry(new THREE.CubicBezierCurve3(new THREE.Vector3(0, 0.22, 0.02), new THREE.Vector3(0, 0.3, 0.12), new THREE.Vector3(0, 0.3, 0.2), new THREE.Vector3(0, 0.2, 0.22)), 16, 0.008, 5); P(lan, scr, R.ironM, 0, 0, 0);
-    P(lan, new THREE.TorusGeometry(0.02, 0.004, 5, 12), R.ironM, 0, 0.2, 0.22);
-    var lb = G(lan, 0, 0, 0.22, 0); P(lb, new THREE.ConeGeometry(0.085, 0.07, 4), R.brassM, 0, 0.14, 0, 0, Math.PI / 4, 0); P(lb, new THREE.CylinderGeometry(0.018, 0.022, 0.03, 8), R.brassM, 0, 0.19, 0);
-    P(lb, new THREE.BoxGeometry(0.13, 0.015, 0.13), R.brassM, 0, 0.1, 0); P(lb, new THREE.BoxGeometry(0.12, 0.02, 0.12), R.brassM, 0, -0.1, 0); P(lb, new THREE.CylinderGeometry(0.03, 0.05, 0.03, 4), R.brassM, 0, -0.125, 0, 0, Math.PI / 4, 0);
-    [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) { P(lb, new THREE.BoxGeometry(0.012, 0.2, 0.012), R.brassM, sx * 0.055, 0, sz * 0.055); }); });
-    Q(P(lb, new THREE.BoxGeometry(0.105, 0.19, 0.105), lanGlowM, 0, 0, 0)); P(lb, new THREE.CylinderGeometry(0.016, 0.016, 0.07, 10), rMat(0xf6f0e0, { roughness: 0.6 }), 0, -0.055, 0); var flame = Q(P(lb, new THREE.ConeGeometry(0.009, 0.03, 8), flameM, 0, 0.0, 0));
+    // ---- the front of the shop, in detail: both windows, their flower boxes, the door, and a lantern either side of it ----
+    // (the old plainer windows and door are put away; these are built in their place)
+    sg.children.forEach(function (o) { if (!o.isGroup || o.rotation.y !== 0) return; var p = o.position;
+      if ((Math.abs(Math.abs(p.x) - 1.3) < 0.01 && Math.abs(p.y - 0.95) < 0.01 && Math.abs(p.z - (BD + 0.05)) < 0.01) || (Math.abs(p.x) < 0.01 && Math.abs(p.y) < 0.01 && Math.abs(p.z - (BD - 0.04)) < 0.01)) o.visible = false; });
+    var WZ = BD;   // (the face of the front wall)
+    var trimM = paintM, sashM = new THREE.MeshStandardMaterial({ map: paintT, color: 0xf6f0e2, roughness: 0.55 }), sageDoorM = new THREE.MeshStandardMaterial({ map: paintT, color: 0x8aa488, roughness: 0.58 }), sageDkM = new THREE.MeshStandardMaterial({ map: paintT, color: 0x6f8a6e, roughness: 0.6 });
+    var paneM = new THREE.MeshStandardMaterial({ color: 0xb8d8e8, transparent: true, opacity: 0.28, roughness: 0.04, metalness: 0.4, depthWrite: false });
+    var reflT = cpTex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); var gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0.2, 'rgba(255,255,255,0)'); gr.addColorStop(0.42, 'rgba(255,255,255,0.55)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.1)'); gr.addColorStop(0.58, 'rgba(255,255,255,0.35)'); gr.addColorStop(0.7, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+    var reflM = new THREE.MeshBasicMaterial({ map: reflT, transparent: true, opacity: 0.55, depthWrite: false });
+    var roomT = cpTex(128, 144, function (g, w, h) { var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#5a4a3a'); gr.addColorStop(1, '#2e2620'); g.fillStyle = gr; g.fillRect(0, 0, w, h);   // (a glimpse of the shop inside: a shelf of jars, a hanging net)
+      g.fillStyle = '#6e5238'; g.fillRect(10, 58, w - 20, 5); ['#c8704a', '#3aa8a8', '#e8b84a', '#9a7ac8', '#e8806a'].forEach(function (c, k) { g.fillStyle = c; g.fillRect(18 + k * 20, 40, 12, 18); g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(20 + k * 20, 42, 3, 12); });
+      g.strokeStyle = 'rgba(220,210,190,0.5)'; g.lineWidth = 1; for (var k = 0; k < 8; k++) { g.beginPath(); g.moveTo(70 + k * 5, 78); g.lineTo(80 + k * 2, 120); g.stroke(); }
+      [[0, 1], [w, -1]].forEach(function (c) { var x0 = c[0]; g.fillStyle = '#efe6d2'; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x0 + c[1] * 34, 0); g.quadraticCurveTo(x0 + c[1] * 20, 70, x0 + c[1] * 8, 88); g.quadraticCurveTo(x0 + c[1] * 22, 110, x0 + c[1] * 30, h); g.lineTo(x0, h); g.closePath(); g.fill();   // (curtains tied back)
+        g.strokeStyle = 'rgba(170,150,120,0.5)'; for (var f = 0; f < 4; f++) { g.beginPath(); g.moveTo(x0 + c[1] * (6 + f * 7), 0); g.quadraticCurveTo(x0 + c[1] * (4 + f * 3), 70, x0 + c[1] * 6, 88); g.stroke(); }
+        g.fillStyle = '#c8704a'; g.fillRect(x0 + (c[1] > 0 ? 0 : -16), 84, 16, 6); }); });
+    var roomM = new THREE.MeshStandardMaterial({ map: roomT, roughness: 1, emissive: 0xffd8a0, emissiveMap: roomT, emissiveIntensity: 0 });
+    var hingeM = rMat(0x2a2624, { metalness: 0.5, roughness: 0.5 });
+    function box(par, w, h, d, m, x, y, z) { return P(par, new THREE.BoxGeometry(w, h, d), m, x, y, z); }
+    function sash(par, w, h, z, ry) {   // (one sash: stiles, rails, glazing bars, four panes)
+      var s = G(par, 0, ry, z, 0), st = 0.04;
+      box(s, st, h, 0.035, sashM, -w / 2 + st / 2, h / 2, 0); box(s, st, h, 0.035, sashM, w / 2 - st / 2, h / 2, 0); box(s, w, st, 0.035, sashM, 0, st / 2, 0); box(s, w, st * 0.8, 0.035, sashM, 0, h - st * 0.4, 0);
+      Q(box(s, 0.014, h - st * 1.8, 0.022, sashM, 0, h / 2, 0)); Q(box(s, w - st * 2, 0.014, 0.022, sashM, 0, h / 2, 0));   // (glazing bars)
+      Q(P(s, new THREE.PlaneGeometry(w - st * 2, h - st * 1.8), paneM, 0, h / 2, -0.004)); Q(P(s, new THREE.PlaneGeometry(w - st * 2, h - st * 1.8), reflM, 0, h / 2, -0.002)).renderOrder = 2; return s; }
+    function shutter(par, x, y, w, h) {   // (a louvred shutter: stiles, three rails, angled louvres, strap hinges)
+      var s = G(par, x, y, WZ + 0.025, 0); box(s, 0.03, h, 0.025, sageDoorM, -w / 2 + 0.015, h / 2, 0); box(s, 0.03, h, 0.025, sageDoorM, w / 2 - 0.015, h / 2, 0);
+      [0.02, h / 2, h - 0.02].forEach(function (ry) { box(s, w, 0.04, 0.025, sageDoorM, 0, ry, 0); });
+      for (var k = 0; k < 2; k++) for (var l = 0; l < 8; l++) { var yy = (k ? h / 2 + 0.035 : 0.05) + l * (h / 2 - 0.08) / 8 + 0.012; Q(P(s, new THREE.BoxGeometry(w - 0.06, 0.03, 0.008), sageDkM, 0, yy, 0, -0.6, 0, 0)); }
+      [0.1, h - 0.1].forEach(function (hy) { Q(box(s, 0.07, 0.012, 0.006, hingeM, (x < 0 ? 1 : -1) * (w / 2 - 0.035), hy, 0.016)); }); return s; }   // (strap hinges on the side by the window)
+    function flowerBox(par, x, y, w) {   // (a planked box on scrolled brackets, full of geraniums, petunias, daisies and alyssum, ivy trailing over)
+      var b = G(par, x, y, WZ + 0.12, 0), bh = 0.16, bd = 0.2;
+      for (var k = 0; k < 3; k++) box(b, w, bh / 3 - 0.004, 0.02, sageDoorM, 0, -bh + (k + 0.5) * bh / 3, bd / 2);   // (front planks)
+      box(b, w + 0.03, 0.02, bd + 0.03, sashM, 0, 0.005, 0.005); box(b, w + 0.02, 0.02, bd + 0.02, sashM, 0, -bh - 0.005, 0.005);   // (cap and base trim)
+      [-1, 1].forEach(function (sd) { box(b, 0.02, bh, bd, sageDoorM, sd * w / 2, -bh / 2, 0); var br = new THREE.Shape(); br.moveTo(0, 0); br.lineTo(0, -0.14); br.quadraticCurveTo(0.03, -0.14, 0.04, -0.1); br.bezierCurveTo(0.05, -0.05, 0.12, -0.04, 0.15, 0); br.lineTo(0, 0);
+        var bg = new THREE.ExtrudeGeometry(br, { depth: 0.022, bevelEnabled: false }); bg.translate(0, 0, -0.011); P(b, bg, sashM, sd * (w / 2 - 0.08), -bh - 0.012, -bd / 2 + 0.005, 0, -Math.PI / 2, 0); });   // (brackets)
+      box(b, w - 0.02, 0.01, bd - 0.02, rMat(0x3a2a1e, { roughness: 1 }), 0, -0.012, 0);   // (soil)
+      var leafG2 = new THREE.SphereGeometry(0.03, 8, 6), leafCols = [0x3f7a3a, 0x4e8a42, 0x5e9a4a], petal = new THREE.SphereGeometry(0.012, 6, 4);
+      for (k = 0; k < Math.round(w / 0.045); k++) { var lx = -w / 2 + 0.03 + k * 0.045; Q(P(b, leafG2, rMat(leafCols[k % 3], { roughness: 0.75 }), lx, 0.02, (rnd() - 0.5) * 0.12)).scale.set(1.2, 0.6, 1); }   // (a bed of leaves)
+      for (k = 0; k < 4; k++) { var gx = -w / 2 + 0.1 + k * (w - 0.2) / 3, gz = (rnd() - 0.5) * 0.06, gm = rMat([0xd83a3a, 0xe85a8a, 0xd83a3a, 0xf06a50][k], { roughness: 0.6 });   // (geraniums: a ball of little florets on a stalk)
+        Q(P(b, new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), rMat(0x4e8a42), gx, 0.07, gz)); for (var f = 0; f < 14; f++) { var fa = rnd() * 6.3, fb = rnd() * 3.1; Q(P(b, petal, gm, gx + Math.cos(fa) * Math.sin(fb) * 0.04, 0.13 + Math.cos(fb) * 0.03, gz + Math.sin(fa) * Math.sin(fb) * 0.04)); }
+        for (f = 0; f < 3; f++) Q(P(b, new THREE.CircleGeometry(0.035, 10), rMat(0x4a8a3e, { roughness: 0.7, side: THREE.DoubleSide }), gx + (f - 1) * 0.04, 0.05, gz + 0.03, -1.1, 0, 0)); }   // (round geranium leaves)
+      for (k = 0; k < 5; k++) { var px = -w / 2 + 0.05 + k * (w - 0.1) / 4 + 0.04, pc = rMat([0x8a4ac8, 0xc85ab8, 0x8a4ac8, 0xf0f0f0, 0xc85ab8][k], { roughness: 0.6, side: THREE.DoubleSide });   // (petunias: open trumpets)
+        Q(P(b, new THREE.ConeGeometry(0.03, 0.035, 10, 1, true), pc, px, 0.055, 0.06 + (k % 2) * 0.02, Math.PI + 0.5, 0, (rnd() - 0.5) * 0.6)); Q(P(b, new THREE.SphereGeometry(0.005, 5, 4), rMat(0xf0e070), px, 0.05, 0.075)); }
+      for (k = 0; k < 6; k++) { var dx = -w / 2 + 0.08 + k * (w - 0.16) / 5, dz = -0.05 + (k % 2) * 0.03; for (var pt = 0; pt < 10; pt++) { var pa = pt / 10 * Math.PI * 2; Q(P(b, new THREE.BoxGeometry(0.022, 0.003, 0.007), rMat(0xfafaf4), dx + Math.cos(pa) * 0.012, 0.1, dz + Math.sin(pa) * 0.012, 0, -pa, 0)); } Q(P(b, new THREE.SphereGeometry(0.008, 8, 5), rMat(0xf0c030), dx, 0.102, dz)).scale.y = 0.5; Q(P(b, new THREE.CylinderGeometry(0.002, 0.002, 0.08, 3), rMat(0x4e8a42), dx, 0.06, dz)); }   // (daisies)
+      for (k = 0; k < 7; k++) Q(P(b, new THREE.SphereGeometry(0.022, 8, 6), rMat(0xfcfaf4, { roughness: 0.9 }), -w / 2 + 0.06 + k * (w - 0.12) / 6, 0.012, bd / 2 - 0.02)).scale.set(1.3, 0.6, 1);   // (white alyssum tumbling at the front)
+      for (k = 0; k < 4; k++) { var ix = -w / 2 + 0.08 + k * (w - 0.16) / 3, pts = []; for (var q = 0; q <= 8; q++) pts.push(new THREE.Vector3(ix + Math.sin(q * 0.8 + k) * 0.02, 0.0 - q * 0.03 - q * q * 0.002, bd / 2 + 0.02 + Math.sin(q * 0.5) * 0.012));   // (ivy trailing over the front)
+        var cv = new THREE.CatmullRomCurve3(pts); Q(P(b, new THREE.TubeGeometry(cv, 12, 0.0025, 4), rMat(0x3a5a2a), 0, 0, 0)); for (q = 1; q < 9; q++) { var pp2 = cv.getPoint(q / 9); var lf = Q(P(b, new THREE.CircleGeometry(0.016, 5), rMat(q % 2 ? 0x3f7a3a : 0x5e9a4a, { side: THREE.DoubleSide, roughness: 0.6 }), pp2.x + (q % 2 ? 0.012 : -0.012), pp2.y, pp2.z + 0.006, -0.2, q % 2 ? 0.5 : -0.5, q * 0.7)); } }
+      return b; }
+    [-1.3, 1.3].forEach(function (wx) { var W = 0.72, H = 0.8, Y = 0.95, w = G(sg, wx, 0, 0, 0);
+      Q(P(w, new THREE.PlaneGeometry(W, H), roomM, 0, Y + H / 2, WZ - 0.095));   // (the shop inside, glimpsed)
+      box(w, W, 0.02, 0.1, sashM, 0, Y + 0.01, WZ - 0.05); box(w, 0.02, H, 0.1, sashM, -W / 2 + 0.01, Y + H / 2, WZ - 0.05); box(w, 0.02, H, 0.1, sashM, W / 2 - 0.01, Y + H / 2, WZ - 0.05); box(w, W, 0.02, 0.1, sashM, 0, Y + H - 0.01, WZ - 0.05);   // (the jambs)
+      sash(w, W - 0.04, H / 2 + 0.01, WZ - 0.055, Y + H / 2 - 0.005); sash(w, W - 0.04, H / 2 + 0.01, WZ - 0.025, Y + 0.01);   // (top sash set back, bottom sash forward)
+      box(w, 0.05, 0.012, 0.016, R.brassM, 0, Y + H / 2 + 0.008, WZ - 0.003); [-0.18, 0.18].forEach(function (lx) { Q(P(w, new THREE.TorusGeometry(0.012, 0.003, 4, 10, Math.PI), R.brassM, lx, Y + 0.035, WZ - 0.003)); });   // (sash lock and lifts)
+      [-1, 1].forEach(function (sd) { box(w, 0.075, H + 0.08, 0.03, trimM, sd * (W / 2 + 0.0375), Y + H / 2, WZ + 0.015); for (var fl = -1; fl <= 1; fl++) Q(box(w, 0.006, H - 0.04, 0.004, rMat(0xd8ccb4), sd * (W / 2 + 0.0375) + fl * 0.018, Y + H / 2, WZ + 0.031)); });   // (fluted side casings)
+      box(w, W + 0.2, 0.1, 0.035, trimM, 0, Y + H + 0.06, WZ + 0.017); box(w, W + 0.26, 0.025, 0.07, trimM, 0, Y + H + 0.122, WZ + 0.035); box(w, W + 0.22, 0.02, 0.05, trimM, 0, Y + H + 0.145, WZ + 0.025);   // (head casing, drip cap and crown)
+      var sill = box(w, W + 0.22, 0.035, 0.13, trimM, 0, Y - 0.02, WZ + 0.06); sill.rotation.x = 0.08; box(w, W + 0.12, 0.05, 0.025, trimM, 0, Y - 0.065, WZ + 0.012);   // (sloped sill, apron under it)
+      [-1, 1].forEach(function (sd) { shutter(w, sd * (W / 2 + 0.075 + 0.105), Y - 0.02, 0.21, H + 0.04);
+        var dog = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.012, 0.02, 0.01), new THREE.Vector3(0, 0.04, 0.02), new THREE.Vector3(-0.012, 0.06, 0.01), new THREE.Vector3(0, 0.08, 0)]), 12, 0.004, 4); Q(P(w, dog, hingeM, sd * (W / 2 + 0.075 + 0.23), Y + 0.12, WZ + 0.005)); });   // (shutter dogs holding them open)
+      flowerBox(w, 0, Y - 0.105, W + 0.1); });
+    // (the door: sage green, stiles and rails with four raised panels below, a brass porthole above, a brass knob on a
+    // rosette, a keyhole, a letter slot and a kick plate, three black hinges; a threshold; a casing of fluted pilasters on
+    // plinth blocks under a frieze and cornice, with a carved fish leaping over it)
+    var dr = G(sg, 0, 0, WZ - 0.05, 0), DW = 0.9, DH = 1.96;
+    box(dr, DW, DH, 0.045, sageDoorM, 0, DH / 2 + 0.02, 0);
+    [-1, 1].forEach(function (sd) { box(dr, 0.12, DH, 0.012, sageDoorM, sd * (DW / 2 - 0.06), DH / 2 + 0.02, 0.028); });   // (stiles)
+    [0.08, 0.74, 1.12, 1.9].forEach(function (ry, k) { box(dr, DW - 0.24, [0.14, 0.1, 0.1, 0.12][k], 0.012, sageDoorM, 0, ry + 0.02, 0.028); });   // (rails)
+    [[-0.17, 0.42], [0.17, 0.42], [-0.17, 0.93], [0.17, 0.93]].forEach(function (pn, k) { var ph = k < 2 ? 0.5 : 0.25; box(dr, 0.26, ph, 0.012, sageDkM, pn[0], pn[1] - (k < 2 ? 0 : 0) + 0.02, 0.022); var rp = P(dr, new THREE.BoxGeometry(0.2, ph - 0.06, 0.02), sageDoorM, pn[0], pn[1] + 0.02, 0.03); });   // (raised panels in their bevelled fields)
+    P(dr, new THREE.CircleGeometry(0.16, 28), roomM, 0, 1.5, 0.026); Q(P(dr, new THREE.CircleGeometry(0.16, 28), paneM, 0, 1.5, 0.03)); Q(P(dr, new THREE.CircleGeometry(0.16, 28), reflM, 0, 1.5, 0.031)).renderOrder = 2;
+    P(dr, new THREE.TorusGeometry(0.175, 0.03, 12, 40), R.brassM, 0, 1.5, 0.036); P(dr, new THREE.TorusGeometry(0.2, 0.01, 8, 40), R.brassM, 0, 1.5, 0.03);
+    for (var bo2 = 0; bo2 < 10; bo2++) { var ba2 = bo2 / 10 * Math.PI * 2; Q(P(dr, new THREE.SphereGeometry(0.011, 8, 6), R.brassM, Math.cos(ba2) * 0.2, 1.5 + Math.sin(ba2) * 0.2, 0.04)); }   // (porthole ring and bolts)
+    P(dr, new THREE.CylinderGeometry(0.035, 0.035, 0.008, 16), R.brassM, 0.34, 1.02, 0.03, Math.PI / 2, 0, 0); P(dr, new THREE.CylinderGeometry(0.008, 0.01, 0.04, 8), R.brassM, 0.34, 1.02, 0.05, Math.PI / 2, 0, 0); P(dr, new THREE.SphereGeometry(0.03, 16, 12), R.brassM, 0.34, 1.02, 0.08);   // (rosette and knob)
+    P(dr, new THREE.BoxGeometry(0.035, 0.07, 0.006), R.brassM, 0.34, 0.93, 0.033); Q(P(dr, new THREE.CircleGeometry(0.006, 8), hingeM, 0.34, 0.94, 0.037)); Q(box(dr, 0.004, 0.014, 0.002, hingeM, 0.34, 0.928, 0.037));   // (keyhole escutcheon)
+    box(dr, 0.26, 0.05, 0.008, R.brassM, 0, 0.76, 0.036); Q(box(dr, 0.22, 0.012, 0.002, hingeM, 0, 0.76, 0.041));   // (letter slot)
+    box(dr, DW - 0.04, 0.16, 0.006, R.brassM, 0, 0.1, 0.026);   // (kick plate)
+    [0.25, 1.0, 1.75].forEach(function (hy) { box(dr, 0.05, 0.1, 0.008, hingeM, -DW / 2 + 0.01, hy, 0.024); Q(P(dr, new THREE.CylinderGeometry(0.008, 0.008, 0.1, 8), hingeM, -DW / 2 - 0.005, hy, 0.024)); });   // (hinges)
+    box(sg, 1.04, 0.03, 0.14, rMat(0x8a6a48, { roughness: 0.7 }), 0, 0.015, WZ + 0.03);   // (threshold)
+    [-1, 1].forEach(function (sd) { var cx = sd * 0.51; box(sg, 0.075, 0.12, 0.05, trimM, cx, 0.06, WZ + 0.025); box(sg, 0.065, 1.92, 0.035, trimM, cx, 0.12 + 0.96, WZ + 0.018);   // (plinth and pilaster)
+      for (var fl = -1; fl <= 1; fl++) Q(box(sg, 0.007, 1.8, 0.004, rMat(0xd8ccb4), cx + fl * 0.016, 1.08, WZ + 0.037)); box(sg, 0.08, 0.04, 0.045, trimM, cx, 2.06, WZ + 0.022); });   // (flutes and capital)
+    box(sg, 1.12, 0.11, 0.035, trimM, 0, 2.135, WZ + 0.017); box(sg, 1.2, 0.025, 0.065, trimM, 0, 2.2, WZ + 0.032); box(sg, 1.16, 0.02, 0.05, trimM, 0, 2.222, WZ + 0.025);   // (frieze and cornice)
+    var fsh = new THREE.Shape(); fsh.moveTo(-0.18, 0); fsh.quadraticCurveTo(-0.02, 0.1, 0.13, 0.01); fsh.lineTo(0.22, 0.07); fsh.quadraticCurveTo(0.2, 0, 0.22, -0.07); fsh.lineTo(0.13, -0.01); fsh.quadraticCurveTo(-0.02, -0.1, -0.18, 0);
+    var fishM = rMat(0x5e6e5c, { roughness: 0.5 }); P(sg, new THREE.ExtrudeGeometry(fsh, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3 }), fishM, 0, 2.33, WZ + 0.035, 0, 0, 0.12);   // (the carved fish over the door)
+    Q(P(sg, new THREE.SphereGeometry(0.01, 8, 6), R.brassM, -0.12, 2.335, WZ + 0.065)); for (var sc2 = 0; sc2 < 4; sc2++) Q(P(sg, new THREE.TorusGeometry(0.02, 0.003, 4, 8, Math.PI), rMat(0x4e5e4c), -0.06 + sc2 * 0.04, 2.33 + sc2 * 0.005, WZ + 0.065, 0, 0, -Math.PI / 2));   // (eye and scales)
+    // (a lantern either side of the door, each the mirror of the other: a shaped iron backplate, an arm curling out with a
+    // scroll beneath it, a short chain; a brass lantern with a vented, crowned cap and a finial, bevelled glass in a frame,
+    // a candle with wax drips on a drip-cup, and a pointed finial below; lit after dark, the candle flickering)
+    var lanGlowM = new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0xffb050, emissiveIntensity: 0.3, transparent: true, opacity: 0.35, roughness: 0.05 }), flameM = new THREE.MeshBasicMaterial({ color: 0xffd070 }), flames = [], lanLights = [];
+    var waxM = rMat(0xf6f0e0, { roughness: 0.6 });
+    [-1, 1].forEach(function (sd) { var lan = G(sg, sd * 0.62, 1.58, WZ, 0);
+      var bp = new THREE.Shape(); bp.moveTo(-0.035, -0.09); bp.lineTo(0.035, -0.09); bp.quadraticCurveTo(0.045, 0, 0.035, 0.09); bp.quadraticCurveTo(0, 0.13, -0.035, 0.09); bp.quadraticCurveTo(-0.045, 0, -0.035, -0.09);
+      P(lan, new THREE.ExtrudeGeometry(bp, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003, bevelSegments: 1 }), R.ironM, 0, 0.18, 0); [0.12, 0.25].forEach(function (y) { Q(P(lan, new THREE.SphereGeometry(0.007, 6, 5), R.brassM, 0, y, 0.016)); });   // (backplate and screws)
+      P(lan, new THREE.TubeGeometry(new THREE.CubicBezierCurve3(new THREE.Vector3(0, 0.22, 0.012), new THREE.Vector3(0, 0.27, 0.1), new THREE.Vector3(0, 0.28, 0.18), new THREE.Vector3(0, 0.25, 0.22)), 18, 0.008, 6), R.ironM, 0, 0, 0);   // (the arm)
+      var curl = []; for (var k = 0; k <= 20; k++) { var t = k / 20, a = t * Math.PI * 2.2, r = 0.045 * (1 - t * 0.75); curl.push(new THREE.Vector3(0, 0.17 + Math.sin(a) * r, 0.06 + Math.cos(a) * r * 0.9 + t * 0.04)); } P(lan, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curl), 30, 0.005, 5), R.ironM, 0, 0, 0);   // (a scroll curling under it)
+      for (k = 0; k < 2; k++) Q(P(lan, new THREE.TorusGeometry(0.012, 0.003, 4, 10), R.ironM, 0, 0.235 - k * 0.02, 0.22, 0, k * Math.PI / 2, 0)).scale.y = 1.5;   // (the chain)
+      var lb = G(lan, 0, 0.06, 0.22, sd * 0.0);
+      P(lb, new THREE.TorusGeometry(0.012, 0.003, 5, 10), R.brassM, 0, 0.21, 0); P(lb, new THREE.SphereGeometry(0.012, 10, 8), R.brassM, 0, 0.19, 0);   // (ring and finial)
+      P(lb, new THREE.CylinderGeometry(0.03, 0.04, 0.025, 4), R.brassM, 0, 0.168, 0, 0, Math.PI / 4, 0); P(lb, new THREE.ConeGeometry(0.092, 0.06, 4), R.brassM, 0, 0.13, 0, 0, Math.PI / 4, 0);   // (crown and cap)
+      for (k = 0; k < 4; k++) { var va = k / 4 * Math.PI * 2; Q(box(lb, 0.03, 0.008, 0.004, hingeM, Math.sin(va) * 0.052, 0.115, Math.cos(va) * 0.052)).rotation.y = va; }   // (vents)
+      box(lb, 0.135, 0.016, 0.135, R.brassM, 0, 0.098, 0); box(lb, 0.125, 0.018, 0.125, R.brassM, 0, -0.098, 0);
+      [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) { box(lb, 0.012, 0.19, 0.012, R.brassM, sx * 0.058, 0, sz * 0.058); }); });   // (corner posts)
+      for (k = 0; k < 4; k++) { var ga = k / 4 * Math.PI * 2, gp = G(lb, Math.sin(ga) * 0.056, 0, Math.cos(ga) * 0.056, ga); Q(box(gp, 0.1, 0.18, 0.004, lanGlowM, 0, 0, 0)); Q(box(gp, 0.1, 0.006, 0.006, R.brassM, 0, 0, 0.002)); }   // (glass panes, a bar across each)
+      P(lb, new THREE.CylinderGeometry(0.03, 0.022, 0.012, 14), R.brassM, 0, -0.082, 0); P(lb, new THREE.CylinderGeometry(0.014, 0.015, 0.07, 12), waxM, 0, -0.04, 0);   // (drip cup and candle)
+      for (k = 0; k < 4; k++) Q(P(lb, new THREE.SphereGeometry(0.004, 6, 4), waxM, Math.cos(k * 1.7) * 0.014, -0.01 - k * 0.012, Math.sin(k * 1.7) * 0.014)).scale.y = 2.2;   // (drips)
+      Q(P(lb, new THREE.CylinderGeometry(0.0015, 0.0015, 0.01, 4), hingeM, 0, 0.0, 0)); var fl = Q(P(lb, new THREE.SphereGeometry(0.009, 10, 8), flameM, 0, 0.018, 0)); fl.scale.set(1, 2.2, 1); flames.push(fl);
+      P(lb, new THREE.ConeGeometry(0.05, 0.04, 4), R.brassM, 0, -0.127, 0, Math.PI, Math.PI / 4, 0); P(lb, new THREE.SphereGeometry(0.01, 8, 6), R.brassM, 0, -0.152, 0);   // (base and drop finial)
+      var pl = new THREE.PointLight(0xffc070, 0, 3.2, 2); pl.position.set(0, 0.02, 0); lb.add(pl); lanLights.push(pl); });
     // ---- the potted agaves: terracotta pots with a rolled rim on saucers, dark soil, curving pointed leaves ----
     var potG = new THREE.LatheGeometry([[0, 0.01], [0.11, 0.01], [0.15, 0.24], [0.17, 0.25], [0.175, 0.29], [0.155, 0.3], [0.15, 0.27], [0, 0.27]].map(function (v) { return new THREE.Vector2(v[0], v[1]); }), 28), potM = new THREE.MeshStandardMaterial({ color: 0xc06a44, roughness: 0.85 });
     // (the agaves: each leaf a thick, folded blade, broad at its base and tapering to a sharp dark tip, arching out and down,
@@ -149,6 +245,6 @@ EVERDAWN_PARTS.push(function (THREE) {
     solids.push({ x: sx0 - 1.45, z: sz0 + BD + 0.49, r: 0.3 }, { x: sx0 - 0.95, z: sz0 + BD + 0.49, r: 0.25 }, { x: sx0 - 1.95, z: sz0 + BD + 0.49, r: 0.25 }, { x: sx0 - 1.95, z: sz0 + FZ - 0.2, r: 0.18 });
     // ---- at night the lantern is lit, its candle flickering ----
     updateCarpenter = (function (base) { return function (t, night) { base.apply(this, arguments); var nt = night || 0, fl = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.3);
-      lanGlowM.emissiveIntensity = 0.2 + nt * 1.4 * fl; flame.visible = nt > 0.15; flame.scale.y = fl; }; })(updateCarpenter);
+      lanGlowM.emissiveIntensity = 0.2 + nt * 1.4 * fl; flames.forEach(function (f, k) { f.visible = nt > 0.15; f.scale.y = 2.2 * (0.85 + 0.15 * Math.sin(t * 11 + k * 2)); }); lanLights.forEach(function (l) { l.intensity = nt * 0.55 * fl; }); roomM.emissiveIntensity = nt * 0.35; }; })(updateCarpenter);
   })();
 });
