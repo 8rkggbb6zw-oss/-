@@ -207,24 +207,44 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-1, 1].forEach(function (sd) { shutter(w, sd * (W / 2 + 0.075 + 0.105), Y - 0.02, 0.21, H + 0.04);
         var dog = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.012, 0.02, 0.01), new THREE.Vector3(0, 0.04, 0.02), new THREE.Vector3(-0.012, 0.06, 0.01), new THREE.Vector3(0, 0.08, 0)]), 12, 0.004, 4); Q(P(w, dog, hingeM, sd * (W / 2 + 0.075 + 0.23), Y + 0.12, WZ + 0.005)); });   // (shutter dogs holding them open)
       flowerBox(w, 0, Y - 0.105, W + 0.1); });
-    // (the door: sage green, stiles and rails with four raised panels below, a brass porthole above, a brass knob on a
-    // rosette, a keyhole, a letter slot and a kick plate, three black hinges; a threshold; a casing of fluted pilasters on
-    // plinth blocks under a frieze and cornice, with a carved fish leaping over it)
-    var dr = G(sg, 0, 0, WZ - 0.05, 0), DW = 0.95, DH = 1.97;
-    box(dr, DW, DH, 0.045, sageDoorM, 0, DH / 2 + 0.02, 0);
-    [-1, 1].forEach(function (sd) { box(sg, 0.025, 2.02, 0.11, trimM, sd * 0.4875, 1.01, WZ - 0.05); }); box(sg, 1.0, 0.025, 0.11, trimM, 0, 2.0, WZ - 0.05);   // (jamb linings round the opening, so there's no gap at the door's edges)
-    box(sg, 1.06, 0.09, 0.03, trimM, 0, 2.03, WZ + 0.015);   // (the head casing, closing the gap above it)
-    [-1, 1].forEach(function (sd) { box(dr, 0.12, DH, 0.012, sageDoorM, sd * (DW / 2 - 0.06), DH / 2 + 0.02, 0.028); });   // (stiles)
-    [0.08, 0.74, 1.12, 1.9].forEach(function (ry, k) { box(dr, DW - 0.24, [0.14, 0.1, 0.1, 0.12][k], 0.012, sageDoorM, 0, ry + 0.02, 0.028); });   // (rails)
-    [[-0.17, 0.42], [0.17, 0.42], [-0.17, 0.93], [0.17, 0.93]].forEach(function (pn, k) { var ph = k < 2 ? 0.5 : 0.25; box(dr, 0.26, ph, 0.012, sageDkM, pn[0], pn[1] - (k < 2 ? 0 : 0) + 0.02, 0.022); var rp = P(dr, new THREE.BoxGeometry(0.2, ph - 0.06, 0.02), sageDoorM, pn[0], pn[1] + 0.02, 0.03); });   // (raised panels in their bevelled fields)
-    P(dr, new THREE.CircleGeometry(0.16, 28), roomM, 0, 1.5, 0.026); Q(P(dr, new THREE.CircleGeometry(0.16, 28), paneM, 0, 1.5, 0.03)); Q(P(dr, new THREE.CircleGeometry(0.16, 28), reflM, 0, 1.5, 0.031)).renderOrder = 2;
-    P(dr, new THREE.TorusGeometry(0.175, 0.03, 12, 40), R.brassM, 0, 1.5, 0.036); P(dr, new THREE.TorusGeometry(0.2, 0.01, 8, 40), R.brassM, 0, 1.5, 0.03);
-    for (var bo2 = 0; bo2 < 10; bo2++) { var ba2 = bo2 / 10 * Math.PI * 2; Q(P(dr, new THREE.SphereGeometry(0.011, 8, 6), R.brassM, Math.cos(ba2) * 0.2, 1.5 + Math.sin(ba2) * 0.2, 0.04)); }   // (porthole ring and bolts)
-    P(dr, new THREE.CylinderGeometry(0.035, 0.035, 0.008, 16), R.brassM, 0.34, 1.02, 0.03, Math.PI / 2, 0, 0); P(dr, new THREE.CylinderGeometry(0.008, 0.01, 0.04, 8), R.brassM, 0.34, 1.02, 0.05, Math.PI / 2, 0, 0); P(dr, new THREE.SphereGeometry(0.03, 16, 12), R.brassM, 0.34, 1.02, 0.08);   // (rosette and knob)
-    P(dr, new THREE.BoxGeometry(0.035, 0.07, 0.006), R.brassM, 0.34, 0.93, 0.033); Q(P(dr, new THREE.CircleGeometry(0.006, 8), hingeM, 0.34, 0.94, 0.037)); Q(box(dr, 0.004, 0.014, 0.002, hingeM, 0.34, 0.928, 0.037));   // (keyhole escutcheon)
-    box(dr, 0.26, 0.05, 0.008, R.brassM, 0, 0.76, 0.036); Q(box(dr, 0.22, 0.012, 0.002, hingeM, 0, 0.76, 0.041));   // (letter slot)
-    box(dr, DW - 0.04, 0.16, 0.006, R.brassM, 0, 0.1, 0.026);   // (kick plate)
-    [0.25, 1.0, 1.75].forEach(function (hy) { box(dr, 0.05, 0.1, 0.008, hingeM, -DW / 2 + 0.01, hy, 0.024); Q(P(dr, new THREE.CylinderGeometry(0.008, 0.008, 0.1, 8), hingeM, -DW / 2 - 0.005, hy, 0.024)); });   // (hinges)
+    // (the door, built like a real one: a frame of stiles and rails standing proud, and between them raised-and-fielded
+    // panels, each sunk in its opening with a bevel rising to a flat field and a small moulding round it; a square glazed
+    // panel up top holding the brass porthole; a lock rail with a brass letter plate; two tall panels below; a long brass
+    // lock plate with a knob and keyhole, an anchor knocker, three butt hinges with their knuckles showing, and a weatherboard across the foot to throw off the rain; a thin shadow gap all round where it meets the frame)
+    var dr = G(sg, 0, 0, WZ - 0.05, 0), DW = 0.93, DH = 1.96, DT = 0.045, FZ2 = DT / 2;
+    [-1, 1].forEach(function (sd) { box(sg, 0.025, 2.02, 0.11, trimM, sd * 0.4875, 1.01, WZ - 0.05); }); box(sg, 1.0, 0.025, 0.11, trimM, 0, 2.0, WZ - 0.05);   // (jamb linings round the opening)
+    box(sg, 1.06, 0.09, 0.03, trimM, 0, 2.03, WZ + 0.015);   // (the head casing)
+    Q(box(sg, 0.95, 1.99, 0.01, rMat(0x241c16, { roughness: 1 }), 0, 1.0, WZ - 0.1));   // (the dark gap behind, so the edges read as a shadow line)
+    var stileW = 0.13, railT = 0.13, railL = 0.17, railB = 0.24, yL = 0.86, py0 = 0.02;   // (frame sizes, and where the lock rail sits)
+    box(dr, DW, DH, DT * 0.6, sageDkM, 0, py0 + DH / 2, -0.004);   // (the back of the panels)
+    [-1, 1].forEach(function (sd) { box(dr, stileW, DH, DT, sageDoorM, sd * (DW / 2 - stileW / 2), py0 + DH / 2, 0); });   // (stiles)
+    [[railB, py0 + railB / 2], [railL, py0 + yL], [railT, py0 + DH - railT / 2]].forEach(function (r) { box(dr, DW - stileW * 2, r[0], DT, sageDoorM, 0, r[1], 0); });   // (bottom, lock and top rails)
+    var mullW = 0.1; box(dr, mullW, yL - railL / 2 - railB, DT, sageDoorM, 0, py0 + railB + (yL - railL / 2 - railB) / 2, 0);   // (a muntin between the two lower panels)
+    function panel(cx, cy, w, h) {   // (a raised and fielded panel in its opening, with a moulding round it)
+      var sh = new THREE.Shape(); sh.moveTo(-w / 2 + 0.03, -h / 2 + 0.03); sh.lineTo(w / 2 - 0.03, -h / 2 + 0.03); sh.lineTo(w / 2 - 0.03, h / 2 - 0.03); sh.lineTo(-w / 2 + 0.03, h / 2 - 0.03); sh.closePath();
+      var g = new THREE.ExtrudeGeometry(sh, { depth: 0.004, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.028, bevelSegments: 1 }); P(dr, g, sageDoorM, cx, cy, -0.003);   // (bevel rising to the flat field)
+      [[0, h / 2, w, 0], [0, -h / 2, w, 0], [w / 2, 0, h, 1], [-w / 2, 0, h, 1]].forEach(function (m) { var mm = P(dr, new THREE.CylinderGeometry(0.008, 0.008, m[2], 6, 1, false, 0, Math.PI), sashM, cx + m[0] * 0.98, cy + m[1] * 0.98, FZ2 - 0.004, 0, 0, m[3] ? 0 : Math.PI / 2); mm.rotation.y = m[3] ? (m[0] > 0 ? Math.PI : 0) : 0; if (!m[3]) mm.rotation.x = m[1] > 0 ? Math.PI / 2 : -Math.PI / 2; });   // (the moulding)
+    }
+    var lowW = (DW - stileW * 2 - mullW) / 2, lowH = yL - railL / 2 - railB;
+    panel(-(mullW + lowW) / 2, py0 + railB + lowH / 2, lowW, lowH); panel((mullW + lowW) / 2, py0 + railB + lowH / 2, lowW, lowH);
+    var upW = DW - stileW * 2, upH = DH - railT - yL - railL / 2, upY = py0 + yL + railL / 2 + upH / 2;
+    panel(0, upY, upW, upH);   // (the upper panel, round which the porthole sits)
+    var PY = upY;
+    P(dr, new THREE.CircleGeometry(0.15, 32), roomM, 0, PY, FZ2 + 0.004); Q(P(dr, new THREE.CircleGeometry(0.15, 32), paneM, 0, PY, FZ2 + 0.008)); Q(P(dr, new THREE.CircleGeometry(0.15, 32), reflM, 0, PY, FZ2 + 0.009)).renderOrder = 2;
+    P(dr, new THREE.TorusGeometry(0.165, 0.028, 14, 44), R.brassM, 0, PY, FZ2 + 0.014); P(dr, new THREE.TorusGeometry(0.192, 0.009, 8, 44), R.brassM, 0, PY, FZ2 + 0.006);
+    for (var bo2 = 0; bo2 < 10; bo2++) { var ba2 = bo2 / 10 * Math.PI * 2; Q(P(dr, new THREE.SphereGeometry(0.01, 8, 6), R.brassM, Math.cos(ba2) * 0.192, PY + Math.sin(ba2) * 0.192, FZ2 + 0.014)); }   // (porthole ring and its bolts)
+    box(dr, 0.24, 0.045, 0.008, R.brassM, 0, py0 + yL, FZ2 + 0.004); Q(box(dr, 0.2, 0.012, 0.004, hingeM, 0, py0 + yL, FZ2 + 0.009)); Q(box(dr, 0.21, 0.006, 0.006, R.brassM, 0, py0 + yL + 0.012, FZ2 + 0.01));   // (letter plate and its flap)
+    var LX = DW / 2 - stileW / 2; box(dr, 0.05, 0.24, 0.007, R.brassM, LX, py0 + 0.98, FZ2 + 0.0035); [0.08, -0.08].forEach(function (dy) { Q(P(dr, new THREE.SphereGeometry(0.005, 6, 4), R.brassM, LX, py0 + 0.98 + dy, FZ2 + 0.008)); });   // (long lock plate)
+    P(dr, new THREE.CylinderGeometry(0.009, 0.012, 0.045, 10), R.brassM, LX, py0 + 1.02, FZ2 + 0.028, Math.PI / 2, 0, 0); P(dr, new THREE.SphereGeometry(0.028, 18, 14), R.brassM, LX, py0 + 1.02, FZ2 + 0.06).scale.z = 0.8;   // (the knob)
+    Q(P(dr, new THREE.CircleGeometry(0.006, 10), hingeM, LX, py0 + 0.93, FZ2 + 0.008)); Q(box(dr, 0.004, 0.016, 0.002, hingeM, LX, py0 + 0.918, FZ2 + 0.008));   // (keyhole)
+    var kn = G(dr, 0, PY - 0.3, FZ2 + 0.004, 0); P(kn, new THREE.CylinderGeometry(0.018, 0.018, 0.012, 14), R.brassM, 0, 0.06, 0.006, Math.PI / 2, 0, 0);   // (an anchor knocker: its mount, shank, stock and flukes)
+    P(kn, new THREE.TorusGeometry(0.012, 0.004, 6, 14), R.brassM, 0, 0.045, 0.014); box(kn, 0.008, 0.1, 0.008, R.brassM, 0, -0.005, 0.016); box(kn, 0.06, 0.008, 0.008, R.brassM, 0, 0.03, 0.016);
+    P(kn, new THREE.TorusGeometry(0.035, 0.005, 6, 20, Math.PI), R.brassM, 0, -0.02, 0.016, 0, 0, Math.PI); [-1, 1].forEach(function (sd) { P(kn, new THREE.ConeGeometry(0.009, 0.02, 4), R.brassM, sd * 0.036, -0.012, 0.016, 0, 0, sd * 0.4); });
+    var wb = new THREE.Shape(); wb.moveTo(0, 0); wb.lineTo(0, 0.06); wb.lineTo(0.012, 0.06); wb.quadraticCurveTo(0.02, 0.02, 0.05, 0.0); wb.lineTo(0, 0);
+    var wbG = new THREE.ExtrudeGeometry(wb, { depth: DW - 0.02, bevelEnabled: false }); wbG.translate(0, 0, -(DW - 0.02) / 2); P(dr, wbG, sageDoorM, 0, py0 + 0.17, FZ2, 0, -Math.PI / 2, 0);   // (the weatherboard)
+    [0.28, 1.0, 1.72].forEach(function (hy) { box(dr, 0.045, 0.1, 0.006, hingeM, -DW / 2 + 0.02, py0 + hy, FZ2 + 0.003); P(dr, new THREE.CylinderGeometry(0.009, 0.009, 0.1, 10), hingeM, -DW / 2 - 0.002, py0 + hy, FZ2 + 0.004);
+      [-1, 1].forEach(function (e) { Q(P(dr, new THREE.SphereGeometry(0.009, 8, 6), hingeM, -DW / 2 - 0.002, py0 + hy + e * 0.052, FZ2 + 0.004)); }); });   // (butt hinges, knuckles and finials)
+    // (a threshold; a casing of fluted pilasters on plinth blocks under a frieze and cornice, with a carved fish leaping over it)
     box(sg, 1.04, 0.03, 0.14, rMat(0x8a6a48, { roughness: 0.7 }), 0, 0.015, WZ + 0.03);   // (threshold)
     [-1, 1].forEach(function (sd) { var cx = sd * 0.51; box(sg, 0.075, 0.12, 0.05, trimM, cx, 0.06, WZ + 0.025); box(sg, 0.065, 1.92, 0.035, trimM, cx, 0.12 + 0.96, WZ + 0.018);   // (plinth and pilaster)
       for (var fl = -1; fl <= 1; fl++) Q(box(sg, 0.007, 1.8, 0.004, rMat(0xd8ccb4), cx + fl * 0.016, 1.08, WZ + 0.037)); box(sg, 0.08, 0.04, 0.045, trimM, cx, 2.06, WZ + 0.022); });   // (flutes and capital)
