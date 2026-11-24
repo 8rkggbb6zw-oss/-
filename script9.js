@@ -165,6 +165,41 @@ EVERDAWN_PARTS.push(function (THREE) {
         P5.forEach(function (p, k) { g[k ? 'lineTo' : 'moveTo'](p[0] * w, p[1] * h); }); g.closePath(); g.fill(); g.strokeStyle = 'rgba(210,230,190,0.6)'; g.lineWidth = 1.2; [[0.5, 0.05], [0.92, 0.37], [0.8, 0.9], [0.2, 0.9], [0.08, 0.37]].forEach(function (p) { g.beginPath(); g.moveTo(w * 0.5, h * 0.72); g.lineTo(p[0] * w, p[1] * h); g.stroke(); }); });
       K.ivyM = new THREE.MeshStandardMaterial({ map: ivT, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.45 }); K.ivyG = new THREE.PlaneGeometry(0.032, 0.032); K.ivyStemM = rMat(0x4a3a2a, { roughness: 0.8 });
       return K; }
+    // (a window box's planting, the same everywhere: geraniums, petunias, daisies, alyssum, leaves and trailing ivy, laid in
+    // group b with the soil's surface at y = 0, the box w long along x and bd deep, its front toward +z. Each bloom is a
+    // shape of its own, then all of one kind are joined into a single piece so a box costs only a handful of draws)
+    function plantBox(B, w, bd) { var F = FL || (FL = makeFlowerKit()), b = new THREE.Group(), k, f, q; B.add(b);
+      // (the planting, done properly: a bed of real leaves; zonal geraniums, each a stalk carrying a round head of five-petalled
+        // florets with a few buds, over scalloped leaves with a dark horseshoe band; petunias, flared five-lobed trumpets veined
+        // darker into a yellow throat; shasta daisies, a ring of slender white rays round a domed golden eye; sweet alyssum,
+        // mounds of tiny white florets spilling over the front; and ivy trailing down with proper lobed leaves)
+        for (k = 0; k < Math.round(w / 0.03); k++) { var lx2 = -w / 2 + 0.02 + k * 0.03, lv = G(b, lx2, 0.0, (rnd() - 0.5) * 0.14, rnd() * 6.3); var lm = P(lv, F.leafG, F.leafM, 0, 0.025, 0.02, -0.9 - rnd() * 0.4, 0, 0); lm.scale.setScalar(0.8 + rnd() * 0.5); lm.castShadow = false; }   // (leaves)
+        var nG = Math.max(2, Math.round(w / 0.21)); for (k = 0; k < nG; k++) { var gx = -w / 2 + 0.1 + k * (w - 0.2) / (nG - 1), gz = (rnd() - 0.5) * 0.05, col = F.gerCols[k % F.gerCols.length], top = 0.13 + rnd() * 0.03;   // (geraniums)
+          Q(P(b, new THREE.CylinderGeometry(0.003, 0.004, top, 5), F.stemM, gx, top / 2, gz, (rnd() - 0.5) * 0.15, 0, (rnd() - 0.5) * 0.15));
+          Q(P(b, new THREE.SphereGeometry(0.022, 12, 8), F.gerCore[k % 4], gx, top + 0.008, gz)).scale.y = 0.8; for (var f = 0; f < 24; f++) { var fa = f * 2.4, fe = Math.acos(1 - (f + 0.5) / 24 * 1.3), fl2 = G(b, gx + Math.sin(fe) * Math.cos(fa) * 0.026, top + 0.008 + Math.cos(fe) * 0.02, gz + Math.sin(fe) * Math.sin(fa) * 0.026, 0);
+            fl2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(Math.sin(fe) * Math.cos(fa), Math.cos(fe), Math.sin(fe) * Math.sin(fa))); Q(P(fl2, F.ger5G, col, 0, 0, 0)); }
+          for (f = 0; f < 4; f++) Q(P(b, F.budG, F.budM, gx + (rnd() - 0.5) * 0.03, top + 0.005, gz + (rnd() - 0.5) * 0.03));
+          for (f = 0; f < 3; f++) { var gl = G(b, gx + (f - 1) * 0.045, 0.045 + f % 2 * 0.012, gz + 0.03 * (f % 2 ? -1 : 1), f * 2.1); Q(P(gl, F.gerLeafG, F.gerLeafM, 0, 0, 0.03, -1.15, 0, 0)); } }
+        var nP = Math.max(2, Math.round(w / 0.165)); for (k = 0; k < nP; k++) { var px = -w / 2 + 0.07 + k * (w - 0.14) / (nP - 1) + 0.03 * (k < nP - 1 ? 1 : -1), pg = G(b, px, 0.04 + (k % 2) * 0.012, 0.05 + (k % 2) * 0.03, rnd() * 6.3);   // (petunias)
+          pg.rotation.x = 0.55; Q(P(pg, F.petG, F.petMs[k % F.petMs.length], 0, 0, 0)).scale.setScalar(0.8); Q(P(pg, F.calyxG, F.stemM, 0, -0.004, 0)); }
+        var nD = Math.max(2, Math.round(w / 0.165)); for (k = 0; k < nD; k++) { var dx = -w / 2 + 0.06 + k * (w - 0.12) / (nD - 1) + 0.015 * (k < nD - 1 ? 1 : -1), dz = -0.055 + (k % 2) * 0.025, dh = 0.1 + rnd() * 0.03;   // (daisies)
+          Q(P(b, new THREE.CylinderGeometry(0.002, 0.0025, dh, 4), F.stemM, dx, dh / 2, dz)); var dg2 = G(b, dx, dh, dz, rnd() * 6.3); dg2.rotation.x = 0.25 + rnd() * 0.2;
+          for (var pt = 0; pt < 18; pt++) { var pr = G(dg2, 0, 0, 0, pt / 18 * Math.PI * 2); Q(P(pr, F.rayG, F.rayM, 0, 0, 0, -0.12 - (pt % 2) * 0.06, 0, 0)); }
+          Q(P(dg2, F.eyeG, F.eyeM, 0, 0.002, 0)).scale.y = 0.55; }
+        var nA = Math.max(2, Math.round(w / 0.14)); for (k = 0; k < nA; k++) { var ax = -w / 2 + 0.05 + k * (w - 0.1) / (nA - 1);   // (sweet alyssum, mounding and spilling over the front)
+          for (f = 0; f < 40; f++) { var aa = rnd() * 6.3, ar = Math.sqrt(rnd()) * 0.032; Q(P(b, F.alyG, f % 7 ? F.alyM : F.stemM, ax + Math.cos(aa) * ar, 0.018 + (0.03 - ar) * 0.5, bd / 2 - 0.01 + Math.sin(aa) * ar * 0.7 + (f % 3 === 0 ? 0.012 : 0))); } }
+        var nI = Math.max(2, Math.round(w / 0.21)); for (k = 0; k < nI; k++) { var ix = -w / 2 + 0.08 + k * (w - 0.16) / (nI - 1), pts = []; for (var q = 0; q <= 8; q++) pts.push(new THREE.Vector3(ix + Math.sin(q * 0.8 + k) * 0.02, 0.0 - q * 0.03 - q * q * 0.002, bd / 2 + 0.02 + Math.sin(q * 0.5) * 0.012));   // (ivy trailing over the front)
+          var cv = new THREE.CatmullRomCurve3(pts); Q(P(b, new THREE.TubeGeometry(cv, 12, 0.0022, 4), F.ivyStemM, 0, 0, 0));
+          for (q = 1; q < 10; q++) { var pp2 = cv.getPoint(q / 10), il = G(b, pp2.x + (q % 2 ? 0.008 : -0.008), pp2.y, pp2.z + 0.006, 0); il.rotation.set(-0.25, q % 2 ? 0.45 : -0.45, (q % 2 ? -1 : 1) * 0.5); Q(P(il, F.ivyG, F.ivyM, 0, 0, 0)).scale.setScalar(0.7 + (q % 3) * 0.15); } }
+      mergeByMat(b); return b; }
+    function mergeByMat(g) { g.updateMatrixWorld(true); var inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), by = new Map(), m4 = new THREE.Matrix4();
+      g.traverse(function (o) { if (o.isMesh) { if (!by.has(o.material)) by.set(o.material, []); by.get(o.material).push(o); } });
+      var out = [];
+      by.forEach(function (list, mat) { var geos = list.map(function (o) { var gg = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); gg.applyMatrix4(m4.multiplyMatrices(inv, o.matrixWorld)); return gg; });
+        var names = Object.keys(geos[0].attributes).filter(function (n) { return geos.every(function (gg) { return gg.attributes[n] && gg.attributes[n].itemSize === geos[0].attributes[n].itemSize; }); }), mg = new THREE.BufferGeometry();
+        names.forEach(function (n) { var sz = geos[0].attributes[n].itemSize, tot = 0; geos.forEach(function (gg) { tot += gg.attributes[n].array.length; }); var arr = new Float32Array(tot), at = 0; geos.forEach(function (gg) { arr.set(gg.attributes[n].array, at); at += gg.attributes[n].array.length; }); mg.setAttribute(n, new THREE.BufferAttribute(arr, sz)); });
+        var mm = new THREE.Mesh(mg, mat); mm.receiveShadow = true; out.push(mm); });
+      while (g.children.length) g.remove(g.children[0]); out.forEach(function (mm) { g.add(mm); }); }
     function flowerBox(par, x, y, w) {   // (a planked box on scrolled brackets, full of geraniums, petunias, daisies and alyssum, ivy trailing over)
       var b = G(par, x, y, WZ + 0.12, 0), bh = 0.16, bd = 0.2;
       for (var k = 0; k < 3; k++) box(b, w, bh / 3 - 0.004, 0.02, sageDoorM, 0, -bh + (k + 0.5) * bh / 3, bd / 2);   // (front planks)
@@ -172,29 +207,7 @@ EVERDAWN_PARTS.push(function (THREE) {
       [-1, 1].forEach(function (sd) { box(b, 0.02, bh, bd, sageDoorM, sd * w / 2, -bh / 2, 0); var br = new THREE.Shape(); br.moveTo(0, 0); br.lineTo(0, -0.14); br.quadraticCurveTo(0.03, -0.14, 0.04, -0.1); br.bezierCurveTo(0.05, -0.05, 0.12, -0.04, 0.15, 0); br.lineTo(0, 0);
         var bg = new THREE.ExtrudeGeometry(br, { depth: 0.022, bevelEnabled: false }); bg.translate(0, 0, -0.011); P(b, bg, sashM, sd * (w / 2 - 0.08), -bh - 0.012, -bd / 2 + 0.005, 0, -Math.PI / 2, 0); });   // (brackets)
       box(b, w - 0.02, 0.01, bd - 0.02, rMat(0x3a2a1e, { roughness: 1 }), 0, -0.004, 0);   // (soil)
-      // (the planting, done properly: a bed of real leaves; zonal geraniums, each a stalk carrying a round head of five-petalled
-      // florets with a few buds, over scalloped leaves with a dark horseshoe band; petunias, flared five-lobed trumpets veined
-      // darker into a yellow throat; shasta daisies, a ring of slender white rays round a domed golden eye; sweet alyssum,
-      // mounds of tiny white florets spilling over the front; and ivy trailing down with proper lobed leaves)
-      var F = FL || (FL = makeFlowerKit());
-      for (k = 0; k < Math.round(w / 0.03); k++) { var lx2 = -w / 2 + 0.02 + k * 0.03, lv = G(b, lx2, 0.0, (rnd() - 0.5) * 0.14, rnd() * 6.3); var lm = P(lv, F.leafG, F.leafM, 0, 0.025, 0.02, -0.9 - rnd() * 0.4, 0, 0); lm.scale.setScalar(0.8 + rnd() * 0.5); lm.castShadow = false; }   // (leaves)
-      for (k = 0; k < 4; k++) { var gx = -w / 2 + 0.1 + k * (w - 0.2) / 3, gz = (rnd() - 0.5) * 0.05, col = F.gerCols[k % F.gerCols.length], top = 0.13 + rnd() * 0.03;   // (geraniums)
-        Q(P(b, new THREE.CylinderGeometry(0.003, 0.004, top, 5), F.stemM, gx, top / 2, gz, (rnd() - 0.5) * 0.15, 0, (rnd() - 0.5) * 0.15));
-        Q(P(b, new THREE.SphereGeometry(0.022, 12, 8), F.gerCore[k % 4], gx, top + 0.008, gz)).scale.y = 0.8; for (var f = 0; f < 24; f++) { var fa = f * 2.4, fe = Math.acos(1 - (f + 0.5) / 24 * 1.3), fl2 = G(b, gx + Math.sin(fe) * Math.cos(fa) * 0.026, top + 0.008 + Math.cos(fe) * 0.02, gz + Math.sin(fe) * Math.sin(fa) * 0.026, 0);
-          fl2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(Math.sin(fe) * Math.cos(fa), Math.cos(fe), Math.sin(fe) * Math.sin(fa))); Q(P(fl2, F.ger5G, col, 0, 0, 0)); }
-        for (f = 0; f < 4; f++) Q(P(b, F.budG, F.budM, gx + (rnd() - 0.5) * 0.03, top + 0.005, gz + (rnd() - 0.5) * 0.03));
-        for (f = 0; f < 3; f++) { var gl = G(b, gx + (f - 1) * 0.045, 0.045 + f % 2 * 0.012, gz + 0.03 * (f % 2 ? -1 : 1), f * 2.1); Q(P(gl, F.gerLeafG, F.gerLeafM, 0, 0, 0.03, -1.15, 0, 0)); } }
-      for (k = 0; k < 5; k++) { var px = -w / 2 + 0.07 + k * (w - 0.14) / 4 + 0.03, pg = G(b, px, 0.04 + (k % 2) * 0.012, 0.05 + (k % 2) * 0.03, rnd() * 6.3);   // (petunias)
-        pg.rotation.x = 0.55; Q(P(pg, F.petG, F.petMs[k % F.petMs.length], 0, 0, 0)).scale.setScalar(0.8); Q(P(pg, F.calyxG, F.stemM, 0, -0.004, 0)); }
-      for (k = 0; k < 5; k++) { var dx = -w / 2 + 0.06 + k * (w - 0.12) / 4 + 0.015, dz = -0.055 + (k % 2) * 0.025, dh = 0.1 + rnd() * 0.03;   // (daisies)
-        Q(P(b, new THREE.CylinderGeometry(0.002, 0.0025, dh, 4), F.stemM, dx, dh / 2, dz)); var dg2 = G(b, dx, dh, dz, rnd() * 6.3); dg2.rotation.x = 0.25 + rnd() * 0.2;
-        for (var pt = 0; pt < 18; pt++) { var pr = G(dg2, 0, 0, 0, pt / 18 * Math.PI * 2); Q(P(pr, F.rayG, F.rayM, 0, 0, 0, -0.12 - (pt % 2) * 0.06, 0, 0)); }
-        Q(P(dg2, F.eyeG, F.eyeM, 0, 0.002, 0)).scale.y = 0.55; }
-      for (k = 0; k < 6; k++) { var ax = -w / 2 + 0.05 + k * (w - 0.1) / 5;   // (sweet alyssum, mounding and spilling over the front)
-        for (f = 0; f < 40; f++) { var aa = rnd() * 6.3, ar = Math.sqrt(rnd()) * 0.032; Q(P(b, F.alyG, f % 7 ? F.alyM : F.stemM, ax + Math.cos(aa) * ar, 0.018 + (0.03 - ar) * 0.5, bd / 2 - 0.01 + Math.sin(aa) * ar * 0.7 + (f % 3 === 0 ? 0.012 : 0))); } }
-      for (k = 0; k < 4; k++) { var ix = -w / 2 + 0.08 + k * (w - 0.16) / 3, pts = []; for (var q = 0; q <= 8; q++) pts.push(new THREE.Vector3(ix + Math.sin(q * 0.8 + k) * 0.02, 0.0 - q * 0.03 - q * q * 0.002, bd / 2 + 0.02 + Math.sin(q * 0.5) * 0.012));   // (ivy trailing over the front)
-        var cv = new THREE.CatmullRomCurve3(pts); Q(P(b, new THREE.TubeGeometry(cv, 12, 0.0022, 4), F.ivyStemM, 0, 0, 0));
-        for (q = 1; q < 10; q++) { var pp2 = cv.getPoint(q / 10), il = G(b, pp2.x + (q % 2 ? 0.008 : -0.008), pp2.y, pp2.z + 0.006, 0); il.rotation.set(-0.25, q % 2 ? 0.45 : -0.45, (q % 2 ? -1 : 1) * 0.5); Q(P(il, F.ivyG, F.ivyM, 0, 0, 0)).scale.setScalar(0.7 + (q % 3) * 0.15); } }
+      plantBox(b, w, bd);
       return b; }
     [-1.3, 1.3].forEach(function (wx) { var W = 0.72, H = 0.8, Y = 0.95, w = G(sg, wx, 0, 0, 0);
       Q(P(w, new THREE.PlaneGeometry(W, H), roomM, 0, Y + H / 2, WZ - 0.095));   // (the shop inside, glimpsed)
@@ -312,6 +325,43 @@ EVERDAWN_PARTS.push(function (THREE) {
     var sx0 = sg.position.x, sz0 = sg.position.z;
     [[-1.45, PZ - 0.42], [-1.0, PZ - 0.42], [-1.9, PZ - 0.42], [2.0, PZ - 0.5], [-2.0, BD + 0.4]].forEach(function (o) { for (var k = solids.length - 1; k >= 0; k--) if (Math.abs(solids[k].x - sx0 - o[0]) < 0.02 && Math.abs(solids[k].z - sz0 - o[1]) < 0.02) solids.splice(k, 1); });
     solids.push({ x: sx0 - 1.45, z: sz0 + BD + 0.49, r: 0.3 }, { x: sx0 - 0.95, z: sz0 + BD + 0.49, r: 0.25 }, { x: sx0 - 1.95, z: sz0 + BD + 0.49, r: 0.25 }, { x: sx0 - 1.95, z: sz0 + FZ - 0.2, r: 0.18 });
+    // ---- every other window box in the game gets the same flowers: the farmhouse, the seed shop, the clinic, Fluff &
+    // Feather, Oak & Ember, the coop and your barn. Their old blooms are put away and the new planting set in their soil ----
+    (function () {
+      function hideIf(par, test) { par.children.forEach(function (o) { if (test(o)) o.visible = false; }); }
+      function geoIs(o, type, a, b, c) { var gp = o.geometry && o.geometry.parameters; return !!gp && o.geometry.type === type && Math.abs((gp.width || gp.radius || 0) - a) < 1e-4 && (b === undefined || Math.abs((gp.height || 0) - b) < 1e-4) && (c === undefined || Math.abs((gp.depth || 0) - c) < 1e-4); }
+      function plantAt(par, x, y, z, w, d, ry) { var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry || 0; par.add(g); plantBox(g, w, d); return g; }
+      try {   // (the farmhouse: each window's own group holds its box)
+        var hm = typeof houseMats !== 'undefined' && houseMats, hset = hm ? [hm.flowerPink, hm.flowerLilac, hm.flowerWhite, hm.flowerBlue, hm.flowerHeart, hm.leaf, hm.leafDark] : [];
+        if (hm) { var seenH = []; scene.traverse(function (o) { if (o.isMesh && o.material === hm.soil && geoIs(o, 'BoxGeometry', 0.84, 0.02, 0.2) && seenH.indexOf(o.parent) < 0) seenH.push(o.parent); });
+          seenH.forEach(function (w) { hideIf(w, function (o) { if (o.isMesh) return hset.indexOf(o.material) >= 0; return o.isGroup && o.children.length && o.children.every(function (c) { return c.isMesh && hset.indexOf(c.material) >= 0; }); });
+            plantAt(w, 0, -0.44, 0.13, 0.82, 0.2); }); }
+      } catch (err) { if (window.console) console.warn(err); }
+      try {   // (Oak & Ember, the coop and your barn: cpFlowerBox's troughs)
+        if (typeof FB !== 'undefined' && FB) { var fset = FB.petals.concat(FB.leaves, [FB.heartM, FB.stemM, FB.lavM, FB.ivyM]), boxes = [];
+          scene.traverse(function (o) { if (o.isMesh && o.material === FB.soil && boxes.indexOf(o.parent) < 0) boxes.push(o.parent); });
+          boxes.forEach(function (g) { var soil = null; g.children.forEach(function (o) { if (o.isMesh && o.material === FB.soil) soil = o; }); var gw = soil.geometry.parameters.width, gd = soil.geometry.parameters.depth;
+            hideIf(g, function (o) { return o.isMesh ? fset.indexOf(o.material) >= 0 : o.isGroup; }); plantAt(g, 0, soil.position.y + 0.012, 0, gw, gd); }); }
+      } catch (err) { if (window.console) console.warn(err); }
+      try {   // (the clinic: its boxes' blooms were drawn all together; those go, and each window's box is planted)
+        if (typeof clLeafIM !== 'undefined') { clLeafIM.visible = false; clBloomIM.visible = false;
+          var cls = []; scene.traverse(function (o) { if (o.isMesh && typeof CL !== 'undefined' && o.material === CL.soil && o.geometry.parameters && Math.abs(o.geometry.parameters.depth - 0.24) < 1e-4) cls.push(o); });
+          cls.forEach(function (o) { plantAt(o.parent, o.position.x, o.position.y + 0.022, o.position.z, o.geometry.parameters.width, 0.24); }); }
+      } catch (err) { if (window.console) console.warn(err); }
+      try {   // (the seed shop: its planters' blooms, drawn all together)
+        if (typeof shopGroup !== 'undefined') { var lists = [pbLeaves, pbPetals, pbCentres, pbLavStems, pbLavBuds].map(function (l) { return l.length; });
+          shopGroup.children.forEach(function (o) { if (o.isInstancedMesh && lists.indexOf(o.count) >= 0) o.visible = false; });
+          shopGroup.children.forEach(function (o) { var gp = o.geometry && o.geometry.parameters; if (!o.isMesh || o.isInstancedMesh || o.geometry.type !== 'BoxGeometry' || !gp || Math.abs(gp.height - 0.02) > 1e-4) return;
+            var lx = gp.width + 0.02, lz = gp.depth + 0.02; if (!((Math.abs(lx - 2.9) < 0.01 && Math.abs(lz - 0.3) < 0.01) || (Math.abs(lx - 0.24) < 0.01 && Math.abs(lz - 1.2) < 0.01))) return;
+            if (lx > lz) plantAt(shopGroup, o.position.x, o.position.y + 0.01, o.position.z, gp.width, gp.depth, 0);
+            else plantAt(shopGroup, o.position.x, o.position.y + 0.01, o.position.z, gp.depth, gp.width, o.position.x > 0 ? Math.PI / 2 : -Math.PI / 2); }); }
+      } catch (err) { if (window.console) console.warn(err); }
+      try {   // (Fluff & Feather: a dark wooden box under each side window, now with soil in it)
+        if (typeof barnGroup !== 'undefined' && typeof AM !== 'undefined') { var bws = []; barnGroup.traverse(function (o) { if (o.isMesh && o.material === AM.darkWood && geoIs(o, 'BoxGeometry', 1.0, 0.2, 0.2) && Math.abs(o.position.y + 0.65) < 0.01) bws.push(o); });
+          bws.forEach(function (o) { var wg = o.parent; hideIf(wg, function (c) { return c.isMesh && (geoIs(c, 'SphereGeometry', 0.045) || geoIs(c, 'IcosahedronGeometry', 0.05)); });
+            Q(P(wg, new THREE.BoxGeometry(0.94, 0.012, 0.16), rMat(0x3a2a1e, { roughness: 1 }), 0, -0.55, 0.12)); plantAt(wg, 0, -0.544, 0.12, 0.92, 0.16); }); }
+      } catch (err) { if (window.console) console.warn(err); }
+    })();
     // ---- at night the lantern is lit, its candle flickering ----
     updateCarpenter = (function (base) { return function (t, night) { base.apply(this, arguments); var nt = night || 0, fl = 0.85 + 0.15 * Math.sin(t * 13) * Math.sin(t * 7.3);
       lanGlowM.emissiveIntensity = 0.2 + nt * 1.4 * fl; flames.forEach(function (f, k) { f.visible = nt > 0.15; f.scale.y = 2.2 * (0.85 + 0.15 * Math.sin(t * 11 + k * 2)); }); lanLights.forEach(function (l) { l.intensity = nt * 0.55 * fl; }); roomM.emissiveIntensity = nt * 0.35; }; })(updateCarpenter);
