@@ -130,24 +130,71 @@ EVERDAWN_PARTS.push(function (THREE) {
       [0.02, h / 2, h - 0.02].forEach(function (ry) { box(s, w, 0.04, 0.025, sageDoorM, 0, ry, 0); });
       for (var k = 0; k < 2; k++) for (var l = 0; l < 8; l++) { var yy = (k ? h / 2 + 0.035 : 0.05) + l * (h / 2 - 0.08) / 8 + 0.012; Q(P(s, new THREE.BoxGeometry(w - 0.06, 0.03, 0.008), sageDkM, 0, yy, 0, -0.6, 0, 0)); }
       [0.1, h - 0.1].forEach(function (hy) { Q(box(s, 0.07, 0.012, 0.006, hingeM, (x < 0 ? 1 : -1) * (w / 2 - 0.035), hy, 0.016)); }); return s; }   // (strap hinges on the side by the window)
+    // (the flower kit, made once and shared by both boxes: every bloom and leaf as a shape of its own)
+    var FL = null;
+    function makeFlowerKit() { var K = {}, i;
+      function tex(w, h, f) { var t = cpTex(w, h, f); return t; }
+      K.stemM = rMat(0x4a7a38, { roughness: 0.7 });
+      var leafT = tex(64, 128, function (g, w, h) { g.clearRect(0, 0, w, h); var gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#2f5e2a'); gr.addColorStop(0.5, '#4f8a40'); gr.addColorStop(1, '#2f5e2a'); g.fillStyle = gr;
+        g.beginPath(); g.moveTo(w / 2, h); g.quadraticCurveTo(-4, h * 0.45, w / 2, 2); g.quadraticCurveTo(w + 4, h * 0.45, w / 2, h); g.fill(); g.strokeStyle = 'rgba(200,230,170,0.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 6); g.stroke();
+        g.lineWidth = 0.8; for (var k = 1; k < 7; k++) { var y = h - k * h / 8; g.beginPath(); g.moveTo(w / 2, y); g.lineTo(w * 0.18, y - 14); g.moveTo(w / 2, y); g.lineTo(w * 0.82, y - 14); g.stroke(); } });
+      K.leafM = new THREE.MeshStandardMaterial({ map: leafT, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.6 }); K.leafG = new THREE.PlaneGeometry(0.03, 0.06); K.leafG.translate(0, 0.03, 0);
+      K.gerCols = ['#d8283a', '#f0507a', '#d8283a', '#ff6a4a'].map(function (c) { var t = tex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); for (var k = 0; k < 5; k++) { var a = k / 5 * Math.PI * 2 - Math.PI / 2, cx = w / 2 + Math.cos(a) * w * 0.22, cy = h / 2 + Math.sin(a) * h * 0.22;   // (a floret: five round, overlapping petals)
+          var gr = g.createRadialGradient(cx, cy, 1, cx, cy, w * 0.24); gr.addColorStop(0, c); gr.addColorStop(1, new THREE.Color(c).multiplyScalar(0.75).getStyle()); g.fillStyle = gr; g.beginPath(); g.ellipse(cx, cy, w * 0.22, w * 0.2, a, 0, 7); g.fill();
+          g.strokeStyle = 'rgba(120,0,20,0.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(w / 2, h / 2); g.lineTo(cx + Math.cos(a) * w * 0.12, cy + Math.sin(a) * h * 0.12); g.stroke(); }
+        g.fillStyle = 'rgba(255,240,220,0.9)'; g.beginPath(); g.arc(w / 2, h / 2, 3, 0, 7); g.fill(); }); return new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.55 }); });
+      K.ger5G = new THREE.PlaneGeometry(0.03, 0.03); K.gerCore = [0xa01828, 0xb8305a, 0xa01828, 0xc04030].map(function (c) { return rMat(c, { roughness: 0.7 }); });
+      K.budG = new THREE.SphereGeometry(0.0045, 6, 4); K.budM = rMat(0x7a8a3a, { roughness: 0.7 });
+      var gLT = tex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.fillStyle = '#4e8a3e'; g.beginPath(); for (var k = 0; k <= 48; k++) { var a = k / 48 * Math.PI * 2, r = w * 0.46 * (1 + 0.06 * Math.cos(a * 9)); if (a > Math.PI * 1.4 && a < Math.PI * 1.6) r *= 0.55; g[k ? 'lineTo' : 'moveTo'](w / 2 + Math.cos(a) * r, h / 2 - Math.sin(a) * r); } g.fill();
+        g.strokeStyle = 'rgba(70,40,30,0.55)'; g.lineWidth = 6; g.beginPath(); g.arc(w / 2, h / 2, w * 0.27, -0.9 + Math.PI, 0.9 + Math.PI * 2); g.stroke();   // (the dark zone)
+        g.strokeStyle = 'rgba(200,230,170,0.5)'; g.lineWidth = 1; for (k = 0; k < 9; k++) { var a2 = k / 9 * Math.PI * 2; g.beginPath(); g.moveTo(w / 2, h * 0.75); g.lineTo(w / 2 + Math.cos(a2) * w * 0.42, h / 2 - Math.sin(a2) * w * 0.42); g.stroke(); } });
+      K.gerLeafM = new THREE.MeshStandardMaterial({ map: gLT, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.7 }); K.gerLeafG = new THREE.PlaneGeometry(0.06, 0.06);
+      var pp = [], N = 14; for (i = 0; i <= N; i++) { var t = i / N; pp.push(new THREE.Vector2(0.003 + Math.pow(t, 2.2) * 0.034, t * 0.03 - Math.pow(t, 3) * 0.008)); }   // (a petunia: a funnel flaring wide)
+      K.petG = new THREE.LatheGeometry(pp, 30); var pa = K.petG.attributes.position, pc = new Float32Array(pa.count * 3), v = new THREE.Vector3();
+      for (i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i); var ang = Math.atan2(v.z, v.x), rr = Math.hypot(v.x, v.z), tt = Math.min(1, rr / 0.037), lobe = 1 + 0.13 * Math.cos(ang * 5) * tt * tt; pa.setX(i, v.x * lobe); pa.setZ(i, v.z * lobe); pa.setY(i, v.y - 0.004 * Math.cos(ang * 5) * tt * tt);
+        var vein = Math.pow(Math.abs(Math.cos(ang * 5 / 2)), 30), c = tt < 0.25 ? [1, 0.88, 0.4] : [1 - 0.35 * vein, 1 - 0.35 * vein, 1 - 0.3 * vein]; pc[i * 3] = c[0]; pc[i * 3 + 1] = c[1]; pc[i * 3 + 2] = c[2]; }
+      K.petG.setAttribute('color', new THREE.BufferAttribute(pc, 3)); K.petG.computeVertexNormals();
+      K.petMs = [0x7a2ab0, 0xd04aa0, 0xf0eaf4, 0x9a3ac8, 0xd04aa0].map(function (c) { return new THREE.MeshStandardMaterial({ color: c, vertexColors: true, side: THREE.DoubleSide, roughness: 0.5 }); });
+      K.calyxG = new THREE.ConeGeometry(0.006, 0.012, 5); K.calyxG.rotateX(Math.PI);
+      var ray = new THREE.Shape(); ray.moveTo(0, 0); ray.quadraticCurveTo(0.0035, 0.012, 0.002, 0.024); ray.quadraticCurveTo(0, 0.027, -0.002, 0.024); ray.quadraticCurveTo(-0.0035, 0.012, 0, 0);
+      K.rayG = new THREE.ShapeGeometry(ray, 4); K.rayG.rotateX(-Math.PI / 2); K.rayG.translate(0, 0, -0.005); K.rayG.rotateY(Math.PI); K.rayM = new THREE.MeshStandardMaterial({ color: 0xfcfcf6, side: THREE.DoubleSide, roughness: 0.6 });
+      var eyeT = tex(32, 32, function (g, w, h) { g.fillStyle = '#e0a820'; g.fillRect(0, 0, w, h); for (var k = 0; k < 120; k++) { g.fillStyle = k % 2 ? 'rgba(160,100,10,0.6)' : 'rgba(255,230,120,0.6)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); } });
+      K.eyeG = new THREE.SphereGeometry(0.0075, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2); K.eyeM = new THREE.MeshStandardMaterial({ map: eyeT, roughness: 0.8 });
+      K.alyG = new THREE.SphereGeometry(0.0034, 5, 4); K.alyM = new THREE.MeshStandardMaterial({ color: 0xfefcf6, roughness: 0.9, emissive: 0x303028 });
+      var ivT = tex(64, 64, function (g, w, h) { g.clearRect(0, 0, w, h); g.fillStyle = '#2e5a2a'; g.beginPath(); var P5 = [[0.5, 0.02], [0.66, 0.3], [0.96, 0.36], [0.74, 0.58], [0.82, 0.92], [0.5, 0.74], [0.18, 0.92], [0.26, 0.58], [0.04, 0.36], [0.34, 0.3]];
+        P5.forEach(function (p, k) { g[k ? 'lineTo' : 'moveTo'](p[0] * w, p[1] * h); }); g.closePath(); g.fill(); g.strokeStyle = 'rgba(210,230,190,0.6)'; g.lineWidth = 1.2; [[0.5, 0.05], [0.92, 0.37], [0.8, 0.9], [0.2, 0.9], [0.08, 0.37]].forEach(function (p) { g.beginPath(); g.moveTo(w * 0.5, h * 0.72); g.lineTo(p[0] * w, p[1] * h); g.stroke(); }); });
+      K.ivyM = new THREE.MeshStandardMaterial({ map: ivT, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.45 }); K.ivyG = new THREE.PlaneGeometry(0.032, 0.032); K.ivyStemM = rMat(0x4a3a2a, { roughness: 0.8 });
+      return K; }
     function flowerBox(par, x, y, w) {   // (a planked box on scrolled brackets, full of geraniums, petunias, daisies and alyssum, ivy trailing over)
       var b = G(par, x, y, WZ + 0.12, 0), bh = 0.16, bd = 0.2;
       for (var k = 0; k < 3; k++) box(b, w, bh / 3 - 0.004, 0.02, sageDoorM, 0, -bh + (k + 0.5) * bh / 3, bd / 2);   // (front planks)
-      box(b, w + 0.03, 0.02, bd + 0.03, sashM, 0, 0.005, 0.005); box(b, w + 0.02, 0.02, bd + 0.02, sashM, 0, -bh - 0.005, 0.005);   // (cap and base trim)
+      [[0, bd / 2 + 0.005, w + 0.03, 0.03], [0, -bd / 2 + 0.005, w + 0.03, 0.03], [-w / 2, 0.005, 0.03, bd + 0.03], [w / 2, 0.005, 0.03, bd + 0.03]].forEach(function (c) { box(b, c[2], 0.02, c[3], sashM, c[0], 0.005, c[1]); });   // (a rim, the soil open inside) box(b, w + 0.02, 0.02, bd + 0.02, sashM, 0, -bh - 0.005, 0.005);   // (cap and base trim)
       [-1, 1].forEach(function (sd) { box(b, 0.02, bh, bd, sageDoorM, sd * w / 2, -bh / 2, 0); var br = new THREE.Shape(); br.moveTo(0, 0); br.lineTo(0, -0.14); br.quadraticCurveTo(0.03, -0.14, 0.04, -0.1); br.bezierCurveTo(0.05, -0.05, 0.12, -0.04, 0.15, 0); br.lineTo(0, 0);
         var bg = new THREE.ExtrudeGeometry(br, { depth: 0.022, bevelEnabled: false }); bg.translate(0, 0, -0.011); P(b, bg, sashM, sd * (w / 2 - 0.08), -bh - 0.012, -bd / 2 + 0.005, 0, -Math.PI / 2, 0); });   // (brackets)
-      box(b, w - 0.02, 0.01, bd - 0.02, rMat(0x3a2a1e, { roughness: 1 }), 0, -0.012, 0);   // (soil)
-      var leafG2 = new THREE.SphereGeometry(0.03, 8, 6), leafCols = [0x3f7a3a, 0x4e8a42, 0x5e9a4a], petal = new THREE.SphereGeometry(0.012, 6, 4);
-      for (k = 0; k < Math.round(w / 0.045); k++) { var lx = -w / 2 + 0.03 + k * 0.045; Q(P(b, leafG2, rMat(leafCols[k % 3], { roughness: 0.75 }), lx, 0.02, (rnd() - 0.5) * 0.12)).scale.set(1.2, 0.6, 1); }   // (a bed of leaves)
-      for (k = 0; k < 4; k++) { var gx = -w / 2 + 0.1 + k * (w - 0.2) / 3, gz = (rnd() - 0.5) * 0.06, gm = rMat([0xd83a3a, 0xe85a8a, 0xd83a3a, 0xf06a50][k], { roughness: 0.6 });   // (geraniums: a ball of little florets on a stalk)
-        Q(P(b, new THREE.CylinderGeometry(0.004, 0.004, 0.1, 4), rMat(0x4e8a42), gx, 0.07, gz)); for (var f = 0; f < 14; f++) { var fa = rnd() * 6.3, fb = rnd() * 3.1; Q(P(b, petal, gm, gx + Math.cos(fa) * Math.sin(fb) * 0.04, 0.13 + Math.cos(fb) * 0.03, gz + Math.sin(fa) * Math.sin(fb) * 0.04)); }
-        for (f = 0; f < 3; f++) Q(P(b, new THREE.CircleGeometry(0.035, 10), rMat(0x4a8a3e, { roughness: 0.7, side: THREE.DoubleSide }), gx + (f - 1) * 0.04, 0.05, gz + 0.03, -1.1, 0, 0)); }   // (round geranium leaves)
-      for (k = 0; k < 5; k++) { var px = -w / 2 + 0.05 + k * (w - 0.1) / 4 + 0.04, pc = rMat([0x8a4ac8, 0xc85ab8, 0x8a4ac8, 0xf0f0f0, 0xc85ab8][k], { roughness: 0.6, side: THREE.DoubleSide });   // (petunias: open trumpets)
-        Q(P(b, new THREE.ConeGeometry(0.03, 0.035, 10, 1, true), pc, px, 0.055, 0.06 + (k % 2) * 0.02, Math.PI + 0.5, 0, (rnd() - 0.5) * 0.6)); Q(P(b, new THREE.SphereGeometry(0.005, 5, 4), rMat(0xf0e070), px, 0.05, 0.075)); }
-      for (k = 0; k < 6; k++) { var dx = -w / 2 + 0.08 + k * (w - 0.16) / 5, dz = -0.05 + (k % 2) * 0.03; for (var pt = 0; pt < 10; pt++) { var pa = pt / 10 * Math.PI * 2; Q(P(b, new THREE.BoxGeometry(0.022, 0.003, 0.007), rMat(0xfafaf4), dx + Math.cos(pa) * 0.012, 0.1, dz + Math.sin(pa) * 0.012, 0, -pa, 0)); } Q(P(b, new THREE.SphereGeometry(0.008, 8, 5), rMat(0xf0c030), dx, 0.102, dz)).scale.y = 0.5; Q(P(b, new THREE.CylinderGeometry(0.002, 0.002, 0.08, 3), rMat(0x4e8a42), dx, 0.06, dz)); }   // (daisies)
-      for (k = 0; k < 7; k++) Q(P(b, new THREE.SphereGeometry(0.022, 8, 6), rMat(0xfcfaf4, { roughness: 0.9 }), -w / 2 + 0.06 + k * (w - 0.12) / 6, 0.012, bd / 2 - 0.02)).scale.set(1.3, 0.6, 1);   // (white alyssum tumbling at the front)
+      box(b, w - 0.02, 0.01, bd - 0.02, rMat(0x3a2a1e, { roughness: 1 }), 0, -0.004, 0);   // (soil)
+      // (the planting, done properly: a bed of real leaves; zonal geraniums, each a stalk carrying a round head of five-petalled
+      // florets with a few buds, over scalloped leaves with a dark horseshoe band; petunias, flared five-lobed trumpets veined
+      // darker into a yellow throat; shasta daisies, a ring of slender white rays round a domed golden eye; sweet alyssum,
+      // mounds of tiny white florets spilling over the front; and ivy trailing down with proper lobed leaves)
+      var F = FL || (FL = makeFlowerKit());
+      for (k = 0; k < Math.round(w / 0.03); k++) { var lx2 = -w / 2 + 0.02 + k * 0.03, lv = G(b, lx2, 0.0, (rnd() - 0.5) * 0.14, rnd() * 6.3); var lm = P(lv, F.leafG, F.leafM, 0, 0.025, 0.02, -0.9 - rnd() * 0.4, 0, 0); lm.scale.setScalar(0.8 + rnd() * 0.5); lm.castShadow = false; }   // (leaves)
+      for (k = 0; k < 4; k++) { var gx = -w / 2 + 0.1 + k * (w - 0.2) / 3, gz = (rnd() - 0.5) * 0.05, col = F.gerCols[k % F.gerCols.length], top = 0.13 + rnd() * 0.03;   // (geraniums)
+        Q(P(b, new THREE.CylinderGeometry(0.003, 0.004, top, 5), F.stemM, gx, top / 2, gz, (rnd() - 0.5) * 0.15, 0, (rnd() - 0.5) * 0.15));
+        Q(P(b, new THREE.SphereGeometry(0.022, 12, 8), F.gerCore[k % 4], gx, top + 0.008, gz)).scale.y = 0.8; for (var f = 0; f < 24; f++) { var fa = f * 2.4, fe = Math.acos(1 - (f + 0.5) / 24 * 1.3), fl2 = G(b, gx + Math.sin(fe) * Math.cos(fa) * 0.026, top + 0.008 + Math.cos(fe) * 0.02, gz + Math.sin(fe) * Math.sin(fa) * 0.026, 0);
+          fl2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(Math.sin(fe) * Math.cos(fa), Math.cos(fe), Math.sin(fe) * Math.sin(fa))); Q(P(fl2, F.ger5G, col, 0, 0, 0)); }
+        for (f = 0; f < 4; f++) Q(P(b, F.budG, F.budM, gx + (rnd() - 0.5) * 0.03, top + 0.005, gz + (rnd() - 0.5) * 0.03));
+        for (f = 0; f < 3; f++) { var gl = G(b, gx + (f - 1) * 0.045, 0.045 + f % 2 * 0.012, gz + 0.03 * (f % 2 ? -1 : 1), f * 2.1); Q(P(gl, F.gerLeafG, F.gerLeafM, 0, 0, 0.03, -1.15, 0, 0)); } }
+      for (k = 0; k < 5; k++) { var px = -w / 2 + 0.07 + k * (w - 0.14) / 4 + 0.03, pg = G(b, px, 0.04 + (k % 2) * 0.012, 0.05 + (k % 2) * 0.03, rnd() * 6.3);   // (petunias)
+        pg.rotation.x = 0.55; Q(P(pg, F.petG, F.petMs[k % F.petMs.length], 0, 0, 0)).scale.setScalar(0.8); Q(P(pg, F.calyxG, F.stemM, 0, -0.004, 0)); }
+      for (k = 0; k < 5; k++) { var dx = -w / 2 + 0.06 + k * (w - 0.12) / 4 + 0.015, dz = -0.055 + (k % 2) * 0.025, dh = 0.1 + rnd() * 0.03;   // (daisies)
+        Q(P(b, new THREE.CylinderGeometry(0.002, 0.0025, dh, 4), F.stemM, dx, dh / 2, dz)); var dg2 = G(b, dx, dh, dz, rnd() * 6.3); dg2.rotation.x = 0.25 + rnd() * 0.2;
+        for (var pt = 0; pt < 18; pt++) { var pr = G(dg2, 0, 0, 0, pt / 18 * Math.PI * 2); Q(P(pr, F.rayG, F.rayM, 0, 0, 0, -0.12 - (pt % 2) * 0.06, 0, 0)); }
+        Q(P(dg2, F.eyeG, F.eyeM, 0, 0.002, 0)).scale.y = 0.55; }
+      for (k = 0; k < 6; k++) { var ax = -w / 2 + 0.05 + k * (w - 0.1) / 5;   // (sweet alyssum, mounding and spilling over the front)
+        for (f = 0; f < 40; f++) { var aa = rnd() * 6.3, ar = Math.sqrt(rnd()) * 0.032; Q(P(b, F.alyG, f % 7 ? F.alyM : F.stemM, ax + Math.cos(aa) * ar, 0.018 + (0.03 - ar) * 0.5, bd / 2 - 0.01 + Math.sin(aa) * ar * 0.7 + (f % 3 === 0 ? 0.012 : 0))); } }
       for (k = 0; k < 4; k++) { var ix = -w / 2 + 0.08 + k * (w - 0.16) / 3, pts = []; for (var q = 0; q <= 8; q++) pts.push(new THREE.Vector3(ix + Math.sin(q * 0.8 + k) * 0.02, 0.0 - q * 0.03 - q * q * 0.002, bd / 2 + 0.02 + Math.sin(q * 0.5) * 0.012));   // (ivy trailing over the front)
-        var cv = new THREE.CatmullRomCurve3(pts); Q(P(b, new THREE.TubeGeometry(cv, 12, 0.0025, 4), rMat(0x3a5a2a), 0, 0, 0)); for (q = 1; q < 9; q++) { var pp2 = cv.getPoint(q / 9); var lf = Q(P(b, new THREE.CircleGeometry(0.016, 5), rMat(q % 2 ? 0x3f7a3a : 0x5e9a4a, { side: THREE.DoubleSide, roughness: 0.6 }), pp2.x + (q % 2 ? 0.012 : -0.012), pp2.y, pp2.z + 0.006, -0.2, q % 2 ? 0.5 : -0.5, q * 0.7)); } }
+        var cv = new THREE.CatmullRomCurve3(pts); Q(P(b, new THREE.TubeGeometry(cv, 12, 0.0022, 4), F.ivyStemM, 0, 0, 0));
+        for (q = 1; q < 10; q++) { var pp2 = cv.getPoint(q / 10), il = G(b, pp2.x + (q % 2 ? 0.008 : -0.008), pp2.y, pp2.z + 0.006, 0); il.rotation.set(-0.25, q % 2 ? 0.45 : -0.45, (q % 2 ? -1 : 1) * 0.5); Q(P(il, F.ivyG, F.ivyM, 0, 0, 0)).scale.setScalar(0.7 + (q % 3) * 0.15); } }
       return b; }
     [-1.3, 1.3].forEach(function (wx) { var W = 0.72, H = 0.8, Y = 0.95, w = G(sg, wx, 0, 0, 0);
       Q(P(w, new THREE.PlaneGeometry(W, H), roomM, 0, Y + H / 2, WZ - 0.095));   // (the shop inside, glimpsed)
@@ -163,8 +210,10 @@ EVERDAWN_PARTS.push(function (THREE) {
     // (the door: sage green, stiles and rails with four raised panels below, a brass porthole above, a brass knob on a
     // rosette, a keyhole, a letter slot and a kick plate, three black hinges; a threshold; a casing of fluted pilasters on
     // plinth blocks under a frieze and cornice, with a carved fish leaping over it)
-    var dr = G(sg, 0, 0, WZ - 0.05, 0), DW = 0.9, DH = 1.96;
+    var dr = G(sg, 0, 0, WZ - 0.05, 0), DW = 0.95, DH = 1.97;
     box(dr, DW, DH, 0.045, sageDoorM, 0, DH / 2 + 0.02, 0);
+    [-1, 1].forEach(function (sd) { box(sg, 0.025, 2.02, 0.11, trimM, sd * 0.4875, 1.01, WZ - 0.05); }); box(sg, 1.0, 0.025, 0.11, trimM, 0, 2.0, WZ - 0.05);   // (jamb linings round the opening, so there's no gap at the door's edges)
+    box(sg, 1.06, 0.09, 0.03, trimM, 0, 2.03, WZ + 0.015);   // (the head casing, closing the gap above it)
     [-1, 1].forEach(function (sd) { box(dr, 0.12, DH, 0.012, sageDoorM, sd * (DW / 2 - 0.06), DH / 2 + 0.02, 0.028); });   // (stiles)
     [0.08, 0.74, 1.12, 1.9].forEach(function (ry, k) { box(dr, DW - 0.24, [0.14, 0.1, 0.1, 0.12][k], 0.012, sageDoorM, 0, ry + 0.02, 0.028); });   // (rails)
     [[-0.17, 0.42], [0.17, 0.42], [-0.17, 0.93], [0.17, 0.93]].forEach(function (pn, k) { var ph = k < 2 ? 0.5 : 0.25; box(dr, 0.26, ph, 0.012, sageDkM, pn[0], pn[1] - (k < 2 ? 0 : 0) + 0.02, 0.022); var rp = P(dr, new THREE.BoxGeometry(0.2, ph - 0.06, 0.02), sageDoorM, pn[0], pn[1] + 0.02, 0.03); });   // (raised panels in their bevelled fields)
