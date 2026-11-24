@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Everdawn</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <h1>Everdawn <span class="spark">&#x2726;</span></h1>
+        <div class="stats">
+          <div class="stat"><span id="clock">&#x263C; 6:00 AM</span> &middot; <span id="day">Day 1</span></div>
+          <div class="mana-wrap">
+            <div class="mana"><div class="mana-fill" id="mana"></div><span>Mana</span></div>
+            <div class="mana-num" id="manaNum">100 / 100</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="frame">
+        <canvas id="game"></canvas>
+        <div id="toast" class="toast"></div>
+        <div class="hotbar"><div id="hotbarSlots" class="hotbar-slots"></div></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnAct" type="button">Interact <kbd>E</kbd></button>
+        <button id="btnSpell" type="button">Dawn Bloom <kbd>Q</kbd></button>
+        <button id="btnBag" type="button">Bag <kbd>I</kbd></button>
+        <button id="btnFull" type="button">&#x26F6; Full screen <kbd>F</kbd></button>
+      </div>
+    </main>
+
+    <!-- three.js r128 and its model loader, then the game. More script files get added below script.js as the game grows -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
