@@ -124,37 +124,34 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
 /* Mana bar */
 .mana {
   position: relative;
-  width: 156px;
-  height: 26px;
-  padding: 3px;
+  width: 170px;
+  height: 20px;
+  margin-left: 16px;
+  padding: 2px 2px 2px 18px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #fbe9e2 0%, #e9bfb3 30%, #b7787a 52%, #8e5a5f 60%, #d9a49a 85%, #f6d9cf 100%);
-  box-shadow: 0 0 0 .5px rgba(90, 45, 60, 0.5), 0 3px 6px rgba(70, 35, 140, 0.25), 0 8px 16px -8px rgba(70, 35, 140, 0.45);
+  background: linear-gradient(180deg, #ffffff 0%, #ddd1ee 25%, #8a77a8 50%, #5e4a7e 56%, #b9a9d2 78%, #efe8f8 100%);
+  box-shadow: 0 0 0 .5px rgba(50, 30, 80, 0.45), 0 2px 3px rgba(40, 20, 80, 0.25), 0 8px 14px -8px rgba(40, 20, 80, 0.5);
 }
+.mana-gem { position: absolute; left: -20px; top: 50%; width: 44px; height: 44px; transform: translateY(-50%); z-index: 5; filter: drop-shadow(0 2px 2px rgba(30, 10, 60, 0.45)); }
+.mana-glint { transform-box: fill-box; transform-origin: center; animation: manaGlint 4.5s ease-in-out infinite; }
+@keyframes manaGlint { 0%, 70%, 100% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.2) rotate(20deg); opacity: 1; } 90% { transform: scale(0) rotate(45deg); opacity: 0; } }
 .mana-glass {
   position: relative;
   height: 100%;
   border-radius: 999px;
   overflow: hidden;
-  background: linear-gradient(180deg, #120728 0%, #2a1556 55%, #1a0b38 100%);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7), inset 0 -1px 1px rgba(255, 255, 255, 0.12);
-}
-.mana-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(255, 255, 255, 0.14) calc(10% - 1px) 10%);
-  pointer-events: none;
+  background: linear-gradient(180deg, rgba(60, 35, 100, 0.35) 0%, rgba(245, 240, 252, 0.85) 30%, rgba(235, 226, 248, 0.9) 70%, rgba(80, 50, 130, 0.35) 100%);
+  box-shadow: inset 0 0 0 .5px rgba(40, 20, 80, 0.5), inset 0 2px 3px rgba(30, 10, 70, 0.35);
 }
 .mana-glass::after {
   content: '';
   position: absolute;
-  left: 6px; right: 6px; top: 1px;
-  height: 42%;
+  inset: 0;
   z-index: 3;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.05));
+  background:
+    linear-gradient(180deg, transparent 8%, rgba(255, 255, 255, 0.85) 14%, rgba(255, 255, 255, 0.25) 26%, transparent 34%),
+    linear-gradient(180deg, transparent 74%, rgba(255, 255, 255, 0.35) 82%, transparent 88%);
   pointer-events: none;
 }
 .mana-fill {
@@ -162,43 +159,46 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
   height: 100%;
   width: 100%;
   overflow: hidden;
-  border-radius: 999px 4px 4px 999px;
-  background: linear-gradient(90deg, #5aa8ff 0%, #8f7dff 40%, #c47cf2 70%, #ff9bd2 100%);
-  background-size: 150px 100%;
-  box-shadow: inset 0 -3px 5px rgba(60, 20, 140, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.35), 0 0 10px rgba(190, 140, 255, 0.9);
-  transition: width .4s ease-out;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 22%, rgba(0, 0, 0, 0) 60%, rgba(25, 5, 60, 0.45) 100%),
+    linear-gradient(90deg, #5a2fb8 0%, #8048d8 40%, #a95ee0 70%, #d77fc8 100%);
+  background-size: 100% 100%, 150px 100%;
+  box-shadow: 0 0 7px rgba(160, 100, 255, 0.75);
+  transition: width .5s cubic-bezier(.3, .7, .3, 1);
 }
 .mana-fill::after {
   content: '';
   position: absolute;
-  top: 0; bottom: 0; right: 0;
-  width: 3px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), #fff, rgba(255, 255, 255, 0.4));
-  box-shadow: 0 0 6px 2px rgba(255, 220, 250, 0.9);
+  top: 1px; bottom: 1px; right: 1px;
+  width: 6px;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 70% 50%, rgba(255, 235, 255, 0.85), rgba(255, 235, 255, 0) 70%);
 }
 .mana-flow {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 70%, rgba(255, 255, 255, 0.7) 0 .8px, transparent 1.4px),
-    radial-gradient(circle at 55% 35%, rgba(255, 255, 255, 0.6) 0 .7px, transparent 1.3px),
-    radial-gradient(circle at 80% 60%, rgba(255, 255, 255, 0.5) 0 .6px, transparent 1.2px),
-    linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.28) 45%, transparent 60%);
-  background-size: 40px 100%, 52px 100%, 34px 100%, 90px 100%;
-  animation: manaFlow 3.5s linear infinite;
+    radial-gradient(ellipse 18px 5px at 50% 60%, rgba(255, 220, 255, 0.35), transparent 70%),
+    radial-gradient(ellipse 12px 4px at 50% 40%, rgba(200, 230, 255, 0.3), transparent 70%);
+  background-size: 70px 100%, 46px 100%;
+  animation: manaFlow 6s linear infinite;
+  mix-blend-mode: screen;
 }
-@keyframes manaFlow { from { background-position: 0 0, 0 0, 0 0, -90px 0; } to { background-position: 40px 0, 52px 0, 34px 0, 90px 0; } }
+@keyframes manaFlow { from { background-position: 0 0, 0 0; } to { background-position: 140px 0, -92px 0; } }
+@media (max-width: 440px) { .mana { width: 120px; } }
 .mana span {
   position: absolute;
   inset: 0;
   z-index: 4;
   display: grid;
   place-items: center;
-  font-size: .78rem;
-  font-weight: 600;
-  letter-spacing: .5px;
+  font-family: 'Cinzel', serif;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(20, 5, 50, 0.9), 0 0 6px rgba(120, 60, 220, 0.8);
+  text-shadow: 0 0 1px rgba(30, 8, 70, 0.9), 0 1px 1px rgba(30, 8, 70, 0.9), 0 0 4px rgba(60, 20, 130, 0.8);
   font-variant-numeric: tabular-nums;
 }
 
