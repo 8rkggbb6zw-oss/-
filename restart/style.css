@@ -33,8 +33,13 @@ h1 {
   text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255, 190, 240, 0.9);
 }
 
-.spark { width: 1.15em; height: 1.15em; vertical-align: -0.16em; overflow: visible; filter: drop-shadow(0 0 3px #ffe08a) drop-shadow(0 0 9px rgba(255, 170, 70, 0.85)); animation: twinkle 2.6s ease-in-out infinite; }
-@keyframes twinkle { 50% { transform: scale(1.18) rotate(12deg); filter: drop-shadow(0 0 5px #fff3c4) drop-shadow(0 0 14px rgba(255, 180, 80, 1)); } }
+.spark { width: 1.5em; height: 1.5em; vertical-align: -0.38em; margin-left: -0.1em; overflow: visible; filter: drop-shadow(0 0 1px rgba(214, 120, 30, 0.55)) drop-shadow(0 0 6px rgba(255, 190, 90, 0.75)); }
+.spark-rays { transform-box: view-box; transform-origin: 60px 60px; animation: starRays 3.2s ease-in-out infinite; }
+.spark-mote { transform-box: fill-box; transform-origin: center; animation: starMote 2.4s ease-in-out infinite; }
+.spark-mote.m2 { animation-delay: -0.8s; }
+.spark-mote.m3 { animation-delay: -1.6s; }
+@keyframes starRays { 0%, 100% { transform: scale(0.92) rotate(0deg); opacity: 0.9; } 50% { transform: scale(1.08) rotate(6deg); opacity: 1; } }
+@keyframes starMote { 0%, 100% { transform: scale(0.3); opacity: 0.2; } 50% { transform: scale(1); opacity: 1; } }
 
 .stats { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
 
