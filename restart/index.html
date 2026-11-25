@@ -32,7 +32,49 @@
           </g>
         </svg></h1>
         <div class="stats">
-          <div class="stat"><span id="clock">&#x263C; 6:00 A&middot;M</span></div>
+          <div class="stat time-stat" id="timeStat">
+            <svg class="time-icon" viewBox="0 0 40 40" aria-hidden="true">
+              <defs>
+                <linearGradient id="tiBezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".3" stop-color="#ddd2ec"/><stop offset=".5" stop-color="#8a77a8"/><stop offset=".56" stop-color="#5a4778"/><stop offset=".78" stop-color="#bcaed3"/><stop offset="1" stop-color="#f3eefa"/></linearGradient>
+                <radialGradient id="tiBead" cx=".35" cy=".3"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#cfc4e0"/><stop offset="1" stop-color="#6a5888"/></radialGradient>
+                <linearGradient id="tiDay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fc8f5"/><stop offset=".6" stop-color="#cfe3fb"/><stop offset="1" stop-color="#ffd9c7"/></linearGradient>
+                <linearGradient id="tiNight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0626"/><stop offset=".6" stop-color="#26124f"/><stop offset="1" stop-color="#4a2a7c"/></linearGradient>
+                <radialGradient id="tiSun" cx=".4" cy=".38"><stop offset="0" stop-color="#fffbe6"/><stop offset=".35" stop-color="#ffe27a"/><stop offset=".75" stop-color="#f6b23c"/><stop offset="1" stop-color="#e08a1e"/></radialGradient>
+                <radialGradient id="tiCorona"><stop offset=".3" stop-color="#fff2b0" stop-opacity=".95"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></radialGradient>
+                <radialGradient id="tiMoon" cx=".35" cy=".35"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#e6e0f2"/><stop offset="1" stop-color="#b3a8cc"/></radialGradient>
+                <radialGradient id="tiGlass" cx=".35" cy=".25" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></radialGradient>
+                <clipPath id="tiFace"><circle cx="20" cy="20" r="12.2"/></clipPath>
+                <mask id="tiCrescent"><rect width="40" height="40" fill="#fff"/><circle cx="23.8" cy="17.2" r="6.4" fill="#000"/></mask>
+              </defs>
+              <circle cx="20.3" cy="20.8" r="14.6" fill="#1e1030" opacity=".35"/>
+              <circle cx="20" cy="20" r="14.4" fill="url(#tiBezel)"/>
+              <g fill="url(#tiBead)" stroke="#6a5888" stroke-width=".15"><circle cx="33.55" cy="20.00" r=".55"/><circle cx="33.25" cy="22.82" r=".55"/><circle cx="32.38" cy="25.51" r=".55"/><circle cx="30.96" cy="27.96" r=".55"/><circle cx="29.07" cy="30.07" r=".55"/><circle cx="26.78" cy="31.73" r=".55"/><circle cx="24.19" cy="32.89" r=".55"/><circle cx="21.42" cy="33.48" r=".55"/><circle cx="18.58" cy="33.48" r=".55"/><circle cx="15.81" cy="32.89" r=".55"/><circle cx="13.23" cy="31.73" r=".55"/><circle cx="10.93" cy="30.07" r=".55"/><circle cx="9.04" cy="27.96" r=".55"/><circle cx="7.62" cy="25.51" r=".55"/><circle cx="6.75" cy="22.82" r=".55"/><circle cx="6.45" cy="20.00" r=".55"/><circle cx="6.75" cy="17.18" r=".55"/><circle cx="7.62" cy="14.49" r=".55"/><circle cx="9.04" cy="12.04" r=".55"/><circle cx="10.93" cy="9.93" r=".55"/><circle cx="13.22" cy="8.27" r=".55"/><circle cx="15.81" cy="7.11" r=".55"/><circle cx="18.58" cy="6.52" r=".55"/><circle cx="21.42" cy="6.52" r=".55"/><circle cx="24.19" cy="7.11" r=".55"/><circle cx="26.78" cy="8.27" r=".55"/><circle cx="29.07" cy="9.93" r=".55"/><circle cx="30.96" cy="12.04" r=".55"/><circle cx="32.38" cy="14.49" r=".55"/><circle cx="33.25" cy="17.18" r=".55"/></g>
+              <circle cx="20" cy="20" r="12.6" fill="none" stroke="#4a3866" stroke-width=".5"/>
+              <g clip-path="url(#tiFace)">
+                <g class="ti-sun">
+                  <rect x="6" y="6" width="28" height="28" fill="url(#tiDay)"/>
+                  <ellipse cx="13" cy="28.5" rx="7" ry="2.2" fill="#fff" opacity=".7"/><ellipse cx="27" cy="29.5" rx="6" ry="1.8" fill="#fff" opacity=".6"/>
+                  <circle cx="20" cy="20" r="11" fill="url(#tiCorona)"/>
+                  <g class="ti-rays" fill="#ffc94a"><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(0 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(30 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(60 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(90 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(120 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(150 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(180 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(210 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(240 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(270 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(300 20 20)"/><path d="M20 9.6 L20.9 13.6 L19.1 13.6 Z" transform="rotate(330 20 20)"/></g>
+                  <g class="ti-rays2" fill="#ffe08a" opacity=".85"><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(15 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(45 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(75 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(105 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(135 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(165 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(195 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(225 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(255 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(285 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(315 20 20)"/><path d="M20 11.4 L20.6 13.8 L19.4 13.8 Z" transform="rotate(345 20 20)"/></g>
+                  <circle cx="20" cy="20" r="5.6" fill="url(#tiSun)" stroke="#e8a02e" stroke-width=".3"/>
+                </g>
+                <g class="ti-moon">
+                  <rect x="6" y="6" width="28" height="28" fill="url(#tiNight)"/>
+                  <g fill="#fff"><circle cx="11.5" cy="13" r=".45"/><circle cx="28" cy="11.5" r=".35"/><circle cx="27" cy="26" r=".5"/><circle cx="13.5" cy="27" r=".3"/><circle cx="30" cy="19" r=".3"/><circle cx="16" cy="9.5" r=".3"/></g>
+                  <circle cx="20" cy="20" r="9" fill="#cbbcf0" opacity=".12"/>
+                  <g mask="url(#tiCrescent)">
+                    <circle cx="19" cy="20" r="7.2" fill="url(#tiMoon)"/>
+                    <circle cx="15.6" cy="18.4" r="1.1" fill="#b9add2" opacity=".7"/><circle cx="17" cy="23.6" r=".8" fill="#b9add2" opacity=".6"/><circle cx="14.4" cy="21.8" r=".5" fill="#b9add2" opacity=".6"/>
+                  </g>
+                  <path class="ti-twinkle" d="M27.5 15 l.35 1.1 1.1 .35 -1.1 .35 -.35 1.1 -.35 -1.1 -1.1 -.35 1.1 -.35 z" fill="#fff"/>
+                </g>
+                <circle cx="20" cy="20" r="12.2" fill="url(#tiGlass)"/>
+                <circle cx="20" cy="20" r="12.2" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1"/>
+              </g>
+            </svg>
+            <span id="clock">6:00 A&middot;M</span>
+          </div>
           <div class="day-cal" id="dayCal" title="Day">
             <svg viewBox="0 0 60 60" aria-hidden="true">
               <defs>
