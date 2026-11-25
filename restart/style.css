@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Cinzel:wght@600;700&display=swap');
 
 * { box-sizing: border-box; }
 
@@ -33,17 +33,20 @@ h1 {
   text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255, 190, 240, 0.9);
 }
 
-/* The name: a lavender-to-violet gradient with a white outline, a deep violet 3D edge underneath, a soft pink glow,
-   and a shine that sweeps across the letters every few seconds */
+/* The name: carved in polished amethyst metal, in an engraved serif. A real metal gradient (bright top, a dark
+   horizon line through the middle, a lighter reflection underneath), a thin edge of thickness below, a soft cast
+   shadow, and a slow highlight that glides across it like light on metal */
 .title {
   position: relative;
   display: inline-block;
-  letter-spacing: 1.5px;
-  color: #4a2296;
-  -webkit-text-stroke: 6px #fff;
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 0.95em;
+  letter-spacing: 2px;
+  color: #2c1458;
   text-shadow:
-    0 3px 0 #b892f2, 0 4px 0 #9a6fe0, 0 5px 0 #7d52c9, 0 6px 0 #6a3fb5,
-    0 8px 6px rgba(70, 30, 140, 0.35), 0 0 22px rgba(255, 180, 240, 0.85), 0 0 40px rgba(200, 150, 255, 0.5);
+    0 1px 0 #3a1c70, 0 2px 0 #2a1252,
+    0 3px 3px rgba(30, 10, 60, 0.45), 0 8px 16px rgba(60, 20, 110, 0.22), 0 0 26px rgba(255, 210, 240, 0.35);
 }
 .title::after, .title::before {
   content: attr(data-text);
@@ -52,34 +55,21 @@ h1 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  -webkit-text-stroke: 0;
   text-shadow: none;
   pointer-events: none;
 }
 .title::after {
-  background-image: linear-gradient(180deg, #fbf4ff 0%, #e2c8ff 22%, #b07cf5 45%, #7f45dd 62%, #6232c4 78%, #9a5ae6 92%, #d6a6ff 100%);
+  background-image: linear-gradient(180deg, #f6f0ff 0%, #dcc6f7 16%, #a77de6 38%, #5b2fa6 49%, #3d1d7c 51%, #7346c4 56%, #a985e8 70%, #e2d2ff 86%, #9a74dc 100%);
 }
 .title::before {
   z-index: 1;
-  background-image: linear-gradient(105deg, transparent 0%, transparent 44%, rgba(255, 255, 255, 0.55) 47.5%, rgba(255, 255, 255, 0.9) 49.5%, rgba(255, 244, 196, 0.8) 50.5%, rgba(255, 255, 255, 0.45) 52.5%, transparent 56%, transparent 100%);
+  background-image: linear-gradient(100deg, transparent 0%, transparent 45%, rgba(255, 255, 255, 0.35) 48.5%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.35) 51.5%, transparent 55%, transparent 100%);
   background-size: 300% 100%;
   background-position: 120% 0;
-  animation: titleShine 5.5s ease-in-out infinite;
+  animation: titleShine 7s ease-in-out infinite;
 }
-@keyframes titleShine { 0%, 55% { background-position: 120% 0; } 85%, 100% { background-position: -20% 0; } }
-/* little glints that twinkle on the letters */
-.glint {
-  position: absolute; z-index: 2; width: .42em; height: .42em; pointer-events: none;
-  background: radial-gradient(circle, #fff 0%, #fff4b0 28%, #ffd84a 55%, rgba(255, 200, 60, 0) 75%);
-  clip-path: polygon(50% 0, 57% 43%, 100% 50%, 57% 57%, 50% 100%, 43% 57%, 0 50%, 43% 43%);
-  filter: drop-shadow(0 0 2px rgba(255, 215, 80, 0.9));
-  animation: glint 3.6s ease-in-out infinite;
-}
-.glint.g1 { left: -2%; top: 12%; }
-.glint.g2 { left: 54%; top: 2%; width: .32em; height: .32em; animation-delay: -1.2s; }
-.glint.g3 { right: 2%; top: 30%; width: .28em; height: .28em; animation-delay: -2.4s; }
-@keyframes glint { 0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; } 15% { transform: scale(1.1) rotate(25deg); opacity: 1; } 30% { transform: scale(0) rotate(45deg); opacity: 0; } }
-body.full .title { -webkit-text-stroke-width: 4px; text-shadow: 0 2px 0 #9a6fe0, 0 3px 0 #6a3fb5, 0 0 16px rgba(255, 180, 240, 0.8); }
+@keyframes titleShine { 0%, 50% { background-position: 120% 0; } 90%, 100% { background-position: -20% 0; } }
+body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3px rgba(30, 10, 60, 0.5), 0 0 16px rgba(255, 210, 240, 0.4); }
 
 .spark { width: 1.9em; height: 1.9em; vertical-align: -0.2em; margin: -0.5em -0.25em -0.5em -0.2em; overflow: visible; filter: drop-shadow(0 0 4px rgba(255, 230, 90, 0.9)) drop-shadow(0 0 10px rgba(255, 215, 60, 0.6)); }
 .spark-spikes { transform-box: view-box; transform-origin: 100px 100px; animation: starSpikes 4.2s ease-in-out infinite; }
