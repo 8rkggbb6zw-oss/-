@@ -369,7 +369,6 @@ kbd {
   bottom: 12px;
   transform: translateX(-50%);
   display: flex;
-  align-items: center;
   padding: 3px;
   border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #ddd1ee 22%, #8a77a8 50%, #5e4a7e 56%, #b9a9d2 80%, #efe8f8 100%);
@@ -378,66 +377,71 @@ kbd {
 .hotbar-slots {
   position: relative;
   display: flex;
-  gap: 5px;
-  padding: 5px;
   border-radius: 13px;
-  background: linear-gradient(180deg, rgba(35, 18, 70, 0.82), rgba(60, 35, 105, 0.78));
-  box-shadow: inset 0 0 0 .5px rgba(20, 8, 45, 0.8), inset 0 2px 5px rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  overflow: hidden;
+  background: linear-gradient(180deg, #e3d8f4 0%, #faf7fe 30%, #f4effb 70%, #d9cbef 100%);
+  box-shadow: inset 0 0 0 .5px rgba(40, 20, 80, 0.5), inset 0 2px 4px rgba(30, 10, 70, 0.3);
+}
+.hotbar-slots::after {
+  content: '';
+  position: absolute;
+  left: 6px; right: 6px; top: 2px;
+  height: 30%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: 2;
 }
 .hotbar .slot {
   position: relative;
-  width: 46px;
+  width: 50px;
   aspect-ratio: 1;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 1.4rem;
   color: #4a3b6b;
-  background:
-    radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.95), rgba(244, 238, 252, 0.9) 55%, rgba(220, 208, 240, 0.9) 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
-    inset 0 -3px 6px rgba(120, 90, 180, 0.22),
-    inset 0 2px 3px rgba(255, 255, 255, 0.9),
-    0 0 0 1px rgba(150, 125, 200, 0.6),
-    0 2px 2px rgba(0, 0, 0, 0.35);
-  transition: transform .12s, box-shadow .2s;
+  background: transparent;
+  box-shadow: none;
 }
-.hotbar .slot::after {
+.hotbar .slot + .slot { box-shadow: inset 1px 0 0 rgba(110, 80, 170, 0.28), inset 2px 0 0 rgba(255, 255, 255, 0.85); }
+.hotbar .slot::before {
   content: '';
   position: absolute;
-  left: 4px; right: 4px; top: 3px;
-  height: 36%;
-  border-radius: 7px 7px 50% 50% / 7px 7px 6px 6px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0));
-  pointer-events: none;
+  inset: 5px;
+  border-radius: 9px;
+  box-shadow: inset 0 1px 3px rgba(60, 30, 120, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.9);
+  transition: background .25s, box-shadow .25s;
 }
+.hotbar .slot > * { position: relative; z-index: 1; }
 .hotbar .slot.empty { opacity: 1; cursor: pointer; }
-.hotbar .slot:active { transform: translateY(1px); }
-.hotbar .slot.selected {
-  background: radial-gradient(ellipse at 50% 30%, #ffffff, #f3ebff 55%, #dccbf7 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.95),
-    inset 0 -3px 6px rgba(120, 80, 200, 0.25),
-    0 0 0 2px #b48af0,
-    0 0 0 3px rgba(255, 255, 255, 0.7),
-    0 0 12px 2px rgba(190, 140, 255, 0.85);
-  transform: translateY(-2px);
+.hotbar .slot:active { transform: none; }
+.hotbar .slot.selected::before {
+  background: radial-gradient(ellipse at 50% 60%, rgba(196, 150, 255, 0.45), rgba(170, 120, 245, 0.18) 60%, rgba(170, 120, 245, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(150, 100, 230, 0.75), inset 0 0 8px rgba(160, 110, 240, 0.5), 0 0 8px rgba(180, 130, 255, 0.55);
+}
+.hotbar .slot.selected::after {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: 1px;
+  width: 6px; height: 6px;
+  margin-left: -3px;
+  transform: rotate(45deg);
+  z-index: 3;
+  background: linear-gradient(135deg, #f3e8ff, #a77de6 50%, #4a2296);
+  box-shadow: 0 0 4px rgba(180, 130, 255, 0.9);
 }
 .slot-key {
-  position: absolute;
-  left: 5px; top: 2px;
-  z-index: 1;
+  position: absolute !important;
+  left: 10px; top: 9px;
   font-family: 'Cinzel', serif;
-  font-size: .55rem;
+  font-size: .52rem;
   font-weight: 700;
-  color: rgba(90, 60, 150, 0.7);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  color: rgba(100, 70, 160, 0.55);
 }
-.hotbar .slot.selected .slot-key { color: #6a3fc8; }
-.hotbar .slot .count { font-size: .7rem; right: 4px; bottom: 1px; }
-@media (max-width: 480px) { .hotbar .slot { width: 38px; } .hotbar-slots { gap: 4px; padding: 4px; } }
+.hotbar .slot.selected .slot-key { color: #5a2db0; }
+.hotbar .slot .count { font-size: .7rem; right: 6px; bottom: 3px; }
+@media (max-width: 480px) { .hotbar .slot { width: 40px; } }
 
 .row-btn {
   padding: 8px 10px;
