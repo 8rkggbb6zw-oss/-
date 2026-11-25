@@ -146,6 +146,7 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
   font-size: .8rem;
   font-weight: 600;
   text-shadow: 0 0 4px #fff;
+  font-variant-numeric: tabular-nums;
 }
 
 .frame {
