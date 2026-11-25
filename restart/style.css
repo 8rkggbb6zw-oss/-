@@ -245,42 +245,56 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
 .frame {
   position: relative;
   border-radius: 14px;
-  padding: 7px;
+  padding: 12px;
   background:
-    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0 .5px, rgba(40, 20, 70, 0.025) .5px 1.5px),
-    linear-gradient(180deg, #f6f3fa 0%, #d7cde6 18%, #a596bd 46%, #8d7eaa 52%, #bdb2d2 78%, #ebe6f3 100%);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.02 1.6' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .45  0 0 0 0 .6  0 0 0 .18 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url%28%23n%29'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, #faf8fd 0%, #ddd3ea 12%, #b2a5c8 34%, #8a7aa6 50%, #9d8fb8 58%, #c9bfdb 80%, #efebf5 100%);
   box-shadow:
-    0 0 0 .5px rgba(45, 25, 75, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(60, 40, 100, 0.35),
-    0 3px 4px rgba(30, 15, 60, 0.25),
-    0 18px 36px -14px rgba(30, 15, 60, 0.55);
+    0 0 0 .5px rgba(35, 18, 60, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 1px 0 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(40, 20, 70, 0.45),
+    inset -1px 0 0 rgba(40, 20, 70, 0.25),
+    0 1px 1px rgba(20, 10, 40, 0.3),
+    0 4px 6px rgba(30, 15, 60, 0.22),
+    0 22px 40px -16px rgba(30, 15, 60, 0.6);
 }
 .frame::before {
   content: '';
   position: absolute;
-  inset: 5px;
+  inset: 7px;
   border-radius: 10px;
   pointer-events: none;
-  box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, 0.7), 0 0 0 1px rgba(40, 20, 70, 0.55);
+  background: linear-gradient(180deg, #7d7194 0%, #a69bba 30%, #d4cde0 70%, #ece8f2 100%);
+  box-shadow:
+    0 0 0 .5px rgba(40, 20, 70, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 1px 1px rgba(30, 10, 60, 0.45);
 }
 .frame::after {
   content: '';
   position: absolute;
-  inset: 7px;
-  border-radius: 8px;
+  inset: 12px;
+  border-radius: 7px;
   pointer-events: none;
   z-index: 1;
-  box-shadow: inset 0 2px 6px rgba(10, 4, 30, 0.45), inset 0 0 0 1px rgba(10, 4, 30, 0.35);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 30%);
+  box-shadow:
+    inset 0 0 0 1px rgba(8, 3, 25, 0.55),
+    inset 0 3px 8px rgba(8, 3, 25, 0.5),
+    inset 0 0 26px rgba(8, 3, 25, 0.22);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 22%, rgba(255, 255, 255, 0) 23%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 12%);
 }
+.frame > * { position: relative; }
+.frame > .toast, .frame > .hotbar, .frame > .inventory { position: absolute; }
 
 canvas {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 3 / 2;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #9fd8ff;
   touch-action: none;
   cursor: grab;
