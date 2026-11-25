@@ -36,57 +36,50 @@
           <div class="day-cal" id="dayCal" title="Day">
             <svg viewBox="0 0 60 60" aria-hidden="true">
               <defs>
-                <linearGradient id="dcPaper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdfaf3"/><stop offset=".7" stop-color="#f6f0e4"/><stop offset="1" stop-color="#ece3d3"/></linearGradient>
-                <radialGradient id="dcVig" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#8a7350" stop-opacity=".22"/></radialGradient>
-                <linearGradient id="dcLeatherCol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c2a57"/><stop offset=".5" stop-color="#43193f"/><stop offset="1" stop-color="#2c0f2a"/></linearGradient>
-                <linearGradient id="dcGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-                <linearGradient id="dcSteel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#55525c"/><stop offset=".28" stop-color="#e9e8ee"/><stop offset=".42" stop-color="#ffffff"/><stop offset=".6" stop-color="#a9a7b2"/><stop offset=".85" stop-color="#6c6976"/><stop offset="1" stop-color="#3f3d46"/></linearGradient>
-                <linearGradient id="dcFoil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1c4"/><stop offset=".45" stop-color="#d9ab55"/><stop offset=".55" stop-color="#a77a2c"/><stop offset="1" stop-color="#e8c47a"/></linearGradient>
-                <linearGradient id="dcCurl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fffdf8"/><stop offset=".6" stop-color="#efe7d8"/><stop offset="1" stop-color="#cfc2aa"/></linearGradient>
-                <linearGradient id="dcRibbon" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a1430"/><stop offset=".45" stop-color="#9c2f55"/><stop offset="1" stop-color="#4a0f27"/></linearGradient>
-                <filter id="dcGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.8" numOctaves="3" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .28  0 0 0 .12 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
-                <filter id="dcLeather" x="0" y="0" width="100%" height="100%"><feTurbulence type="turbulence" baseFrequency="2.6" numOctaves="3" seed="9" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .28 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+                <linearGradient id="dcPaper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".65" stop-color="#faf6ff"/><stop offset="1" stop-color="#efe6fb"/></linearGradient>
+                <radialGradient id="dcBlush" cx=".5" cy=".55" r=".7"><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#c9a8f0" stop-opacity=".28"/></radialGradient>
+                <linearGradient id="dcMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f0ff"/><stop offset=".16" stop-color="#dcc6f7"/><stop offset=".4" stop-color="#a77de6"/><stop offset=".52" stop-color="#5b2fa6"/><stop offset=".56" stop-color="#3d1d7c"/><stop offset=".64" stop-color="#7346c4"/><stop offset=".82" stop-color="#a985e8"/><stop offset="1" stop-color="#cdb4f5"/></linearGradient>
+                <linearGradient id="dcNum" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9a8f5"/><stop offset=".3" stop-color="#8d5ee0"/><stop offset=".5" stop-color="#4e2696"/><stop offset=".54" stop-color="#3a1a78"/><stop offset=".7" stop-color="#6a3fbe"/><stop offset="1" stop-color="#a985e8"/></linearGradient>
+                <linearGradient id="dcRose" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8e5a5f"/><stop offset=".3" stop-color="#f6d2c8"/><stop offset=".45" stop-color="#fff2ec"/><stop offset=".65" stop-color="#d79f96"/><stop offset="1" stop-color="#7a4950"/></linearGradient>
+                <linearGradient id="dcGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9a24e" stop-opacity="0"/><stop offset=".2" stop-color="#e9cb7f"/><stop offset=".5" stop-color="#fff3c8"/><stop offset=".8" stop-color="#e9cb7f"/><stop offset="1" stop-color="#c9a24e" stop-opacity="0"/></linearGradient>
+                <linearGradient id="dcCurl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#efe6fb"/><stop offset="1" stop-color="#cbb6ec"/></linearGradient>
+                <filter id="dcGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.8" numOctaves="3" seed="4" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 .5  0 0 0 0 .35  0 0 0 0 .75  0 0 0 .08 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+                <filter id="dcBrush" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.05 3" numOctaves="2" seed="2" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .18 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
                 <filter id="dcSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation=".8"/></filter>
                 <clipPath id="dcClip"><path d="M5.5 14 Q5.5 10 9.5 10 H50.5 Q54.5 10 54.5 14 V44 L45.5 53 H9.5 Q5.5 53 5.5 49 Z"/></clipPath>
                 <clipPath id="dcUnder"><path d="M54.5 44 L45.5 53 H54.5 Z"/></clipPath>
-                <clipPath id="dcMoonClip"><circle cx="49" cy="30" r="1.6"/></clipPath>
               </defs>
-              <ellipse cx="30.5" cy="56.4" rx="24" ry="2.4" fill="#2a1a10" opacity=".22" filter="url(#dcSoft)"/>
-              <path d="M12 50 V58.6 L13.6 57.2 L15.2 58.6 V50 Z" fill="url(#dcRibbon)"/>
-              <rect x="7.4" y="12.8" width="47.6" height="42.2" rx="4" fill="#e4dac7" stroke="#b5a68b" stroke-width=".3"/>
-              <rect x="6.9" y="12" width="47.6" height="42" rx="4" fill="#ede5d5" stroke="#bcae94" stroke-width=".3"/>
-              <rect x="6.4" y="11.2" width="47.6" height="41.9" rx="4" fill="#f4eee2" stroke="#c4b79e" stroke-width=".3"/>
+              <ellipse cx="30.5" cy="56.4" rx="24" ry="2.4" fill="#3b1d78" opacity=".2" filter="url(#dcSoft)"/>
+              <rect x="7.4" y="12.8" width="47.6" height="42.2" rx="4" fill="#ddd0f3" stroke="#b39ae0" stroke-width=".3"/>
+              <rect x="6.9" y="12" width="47.6" height="42" rx="4" fill="#e9e0f8" stroke="#bea8e6" stroke-width=".3"/>
+              <rect x="6.4" y="11.2" width="47.6" height="41.9" rx="4" fill="#f3eefc" stroke="#c9b6eb" stroke-width=".3"/>
               <g clip-path="url(#dcClip)">
                 <rect x="5" y="9" width="50" height="45" fill="url(#dcPaper)"/>
                 <rect x="5" y="9" width="50" height="45" fill="#fff" filter="url(#dcGrain)"/>
-                <rect x="5" y="22" width="50" height="32" fill="url(#dcVig)"/>
-                <rect x="5" y="9" width="50" height="12.6" fill="url(#dcLeatherCol)"/>
-                <rect x="5" y="9" width="50" height="12.6" fill="#000" filter="url(#dcLeather)"/>
-                <rect x="5" y="9" width="50" height="5.5" fill="url(#dcGloss)"/>
-                <line x1="7.5" y1="11.6" x2="52.5" y2="11.6" stroke="#c9a96e" stroke-width=".28" stroke-dasharray=".9 .8" opacity=".8"/>
-                <line x1="7.5" y1="20" x2="52.5" y2="20" stroke="#c9a96e" stroke-width=".28" stroke-dasharray=".9 .8" opacity=".8"/>
-                <rect x="5" y="21.6" width="50" height=".6" fill="#1c0a1b" opacity=".55"/>
-                <path d="M5 22.2 l1.1 .6 .9 -.4 1.2 .7 .8 -.5 1.1 .6 1 -.6 1.2 .5 .9 -.4 1.1 .7 .8 -.6 1.2 .5 1 -.5 1.1 .6 .9 -.6 1.2 .7 .8 -.4 1.1 .5 1 -.6 1.2 .6 .9 -.5 1.1 .6 .8 -.5 1.2 .7 1 -.6 1.1 .5 .9 -.4 1.2 .6 .8 -.6 1.1 .5 1 -.5 1.2 .7 .9 -.6 1.1 .5 .8 -.4 1.2 .6 1 -.6 1.1 .6 .9 -.5 V22.2 Z" fill="#e2d7c3"/>
-                <rect x="5" y="22.6" width="50" height="2.2" fill="#6b5030" opacity=".06"/>
-                <line x1="6" y1="24.6" x2="54" y2="24.6" stroke="#b9aa8e" stroke-width=".35" stroke-dasharray=".5 .9"/>
+                <rect x="5" y="22" width="50" height="32" fill="url(#dcBlush)"/>
+                <rect x="5" y="9" width="50" height="12.6" fill="url(#dcMetal)"/>
+                <rect x="5" y="9" width="50" height="12.6" fill="#fff" filter="url(#dcBrush)"/>
+                <rect x="5" y="9" width="50" height=".7" fill="#fff" opacity=".7"/>
+                <rect x="5" y="21.2" width="50" height=".45" fill="url(#dcGold)"/>
+                <rect x="5" y="21.65" width="50" height=".5" fill="#2a1052" opacity=".35"/>
+                <path d="M5 22.15 l1.1 .5 .9 -.35 1.2 .6 .8 -.45 1.1 .5 1 -.5 1.2 .45 .9 -.35 1.1 .6 .8 -.5 1.2 .45 1 -.45 1.1 .5 .9 -.5 1.2 .6 .8 -.35 1.1 .45 1 -.5 1.2 .5 .9 -.45 1.1 .5 .8 -.45 1.2 .6 1 -.5 1.1 .45 .9 -.35 1.2 .5 .8 -.5 1.1 .45 1 -.45 1.2 .6 .9 -.5 1.1 .45 .8 -.35 1.2 .5 1 -.5 1.1 .5 .9 -.45 V22.15 Z" fill="#e4d8f6"/>
+                <line x1="6" y1="24.4" x2="54" y2="24.4" stroke="#c6b2ea" stroke-width=".3" stroke-dasharray=".5 .9"/>
               </g>
-              <path d="M5.5 14 Q5.5 10 9.5 10 H50.5 Q54.5 10 54.5 14 V44 L45.5 53 H9.5 Q5.5 53 5.5 49 Z" fill="none" stroke="#7a6a52" stroke-width=".45" opacity=".8"/>
+              <path d="M5.5 14 Q5.5 10 9.5 10 H50.5 Q54.5 10 54.5 14 V44 L45.5 53 H9.5 Q5.5 53 5.5 49 Z" fill="none" stroke="#5b2fa6" stroke-width=".45" opacity=".55"/>
               <text x="30" y="17.95" text-anchor="middle" class="dc-label dc-deboss">DAY</text>
-              <text x="30" y="17.6" text-anchor="middle" class="dc-label">DAY</text>
-              <ellipse cx="17" cy="13.7" rx="2" ry="1.3" fill="#120510"/><ellipse cx="43" cy="13.7" rx="2" ry="1.3" fill="#120510"/>
-              <ellipse cx="17.5" cy="14.6" rx="2" ry=".6" fill="#000" opacity=".4" filter="url(#dcSoft)"/><ellipse cx="43.5" cy="14.6" rx="2" ry=".6" fill="#000" opacity=".4" filter="url(#dcSoft)"/>
-              <path d="M15.6 13.9 V6.2 Q15.6 3.3 17 3.3 Q18.4 3.3 18.4 6.2 V13.3" fill="none" stroke="url(#dcSteel)" stroke-width="1.7" stroke-linecap="round"/>
-              <path d="M41.6 13.9 V6.2 Q41.6 3.3 43 3.3 Q44.4 3.3 44.4 6.2 V13.3" fill="none" stroke="url(#dcSteel)" stroke-width="1.7" stroke-linecap="round"/>
+              <text x="30" y="17.55" text-anchor="middle" class="dc-label">DAY</text>
+              <ellipse cx="17" cy="13.5" rx="1.9" ry="1.2" fill="#1e0a40"/><ellipse cx="43" cy="13.5" rx="1.9" ry="1.2" fill="#1e0a40"/>
+              <ellipse cx="17.5" cy="14.4" rx="1.9" ry=".55" fill="#1e0a40" opacity=".45" filter="url(#dcSoft)"/><ellipse cx="43.5" cy="14.4" rx="1.9" ry=".55" fill="#1e0a40" opacity=".45" filter="url(#dcSoft)"/>
+              <path d="M15.6 13.7 V6.2 Q15.6 3.3 17 3.3 Q18.4 3.3 18.4 6.2 V13.1" fill="none" stroke="url(#dcRose)" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M41.6 13.7 V6.2 Q41.6 3.3 43 3.3 Q44.4 3.3 44.4 6.2 V13.1" fill="none" stroke="url(#dcRose)" stroke-width="1.7" stroke-linecap="round"/>
               <g class="dc-page">
-                <text x="30" y="45.3" text-anchor="middle" class="dc-num dc-press" font-size="22" id="dayShade">1</text>
+                <text x="30" y="45.4" text-anchor="middle" class="dc-num dc-press" font-size="22" id="dayShade">1</text>
                 <text id="day" x="30" y="45" text-anchor="middle" class="dc-num" font-size="22">1</text>
               </g>
-              <line x1="24" y1="48.2" x2="36" y2="48.2" stroke="#8a7658" stroke-width=".3"/>
-              <circle cx="49" cy="30" r="1.6" fill="#f3e6c6" stroke="#8a7658" stroke-width=".25"/>
-              <circle id="dcMoonShade" cx="49" cy="30" r="1.65" fill="#6d5c48" opacity=".75" clip-path="url(#dcMoonClip)"/>
-              <g clip-path="url(#dcUnder)"><rect x="44" y="43" width="11" height="11" fill="#f2ebdd"/><rect x="44" y="43" width="11" height="11" fill="#fff" filter="url(#dcGrain)"/><text id="dayNext" x="51.8" y="53.2" text-anchor="middle" class="dc-next">2</text></g>
-              <path d="M54.5 44 L45.5 53 L44.8 53.8 Q49.5 50.5 55.3 45 Z" fill="#2a1a10" opacity=".3" filter="url(#dcSoft)"/>
-              <path d="M54.5 44 L45.5 53 V48.2 Q45.5 44 49.7 44 Z" fill="url(#dcCurl)" stroke="#9c8c70" stroke-width=".35" stroke-linejoin="round"/>
+              <rect x="22" y="48.1" width="16" height=".35" fill="url(#dcGold)"/>
+              <g clip-path="url(#dcUnder)"><rect x="44" y="43" width="11" height="11" fill="#eee6fb"/><text id="dayNext" x="51.8" y="53.2" text-anchor="middle" class="dc-next">2</text></g>
+              <path d="M54.5 44 L45.5 53 L44.8 53.8 Q49.5 50.5 55.3 45 Z" fill="#3b1d78" opacity=".28" filter="url(#dcSoft)"/>
+              <path d="M54.5 44 L45.5 53 V48.2 Q45.5 44 49.7 44 Z" fill="url(#dcCurl)" stroke="#9f86cf" stroke-width=".35" stroke-linejoin="round"/>
             </svg>
           </div>
           <div class="mana-wrap">

@@ -62,8 +62,6 @@
     var size = day >= 100 ? 16 : 22;
     [dayEl, $('dayShade')].forEach(function (el) { el.textContent = day; el.setAttribute('font-size', size); });
     $('dayNext').textContent = day + 1;
-    var MOON = [0, 1.05, 1.9, 2.75, 99, -2.75, -1.9, -1.05];
-    $('dcMoonShade').setAttribute('cx', 49 + MOON[(day - 1) % 8]);
   }
 
   // Sky colour
