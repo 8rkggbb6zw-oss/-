@@ -37,6 +37,12 @@
   scene.add(hemi);
   var sun = new THREE.DirectionalLight('#ffeccc', 1.6);
   sun.position.set(-40, 70, 30);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = sun.shadow.camera.bottom = -45;
+  sun.shadow.camera.right = sun.shadow.camera.top = 45;
+  sun.shadow.camera.near = 20; sun.shadow.camera.far = 170;
+  sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.04;
   scene.add(sun);
   scene.fog = new THREE.Fog('#9fd8ff', 120, 260);
 
@@ -176,13 +182,15 @@
     for (var k2 = 0; k2 < bp2.count; k2++) {
       var dz2 = (5 - bp2.getZ(k2)) / 5, cr = vnoise(bp2.getX(k2) * 0.8, bp2.getY(k2) * 0.8 + bp2.getZ(k2));
       var lv = (1.25 - dz2 * 0.45) * (0.8 + cr * 0.3);
-      bc2[k2 * 3] = lv; bc2[k2 * 3 + 1] = lv * 0.96; bc2[k2 * 3 + 2] = lv * 0.92;
+      var moss = Math.max(0, 1 - dz2 * 4.5) * Math.max(0, cr - 0.35) * 1.8;
+      bc2[k2 * 3] = lv * (1 - moss * 0.45); bc2[k2 * 3 + 1] = lv * (0.96 + moss * 0.25); bc2[k2 * 3 + 2] = lv * (0.92 - moss * 0.4);
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
-    var side = soilTexture(); side.repeat.set(0.06, 1 / 5); side.offset.set(0, 0);
-    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, roughness: 1, vertexColors: true })]);
+    var side = soilTexture(); side.repeat.set(0.2, 1 / 5); side.offset.set(0, 0);
+    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.12, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
+    bodyMesh.receiveShadow = true;
     scene.add(bodyMesh);
 
     // Gently rolling grass ground, shaded in large natural patches
@@ -222,7 +230,7 @@
         'transformed.x += sway * position.y * position.y * 0.28;\n' +
         'transformed.z += sway * position.y * position.y * 0.12;');
     };
-    var COUNT = 110000, FRINGE = 9000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
+    var COUNT = 110000, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3(), tint = new THREE.Color(), placed = 0;
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
@@ -242,9 +250,11 @@
       var fx = rp.x - rp.nx * inset, fz = rp.z - rp.nz * inset;
       qy.setFromAxisAngle(up, r() * Math.PI * 2);
       axis.set(rp.nz, 0, -rp.nx).normalize();
-      qt.setFromAxisAngle(axis, 0.5 + r() * 1.0 + (0.5 - inset) * 0.6);
+      var hang = f > 9000;
+      if (hang) { fx = rp.x + rp.nx * 0.08; fz = rp.z + rp.nz * 0.08; }
+      qt.setFromAxisAngle(axis, hang ? 1.7 + r() * 0.9 : 0.5 + r() * 1.0 + (0.5 - inset) * 0.6);
       q.copy(qt).multiply(qy);
-      p.set(fx, groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, 0.45 + r() * 0.8, 1);
+      p.set(fx, hang ? 0.05 : groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, hang ? 0.5 + r() * r() * 1.6 : 0.45 + r() * 0.8, 1);
       m.compose(p, q, sc); grass.setMatrixAt(COUNT + f, m);
       grassColour(fx, fz, tint).multiplyScalar(1.7 + (r() - 0.5) * 0.7);
       if (r() < 0.12) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
@@ -270,6 +280,7 @@
       m.compose(rpv, rq, rs); rocks.setMatrixAt(n2, m);
       rc.setHSL(0.07 + rr() * 0.04, 0.12 + rr() * 0.1, 0.13 + rr() * 0.1); rocks.setColorAt(n2, rc);
     }
+    rocks.castShadow = true; rocks.receiveShadow = true;
     scene.add(rocks);
 
     // Roots hanging from under the grass
