@@ -54,12 +54,14 @@
   function clockText(m) {
     var h = Math.floor(m / 60) % 24, mm = Math.floor(m % 60 / 10) * 10;
     var am = h < 12, h12 = h % 12 === 0 ? 12 : h % 12;
-    return h12 + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (am ? 'A·M' : 'P·M');
+    return h12 + ':' + (mm < 10 ? '0' : '') + mm + '<small>' + (am ? 'A·M' : 'P·M') + '</small>';
   }
   function showTime() {
-    clockEl.textContent = clockText(minutes);
-    var h = Math.floor(minutes / 60) % 24;
-    $('timeStat').classList.toggle('night', h < 6 || h >= 19);
+    clockEl.innerHTML = clockText(minutes);
+    var h = minutes / 60 % 24, stat = $('timeStat');
+    var part = h >= 5 && h < 7.5 ? 'dawn' : h >= 7.5 && h < 17.5 ? 'day' : h >= 17.5 && h < 20 ? 'dusk' : 'night';
+    ['dawn', 'day', 'dusk', 'night'].forEach(function (p) { stat.classList.toggle(p, p === part); });
+    $('timeMark').style.left = Math.min(100, (minutes - 360) / 1200 * 100) + '%';
     var size = day >= 100 ? 16 : 22;
     [dayEl, $('dayShade')].forEach(function (el) { el.textContent = day; el.setAttribute('font-size', size); });
     $('dayNext').textContent = day + 1;
