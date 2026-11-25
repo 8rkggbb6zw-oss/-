@@ -110,8 +110,16 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
   pointer-events: none;
 }
 .stat > * { position: relative; }
-.cal-icon { width: 1.45em; height: 1.45em; margin: -3px 0 -2px -3px; filter: drop-shadow(0 1px 1px rgba(80, 40, 150, 0.3)); }
-#day { color: #5a35b0; }
+.day-cal { width: 66px; height: 66px; margin: -14px -2px; flex: none; filter: drop-shadow(0 2px 3px rgba(40, 25, 15, 0.22)); }
+.day-cal svg { width: 100%; height: 100%; overflow: visible; }
+.dc-label { font-family: 'Cinzel', serif; font-weight: 700; font-size: 6px; letter-spacing: 2.2px; fill: url(#dcFoil); }
+.dc-deboss { fill: #12040f; opacity: .7; }
+.dc-num { font-family: 'Cinzel', serif; font-weight: 700; fill: #2b1d2e; }
+.dc-press { fill: #fff; opacity: .85; }
+.dc-next { font-family: 'Cinzel', serif; font-weight: 700; font-size: 6px; fill: #b3a68e; }
+.dc-page { transform-box: view-box; transform-origin: 30px 24px; }
+.day-cal.flip .dc-page { animation: dayFlip .7s ease-out; }
+@keyframes dayFlip { 0% { transform: rotateX(80deg); opacity: 0; } 60% { transform: rotateX(-10deg); opacity: 1; } 100% { transform: rotateX(0); } }
 
 .mana {
   position: relative;
