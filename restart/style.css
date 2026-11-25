@@ -77,20 +77,41 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
 
 .stats { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; }
 
+/* Time and day */
 .stat {
-  background: rgba(255, 255, 255, 0.75);
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(120, 80, 190, 0.18);
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  line-height: 1.15;
+  gap: 7px;
+  padding: 6px 15px;
   border-radius: 14px;
+  font-weight: 600;
+  color: #4a2f7a;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
+  text-shadow: 0 1px 0 #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(250, 245, 255, 0.92) 55%, rgba(240, 230, 255, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(150, 110, 220, 0.28),
+    0 2px 3px rgba(90, 50, 160, 0.14),
+    0 8px 16px -6px rgba(90, 50, 160, 0.38),
+    inset 0 1px 0 #fff,
+    inset 0 -3px 6px rgba(170, 130, 230, 0.16);
 }
-#day { font-size: 0.82em; opacity: 0.8; }
+.stat::before {
+  content: '';
+  position: absolute;
+  left: 6px; right: 6px; top: 2px;
+  height: 45%;
+  border-radius: 11px 11px 40% 40% / 11px 11px 8px 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+.stat > * { position: relative; }
+.cal-icon { width: 1.45em; height: 1.45em; margin: -3px 0 -2px -3px; filter: drop-shadow(0 1px 1px rgba(80, 40, 150, 0.3)); }
+#day { color: #5a35b0; }
 
 .mana {
   position: relative;

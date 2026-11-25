@@ -59,7 +59,7 @@
   }
   function showTime() {
     clockEl.textContent = clockText(minutes);
-    dayEl.textContent = 'Day ' + day;
+    dayEl.textContent = 'Day: ' + day;
   }
 
   // Sky colour
