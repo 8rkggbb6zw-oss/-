@@ -172,8 +172,15 @@
       bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
     }
     body.computeVertexNormals();
+    var bc2 = new Float32Array(bp2.count * 3);
+    for (var k2 = 0; k2 < bp2.count; k2++) {
+      var dz2 = (5 - bp2.getZ(k2)) / 5, cr = vnoise(bp2.getX(k2) * 0.8, bp2.getY(k2) * 0.8 + bp2.getZ(k2));
+      var lv = (1 - dz2 * 0.55) * (0.75 + cr * 0.35);
+      bc2[k2 * 3] = lv; bc2[k2 * 3 + 1] = lv * 0.96; bc2[k2 * 3 + 2] = lv * 0.92;
+    }
+    body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
     var side = soilTexture(); side.repeat.set(0.06, 1 / 5); side.offset.set(0, 0);
-    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, roughness: 1 })]);
+    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
     scene.add(bodyMesh);
@@ -245,6 +252,41 @@
     }
     grass.instanceMatrix.needsUpdate = true;
     scene.add(grass);
+
+    // Stones poking out of the earth edge
+    var rockGeo = new THREE.IcosahedronGeometry(1, 1), rpz = rockGeo.attributes.position;
+    for (var v = 0; v < rpz.count; v++) {
+      var vx3 = rpz.getX(v), vy3 = rpz.getY(v), vz3 = rpz.getZ(v), f3 = 0.75 + vnoise(vx3 * 2 + 5, vy3 * 2 + vz3 * 2) * 0.5;
+      rpz.setXYZ(v, vx3 * f3, vy3 * f3 * 0.8, vz3 * f3);
+    }
+    rockGeo.computeVertexNormals();
+    var ROCKS = 170, rocks = new THREE.InstancedMesh(rockGeo, new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true }), ROCKS);
+    var rr = rand(41), rq = new THREE.Quaternion(), re = new THREE.Euler(), rs = new THREE.Vector3(), rpv = new THREE.Vector3(), rc = new THREE.Color();
+    for (var n2 = 0; n2 < ROCKS; n2++) {
+      var rim = rimPoint(rr(), w, R), dep = 0.6 + rr() * 3.8, dn = dep / 5, out = -dn * dn * 0.7 + 0.15;
+      rpv.set(rim.x + rim.nx * out, -dep, rim.z + rim.nz * out);
+      re.set(rr() * 6.3, rr() * 6.3, rr() * 6.3); rq.setFromEuler(re);
+      var big = 0.18 + rr() * rr() * 0.6; rs.set(big * (0.8 + rr() * 0.6), big * (0.6 + rr() * 0.5), big * (0.8 + rr() * 0.6));
+      m.compose(rpv, rq, rs); rocks.setMatrixAt(n2, m);
+      rc.setHSL(0.07 + rr() * 0.05, 0.08 + rr() * 0.1, 0.3 + rr() * 0.22); rocks.setColorAt(n2, rc);
+    }
+    scene.add(rocks);
+
+    // Roots hanging from under the grass
+    var rootPts = [], rr2 = rand(53);
+    for (var t2 = 0; t2 < 420; t2++) {
+      var rim2 = rimPoint(rr2(), w, R), L2 = 0.4 + rr2() * rr2() * 2.4, x2 = rim2.x + rim2.nx * 0.12, z2 = rim2.z + rim2.nz * 0.12, y2 = -0.05;
+      var wob = (rr2() - 0.5) * 0.3, segs2 = 6;
+      for (var g2 = 0; g2 < segs2; g2++) {
+        var k3 = (g2 + 1) / segs2, dn3 = (k3 * L2) / 5;
+        var nx2 = rim2.x + rim2.nx * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 4 + t2) * 0.06) + rim2.nz * wob * k3;
+        var nz2 = rim2.z + rim2.nz * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 4 + t2) * 0.06) - rim2.nx * wob * k3;
+        var ny2 = -k3 * L2;
+        rootPts.push(x2, y2, z2, nx2, ny2, nz2); x2 = nx2; y2 = ny2; z2 = nz2;
+      }
+    }
+    var rootGeo = new THREE.BufferGeometry(); rootGeo.setAttribute('position', new THREE.Float32BufferAttribute(rootPts, 3));
+    scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#6b5236', transparent: true, opacity: 0.85 })));
   })();
 
   function resize() {
