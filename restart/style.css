@@ -123,7 +123,6 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
 #clock {
   position: relative;
   z-index: 1;
-  margin-top: -2px;
   font-family: 'Cinzel', serif;
   font-size: .98rem;
   font-weight: 700;
@@ -138,23 +137,6 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95));
 }
 #clock small { margin-left: 5px; font-size: .62em; letter-spacing: 1.5px; }
-.time-track {
-  position: absolute;
-  left: 30px; right: 16px; bottom: 4px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201, 162, 78, 0.8) 10%, rgba(201, 162, 78, 0.8) 90%, transparent);
-}
-.time-track b {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 4px; height: 4px;
-  margin: -2px 0 0 -2px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff8dc, #e9b949 60%, #a8741c);
-  box-shadow: 0 0 3px rgba(255, 200, 80, 0.9);
-  transition: left 1s linear;
-}
 .time-icon { position: absolute; left: -20px; top: 50%; width: 44px; height: 44px; transform: translateY(-50%); z-index: 2; filter: drop-shadow(0 2px 2px rgba(30, 10, 60, 0.45)); }
 .ti-sky { opacity: 0; transition: opacity 2s; }
 .time-stat.dawn .ti-sky-dawn, .time-stat.day .ti-sky-day, .time-stat.dusk .ti-sky-dusk, .time-stat.night .ti-sky-night { opacity: 1; }
