@@ -132,34 +132,50 @@
     var dx = Math.max(Math.abs(x) - (w - R), 0), dz = Math.max(Math.abs(z) - (w - R), 0);
     return dx * dx + dz * dz <= R * R;
   }
+  // A point (and its outward direction) at fraction t round the farm's rounded edge
+  function rimPoint(t, w, R) {
+    var s = w - R, L = 8 * s + 2 * Math.PI * R, d = t * L, segs = [];
+    for (var q = 0; q < 4; q++) { segs.push(['l', q]); segs.push(['c', q]); }
+    for (var i = 0; i < segs.length; i++) {
+      var len = segs[i][0] === 'l' ? 2 * s : Math.PI * R / 2;
+      if (d <= len || i === segs.length - 1) {
+        var q = segs[i][1], ang = q * Math.PI / 2, ca = Math.cos(ang), sa = Math.sin(ang), lx, lz, nx, nz;
+        if (segs[i][0] === 'l') { lx = -s + d; lz = -w; nx = 0; nz = -1; }
+        else { var a = -Math.PI / 2 + Math.min(d / R, Math.PI / 2); lx = s + Math.cos(a) * R; lz = -s + Math.sin(a) * R; nx = Math.cos(a); nz = Math.sin(a); }
+        return { x: lx * ca - lz * sa, z: lx * sa + lz * ca, nx: nx * ca - nz * sa, nz: nx * sa + nz * ca };
+      }
+      d -= len;
+    }
+  }
+
   function groundHeight(x, z, w) {
     var edge = Math.min(w - Math.abs(x), w - Math.abs(z));
     var fade = Math.max(0, Math.min(1, edge / 4));
-    return fade * (0.15 + fbm(x * 0.08, z * 0.08) * 0.9 + vnoise(x * 0.5, z * 0.5) * 0.12);
+    return 0.12 + fade * (0.15 + fbm(x * 0.08, z * 0.08) * 0.9) + vnoise(x * 0.5, z * 0.5) * 0.1;
   }
 
   (function buildFarm() {
     var R = 7, w = FARM;
 
     // Soil body with a rounded rim
-    var shape = new THREE.Shape();
-    shape.moveTo(-w + R, -w); shape.lineTo(w - R, -w); shape.quadraticCurveTo(w, -w, w, -w + R);
-    shape.lineTo(w, w - R); shape.quadraticCurveTo(w, w, w - R, w);
-    shape.lineTo(-w + R, w); shape.quadraticCurveTo(-w, w, -w, w - R);
-    shape.lineTo(-w, -w + R); shape.quadraticCurveTo(-w, -w, -w + R, -w);
-    var body = new THREE.ExtrudeGeometry(shape, { depth: 4.5, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.5, bevelSegments: 4, curveSegments: 24 });
+    var outline = [], N = 640;
+    for (var i = 0; i < N; i++) { var pp = rimPoint(i / N, w, R); outline.push(new THREE.Vector2(pp.x, -pp.z)); }
+    var shape = new THREE.Shape(outline);
+    var body = new THREE.ExtrudeGeometry(shape, { depth: 5, steps: 10, bevelEnabled: false });
+    // Crumbly earth edge that leans inward as it goes down
     var bp2 = body.attributes.position;
     for (var k = 0; k < bp2.count; k++) {
-      var vx = bp2.getX(k), vy = bp2.getY(k), vz = bp2.getZ(k);
-      if (Math.max(Math.abs(vx), Math.abs(vy)) < w - 1.2) continue;
-      var j = (fbm(vx * 0.35 + vz * 0.2, vy * 0.35 - vz * 0.2) - 0.5) * 0.9 * Math.min(1, (4.6 - vz) / 1.5 + 0.3);
-      var len = Math.hypot(vx, vy); bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
+      var vx = bp2.getX(k), vy = bp2.getY(k), vz = bp2.getZ(k), down = (5 - vz) / 5;
+      var len = Math.hypot(vx, vy); if (len < w * 0.5) continue;
+      var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 - down * down * 2.2;
+      if (vz > 4.99) j = (vnoise(vx * 0.9, vy * 0.9) - 0.5) * 0.35;
+      bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
     }
     body.computeVertexNormals();
-    var side = soilTexture(); side.repeat.set(0.06, 1 / 5.6); side.offset.set(0, 0.1);
+    var side = soilTexture(); side.repeat.set(0.06, 1 / 5); side.offset.set(0, 0);
     var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, roughness: 1 })]);
     bodyMesh.rotation.x = -Math.PI / 2;
-    bodyMesh.position.y = -5.02;
+    bodyMesh.position.y = -5;
     scene.add(bodyMesh);
 
     // Gently rolling grass ground, shaded in large natural patches
@@ -199,7 +215,7 @@
         'transformed.x += sway * position.y * position.y * 0.28;\n' +
         'transformed.z += sway * position.y * position.y * 0.12;');
     };
-    var COUNT = 110000, grass = new THREE.InstancedMesh(blade, mat, COUNT), r = rand(11);
+    var COUNT = 110000, FRINGE = 9000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3(), tint = new THREE.Color(), placed = 0;
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
@@ -212,6 +228,20 @@
       if (r() < 0.06) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
       grass.setColorAt(placed, tint);
       placed++;
+    }
+    var axis = new THREE.Vector3(), qt = new THREE.Quaternion(), qy = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    for (var f = 0; f < FRINGE; f++) {
+      var rp = rimPoint(r(), w, R), inset = r() * 0.5;
+      var fx = rp.x - rp.nx * inset, fz = rp.z - rp.nz * inset;
+      qy.setFromAxisAngle(up, r() * Math.PI * 2);
+      axis.set(rp.nz, 0, -rp.nx).normalize();
+      qt.setFromAxisAngle(axis, 0.5 + r() * 1.0 + (0.5 - inset) * 0.6);
+      q.copy(qt).multiply(qy);
+      p.set(fx, groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, 0.45 + r() * 0.8, 1);
+      m.compose(p, q, sc); grass.setMatrixAt(COUNT + f, m);
+      grassColour(fx, fz, tint).multiplyScalar(1.7 + (r() - 0.5) * 0.7);
+      if (r() < 0.12) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
+      grass.setColorAt(COUNT + f, tint);
     }
     grass.instanceMatrix.needsUpdate = true;
     scene.add(grass);
