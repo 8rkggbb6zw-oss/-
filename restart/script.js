@@ -1,10 +1,8 @@
-// Everdawn (the restart): the base of the game, with nothing in the world yet.
-// It sets up the 3D view, the clock and the days, mana, the hotbar, the buttons and keys, little messages and full
-// screen. The island, your character and everything else get added on top of this later.
+// Everdawn: the base of the game
 (function () {
   'use strict';
 
-  // ---------- Finding things on the page ----------
+  // Page elements
   var $ = function (id) { return document.getElementById(id); };
   var canvas = $('game');
   var clockEl = $('clock'), dayEl = $('day');
@@ -12,13 +10,13 @@
   var toastEl = $('toast');
   var hotbarEl = $('hotbarSlots');
 
-  if (typeof THREE === 'undefined') {                                   // three.js didn't load (no internet?)
+  if (typeof THREE === 'undefined') {
     toastEl.textContent = 'The 3D engine could not load. Check your connection and run the pen again.';
     toastEl.classList.add('show');
     return;
   }
 
-  // ---------- The 3D view: an empty sky for now ----------
+  // 3D view
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -30,7 +28,7 @@
   camera.position.set(0, 12, 18);
   camera.lookAt(0, 0, 0);
 
-  function resize() {                                                   // keep the picture sharp at any size
+  function resize() {
     var w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
@@ -39,7 +37,7 @@
   }
   window.addEventListener('resize', resize);
 
-  // ---------- Little messages along the bottom of the game ----------
+  // Messages
   var toastTimer = 0;
   function toast(text, seconds) {
     toastEl.textContent = text;
@@ -48,15 +46,15 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, (seconds || 2.4) * 1000);
   }
 
-  // ---------- Time: the day starts at 6:00 AM, and at 2:00 AM you fall asleep ----------
-  var MINUTES_PER_SECOND = 1.4;                                         // a whole day takes about 14 real minutes
+  // Time
+  var MINUTES_PER_SECOND = 1.4;
   var day = 1;
-  var minutes = 6 * 60;                                                 // minutes since midnight
+  var minutes = 6 * 60;
 
   function clockText(m) {
-    var h = Math.floor(m / 60) % 24, mm = Math.floor(m % 60 / 10) * 10; // the clock moves in steps of 10 minutes
+    var h = Math.floor(m / 60) % 24, mm = Math.floor(m % 60 / 10) * 10;
     var am = h < 12, h12 = h % 12 === 0 ? 12 : h % 12;
-    var icon = (h >= 6 && h < 19) ? '☼' : '☾';                // sun by day, moon by night
+    var icon = (h >= 6 && h < 19) ? '☼' : '☾';
     return icon + ' ' + h12 + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (am ? 'A·M' : 'P·M');
   }
   function showTime() {
@@ -64,7 +62,7 @@
     dayEl.textContent = 'Day ' + day;
   }
 
-  // the sky's colour through the day: night, dawn, day, dusk
+  // Sky colour
   var SKY = [
     [0, '#1a1840'], [5, '#2a2660'], [6, '#f6b8a8'], [8, '#9fd8ff'],
     [17, '#9fd8ff'], [19, '#f4a6a0'], [20.5, '#3a2f70'], [24, '#1a1840']
@@ -91,7 +89,7 @@
     toast(fainted ? 'You were so tired you fell asleep. Good morning!' : 'Good morning! Day ' + day + '.', 3.2);
   }
 
-  // ---------- Mana ----------
+  // Mana
   var MANA_MAX = 100;
   var mana = MANA_MAX;
   function showMana() {
@@ -99,7 +97,7 @@
     manaNumEl.textContent = Math.round(mana) + ' / ' + MANA_MAX;
   }
 
-  // ---------- Hotbar: four empty slots for now ----------
+  // Hotbar
   var HOTBAR_SIZE = 4;
   var selected = 0;
   function buildHotbar() {
@@ -119,7 +117,7 @@
     for (var i = 0; i < slots.length; i++) slots[i].classList.toggle('selected', i === n);
   }
 
-  // ---------- What the buttons and keys do (for now) ----------
+  // Buttons and keys
   function interact() { toast('Nothing here yet.'); }
   function castSpell() {
     if (mana < 20) { toast('Not enough mana.'); return; }
@@ -139,7 +137,7 @@
     } catch (e) {}
     setTimeout(resize, 60);
   }
-  document.addEventListener('fullscreenchange', function () {      // leaving full screen with the system's own button
+  document.addEventListener('fullscreenchange', function () {
     if (!document.fullscreenElement) document.body.classList.remove('full');
     setTimeout(resize, 60);
   });
@@ -159,15 +157,15 @@
     else if (/^Digit[1-4]$/.test(k)) selectSlot(+k.slice(5) - 1);
   });
 
-  // ---------- The game loop ----------
+  // Game loop
   var last = performance.now();
   function frame(now) {
-    var dt = Math.min((now - last) / 1000, 0.1);                       // seconds since the last frame (capped)
+    var dt = Math.min((now - last) / 1000, 0.1);
     last = now;
 
     var before = Math.floor(minutes / 10);
     minutes += dt * MINUTES_PER_SECOND;
-    if (minutes >= 26 * 60) newDay(true);                               // 2:00 AM: you fall asleep where you stand
+    if (minutes >= 26 * 60) newDay(true);
     else if (Math.floor(minutes / 10) !== before) showTime();
 
     scene.background.copy(skyColour(minutes));

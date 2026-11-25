@@ -33,9 +33,7 @@ h1 {
   text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255, 190, 240, 0.9);
 }
 
-/* The name: carved in polished amethyst metal, in an engraved serif. A real metal gradient (bright top, a dark
-   horizon line through the middle, a lighter reflection underneath), a thin edge of thickness below, a soft cast
-   shadow, and a slow highlight that glides across it like light on metal */
+/* The title design */
 .title {
   position: relative;
   display: inline-block;
