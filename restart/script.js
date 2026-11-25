@@ -167,7 +167,7 @@
     for (var k = 0; k < bp2.count; k++) {
       var vx = bp2.getX(k), vy = bp2.getY(k), vz = bp2.getZ(k), down = (5 - vz) / 5;
       var len = Math.hypot(vx, vy); if (len < w * 0.5) continue;
-      var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 - down * down * 2.2;
+      var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 - down * down * 0.7;
       if (vz > 4.99) j = (vnoise(vx * 0.9, vy * 0.9) - 0.5) * 0.35;
       bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
     }
