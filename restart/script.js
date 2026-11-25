@@ -175,7 +175,7 @@
     var bc2 = new Float32Array(bp2.count * 3);
     for (var k2 = 0; k2 < bp2.count; k2++) {
       var dz2 = (5 - bp2.getZ(k2)) / 5, cr = vnoise(bp2.getX(k2) * 0.8, bp2.getY(k2) * 0.8 + bp2.getZ(k2));
-      var lv = (1 - dz2 * 0.55) * (0.75 + cr * 0.35);
+      var lv = (1.25 - dz2 * 0.45) * (0.8 + cr * 0.3);
       bc2[k2 * 3] = lv; bc2[k2 * 3 + 1] = lv * 0.96; bc2[k2 * 3 + 2] = lv * 0.92;
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
@@ -268,7 +268,7 @@
       re.set(rr() * 6.3, rr() * 6.3, rr() * 6.3); rq.setFromEuler(re);
       var big = 0.18 + rr() * rr() * 0.6; rs.set(big * (0.8 + rr() * 0.6), big * (0.6 + rr() * 0.5), big * (0.8 + rr() * 0.6));
       m.compose(rpv, rq, rs); rocks.setMatrixAt(n2, m);
-      rc.setHSL(0.07 + rr() * 0.05, 0.08 + rr() * 0.1, 0.3 + rr() * 0.22); rocks.setColorAt(n2, rc);
+      rc.setHSL(0.07 + rr() * 0.04, 0.12 + rr() * 0.1, 0.13 + rr() * 0.1); rocks.setColorAt(n2, rc);
     }
     scene.add(rocks);
 
@@ -286,7 +286,7 @@
       }
     }
     var rootGeo = new THREE.BufferGeometry(); rootGeo.setAttribute('position', new THREE.Float32BufferAttribute(rootPts, 3));
-    scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#6b5236', transparent: true, opacity: 0.85 })));
+    scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#8a6a44' })));
   })();
 
   function resize() {
