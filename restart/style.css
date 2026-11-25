@@ -313,62 +313,80 @@ kbd {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 10px 9px 12px;
-  border-radius: 999px;
-  color: #3a1a78;
-  background: linear-gradient(180deg, #ffffff 0%, #ddd1ee 22%, #8a77a8 50%, #5e4a7e 56%, #b9a9d2 80%, #efe8f8 100%);
-  box-shadow: 0 0 0 .5px rgba(50, 30, 80, 0.55), 0 3px 4px rgba(30, 15, 60, 0.3), 0 9px 16px -7px rgba(30, 15, 60, 0.55);
-  transition: transform .1s, box-shadow .1s, filter .2s;
+  gap: 9px;
+  padding: 10px 10px 10px 13px;
+  border-radius: 14px;
+  color: #3d2477;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0 .5px, rgba(40, 20, 70, 0.025) .5px 1.5px),
+    linear-gradient(180deg, #f6f3fa 0%, #d7cde6 34%, #a596bd 50%, #8d7eaa 54%, #bdb2d2 74%, #ebe6f3 100%);
+  box-shadow:
+    0 0 0 .5px rgba(45, 25, 75, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 2px rgba(30, 15, 60, 0.28),
+    0 8px 14px -6px rgba(30, 15, 60, 0.5);
+  transition: transform .08s, box-shadow .08s;
 }
 .controls button::before {
   content: '';
   position: absolute;
-  inset: 3px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #e3d8f4 0%, #faf7fe 32%, #f4effb 68%, #d9cbef 100%);
-  box-shadow: inset 0 0 0 .5px rgba(40, 20, 80, 0.5), inset 0 2px 3px rgba(30, 10, 70, 0.28), inset 0 -2px 3px rgba(150, 110, 220, 0.18);
+  inset: 3.5px;
+  border-radius: 11px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .35  0 0 0 0 .25  0 0 0 0 .55  0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url%28%23n%29'/%3E%3C/svg%3E"), linear-gradient(180deg, #ebe4f5 0%, #f8f5fc 38%, #f3eef9 70%, #e4dbf1 100%);
+  box-shadow:
+    inset 0 0 0 .5px rgba(40, 20, 80, 0.55),
+    inset 0 2px 2px rgba(30, 10, 70, 0.32),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -4px 6px rgba(140, 105, 200, 0.12);
 }
 .controls button::after {
   content: '';
   position: absolute;
-  left: 12px; right: 12px; top: 4px;
-  height: 36%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0));
+  left: 10px; right: 10px; top: 5px;
+  height: 30%;
+  border-radius: 8px 8px 50% 50% / 8px 8px 6px 6px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
   pointer-events: none;
 }
 .controls button > * { position: relative; z-index: 1; }
 .controls button > span {
   font-family: 'Cinzel', serif;
-  font-size: .82rem;
+  font-size: .8rem;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   white-space: nowrap;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95), 0 -.5px 0 rgba(40, 20, 80, 0.3);
 }
-.ctl-ico { width: 22px; height: 22px; flex: none; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9)) drop-shadow(0 0 3px rgba(170, 120, 240, 0.35)); }
+.ctl-ico { width: 22px; height: 22px; flex: none; filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95)) drop-shadow(0 -.5px 0 rgba(40, 20, 80, 0.35)); }
 .controls kbd {
   display: inline-grid;
   place-items: center;
-  min-width: 22px;
-  height: 22px;
-  margin: 0;
+  min-width: 23px;
+  height: 21px;
+  margin: 0 0 3px 2px;
   padding: 0 5px;
-  border-radius: 6px;
+  border-radius: 5px;
   font-family: 'Cinzel', serif;
-  font-size: .68rem;
+  font-size: .66rem;
   font-weight: 700;
-  color: #4a2a8a;
-  background: linear-gradient(180deg, #ffffff 0%, #f1ecf8 45%, #d6cbe6 100%);
-  box-shadow: inset 0 0 0 .5px rgba(60, 40, 100, 0.45), inset 0 -2px 0 rgba(110, 85, 160, 0.35), inset 0 1px 0 #fff, 0 1px 0 rgba(60, 40, 100, 0.55), 0 2px 3px rgba(30, 15, 60, 0.3);
+  color: #3d2477;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: radial-gradient(ellipse 80% 70% at 50% 40%, #ffffff 0%, #f3eff8 55%, #ddd5ea 100%);
+  box-shadow:
+    inset 0 0 0 .5px rgba(60, 40, 100, 0.5),
+    inset 0 1px 0 #fff,
+    0 1px 0 #c3b8d6,
+    0 2px 0 #a597bf,
+    0 3px 0 #8a7ba7,
+    0 3.5px 0 rgba(45, 25, 75, 0.6),
+    0 5px 5px rgba(30, 15, 60, 0.35);
+  transition: transform .08s, box-shadow .08s;
 }
-.controls button:hover { filter: brightness(1.03); }
-.controls button:active { transform: translateY(1px) scale(.985); box-shadow: 0 0 0 .5px rgba(50, 30, 80, 0.55), 0 1px 2px rgba(30, 15, 60, 0.35); }
-.controls button:active::before { background: linear-gradient(180deg, #d9cbef, #f1ebfa 40%, #e9e0f8); box-shadow: inset 0 0 0 .5px rgba(40, 20, 80, 0.5), inset 0 3px 5px rgba(30, 10, 70, 0.35); }
-.controls button:active kbd { box-shadow: inset 0 0 0 .5px rgba(60, 40, 100, 0.45), inset 0 1px 2px rgba(60, 40, 100, 0.35); transform: translateY(1px); }
-body.full .controls button { padding: 7px 9px 7px 10px; }
-body.full .controls button > span { font-size: .74rem; }
+.controls button:active { transform: translateY(1px); box-shadow: 0 0 0 .5px rgba(45, 25, 75, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 1px rgba(30, 15, 60, 0.35); }
+.controls button:active::before { box-shadow: inset 0 0 0 .5px rgba(40, 20, 80, 0.55), inset 0 3px 5px rgba(30, 10, 70, 0.38), inset 0 -1px 0 rgba(255, 255, 255, 0.9); }
+.controls button:active kbd { transform: translateY(2.5px); box-shadow: inset 0 0 0 .5px rgba(60, 40, 100, 0.5), inset 0 1px 0 #fff, 0 1px 0 #a597bf, 0 1.5px 1px rgba(30, 15, 60, 0.35); }
+body.full .controls button { padding: 7px 8px 7px 10px; }
+body.full .controls button > span { font-size: .72rem; }
 
 .help { text-align: center; font-size: .9rem; line-height: 1.5; opacity: .85; margin: 10px 8px 0; }
 
