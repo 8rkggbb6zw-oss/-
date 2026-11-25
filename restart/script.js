@@ -24,9 +24,98 @@
   var scene = new THREE.Scene();
   scene.background = new THREE.Color('#9fd8ff');
 
-  var camera = new THREE.PerspectiveCamera(50, 3 / 2, 0.1, 2000);
-  camera.position.set(0, 12, 18);
-  camera.lookAt(0, 0, 0);
+  var camera = new THREE.PerspectiveCamera(45, 3 / 2, 0.1, 2000);
+  camera.position.set(0, 50, 66);
+  camera.lookAt(0, -3, 0);
+
+  // Light
+  var hemi = new THREE.HemisphereLight('#dff1ff', '#5a6b3a', 0.75);
+  scene.add(hemi);
+  var sun = new THREE.DirectionalLight('#fff4e0', 0.95);
+  sun.position.set(-40, 70, 30);
+  scene.add(sun);
+  scene.fog = new THREE.Fog('#9fd8ff', 120, 260);
+
+  // The farm: a grassy square with softly rounded corners
+  var FARM = 34;
+  function rand(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+  function grassTexture() {
+    var S = 2048, c = document.createElement('canvas'); c.width = c.height = S;
+    var g = c.getContext('2d'), r = rand(7);
+    g.fillStyle = '#5f8f3e'; g.fillRect(0, 0, S, S);
+    for (var i = 0; i < 260; i++) {
+      var x = r() * S, y = r() * S, rad = 60 + r() * 220;
+      var tone = ['rgba(120,165,70,', 'rgba(70,115,45,', 'rgba(140,170,80,', 'rgba(85,130,55,'][i % 4];
+      var grd = g.createRadialGradient(x, y, 0, x, y, rad);
+      grd.addColorStop(0, tone + (0.25 + r() * 0.2) + ')'); grd.addColorStop(1, tone + '0)');
+      g.fillStyle = grd; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    var shades = ['#4f7f32', '#679a42', '#7aac4e', '#5a8a38', '#8bbb5a', '#466f2c', '#9cc767'];
+    g.lineCap = 'round';
+    for (var j = 0; j < 90000; j++) {
+      var bx = r() * S, by = r() * S, len = 3 + r() * 7, lean = (r() - 0.5) * 4;
+      g.strokeStyle = shades[(r() * shades.length) | 0];
+      g.globalAlpha = 0.35 + r() * 0.5;
+      g.lineWidth = 0.8 + r() * 1.1;
+      g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + lean, by - len); g.stroke();
+    }
+    g.globalAlpha = 1;
+    for (var k = 0; k < 1400; k++) {
+      g.fillStyle = r() < 0.5 ? 'rgba(40,60,25,.25)' : 'rgba(200,220,140,.18)';
+      g.beginPath(); g.arc(r() * S, r() * S, 0.8 + r() * 1.6, 0, 6.3); g.fill();
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return t;
+  }
+
+  function soilTexture() {
+    var W = 1024, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d'), r = rand(3);
+    var grd = g.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#4c6b2c'); grd.addColorStop(0.12, '#6b4a2e'); grd.addColorStop(0.5, '#5a3d26'); grd.addColorStop(1, '#3c2818');
+    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    for (var i = 0; i < 9000; i++) {
+      g.fillStyle = ['rgba(30,18,10,.35)', 'rgba(120,90,60,.3)', 'rgba(90,65,40,.35)'][i % 3];
+      g.fillRect(r() * W, 30 + r() * (H - 30), 1 + r() * 3, 1 + r() * 2);
+    }
+    for (var k = 0; k < 70; k++) {
+      var x = r() * W, y = 50 + r() * (H - 60), rw = 4 + r() * 10, rh = 3 + r() * 6;
+      g.fillStyle = 'rgba(140,128,118,.85)'; g.beginPath(); g.ellipse(x, y, rw, rh, 0, 0, 6.3); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(x - rw * .25, y - rh * .3, rw * .5, rh * .35, 0, 0, 6.3); g.fill();
+    }
+    for (var j = 0; j < 160; j++) {
+      g.strokeStyle = 'rgba(80,110,50,.8)'; g.lineWidth = 1.2;
+      var rx = r() * W; g.beginPath(); g.moveTo(rx, 26); g.quadraticCurveTo(rx + (r() - .5) * 10, 34, rx + (r() - .5) * 6, 30 + r() * 26); g.stroke();
+    }
+    var t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    t.wrapS = THREE.RepeatWrapping;
+    return t;
+  }
+
+  (function buildFarm() {
+    var R = 7, w = FARM, shape = new THREE.Shape();
+    shape.moveTo(-w + R, -w); shape.lineTo(w - R, -w); shape.quadraticCurveTo(w, -w, w, -w + R);
+    shape.lineTo(w, w - R); shape.quadraticCurveTo(w, w, w - R, w);
+    shape.lineTo(-w + R, w); shape.quadraticCurveTo(-w, w, -w, w - R);
+    shape.lineTo(-w, -w + R); shape.quadraticCurveTo(-w, -w, -w + R, -w);
+    var geo = new THREE.ExtrudeGeometry(shape, { depth: 4, bevelEnabled: true, bevelThickness: 0.6, bevelSize: 0.6, bevelSegments: 4, curveSegments: 24 });
+    var top = grassTexture();
+    top.repeat.set(1 / (w * 2), 1 / (w * 2)); top.offset.set(0.5, 0.5);
+    var side = soilTexture();
+    side.repeat.set(0.06, 1 / 5.2); side.offset.set(0, 0.12);
+    var mats = [
+      new THREE.MeshStandardMaterial({ map: top, roughness: 0.95 }),
+      new THREE.MeshStandardMaterial({ map: side, roughness: 1 })
+    ];
+    var farm = new THREE.Mesh(geo, mats);
+    farm.rotation.x = -Math.PI / 2;
+    farm.position.y = -4.6;
+    scene.add(farm);
+  })();
 
   function resize() {
     var w = canvas.clientWidth, h = canvas.clientHeight;
@@ -176,6 +265,7 @@
     else if (Math.floor(minutes / 10) !== before) showTime();
 
     scene.background.copy(skyColour(minutes));
+    scene.fog.color.copy(scene.background);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
