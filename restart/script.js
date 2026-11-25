@@ -104,7 +104,7 @@
   }
 
   // Hotbar
-  var HOTBAR_SIZE = 4;
+  var HOTBAR_SIZE = 6;
   var selected = 0;
   function buildHotbar() {
     hotbarEl.innerHTML = '';
@@ -113,6 +113,7 @@
       b.type = 'button';
       b.className = 'slot empty' + (i === selected ? ' selected' : '');
       b.setAttribute('aria-label', 'Slot ' + (i + 1) + ', empty');
+      b.innerHTML = '<span class="slot-key">' + (i + 1) + '</span>';
       (function (n) { b.addEventListener('click', function () { selectSlot(n); }); })(i);
       hotbarEl.appendChild(b);
     }
@@ -160,7 +161,7 @@
     else if (k === 'KeyQ') castSpell();
     else if (k === 'KeyI') openBag();
     else if (k === 'KeyF') toggleFull();
-    else if (/^Digit[1-4]$/.test(k)) selectSlot(+k.slice(5) - 1);
+    else if (/^Digit[1-6]$/.test(k)) selectSlot(+k.slice(5) - 1);
   });
 
   // Game loop
