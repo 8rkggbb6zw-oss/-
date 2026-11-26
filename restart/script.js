@@ -469,6 +469,360 @@
     scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#5a4430' })));
   })();
 
+  // The Dawn Tree
+  var TREE_X = -24, TREE_Z = -24;
+  var dawn = (function () {
+    var r = rand(4242), tree = new THREE.Group(), baseY = groundHeight(TREE_X, TREE_Z, FARM);
+    tree.position.set(TREE_X, baseY, TREE_Z); tree.rotation.y = 0.4;
+    function localGround(x, z) { var c = Math.cos(0.4), s = Math.sin(0.4); return groundHeight(TREE_X + x * c + z * s, TREE_Z - x * s + z * c, FARM) - baseY; }
+    function paint(w, h, fn, srgb) { var c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return canvasTex(c, srgb); }
+    // Soft round glow, built pixel by pixel (no speckles on iPhone/iPad)
+    function glowTex(stops) {
+      var S = 64, d = new Uint8Array(S * S * 4);
+      for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
+        var t = Math.hypot((x + 0.5) / S - 0.5, (y + 0.5) / S - 0.5) * 2, a = stops[stops.length - 1][1];
+        for (var i = 1; i < stops.length; i++) if (t <= stops[i][0]) { a = stops[i - 1][1] + (stops[i][1] - stops[i - 1][1]) * (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]); break; }
+        var k = (y * S + x) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.round(Math.max(0, Math.min(1, a)) * 255);
+      }
+      var tx = new THREE.DataTexture(d, S, S, THREE.RGBAFormat); tx.magFilter = THREE.LinearFilter; tx.minFilter = THREE.LinearMipmapLinearFilter; tx.generateMipmaps = true; tx.needsUpdate = true; return tx;
+    }
+    var GLOW = glowTex([[0, 1], [0.3, 0.45], [1, 0]]);
+    function glow(col, size, op) {
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color: col, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+      sp.scale.set(size, size, 1); return sp;
+    }
+
+    // Bark: twisting plates split by deep fissures, fine cherry lenticels, a bump map to match
+    var BW = 256, BH = 512, barkR = rand(7);
+    function barkPaint(g, bump) {
+      g.fillStyle = bump ? '#808080' : '#5e3f5f'; g.fillRect(0, 0, BW, BH);
+      function wrapStroke(fn) { for (var ox = -BW; ox <= BW; ox += BW) for (var oy = -BH; oy <= BH; oy += BH) fn(ox, oy); }
+      var rr = rand(7);
+      for (var i = 0; i < 520; i++) {                                  // plates
+        var x = rr() * BW, y = rr() * BH, len = 20 + rr() * 70, wd = 3 + rr() * 9, lt = rr();
+        var col = bump ? 'rgba(' + (140 + lt * 90 | 0) + ',' + (140 + lt * 90 | 0) + ',' + (140 + lt * 90 | 0) + ',.5)'
+          : 'rgba(' + (110 + lt * 60 | 0) + ',' + (74 + lt * 44 | 0) + ',' + (112 + lt * 52 | 0) + ',.45)';
+        g.strokeStyle = col; g.lineWidth = wd; g.lineCap = 'round';
+        wrapStroke(function (ox, oy) { g.beginPath(); g.moveTo(x + ox, y + oy); g.bezierCurveTo(x + ox + 4, y + oy + len * 0.3, x + ox - 4, y + oy + len * 0.7, x + ox + (lt - 0.5) * 6, y + oy + len); g.stroke(); });
+      }
+      for (var f = 0; f < 70; f++) {                                   // fissures
+        var fx = rr() * BW, fy = rr() * BH, fl = 60 + rr() * 200, fw = 1 + rr() * 3.5, j1 = rr() * 6, j2 = rr() * 6;
+        g.strokeStyle = bump ? 'rgba(0,0,0,.9)' : 'rgba(26,12,26,.85)'; g.lineWidth = fw;
+        wrapStroke(function (ox, oy) {
+          g.beginPath();
+          for (var s = 0; s <= 12; s++) { var k = s / 12, px = fx + ox + Math.sin(k * 5 + j1) * 5 + Math.sin(k * 13 + j2) * 1.6, py = fy + oy + k * fl; if (s) g.lineTo(px, py); else g.moveTo(px, py); }
+          g.stroke();
+        });
+        if (!bump) { g.strokeStyle = 'rgba(206,168,206,.18)'; g.lineWidth = 1; wrapStroke(function (ox, oy) { g.beginPath(); g.moveTo(fx + ox + fw + 1, fy + oy); g.lineTo(fx + ox + fw + 1 + Math.sin(j1) * 4, fy + oy + fl); g.stroke(); }); }
+      }
+      for (var l = 0; l < 260; l++) {                                  // lenticels
+        var lx = rr() * BW, ly = rr() * BH, lw = 4 + rr() * 9;
+        g.fillStyle = bump ? 'rgba(40,40,40,.6)' : 'rgba(' + (150 + rr() * 50 | 0) + ',120,140,.35)';
+        g.fillRect(lx, ly, lw, 1 + rr());
+      }
+      if (!bump) for (var m = 0; m < 900; m++) { var v = rr(); g.fillStyle = 'rgba(' + (v < 0.5 ? '20,10,22' : '220,190,220') + ',' + (0.05 + rr() * 0.1) + ')'; g.fillRect(rr() * BW, rr() * BH, 1 + rr() * 2, 1 + rr() * 2); }
+    }
+    var bark = paint(BW, BH, function (g) { barkPaint(g, false); }, true), barkBump = paint(BW, BH, function (g) { barkPaint(g, true); });
+    // Glowing veins winding up the bark, with fine forks
+    var veins = paint(128, 512, function (g, w, h) {
+      g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.lineCap = 'round';
+      for (var i = 0; i < 5; i++) {
+        var x0 = barkR() * w, p1 = barkR() * 6.28, p2 = barkR() * 6.28, jag = [];
+        for (var j = 0; j < h / 8; j++) jag.push((barkR() - 0.5) * 4);
+        var vx = function (y, ox) { var k = y / h * Math.PI * 2, n = ((y / 8) % jag.length + jag.length) % jag.length; return x0 + ox + Math.sin(k + p1) * 10 + Math.sin(k * 3 + p2) * 4 + jag[n]; };
+        [[7, 'rgba(255,120,220,.25)', 8], [2.2, 'rgba(255,170,235,.9)', 4], [0.9, '#fff', 0]].forEach(function (L) {
+          g.lineWidth = L[0]; g.strokeStyle = L[1]; g.shadowColor = '#ff8fe0'; g.shadowBlur = L[2];
+          for (var ox = -w; ox <= w; ox += w) { g.beginPath(); for (var y = -16; y <= h + 16; y += 8) { if (y === -16) g.moveTo(vx(y, ox), y); else g.lineTo(vx(y, ox), y); } g.stroke(); }
+        });
+        g.shadowBlur = 3; g.strokeStyle = 'rgba(255,190,240,.7)'; g.lineWidth = 0.8;
+        for (var b = 0; b < 7; b++) { var by = barkR() * h, bx = vx(by, 0), dir = barkR() < 0.5 ? -1 : 1; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + dir * 6, by + 8, bx + dir * (8 + barkR() * 8), by + 16 + barkR() * 14); g.stroke(); }
+      }
+      g.shadowBlur = 0;
+    });
+    var barkMat = new THREE.MeshStandardMaterial({ map: bark, bumpMap: barkBump, bumpScale: 0.06, roughness: 0.88, vertexColors: true,
+      emissive: new THREE.Color('#ff70d4'), emissiveMap: veins, emissiveIntensity: 0.5 });
+
+    // Wood: smooth tapering tubes that twist and ripple, all joined into one mesh
+    var wood = [];
+    function limb(points, r0, r1, opt) {
+      opt = opt || {};
+      var curve = new THREE.CatmullRomCurve3(points), L = opt.segs || 14, R = opt.sides || 12, len = curve.getLength();
+      var fr = curve.computeFrenetFrames(L, false), pos = [], uv = [], idx = [];
+      var uRep = Math.max(1, Math.round(r0 * 5)), vRate = uRep / (2 * Math.PI * r0) * 0.5;
+      for (var i = 0; i <= L; i++) {
+        var t = i / L, c = curve.getPointAt(t), N = fr.normals[i], Bn = fr.binormals[i];
+        var rad = opt.radius ? opt.radius(t, c.y) : r0 + (r1 - r0) * Math.pow(t, 0.8);
+        for (var j = 0; j <= R; j++) {
+          var a = j / R * Math.PI * 2 + (opt.twist || 0) * t;
+          var rr2 = rad * (1 + (opt.ridge || 0.05) * Math.sin(a * (opt.lobes || 5) + t * 3) + 0.04 * Math.sin(a * 11 + t * 17));
+          var ca = Math.cos(a), sa = Math.sin(a);
+          pos.push(c.x + (N.x * ca + Bn.x * sa) * rr2, c.y + (N.y * ca + Bn.y * sa) * rr2, c.z + (N.z * ca + Bn.z * sa) * rr2);
+          uv.push(j / R * uRep, t * len * vRate);
+        }
+      }
+      for (var i2 = 0; i2 < L; i2++) for (var j2 = 0; j2 < R; j2++) { var a2 = i2 * (R + 1) + j2, b2 = a2 + R + 1; idx.push(a2, b2, a2 + 1, b2, b2 + 1, a2 + 1); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+      g.computeVertexNormals();
+      // close the seam: average normals where the ring wraps
+      var nm = g.attributes.normal;
+      for (var i3 = 0; i3 <= L; i3++) { var s0 = i3 * (R + 1), s1 = s0 + R; var nx = nm.getX(s0) + nm.getX(s1), ny = nm.getY(s0) + nm.getY(s1), nz = nm.getZ(s0) + nm.getZ(s1), nl = Math.hypot(nx, ny, nz) || 1; nm.setXYZ(s0, nx / nl, ny / nl, nz / nl); nm.setXYZ(s1, nx / nl, ny / nl, nz / nl); }
+      wood.push(g);
+      return curve;
+    }
+    function V(x, y, z) { return new THREE.Vector3(x, y, z); }
+
+    // Trunk: wide flared base, twisting ridges
+    var TRUNK_H = 4.4;
+    limb([V(0, -0.4, 0), V(0.05, 1.2, 0.04), V(0.16, 2.6, -0.05), V(0.08, TRUNK_H, 0)], 0.6, 0.36, {
+      segs: 30, sides: 30, twist: 1.6, lobes: 6, ridge: 0.11,
+      radius: function (t, y) { return 0.6 * (1 - 0.4 * Math.max(0, y) / TRUNK_H) + 0.85 * Math.exp(-Math.max(0, y) * 2.2); }
+    });
+    // Roots: buttresses that arch out of the trunk and dive into the ground
+    for (var d = 0; d < 7; d++) {
+      var ra = d / 7 * Math.PI * 2 + r() * 0.4, rl = 2.0 + r() * 0.9, rx = Math.cos(ra), rz = Math.sin(ra), wob = (r() - 0.5) * 0.5;
+      var ex = rx * rl - rz * wob, ez = rz * rl + rx * wob;
+      limb([V(rx * 0.42, 1.4, rz * 0.42), V(rx * 0.66, 0.6, rz * 0.66), V(rx * 1.05, 0.2, rz * 1.05), V(rx * rl * 0.62 - rz * wob * 0.5, localGround(rx * rl * 0.62, rz * rl * 0.62) + 0.06, rz * rl * 0.62 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.2, ez)], 0.34, 0.04, {
+        segs: 20, sides: 14, lobes: 3, ridge: 0.05, radius: function (t) { return t < 0.25 ? 0.12 + 0.22 * Math.sin(t / 0.25 * Math.PI / 2) : 0.34 - 0.3 * Math.pow((t - 0.25) / 0.75, 0.8); }
+      });
+    }
+    // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
+    var clumps = [], hang = [];
+    var leader = limb([V(0.08, 3.6, 0), V(0.3, 5.3, 0.1), V(0.1, 6.7, -0.2)], 0.38, 0.08, { twist: 0.3, ridge: 0.05 });
+    clumps.push({ p: leader.getPoint(1), r: 1.5 }, { p: leader.getPoint(0.6), r: 1.2 });
+    function twigs(from, ang, rise, n, len, rad) {
+      for (var k = 0; k < n; k++) {
+        var a = ang + (r() - 0.5) * 1.6, l = len * (0.7 + r() * 0.5);
+        var end = V(from.x + Math.cos(a) * l, from.y + rise * (0.4 + r() * 0.6), from.z + Math.sin(a) * l);
+        var tw = limb([from, from.clone().lerp(end, 0.5).add(V(0, 0.12, 0)), end], rad, rad * 0.35, { segs: 6, sides: 6 });
+        clumps.push({ p: tw.getPoint(1), r: 0.75 + r() * 0.25 });
+      }
+    }
+    for (var li = 0; li < 7; li++) {
+      var la = li / 7 * Math.PI * 2 + r() * 0.5, lx = Math.cos(la), lz = Math.sin(la), y0 = 3.2 + r() * 1.0, reach = 2.6 + r() * 0.7;
+      var lb = limb([V(lx * 0.05, y0 - 0.7, lz * 0.05), V(lx * 0.6, y0 + 0.2, lz * 0.6), V(lx * 1.2, y0 + 0.8, lz * 1.2), V(lx * reach * 0.8, y0 + 1.3, lz * reach * 0.8), V(lx * reach, y0 + 1.5 + r() * 0.5, lz * reach)], 0.3, 0.07, { segs: 18, sides: 14, twist: 0.3, ridge: 0.04 });
+      clumps.push({ p: lb.getPoint(1), r: 1.3 + r() * 0.3 }, { p: lb.getPoint(0.55), r: 1.0 });
+      hang.push(lb.getPoint(0.75));
+      twigs(lb.getPoint(1), la, 0.5, 2, 0.8, 0.06);
+      for (var sb = 0; sb < 2; sb++) {
+        var sa = la + (sb ? 0.7 : -0.7) + (r() - 0.5) * 0.3, from = lb.getPoint(0.6 + sb * 0.2), sl = 1.0 + r() * 0.5;
+        var sub = limb([from, V(from.x + Math.cos(sa) * sl * 0.5, from.y + 0.5, from.z + Math.sin(sa) * sl * 0.5), V(from.x + Math.cos(sa) * sl, from.y + 0.7 + r() * 0.4, from.z + Math.sin(sa) * sl)], 0.13, 0.04, { segs: 8, sides: 8 });
+        clumps.push({ p: sub.getPoint(1), r: 1.0 + r() * 0.3 });
+        twigs(sub.getPoint(1), sa, 0.4, 2, 0.6, 0.04);
+      }
+    }
+    // Join the wood, shading it darker underneath and damp near the ground
+    var P = [], Nn = [], U = [], I = [], C = [], off = 0;
+    wood.forEach(function (g) {
+      var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv;
+      for (var i = 0; i < p.count; i++) {
+        P.push(p.getX(i), p.getY(i), p.getZ(i)); Nn.push(n.getX(i), n.getY(i), n.getZ(i)); U.push(u.getX(i), u.getY(i));
+        var sh = 1 - 0.38 * Math.max(0, -n.getY(i)), low = Math.max(0, 1 - (p.getY(i) + 0.2) / 1.1);
+        C.push(sh * (1 - low * 0.35), sh * (1 - low * 0.22), sh * (1 - low * 0.38));
+      }
+      for (var j = 0; j < g.index.count; j++) I.push(g.index.getX(j) + off);
+      off += p.count;
+    });
+    var wg = new THREE.BufferGeometry();
+    wg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); wg.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
+    wg.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); wg.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); wg.setIndex(I);
+    var woodMesh = new THREE.Mesh(wg, barkMat); woodMesh.castShadow = woodMesh.receiveShadow = true; tree.add(woodMesh);
+
+    // Blossom: loose clusters of real cherry flowers with notched petals, blushing hearts, gold stamens and young leaves
+    var blossomTex = paint(512, 512, function (g) {
+      var CL = []; for (var c = 0; c < 11; c++) { var ca = r() * 6.28, cr = c === 0 ? 0 : 80 + r() * 110; CL.push([256 + Math.cos(ca) * cr, 256 + Math.sin(ca) * cr * 0.9, 55 + r() * 45]); }
+      function inCl() { var k = CL[Math.floor(r() * CL.length)], a = r() * 6.28, d = Math.sqrt(r()) * k[2]; return [k[0] + Math.cos(a) * d, k[1] + Math.sin(a) * d, k]; }
+      for (var l = 0; l < 60; l++) {
+        var lp = inCl(); g.save(); g.translate(lp[0], lp[1]); g.rotate(r() * 6.28);
+        var lg = g.createLinearGradient(-18, 0, 18, 0); lg.addColorStop(0, 'hsl(' + (85 + r() * 25) + ',38%,24%)'); lg.addColorStop(1, 'hsl(' + (80 + r() * 25) + ',42%,' + (36 + r() * 10) + '%)');
+        g.fillStyle = lg; g.beginPath(); g.moveTo(-18, 0); g.quadraticCurveTo(0, -9, 18, 0); g.quadraticCurveTo(0, 9, -18, 0); g.fill();
+        g.strokeStyle = 'rgba(30,50,20,.5)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-16, 0); g.lineTo(16, 0); g.stroke(); g.restore();
+      }
+      for (var i = 0; i < 420; i++) {
+        var fp = inCl(), x = fp[0], y = fp[1], sz = 10 + r() * 10, spin = r() * 6.28;
+        var edge = Math.hypot(x - fp[2][0], y - fp[2][1]) / fp[2][2], lit = Math.max(0, Math.min(1, 0.6 - ((x - 256) + (y - 256)) / 520 + (1 - edge) * 0.15));
+        var hue = r() < 0.15 ? 305 + r() * 15 : 334 + r() * 16, sat = 55 + r() * 25, lo = 76 + lit * 12 + r() * 5;
+        for (var k = 0; k < 5; k++) {
+          var pa = spin + k / 5 * Math.PI * 2 + (r() - 0.5) * 0.2; g.save(); g.translate(x, y); g.rotate(pa);
+          var pg = g.createLinearGradient(0, 0, sz, 0); pg.addColorStop(0, 'hsl(' + hue + ',' + (sat + 15) + '%,' + (lo - 20) + '%)'); pg.addColorStop(0.55, 'hsl(' + hue + ',' + sat + '%,' + lo + '%)'); pg.addColorStop(1, 'hsl(' + hue + ',' + (sat - 15) + '%,' + Math.min(96, lo + 10) + '%)');
+          g.fillStyle = pg; g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(sz * 0.3, -sz * 0.5, sz * 0.95, -sz * 0.45, sz, -sz * 0.1); g.lineTo(sz * 0.85, 0); g.lineTo(sz, sz * 0.1); g.bezierCurveTo(sz * 0.95, sz * 0.45, sz * 0.3, sz * 0.5, 0, 0); g.fill();
+          g.strokeStyle = 'rgba(190,80,130,.25)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(sz * 0.15, 0); g.lineTo(sz * 0.75, 0); g.stroke();
+          g.restore();
+        }
+        g.fillStyle = 'hsl(' + (338 + r() * 10) + ',58%,' + (55 + lit * 10) + '%)'; g.beginPath(); g.arc(x, y, sz * 0.15, 0, 6.28); g.fill();
+        g.fillStyle = 'rgba(255,232,160,.95)'; for (var st = 0; st < 7; st++) { var sa = r() * 6.28, sr = sz * (0.22 + r() * 0.16); g.beginPath(); g.arc(x + Math.cos(sa) * sr, y + Math.sin(sa) * sr, 1.1, 0, 6.28); g.fill(); }
+      }
+    }, true);
+    // Hanging strands: trailing sprays of pale blossom, thinning towards the tip
+    var strandTex = paint(64, 256, function (g) {
+      g.strokeStyle = 'rgba(70,40,50,.7)'; g.lineWidth = 1; g.beginPath(); g.moveTo(32, 0); g.bezierCurveTo(30, 90, 35, 170, 32, 250); g.stroke();
+      for (var y = 4; y < 250; y += 5) {
+        var f = y / 256, n = Math.max(1, Math.round(4 * (1 - f * 0.8)));
+        for (var k = 0; k < n; k++) {
+          var bx = 32 + (r() - 0.5) * 30 * (1 - f * 0.6), by = y + r() * 4, bs = 6 * (1 - f * 0.55) * (0.7 + r() * 0.5);
+          for (var p = 0; p < 5; p++) { var a = p / 5 * 6.28 + r(); g.fillStyle = 'hsl(' + (328 + r() * 20) + ',' + (55 + r() * 25) + '%,' + (80 + r() * 10 - f * 6) + '%)'; g.beginPath(); g.ellipse(bx + Math.cos(a) * bs * 0.5, by + Math.sin(a) * bs * 0.5, bs * 0.5, bs * 0.34, a, 0, 6.28); g.fill(); }
+          g.fillStyle = 'hsl(340,60%,52%)'; g.beginPath(); g.arc(bx, by, bs * 0.18, 0, 6.28); g.fill();
+        }
+      }
+    }, true);
+    bark.wrapS = bark.wrapT = barkBump.wrapS = barkBump.wrapT = veins.wrapS = veins.wrapT = THREE.RepeatWrapping;
+    blossomTex.wrapS = blossomTex.wrapT = strandTex.wrapS = strandTex.wrapT = THREE.ClampToEdgeWrapping;
+    // Each card lit as if it faced out of its cluster, so the canopy is bright on top and shaded beneath; swaying in the breeze
+    function blossomMat(tex, glowAmt, droop) {
+      var m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.35, transparent: true, side: THREE.DoubleSide, roughness: 0.75,
+        emissive: new THREE.Color('#ff86d6'), emissiveMap: tex, emissiveIntensity: glowAmt });
+      m.onBeforeCompile = function (sh) {
+        sh.uniforms.uTime = grassTime;
+        sh.vertexShader = 'attribute vec3 aN;\nuniform float uTime;\n' + sh.vertexShader
+          .replace('#include <defaultnormal_vertex>', 'vec3 transformedNormal = normalMatrix * aN;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
+            'vec3 ip = instanceMatrix[3].xyz;\n' +
+            'float wv = sin(uTime * 1.4 + ip.x * 0.8 + ip.z * 0.6) + 0.5 * sin(uTime * 2.3 + ip.y * 1.7);\n' +
+            (droop ? 'transformed.x += wv * 0.06 * position.y * position.y; transformed.z += wv * 0.03 * position.y * position.y;\n' : 'transformed.xy += wv * 0.025;\n'));
+        sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\nvec3 normal = normalize(vNormal);\nvec3 geometryNormal = normal;');
+      };
+      return m;
+    }
+    var bMat = blossomMat(blossomTex, 0.22, false), sMat = blossomMat(strandTex, 0.45, true);
+    function cards(geo, tex, mat, max) {
+      geo.setAttribute('aN', new THREE.InstancedBufferAttribute(new Float32Array(max * 3), 3));
+      var b = new THREE.InstancedMesh(geo, mat, max);
+      b.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.35 });
+      b.castShadow = true; b.n = 0; b.frustumCulled = false; return b;
+    }
+    var blossoms = cards(new THREE.PlaneGeometry(1, 1), blossomTex, bMat, 2400);
+    var sGeo = new THREE.PlaneGeometry(0.34, 1.6); sGeo.translate(0, -0.8, 0);
+    var strands = cards(sGeo, strandTex, sMat, 500);
+    var M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Q2 = new THREE.Quaternion(), Pp = new THREE.Vector3(), Sc = new THREE.Vector3(), Col = new THREE.Color(), Dir = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1), Eu = new THREE.Euler();
+    function addCard(b, n, shade, tint) {
+      if (b.n >= b.instanceMatrix.count) return;
+      M.compose(Pp, Q, Sc); b.setMatrixAt(b.n, M);
+      b.geometry.attributes.aN.setXYZ(b.n, n.x, n.y, n.z);
+      Col.setRGB(shade * (tint || 1), shade, shade); b.setColorAt(b.n, Col); b.n++;
+    }
+    clumps.forEach(function (c) {
+      var many = Math.round(34 * c.r);
+      for (var i = 0; i < many; i++) {
+        Dir.set(r() - 0.5, (r() - 0.3) * 0.9, r() - 0.5).normalize();
+        Pp.copy(Dir).multiplyScalar(c.r * (0.35 + r() * 0.75)); Pp.y *= 0.7; Pp.add(c.p);
+        Q.setFromUnitVectors(Z, Dir); Q2.setFromAxisAngle(Z, r() * 6.28); Q.multiply(Q2);
+        Eu.set((r() - 0.5) * 0.9, (r() - 0.5) * 0.9, 0); Q.multiply(Q2.setFromEuler(Eu));
+        var s = c.r * (0.85 + r() * 0.5); Sc.set(s, s, s);
+        var up = Dir.y, high = Math.max(0, Math.min(1, (Pp.y - 3.5) / 3.5));
+        var shade = 0.72 + Math.max(0, Math.min(1, 0.45 + up * 0.5)) * 0.24 + high * 0.1 + (r() - 0.5) * 0.08;
+        addCard(blossoms, Dir, shade, r() < 0.2 ? 0.94 : 1);
+      }
+      for (var h = 0; h < (c.r > 1.1 ? 2 : 1); h++) {
+        Pp.set((r() - 0.5) * c.r * 1.3, -c.r * 0.3, (r() - 0.5) * c.r * 1.3).add(c.p);
+        var hs = 0.45 + r() * 0.55, yaw = r() * 6.28;
+        for (var x = 0; x < 2; x++) {
+          Eu.set((r() - 0.5) * 0.12, yaw + x * Math.PI / 2, (r() - 0.5) * 0.12); Q.setFromEuler(Eu); Sc.set(1, hs, 1);
+          addCard(strands, Dir.set(Pp.x - c.p.x, 0.4, Pp.z - c.p.z).normalize(), 0.9 + r() * 0.1);
+        }
+      }
+    });
+    [blossoms, strands].forEach(function (b) { b.count = b.n; b.instanceMatrix.needsUpdate = true; b.geometry.attributes.aN.needsUpdate = true; if (b.instanceColor) b.instanceColor.needsUpdate = true; tree.add(b); });
+
+    // Soft glows inside the canopy
+    for (var cg = 0; cg < 6; cg++) { var gl = glow(cg % 2 ? '#c9a0ff' : '#ff9be0', 3.6, 0.16), gc = clumps[cg * 5 % clumps.length].p; gl.position.set(gc.x * 0.7, gc.y - 0.3, gc.z * 0.7); tree.add(gl); }
+    var halo = glow('#ffb6ec', 9, 0.18); halo.position.set(0, 5.4, 0); tree.add(halo);
+
+    // Glass orbs hanging on fine threads, each with a warm glowing heart
+    var threadMat = new THREE.MeshBasicMaterial({ color: '#f3d2ea' }), coreMat = new THREE.MeshBasicMaterial({ color: '#fff3cf' });
+    var glassMat = new THREE.MeshStandardMaterial({ color: '#ffe6f6', roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.32, emissive: new THREE.Color('#ffb0e0'), emissiveIntensity: 0.35, depthWrite: false });
+    var capMat = new THREE.MeshStandardMaterial({ color: '#d9cfe8', metalness: 0.9, roughness: 0.3 });
+    var orbs = [];
+    hang.forEach(function (hp, n) {
+      var pivot = new THREE.Group(), drop = 0.7 + r() * 0.6; pivot.position.copy(hp);
+      var th = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, drop, 4), threadMat); th.position.y = -drop / 2; pivot.add(th);
+      var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.05, 10), capMat); cap.position.y = -drop - 0.005; pivot.add(cap);
+      var core = new THREE.Mesh(new THREE.SphereGeometry(0.055, 14, 10), coreMat); core.position.y = -drop - 0.12; pivot.add(core);
+      var shell = new THREE.Mesh(new THREE.SphereGeometry(0.11, 20, 14), glassMat); shell.position.y = -drop - 0.12; pivot.add(shell);
+      var hl = glow(n % 2 ? '#ffd27a' : '#ff9be0', 0.95, 0.7); hl.position.y = -drop - 0.12; pivot.add(hl);
+      tree.add(pivot); orbs.push({ pivot: pivot, halo: hl, p: r() * 6.28 });
+    });
+
+    // Glowing mushrooms in little clusters between the roots
+    var capProfile = [], stemProfile = [];
+    for (var cp = 0; cp <= 10; cp++) { var ang = cp / 10 * Math.PI / 2; capProfile.push(new THREE.Vector2(Math.sin(ang) * 1.0, Math.cos(ang) * 0.62)); }
+    capProfile.push(new THREE.Vector2(0.97, -0.05), new THREE.Vector2(0.55, -0.12), new THREE.Vector2(0.12, -0.06));
+    for (var sp2 = 0; sp2 <= 6; sp2++) { var tt = sp2 / 6; stemProfile.push(new THREE.Vector2(0.14 + 0.06 * (1 - tt) * (1 - tt) + 0.02 * Math.sin(tt * 3), tt)); }
+    var capGeo = new THREE.LatheGeometry(capProfile, 20), stemGeo = new THREE.LatheGeometry(stemProfile, 10);
+    var capM = new THREE.MeshStandardMaterial({ color: '#2f86b8', emissive: new THREE.Color('#1c8fe6'), emissiveIntensity: 0.6, roughness: 0.45, side: THREE.DoubleSide });
+    var stemM = new THREE.MeshStandardMaterial({ color: '#b9c6d6', roughness: 0.7, emissive: new THREE.Color('#8fd8ff'), emissiveIntensity: 0.08 });
+    for (var mc = 0; mc < 6; mc++) {
+      var ma = mc / 6 * Math.PI * 2 + 0.45 + r() * 0.3, md = 1.35 + r() * 0.8, many2 = 1 + Math.floor(r() * 3);
+      for (var mu = 0; mu < many2; mu++) {
+        var ms = (0.5 + r() * 0.7) * (mu ? 0.7 : 1), mx = Math.cos(ma) * md + (r() - 0.5) * 0.25, mz = Math.sin(ma) * md + (r() - 0.5) * 0.25, my = localGround(mx, mz) - 0.02, lean = (r() - 0.5) * 0.4;
+        var mush = new THREE.Group(); mush.position.set(mx, my, mz); mush.rotation.set(lean, r() * 6.28, (r() - 0.5) * 0.4);
+        var st2 = new THREE.Mesh(stemGeo, stemM); st2.scale.set(0.25 * ms, 0.22 * ms, 0.25 * ms); mush.add(st2);
+        var cp2 = new THREE.Mesh(capGeo, capM); cp2.position.y = 0.21 * ms; cp2.scale.set(0.12 * ms, 0.12 * ms, 0.12 * ms); mush.add(cp2);
+        tree.add(mush);
+      }
+      var mg = glow('#7fd6ff', 0.9, 0.45); mg.position.set(Math.cos(ma) * md, localGround(Math.cos(ma) * md, Math.sin(ma) * md) + 0.15, Math.sin(ma) * md); tree.add(mg);
+    }
+
+    // Petals: a notched, gently cupped petal shape
+    var ps = new THREE.Shape(); ps.moveTo(0, 0); ps.bezierCurveTo(0.03, 0.01, 0.045, 0.045, 0.03, 0.07); ps.lineTo(0, 0.06); ps.lineTo(-0.03, 0.07); ps.bezierCurveTo(-0.045, 0.045, -0.03, 0.01, 0, 0);
+    var petalGeo = new THREE.ShapeGeometry(ps, 4), pp = petalGeo.attributes.position;
+    for (var pv = 0; pv < pp.count; pv++) pp.setZ(pv, pp.getX(pv) * pp.getX(pv) * 9);
+    petalGeo.computeVertexNormals(); petalGeo.translate(0, -0.035, 0);
+    var petalMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide, roughness: 0.6, emissive: new THREE.Color('#ff9fd8'), emissiveIntensity: 0.22 });
+    // Fallen petals carpeting the ground around the roots
+    var fallen = new THREE.InstancedMesh(petalGeo, petalMat, 1800);
+    for (var fp = 0; fp < 1800; fp++) {
+      var fa = r() * 6.28, fd = 0.9 + Math.pow(r(), 1.6) * 4.2, fx = Math.cos(fa) * fd, fz = Math.sin(fa) * fd;
+      Eu.set(-Math.PI / 2 + (r() - 0.5) * 0.5, 0, r() * 6.28); Q.setFromEuler(Eu);
+      Pp.set(fx, localGround(fx, fz) + 0.02, fz); var fs = 0.5 + r() * 0.45; Sc.set(fs, fs, fs);
+      M.compose(Pp, Q, Sc); fallen.setMatrixAt(fp, M);
+      var fl = 0.9 + r() * 0.1; Col.setRGB(fl, fl * (0.62 + r() * 0.14), fl * (0.76 + r() * 0.1)); if (r() < 0.25) Col.setRGB(fl * 0.82, fl * 0.55, fl * 0.62); fallen.setColorAt(fp, Col);
+    }
+    fallen.receiveShadow = true; tree.add(fallen);
+    // Petals drifting down, tumbling as they fall
+    var FALL = 90, drift = new THREE.InstancedMesh(petalGeo, petalMat, FALL), dState = [];
+    function resetPetal(s, any) { var a = r() * 6.28, d = Math.sqrt(r()) * 3.6; s.x = Math.cos(a) * d; s.z = Math.sin(a) * d; s.y = any ? r() * 6 : 4.6 + r() * 1.6; s.v = 0.25 + r() * 0.25; s.p = r() * 6.28; s.s = r() * 2 + 1; s.c = 0.85 + r() * 0.15; }
+    for (var dp = 0; dp < FALL; dp++) { var ds = {}; resetPetal(ds, true); dState.push(ds); Col.setRGB(ds.c, ds.c * 0.66, ds.c * 0.8); drift.setColorAt(dp, Col); }
+    drift.frustumCulled = false; tree.add(drift);
+
+    // Sparkles rising from the ground round the tree
+    var SPARKS = 120, spGeo = new THREE.BufferGeometry();
+    spGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3)); spGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+    var sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ map: GLOW, size: 0.3, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    sparks.frustumCulled = false; tree.add(sparks);
+    var tints = ['#ff9be0', '#ffe08a', '#c9a0ff', '#ffffff'].map(function (c) { return new THREE.Color(c); }), skS = [];
+    function resetSpark(s, any) { var a = r() * 6.28, d = 1.3 + Math.sqrt(r()) * 2.2; s.x = Math.cos(a) * d; s.z = Math.sin(a) * d; s.g = localGround(s.x, s.z); s.y = any ? r() * 1.2 : 0.05; s.rise = 0.12 + r() * 0.2; s.p = r() * 6.28; s.sp = 2 + r() * 3; s.t = tints[Math.floor(r() * 4)]; }
+    for (var k2 = 0; k2 < SPARKS; k2++) { var sk = {}; resetSpark(sk, true); skS.push(sk); }
+
+    var light = new THREE.PointLight('#ffa8ee', 1.3, 14, 2); light.position.set(0, 4.6, 0); tree.add(light);
+    scene.add(tree);
+
+    var fade = 1, pq = new THREE.Quaternion();
+    return {
+      blocks: function (x, z) { return Math.hypot(x - TREE_X, z - TREE_Z) < 1.35; },
+      update: function (t, dt, px, pz) {
+        barkMat.emissiveIntensity = 0.45 + 0.12 * Math.sin(t * 1.3);
+        orbs.forEach(function (o) { o.pivot.rotation.z = Math.sin(t * 0.9 + o.p) * 0.08; o.pivot.rotation.x = Math.cos(t * 0.7 + o.p) * 0.06; o.halo.material.opacity = 0.55 + 0.2 * Math.sin(t * 2 + o.p); });
+        for (var i = 0; i < FALL; i++) {
+          var s = dState[i]; s.y -= s.v * dt; s.x += Math.sin(t * 0.8 + s.p) * dt * 0.35; s.z += Math.cos(t * 0.9 + s.p) * dt * 0.25;
+          if (s.y < localGround(s.x, s.z) + 0.03) resetPetal(s, false);
+          Eu.set(t * s.s + s.p, t * s.s * 0.7, Math.sin(t * 2 + s.p)); pq.setFromEuler(Eu); Pp.set(s.x, s.y, s.z); Sc.set(1, 1, 1);
+          M.compose(Pp, pq, Sc); drift.setMatrixAt(i, M);
+        }
+        drift.instanceMatrix.needsUpdate = true;
+        var sp = spGeo.attributes.position, sc = spGeo.attributes.color;
+        for (var j = 0; j < SPARKS; j++) {
+          var k = skS[j]; k.y += k.rise * dt; if (k.y > 1.4) resetSpark(k, false);
+          var tw = Math.max(0, Math.sin(t * k.sp + k.p)) * Math.max(0, 1 - k.y / 1.4);
+          sp.setXYZ(j, k.x, k.g + k.y, k.z); sc.setXYZ(j, k.t.r * tw, k.t.g * tw, k.t.b * tw);
+        }
+        sp.needsUpdate = sc.needsUpdate = true;
+        // the blossom goes see-through when you walk under it, so it never hides you
+        var near = Math.hypot(px - TREE_X, pz - TREE_Z) < 4.5;
+        fade += ((near ? 0.45 : 1) - fade) * Math.min(1, dt * 4);
+        bMat.opacity = sMat.opacity = fade;
+      }
+    };
+  })();
+
   // Your witch: Witch.vrm, loaded from GitHub
   var witch = null;
   var MODEL_URLS = [window.EVERDAWN_MODEL_URL,
@@ -550,7 +904,7 @@
         var goal = WALK * want * Math.max(0.25, 1 - turning / 1.6);
         speed += (goal - speed) * Math.min(1, dt * (goal > speed ? 4 : 6));
         var nx = x + Math.sin(heading) * speed * dt, nz = z + Math.cos(heading) * speed * dt;
-        if (insideFarm(nx, nz, FARM - 0.5, 6.5)) { x = nx; z = nz; } else speed *= 0.5;
+        if (insideFarm(nx, nz, FARM - 0.5, 6.5) && !dawn.blocks(nx, nz)) { x = nx; z = nz; } else speed *= 0.5;
         phase += (speed * dt / STRIDE) * Math.PI * 2;
         walkW += (Math.min(1, speed / (WALK * 0.6)) - walkW) * Math.min(1, dt * 6);
         var W = walkW, I = 1 - W, p = phase;
@@ -821,6 +1175,7 @@
     var mv = moveInput();
     if (witch) witch.update(now / 1000, dt, mv[0], mv[1]);
     followCamera(dt);
+    dawn.update(now / 1000, dt, witch ? witch.position().x : 0, witch ? witch.position().z : 0);
     if (witch) grassCenter.value.set(witch.position().x, witch.position().z);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
