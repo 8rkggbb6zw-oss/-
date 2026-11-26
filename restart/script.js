@@ -236,7 +236,7 @@
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
     var side = soilTexture(); side.repeat.set(0.2, -0.2); side.offset.set(0, 0.2);
-    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#2e2014' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
+    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#120b06' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
     bodyMesh.receiveShadow = true;
