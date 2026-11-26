@@ -589,11 +589,43 @@
         return 0.6 * (1 - 0.4 * h / TRUNK_H) + 0.12 * Math.exp(-h * 3) + 0.7 * Math.exp(-h * 1.7) * b;
       }
     });
-    // Roots: running on from each buttress, out over the ground and into it
+    // Roots: running on from each buttress, half-buried in the soil, then diving under it; side roots fork off and dig in too
+    var rr = rand(321), mounds = [];
+    function at(x, z, up) { return V(x, localGround(x, z) + up, z); }
     roots.forEach(function (rt) {
-      var rx = Math.cos(rt.a), rz = Math.sin(rt.a), rl = rt.l, wob = rt.w, ex = rx * rl - rz * wob, ez = rz * rl + rx * wob;
-      limb([V(rx * 0.3, 1.1, rz * 0.3), V(rx * 0.72, 0.45, rz * 0.72), V(rx * 1.3, 0.14, rz * 1.3), V(rx * rl * 0.7 - rz * wob * 0.5, localGround(rx * rl * 0.7, rz * rl * 0.7) + 0.02, rz * rl * 0.7 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.3, ez)], 0.3, 0.04, { segs: 24, sides: 14, lobes: 3, ridge: 0.05,
-        radius: function (t) { return t < 0.3 ? 0.08 + 0.22 * Math.sin(t / 0.3 * Math.PI / 2) : 0.3 - 0.26 * Math.pow((t - 0.3) / 0.7, 0.8); } });
+      var rx = Math.cos(rt.a), rz = Math.sin(rt.a), rl = rt.l, wob = rt.w, sx = -rz, sz = rx;
+      function pt(d, side, up) { return at(rx * d + sx * side, rz * d + sz * side, up); }
+      var main = limb([V(rx * 0.3, 1.1, rz * 0.3), V(rx * 0.72, 0.45, rz * 0.72), pt(1.25, 0, 0.1), pt(rl * 0.5, wob * 0.3, 0.0), pt(rl * 0.78, wob * 0.8, -0.12), pt(rl * 1.05, wob, -0.5)], 0.3, 0.03, {
+        segs: 30, sides: 14, lobes: 3, ridge: 0.06,
+        radius: function (t) { return t < 0.25 ? 0.08 + 0.22 * Math.sin(t / 0.25 * Math.PI / 2) : 0.3 - 0.27 * Math.pow((t - 0.25) / 0.75, 0.7); } });
+      mounds.push([main.getPoint(0.8), rt.a, 0.24]);
+      for (var k = 0; k < 2; k++) {
+        var f = 0.38 + rr() * 0.2, from = main.getPoint(f), sa = rt.a + (k ? 1 : -1) * (0.6 + rr() * 0.5), sl = 0.7 + rr() * 0.6;
+        var dx = Math.cos(sa), dz = Math.sin(sa);
+        var side = limb([from.clone().add(V(0, -0.04, 0)), at(from.x + dx * sl * 0.45, from.z + dz * sl * 0.45, 0.01), at(from.x + dx * sl, from.z + dz * sl, -0.35)], 0.11, 0.02, { segs: 12, sides: 9, lobes: 3, ridge: 0.06 });
+        mounds.push([side.getPoint(0.62), sa, 0.12]);
+      }
+    });
+    // Soil heaped up where each root breaks into the ground
+    var dirt = paint(128, 128, function (g, w, h) {                  // crumbly soil: clods, grit and tiny stones
+      g.fillStyle = '#3a2a1e'; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 900; i++) { var v = rr(), sz = 0.6 + rr() * 2.6; g.fillStyle = v < 0.45 ? 'rgba(18,12,8,.7)' : v < 0.85 ? 'rgba(92,70,50,.6)' : 'rgba(150,132,110,.55)'; g.beginPath(); g.arc(rr() * w, rr() * h, sz, 0, 6.28); g.fill(); }
+    }, true);
+    var soilMat = new THREE.MeshStandardMaterial({ color: '#b8a898', map: dirt, bumpMap: dirt, bumpScale: 0.04, roughness: 1, vertexColors: true }), crumbMat = new THREE.MeshStandardMaterial({ color: '#2e2117', roughness: 1 });
+    mounds.forEach(function (m) {
+      var g = new THREE.SphereGeometry(1, 18, 10), mp = g.attributes.position, mc = [], ph = rr() * 9;
+      for (var v = 0; v < mp.count; v++) {
+        var X = mp.getX(v), Y = mp.getY(v), Z = mp.getZ(v), k = 1 + 0.16 * Math.sin(X * 5 + ph) * Math.cos(Z * 4 - ph) + 0.08 * Math.sin((X + Z) * 11 + ph);
+        mp.setXYZ(v, X * k, Math.max(-0.2, Y) * k, Z * k); var sh = 0.45 + 0.3 * vnoise(X * 3 + ph, Z * 3) + 0.15 * Math.max(0, Y); mc.push(sh, sh * 0.93, sh * 0.86);
+      }
+      g.setAttribute('color', new THREE.Float32BufferAttribute(mc, 3)); g.computeVertexNormals();
+      var mesh = new THREE.Mesh(g, soilMat), sz = m[2];
+      mesh.position.set(m[0].x, localGround(m[0].x, m[0].z) - 0.01, m[0].z); mesh.scale.set(sz * 1.4, sz * 0.26, sz); mesh.rotation.y = -m[1];
+      mesh.receiveShadow = true; tree.add(mesh);
+      for (var c = 0; c < 4; c++) {                                   // a few crumbs scattered round it
+        var ca = rr() * 6.28, cd = sz * (1 + rr() * 0.9), crumb = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), crumbMat), cs = sz * (0.12 + rr() * 0.12);
+        crumb.position.set(m[0].x + Math.cos(ca) * cd, localGround(m[0].x + Math.cos(ca) * cd, m[0].z + Math.sin(ca) * cd) + cs * 0.2, m[0].z + Math.sin(ca) * cd); crumb.scale.set(cs, cs * 0.6, cs); crumb.rotation.set(rr() * 3, rr() * 3, 0); tree.add(crumb);
+      }
     });
     // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
     var clumps = [], hang = [];
