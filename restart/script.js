@@ -585,7 +585,7 @@
           pose(L[3], E(-0.35 * Math.pow(Math.max(0, -sw), 3) * W, 0, 0));
         });
 
-        // Arms: held a little out from her sides so her hands clear her skirt, swinging from the shoulder opposite
+        // Arms
         // the legs, a beat behind them, further forward than back, elbows bending more as each arm comes forward
         var pa = p - 0.3;
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
