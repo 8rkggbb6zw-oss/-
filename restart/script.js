@@ -476,31 +476,73 @@
     function blink(v) { blinkBinds.forEach(function (b) { if (b[1] < b[0].morphTargetInfluences.length) b[0].morphTargetInfluences[b[1]] = b[2] * v; }); }
 
     // Standing on the farm
-    var x = 0, z = 0;
+    var x = 0, z = 0, heading = 0, speed = 0, phase = 0, walkW = 0;
+    var hipsRestY = B.hips ? B.hips.position.y : 0;
     holder.position.set(x, groundHeight(x, z, FARM), z);
     var nextBlink = 2, blinkT = -1;
+    var WALK = 1.45, STRIDE = 1.5;
 
     return {
       group: holder,
-      update: function (t, dt) {
-        var br = Math.sin(t * 1.4);
-        pose(B.spine, E(0.01 * br, 0, 0));
-        pose(B.chest, E(0.015 * br, 0, 0));
+      update: function (t, dt, mx, mz) {
+        // Moving: ease up to walking pace, turn smoothly toward where she's heading, stay on the farm
+        var want = Math.min(1, Math.hypot(mx, mz));
+        if (want > 0.05) {
+          var target = Math.atan2(mx, mz), diff = Math.atan2(Math.sin(target - heading), Math.cos(target - heading));
+          heading += diff * Math.min(1, dt * 8);
+        }
+        var turning = want > 0.05 ? Math.abs(Math.atan2(Math.sin(Math.atan2(mx, mz) - heading), Math.cos(Math.atan2(mx, mz) - heading))) : 0;
+        var goal = WALK * want * Math.max(0.25, 1 - turning / 1.6);
+        speed += (goal - speed) * Math.min(1, dt * (goal > speed ? 4 : 6));
+        var nx = x + Math.sin(heading) * speed * dt, nz = z + Math.cos(heading) * speed * dt;
+        if (insideFarm(nx, nz, FARM - 1.2, 6)) { x = nx; z = nz; } else speed *= 0.5;
+        phase += (speed * dt / STRIDE) * Math.PI * 2;
+        walkW += (Math.min(1, speed / (WALK * 0.6)) - walkW) * Math.min(1, dt * 6);
+        var W = walkW, I = 1 - W, p = phase;
+        holder.rotation.y = heading;
+        holder.position.set(x, groundHeight(x, z, FARM), z);
+
+        // Hips: rising over each step and sinking between, rolling toward the standing leg, turning with the stride
+        if (B.hips) B.hips.position.y = hipsRestY + W * (0.018 * Math.cos(2 * p) - 0.022);
+        pose(B.hips, E(0.03 * W, -0.09 * Math.sin(p) * W, 0.035 * Math.sin(p) * W));
+
+        // Body: breathing when still; walking, a slight lean and the chest turning against the hips
+        var br = Math.sin(t * 1.4) * I;
+        pose(B.spine, E(0.01 * br + 0.035 * W, 0.05 * Math.sin(p) * W, -0.02 * Math.sin(p) * W));
+        pose(B.chest, E(0.015 * br + 0.02 * W, 0.07 * Math.sin(p) * W, 0));
+
+        // Legs: thigh swinging through, knee folding to lift the foot then straightening to land heel first,
+        // ankle pushing off at the back
+        [[B.leftUpperLeg, B.leftLowerLeg, B.leftFoot, B.leftToes, 0], [B.rightUpperLeg, B.rightLowerLeg, B.rightFoot, B.rightToes, Math.PI]].forEach(function (L, k) {
+          var q = p + L[4], sw = Math.sin(q), c = Math.cos(q);
+          var thigh = -0.46 * sw - 0.04, knee = 0.1 + 1.0 * Math.pow(Math.max(0, c), 1.6) + 0.12 * Math.max(0, sw);
+          var ankle = -0.22 * Math.max(0, sw) * Math.max(0, -c * 0.5 + 0.5) + 0.32 * Math.pow(Math.max(0, -sw), 2) - 0.25 * Math.max(0, c) * 0.6;
+          var idleThigh = k ? -0.06 : 0, idleKnee = k ? 0.12 : 0;
+          pose(L[0], E(thigh * W + idleThigh * I, (k ? -0.08 : 0) * I, (k ? 0.02 : 0) * I));
+          pose(L[1], E(knee * W + idleKnee * I, 0, 0));
+          pose(L[2], E(ankle * W, 0, 0));
+          pose(L[3], E(-0.35 * Math.pow(Math.max(0, -sw), 3) * W, 0, 0));
+        });
+
+        // Arms: swinging opposite the legs, elbows bending a little more on the forward swing
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
-          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02;
-          pose(a[0], E(0, 0, -s * 0.06));
-          pose(a[1], E(0.05, 0, -s * (1.3 + sway)));
-          pose(a[2], E(0, -s * 0.3, 0));
+          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I;
+          var swing = s * 0.34 * Math.sin(p) * W, fwd = Math.max(0, -swing);
+          pose(a[0], E(0, -s * 0.04 * Math.sin(p) * W, -s * 0.06));
+          pose(a[1], E(0.05 + swing, 0, -s * (1.3 + sway + 0.04 * W)));
+          pose(a[2], E(0, -s * (0.3 + 0.12 * W + fwd * 0.9), 0));
           pose(a[3], E(0, -s * 0.1, -s * 0.15));
         });
-        pose(B.neck, E(0.02, 0.03 * Math.sin(t * 0.3), 0));
-        pose(B.head, E(0.04, 0.05 * Math.sin(t * 0.3 + 1), 0.05));
-        pose(B.rightLowerLeg, E(0.12, 0, 0));
-        pose(B.rightUpperLeg, E(-0.06, -0.08, 0.02));
+
+        // Head: steady, looking ahead, settling against the bob of each step
+        pose(B.neck, E(0.02 - 0.01 * W, (0.03 * Math.sin(t * 0.3)) * I - 0.04 * Math.sin(p) * W, 0));
+        pose(B.head, E(0.04 - 0.02 * W - 0.01 * Math.cos(2 * p) * W, (0.05 * Math.sin(t * 0.3 + 1)) * I - 0.03 * Math.sin(p) * W, 0.05 * I));
+
         nextBlink -= dt;
         if (nextBlink <= 0) { blinkT = 0; nextBlink = 2 + Math.random() * 3.5; }
         if (blinkT >= 0) { blinkT += dt; var bv = blinkT < 0.08 ? blinkT / 0.08 : Math.max(0, 1 - (blinkT - 0.08) / 0.1); blink(bv); if (blinkT > 0.2) { blink(0); blinkT = -1; } }
-      }
+      },
+      position: function () { return holder.position; }
     };
   }
   loadWitch(0);
@@ -631,7 +673,46 @@
   $('btnBag').addEventListener('click', openBag);
   $('btnFull').addEventListener('click', toggleFull);
 
+  // Walking: WASD / arrow keys, or touch and hold on the ground to walk toward your finger
+  var keys = {};
+  window.addEventListener('keyup', function (e) { keys[e.code] = false; });
+  window.addEventListener('blur', function () { keys = {}; });
+  var pointerGoal = null, pointerDown = false, ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.3), hit = new THREE.Vector3();
+  function aimAt(e) {
+    var r = canvas.getBoundingClientRect();
+    ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    if (ray.ray.intersectPlane(groundPlane, hit)) pointerGoal = hit.clone();
+  }
+  canvas.addEventListener('pointerdown', function (e) { pointerDown = true; aimAt(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', function (e) { if (pointerDown) aimAt(e); });
+  canvas.addEventListener('pointerup', function () { pointerDown = false; });
+  canvas.addEventListener('pointercancel', function () { pointerDown = false; pointerGoal = null; });
+  function moveInput() {
+    var mx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+    var mz = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
+    if (mx || mz) { pointerGoal = null; var l = Math.hypot(mx, mz); return [mx / l, mz / l]; }
+    if (pointerGoal && witch) {
+      var p = witch.position(), dx = pointerGoal.x - p.x, dz = pointerGoal.z - p.z, d = Math.hypot(dx, dz);
+      if (d < 0.25 && !pointerDown) { pointerGoal = null; return [0, 0]; }
+      var f = Math.min(1, d / 0.6); return [dx / d * f, dz / d * f];
+    }
+    return [0, 0];
+  }
+
+  // Camera: follows her from behind and above
+  var camOffset = new THREE.Vector3(0, 2.4, 4.6), camLook = new THREE.Vector3(0, 0.95, 0), camAim = new THREE.Vector3();
+  function followCamera(dt) {
+    if (!witch) return;
+    var p = witch.position(), k = Math.min(1, dt * 4);
+    camera.position.lerp(camAim.set(p.x, p.y, p.z).add(camOffset), k);
+    camLook.lerp(camAim.set(p.x, p.y + 0.95, p.z), k);
+    camera.lookAt(camLook);
+  }
+
   window.addEventListener('keydown', function (e) {
+    keys[e.code] = true;
+    if (/^Arrow/.test(e.code)) e.preventDefault();
     if (e.repeat) return;
     var k = e.code;
     if (k === 'KeyE' || k === 'Space') { interact(); e.preventDefault(); }
@@ -655,7 +736,9 @@
     scene.background.copy(skyColour(minutes));
     scene.fog.color.copy(scene.background);
     grassTime.value = now / 1000;
-    if (witch) witch.update(now / 1000, dt);
+    var mv = moveInput();
+    if (witch) witch.update(now / 1000, dt, mv[0], mv[1]);
+    followCamera(dt);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
