@@ -217,6 +217,9 @@
   }
 
   var grassTime = { value: 0 }, grassCenter = { value: new THREE.Vector2(0, 0) };
+  // Bare soil spots (x, z, radius) the grass thins out around, and the island's grass
+  var soilSpots = { value: [] }, farmGrass = null;
+  for (var si = 0; si < 32; si++) soilSpots.value.push(new THREE.Vector3(0, 0, -1));
   function insideFarm(x, z, w, R) {
     var dx = Math.max(Math.abs(x) - (w - R), 0), dz = Math.max(Math.abs(z) - (w - R), 0);
     return dx * dx + dz * dz <= R * R;
@@ -363,7 +366,7 @@
       grass.setColorAt(COUNT + f, tint);
     }
     grass.instanceMatrix.needsUpdate = true;
-    scene.add(grass);
+    scene.add(grass); farmGrass = grass;
 
     // Thick lawn around wherever she is: a deep carpet of grass that moves along with her, so no bare ground shows
     function addLawn(TILE, NEAR, size, inner, seed, hole) {
@@ -386,8 +389,8 @@
     var nmat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     nmat.onBeforeCompile = function (sh) {
       sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE }; sh.uniforms.uInner = { value: inner }; sh.uniforms.uHole = { value: hole };
-      sh.uniforms.uFarm = { value: w }; sh.uniforms.uRound = { value: R };
-      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform float uHole; uniform float uFarm; uniform float uRound;\n' +
+      sh.uniforms.uFarm = { value: w }; sh.uniforms.uRound = { value: R }; sh.uniforms.uSoil = soilSpots;
+      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform float uHole; uniform float uFarm; uniform float uRound; uniform vec3 uSoil[32];\n' +
         'attribute vec2 aOff; attribute float aRot; attribute vec2 aScl; attribute vec3 aCol;\n' +
         sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= aCol;').replace('#include <begin_vertex>',
         'vec3 transformed = vec3(position);\n' +
@@ -397,7 +400,10 @@
         'float onIsland = step(length(q), uRound - 0.35);\n' +
         'float edgeD = min(uFarm - abs(wp.x), uFarm - abs(wp.y)), hf = clamp(edgeD / 4.0, 0.0, 1.0);\n' +
         'float gy = 0.12 + hf * (0.55 + 0.28 * sin(wp.x * 0.11 + 1.3) * cos(wp.y * 0.09 - 0.7) + 0.14 * sin(wp.x * 0.23 + wp.y * 0.17) + 0.06 * sin(wp.x * 0.61 - wp.y * 0.47)) + 0.04 * sin(wp.x * 1.3) * sin(wp.y * 1.1);\n' +
-        'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * onIsland;\n' +
+        'float bare = 1.0, jit = fract(aRot * 7.13);\n' +
+        'for (int i = 0; i < 32; i++) { vec3 sp = uSoil[i]; if (sp.z > 0.0) bare = min(bare, smoothstep(sp.z * 0.45, sp.z * (1.0 + jit * 0.5), length(wp - sp.xy))); }\n' +
+        'vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.08, 0.92, 0.62), (1.0 - bare) * 0.85);\n' +
+        'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * onIsland * bare;\n' +
         'transformed.xz *= onIsland;\n' +
         'float cr = cos(aRot), sr = sin(aRot);\n' +
         'transformed.xz = vec2(cr * transformed.x - sr * transformed.z, sr * transformed.x + cr * transformed.z);\n' +
@@ -627,6 +633,40 @@
         crumb.position.set(m[0].x + Math.cos(ca) * cd, localGround(m[0].x + Math.cos(ca) * cd, m[0].z + Math.sin(ca) * cd) + cs * 0.2, m[0].z + Math.sin(ca) * cd); crumb.scale.set(cs, cs * 0.6, cs); crumb.rotation.set(rr() * 3, rr() * 3, 0); tree.add(crumb);
       }
     });
+    // Grass fading into the soil: patches of bare earth with ragged edges, the grass thinning, shortening and yellowing towards them
+    var patchTex = paint(256, 256, function (g, w) {
+      for (var i = 0; i < 4200; i++) {
+        var a = rr() * 6.28, d = Math.sqrt(rr()) * 0.5, keep = 1 - Math.max(0, Math.min(1, (d - 0.2) / 0.3)) + (vnoise(Math.cos(a) * 3 + 9, Math.sin(a) * 3) - 0.5) * 0.5;
+        if (rr() > keep) continue;
+        var v = rr(), x = w / 2 + Math.cos(a) * d * w, y = w / 2 + Math.sin(a) * d * w, sz = 1 + rr() * 3.5;
+        g.fillStyle = v < 0.4 ? 'rgba(40,28,19,.85)' : v < 0.8 ? 'rgba(66,48,33,.8)' : v < 0.95 ? 'rgba(98,78,58,.75)' : 'rgba(140,126,108,.8)';
+        g.beginPath(); g.arc(x, y, sz, 0, 6.28); g.fill();
+      }
+    }, true);
+    patchTex.wrapS = patchTex.wrapT = THREE.ClampToEdgeWrapping;
+    var patchMat = new THREE.MeshStandardMaterial({ map: patchTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
+    var spots = mounds.map(function (m) { return [m[0].x, m[0].z, m[2] * 2.4]; }); spots.push([0, 0, 1.75]);
+    tree.updateMatrixWorld(true);
+    spots.forEach(function (sp, n) {
+      var pg = new THREE.PlaneGeometry(1, 1, 12, 12); pg.rotateX(-Math.PI / 2); pg.rotateY(rr() * 6.28);
+      var pp2 = pg.attributes.position, D = sp[2] * 2.3;
+      for (var v = 0; v < pp2.count; v++) { var X = sp[0] + pp2.getX(v) * D, Z = sp[1] + pp2.getZ(v) * D; pp2.setXYZ(v, X, localGround(X, Z) + 0.012, Z); }
+      var patch = new THREE.Mesh(pg, patchMat); patch.receiveShadow = true; tree.add(patch);
+      var wpos = tree.localToWorld(V(sp[0], 0, sp[1])); soilSpots.value[n].set(wpos.x, wpos.z, sp[2]);
+    });
+    if (farmGrass) {                                                    // the island's grass round each patch
+      var ga = farmGrass.instanceMatrix.array, gc = farmGrass.instanceColor && farmGrass.instanceColor.array;
+      for (var gi2 = 0; gi2 < farmGrass.count; gi2++) {
+        var gx = ga[gi2 * 16 + 12], gz = ga[gi2 * 16 + 14];
+        if (Math.abs(gx - TREE_X) > 7 || Math.abs(gz - TREE_Z) > 7) continue;
+        var bare = 1, jt = rr();
+        soilSpots.value.forEach(function (sp) { if (sp.z > 0) { var dd = Math.hypot(gx - sp.x, gz - sp.y), lo = sp.z * 0.45, hi = sp.z * (1 + jt * 0.5), k = Math.max(0, Math.min(1, (dd - lo) / (hi - lo))); bare = Math.min(bare, k * k * (3 - 2 * k)); } });
+        if (bare >= 1) continue;
+        for (var e = 4; e < 7; e++) ga[gi2 * 16 + e] *= bare;
+        if (gc) { gc[gi2 * 3] *= 1 + 0.08 * (1 - bare); gc[gi2 * 3 + 1] *= 1 - 0.08 * (1 - bare); gc[gi2 * 3 + 2] *= 1 - 0.38 * (1 - bare); }
+      }
+      farmGrass.instanceMatrix.needsUpdate = true; if (gc) farmGrass.instanceColor.needsUpdate = true;
+    }
     // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
     var clumps = [], hang = [];
     var leader = limb([V(0.08, 3.6, 0), V(0.3, 5.3, 0.1), V(0.1, 6.7, -0.2)], 0.38, 0.08, { twist: 0.3, ridge: 0.05 });
