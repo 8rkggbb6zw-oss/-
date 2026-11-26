@@ -493,7 +493,7 @@
     }
 
     // Bark: twisting plates split by deep fissures, fine cherry lenticels, a bump map to match
-    var BW = 256, BH = 512, barkR = rand(7);
+    var BW = 256, BH = 512;
     function barkPaint(g, bump) {
       g.fillStyle = bump ? '#808080' : '#5e3f5f'; g.fillRect(0, 0, BW, BH);
       function wrapStroke(fn) { for (var ox = -BW; ox <= BW; ox += BW) for (var oy = -BH; oy <= BH; oy += BH) fn(ox, oy); }
@@ -524,23 +524,26 @@
     }
     var bark = paint(BW, BH, function (g) { barkPaint(g, false); }, true), barkBump = paint(BW, BH, function (g) { barkPaint(g, true); });
     // Glowing veins winding up the bark, with fine forks
-    var veins = paint(128, 512, function (g, w, h) {
+    function veinPaint(g, w, h, soft) {
+      var barkR = rand(19);
       g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.lineCap = 'round';
       for (var i = 0; i < 5; i++) {
         var x0 = barkR() * w, p1 = barkR() * 6.28, p2 = barkR() * 6.28, jag = [];
         for (var j = 0; j < h / 8; j++) jag.push((barkR() - 0.5) * 4);
         var vx = function (y, ox) { var k = y / h * Math.PI * 2, n = ((y / 8) % jag.length + jag.length) % jag.length; return x0 + ox + Math.sin(k + p1) * 10 + Math.sin(k * 3 + p2) * 4 + jag[n]; };
-        [[7, 'rgba(255,120,220,.25)', 8], [2.2, 'rgba(255,170,235,.9)', 4], [0.9, '#fff', 0]].forEach(function (L) {
+        (soft ? [[26, 'rgba(255,90,210,.16)', 26], [13, 'rgba(255,120,220,.3)', 16], [5, 'rgba(255,180,240,.6)', 8]]
+          : [[8, 'rgba(255,120,220,.35)', 10], [2.6, 'rgba(255,180,240,1)', 5], [1.1, '#fff', 0]]).forEach(function (L) {
           g.lineWidth = L[0]; g.strokeStyle = L[1]; g.shadowColor = '#ff8fe0'; g.shadowBlur = L[2];
           for (var ox = -w; ox <= w; ox += w) { g.beginPath(); for (var y = -16; y <= h + 16; y += 8) { if (y === -16) g.moveTo(vx(y, ox), y); else g.lineTo(vx(y, ox), y); } g.stroke(); }
         });
-        g.shadowBlur = 3; g.strokeStyle = 'rgba(255,190,240,.7)'; g.lineWidth = 0.8;
+        g.shadowBlur = soft ? 10 : 3; g.strokeStyle = soft ? 'rgba(255,140,225,.35)' : 'rgba(255,200,245,.85)'; g.lineWidth = soft ? 4 : 1;
         for (var b = 0; b < 7; b++) { var by = barkR() * h, bx = vx(by, 0), dir = barkR() < 0.5 ? -1 : 1; g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + dir * 6, by + 8, bx + dir * (8 + barkR() * 8), by + 16 + barkR() * 14); g.stroke(); }
       }
       g.shadowBlur = 0;
-    });
+    }
+    var veins = paint(128, 512, function (g, w, h) { veinPaint(g, w, h, false); }), veinGlow = paint(128, 512, function (g, w, h) { veinPaint(g, w, h, true); });
     var barkMat = new THREE.MeshStandardMaterial({ map: bark, bumpMap: barkBump, bumpScale: 0.06, roughness: 0.88, vertexColors: true,
-      emissive: new THREE.Color('#ff70d4'), emissiveMap: veins, emissiveIntensity: 0.5 });
+      emissive: new THREE.Color('#ff7ad8'), emissiveMap: veins, emissiveIntensity: 0.6 });
 
     // Wood: smooth tapering tubes that twist and ripple, all joined into one mesh
     var wood = [];
@@ -626,6 +629,11 @@
     wg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); wg.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
     wg.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); wg.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); wg.setIndex(I);
     var woodMesh = new THREE.Mesh(wg, barkMat); woodMesh.castShadow = woodMesh.receiveShadow = true; tree.add(woodMesh);
+    // Vein glow: a soft pink haze just off the bark
+    var gg = wg.clone(), gp = gg.attributes.position, gn = gg.attributes.normal;
+    for (var gi = 0; gi < gp.count; gi++) gp.setXYZ(gi, gp.getX(gi) + gn.getX(gi) * 0.05, gp.getY(gi) + gn.getY(gi) * 0.05, gp.getZ(gi) + gn.getZ(gi) * 0.05);
+    var glowMat = new THREE.MeshBasicMaterial({ map: veinGlow, color: '#ff62d2', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    tree.add(new THREE.Mesh(gg, glowMat));
 
     // Blossom: loose clusters of real cherry flowers with notched petals, blushing hearts, gold stamens and young leaves
     var blossomTex = paint(512, 512, function (g) {
@@ -664,7 +672,7 @@
         }
       }
     }, true);
-    bark.wrapS = bark.wrapT = barkBump.wrapS = barkBump.wrapT = veins.wrapS = veins.wrapT = THREE.RepeatWrapping;
+    bark.wrapS = bark.wrapT = barkBump.wrapS = barkBump.wrapT = veins.wrapS = veins.wrapT = veinGlow.wrapS = veinGlow.wrapT = THREE.RepeatWrapping;
     blossomTex.wrapS = blossomTex.wrapT = strandTex.wrapS = strandTex.wrapT = THREE.ClampToEdgeWrapping;
     // Each card lit as if it faced out of its cluster, so the canopy is bright on top and shaded beneath; swaying in the breeze
     function blossomMat(tex, glowAmt, droop) {
@@ -766,21 +774,21 @@
     var petalGeo = new THREE.ShapeGeometry(ps, 4), pp = petalGeo.attributes.position;
     for (var pv = 0; pv < pp.count; pv++) pp.setZ(pv, pp.getX(pv) * pp.getX(pv) * 9);
     petalGeo.computeVertexNormals(); petalGeo.translate(0, -0.035, 0);
-    var petalMat = new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide, roughness: 0.6, emissive: new THREE.Color('#ff9fd8'), emissiveIntensity: 0.22 });
+    var petalMat = new THREE.MeshStandardMaterial({ color: '#ffb3d3', side: THREE.DoubleSide, roughness: 0.6, emissive: new THREE.Color('#ff5aa8'), emissiveIntensity: 0.4 });
     // Fallen petals carpeting the ground around the roots
-    var fallen = new THREE.InstancedMesh(petalGeo, petalMat, 1800);
-    for (var fp = 0; fp < 1800; fp++) {
-      var fa = r() * 6.28, fd = 0.9 + Math.pow(r(), 1.6) * 4.2, fx = Math.cos(fa) * fd, fz = Math.sin(fa) * fd;
+    var FALLEN = 3200, fallen = new THREE.InstancedMesh(petalGeo, petalMat, FALLEN);
+    for (var fp = 0; fp < FALLEN; fp++) {
+      var fa = r() * 6.28, fd = 0.9 + Math.pow(r(), 1.5) * 5.5, fx = Math.cos(fa) * fd, fz = Math.sin(fa) * fd;
       Eu.set(-Math.PI / 2 + (r() - 0.5) * 0.5, 0, r() * 6.28); Q.setFromEuler(Eu);
       Pp.set(fx, localGround(fx, fz) + 0.02, fz); var fs = 0.5 + r() * 0.45; Sc.set(fs, fs, fs);
       M.compose(Pp, Q, Sc); fallen.setMatrixAt(fp, M);
-      var fl = 0.9 + r() * 0.1; Col.setRGB(fl, fl * (0.62 + r() * 0.14), fl * (0.76 + r() * 0.1)); if (r() < 0.25) Col.setRGB(fl * 0.82, fl * 0.55, fl * 0.62); fallen.setColorAt(fp, Col);
+      var fl = 0.92 + r() * 0.08; Col.setRGB(fl, fl * (0.42 + r() * 0.14), fl * (0.6 + r() * 0.12)); if (r() < 0.25) Col.setRGB(fl * 0.9, fl * 0.36, fl * 0.52); fallen.setColorAt(fp, Col);
     }
     fallen.receiveShadow = true; tree.add(fallen);
-    // Petals drifting down, tumbling as they fall
-    var FALL = 90, drift = new THREE.InstancedMesh(petalGeo, petalMat, FALL), dState = [];
-    function resetPetal(s, any) { var a = r() * 6.28, d = Math.sqrt(r()) * 3.6; s.x = Math.cos(a) * d; s.z = Math.sin(a) * d; s.y = any ? r() * 6 : 4.6 + r() * 1.6; s.v = 0.25 + r() * 0.25; s.p = r() * 6.28; s.s = r() * 2 + 1; s.c = 0.85 + r() * 0.15; }
-    for (var dp = 0; dp < FALL; dp++) { var ds = {}; resetPetal(ds, true); dState.push(ds); Col.setRGB(ds.c, ds.c * 0.66, ds.c * 0.8); drift.setColorAt(dp, Col); }
+    // Petals swirling round the tree in the wind, tumbling as they fall
+    var FALL = 200, drift = new THREE.InstancedMesh(petalGeo, petalMat, FALL), dState = [];
+    function resetPetal(s, any) { s.a = r() * 6.28; s.d = 0.8 + Math.sqrt(r()) * 3.4; s.y = any ? 0.3 + r() * 6 : 4.2 + r() * 2.2; s.v = 0.3 + r() * 0.3; s.p = r() * 6.28; s.s = r() * 2.5 + 1.5; s.k = 0.7 + r() * 0.6; s.x = Math.cos(s.a) * s.d; s.z = Math.sin(s.a) * s.d; }
+    for (var dp = 0; dp < FALL; dp++) { var ds = {}; resetPetal(ds, true); dState.push(ds); var dc = 0.9 + r() * 0.1; Col.setRGB(dc, dc * (0.42 + r() * 0.14), dc * (0.6 + r() * 0.12)); drift.setColorAt(dp, Col); }
     drift.frustumCulled = false; tree.add(drift);
 
     // Sparkles rising from the ground round the tree
@@ -799,12 +807,17 @@
     return {
       blocks: function (x, z) { return Math.hypot(x - TREE_X, z - TREE_Z) < 1.35; },
       update: function (t, dt, px, pz) {
-        barkMat.emissiveIntensity = 0.45 + 0.12 * Math.sin(t * 1.3);
+        var pulse = Math.sin(t * 1.3), gust = 0.5 + 0.5 * Math.sin(t * 0.35) * Math.sin(t * 0.13 + 1);
+        barkMat.emissiveIntensity = 0.6 + 0.15 * pulse; glowMat.opacity = 0.5 + 0.15 * pulse;
         orbs.forEach(function (o) { o.pivot.rotation.z = Math.sin(t * 0.9 + o.p) * 0.08; o.pivot.rotation.x = Math.cos(t * 0.7 + o.p) * 0.06; o.halo.material.opacity = 0.55 + 0.2 * Math.sin(t * 2 + o.p); });
         for (var i = 0; i < FALL; i++) {
-          var s = dState[i]; s.y -= s.v * dt; s.x += Math.sin(t * 0.8 + s.p) * dt * 0.35; s.z += Math.cos(t * 0.9 + s.p) * dt * 0.25;
-          if (s.y < localGround(s.x, s.z) + 0.03) resetPetal(s, false);
-          Eu.set(t * s.s + s.p, t * s.s * 0.7, Math.sin(t * 2 + s.p)); pq.setFromEuler(Eu); Pp.set(s.x, s.y, s.z); Sc.set(1, 1, 1);
+          var s = dState[i];
+          s.a += dt * (0.3 + gust * 1.1) * s.k * 1.8 / (0.8 + s.d * 0.4);
+          s.d += dt * (0.18 * Math.sin(t * 0.6 + s.p) + gust * 0.22);
+          s.y += dt * (-s.v + gust * 0.45 * Math.sin(t * 1.7 + s.p) + 0.3 * gust * Math.max(0, 1 - s.y / 3));
+          s.x = Math.cos(s.a) * s.d + Math.sin(t * 2.3 + s.p) * 0.08; s.z = Math.sin(s.a) * s.d + Math.cos(t * 2.1 + s.p) * 0.08;
+          if (s.y < localGround(s.x, s.z) + 0.03 || s.d > 8) resetPetal(s, false);
+          Eu.set(t * s.s * (0.6 + gust) + s.p, t * s.s * 0.7, Math.sin(t * 2 + s.p)); pq.setFromEuler(Eu); Pp.set(s.x, s.y, s.z); Sc.set(1.3, 1.3, 1.3);
           M.compose(Pp, pq, Sc); drift.setMatrixAt(i, M);
         }
         drift.instanceMatrix.needsUpdate = true;
