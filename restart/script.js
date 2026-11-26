@@ -613,27 +613,6 @@
         mounds.push([side.getPoint(0.62), sa, 0.12]);
       }
     });
-    // Soil heaped up where each root breaks into the ground
-    var dirt = paint(128, 128, function (g, w, h) {                  // crumbly soil: clods, grit and tiny stones
-      g.fillStyle = '#3a2a1e'; g.fillRect(0, 0, w, h);
-      for (var i = 0; i < 900; i++) { var v = rr(), sz = 0.6 + rr() * 2.6; g.fillStyle = v < 0.45 ? 'rgba(18,12,8,.7)' : v < 0.85 ? 'rgba(92,70,50,.6)' : 'rgba(150,132,110,.55)'; g.beginPath(); g.arc(rr() * w, rr() * h, sz, 0, 6.28); g.fill(); }
-    }, true);
-    var soilMat = new THREE.MeshStandardMaterial({ color: '#b8a898', map: dirt, bumpMap: dirt, bumpScale: 0.04, roughness: 1, vertexColors: true }), crumbMat = new THREE.MeshStandardMaterial({ color: '#2e2117', roughness: 1 });
-    mounds.forEach(function (m) {
-      var g = new THREE.SphereGeometry(1, 18, 10), mp = g.attributes.position, mc = [], ph = rr() * 9;
-      for (var v = 0; v < mp.count; v++) {
-        var X = mp.getX(v), Y = mp.getY(v), Z = mp.getZ(v), k = 1 + 0.16 * Math.sin(X * 5 + ph) * Math.cos(Z * 4 - ph) + 0.08 * Math.sin((X + Z) * 11 + ph);
-        mp.setXYZ(v, X * k, Math.max(-0.2, Y) * k, Z * k); var sh = 0.45 + 0.3 * vnoise(X * 3 + ph, Z * 3) + 0.15 * Math.max(0, Y); mc.push(sh, sh * 0.93, sh * 0.86);
-      }
-      g.setAttribute('color', new THREE.Float32BufferAttribute(mc, 3)); g.computeVertexNormals();
-      var mesh = new THREE.Mesh(g, soilMat), sz = m[2];
-      mesh.position.set(m[0].x, localGround(m[0].x, m[0].z) - 0.01, m[0].z); mesh.scale.set(sz * 1.4, sz * 0.26, sz); mesh.rotation.y = -m[1];
-      mesh.receiveShadow = true; tree.add(mesh);
-      for (var c = 0; c < 4; c++) {                                   // a few crumbs scattered round it
-        var ca = rr() * 6.28, cd = sz * (1 + rr() * 0.9), crumb = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 0), crumbMat), cs = sz * (0.12 + rr() * 0.12);
-        crumb.position.set(m[0].x + Math.cos(ca) * cd, localGround(m[0].x + Math.cos(ca) * cd, m[0].z + Math.sin(ca) * cd) + cs * 0.2, m[0].z + Math.sin(ca) * cd); crumb.scale.set(cs, cs * 0.6, cs); crumb.rotation.set(rr() * 3, rr() * 3, 0); tree.add(crumb);
-      }
-    });
     // Grass fading into the soil: patches of bare earth with ragged edges, the grass thinning, shortening and yellowing towards them
     // Soil patch: damp dark earth in the middle, drier and grittier towards its ragged edge, with leaf litter, twigs, pebbles, moss and roots
     function edgeAt(a) { return 0.3 + (vnoise(Math.cos(a) * 2.2 + 9, Math.sin(a) * 2.2 + 4) - 0.5) * 0.22 + (vnoise(Math.cos(a) * 6 + 2, Math.sin(a) * 6) - 0.5) * 0.08; }
