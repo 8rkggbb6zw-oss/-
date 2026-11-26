@@ -29,7 +29,7 @@
   scene.background = new THREE.Color('#9fd8ff');
 
   var camera = new THREE.PerspectiveCamera(45, 3 / 2, 0.1, 2000);
-  camera.position.set(0, 2.4, 4.6);
+  camera.position.set(0, 9.5, 10.2);
   camera.lookAt(0, 0.95, 0);
 
   // Light
@@ -541,7 +541,7 @@
     var hipsRestY = B.hips ? B.hips.position.y : 0;
     holder.position.set(x, groundHeight(x, z, FARM), z);
     var nextBlink = 2, blinkT = -1;
-    var WALK = 1.9, STRIDE = 1.7;
+    var WALK = 4.4, STRIDE = 2.9;
 
     return {
       group: holder,
@@ -586,14 +586,16 @@
         });
 
         // Arms
-        var pa = p - 0.3;
+        var pa = p - 0.35, jit = 1 + 0.08 * Math.sin(t * 0.7);
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
-          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I, sn = s * Math.sin(pa);
-          var swing = (sn < 0 ? 0.46 : 0.3) * sn * W, fwd = Math.max(0, -swing), back = Math.max(0, swing);
-          pose(a[0], E(0, -s * 0.05 * Math.sin(pa) * W, -s * 0.05));
-          pose(a[1], E(-0.08 + swing, 0, -s * (1.12 + sway - 0.06 * back)));
-          pose(a[2], E(0, -s * (0.32 + 0.1 * W + fwd * 1.1), 0));
-          pose(a[3], E(0, -s * (0.12 + 0.2 * back), -s * (0.12 + 0.08 * W)));
+          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I;
+          var sn = s * Math.sin(pa), lag = s * Math.sin(pa - 0.7);
+          var swing = (sn < 0 ? 0.3 : 0.2) * sn * W * jit;
+          var bend = 0.3 + 0.1 * W + 0.28 * W * Math.max(0, -lag) + 0.05 * W * Math.max(0, lag);
+          pose(a[0], E(0.02 * swing, 0, -s * 0.05));
+          pose(a[1], E(-0.06 + swing, 0.06 * s * swing, -s * (1.14 + sway)));
+          pose(a[2], E(0, -s * bend, 0));
+          pose(a[3], E(0.08 * lag * W, -s * 0.12, -s * (0.14 + 0.05 * W)));
         });
 
         // Head: steady, looking ahead, settling against the bob of each step
@@ -763,7 +765,7 @@
   }
 
   // Camera: follows her from behind and above
-  var camOffset = new THREE.Vector3(0, 2.4, 4.6), camLook = new THREE.Vector3(0, 0.95, 0), camAim = new THREE.Vector3();
+  var camOffset = new THREE.Vector3(0, 9.5, 10.2), camLook = new THREE.Vector3(0, 0.95, 0), camAim = new THREE.Vector3();
   function followCamera(dt) {
     if (!witch) return;
     var p = witch.position(), k = Math.min(1, dt * 4);
