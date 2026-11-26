@@ -586,7 +586,6 @@
         });
 
         // Arms
-        // the legs, a beat behind them, further forward than back, elbows bending more as each arm comes forward
         var pa = p - 0.3;
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
           var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I, sn = s * Math.sin(pa);
