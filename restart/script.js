@@ -235,7 +235,7 @@
       bc2[k2 * 3] = lv * (1 - moss * 0.45); bc2[k2 * 3 + 1] = lv * (0.96 + moss * 0.25); bc2[k2 * 3 + 2] = lv * (0.92 - moss * 0.4);
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
-    var side = soilTexture(); side.repeat.set(0.2, 1 / 5); side.offset.set(0, 0);
+    var side = soilTexture(); side.repeat.set(0.2, -0.2); side.offset.set(0, 0.2);
     var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#2e2014' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
