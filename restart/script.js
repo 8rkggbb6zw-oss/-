@@ -317,9 +317,9 @@
     var rr = rand(41), rq = new THREE.Quaternion(), re = new THREE.Euler(), rs = new THREE.Vector3(), rpv = new THREE.Vector3(), rc = new THREE.Color();
     var PAL = ['#8d8478', '#9c8f7c', '#6f6a66', '#a38c6e', '#7b6a5a', '#5d5a58', '#b0a48e'];
     var KINDS = [
-      { detail: 3, sx: 1, sy: 0.7, sz: 0.95, rough: 0.5, flat: false, count: 55, size: [0.18, 0.6] },
-      { detail: 1, sx: 1, sy: 0.85, sz: 0.9, rough: 0.75, flat: true, count: 55, size: [0.16, 0.55] },
-      { detail: 2, sx: 1.2, sy: 0.32, sz: 0.9, rough: 0.6, flat: true, count: 40, size: [0.2, 0.6] },
+      { detail: 3, sx: 1, sy: 0.7, sz: 0.95, rough: 0.5, flat: false, count: 75, size: [0.18, 0.6] },
+      { detail: 1, sx: 1, sy: 0.85, sz: 0.9, rough: 0.75, flat: true, count: 65, size: [0.16, 0.55] },
+      { detail: 2, sx: 1.2, sy: 0.32, sz: 0.9, rough: 0.6, flat: true, count: 50, size: [0.2, 0.6] },
       { detail: 2, sx: 1, sy: 0.75, sz: 1, rough: 0.4, flat: false, count: 150, size: [0.05, 0.13] }
     ];
     KINDS.forEach(function (K, kind) {
@@ -338,7 +338,7 @@
       for (var n2 = 0; n2 < K.count; n2++) {
         var rim = rimPoint(rr(), w, R), dep = 0.4 + rr() * 4.2, dn = dep / 5;
         var big = K.size[0] + rr() * rr() * (K.size[1] - K.size[0]);
-        var out = -dn * dn * 0.7 + 0.12 - big * 0.4;
+        var out = -dn * dn * 0.7 + 0.08 + big * 0.15;
         rpv.set(rim.x + rim.nx * out, -dep, rim.z + rim.nz * out);
         re.set((rr() - 0.5) * (kind === 2 ? 0.5 : 1.2), rr() * 6.3, (rr() - 0.5) * (kind === 2 ? 0.4 : 1.2)); rq.setFromEuler(re);
         rs.set(big * (0.85 + rr() * 0.5), big * (0.75 + rr() * 0.5), big * (0.85 + rr() * 0.5));
