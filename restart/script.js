@@ -217,6 +217,16 @@
       bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
     }
     body.computeVertexNormals();
+    // Smooth the earth's shading (the sides are built from separate pieces)
+    var nrm = body.attributes.normal, acc = {};
+    for (var k4 = 0; k4 < bp2.count; k4++) {
+      var key = Math.round(bp2.getX(k4) * 50) + ',' + Math.round(bp2.getY(k4) * 50) + ',' + Math.round(bp2.getZ(k4) * 50);
+      var a4 = acc[key] || (acc[key] = [0, 0, 0]); a4[0] += nrm.getX(k4); a4[1] += nrm.getY(k4); a4[2] += nrm.getZ(k4);
+    }
+    for (var k5 = 0; k5 < bp2.count; k5++) {
+      var a5 = acc[Math.round(bp2.getX(k5) * 50) + ',' + Math.round(bp2.getY(k5) * 50) + ',' + Math.round(bp2.getZ(k5) * 50)];
+      var l5 = Math.hypot(a5[0], a5[1], a5[2]) || 1; nrm.setXYZ(k5, a5[0] / l5, a5[1] / l5, a5[2] / l5);
+    }
     var bc2 = new Float32Array(bp2.count * 3);
     for (var k2 = 0; k2 < bp2.count; k2++) {
       var dz2 = (5 - bp2.getZ(k2)) / 5, cr = vnoise(bp2.getX(k2) * 0.8, bp2.getY(k2) * 0.8 + bp2.getZ(k2));
@@ -226,7 +236,7 @@
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
     var side = soilTexture(); side.repeat.set(0.2, 1 / 5); side.offset.set(0, 0);
-    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
+    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#2e2014' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
     bodyMesh.receiveShadow = true;
@@ -332,19 +342,19 @@
 
     // Roots hanging from under the grass
     var rootPts = [], rr2 = rand(53);
-    for (var t2 = 0; t2 < 420; t2++) {
-      var rim2 = rimPoint(rr2(), w, R), L2 = 0.4 + rr2() * rr2() * 2.4, x2 = rim2.x + rim2.nx * 0.12, z2 = rim2.z + rim2.nz * 0.12, y2 = -0.05;
-      var wob = (rr2() - 0.5) * 0.3, segs2 = 6;
+    for (var t2 = 0; t2 < 220; t2++) {
+      var rim2 = rimPoint(rr2(), w, R), L2 = 0.25 + rr2() * rr2() * 1.2, x2 = rim2.x + rim2.nx * 0.12, z2 = rim2.z + rim2.nz * 0.12, y2 = -0.05;
+      var wob = (rr2() - 0.5) * 0.5, segs2 = 8;
       for (var g2 = 0; g2 < segs2; g2++) {
         var k3 = (g2 + 1) / segs2, dn3 = (k3 * L2) / 5;
-        var nx2 = rim2.x + rim2.nx * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 4 + t2) * 0.06) + rim2.nz * wob * k3;
-        var nz2 = rim2.z + rim2.nz * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 4 + t2) * 0.06) - rim2.nx * wob * k3;
+        var nx2 = rim2.x + rim2.nx * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 9 + t2) * 0.05) + rim2.nz * wob * k3;
+        var nz2 = rim2.z + rim2.nz * (0.12 - dn3 * dn3 * 0.7 + Math.sin(k3 * 9 + t2) * 0.05) - rim2.nx * wob * k3;
         var ny2 = -k3 * L2;
         rootPts.push(x2, y2, z2, nx2, ny2, nz2); x2 = nx2; y2 = ny2; z2 = nz2;
       }
     }
     var rootGeo = new THREE.BufferGeometry(); rootGeo.setAttribute('position', new THREE.Float32BufferAttribute(rootPts, 3));
-    scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#8a6a44' })));
+    scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#5a4430' })));
   })();
 
   function resize() {
