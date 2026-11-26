@@ -332,16 +332,16 @@
         'transformed.x += sway * position.y * position.y * 0.07;\n' +
         'transformed.z += sway * position.y * position.y * 0.035;');
     };
-    var COUNT = 0, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
+    var COUNT = 220000, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3(), tint = new THREE.Color(), placed = 0;
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
       if (!insideFarm(bx, bz, w - 0.15, R - 0.15)) continue;
       var hgt = 0.05 + r() * r() * 0.09;
       e.set((r() - 0.5) * 0.5, r() * Math.PI * 2, (r() - 0.5) * 0.5); q.setFromEuler(e);
-      p.set(bx, groundHeight(bx, bz, w) - 0.02, bz); sc.set(0.8 + r() * 0.6, hgt, 1);
+      p.set(bx, groundHeight(bx, bz, w) - 0.02, bz); sc.set(1.5 + r() * 0.9, hgt * 1.2, 1);
       m.compose(p, q, sc); grass.setMatrixAt(placed, m);
-      grassColour(bx, bz, tint).multiplyScalar(2.1 + (r() - 0.5) * 0.7);
+      grassColour(bx, bz, tint).multiplyScalar(1.55 + (r() - 0.5) * 0.6);
       if (r() < 0.06) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
       grass.setColorAt(placed, tint);
       placed++;
@@ -409,8 +409,7 @@
     var nearGrass = new THREE.Mesh(ng, nmat); nearGrass.frustumCulled = false;
     scene.add(nearGrass);
     }
-    addLawn(28, 160000, 1, 0.18, 77, 0);
-    addLawn(100, 110000, 1.7, 0.38, 91, 11);
+    addLawn(28, 130000, 1, 0.18, 77, 0);
 
     // Stones set into the earth edge: rounded river stones, angular chunks, flat slates and small pebbles
     var rockTex = rockTexture(false), slateTex = rockTexture(true);
