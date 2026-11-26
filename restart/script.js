@@ -586,16 +586,15 @@
         });
 
         // Arms
-        var pa = p - 0.35, jit = 1 + 0.08 * Math.sin(t * 0.7);
+        var pa = p - 0.45, jit = 1 + 0.1 * Math.sin(t * 0.7);
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
-          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I;
-          var sn = s * Math.sin(pa), lag = s * Math.sin(pa - 0.7);
-          var swing = (sn < 0 ? 0.3 : 0.2) * sn * W * jit;
-          var bend = 0.3 + 0.1 * W + 0.28 * W * Math.max(0, -lag) + 0.05 * W * Math.max(0, lag);
-          pose(a[0], E(0.02 * swing, 0, -s * 0.05));
-          pose(a[1], E(-0.06 + swing, 0.06 * s * swing, -s * (1.14 + sway)));
-          pose(a[2], E(0, -s * bend, 0));
-          pose(a[3], E(0.08 * lag * W, -s * 0.12, -s * (0.14 + 0.05 * W)));
+          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.015 * I;
+          var sn = s * Math.sin(pa), lag = s * Math.sin(pa - 0.9), lag2 = s * Math.sin(pa - 1.5);
+          var swing = (sn < 0 ? 0.2 : 0.13) * sn * W * jit;
+          pose(a[0], E(0.03 * swing, 0, -s * 0.09));
+          pose(a[1], E(-0.1 + swing, 0, -s * (1.2 + sway)));
+          pose(a[2], E(0, -s * (0.22 + 0.16 * W * (0.5 - 0.5 * lag)), 0));
+          pose(a[3], E(0.12 * lag2 * W, -s * (0.2 + 0.06 * W), -s * (0.1 + 0.05 * W)));
         });
 
         // Head: steady, looking ahead, settling against the bob of each step
