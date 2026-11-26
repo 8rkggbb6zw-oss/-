@@ -374,7 +374,7 @@
     }
     var hTex = new THREE.DataTexture(hm, HM, HM, THREE.RGBAFormat);
     hTex.magFilter = THREE.LinearFilter; hTex.minFilter = THREE.LinearFilter; hTex.needsUpdate = true;
-    function addLawn(TILE, NEAR, size, inner, seed) {
+    function addLawn(TILE, NEAR, size, inner, seed, hole) {
     var ng = new THREE.InstancedBufferGeometry();
     ng.index = blade.index; ng.setAttribute('position', blade.attributes.position); ng.setAttribute('color', blade.attributes.color); ng.setAttribute('normal', blade.attributes.normal);
     var aOff = new Float32Array(NEAR * 2), aRot = new Float32Array(NEAR), aScl = new Float32Array(NEAR * 2), aCol = new Float32Array(NEAR * 3), nr = rand(seed), nc = new THREE.Color();
@@ -393,14 +393,14 @@
     ng.instanceCount = NEAR;
     var nmat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     nmat.onBeforeCompile = function (sh) {
-      sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE }; sh.uniforms.uInner = { value: inner };
+      sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE }; sh.uniforms.uInner = { value: inner }; sh.uniforms.uHole = { value: hole };
       sh.uniforms.uHeight = { value: hTex }; sh.uniforms.uFarm = { value: w };
-      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform sampler2D uHeight; uniform float uFarm;\n' +
+      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform float uHole; uniform sampler2D uHeight; uniform float uFarm;\n' +
         'attribute vec2 aOff; attribute float aRot; attribute vec2 aScl; attribute vec3 aCol;\n' +
         sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= aCol;').replace('#include <begin_vertex>',
         'vec3 transformed = vec3(position);\n' +
         'vec2 wp = aOff + uTile * floor((uCenter - aOff) / uTile + 0.5);\n' +
-        'float fade = 1.0 - smoothstep(uTile * uInner, uTile * 0.48, length(wp - uCenter));\n' +
+        'float fade = (1.0 - smoothstep(uTile * uInner, uTile * 0.48, length(wp - uCenter))) * (uHole > 0.0 ? smoothstep(uHole * 0.6, uHole, length(wp - uCenter)) : 1.0);\n' +
         'vec4 hs = texture2D(uHeight, wp / (uFarm * 2.0) + 0.5);\n' +
         'float gy = (hs.r + hs.g / 255.0) * 2.0;\n' +
         'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * step(0.5, hs.a);\n' +
@@ -414,8 +414,8 @@
     var nearGrass = new THREE.Mesh(ng, nmat); nearGrass.frustumCulled = false;
     scene.add(nearGrass);
     }
-    addLawn(28, 160000, 1, 0.18, 77);
-    addLawn(100, 110000, 2.6, 0.38, 91);
+    addLawn(28, 160000, 1, 0.18, 77, 0);
+    addLawn(100, 110000, 2.6, 0.38, 91, 11);
 
     // Stones set into the earth edge: rounded river stones, angular chunks, flat slates and small pebbles
     var rockTex = rockTexture(false), slateTex = rockTexture(true);
@@ -556,7 +556,7 @@
         var goal = WALK * want * Math.max(0.25, 1 - turning / 1.6);
         speed += (goal - speed) * Math.min(1, dt * (goal > speed ? 4 : 6));
         var nx = x + Math.sin(heading) * speed * dt, nz = z + Math.cos(heading) * speed * dt;
-        if (insideFarm(nx, nz, FARM - 1.2, 6)) { x = nx; z = nz; } else speed *= 0.5;
+        if (insideFarm(nx, nz, FARM - 0.5, 6.5)) { x = nx; z = nz; } else speed *= 0.5;
         phase += (speed * dt / STRIDE) * Math.PI * 2;
         walkW += (Math.min(1, speed / (WALK * 0.6)) - walkW) * Math.min(1, dt * 6);
         var W = walkW, I = 1 - W, p = phase;
