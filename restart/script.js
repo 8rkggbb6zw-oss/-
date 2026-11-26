@@ -554,16 +554,20 @@
       var uRep = Math.max(1, Math.round(r0 * 5)), vRate = uRep / (2 * Math.PI * r0) * 0.5;
       for (var i = 0; i <= L; i++) {
         var t = i / L, c = curve.getPointAt(t), N = fr.normals[i], Bn = fr.binormals[i];
-        var rad = opt.radius ? opt.radius(t, c.y) : r0 + (r1 - r0) * Math.pow(t, 0.8);
+        var rad0 = r0 + (r1 - r0) * Math.pow(t, 0.8);
         for (var j = 0; j <= R; j++) {
           var a = j / R * Math.PI * 2 + (opt.twist || 0) * t;
+          var rad = opt.radius ? opt.radius(t, c.y, Math.atan2(N.z * Math.cos(a) + Bn.z * Math.sin(a), N.x * Math.cos(a) + Bn.x * Math.sin(a))) : rad0;
           var rr2 = rad * (1 + (opt.ridge || 0.05) * Math.sin(a * (opt.lobes || 5) + t * 3) + 0.04 * Math.sin(a * 11 + t * 17));
           var ca = Math.cos(a), sa = Math.sin(a);
           pos.push(c.x + (N.x * ca + Bn.x * sa) * rr2, c.y + (N.y * ca + Bn.y * sa) * rr2, c.z + (N.z * ca + Bn.z * sa) * rr2);
           uv.push(j / R * uRep, t * len * vRate);
         }
       }
-      for (var i2 = 0; i2 < L; i2++) for (var j2 = 0; j2 < R; j2++) { var a2 = i2 * (R + 1) + j2, b2 = a2 + R + 1; idx.push(a2, b2, a2 + 1, b2, b2 + 1, a2 + 1); }
+      // faces turned outward, whichever way the frame spins
+      var c1 = curve.getPointAt(0), q0 = new THREE.Vector3().fromArray(pos, 0), q1 = new THREE.Vector3().fromArray(pos, (R + 1) * 3), q2 = new THREE.Vector3().fromArray(pos, 3);
+      var out = q1.clone().sub(q0).cross(q2.clone().sub(q0)).dot(q0.clone().sub(c1)) > 0;
+      for (var i2 = 0; i2 < L; i2++) for (var j2 = 0; j2 < R; j2++) { var a2 = i2 * (R + 1) + j2, b2 = a2 + R + 1; if (out) idx.push(a2, b2, a2 + 1, b2, b2 + 1, a2 + 1); else idx.push(a2, a2 + 1, b2, b2, a2 + 1, b2 + 1); }
       var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
       g.computeVertexNormals();
       // close the seam: average normals where the ring wraps
@@ -574,20 +578,23 @@
     }
     function V(x, y, z) { return new THREE.Vector3(x, y, z); }
 
-    // Trunk: wide flared base, twisting ridges
-    var TRUNK_H = 4.4;
+    // Trunk: one smooth piece that swells into buttresses where each root leaves it
+    var TRUNK_H = 4.4, roots = [];
+    for (var d = 0; d < 7; d++) roots.push({ a: d / 7 * Math.PI * 2 + r() * 0.4, l: 2.0 + r() * 0.9, w: (r() - 0.5) * 0.5 });
     limb([V(0, -0.4, 0), V(0.05, 1.2, 0.04), V(0.16, 2.6, -0.05), V(0.08, TRUNK_H, 0)], 0.6, 0.36, {
-      segs: 30, sides: 30, twist: 1.6, lobes: 6, ridge: 0.11,
-      radius: function (t, y) { return 0.6 * (1 - 0.4 * Math.max(0, y) / TRUNK_H) + 0.85 * Math.exp(-Math.max(0, y) * 2.2); }
+      segs: 40, sides: 64, twist: 1.6, lobes: 6, ridge: 0.09,
+      radius: function (t, y, a) {
+        var h = Math.max(0, y), b = 0;
+        roots.forEach(function (rt) { b += Math.pow(Math.max(0, Math.cos(a - rt.a)), 4); });
+        return 0.6 * (1 - 0.4 * h / TRUNK_H) + 0.5 * Math.exp(-h * 2.2) + 0.55 * Math.exp(-h * 2.2) * b;
+      }
     });
-    // Roots: buttresses that arch out of the trunk and dive into the ground
-    for (var d = 0; d < 7; d++) {
-      var ra = d / 7 * Math.PI * 2 + r() * 0.4, rl = 2.0 + r() * 0.9, rx = Math.cos(ra), rz = Math.sin(ra), wob = (r() - 0.5) * 0.5;
-      var ex = rx * rl - rz * wob, ez = rz * rl + rx * wob;
-      limb([V(rx * 0.42, 1.4, rz * 0.42), V(rx * 0.66, 0.6, rz * 0.66), V(rx * 1.05, 0.2, rz * 1.05), V(rx * rl * 0.62 - rz * wob * 0.5, localGround(rx * rl * 0.62, rz * rl * 0.62) + 0.06, rz * rl * 0.62 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.2, ez)], 0.34, 0.04, {
-        segs: 20, sides: 14, lobes: 3, ridge: 0.05, radius: function (t) { return t < 0.25 ? 0.12 + 0.22 * Math.sin(t / 0.25 * Math.PI / 2) : 0.34 - 0.3 * Math.pow((t - 0.25) / 0.75, 0.8); }
-      });
-    }
+    // Roots: running on from each buttress, out over the ground and into it
+    roots.forEach(function (rt) {
+      var rx = Math.cos(rt.a), rz = Math.sin(rt.a), rl = rt.l, wob = rt.w, ex = rx * rl - rz * wob, ez = rz * rl + rx * wob;
+      limb([V(rx * 0.55, 0.3, rz * 0.55), V(rx * 1.45, 0.08, rz * 1.45), V(rx * rl * 0.75 - rz * wob * 0.5, localGround(rx * rl * 0.75, rz * rl * 0.75) + 0.04, rz * rl * 0.75 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.2, ez)], 0.3, 0.04, { segs: 18, sides: 14, lobes: 3, ridge: 0.05,
+        radius: function (t) { return t < 0.2 ? 0.08 + 0.22 * Math.sin(t / 0.2 * Math.PI / 2) : 0.3 - 0.26 * Math.pow((t - 0.2) / 0.8, 0.8); } });
+    });
     // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
     var clumps = [], hang = [];
     var leader = limb([V(0.08, 3.6, 0), V(0.3, 5.3, 0.1), V(0.1, 6.7, -0.2)], 0.38, 0.08, { twist: 0.3, ridge: 0.05 });
@@ -614,13 +621,14 @@
       }
     }
     // Join the wood, shading it darker underneath and damp near the ground
-    var P = [], Nn = [], U = [], I = [], C = [], off = 0;
+    var P = [], Nn = [], U = [], I = [], C = [], TH = [], off = 0;
     wood.forEach(function (g) {
       var p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv;
       for (var i = 0; i < p.count; i++) {
         P.push(p.getX(i), p.getY(i), p.getZ(i)); Nn.push(n.getX(i), n.getY(i), n.getZ(i)); U.push(u.getX(i), u.getY(i));
         var sh = 1 - 0.38 * Math.max(0, -n.getY(i)), low = Math.max(0, 1 - (p.getY(i) + 0.2) / 1.1);
         C.push(sh * (1 - low * 0.35), sh * (1 - low * 0.22), sh * (1 - low * 0.38));
+        TH.push(Math.max(0, Math.min(1, (p.getY(i) - 1.4) / 2.6)));
       }
       for (var j = 0; j < g.index.count; j++) I.push(g.index.getX(j) + off);
       off += p.count;
@@ -628,11 +636,20 @@
     var wg = new THREE.BufferGeometry();
     wg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); wg.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3));
     wg.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); wg.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); wg.setIndex(I);
+    wg.setAttribute('aThin', new THREE.Float32BufferAttribute(TH, 1));
+    // Veins: only their bright cores glow higher up, so they're skinnier towards the top
+    barkMat.onBeforeCompile = function (sh) {
+      sh.vertexShader = 'attribute float aThin;\nvarying float vThin;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvThin = aThin;');
+      sh.fragmentShader = 'varying float vThin;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+        'vec4 emissiveColor = texture2D(emissiveMap, vUv);\nemissiveColor.rgb = emissiveMapTexelToLinear(emissiveColor).rgb;\n' +
+        'float vTh = vThin * 0.75, vL = max(emissiveColor.r, max(emissiveColor.g, emissiveColor.b));\n' +
+        'totalEmissiveRadiance *= emissiveColor.rgb * smoothstep(vTh, vTh + 0.2, vL);');
+    };
     var woodMesh = new THREE.Mesh(wg, barkMat); woodMesh.castShadow = woodMesh.receiveShadow = true; tree.add(woodMesh);
     // Vein glow: a soft pink haze just off the bark
     var gg = wg.clone(), gp = gg.attributes.position, gn = gg.attributes.normal;
-    for (var gi = 0; gi < gp.count; gi++) gp.setXYZ(gi, gp.getX(gi) + gn.getX(gi) * 0.05, gp.getY(gi) + gn.getY(gi) * 0.05, gp.getZ(gi) + gn.getZ(gi) * 0.05);
-    var glowMat = new THREE.MeshBasicMaterial({ map: veinGlow, color: '#ff62d2', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+    for (var gi = 0; gi < gp.count; gi++) { gp.setXYZ(gi, gp.getX(gi) + gn.getX(gi) * 0.02, gp.getY(gi) + gn.getY(gi) * 0.02, gp.getZ(gi) + gn.getZ(gi) * 0.02); var gf = 0.8 - 0.7 * TH[gi]; gg.attributes.color.setXYZ(gi, gf, gf, gf); }
+    var glowMat = new THREE.MeshBasicMaterial({ map: veinGlow, color: '#ff62d2', vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
     tree.add(new THREE.Mesh(gg, glowMat));
 
     // Blossom: loose clusters of real cherry flowers with notched petals, blushing hearts, gold stamens and young leaves
