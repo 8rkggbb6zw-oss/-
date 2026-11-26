@@ -415,7 +415,7 @@
     scene.add(nearGrass);
     }
     addLawn(28, 160000, 1, 0.18, 77, 0);
-    addLawn(100, 110000, 2.6, 0.38, 91, 11);
+    addLawn(100, 110000, 1.7, 0.38, 91, 11);
 
     // Stones set into the earth edge: rounded river stones, angular chunks, flat slates and small pebbles
     var rockTex = rockTexture(false), slateTex = rockTexture(true);
@@ -737,40 +737,65 @@
   $('btnBag').addEventListener('click', openBag);
   $('btnFull').addEventListener('click', toggleFull);
 
-  // Walking: WASD / arrow keys, or touch and hold on the ground to walk toward your finger
+  // Walking: WASD / arrow keys, or tap the ground to walk there
+  // Looking around: drag with one finger to turn the camera, pinch (or scroll) to zoom
   var keys = {};
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; });
-  var pointerGoal = null, pointerDown = false, ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.3), hit = new THREE.Vector3();
-  function aimAt(e) {
+  var cam = { yaw: 0, pitch: 0.75, dist: 14 };
+  var pointerGoal = null, ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.3), hit = new THREE.Vector3();
+  var touches = {}, dragged = false, pinchStart = 0, distStart = 14;
+  function aimAt(x, y) {
     var r = canvas.getBoundingClientRect();
-    ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     if (ray.ray.intersectPlane(groundPlane, hit)) pointerGoal = hit.clone();
   }
-  canvas.addEventListener('pointerdown', function (e) { pointerDown = true; aimAt(e); canvas.setPointerCapture(e.pointerId); });
-  canvas.addEventListener('pointermove', function (e) { if (pointerDown) aimAt(e); });
-  canvas.addEventListener('pointerup', function () { pointerDown = false; });
-  canvas.addEventListener('pointercancel', function () { pointerDown = false; pointerGoal = null; });
+  function pinchGap() { var ids = Object.keys(touches); return ids.length < 2 ? 0 : Math.hypot(touches[ids[0]].x - touches[ids[1]].x, touches[ids[0]].y - touches[ids[1]].y); }
+  canvas.addEventListener('pointerdown', function (e) {
+    touches[e.pointerId] = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY };
+    canvas.setPointerCapture(e.pointerId);
+    if (Object.keys(touches).length === 1) dragged = false;
+    else { dragged = true; pinchStart = pinchGap(); distStart = cam.dist; }
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    var t = touches[e.pointerId]; if (!t) return;
+    var dx = e.clientX - t.x, dy = e.clientY - t.y; t.x = e.clientX; t.y = e.clientY;
+    var n = Object.keys(touches).length;
+    if (n >= 2) { var g = pinchGap(); if (pinchStart > 0 && g > 0) cam.dist = Math.max(4, Math.min(30, distStart * pinchStart / g)); return; }
+    if (!dragged && Math.hypot(e.clientX - t.sx, e.clientY - t.sy) > 8) dragged = true;
+    if (dragged) { cam.yaw -= dx * 0.008; cam.pitch = Math.max(0.12, Math.min(1.35, cam.pitch + dy * 0.005)); }
+  });
+  function lift(e) {
+    var t = touches[e.pointerId]; delete touches[e.pointerId];
+    if (t && !dragged && e.type === 'pointerup' && !Object.keys(touches).length) aimAt(e.clientX, e.clientY);
+  }
+  canvas.addEventListener('pointerup', lift);
+  canvas.addEventListener('pointercancel', lift);
+  canvas.addEventListener('wheel', function (e) { e.preventDefault(); cam.dist = Math.max(4, Math.min(30, cam.dist * (1 + e.deltaY * 0.001))); }, { passive: false });
   function moveInput() {
     var mx = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
     var mz = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0);
-    if (mx || mz) { pointerGoal = null; var l = Math.hypot(mx, mz); return [mx / l, mz / l]; }
+    if (mx || mz) {
+      pointerGoal = null; var l = Math.hypot(mx, mz), c = Math.cos(cam.yaw), s = Math.sin(cam.yaw);
+      mx /= l; mz /= l; return [mx * c + mz * s, -mx * s + mz * c];
+    }
     if (pointerGoal && witch) {
       var p = witch.position(), dx = pointerGoal.x - p.x, dz = pointerGoal.z - p.z, d = Math.hypot(dx, dz);
-      if (d < 0.25 && !pointerDown) { pointerGoal = null; return [0, 0]; }
-      var f = Math.min(1, d / 0.6); return [dx / d * f, dz / d * f];
+      if (d < 0.3) { pointerGoal = null; return [0, 0]; }
+      var f = Math.min(1, d / 0.8); return [dx / d * f, dz / d * f];
     }
     return [0, 0];
   }
 
-  // Camera: follows her from behind and above
-  var camOffset = new THREE.Vector3(0, 9.5, 10.2), camLook = new THREE.Vector3(0, 0.95, 0), camAim = new THREE.Vector3();
+  // Camera: follows her, turned and zoomed with your finger
+  var camLook = new THREE.Vector3(0, 0.95, 0), camAim = new THREE.Vector3();
   function followCamera(dt) {
     if (!witch) return;
-    var p = witch.position(), k = Math.min(1, dt * 4);
-    camera.position.lerp(camAim.set(p.x, p.y, p.z).add(camOffset), k);
+    var p = witch.position(), k = Math.min(1, dt * 6);
     camLook.lerp(camAim.set(p.x, p.y + 0.95, p.z), k);
+    var flat = Math.cos(cam.pitch) * cam.dist;
+    camera.position.set(camLook.x + Math.sin(cam.yaw) * flat, camLook.y + Math.sin(cam.pitch) * cam.dist, camLook.z + Math.cos(cam.yaw) * flat);
     camera.lookAt(camLook);
   }
 
