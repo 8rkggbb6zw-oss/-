@@ -402,6 +402,7 @@
         'float gy = 0.12 + hf * (0.55 + 0.28 * sin(wp.x * 0.11 + 1.3) * cos(wp.y * 0.09 - 0.7) + 0.14 * sin(wp.x * 0.23 + wp.y * 0.17) + 0.06 * sin(wp.x * 0.61 - wp.y * 0.47)) + 0.04 * sin(wp.x * 1.3) * sin(wp.y * 1.1);\n' +
         'float bare = 1.0, jit = fract(aRot * 7.13);\n' +
         'for (int i = 0; i < 32; i++) { vec3 sp = uSoil[i]; if (sp.z > 0.0) bare = min(bare, smoothstep(sp.z * 0.45, sp.z * (1.0 + jit * 0.5), length(wp - sp.xy))); }\n' +
+        'if (fract(aRot * 3.71) < 0.12) bare = max(bare, 0.35 + jit * 0.25);\n' +
         'vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.08, 0.92, 0.62), (1.0 - bare) * 0.85);\n' +
         'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * onIsland * bare;\n' +
         'transformed.xz *= onIsland;\n' +
@@ -634,18 +635,62 @@
       }
     });
     // Grass fading into the soil: patches of bare earth with ragged edges, the grass thinning, shortening and yellowing towards them
-    var patchTex = paint(256, 256, function (g, w) {
-      for (var i = 0; i < 4200; i++) {
-        var a = rr() * 6.28, d = Math.sqrt(rr()) * 0.5, keep = 1 - Math.max(0, Math.min(1, (d - 0.2) / 0.3)) + (vnoise(Math.cos(a) * 3 + 9, Math.sin(a) * 3) - 0.5) * 0.5;
-        if (rr() > keep) continue;
-        var v = rr(), x = w / 2 + Math.cos(a) * d * w, y = w / 2 + Math.sin(a) * d * w, sz = 1 + rr() * 3.5;
-        g.fillStyle = v < 0.4 ? 'rgba(40,28,19,.85)' : v < 0.8 ? 'rgba(66,48,33,.8)' : v < 0.95 ? 'rgba(98,78,58,.75)' : 'rgba(140,126,108,.8)';
-        g.beginPath(); g.arc(x, y, sz, 0, 6.28); g.fill();
+    // Soil patch: damp dark earth in the middle, drier and grittier towards its ragged edge, with leaf litter, twigs, pebbles, moss and roots
+    function edgeAt(a) { return 0.3 + (vnoise(Math.cos(a) * 2.2 + 9, Math.sin(a) * 2.2 + 4) - 0.5) * 0.22 + (vnoise(Math.cos(a) * 6 + 2, Math.sin(a) * 6) - 0.5) * 0.08; }
+    var patchTex = paint(512, 512, function (g, w) {
+      var c = w / 2;
+      // Earth, pixel by pixel: damp and dark in the middle, drier and paler outward, with a soft grainy edge that breaks up into the grass
+      var img = g.createImageData(w, w), D = img.data;
+      for (var py = 0; py < w; py++) for (var px = 0; px < w; px++) {
+        var u = (px - c) / w, v = (py - c) / w, d = Math.hypot(u, v), an = Math.atan2(v, u);
+        var big = fbm(px * 0.012 + 3, py * 0.012 + 7), mid = vnoise(px * 0.05, py * 0.05), grain = rr();
+        var edge = edgeAt(an) + (big - 0.5) * 0.12;
+        var al = Math.max(0, Math.min(1, (edge - d) / 0.1 + (grain - 0.5) * 0.9 + (mid - 0.5) * 0.6));
+        var damp = Math.max(0, Math.min(1, 1 - d / 0.3)) * 0.6 + (1 - big) * 0.4;
+        var r0 = 104 - damp * 58, g0 = 84 - damp * 48, b0 = 62 - damp * 36, k = 0.8 + mid * 0.3 + (grain - 0.5) * 0.3;
+        var worn = Math.max(0, Math.min(1, (d - edge + 0.12) / 0.12)) * 0.5;   // trampled, half-dead grass colour where it meets the lawn
+        var o = (py * w + px) * 4;
+        D[o] = (r0 * k) * (1 - worn) + 84 * worn; D[o + 1] = (g0 * k) * (1 - worn) + 86 * worn; D[o + 2] = (b0 * k) * (1 - worn) + 46 * worn; D[o + 3] = al * 255;
       }
+      g.putImageData(img, 0, 0);
+      g.globalCompositeOperation = 'source-atop';                          // details only where there's soil
+      function sprinkle(n, fn, slack, bias) { for (var i = 0; i < n; i++) { var a = rr() * 6.28, d = Math.pow(rr(), bias || 0.5) * 0.5, x = c + Math.cos(a) * d * w, y = c + Math.sin(a) * d * w; fn(x, y, d, a); } }
+      sprinkle(7000, function (x, y, d) {                              // crumbs and grit, each with a tiny shadow
+        var v = rr(), r = 0.5 + rr() * rr() * 2.2;
+        g.fillStyle = 'rgba(10,6,3,.45)'; g.beginPath(); g.arc(x + 0.6, y + 0.7, r, 0, 6.28); g.fill();
+        g.fillStyle = v < 0.5 ? 'rgba(' + (60 + rr() * 30 | 0) + ',' + (44 + rr() * 22 | 0) + ',30,.9)' : v < 0.9 ? 'rgba(' + (110 + rr() * 30 | 0) + ',' + (92 + rr() * 24 | 0) + ',70,.85)' : 'rgba(160,150,135,.85)';
+        g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill();
+      }, 0, 0.6);
+      sprinkle(140, function (x, y) {                                  // pebbles, lit from the top left
+        var r = 1.5 + rr() * 4, t = 110 + rr() * 70; g.fillStyle = 'rgba(15,10,6,.5)'; g.beginPath(); g.ellipse(x + 1, y + 1.2, r, r * 0.75, 0, 0, 6.28); g.fill();
+        var pg = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r); pg.addColorStop(0, 'rgb(' + (t + 50) + ',' + (t + 42) + ',' + (t + 30) + ')'); pg.addColorStop(1, 'rgb(' + (t - 40) + ',' + (t - 46) + ',' + (t - 54) + ')');
+        g.fillStyle = pg; g.beginPath(); g.ellipse(x, y, r, r * 0.75, rr() * 3, 0, 6.28); g.fill();
+      });
+      sprinkle(170, function (x, y) {                                  // old leaves, curled and browned
+        g.save(); g.translate(x, y); g.rotate(rr() * 6.28); var L = 5 + rr() * 7, h = 20 + rr() * 22;
+        g.fillStyle = 'hsl(' + h + ',' + (30 + rr() * 30) + '%,' + (18 + rr() * 16) + '%)'; g.beginPath(); g.moveTo(-L, 0); g.quadraticCurveTo(0, -L * 0.5, L, 0); g.quadraticCurveTo(0, L * 0.5, -L, 0); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(-L, 0); g.lineTo(L, 0); g.stroke(); g.restore();
+      }, 0.06);
+      sprinkle(26, function (x, y) {                                   // twigs
+        var a = rr() * 6.28, L = 10 + rr() * 22; g.strokeStyle = 'rgb(' + (40 + rr() * 30 | 0) + ',28,20)'; g.lineWidth = 1 + rr() * 1.4; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a + 0.3) * L * 0.5, y + Math.sin(a + 0.3) * L * 0.5, x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+        if (rr() < 0.5) { g.lineWidth *= 0.6; g.beginPath(); g.moveTo(x + Math.cos(a) * L * 0.5, y + Math.sin(a) * L * 0.5); g.lineTo(x + Math.cos(a + 0.7) * L * 0.8, y + Math.sin(a + 0.7) * L * 0.8); g.stroke(); }
+      });
+      sprinkle(30, function (x, y) {                                   // fine roots showing through the soil
+        var a = rr() * 6.28; g.strokeStyle = 'rgba(70,50,40,.7)'; g.lineWidth = 0.7 + rr(); g.beginPath(); g.moveTo(x, y);
+        for (var k = 1; k < 6; k++) { a += (rr() - 0.5) * 0.9; x += Math.cos(a) * 5; y += Math.sin(a) * 5; g.lineTo(x, y); } g.stroke();
+      });
+      sprinkle(900, function (x, y, d) {                               // moss creeping in from the edge
+        if (d < 0.2) return; g.fillStyle = 'hsla(' + (75 + rr() * 30) + ',' + (35 + rr() * 25) + '%,' + (18 + rr() * 14) + '%,.75)'; g.beginPath(); g.arc(x, y, 0.8 + rr() * 2.2, 0, 6.28); g.fill();
+      }, 0.1, 0.3);
+      sprinkle(260, function (x, y, d) {                               // a few short blades still holding on
+        if (d < 0.17) return; var a = -Math.PI / 2 + (rr() - 0.5) * 1.2, L = 3 + rr() * 6;
+        g.strokeStyle = 'hsl(' + (70 + rr() * 30) + ',' + (35 + rr() * 20) + '%,' + (28 + rr() * 18) + '%)'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+      }, 0.08, 0.3);
     }, true);
     patchTex.wrapS = patchTex.wrapT = THREE.ClampToEdgeWrapping;
     var patchMat = new THREE.MeshStandardMaterial({ map: patchTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
-    var spots = mounds.map(function (m) { return [m[0].x, m[0].z, m[2] * 2.4]; }); spots.push([0, 0, 1.75]);
+    var spots = mounds.map(function (m) { return [m[0].x, m[0].z, m[2] * 2.4]; }); spots.push([0, 0, 2.5]);
     tree.updateMatrixWorld(true);
     spots.forEach(function (sp, n) {
       var pg = new THREE.PlaneGeometry(1, 1, 12, 12); pg.rotateX(-Math.PI / 2); pg.rotateY(rr() * 6.28);
@@ -654,13 +699,28 @@
       var patch = new THREE.Mesh(pg, patchMat); patch.receiveShadow = true; tree.add(patch);
       var wpos = tree.localToWorld(V(sp[0], 0, sp[1])); soilSpots.value[n].set(wpos.x, wpos.z, sp[2]);
     });
+    // Small stones half-sunk in the soil
+    var pebG = new THREE.IcosahedronGeometry(1, 2), pbp = pebG.attributes.position;
+    for (var pv2 = 0; pv2 < pbp.count; pv2++) { var kk = 0.9 + rr() * 0.15; pbp.setXYZ(pv2, pbp.getX(pv2) * kk, pbp.getY(pv2) * kk, pbp.getZ(pv2) * kk); }
+    pebG.computeVertexNormals();
+    var pebbles = new THREE.InstancedMesh(pebG, new THREE.MeshStandardMaterial({ roughness: 0.85 }), 160), pn = 0, pM = new THREE.Matrix4(), pQ = new THREE.Quaternion(), pE = new THREE.Euler(), pP = new THREE.Vector3(), pS = new THREE.Vector3(), pC = new THREE.Color();
+    spots.forEach(function (sp) {
+      for (var k = 0; k < Math.round(sp[2] * 26); k++) {
+        var a = rr() * 6.28, d = Math.sqrt(rr()) * sp[2] * 0.8, x = sp[0] + Math.cos(a) * d, z = sp[1] + Math.sin(a) * d, sz = 0.015 + rr() * rr() * 0.05;
+        if (Math.hypot(x, z) < 1.05 || pn >= 160) continue;
+        pE.set(rr() * 3, rr() * 3, rr() * 3); pQ.setFromEuler(pE); pP.set(x, localGround(x, z) + sz * 0.15, z); pS.set(sz * 1.3, sz * 0.7, sz);
+        pM.compose(pP, pQ, pS); pebbles.setMatrixAt(pn, pM); var t = 0.2 + rr() * 0.2; pC.setRGB(t * 1.08, t, t * 0.88); pebbles.setColorAt(pn, pC); pn++;
+      }
+    });
+    pebbles.count = pn; pebbles.castShadow = pebbles.receiveShadow = true; tree.add(pebbles);
     if (farmGrass) {                                                    // the island's grass round each patch
       var ga = farmGrass.instanceMatrix.array, gc = farmGrass.instanceColor && farmGrass.instanceColor.array;
       for (var gi2 = 0; gi2 < farmGrass.count; gi2++) {
         var gx = ga[gi2 * 16 + 12], gz = ga[gi2 * 16 + 14];
         if (Math.abs(gx - TREE_X) > 7 || Math.abs(gz - TREE_Z) > 7) continue;
-        var bare = 1, jt = rr();
+        var bare = 1, jt = rr(), hold = rr() < 0.12;
         soilSpots.value.forEach(function (sp) { if (sp.z > 0) { var dd = Math.hypot(gx - sp.x, gz - sp.y), lo = sp.z * 0.45, hi = sp.z * (1 + jt * 0.5), k = Math.max(0, Math.min(1, (dd - lo) / (hi - lo))); bare = Math.min(bare, k * k * (3 - 2 * k)); } });
+        if (hold) bare = Math.max(bare, 0.35 + jt * 0.25);                // a few tough tufts hang on in the soil
         if (bare >= 1) continue;
         for (var e = 4; e < 7; e++) ga[gi2 * 16 + e] *= bare;
         if (gc) { gc[gi2 * 3] *= 1 + 0.08 * (1 - bare); gc[gi2 * 3 + 1] *= 1 - 0.08 * (1 - bare); gc[gi2 * 3 + 2] *= 1 - 0.38 * (1 - bare); }
@@ -699,7 +759,8 @@
       for (var i = 0; i < p.count; i++) {
         P.push(p.getX(i), p.getY(i), p.getZ(i)); Nn.push(n.getX(i), n.getY(i), n.getZ(i)); U.push(u.getX(i), u.getY(i));
         var sh = 1 - 0.38 * Math.max(0, -n.getY(i)), low = Math.max(0, 1 - (p.getY(i) + 0.2) / 1.1);
-        C.push(sh * (1 - low * 0.35), sh * (1 - low * 0.22), sh * (1 - low * 0.38));
+        var moss = low * Math.max(0, n.getY(i)) * (0.5 + 0.5 * vnoise(p.getX(i) * 4, p.getZ(i) * 4));   // moss on the tops of the roots near the ground
+        C.push(sh * (1 - low * 0.35) * (1 - moss * 0.5), sh * (1 - low * 0.22) * (1 + moss * 0.15), sh * (1 - low * 0.38) * (1 - moss * 0.7));
         TH.push(Math.max(0, Math.min(1, (p.getY(i) - 1.4) / 2.6)));
       }
       for (var j = 0; j < g.index.count; j++) I.push(g.index.getX(j) + off);
