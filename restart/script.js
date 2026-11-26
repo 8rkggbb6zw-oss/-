@@ -29,8 +29,8 @@
   scene.background = new THREE.Color('#9fd8ff');
 
   var camera = new THREE.PerspectiveCamera(45, 3 / 2, 0.1, 2000);
-  camera.position.set(0, 5.5, 9.5);
-  camera.lookAt(0, 1.1, 0);
+  camera.position.set(0, 2.4, 4.6);
+  camera.lookAt(0, 0.95, 0);
 
   // Light
   var hemi = new THREE.HemisphereLight('#cfe4ff', '#4a5530', 0.6);
@@ -302,12 +302,12 @@
     }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     geo.computeVertexNormals();
-    var tex = grassTexture(); tex.repeat.set(w * 2 / 5, w * 2 / 5);
+    var tex = grassTexture(); tex.repeat.set(w * 2 / 1.6, w * 2 / 1.6);
     scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.95 })));
 
     // Real grass blades that sway in the breeze
     var blade = new THREE.BufferGeometry();
-    var bw = 0.05, bp = [-bw, 0, 0, bw, 0, 0, -bw * 0.7, 0.45, 0.03, bw * 0.7, 0.45, 0.03, 0, 1, 0.12];
+    var bw = 0.016, bp = [-bw, 0, 0, bw, 0, 0, -bw * 0.7, 0.45, 0.03, bw * 0.7, 0.45, 0.03, 0, 1, 0.12];
     var bc = [0.18, 0.2, 0.1, 0.18, 0.2, 0.1, 0.42, 0.46, 0.26, 0.42, 0.46, 0.26, 0.72, 0.74, 0.5];
     blade.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
     blade.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3));
@@ -328,7 +328,7 @@
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
       if (!insideFarm(bx, bz, w - 0.15, R - 0.15)) continue;
-      var hgt = 0.25 + r() * r() * 0.75;
+      var hgt = 0.07 + r() * r() * 0.22;
       e.set((r() - 0.5) * 0.5, r() * Math.PI * 2, (r() - 0.5) * 0.5); q.setFromEuler(e);
       p.set(bx, groundHeight(bx, bz, w) - 0.02, bz); sc.set(0.8 + r() * 0.6, hgt, 1);
       m.compose(p, q, sc); grass.setMatrixAt(placed, m);
@@ -347,7 +347,7 @@
       if (hang) { fx = rp.x + rp.nx * 0.08; fz = rp.z + rp.nz * 0.08; }
       qt.setFromAxisAngle(axis, hang ? 1.7 + r() * 0.9 : 0.5 + r() * 1.0 + (0.5 - inset) * 0.6);
       q.copy(qt).multiply(qy);
-      p.set(fx, hang ? 0.05 : groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, hang ? 0.5 + r() * r() * 1.6 : 0.45 + r() * 0.8, 1);
+      p.set(fx, hang ? 0.05 : groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, hang ? 0.2 + r() * r() * 0.6 : 0.14 + r() * 0.25, 1);
       m.compose(p, q, sc); grass.setMatrixAt(COUNT + f, m);
       grassColour(fx, fz, tint).multiplyScalar(1.7 + (r() - 0.5) * 0.7);
       if (r() < 0.12) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
