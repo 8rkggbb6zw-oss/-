@@ -85,35 +85,74 @@
   }
 
   function soilTexture() {
-    var W = 1024, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H;
+    var W = 1024, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H;
     var g = c.getContext('2d'), r = rand(3);
     var grd = g.createLinearGradient(0, 0, 0, H);
-    grd.addColorStop(0, '#3f5f24'); grd.addColorStop(0.1, '#5e4128'); grd.addColorStop(0.45, '#4d3420'); grd.addColorStop(1, '#2e1f12');
+    grd.addColorStop(0, '#4a3a22'); grd.addColorStop(0.08, '#5c4029'); grd.addColorStop(0.5, '#4a3220'); grd.addColorStop(1, '#2c1d11');
     g.fillStyle = grd; g.fillRect(0, 0, W, H);
-    for (var l = 0; l < 6; l++) {
-      g.strokeStyle = 'rgba(' + (l % 2 ? '35,22,12' : '110,82,52') + ',.25)'; g.lineWidth = 3 + r() * 5;
-      g.beginPath(); var y0 = 50 + l * 34; g.moveTo(0, y0);
-      for (var x = 0; x <= W; x += 64) g.lineTo(x, y0 + (r() - .5) * 10);
+    // soft blotches of different earth tones
+    for (var i = 0; i < 700; i++) {
+      var x = r() * W, y = r() * H, rad = 6 + r() * 40;
+      var tone = ['92,66,42', '58,40,24', '110,84,58', '70,52,34', '44,30,18', '120,100,72'][i % 6];
+      var bl = g.createRadialGradient(x, y, 0, x, y, rad);
+      bl.addColorStop(0, 'rgba(' + tone + ',' + (0.25 + r() * 0.3) + ')'); bl.addColorStop(1, 'rgba(' + tone + ',0)');
+      g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    // faint sediment layers
+    for (var l = 0; l < 9; l++) {
+      g.strokeStyle = 'rgba(' + (l % 2 ? '30,20,10' : '125,98,66') + ',.18)'; g.lineWidth = 2 + r() * 6;
+      g.beginPath(); var y0 = 40 + l * 50 + r() * 20; g.moveTo(0, y0);
+      for (var x2 = 0; x2 <= W; x2 += 32) g.lineTo(x2, y0 + (r() - .5) * 8);
       g.stroke();
     }
-    for (var i = 0; i < 12000; i++) {
-      g.fillStyle = ['rgba(25,15,8,.35)', 'rgba(125,95,62,.3)', 'rgba(85,60,38,.35)'][i % 3];
-      g.fillRect(r() * W, 24 + r() * (H - 24), 1 + r() * 3, 1 + r() * 2);
+    // clods: lit on top, shaded underneath
+    for (var k = 0; k < 900; k++) {
+      var cx = r() * W, cy = 20 + r() * (H - 20), cw = 2 + r() * 7, ch = 1.5 + r() * 4;
+      g.fillStyle = 'rgba(20,12,6,.5)'; g.beginPath(); g.ellipse(cx + .8, cy + 1.4, cw, ch, 0, 0, 6.3); g.fill();
+      g.fillStyle = ['#5e432a', '#6d5034', '#4f3822', '#7a5c3d'][k % 4]; g.beginPath(); g.ellipse(cx, cy, cw, ch, 0, 0, 6.3); g.fill();
+      g.fillStyle = 'rgba(190,160,120,.22)'; g.beginPath(); g.ellipse(cx - cw * .2, cy - ch * .4, cw * .55, ch * .35, 0, 0, 6.3); g.fill();
     }
-    for (var k = 0; k < 90; k++) {
-      var sx = r() * W, sy = 45 + r() * (H - 55), rw = 3 + r() * 9, rh = 2 + r() * 5;
-      g.fillStyle = 'rgba(20,12,6,.45)'; g.beginPath(); g.ellipse(sx + 1, sy + 1.5, rw, rh, 0, 0, 6.3); g.fill();
-      g.fillStyle = ['#8a7d70', '#9c9184', '#766a5e'][k % 3]; g.beginPath(); g.ellipse(sx, sy, rw, rh, 0, 0, 6.3); g.fill();
-      g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.ellipse(sx - rw * .25, sy - rh * .3, rw * .45, rh * .3, 0, 0, 6.3); g.fill();
+    // grit and tiny pebbles
+    for (var j = 0; j < 22000; j++) {
+      var pv = r();
+      g.fillStyle = pv < 0.5 ? 'rgba(18,10,4,.45)' : pv < 0.85 ? 'rgba(140,112,80,.4)' : 'rgba(170,160,150,.55)';
+      var sz = pv > 0.85 ? 1 + r() * 2.2 : 0.6 + r() * 1.4;
+      g.fillRect(r() * W, r() * H, sz, sz);
     }
-    for (var j = 0; j < 220; j++) {
-      g.strokeStyle = 'rgba(' + (r() < .5 ? '60,40,22' : '160,130,90') + ',.75)'; g.lineWidth = 0.6 + r();
-      var rx = r() * W, ry = 18 + r() * 10; g.beginPath(); g.moveTo(rx, ry);
-      g.quadraticCurveTo(rx + (r() - .5) * 14, ry + 14, rx + (r() - .5) * 10, ry + 14 + r() * 34); g.stroke();
+    // fine root hairs
+    for (var t = 0; t < 260; t++) {
+      g.strokeStyle = 'rgba(' + (r() < .5 ? '58,40,22' : '168,138,96') + ',.6)'; g.lineWidth = 0.5 + r() * 0.8;
+      var rx = r() * W, ry = r() * H * 0.6; g.beginPath(); g.moveTo(rx, ry);
+      g.bezierCurveTo(rx + (r() - .5) * 20, ry + 15, rx + (r() - .5) * 20, ry + 30, rx + (r() - .5) * 16, ry + 20 + r() * 50); g.stroke();
     }
-    var t = canvasTex(c, true); t.wrapT = THREE.ClampToEdgeWrapping;
-    return t;
+    var t2 = canvasTex(c, true); t2.wrapT = THREE.ClampToEdgeWrapping;
+    return t2;
   }
+
+  function rockTexture() {
+    var S = 256, c = document.createElement('canvas'); c.width = c.height = S;
+    var g = c.getContext('2d'), r = rand(17);
+    g.fillStyle = '#7d756b'; g.fillRect(0, 0, S, S);
+    for (var i = 0; i < 260; i++) {
+      var x = r() * S, y = r() * S, rad = 4 + r() * 28, tone = ['60,55,50', '120,112,100', '95,85,72', '140,132,120'][i % 4];
+      var bl = g.createRadialGradient(x, y, 0, x, y, rad);
+      bl.addColorStop(0, 'rgba(' + tone + ',.45)'); bl.addColorStop(1, 'rgba(' + tone + ',0)');
+      g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    for (var j = 0; j < 7000; j++) { g.fillStyle = r() < .5 ? 'rgba(30,26,22,.4)' : 'rgba(200,192,180,.35)'; g.fillRect(r() * S, r() * S, 1, 1); }
+    for (var k = 0; k < 14; k++) {
+      g.strokeStyle = 'rgba(28,24,20,.55)'; g.lineWidth = 0.6 + r() * 0.8; g.beginPath();
+      var cx = r() * S, cy = r() * S; g.moveTo(cx, cy);
+      for (var q = 0; q < 5; q++) { cx += (r() - .5) * 40; cy += (r() - .5) * 40; g.lineTo(cx, cy); }
+      g.stroke();
+    }
+    for (var l = 0; l < 40; l++) {
+      g.fillStyle = r() < .6 ? 'rgba(150,160,90,.35)' : 'rgba(210,200,140,.3)';
+      g.beginPath(); g.arc(r() * S, r() * S, 1.5 + r() * 5, 0, 6.3); g.fill();
+    }
+    return canvasTex(c, true);
+  }
+
 
   // Smooth natural noise for patches and bumps
   var NP = (function () { var r = rand(29), a = []; for (var i = 0; i < 512; i++) a.push(r()); return a; })();
@@ -164,16 +203,16 @@
     var R = 7, w = FARM;
 
     // Soil body with a rounded rim
-    var outline = [], N = 640;
+    var outline = [], N = 900;
     for (var i = 0; i < N; i++) { var pp = rimPoint(i / N, w, R); outline.push(new THREE.Vector2(pp.x, -pp.z)); }
     var shape = new THREE.Shape(outline);
-    var body = new THREE.ExtrudeGeometry(shape, { depth: 5, steps: 10, bevelEnabled: false });
+    var body = new THREE.ExtrudeGeometry(shape, { depth: 5, steps: 22, bevelEnabled: false });
     // Crumbly earth edge that leans inward as it goes down
     var bp2 = body.attributes.position;
     for (var k = 0; k < bp2.count; k++) {
       var vx = bp2.getX(k), vy = bp2.getY(k), vz = bp2.getZ(k), down = (5 - vz) / 5;
       var len = Math.hypot(vx, vy); if (len < w * 0.5) continue;
-      var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 - down * down * 0.7;
+      var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 + (vnoise(vx * 4.3 + vz * 3, vy * 4.3 - vz * 3) - 0.5) * 0.22 - down * down * 0.7;
       if (vz > 4.99) j = (vnoise(vx * 0.9, vy * 0.9) - 0.5) * 0.35;
       bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
     }
@@ -187,7 +226,7 @@
     }
     body.setAttribute('color', new THREE.BufferAttribute(bc2, 3));
     var side = soilTexture(); side.repeat.set(0.2, 1 / 5); side.offset.set(0, 0);
-    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.12, roughness: 1, vertexColors: true })]);
+    var bodyMesh = new THREE.Mesh(body, [new THREE.MeshLambertMaterial({ color: '#3c5a22' }), new THREE.MeshStandardMaterial({ map: side, bumpMap: side, bumpScale: 0.2, roughness: 1, vertexColors: true })]);
     bodyMesh.rotation.x = -Math.PI / 2;
     bodyMesh.position.y = -5;
     bodyMesh.receiveShadow = true;
@@ -263,25 +302,33 @@
     grass.instanceMatrix.needsUpdate = true;
     scene.add(grass);
 
-    // Stones poking out of the earth edge
-    var rockGeo = new THREE.IcosahedronGeometry(1, 1), rpz = rockGeo.attributes.position;
-    for (var v = 0; v < rpz.count; v++) {
-      var vx3 = rpz.getX(v), vy3 = rpz.getY(v), vz3 = rpz.getZ(v), f3 = 0.75 + vnoise(vx3 * 2 + 5, vy3 * 2 + vz3 * 2) * 0.5;
-      rpz.setXYZ(v, vx3 * f3, vy3 * f3 * 0.8, vz3 * f3);
-    }
-    rockGeo.computeVertexNormals();
-    var ROCKS = 170, rocks = new THREE.InstancedMesh(rockGeo, new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true }), ROCKS);
+    // Stones poking out of the earth edge: rounded, weathered and part-buried
+    var rockTex = rockTexture();
+    var rockMat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.06, roughness: 0.9, vertexColors: true });
     var rr = rand(41), rq = new THREE.Quaternion(), re = new THREE.Euler(), rs = new THREE.Vector3(), rpv = new THREE.Vector3(), rc = new THREE.Color();
-    for (var n2 = 0; n2 < ROCKS; n2++) {
-      var rim = rimPoint(rr(), w, R), dep = 0.6 + rr() * 3.8, dn = dep / 5, out = -dn * dn * 0.7 + 0.15;
-      rpv.set(rim.x + rim.nx * out, -dep, rim.z + rim.nz * out);
-      re.set(rr() * 6.3, rr() * 6.3, rr() * 6.3); rq.setFromEuler(re);
-      var big = 0.18 + rr() * rr() * 0.6; rs.set(big * (0.8 + rr() * 0.6), big * (0.6 + rr() * 0.5), big * (0.8 + rr() * 0.6));
-      m.compose(rpv, rq, rs); rocks.setMatrixAt(n2, m);
-      rc.setHSL(0.07 + rr() * 0.04, 0.12 + rr() * 0.1, 0.13 + rr() * 0.1); rocks.setColorAt(n2, rc);
+    for (var kind = 0; kind < 3; kind++) {
+      var rockGeo = new THREE.IcosahedronGeometry(1, 3), rpz = rockGeo.attributes.position, rcol = new Float32Array(rpz.count * 3);
+      for (var v = 0; v < rpz.count; v++) {
+        var vx3 = rpz.getX(v), vy3 = rpz.getY(v), vz3 = rpz.getZ(v), o = kind * 17;
+        var bump = fbm(vx3 * 1.3 + vz3 * 0.7 + o, vy3 * 1.3 - vz3 * 0.5 + o), f3 = 0.72 + bump * 0.5 + (vnoise(vx3 * 5 + o, vy3 * 5 + vz3 * 5) - 0.5) * 0.08;
+        var flat = vy3 < -0.2 ? 0.75 : 1;
+        rpz.setXYZ(v, vx3 * f3, vy3 * f3 * (0.62 + kind * 0.1) * flat, vz3 * f3 * (0.9 + kind * 0.08));
+        var ao = 0.55 + bump * 0.6; rcol[v * 3] = ao; rcol[v * 3 + 1] = ao; rcol[v * 3 + 2] = ao * 0.97;
+      }
+      rockGeo.setAttribute('color', new THREE.BufferAttribute(rcol, 3));
+      rockGeo.computeVertexNormals();
+      var PER = 70, rocks = new THREE.InstancedMesh(rockGeo, rockMat, PER);
+      for (var n2 = 0; n2 < PER; n2++) {
+        var rim = rimPoint(rr(), w, R), dep = 0.5 + rr() * 4, dn = dep / 5, out = -dn * dn * 0.7 + 0.05 + rr() * 0.1;
+        rpv.set(rim.x + rim.nx * out, -dep, rim.z + rim.nz * out);
+        re.set((rr() - 0.5) * 0.8, rr() * 6.3, (rr() - 0.5) * 0.8); rq.setFromEuler(re);
+        var big = 0.15 + rr() * rr() * 0.65; rs.set(big * (0.9 + rr() * 0.5), big * (0.7 + rr() * 0.4), big * (0.9 + rr() * 0.5));
+        m.compose(rpv, rq, rs); rocks.setMatrixAt(n2, m);
+        rc.setHSL(0.07 + rr() * 0.05, 0.06 + rr() * 0.08, 0.42 + rr() * 0.2); rocks.setColorAt(n2, rc);
+      }
+      rocks.castShadow = true; rocks.receiveShadow = true;
+      scene.add(rocks);
     }
-    rocks.castShadow = true; rocks.receiveShadow = true;
-    scene.add(rocks);
 
     // Roots hanging from under the grass
     var rootPts = [], rr2 = rand(53);
