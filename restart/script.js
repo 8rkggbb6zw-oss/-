@@ -209,7 +209,7 @@
   }
   function fbm(x, z) { return vnoise(x, z) * 0.5 + vnoise(x * 2.1 + 7, z * 2.1 + 3) * 0.3 + vnoise(x * 4.3 + 1, z * 4.3 + 9) * 0.2; }
   // Grass colour at a spot: lush green, olive and sun-dried straw mixed naturally
-  var LUSH = new THREE.Color('#3d6327'), OLIVE = new THREE.Color('#5b7232'), DRY = new THREE.Color('#8f8a4a'), DARK = new THREE.Color('#2c4a1c');
+  var LAWN = new THREE.Color('#7f9a3e'), LUSH = new THREE.Color('#3d6327'), OLIVE = new THREE.Color('#5b7232'), DRY = new THREE.Color('#8f8a4a'), DARK = new THREE.Color('#2c4a1c');
   function grassColour(x, z, out) {
     var a = fbm(x * 0.06, z * 0.06), b = fbm(x * 0.17 + 40, z * 0.17 + 40), dry = Math.max(0, fbm(x * 0.045 + 90, z * 0.045 + 90) - 0.55) * 2.4;
     out.copy(LUSH).lerp(OLIVE, a).lerp(DARK, Math.max(0, 0.45 - b) * 1.2).lerp(DRY, Math.min(0.55, dry));
@@ -297,7 +297,7 @@
         x = cx + dx / d * R; z = cz + dz / d * R;
       }
       pos.setXYZ(i, x, groundHeight(x, z, w), z);
-      grassColour(x, z, c).multiplyScalar(1.15);
+      grassColour(x, z, c).lerp(LAWN, 0.45).multiplyScalar(1.1);
       cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
@@ -332,7 +332,7 @@
         'transformed.x += sway * position.y * position.y * 0.07;\n' +
         'transformed.z += sway * position.y * position.y * 0.035;');
     };
-    var COUNT = 70000, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
+    var COUNT = 0, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3(), tint = new THREE.Color(), placed = 0;
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
@@ -374,13 +374,14 @@
     }
     var hTex = new THREE.DataTexture(hm, HM, HM, THREE.RGBAFormat);
     hTex.magFilter = THREE.LinearFilter; hTex.minFilter = THREE.LinearFilter; hTex.needsUpdate = true;
-    var TILE = 28, NEAR = 160000, ng = new THREE.InstancedBufferGeometry();
+    function addLawn(TILE, NEAR, size, inner, seed) {
+    var ng = new THREE.InstancedBufferGeometry();
     ng.index = blade.index; ng.setAttribute('position', blade.attributes.position); ng.setAttribute('color', blade.attributes.color); ng.setAttribute('normal', blade.attributes.normal);
-    var aOff = new Float32Array(NEAR * 2), aRot = new Float32Array(NEAR), aScl = new Float32Array(NEAR * 2), aCol = new Float32Array(NEAR * 3), nr = rand(77), nc = new THREE.Color();
+    var aOff = new Float32Array(NEAR * 2), aRot = new Float32Array(NEAR), aScl = new Float32Array(NEAR * 2), aCol = new Float32Array(NEAR * 3), nr = rand(seed), nc = new THREE.Color();
     for (var ni = 0; ni < NEAR; ni++) {
       var gx = (nr() - 0.5) * TILE, gz = (nr() - 0.5) * TILE;
       aOff[ni * 2] = gx; aOff[ni * 2 + 1] = gz; aRot[ni] = nr() * Math.PI * 2;
-      aScl[ni * 2] = 0.9 + nr() * 0.6; aScl[ni * 2 + 1] = 0.06 + nr() * nr() * 0.08;
+      aScl[ni * 2] = (0.9 + nr() * 0.6) * size; aScl[ni * 2 + 1] = (0.06 + nr() * nr() * 0.08) * Math.sqrt(size);
       grassColour(gx * 3.1, gz * 3.1, nc).multiplyScalar(1.55 + (nr() - 0.5) * 0.6);
       if (nr() < 0.05) nc.lerp(DRY, 0.5).multiplyScalar(1.2);
       aCol[ni * 3] = nc.r; aCol[ni * 3 + 1] = nc.g; aCol[ni * 3 + 2] = nc.b;
@@ -392,14 +393,14 @@
     ng.instanceCount = NEAR;
     var nmat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     nmat.onBeforeCompile = function (sh) {
-      sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE };
+      sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE }; sh.uniforms.uInner = { value: inner };
       sh.uniforms.uHeight = { value: hTex }; sh.uniforms.uFarm = { value: w };
-      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform sampler2D uHeight; uniform float uFarm;\n' +
+      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform sampler2D uHeight; uniform float uFarm;\n' +
         'attribute vec2 aOff; attribute float aRot; attribute vec2 aScl; attribute vec3 aCol;\n' +
         sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= aCol;').replace('#include <begin_vertex>',
         'vec3 transformed = vec3(position);\n' +
         'vec2 wp = aOff + uTile * floor((uCenter - aOff) / uTile + 0.5);\n' +
-        'float fade = 1.0 - smoothstep(uTile * 0.18, uTile * 0.48, length(wp - uCenter));\n' +
+        'float fade = 1.0 - smoothstep(uTile * uInner, uTile * 0.48, length(wp - uCenter));\n' +
         'vec4 hs = texture2D(uHeight, wp / (uFarm * 2.0) + 0.5);\n' +
         'float gy = (hs.r + hs.g / 255.0) * 2.0;\n' +
         'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * step(0.5, hs.a);\n' +
@@ -412,6 +413,9 @@
     };
     var nearGrass = new THREE.Mesh(ng, nmat); nearGrass.frustumCulled = false;
     scene.add(nearGrass);
+    }
+    addLawn(28, 160000, 1, 0.18, 77);
+    addLawn(100, 110000, 2.6, 0.38, 91);
 
     // Stones set into the earth edge: rounded river stones, angular chunks, flat slates and small pebbles
     var rockTex = rockTexture(false), slateTex = rockTexture(true);
