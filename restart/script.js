@@ -218,7 +218,7 @@
 
   var grassTime = { value: 0 }, grassCenter = { value: new THREE.Vector2(0, 0) };
   // Bare soil spots (x, z, radius) the grass thins out around, and the island's grass
-  var soilSpots = { value: [] }, farmGrass = null;
+  var soilSpots = { value: [] }, farmGrass = null, farmGround = null;
   for (var si = 0; si < 32; si++) soilSpots.value.push(new THREE.Vector3(0, 0, -1));
   function insideFarm(x, z, w, R) {
     var dx = Math.max(Math.abs(x) - (w - R), 0), dz = Math.max(Math.abs(z) - (w - R), 0);
@@ -306,7 +306,8 @@
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     geo.computeVertexNormals();
     var tex = grassTexture(); tex.repeat.set(w * 2 / 1.6, w * 2 / 1.6);
-    scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.95 })));
+    farmGround = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.95 })); farmGround.receiveShadow = true;
+    scene.add(farmGround);
 
     // Real grass blades that sway in the breeze
     // Each piece of grass is a little tuft of five blades
@@ -401,9 +402,10 @@
         'float edgeD = min(uFarm - abs(wp.x), uFarm - abs(wp.y)), hf = clamp(edgeD / 4.0, 0.0, 1.0);\n' +
         'float gy = 0.12 + hf * (0.55 + 0.28 * sin(wp.x * 0.11 + 1.3) * cos(wp.y * 0.09 - 0.7) + 0.14 * sin(wp.x * 0.23 + wp.y * 0.17) + 0.06 * sin(wp.x * 0.61 - wp.y * 0.47)) + 0.04 * sin(wp.x * 1.3) * sin(wp.y * 1.1);\n' +
         'float bare = 1.0, jit = fract(aRot * 7.13);\n' +
-        'for (int i = 0; i < 32; i++) { vec3 sp = uSoil[i]; if (sp.z > 0.0) bare = min(bare, smoothstep(sp.z * 0.45, sp.z * (1.0 + jit * 0.5), length(wp - sp.xy))); }\n' +
+        'float dryc = 1.0;\n' +
+        'for (int i = 0; i < 32; i++) { vec3 sp = uSoil[i]; if (sp.z > 0.0) { float sd = length(wp - sp.xy); bare = min(bare, smoothstep(sp.z * 0.45, sp.z * (1.3 + jit * 0.7), sd)); dryc = min(dryc, smoothstep(sp.z * 0.45, sp.z * 2.2, sd)); } }\n' +
         'if (fract(aRot * 3.71) < 0.12) bare = max(bare, 0.35 + jit * 0.25);\n' +
-        'vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.08, 0.92, 0.62), (1.0 - bare) * 0.85);\n' +
+        'vColor.rgb = mix(vColor.rgb, vColor.rgb * vec3(1.1, 0.9, 0.55), (1.0 - dryc) * 0.75);\n' +
         'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * onIsland * bare;\n' +
         'transformed.xz *= onIsland;\n' +
         'float cr = cos(aRot), sr = sin(aRot);\n' +
@@ -624,10 +626,10 @@
         var u = (px - c) / w, v = (py - c) / w, d = Math.hypot(u, v), an = Math.atan2(v, u);
         var big = fbm(px * 0.012 + 3, py * 0.012 + 7), mid = vnoise(px * 0.05, py * 0.05), grain = rr();
         var edge = edgeAt(an) + (big - 0.5) * 0.12;
-        var al = Math.max(0, Math.min(1, (edge - d) / 0.1 + (grain - 0.5) * 0.9 + (mid - 0.5) * 0.6));
+        var tt = Math.max(0, Math.min(1, (edge - d) / 0.2)), al = Math.max(0, Math.min(1, tt * 1.9 - 0.25 + ((grain - 0.5) * 1.2 + (mid - 0.5) * 0.7) * (1 - tt)));   // solid earth inside, breaking into grains at the edge
         var damp = Math.max(0, Math.min(1, 1 - d / 0.3)) * 0.6 + (1 - big) * 0.4;
         var r0 = 104 - damp * 58, g0 = 84 - damp * 48, b0 = 62 - damp * 36, k = 0.8 + mid * 0.3 + (grain - 0.5) * 0.3;
-        var worn = Math.max(0, Math.min(1, (d - edge + 0.12) / 0.12)) * 0.5;   // trampled, half-dead grass colour where it meets the lawn
+        var worn = Math.max(0, Math.min(1, (d - edge + 0.18) / 0.18)) * 0.65;   // trampled, half-dead grass colour where it meets the lawn
         var o = (py * w + px) * 4;
         D[o] = (r0 * k) * (1 - worn) + 84 * worn; D[o + 1] = (g0 * k) * (1 - worn) + 86 * worn; D[o + 2] = (b0 * k) * (1 - worn) + 46 * worn; D[o + 3] = al * 255;
       }
@@ -669,7 +671,7 @@
     }, true);
     patchTex.wrapS = patchTex.wrapT = THREE.ClampToEdgeWrapping;
     var patchMat = new THREE.MeshStandardMaterial({ map: patchTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 });
-    var spots = mounds.map(function (m) { return [m[0].x, m[0].z, m[2] * 2.4]; }); spots.push([0, 0, 2.5]);
+    var spots = mounds.map(function (m) { return [m[0].x, m[0].z, m[2] * 2.8]; }); spots.push([0, 0, 3]);
     tree.updateMatrixWorld(true);
     spots.forEach(function (sp, n) {
       var pg = new THREE.PlaneGeometry(1, 1, 12, 12); pg.rotateX(-Math.PI / 2); pg.rotateY(rr() * 6.28);
@@ -697,14 +699,25 @@
       for (var gi2 = 0; gi2 < farmGrass.count; gi2++) {
         var gx = ga[gi2 * 16 + 12], gz = ga[gi2 * 16 + 14];
         if (Math.abs(gx - TREE_X) > 7 || Math.abs(gz - TREE_Z) > 7) continue;
-        var bare = 1, jt = rr(), hold = rr() < 0.12;
-        soilSpots.value.forEach(function (sp) { if (sp.z > 0) { var dd = Math.hypot(gx - sp.x, gz - sp.y), lo = sp.z * 0.45, hi = sp.z * (1 + jt * 0.5), k = Math.max(0, Math.min(1, (dd - lo) / (hi - lo))); bare = Math.min(bare, k * k * (3 - 2 * k)); } });
+        var bare = 1, dry = 1, jt = rr(), hold = rr() < 0.12;
+        soilSpots.value.forEach(function (sp) { if (sp.z > 0) { var dd = Math.hypot(gx - sp.x, gz - sp.y), lo = sp.z * 0.45, hi = sp.z * (1.3 + jt * 0.7), k = Math.max(0, Math.min(1, (dd - lo) / (hi - lo))); bare = Math.min(bare, k * k * (3 - 2 * k)); var kd = Math.max(0, Math.min(1, (dd - lo) / (sp.z * 2.2 - lo))); dry = Math.min(dry, kd * kd * (3 - 2 * kd)); } });
         if (hold) bare = Math.max(bare, 0.35 + jt * 0.25);                // a few tough tufts hang on in the soil
-        if (bare >= 1) continue;
+        if (dry >= 1) continue;
         for (var e = 4; e < 7; e++) ga[gi2 * 16 + e] *= bare;
-        if (gc) { gc[gi2 * 3] *= 1 + 0.08 * (1 - bare); gc[gi2 * 3 + 1] *= 1 - 0.08 * (1 - bare); gc[gi2 * 3 + 2] *= 1 - 0.38 * (1 - bare); }
+        var wd = (1 - dry) * 0.75; if (gc) { gc[gi2 * 3] *= 1 + 0.1 * wd; gc[gi2 * 3 + 1] *= 1 - 0.1 * wd; gc[gi2 * 3 + 2] *= 1 - 0.45 * wd; }
       }
       farmGrass.instanceMatrix.needsUpdate = true; if (gc) farmGrass.instanceColor.needsUpdate = true;
+    }
+    if (farmGround) {                                                   // the ground under the grass turns earthy towards the tree
+      var fg = farmGround.geometry, fpos = fg.attributes.position, fcol = fg.attributes.color, earth = new THREE.Color('#8f6c48'), fc = new THREE.Color();
+      for (var fv = 0; fv < fpos.count; fv++) {
+        var vx = fpos.getX(fv), vz = fpos.getZ(fv), near = 1;
+        soilSpots.value.forEach(function (sp) { if (sp.z > 0) { var kd = Math.max(0, Math.min(1, (Math.hypot(vx - sp.x, vz - sp.y) - sp.z * 0.3) / (sp.z * 1.9))); near = Math.min(near, kd); } });
+        if (near >= 1) continue;
+        var amt = (1 - near * near * (3 - 2 * near)) * (0.75 + 0.25 * vnoise(vx * 1.7, vz * 1.7));
+        fc.fromArray(fcol.array, fv * 3).lerp(earth, Math.min(1, amt * 1.05)); fc.toArray(fcol.array, fv * 3);
+      }
+      fcol.needsUpdate = true;
     }
     // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
     var clumps = [], hang = [];
