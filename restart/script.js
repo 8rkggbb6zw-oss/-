@@ -537,7 +537,7 @@
     var hipsRestY = B.hips ? B.hips.position.y : 0;
     holder.position.set(x, groundHeight(x, z, FARM), z);
     var nextBlink = 2, blinkT = -1;
-    var WALK = 1.45, STRIDE = 1.5;
+    var WALK = 1.9, STRIDE = 1.7;
 
     return {
       group: holder,
@@ -581,14 +581,16 @@
           pose(L[3], E(-0.35 * Math.pow(Math.max(0, -sw), 3) * W, 0, 0));
         });
 
-        // Arms: swinging opposite the legs, elbows bending a little more on the forward swing
+        // Arms: held a little out from her sides so her hands clear her skirt, swinging from the shoulder opposite
+        // the legs, a beat behind them, further forward than back, elbows bending more as each arm comes forward
+        var pa = p - 0.3;
         [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
-          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I;
-          var swing = s * 0.34 * Math.sin(p) * W, fwd = Math.max(0, -swing);
-          pose(a[0], E(0, -s * 0.04 * Math.sin(p) * W, -s * 0.06));
-          pose(a[1], E(0.05 + swing, 0, -s * (1.3 + sway + 0.04 * W)));
-          pose(a[2], E(0, -s * (0.3 + 0.12 * W + fwd * 0.9), 0));
-          pose(a[3], E(0, -s * 0.1, -s * 0.15));
+          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02 * I, sn = s * Math.sin(pa);
+          var swing = (sn < 0 ? 0.46 : 0.3) * sn * W, fwd = Math.max(0, -swing), back = Math.max(0, swing);
+          pose(a[0], E(0, -s * 0.05 * Math.sin(pa) * W, -s * 0.05));
+          pose(a[1], E(-0.08 + swing, 0, -s * (1.12 + sway - 0.06 * back)));
+          pose(a[2], E(0, -s * (0.32 + 0.1 * W + fwd * 1.1), 0));
+          pose(a[3], E(0, -s * (0.12 + 0.2 * back), -s * (0.12 + 0.08 * W)));
         });
 
         // Head: steady, looking ahead, settling against the bob of each step
