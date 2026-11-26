@@ -46,7 +46,7 @@
   scene.add(sun);
   scene.fog = new THREE.Fog('#9fd8ff', 120, 260);
 
-  // The farm: a grassy square with softly rounded corners
+  // The Farm Land
   var FARM = 34;
   function rand(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
 
