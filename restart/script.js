@@ -374,14 +374,14 @@
     }
     var hTex = new THREE.DataTexture(hm, HM, HM, THREE.RGBAFormat);
     hTex.magFilter = THREE.LinearFilter; hTex.minFilter = THREE.LinearFilter; hTex.needsUpdate = true;
-    var TILE = 22, NEAR = 120000, ng = new THREE.InstancedBufferGeometry();
+    var TILE = 28, NEAR = 160000, ng = new THREE.InstancedBufferGeometry();
     ng.index = blade.index; ng.setAttribute('position', blade.attributes.position); ng.setAttribute('color', blade.attributes.color); ng.setAttribute('normal', blade.attributes.normal);
     var aOff = new Float32Array(NEAR * 2), aRot = new Float32Array(NEAR), aScl = new Float32Array(NEAR * 2), aCol = new Float32Array(NEAR * 3), nr = rand(77), nc = new THREE.Color();
     for (var ni = 0; ni < NEAR; ni++) {
       var gx = (nr() - 0.5) * TILE, gz = (nr() - 0.5) * TILE;
       aOff[ni * 2] = gx; aOff[ni * 2 + 1] = gz; aRot[ni] = nr() * Math.PI * 2;
       aScl[ni * 2] = 0.9 + nr() * 0.6; aScl[ni * 2 + 1] = 0.06 + nr() * nr() * 0.08;
-      grassColour(gx * 3.1, gz * 3.1, nc).multiplyScalar(2.0 + (nr() - 0.5) * 0.7);
+      grassColour(gx * 3.1, gz * 3.1, nc).multiplyScalar(1.55 + (nr() - 0.5) * 0.6);
       if (nr() < 0.05) nc.lerp(DRY, 0.5).multiplyScalar(1.2);
       aCol[ni * 3] = nc.r; aCol[ni * 3 + 1] = nc.g; aCol[ni * 3 + 2] = nc.b;
     }
@@ -399,7 +399,7 @@
         sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= aCol;').replace('#include <begin_vertex>',
         'vec3 transformed = vec3(position);\n' +
         'vec2 wp = aOff + uTile * floor((uCenter - aOff) / uTile + 0.5);\n' +
-        'float fade = 1.0 - smoothstep(uTile * 0.3, uTile * 0.48, length(wp - uCenter));\n' +
+        'float fade = 1.0 - smoothstep(uTile * 0.18, uTile * 0.48, length(wp - uCenter));\n' +
         'vec4 hs = texture2D(uHeight, wp / (uFarm * 2.0) + 0.5);\n' +
         'float gy = (hs.r + hs.g / 255.0) * 2.0;\n' +
         'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * step(0.5, hs.a);\n' +
