@@ -58,7 +58,7 @@
     return t;
   }
 
-  // Close-up grass: fine blades and specks of soil, tiled across the ground
+  // The Grass with Specs of Soil
   function grassTexture() {
     var S = 512, c = document.createElement('canvas'); c.width = c.height = S;
     var g = c.getContext('2d'), r = rand(7);
