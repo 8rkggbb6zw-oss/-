@@ -585,15 +585,15 @@
       segs: 40, sides: 64, twist: 1.6, lobes: 6, ridge: 0.09,
       radius: function (t, y, a) {
         var h = Math.max(0, y), b = 0;
-        roots.forEach(function (rt) { b += Math.pow(Math.max(0, Math.cos(a - rt.a)), 4); });
-        return 0.6 * (1 - 0.4 * h / TRUNK_H) + 0.5 * Math.exp(-h * 2.2) + 0.55 * Math.exp(-h * 2.2) * b;
+        roots.forEach(function (rt) { b += Math.pow(Math.max(0, Math.cos(a - rt.a)), 14); });
+        return 0.6 * (1 - 0.4 * h / TRUNK_H) + 0.12 * Math.exp(-h * 3) + 0.7 * Math.exp(-h * 1.7) * b;
       }
     });
     // Roots: running on from each buttress, out over the ground and into it
     roots.forEach(function (rt) {
       var rx = Math.cos(rt.a), rz = Math.sin(rt.a), rl = rt.l, wob = rt.w, ex = rx * rl - rz * wob, ez = rz * rl + rx * wob;
-      limb([V(rx * 0.55, 0.3, rz * 0.55), V(rx * 1.45, 0.08, rz * 1.45), V(rx * rl * 0.75 - rz * wob * 0.5, localGround(rx * rl * 0.75, rz * rl * 0.75) + 0.04, rz * rl * 0.75 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.2, ez)], 0.3, 0.04, { segs: 18, sides: 14, lobes: 3, ridge: 0.05,
-        radius: function (t) { return t < 0.2 ? 0.08 + 0.22 * Math.sin(t / 0.2 * Math.PI / 2) : 0.3 - 0.26 * Math.pow((t - 0.2) / 0.8, 0.8); } });
+      limb([V(rx * 0.3, 1.1, rz * 0.3), V(rx * 0.72, 0.45, rz * 0.72), V(rx * 1.3, 0.14, rz * 1.3), V(rx * rl * 0.7 - rz * wob * 0.5, localGround(rx * rl * 0.7, rz * rl * 0.7) + 0.02, rz * rl * 0.7 + rx * wob * 0.5), V(ex, localGround(ex, ez) - 0.3, ez)], 0.3, 0.04, { segs: 24, sides: 14, lobes: 3, ridge: 0.05,
+        radius: function (t) { return t < 0.3 ? 0.08 + 0.22 * Math.sin(t / 0.3 * Math.PI / 2) : 0.3 - 0.26 * Math.pow((t - 0.3) / 0.7, 0.8); } });
     });
     // Branches: a leader, wide curving limbs, side branches and fine twigs; blossom gathers at their ends
     var clumps = [], hang = [];
