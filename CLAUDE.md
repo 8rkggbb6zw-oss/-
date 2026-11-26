@@ -15,3 +15,10 @@ A cozy 3D farming game (three.js r128), played and edited in CodePen.
 ## Testing in the browser
 
 The test browser can't reach cdnjs, so serve a copy of the game locally with three.js r128 taken from the npm registry (`https://registry.npmjs.org/three/-/three-0.128.0.tgz`, file `package/build/three.min.js`). The title screen has to be clicked through (Play, then a save slot) before the game runs.
+
+## The restarted game (restart/)
+
+The restarted Everdawn lives in `restart/` (`index.html`, `style.css`, `script.js`), pasted into a new pen. **With every single change, in the same reply, always give both pages — never wait to be asked, never send one without the other:**
+1. A by-hand page for that change (Find / Replace with, a Copy button on each replacement).
+2. The updated full copy page (https://claude.ai/artifact/MRzk9cuf4nizLt6iS6M96y, republished from `glowing-star-by-hand.html`) with all three files, checked to match the repo files exactly.
+Keep notes in the code short (e.g. `// Mana`), and keep the user's own renamed notes.
