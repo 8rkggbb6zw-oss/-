@@ -29,8 +29,8 @@
   scene.background = new THREE.Color('#9fd8ff');
 
   var camera = new THREE.PerspectiveCamera(45, 3 / 2, 0.1, 2000);
-  camera.position.set(0, 50, 66);
-  camera.lookAt(0, -3, 0);
+  camera.position.set(0, 5.5, 9.5);
+  camera.lookAt(0, 1.1, 0);
 
   // Light
   var hemi = new THREE.HemisphereLight('#cfe4ff', '#4a5530', 0.6);
@@ -414,6 +414,97 @@
     scene.add(new THREE.LineSegments(rootGeo, new THREE.LineBasicMaterial({ color: '#5a4430' })));
   })();
 
+  // Your witch: Witch.vrm, loaded from GitHub
+  var witch = null;
+  var MODEL_URLS = [window.EVERDAWN_MODEL_URL,
+    'https://raw.githubusercontent.com/8rkggbb6zw-oss/-/claude/coding-conversation-f08c0n/Witch.vrm',
+    'https://cdn.jsdelivr.net/gh/8rkggbb6zw-oss/-@claude/coding-conversation-f08c0n/Witch.vrm'].filter(Boolean);
+
+  function loadWitch(n) {
+    if (!THREE.GLTFLoader) { console.warn('Everdawn: GLTFLoader is missing'); return; }
+    if (n >= MODEL_URLS.length * 2) { toast('Your witch could not be loaded.'); return; }
+    new THREE.GLTFLoader().load(MODEL_URLS[n % MODEL_URLS.length], function (gltf) {
+      try { witch = makeWitch(gltf); } catch (err) { console.error(err); }
+    }, undefined, function () { setTimeout(function () { loadWitch(n + 1); }, n + 1 >= MODEL_URLS.length ? 2500 : 0); });
+  }
+
+  function makeWitch(gltf) {
+    var root = gltf.scene, json = gltf.parser.json, vrm = json.extensions && json.extensions.VRMC_vrm;
+    if (!vrm) throw new Error('Witch.vrm is not a VRM 1.0 model');
+    var holder = new THREE.Group(); holder.add(root); scene.add(holder);
+    root.updateMatrixWorld(true);
+
+    // Soft cel shading that still takes the world's light and shade
+    var GRAD = new THREE.DataTexture(new Uint8Array([150, 150, 150, 255, 215, 215, 215, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
+    GRAD.minFilter = GRAD.magFilter = THREE.NearestFilter; GRAD.needsUpdate = true;
+    var meshes = [];
+    function toon(m) {
+      if (/Eye(Iris|Highlight|White)/.test(m.name)) return m;
+      return new THREE.MeshToonMaterial({ name: m.name, color: m.color, map: m.map, gradientMap: GRAD, transparent: m.transparent, alphaTest: m.alphaTest,
+        side: m.side, depthWrite: m.depthWrite, opacity: m.opacity, emissive: 0xffffff, emissiveMap: m.map, emissiveIntensity: 0.18,
+        skinning: m.skinning, morphTargets: !!m.morphTargets });
+    }
+    root.traverse(function (o) {
+      if (!o.isMesh) return;
+      o.frustumCulled = false; o.castShadow = true; o.receiveShadow = true; meshes.push(o);
+      var mats = (Array.isArray(o.material) ? o.material : [o.material]).map(toon);
+      o.material = mats.length === 1 ? mats[0] : mats;
+      if (/Face|Eye|Brow|Lash/.test(o.name)) o.renderOrder = 2;
+    });
+
+    // Her bones, and a way to turn them from her standing pose
+    var names = json.nodes.map(function (nd) { return THREE.PropertyBinding.sanitizeNodeName(nd.name || ''); });
+    var B = {};
+    Object.keys(vrm.humanoid.humanBones).forEach(function (k) { B[k] = root.getObjectByName(names[vrm.humanoid.humanBones[k].node]); });
+    var rest = new Map(), rootQi = root.getWorldQuaternion(new THREE.Quaternion()).invert();
+    Object.keys(B).forEach(function (k) { var o = B[k]; if (o) rest.set(o, { local: o.quaternion.clone(), model: rootQi.clone().multiply(o.getWorldQuaternion(new THREE.Quaternion())) }); });
+    var qa = new THREE.Quaternion(), ea = new THREE.Euler();
+    function pose(o, d) { var r = o && rest.get(o); if (!r) return; qa.copy(r.model).invert().multiply(d).multiply(r.model); o.quaternion.copy(r.local).multiply(qa); }
+    function E(x, y, z) { return new THREE.Quaternion().setFromEuler(ea.set(x, y, z)); }
+
+    // Her face: blinking
+    function exprBinds(name) {
+      var e = vrm.expressions && vrm.expressions.preset && vrm.expressions.preset[name], out = [];
+      if (!e || !e.morphTargetBinds) return out;
+      e.morphTargetBinds.forEach(function (b) {
+        var nd = root.getObjectByName(names[b.node]); if (!nd) return;
+        nd.traverse(function (m) { if (m.isMesh && m.morphTargetInfluences) out.push([m, b.index, b.weight]); });
+      });
+      return out;
+    }
+    var blinkBinds = exprBinds('blink');
+    function blink(v) { blinkBinds.forEach(function (b) { if (b[1] < b[0].morphTargetInfluences.length) b[0].morphTargetInfluences[b[1]] = b[2] * v; }); }
+
+    // Standing on the farm
+    var x = 0, z = 0;
+    holder.position.set(x, groundHeight(x, z, FARM), z);
+    var nextBlink = 2, blinkT = -1;
+
+    return {
+      group: holder,
+      update: function (t, dt) {
+        var br = Math.sin(t * 1.4);
+        pose(B.spine, E(0.01 * br, 0, 0));
+        pose(B.chest, E(0.015 * br, 0, 0));
+        [[B.leftShoulder, B.leftUpperArm, B.leftLowerArm, B.leftHand, 1], [B.rightShoulder, B.rightUpperArm, B.rightLowerArm, B.rightHand, -1]].forEach(function (a) {
+          var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.02;
+          pose(a[0], E(0, 0, -s * 0.06));
+          pose(a[1], E(0.05, 0, -s * (1.3 + sway)));
+          pose(a[2], E(0, -s * 0.3, 0));
+          pose(a[3], E(0, -s * 0.1, -s * 0.15));
+        });
+        pose(B.neck, E(0.02, 0.03 * Math.sin(t * 0.3), 0));
+        pose(B.head, E(0.04, 0.05 * Math.sin(t * 0.3 + 1), 0.05));
+        pose(B.rightLowerLeg, E(0.12, 0, 0));
+        pose(B.rightUpperLeg, E(-0.06, -0.08, 0.02));
+        nextBlink -= dt;
+        if (nextBlink <= 0) { blinkT = 0; nextBlink = 2 + Math.random() * 3.5; }
+        if (blinkT >= 0) { blinkT += dt; var bv = blinkT < 0.08 ? blinkT / 0.08 : Math.max(0, 1 - (blinkT - 0.08) / 0.1); blink(bv); if (blinkT > 0.2) { blink(0); blinkT = -1; } }
+      }
+    };
+  }
+  loadWitch(0);
+
   function resize() {
     var w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
@@ -564,6 +655,7 @@
     scene.background.copy(skyColour(minutes));
     scene.fog.color.copy(scene.background);
     grassTime.value = now / 1000;
+    if (witch) witch.update(now / 1000, dt);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
