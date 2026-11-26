@@ -306,12 +306,21 @@
     scene.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, vertexColors: true, roughness: 0.95 })));
 
     // Real grass blades that sway in the breeze
-    var blade = new THREE.BufferGeometry();
-    var bw = 0.016, bp = [-bw, 0, 0, bw, 0, 0, -bw * 0.7, 0.45, 0.03, bw * 0.7, 0.45, 0.03, 0, 1, 0.12];
-    var bc = [0.18, 0.2, 0.1, 0.18, 0.2, 0.1, 0.42, 0.46, 0.26, 0.42, 0.46, 0.26, 0.72, 0.74, 0.5];
+    // Each piece of grass is a little tuft of five blades
+    var blade = new THREE.BufferGeometry(), bp = [], bc = [], bi = [], tr = rand(5);
+    for (var tb = 0; tb < 5; tb++) {
+      var bw = 0.011 + tr() * 0.006, h = 0.65 + tr() * 0.35, lean = 0.04 + tr() * 0.1, ang = tr() * Math.PI * 2;
+      var ox = (tr() - 0.5) * 0.05, oz = (tr() - 0.5) * 0.05, ca = Math.cos(ang), sa = Math.sin(ang), base = bp.length / 3;
+      [[-bw, 0, 0], [bw, 0, 0], [-bw * 0.7, 0.45 * h, lean * 0.3], [bw * 0.7, 0.45 * h, lean * 0.3], [0, h, lean]].forEach(function (v) {
+        bp.push(ox + v[0] * ca + v[2] * sa, v[1], oz - v[0] * sa + v[2] * ca);
+      });
+      var tint = 0.85 + tr() * 0.3;
+      bc.push(0.18 * tint, 0.2 * tint, 0.1 * tint, 0.18 * tint, 0.2 * tint, 0.1 * tint, 0.42 * tint, 0.46 * tint, 0.26 * tint, 0.42 * tint, 0.46 * tint, 0.26 * tint, 0.72 * tint, 0.74 * tint, 0.5 * tint);
+      bi.push(base, base + 1, base + 2, base + 1, base + 3, base + 2, base + 2, base + 3, base + 4);
+    }
     blade.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3));
     blade.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3));
-    blade.setIndex([0, 1, 2, 1, 3, 2, 2, 3, 4]);
+    blade.setIndex(bi);
     blade.computeVertexNormals();
     var mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     mat.onBeforeCompile = function (sh) {
@@ -320,15 +329,15 @@
         '#include <begin_vertex>\n' +
         'vec4 bw = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n' +
         'float sway = sin(uTime * 1.5 + bw.x * 0.3 + bw.z * 0.22) * 0.6 + sin(uTime * 2.6 + bw.x * 0.9 - bw.z * 0.7) * 0.25;\n' +
-        'transformed.x += sway * position.y * position.y * 0.28;\n' +
-        'transformed.z += sway * position.y * position.y * 0.12;');
+        'transformed.x += sway * position.y * position.y * 0.07;\n' +
+        'transformed.z += sway * position.y * position.y * 0.035;');
     };
-    var COUNT = 110000, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
+    var COUNT = 170000, FRINGE = 13000, grass = new THREE.InstancedMesh(blade, mat, COUNT + FRINGE), r = rand(11);
     var m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), p = new THREE.Vector3(), tint = new THREE.Color(), placed = 0;
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
       if (!insideFarm(bx, bz, w - 0.15, R - 0.15)) continue;
-      var hgt = 0.07 + r() * r() * 0.22;
+      var hgt = 0.05 + r() * r() * 0.09;
       e.set((r() - 0.5) * 0.5, r() * Math.PI * 2, (r() - 0.5) * 0.5); q.setFromEuler(e);
       p.set(bx, groundHeight(bx, bz, w) - 0.02, bz); sc.set(0.8 + r() * 0.6, hgt, 1);
       m.compose(p, q, sc); grass.setMatrixAt(placed, m);
@@ -347,7 +356,7 @@
       if (hang) { fx = rp.x + rp.nx * 0.08; fz = rp.z + rp.nz * 0.08; }
       qt.setFromAxisAngle(axis, hang ? 1.7 + r() * 0.9 : 0.5 + r() * 1.0 + (0.5 - inset) * 0.6);
       q.copy(qt).multiply(qy);
-      p.set(fx, hang ? 0.05 : groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, hang ? 0.2 + r() * r() * 0.6 : 0.14 + r() * 0.25, 1);
+      p.set(fx, hang ? 0.05 : groundHeight(fx, fz, w) - 0.05, fz); sc.set(0.9 + r() * 0.6, hang ? 0.15 + r() * r() * 0.45 : 0.08 + r() * 0.16, 1);
       m.compose(p, q, sc); grass.setMatrixAt(COUNT + f, m);
       grassColour(fx, fz, tint).multiplyScalar(1.7 + (r() - 0.5) * 0.7);
       if (r() < 0.12) tint.lerp(DRY, 0.6).multiplyScalar(1.3);
