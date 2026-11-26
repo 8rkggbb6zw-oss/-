@@ -240,7 +240,7 @@
   function groundHeight(x, z, w) {
     var edge = Math.min(w - Math.abs(x), w - Math.abs(z));
     var fade = Math.max(0, Math.min(1, edge / 4));
-    return 0.12 + fade * (0.15 + fbm(x * 0.08, z * 0.08) * 0.9) + vnoise(x * 0.5, z * 0.5) * 0.1;
+    return 0.12 + fade * (0.55 + 0.28 * Math.sin(x * 0.11 + 1.3) * Math.cos(z * 0.09 - 0.7) + 0.14 * Math.sin(x * 0.23 + z * 0.17) + 0.06 * Math.sin(x * 0.61 - z * 0.47)) + 0.04 * Math.sin(x * 1.3) * Math.sin(z * 1.1);
   }
 
   (function buildFarm() {
@@ -366,14 +366,6 @@
     scene.add(grass);
 
     // Thick lawn around wherever she is: a deep carpet of grass that moves along with her, so no bare ground shows
-    var HM = 256, hm = new Uint8Array(HM * HM * 4);
-    for (var hj = 0; hj < HM; hj++) for (var hi = 0; hi < HM; hi++) {
-      var hx = ((hi + 0.5) / HM - 0.5) * w * 2, hz = ((hj + 0.5) / HM - 0.5) * w * 2, o4 = (hj * HM + hi) * 4;
-      var hv = Math.max(0, Math.min(254.99, groundHeight(hx, hz, w) / 2 * 255));
-      hm[o4] = Math.floor(hv); hm[o4 + 1] = Math.floor((hv - Math.floor(hv)) * 255); hm[o4 + 3] = insideFarm(hx, hz, w - 0.3, R - 0.3) ? 255 : 0;
-    }
-    var hTex = new THREE.DataTexture(hm, HM, HM, THREE.RGBAFormat);
-    hTex.magFilter = THREE.LinearFilter; hTex.minFilter = THREE.LinearFilter; hTex.needsUpdate = true;
     function addLawn(TILE, NEAR, size, inner, seed, hole) {
     var ng = new THREE.InstancedBufferGeometry();
     ng.index = blade.index; ng.setAttribute('position', blade.attributes.position); ng.setAttribute('color', blade.attributes.color); ng.setAttribute('normal', blade.attributes.normal);
@@ -394,16 +386,19 @@
     var nmat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     nmat.onBeforeCompile = function (sh) {
       sh.uniforms.uTime = grassTime; sh.uniforms.uCenter = grassCenter; sh.uniforms.uTile = { value: TILE }; sh.uniforms.uInner = { value: inner }; sh.uniforms.uHole = { value: hole };
-      sh.uniforms.uHeight = { value: hTex }; sh.uniforms.uFarm = { value: w };
-      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform float uHole; uniform sampler2D uHeight; uniform float uFarm;\n' +
+      sh.uniforms.uFarm = { value: w }; sh.uniforms.uRound = { value: R };
+      sh.vertexShader = 'uniform float uTime; uniform vec2 uCenter; uniform float uTile; uniform float uInner; uniform float uHole; uniform float uFarm; uniform float uRound;\n' +
         'attribute vec2 aOff; attribute float aRot; attribute vec2 aScl; attribute vec3 aCol;\n' +
         sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= aCol;').replace('#include <begin_vertex>',
         'vec3 transformed = vec3(position);\n' +
         'vec2 wp = aOff + uTile * floor((uCenter - aOff) / uTile + 0.5);\n' +
         'float fade = (1.0 - smoothstep(uTile * uInner, uTile * 0.48, length(wp - uCenter))) * (uHole > 0.0 ? smoothstep(uHole * 0.6, uHole, length(wp - uCenter)) : 1.0);\n' +
-        'vec4 hs = texture2D(uHeight, wp / (uFarm * 2.0) + 0.5);\n' +
-        'float gy = (hs.r + hs.g / 255.0) * 2.0;\n' +
-        'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * step(0.5, hs.a);\n' +
+        'vec2 q = max(abs(wp) - (uFarm - uRound), 0.0);\n' +
+        'float onIsland = step(length(q), uRound - 0.35);\n' +
+        'float edgeD = min(uFarm - abs(wp.x), uFarm - abs(wp.y)), hf = clamp(edgeD / 4.0, 0.0, 1.0);\n' +
+        'float gy = 0.12 + hf * (0.55 + 0.28 * sin(wp.x * 0.11 + 1.3) * cos(wp.y * 0.09 - 0.7) + 0.14 * sin(wp.x * 0.23 + wp.y * 0.17) + 0.06 * sin(wp.x * 0.61 - wp.y * 0.47)) + 0.04 * sin(wp.x * 1.3) * sin(wp.y * 1.1);\n' +
+        'transformed.xz *= aScl.x; transformed.y *= aScl.y * fade * onIsland;\n' +
+        'transformed.xz *= onIsland;\n' +
         'float cr = cos(aRot), sr = sin(aRot);\n' +
         'transformed.xz = vec2(cr * transformed.x - sr * transformed.z, sr * transformed.x + cr * transformed.z);\n' +
         'float sway = sin(uTime * 1.5 + wp.x * 0.3 + wp.y * 0.22) * 0.6 + sin(uTime * 2.6 + wp.x * 0.9 - wp.y * 0.7) * 0.25;\n' +
