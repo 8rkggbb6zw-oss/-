@@ -129,29 +129,73 @@
     return t2;
   }
 
-  function rockTexture() {
-    var S = 256, c = document.createElement('canvas'); c.width = c.height = S;
-    var g = c.getContext('2d'), r = rand(17);
-    g.fillStyle = '#c9c1b4'; g.fillRect(0, 0, S, S);
-    for (var i = 0; i < 260; i++) {
-      var x = r() * S, y = r() * S, rad = 4 + r() * 28, tone = ['90,84,76', '210,202,188', '150,138,120', '120,112,104'][i % 4];
+  function rockTexture(banded) {
+    var S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+    var g = c.getContext('2d'), r = rand(banded ? 23 : 17);
+    g.fillStyle = '#c4bcae'; g.fillRect(0, 0, S, S);
+    // mottled colour
+    for (var i = 0; i < 520; i++) {
+      var x = r() * S, y = r() * S, rad = 6 + r() * 50, tone = ['86,80,72', '214,206,192', '150,136,116', '118,110,102', '172,150,120'][i % 5];
       var bl = g.createRadialGradient(x, y, 0, x, y, rad);
-      bl.addColorStop(0, 'rgba(' + tone + ',.45)'); bl.addColorStop(1, 'rgba(' + tone + ',0)');
+      bl.addColorStop(0, 'rgba(' + tone + ',.4)'); bl.addColorStop(1, 'rgba(' + tone + ',0)');
       g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
     }
-    for (var j = 0; j < 7000; j++) { g.fillStyle = r() < .5 ? 'rgba(30,26,22,.4)' : 'rgba(200,192,180,.35)'; g.fillRect(r() * S, r() * S, 1, 1); }
-    for (var k = 0; k < 14; k++) {
-      g.strokeStyle = 'rgba(28,24,20,.55)'; g.lineWidth = 0.6 + r() * 0.8; g.beginPath();
-      var cx = r() * S, cy = r() * S; g.moveTo(cx, cy);
-      for (var q = 0; q < 5; q++) { cx += (r() - .5) * 40; cy += (r() - .5) * 40; g.lineTo(cx, cy); }
+    // layered bands for slate-like stones
+    if (banded) for (var bnd = 0; bnd < 34; bnd++) {
+      var by = r() * S, bh = 1 + r() * 7;
+      g.fillStyle = 'rgba(' + (r() < .5 ? '60,56,52' : '200,192,178') + ',' + (0.15 + r() * 0.25) + ')';
+      g.beginPath(); g.moveTo(0, by);
+      for (var bx = 0; bx <= S; bx += 32) g.lineTo(bx, by + Math.sin(bx * 0.02 + bnd) * 4);
+      g.lineTo(S, by + bh); for (var bx2 = S; bx2 >= 0; bx2 -= 32) g.lineTo(bx2, by + bh + Math.sin(bx2 * 0.02 + bnd) * 4);
+      g.fill();
+    }
+    // mineral grains: dark specks, white quartz flecks and glinting mica
+    for (var j = 0; j < 26000; j++) {
+      var v = r(), sz = v < 0.9 ? 1 : 1 + r() * 2;
+      g.fillStyle = v < 0.45 ? 'rgba(28,24,20,.45)' : v < 0.85 ? 'rgba(236,230,218,.45)' : v < 0.95 ? 'rgba(96,70,50,.5)' : 'rgba(255,250,235,.85)';
+      g.fillRect(r() * S, r() * S, sz, sz);
+    }
+    // pale quartz veins
+    for (var vn = 0; vn < 6; vn++) {
+      g.strokeStyle = 'rgba(238,232,220,.55)'; g.lineWidth = 1 + r() * 2.5; g.beginPath();
+      var vx = r() * S, vy = r() * S; g.moveTo(vx, vy);
+      for (var q = 0; q < 8; q++) { vx += (r() - .3) * 50; vy += (r() - .5) * 30; g.lineTo(vx, vy); }
       g.stroke();
     }
-    for (var l = 0; l < 40; l++) {
-      g.fillStyle = r() < .6 ? 'rgba(150,160,90,.35)' : 'rgba(210,200,140,.3)';
-      g.beginPath(); g.arc(r() * S, r() * S, 1.5 + r() * 5, 0, 6.3); g.fill();
+    // hairline cracks with a lit edge
+    for (var k = 0; k < 26; k++) {
+      var cx = r() * S, cy = r() * S, pts = [[cx, cy]];
+      for (var q2 = 0; q2 < 6; q2++) { cx += (r() - .5) * 46; cy += (r() - .5) * 46; pts.push([cx, cy]); }
+      [['rgba(255,250,240,.35)', 0.7, 1], ['rgba(24,20,16,.7)', 0.6 + r() * 0.9, 0]].forEach(function (st) {
+        g.strokeStyle = st[0]; g.lineWidth = st[1]; g.beginPath();
+        pts.forEach(function (p, i) { if (i) g.lineTo(p[0] + st[2], p[1] + st[2]); else g.moveTo(p[0] + st[2], p[1] + st[2]); });
+        g.stroke();
+      });
+    }
+    // little pits
+    for (var pt = 0; pt < 260; pt++) {
+      var px = r() * S, py = r() * S, pr = 0.8 + r() * 2.4;
+      g.fillStyle = 'rgba(30,26,22,.5)'; g.beginPath(); g.arc(px, py, pr, 0, 6.3); g.fill();
+      g.fillStyle = 'rgba(240,234,222,.35)'; g.beginPath(); g.arc(px + pr * .4, py + pr * .4, pr * .5, 0, 6.3); g.fill();
+    }
+    // crusty lichen: grey-green and orange rosettes
+    for (var l = 0; l < 70; l++) {
+      var lx = r() * S, ly = r() * S, lr = 3 + r() * 12, col = r() < 0.65 ? [150, 162, 108] : r() < 0.6 ? [214, 196, 132] : [206, 132, 60];
+      for (var dot = 0; dot < 26; dot++) {
+        var an = r() * 6.3, d2 = Math.sqrt(r()) * lr;
+        g.fillStyle = 'rgba(' + col.join(',') + ',' + (0.35 + r() * 0.4) + ')';
+        g.beginPath(); g.arc(lx + Math.cos(an) * d2, ly + Math.sin(an) * d2, 0.8 + r() * 2.2, 0, 6.3); g.fill();
+      }
+    }
+    // dark weathering streaks
+    for (var w2 = 0; w2 < 18; w2++) {
+      var sx = r() * S, sy = r() * S * 0.6, gr = g.createLinearGradient(sx, sy, sx, sy + 120);
+      gr.addColorStop(0, 'rgba(40,34,28,.28)'); gr.addColorStop(1, 'rgba(40,34,28,0)');
+      g.fillStyle = gr; g.fillRect(sx - 3 - r() * 6, sy, 6 + r() * 12, 120);
     }
     return canvasTex(c, true);
   }
+
 
 
   // Smooth natural noise for patches and bumps
@@ -313,27 +357,31 @@
     scene.add(grass);
 
     // Stones set into the earth edge: rounded river stones, angular chunks, flat slates and small pebbles
-    var rockTex = rockTexture();
+    var rockTex = rockTexture(false), slateTex = rockTexture(true);
     var rr = rand(41), rq = new THREE.Quaternion(), re = new THREE.Euler(), rs = new THREE.Vector3(), rpv = new THREE.Vector3(), rc = new THREE.Color();
     var PAL = ['#8d8478', '#9c8f7c', '#6f6a66', '#a38c6e', '#7b6a5a', '#5d5a58', '#b0a48e'];
     var KINDS = [
-      { detail: 3, sx: 1, sy: 0.7, sz: 0.95, rough: 0.5, flat: false, count: 75, size: [0.18, 0.6] },
-      { detail: 1, sx: 1, sy: 0.85, sz: 0.9, rough: 0.75, flat: true, count: 65, size: [0.16, 0.55] },
-      { detail: 2, sx: 1.2, sy: 0.32, sz: 0.9, rough: 0.6, flat: true, count: 50, size: [0.2, 0.6] },
+      { detail: 4, sx: 1, sy: 0.7, sz: 0.95, rough: 0.5, flat: false, count: 75, size: [0.18, 0.6] },
+      { detail: 2, sx: 1, sy: 0.85, sz: 0.9, rough: 0.75, flat: true, ridged: true, count: 65, size: [0.16, 0.55] },
+      { detail: 3, sx: 1.2, sy: 0.32, sz: 0.9, rough: 0.6, flat: true, slate: true, count: 50, size: [0.2, 0.6] },
       { detail: 2, sx: 1, sy: 0.75, sz: 1, rough: 0.4, flat: false, count: 150, size: [0.05, 0.13] }
     ];
     KINDS.forEach(function (K, kind) {
       var rockGeo = new THREE.IcosahedronGeometry(1, K.detail), rpz = rockGeo.attributes.position, rcol = new Float32Array(rpz.count * 3);
       for (var v = 0; v < rpz.count; v++) {
         var vx3 = rpz.getX(v), vy3 = rpz.getY(v), vz3 = rpz.getZ(v), o = kind * 17;
-        var bump = fbm(vx3 * 1.2 + vz3 * 0.7 + o, vy3 * 1.2 - vz3 * 0.5 + o), f3 = 1 - K.rough * 0.35 + bump * K.rough * 0.7;
+        var bump = fbm(vx3 * 1.2 + vz3 * 0.7 + o, vy3 * 1.2 - vz3 * 0.5 + o);
+        var fine = (vnoise(vx3 * 6 + vz3 * 4 + o, vy3 * 6 - vz3 * 3) - 0.5) * 0.06 + (vnoise(vx3 * 13 + o, vy3 * 13 + vz3 * 9) - 0.5) * 0.025;
+        if (K.ridged) bump = 1 - Math.abs(bump * 2 - 1) * 0.9;
+        var f3 = 1 - K.rough * 0.35 + bump * K.rough * 0.7 + fine;
+        if (K.ridged && vx3 + vy3 * 0.6 > 0.55) f3 *= 0.86;
         rpz.setXYZ(v, vx3 * f3 * K.sx, vy3 * f3 * K.sy, vz3 * f3 * K.sz);
-        var ao = 0.6 + bump * 0.55, dirt = Math.max(0, -vy3 - 0.15) * 1.1;
-        rcol[v * 3] = ao * (1 - dirt * 0.35); rcol[v * 3 + 1] = ao * (1 - dirt * 0.45); rcol[v * 3 + 2] = ao * (1 - dirt * 0.6);
+        var ao = 0.55 + bump * 0.5 + fine * 3, dirt = Math.max(0, -vy3 - 0.15) * 1.2, moss = Math.max(0, vy3 - 0.45) * Math.max(0, vnoise(vx3 * 3 + o, vz3 * 3) - 0.45) * 5;
+        rcol[v * 3] = ao * (1 - dirt * 0.4) * (1 - moss * 0.45); rcol[v * 3 + 1] = ao * (1 - dirt * 0.5) * (1 + moss * 0.15); rcol[v * 3 + 2] = ao * (1 - dirt * 0.62) * (1 - moss * 0.55);
       }
       rockGeo.setAttribute('color', new THREE.BufferAttribute(rcol, 3));
       rockGeo.computeVertexNormals();
-      var mat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.05, roughness: 0.82, metalness: 0.02, vertexColors: true, flatShading: K.flat });
+      var tx = K.slate ? slateTex : rockTex, mat = new THREE.MeshStandardMaterial({ map: tx, bumpMap: tx, bumpScale: 0.08, roughness: 0.82, metalness: 0.02, vertexColors: true, flatShading: K.flat });
       var rocks = new THREE.InstancedMesh(rockGeo, mat, K.count);
       for (var n2 = 0; n2 < K.count; n2++) {
         var rim = rimPoint(rr(), w, R), dep = 0.4 + rr() * 4.2, dn = dep / 5;
