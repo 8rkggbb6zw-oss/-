@@ -239,11 +239,35 @@
     }
   }
 
-  function groundHeight(x, z, w) {
+  function baseHeight(x, z, w) {
     var edge = Math.min(w - Math.abs(x), w - Math.abs(z));
     var fade = Math.max(0, Math.min(1, edge / 4));
     return 0.12 + fade * (0.55 + 0.28 * Math.sin(x * 0.11 + 1.3) * Math.cos(z * 0.09 - 0.7) + 0.14 * Math.sin(x * 0.23 + z * 0.17) + 0.06 * Math.sin(x * 0.61 - z * 0.47)) + 0.04 * Math.sin(x * 1.3) * Math.sin(z * 1.1);
   }
+
+  function groundHeight(x, z, w) { return pondDip(baseHeight(x, z, w), pondT(x, z)); }
+
+  // The Pond
+  var PX = 14, PZ = 10, WY = 0, PDEEP = 1.6;
+  function pondR(a) { return 1.4 * (7.6 + 1.1 * Math.sin(2 * a + 1) + 0.6 * Math.sin(3 * a + 2) + 0.35 * Math.sin(5 * a + 0.5)); }
+  function pondT(x, z) { var dx = x - PX, dz = z - PZ; return Math.hypot(dx, dz) / pondR(Math.atan2(dz, dx)); }
+  function pondDip(g, t) {
+    if (t >= 1.35) return g;
+    if (t < 1) return WY - 0.05 - PDEEP * Math.pow(1 - t * t, 2);
+    var s = (t - 1) / 0.35; s = s * s * (3 - 2 * s);
+    return (WY - 0.05) * (1 - s) + g * s;
+  }
+  (function () {
+    var lo = 1e9;
+    for (var i = 0; i < 96; i++) { var a = i / 96 * Math.PI * 2; [1, 1.15, 1.35].forEach(function (k) { lo = Math.min(lo, baseHeight(PX + Math.cos(a) * pondR(a) * k, PZ + Math.sin(a) * pondR(a) * k, FARM)); }); }
+    WY = lo - 0.08;
+  })();
+  var PONDGLSL = function (P, gy) {
+    return 'vec2 pd = ' + P + ' - vec2(' + PX.toFixed(2) + ', ' + PZ.toFixed(2) + '); float pa = atan(pd.y, pd.x);\n' +
+      'float pt = length(pd) / (1.4 * (7.6 + 1.1 * sin(2.0 * pa + 1.0) + 0.6 * sin(3.0 * pa + 2.0) + 0.35 * sin(5.0 * pa + 0.5)));\n' +
+      'if (pt < 1.0) ' + gy + ' = ' + WY.toFixed(4) + ' - 0.05 - ' + PDEEP.toFixed(2) + ' * pow(1.0 - pt * pt, 2.0);\n' +
+      'else if (pt < 1.35) ' + gy + ' = mix(' + WY.toFixed(4) + ' - 0.05, ' + gy + ', smoothstep(1.0, 1.35, pt));\n';
+  };
 
   (function buildFarm() {
     var R = 7, w = FARM;
@@ -251,13 +275,15 @@
     // Soil body with a rounded rim
     var outline = [], N = 900;
     for (var i = 0; i < N; i++) { var pp = rimPoint(i / N, w, R); outline.push(new THREE.Vector2(pp.x, -pp.z)); }
-    var shape = new THREE.Shape(outline);
+    var shape = new THREE.Shape(outline), hole = [];
+    for (var hi2 = 0; hi2 < 160; hi2++) { var ha = hi2 / 160 * Math.PI * 2, hr = pondR(ha) * 1.2; hole.push(new THREE.Vector2(PX + Math.cos(ha) * hr, -(PZ + Math.sin(ha) * hr))); }
+    shape.holes.push(new THREE.Path(hole));                           // room for the pond
     var body = new THREE.ExtrudeGeometry(shape, { depth: 5, steps: 22, bevelEnabled: false });
     // Crumbly earth edge that leans inward as it goes down
     var bp2 = body.attributes.position;
     for (var k = 0; k < bp2.count; k++) {
       var vx = bp2.getX(k), vy = bp2.getY(k), vz = bp2.getZ(k), down = (5 - vz) / 5;
-      var len = Math.hypot(vx, vy); if (len < w * 0.5) continue;
+      var len = Math.hypot(vx, vy); if (len < w * 0.5 || pondT(vx, -vy) < 1.5) continue;
       var j = (fbm(vx * 0.3 + vz * 0.25, vy * 0.3 - vz * 0.25) - 0.5) * (0.5 + down * 1.6) + (vnoise(vx * 1.7, vy * 1.7 + vz) - 0.5) * 0.35 + (vnoise(vx * 4.3 + vz * 3, vy * 4.3 - vz * 3) - 0.5) * 0.22 - down * down * 0.7;
       if (vz > 4.99) j = (vnoise(vx * 0.9, vy * 0.9) - 0.5) * 0.35;
       bp2.setXYZ(k, vx + vx / len * j, vy + vy / len * j, vz);
@@ -340,6 +366,7 @@
     while (placed < COUNT) {
       var bx = (r() * 2 - 1) * (w - 0.15), bz = (r() * 2 - 1) * (w - 0.15);
       if (!insideFarm(bx, bz, w - 0.15, R - 0.15)) continue;
+      var ptt = pondT(bx, bz); if (ptt < 1.07 || (ptt < 1.16 && r() > (ptt - 1.07) / 0.09)) continue;   // no grass in the water
       var hgt = 0.05 + r() * r() * 0.09;
       e.set((r() - 0.5) * 0.5, r() * Math.PI * 2, (r() - 0.5) * 0.5); q.setFromEuler(e);
       p.set(bx, groundHeight(bx, bz, w) - 0.02, bz); sc.set(1.5 + r() * 0.9, hgt * 1.2, 1);
@@ -400,6 +427,7 @@
         'float onIsland = step(length(q), uRound - 0.35);\n' +
         'float edgeD = min(uFarm - abs(wp.x), uFarm - abs(wp.y)), hf = clamp(edgeD / 4.0, 0.0, 1.0);\n' +
         'float gy = 0.12 + hf * (0.55 + 0.28 * sin(wp.x * 0.11 + 1.3) * cos(wp.y * 0.09 - 0.7) + 0.14 * sin(wp.x * 0.23 + wp.y * 0.17) + 0.06 * sin(wp.x * 0.61 - wp.y * 0.47)) + 0.04 * sin(wp.x * 1.3) * sin(wp.y * 1.1);\n' +
+        PONDGLSL('wp', 'gy') + 'onIsland *= step(1.07, pt) * step(fract(aRot * 5.31), (pt - 1.07) / 0.09) * step(0.04, fade);\n' +
         'float bare = 1.0, jit = fract(aRot * 7.13);\n' +
         'float dryc = 1.0;\n' +
         'for (int i = 0; i < 32; i++) { vec3 sp = uSoil[i]; if (sp.z > 0.0) { float sd = length(wp - sp.xy); bare = min(bare, smoothstep(sp.z * 0.45, sp.z * (1.3 + jit * 0.7), sd)); dryc = min(dryc, smoothstep(sp.z * 0.45, sp.z * 2.2, sd)); } }\n' +
@@ -1046,6 +1074,245 @@
     return m;
   }
 
+  // The Pond
+  var pond = (function () {
+    var r = rand(909), g0 = function (x, z) { return groundHeight(x, z, FARM); };
+    function paint(w, h, fn, srgb) { var c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return canvasTex(c, srgb); }
+    function polar(t, a) { var R = pondR(a) * t; return [PX + Math.cos(a) * R, PZ + Math.sin(a) * R]; }
+    var SEG = 160;
+    function disc(T1, RINGS, fn) {
+      var pos = [], idx = [], ex = [];
+      for (var k = 0; k <= RINGS; k++) for (var j = 0; j <= SEG; j++) {
+        var t = T1 * Math.pow(k / RINGS, 0.8), a = j / SEG * Math.PI * 2, p = polar(t, a);
+        pos.push(p[0], 0, p[1]); ex.push(fn(p[0], p[1], t, pos.length / 3 - 1, pos));
+      }
+      for (var k2 = 0; k2 < RINGS; k2++) for (var j2 = 0; j2 < SEG; j2++) { var A = k2 * (SEG + 1) + j2, B = A + SEG + 1; idx.push(A, A + 1, B, B, A + 1, B + 1); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+      return g;
+    }
+
+    // Pond bed
+    var bedTex = paint(512, 512, function (g, w) {
+      g.fillStyle = '#cdbfa6'; g.fillRect(0, 0, w, w);
+      for (var i = 0; i < 260; i++) { var x = r() * w, y = r() * w, rad = 10 + r() * 50, tone = r() < 0.5 ? '120,104,80' : '226,214,190'; var bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, 'rgba(' + tone + ',.35)'); bl.addColorStop(1, 'rgba(' + tone + ',0)'); g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+      for (var s = 0; s < 9000; s++) { var v = r(); g.fillStyle = v < 0.4 ? 'rgba(90,76,58,.55)' : v < 0.8 ? 'rgba(240,230,210,.5)' : 'rgba(60,52,44,.6)'; g.fillRect(r() * w, r() * w, 1 + r() * 1.5, 1 + r() * 1.5); }
+      for (var p = 0; p < 160; p++) {
+        var px = r() * w, py = r() * w, pr = 1.5 + r() * r() * 7, t = 120 + r() * 90;
+        g.fillStyle = 'rgba(30,24,18,.45)'; g.beginPath(); g.ellipse(px + 1, py + 1.3, pr, pr * 0.78, 0, 0, 6.29); g.fill();
+        var pg = g.createRadialGradient(px - pr * 0.3, py - pr * 0.35, 0, px, py, pr); pg.addColorStop(0, 'rgb(' + (t + 40) + ',' + (t + 34) + ',' + (t + 24) + ')'); pg.addColorStop(1, 'rgb(' + (t - 40) + ',' + (t - 46) + ',' + (t - 54) + ')');
+        g.fillStyle = pg; g.beginPath(); g.ellipse(px, py, pr, pr * 0.78, r() * 3, 0, 6.29); g.fill();
+      }
+    }, true);
+    bedTex.repeat.set(1, 1);
+    var bedG = disc(1.32, 48, function () { return 0; }), bp = bedG.attributes.position, bc = [], ba = [], bu = [];
+    var SAND = new THREE.Color(0.44, 0.39, 0.29), SILT = new THREE.Color(0.13, 0.13, 0.09), WEED = new THREE.Color(0.17, 0.22, 0.09), MUD = new THREE.Color(0.24, 0.18, 0.12), DAMP = new THREE.Color(0.36, 0.29, 0.2), bcol = new THREE.Color();
+    for (var bi = 0; bi < bp.count; bi++) {
+      var x = bp.getX(bi), z = bp.getZ(bi), t = pondT(x, z), y = g0(x, z);
+      bp.setY(bi, y + 0.01); bu.push(x * 0.32, z * 0.32);
+      var n1 = vnoise(x * 0.6, z * 0.6), n2 = vnoise(x * 1.7 + 5, z * 1.7);
+      if (t < 1) bcol.copy(SAND).lerp(SILT, Math.min(1, (WY - y) / 0.6)).lerp(WEED, Math.max(0, n1 - 0.4) * 1.4 * Math.min(1, (WY - y) * 3));
+      else bcol.copy(MUD).lerp(DAMP, Math.min(1, (t - 1) / 0.25));
+      bcol.multiplyScalar(0.85 + n2 * 0.3); bc.push(bcol.r, bcol.g, bcol.b);
+      var edge = 1.12 + (n1 - 0.5) * 0.12; ba.push(t < edge ? 1 : Math.max(0, 1 - (t - edge) / 0.18));
+    }
+    bedG.setAttribute('uv', new THREE.Float32BufferAttribute(bu, 2)); bedG.setAttribute('color', new THREE.Float32BufferAttribute(bc, 3)); bedG.setAttribute('aA', new THREE.Float32BufferAttribute(ba, 1));
+    bedG.computeVertexNormals();
+    var bedMat = new THREE.MeshStandardMaterial({ map: bedTex, vertexColors: true, transparent: true, roughness: 0.95 });
+    bedMat.onBeforeCompile = function (sh) {
+      sh.uniforms.uTime = grassTime; sh.uniforms.uWY = { value: WY };
+      sh.vertexShader = 'attribute float aA;\nvarying float vA;\nvarying vec3 vWp;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvA = aA; vWp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform float uTime;\nuniform float uWY;\nvarying float vA;\nvarying vec3 vWp;\n' + sh.fragmentShader
+        .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\ndiffuseColor.a *= vA;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' +
+          'float under = clamp((uWY - vWp.y) * 4.0, 0.0, 1.0) * clamp(1.6 - (uWY - vWp.y), 0.0, 1.0);\n' +       // light rippling over the bed, under the water
+          'vec2 q = vWp.xz * 1.7; float c1 = abs(sin(q.x + sin(q.y * 1.3 + uTime * 0.9)) * sin(q.y + sin(q.x * 1.1 - uTime * 0.7)));\n' +
+          'vec2 q2 = vWp.xz * 2.6 + 3.0; float c2 = abs(sin(q2.x - sin(q2.y * 0.9 - uTime * 1.1)) * sin(q2.y + sin(q2.x * 1.4 + uTime * 0.8)));\n' +
+          'totalEmissiveRadiance += vec3(0.85, 0.95, 0.8) * (pow(1.0 - c1, 8.0) + pow(1.0 - c2, 8.0)) * 0.16 * under;');
+    };
+    var bed = new THREE.Mesh(bedG, bedMat); bed.receiveShadow = true; bed.renderOrder = 1; scene.add(bed);
+
+    // Water
+    var wG = disc(1.1, 30, function () { return 0; }), wp = wG.attributes.position, wD = [], wT = [];
+    for (var wi = 0; wi < wp.count; wi++) { var wx = wp.getX(wi), wz = wp.getZ(wi); wp.setY(wi, WY); wD.push(WY - g0(wx, wz)); wT.push(pondT(wx, wz)); }
+    wG.setAttribute('aDepth', new THREE.Float32BufferAttribute(wD, 1)); wG.setAttribute('aT', new THREE.Float32BufferAttribute(wT, 1));
+    var waterMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uTime: grassTime, uSky: { value: scene.background }, uSun: { value: sun.position.clone().normalize() } },
+      vertexShader: 'attribute float aDepth; attribute float aT; varying float vD; varying float vT; varying vec3 vW;\n' +
+        'void main() { vD = aDepth; vT = aT; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSun; varying float vD; varying float vT; varying vec3 vW;\n' +
+        'vec2 wv(vec2 p, vec2 d, float f, float s, float a) { return a * f * cos(dot(normalize(d), p) * f + uTime * s) * normalize(d); }\n' +
+        'void main() {\n' +
+        '  vec2 p = vW.xz, gr = wv(p, vec2(1.0, 0.3), 1.3, 1.1, 0.02) + wv(p, vec2(-0.4, 1.0), 2.1, 1.6, 0.012) + wv(p, vec2(0.7, -0.8), 3.7, 2.3, 0.006)\n' +
+        '    + wv(p, vec2(-1.0, -0.2), 6.3, 3.1, 0.003) + wv(p, vec2(0.2, 1.0), 11.0, 4.2, 0.0015) + wv(p, vec2(0.9, 0.5), 17.0, 5.0, 0.0008);\n' +
+        '  vec3 n = normalize(vec3(-gr.x, 1.0, -gr.y)), v = normalize(cameraPosition - vW);\n' +
+        '  vec3 sky = pow(uSky, vec3(2.2)), rf = reflect(-v, n);\n' +
+        '  float day = clamp(dot(sky, vec3(0.3, 0.5, 0.2)) * 1.6, 0.08, 1.0);\n' +
+        '  float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);\n' +
+        '  vec3 refl = mix(sky * 1.05, sky * 0.55 + vec3(0.01, 0.03, 0.07) * day, clamp(rf.y * 1.3, 0.0, 1.0));\n' +
+        '  refl = mix(refl, vec3(0.06, 0.09, 0.04) * day, smoothstep(0.82, 1.05, vT) * 0.55);\n' +            // the grassy banks mirrored near the edge
+        '  vec3 body = mix(vec3(0.1, 0.12, 0.06), vec3(0.01, 0.045, 0.045), smoothstep(0.0, 0.8, vD)) * day;\n' +
+        '  float sp = max(dot(rf, uSun), 0.0);\n' +
+        '  vec3 col = mix(body, refl, fres) + vec3(1.0, 0.94, 0.82) * (pow(sp, 400.0) * 4.0 + pow(sp, 60.0) * 0.12) * day;\n' +
+        '  col += vec3(0.5, 0.52, 0.48) * (1.0 - smoothstep(0.0, 0.05, vD)) * 0.18 * day;\n' +              // a faint bright line where it laps the shore
+        '  float a = clamp(mix(0.3, 0.93, smoothstep(0.0, 0.6, vD)) + fres * 0.7, 0.0, 1.0);\n' +
+        '  gl_FragColor = vec4(col, a);\n' +
+        '  #include <tonemapping_fragment>\n  #include <encodings_fragment>\n}'
+    });
+    var water = new THREE.Mesh(wG, waterMat); water.renderOrder = 5; scene.add(water);
+
+    var toC = new THREE.Vector2(-PX, -PZ).normalize(), da = Math.atan2(toC.y, toC.x);
+
+    // Rocks
+    var rockTex = rockTexture(false), rockMat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.03, vertexColors: true, roughness: 0.88 });
+    for (var rk = 0; rk < 26; rk++) {
+      var ra = r() * 6.28; if (Math.abs(Math.atan2(Math.sin(ra - da), Math.cos(ra - da))) < 0.45) continue;
+      var rp = polar(1.0 + r() * 0.16, ra), size = 0.25 + r() * r() * 0.55, rg = new THREE.IcosahedronGeometry(1, 3), rpp = rg.attributes.position, rc = [], ph = r() * 9;
+      for (var v = 0; v < rpp.count; v++) {
+        var X = rpp.getX(v), Y = rpp.getY(v), Z = rpp.getZ(v), k = 1 + 0.22 * (vnoise(X * 1.8 + ph, Z * 1.8 + Y) - 0.5) + 0.08 * (vnoise(X * 5 + ph, Y * 5) - 0.5);
+        rpp.setXYZ(v, X * k, Y * k * 0.62, Z * k * (0.8 + 0.2 * Math.cos(ph)));
+      }
+      rg.computeVertexNormals();
+      var rm = new THREE.Mesh(rg, rockMat); rm.scale.setScalar(size); rm.rotation.y = r() * 6.28; rm.position.set(rp[0], g0(rp[0], rp[1]) + size * 0.12, rp[1]); rm.updateMatrixWorld();
+      var nrm = rg.attributes.normal, wv2 = new THREE.Vector3();
+      for (var v2 = 0; v2 < rpp.count; v2++) {
+        wv2.set(rpp.getX(v2), rpp.getY(v2), rpp.getZ(v2)).applyMatrix4(rm.matrixWorld);
+        var wetK = Math.max(0, Math.min(1, (WY + 0.08 - wv2.y) / 0.1)), moss = Math.max(0, nrm.getY(v2) - 0.5) * Math.max(0, vnoise(wv2.x * 4, wv2.z * 4) - 0.35) * 3;
+        var base2 = 0.42 + 0.22 * vnoise(wv2.x * 6, wv2.y * 6) + 0.1 * vnoise(wv2.x * 1.3 + 4, wv2.z * 1.3);
+        rc.push(base2 * (1 - wetK * 0.45) * (1 - moss * 0.45), base2 * (1 - wetK * 0.4) * (1 + moss * 0.1), base2 * (1 - wetK * 0.35) * (1 - moss * 0.6));
+      }
+      rg.setAttribute('color', new THREE.Float32BufferAttribute(rc, 3)); rm.castShadow = rm.receiveShadow = true; scene.add(rm);
+    }
+
+    // Reeds and cattails
+    function swayMat(rough) {
+      var m = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: rough });
+      m.onBeforeCompile = function (sh) {
+        sh.uniforms.uTime = grassTime;
+        sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
+          'vec4 ib = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); float sw = sin(uTime * 1.3 + ib.x * 0.7 + ib.z * 0.5) * 0.7 + sin(uTime * 2.7 + ib.x * 1.9) * 0.3;\n' +
+          'transformed.x += sw * position.y * position.y * 0.05; transformed.z += sw * position.y * position.y * 0.025;');
+      };
+      return m;
+    }
+    var bladeG = new THREE.BufferGeometry(), bpos = [], bix = [];
+    for (var s2 = 0; s2 <= 6; s2++) { var f = s2 / 6, wdt = 0.022 * (1 - f * 0.92), bend = f * f * 0.12; bpos.push(-wdt, f, bend, wdt, f, bend); }
+    for (var s3 = 0; s3 < 6; s3++) { var a0 = s3 * 2; bix.push(a0, a0 + 1, a0 + 2, a0 + 1, a0 + 3, a0 + 2); }
+    bladeG.setAttribute('position', new THREE.Float32BufferAttribute(bpos, 3)); bladeG.setIndex(bix); bladeG.computeVertexNormals();
+    var stalkG = new THREE.CylinderGeometry(0.008, 0.011, 1.4, 5); stalkG.translate(0, 0.7, 0);
+    var headG = new THREE.LatheGeometry([[0, 0], [0.028, 0.01], [0.034, 0.05], [0.034, 0.17], [0.028, 0.2], [0.006, 0.215], [0.004, 0.3], [0, 0.31]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 10); headG.translate(0, 1.18, 0);
+    var REEDS = 1400, CATS = 100, reeds = new THREE.InstancedMesh(bladeG, swayMat(0.7), REEDS), stalks = new THREE.InstancedMesh(stalkG, swayMat(0.7), CATS), heads = new THREE.InstancedMesh(headG, swayMat(1), CATS);
+    var M4 = new THREE.Matrix4(), Q4 = new THREE.Quaternion(), E4 = new THREE.Euler(), P4 = new THREE.Vector3(), S4 = new THREE.Vector3(), C4 = new THREE.Color();
+    var clumps = []; for (var cl = 0; cl < 14; cl++) { var ca = r() * 6.28; if (Math.abs(Math.atan2(Math.sin(ca - da), Math.cos(ca - da))) < 0.6) { cl--; continue; } clumps.push(ca); }
+    var nR = 0, nC = 0;
+    clumps.forEach(function (ca, ci) {
+      var span = 0.18 + r() * 0.2;
+      for (var i = 0; i < REEDS / clumps.length; i++) {
+        var a = ca + (r() - 0.5) * span, t = 0.86 + r() * 0.2, p = polar(t, a), h = (0.7 + r() * 0.8) * (t < 1 ? 1 : 0.8);
+        E4.set((r() - 0.5) * 0.3, r() * 6.28, (r() - 0.5) * 0.3); Q4.setFromEuler(E4); P4.set(p[0], g0(p[0], p[1]), p[1]); S4.set(1, h, 1);
+        M4.compose(P4, Q4, S4); reeds.setMatrixAt(nR, M4); var gtn = 0.75 + r() * 0.35; C4.setRGB(0.2 * gtn, 0.3 * gtn, 0.1 * gtn); if (r() < 0.15) C4.setRGB(0.42 * gtn, 0.38 * gtn, 0.2 * gtn); reeds.setColorAt(nR++, C4);
+      }
+      for (var c = 0; c < CATS / clumps.length && nC < CATS; c++) {
+        var a2 = ca + (r() - 0.5) * span * 0.8, t2 = 0.88 + r() * 0.14, p2 = polar(t2, a2), h2 = 0.8 + r() * 0.45;
+        E4.set((r() - 0.5) * 0.12, r() * 6.28, (r() - 0.5) * 0.12); Q4.setFromEuler(E4); P4.set(p2[0], g0(p2[0], p2[1]), p2[1]); S4.set(1, h2, 1);
+        M4.compose(P4, Q4, S4); stalks.setMatrixAt(nC, M4); heads.setMatrixAt(nC, M4);
+        C4.setRGB(0.2, 0.28, 0.11); stalks.setColorAt(nC, C4); var hb = 0.8 + r() * 0.3; C4.setRGB(0.36 * hb, 0.22 * hb, 0.12 * hb); heads.setColorAt(nC, C4); nC++;
+      }
+    });
+    reeds.count = nR; stalks.count = nC; heads.count = nC;
+    [reeds, stalks, heads].forEach(function (m) { m.castShadow = true; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; scene.add(m); });
+
+    // Lily pads
+    var padTex = paint(256, 256, function (g, w) {
+      var c = w / 2, gr = g.createRadialGradient(c, c, 0, c, c, c); gr.addColorStop(0, '#5f7a2c'); gr.addColorStop(0.7, '#46632a'); gr.addColorStop(0.97, '#3a5222'); gr.addColorStop(1, '#6a5a2a');
+      g.fillStyle = gr; g.fillRect(0, 0, w, w);
+      g.strokeStyle = 'rgba(160,190,100,.45)'; g.lineWidth = 1.4;
+      for (var i = 0; i < 26; i++) { var a = i / 26 * 6.29; g.beginPath(); g.moveTo(c, c); g.quadraticCurveTo(c + Math.cos(a + 0.08) * c * 0.5, c + Math.sin(a + 0.08) * c * 0.5, c + Math.cos(a) * c, c + Math.sin(a) * c); g.stroke(); }
+      for (var s = 0; s < 40; s++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '140,110,50' : '30,45,20') + ',' + (0.1 + r() * 0.2) + ')'; g.beginPath(); g.arc(r() * w, r() * w, 2 + r() * 8, 0, 6.29); g.fill(); }
+    }, true);
+    var padG = new THREE.CircleGeometry(1, 48, 0.2, Math.PI * 2 - 0.4), pdp = padG.attributes.position;
+    for (var pv = 0; pv < pdp.count; pv++) { var px2 = pdp.getX(pv), py2 = pdp.getY(pv), rr3 = Math.hypot(px2, py2); pdp.setZ(pv, 0.06 * Math.pow(rr3, 6) - 0.01 * rr3); }
+    padG.rotateX(-Math.PI / 2); padG.computeVertexNormals();
+    var pads = [], PADS = 64, padMesh = new THREE.InstancedMesh(padG, new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.45, side: THREE.DoubleSide }), PADS);
+    for (var pd = 0; pd < PADS; pd++) {
+      var pa2, pt2, pp3, tries = 0;
+      do { pa2 = r() * 6.28; pt2 = 0.3 + r() * 0.6; pp3 = polar(pt2, pa2); tries++; }
+      while (tries < 30 && (Math.abs(Math.atan2(Math.sin(pa2 - da), Math.cos(pa2 - da))) < 0.4 || pads.some(function (o) { return Math.hypot(o.x - pp3[0], o.z - pp3[1]) < o.s + 0.45; })));
+      var ps2 = 0.2 + r() * 0.25; pads.push({ x: pp3[0], z: pp3[1], s: ps2, yaw: r() * 6.28, ph: r() * 6.28 });
+      var pc = 0.6 + r() * 0.3; C4.setRGB(pc, pc * (0.92 + r() * 0.1), pc * 0.8); padMesh.setColorAt(pd, C4);
+    }
+    padMesh.receiveShadow = true; scene.add(padMesh);
+    // Water lilies
+    var petalShape = new THREE.Shape(); petalShape.moveTo(0, 0); petalShape.bezierCurveTo(0.045, 0.04, 0.05, 0.13, 0, 0.2); petalShape.bezierCurveTo(-0.05, 0.13, -0.045, 0.04, 0, 0);
+    var lpG = new THREE.ShapeGeometry(petalShape, 8), lpp = lpG.attributes.position, lpc = [];
+    for (var lv = 0; lv < lpp.count; lv++) { var ly = lpp.getY(lv), lx = lpp.getX(lv); lpp.setZ(lv, -Math.pow(lx / 0.05, 2) * 0.012 + ly * ly * 0.4); var tip = ly / 0.2; lpc.push(1, 1 - tip * tip * 0.38, 1 - tip * tip * 0.22); }
+    lpG.setAttribute('color', new THREE.Float32BufferAttribute(lpc, 3)); lpG.computeVertexNormals();
+    var lilyMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, emissive: new THREE.Color('#ffe0ec'), emissiveIntensity: 0.08 });
+    function lily() {
+      var f = new THREE.Group();
+      [[11, 1.35, 1.0], [9, 0.95, 0.82], [7, 0.55, 0.62]].forEach(function (ring, ri) {
+        for (var i = 0; i < ring[0]; i++) { var m = new THREE.Mesh(lpG, lilyMat), hold = new THREE.Group(); hold.rotation.y = (i + ri * 0.5) / ring[0] * Math.PI * 2; m.rotation.x = -ring[1]; m.scale.setScalar(ring[2]); m.position.y = ri * 0.01; hold.add(m); f.add(hold); }
+      });
+      var heart = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.04, 14), new THREE.MeshStandardMaterial({ color: '#f2c230', emissive: new THREE.Color('#c08a10'), emissiveIntensity: 0.25, roughness: 0.6 })); heart.position.y = 0.03; f.add(heart);
+      return f;
+    }
+    var flowers = [];
+    pads.forEach(function (p, i) { if (i % 5 === 1) { var fl = lily(); fl.scale.setScalar(0.9 + r() * 0.4); scene.add(fl); flowers.push({ f: fl, pad: p }); } });
+
+    // Koi
+    function koiTex(seed) {
+      var kr = rand(seed);
+      return paint(256, 128, function (g, w, h) {
+        g.fillStyle = '#f4efe6'; g.fillRect(0, 0, w, h);
+        var orange = ['#e2531c', '#ea6a1e', '#d9401a', '#f08a2a'][Math.floor(kr() * 4)];
+        for (var i = 0; i < 7; i++) { var x = kr() * w, y = kr() * h * 0.6 + h * 0.2, rx = 15 + kr() * 40, ry = 10 + kr() * 28; g.fillStyle = orange; g.beginPath(); g.ellipse(x, y, rx, ry, kr() * 3, 0, 6.29); g.fill(); }
+        if (kr() < 0.5) for (var j = 0; j < 5; j++) { g.fillStyle = '#1b1614'; g.beginPath(); g.ellipse(kr() * w, kr() * h, 4 + kr() * 10, 3 + kr() * 6, 0, 0, 6.29); g.fill(); }
+        for (var s = 0; s < 500; s++) { g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 0.6; var sx = (s % 25) / 25 * w + (Math.floor(s / 25) % 2) * 5, sy = Math.floor(s / 25) / 20 * h; g.beginPath(); g.arc(sx, sy, 4, 0.3, 2.8); g.stroke(); }   // scales
+      }, true);
+    }
+    var koiBody = new THREE.SphereGeometry(1, 22, 14); koiBody.rotateZ(-Math.PI / 2);
+    var kbp = koiBody.attributes.position;
+    for (var kv = 0; kv < kbp.count; kv++) { var kx = kbp.getX(kv), kf2 = kx > 0 ? 1 : 0.35 + 0.65 * (1 + kx); kbp.setXYZ(kv, kx * 0.2, kbp.getY(kv) * 0.055 * kf2, kbp.getZ(kv) * 0.045 * kf2); }   // a rounded head, tapering to the tail
+    koiBody.computeVertexNormals();
+    var tailShape = new THREE.Shape(); tailShape.moveTo(0, 0); tailShape.quadraticCurveTo(-0.06, 0.06, -0.12, 0.08); tailShape.quadraticCurveTo(-0.09, 0, -0.12, -0.08); tailShape.quadraticCurveTo(-0.06, -0.06, 0, 0);
+    var tailG = new THREE.ShapeGeometry(tailShape, 8), finMat = new THREE.MeshStandardMaterial({ color: '#f6c8a0', transparent: true, opacity: 0.75, side: THREE.DoubleSide, roughness: 0.5 });
+    var koi = [];
+    for (var kf = 0; kf < 9; kf++) {
+      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, new THREE.MeshStandardMaterial({ map: koiTex(70 + kf), roughness: 0.35 }));
+      fish.add(body);
+      var tail = new THREE.Group(); tail.position.x = -0.19; fish.add(tail); tail.add(new THREE.Mesh(tailG, finMat));
+      [-1, 1].forEach(function (sd) { var fin = new THREE.Mesh(new THREE.CircleGeometry(0.035, 10), finMat); fin.position.set(0.07, -0.03, sd * 0.04); fin.rotation.set(Math.PI / 2 - sd * 0.5, 0, 0.6); fish.add(fin); });
+      var sc = 0.9 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
+      koi.push({ g: fish, tail: tail, a: r() * 6.28, rt: 0.35 + r() * 0.35, sp: (0.12 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.22 + r() * 0.25, ph: r() * 6.28, wob: r() * 6.28 });
+    }
+
+    var kP = new THREE.Vector3(), kQ = new THREE.Quaternion(), kE = new THREE.Euler();
+    return {
+      walkable: function (x, z) { return pondT(x, z) > 1.07; },
+      floor: function (x, z) { return groundHeight(x, z, FARM); },
+      update: function (t, dt) {
+        waterMat.uniforms.uSun.value.copy(sun.position).normalize();
+        pads.forEach(function (p, i) {
+          var bob = Math.sin(t * 0.8 + p.ph) * 0.006;
+          E4.set(Math.sin(t * 0.9 + p.ph) * 0.02, p.yaw + Math.sin(t * 0.15 + p.ph) * 0.15, Math.cos(t * 0.7 + p.ph) * 0.02); Q4.setFromEuler(E4);
+          P4.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05, WY + 0.012 + bob, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); S4.set(p.s, 1, p.s);
+          M4.compose(P4, Q4, S4); padMesh.setMatrixAt(i, M4);
+        });
+        padMesh.instanceMatrix.needsUpdate = true;
+        flowers.forEach(function (f) { var p = f.pad; f.f.position.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05 + p.s * 0.25, WY + 0.02 + Math.sin(t * 0.8 + p.ph) * 0.006, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); f.f.rotation.y = p.yaw + t * 0.02; });
+        koi.forEach(function (k) {
+          k.a += k.sp * dt / k.rt * (1 + 0.3 * Math.sin(t * 0.3 + k.ph));
+          var rad = k.rt + 0.25 * Math.sin(t * 0.21 + k.ph), a = k.a, R = pondR(a) * rad;
+          kP.set(PX + Math.cos(a) * R, 0, PZ + Math.sin(a) * R); var bedY = groundHeight(kP.x, kP.z, FARM); kP.y = Math.max(bedY + 0.12, WY - k.depth - 0.08 * Math.sin(t * 0.4 + k.ph));
+          var dir = Math.atan2(-Math.cos(a) * k.sp, -Math.sin(a) * k.sp);
+          k.g.position.copy(kP); k.g.rotation.set(0, dir, Math.sin(t * 2 + k.wob) * 0.04);
+          k.tail.rotation.y = Math.sin(t * 5 + k.wob) * 0.45; k.g.children[0].rotation.y = Math.sin(t * 5 + k.wob - 1) * 0.06;
+        });
+      }
+    };
+  })();
+  function floorAt(x, z) { return pond ? pond.floor(x, z) : groundHeight(x, z, FARM); }
+
   // The Witch
   var witch = null;
   var MODEL_URLS = [window.EVERDAWN_MODEL_URL,
@@ -1114,7 +1381,7 @@
     function tipOf(bone, out) { var p = bone.getWorldPosition(new THREE.Vector3()), q = bone.parent.getWorldPosition(new THREE.Vector3()); return out.copy(p).addScaledVector(p.sub(q).normalize(), 0.012); }   // a fingertip's pad, just past its last joint
     var hv = new THREE.Vector3(), hv2 = new THREE.Vector3(), hUp = new THREE.Vector3(), hFw = new THREE.Vector3(), hSd = new THREE.Vector3(), hM = new THREE.Matrix4();
     var hipsRestY = B.hips ? B.hips.position.y : 0;
-    holder.position.set(x, groundHeight(x, z, FARM), z);
+    holder.position.set(x, floorAt(x, z), z);
     var nextBlink = 2, blinkT = -1;
     var WALK = 4.4, STRIDE = 2.9;
 
@@ -1131,12 +1398,12 @@
         var goal = WALK * want * Math.max(0.25, 1 - turning / 1.6);
         speed += (goal - speed) * Math.min(1, dt * (goal > speed ? 4 : 6));
         var nx = x + Math.sin(heading) * speed * dt, nz = z + Math.cos(heading) * speed * dt;
-        if (insideFarm(nx, nz, FARM - 0.5, 6.5) && !dawn.blocks(nx, nz)) { x = nx; z = nz; } else speed *= 0.5;
+        if (insideFarm(nx, nz, FARM - 0.5, 6.5) && !dawn.blocks(nx, nz) && pond.walkable(nx, nz)) { x = nx; z = nz; } else speed *= 0.5;
         phase += (speed * dt / STRIDE) * Math.PI * 2;
         walkW += (Math.min(1, speed / (WALK * 0.6)) - walkW) * Math.min(1, dt * 6);
         var W = walkW, I = 1 - W, p = phase;
         holder.rotation.y = heading;
-        holder.position.set(x, groundHeight(x, z, FARM), z);
+        holder.position.set(x, floorAt(x, z), z);
 
         // Hips: rising over each step and sinking between, rolling toward the standing leg, turning with the stride
         if (B.hips) B.hips.position.y = hipsRestY + W * (0.018 * Math.cos(2 * p) - 0.022);
@@ -1514,6 +1781,7 @@
     var mv = moveInput();
     if (witch) { witch.hold(heldId()); witch.update(now / 1000, dt, mv[0], mv[1]); }
     followCamera(dt);
+    pond.update(now / 1000, dt);
     dawn.update(now / 1000, dt, witch ? witch.position().x : 0, witch ? witch.position().z : 0);
     treeMana(now / 1000, dt);
     if (witch) grassCenter.value.set(witch.position().x, witch.position().z);
