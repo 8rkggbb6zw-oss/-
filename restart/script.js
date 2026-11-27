@@ -1249,17 +1249,71 @@
     dawn.feed(want, t, dt, p ? p.x : 0, p ? p.y + 1.1 : 0, p ? p.z : 0);
   }
 
+  // Dawn Petal icon: a cupped cherry petal, painted pixel by pixel
+  function petalIcon() {
+    var S = 192, c = document.createElement('canvas'); c.width = c.height = S;
+    var g = c.getContext('2d'), k = S * 0.92;
+    g.translate(S / 2, S / 2); g.scale(k, k);                             // the outline: narrow at its base, rounded shoulders, a notch at the tip
+    g.beginPath(); g.moveTo(0, 0.47);
+    g.bezierCurveTo(0.1, 0.4, 0.31, 0.2, 0.33, -0.08); g.bezierCurveTo(0.35, -0.33, 0.2, -0.45, 0.08, -0.43);
+    g.quadraticCurveTo(0.03, -0.42, 0, -0.35); g.quadraticCurveTo(-0.03, -0.42, -0.08, -0.43);
+    g.bezierCurveTo(-0.2, -0.45, -0.35, -0.33, -0.33, -0.08); g.bezierCurveTo(-0.31, 0.2, -0.1, 0.4, 0, 0.47);
+    g.fillStyle = '#fff'; g.fill(); g.setTransform(1, 0, 0, 1, 0, 0);
+    var img = g.getImageData(0, 0, S, S), D = img.data;
+    for (var y = 0; y < S; y++) {
+      var x0 = S, x1 = -1;
+      for (var x = 0; x < S; x++) if (D[(y * S + x) * 4 + 3] > 0) { if (x < x0) x0 = x; x1 = x; }
+      if (x1 < 0) continue;
+      var mid = (x0 + x1) / 2, hw = Math.max(1, (x1 - x0) / 2), v = (S / 2 + 0.47 * k - y) / (0.82 * k);   // v: 0 at the base, 1 at the tip
+      for (var x2 = x0; x2 <= x1; x2++) {
+        var o = (y * S + x2) * 4, al = D[o + 3] / 255; if (!al) continue;
+        var u = (x2 - mid) / hw, cup = Math.sqrt(Math.max(0, 1 - u * u));
+        var ang = Math.atan2((x2 - S / 2) / k, Math.max(0.02, v + 0.06));
+        var vein = Math.pow(Math.abs(Math.cos(ang * 21)), 30) * 0.06 * (1 - v * 0.5) + Math.pow(Math.abs(Math.cos(ang * 7.5)), 60) * 0.05;
+        var light = 0.5 + 0.46 * cup - 0.2 * u + 0.08 * v - vein;      // lit from the upper left, shaded where it curls away
+        var blush = Math.max(0, 1 - v * 2.2), pearl = Math.max(0, v - 0.45) * 1.6;
+        var R = 250 - blush * 50, G = 146 - blush * 104 + pearl * 48, B = 186 - blush * 62 + pearl * 26;
+        var rim = Math.pow(Math.abs(u), 10);                             // a thin bright edge where light comes through
+        R = R * light + rim * 40; G = G * light + rim * 46; B = B * light + rim * 40;
+        var n = ((Math.sin(x2 * 12.9898 + y * 78.233) * 43758.5453) % 1) * 5;
+        D[o] = Math.min(255, R + n); D[o + 1] = Math.min(255, G + n); D[o + 2] = Math.min(255, B + n); D[o + 3] = 255 * al * (0.93 + 0.07 * cup);
+      }
+    }
+    g.putImageData(img, 0, 0);
+    var out = document.createElement('canvas'); out.width = out.height = S; var q = out.getContext('2d');
+    q.translate(S / 2, S / 2); q.rotate(-0.5); q.translate(-S / 2, -S / 2);
+    q.shadowColor = 'rgba(40,0,30,.55)'; q.shadowBlur = 12; q.shadowOffsetX = 4; q.shadowOffsetY = 7; q.drawImage(c, 0, 0);
+    q.shadowColor = 'transparent';
+    q.globalCompositeOperation = 'source-atop';                           // a satin sheen down the curve
+    var sh = q.createLinearGradient(S * 0.38, 0, S * 0.56, 0); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,240,248,.3)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+    q.fillStyle = sh; q.fillRect(0, 0, S, S); q.globalCompositeOperation = 'source-over';
+    var dx = S * 0.47, dy = S * 0.42, dr = S * 0.05;                       // a dewdrop
+    q.fillStyle = 'rgba(110,10,60,.3)'; q.beginPath(); q.ellipse(dx + 2.5, dy + 3.5, dr * 1.05, dr * 0.9, 0, 0, 6.29); q.fill();
+    var dg = q.createRadialGradient(dx + dr * 0.25, dy + dr * 0.35, dr * 0.1, dx, dy, dr);
+    dg.addColorStop(0, 'rgba(255,235,244,.9)'); dg.addColorStop(0.6, 'rgba(240,150,190,.45)'); dg.addColorStop(1, 'rgba(170,40,100,.7)');
+    q.fillStyle = dg; q.beginPath(); q.ellipse(dx, dy, dr, dr * 0.88, 0, 0, 6.29); q.fill();
+    q.fillStyle = 'rgba(255,255,255,.95)'; q.beginPath(); q.ellipse(dx - dr * 0.38, dy - dr * 0.36, dr * 0.3, dr * 0.17, -0.7, 0, 6.29); q.fill();
+    return out.toDataURL('image/png');
+  }
+  var ITEMS = { petal: { name: 'Dawn Petal', icon: null } };
+  function itemIcon(id) { var it = ITEMS[id]; if (!it.icon) it.icon = petalIcon(); return it.icon; }
+
   // Hotbar
   var HOTBAR_SIZE = 6;
-  var selected = 0;
+  var selected = 0, bag = [];
+  function addItem(id, n) {
+    for (var i = 0; i < HOTBAR_SIZE; i++) if (bag[i] && bag[i].id === id) { bag[i].count += n; buildHotbar(); return true; }
+    for (var j = 0; j < HOTBAR_SIZE; j++) if (!bag[j]) { bag[j] = { id: id, count: n }; buildHotbar(); return true; }
+    return false;
+  }
   function buildHotbar() {
     hotbarEl.innerHTML = '';
     for (var i = 0; i < HOTBAR_SIZE; i++) {
-      var b = document.createElement('button');
+      var b = document.createElement('button'), it = bag[i];
       b.type = 'button';
-      b.className = 'slot empty' + (i === selected ? ' selected' : '');
-      b.setAttribute('aria-label', 'Slot ' + (i + 1) + ', empty');
-      b.innerHTML = '<span class="slot-key">' + (i + 1) + '</span>';
+      b.className = 'slot' + (it ? '' : ' empty') + (i === selected ? ' selected' : '');
+      b.setAttribute('aria-label', 'Slot ' + (i + 1) + ', ' + (it ? ITEMS[it.id].name + ' ×' + it.count : 'empty'));
+      b.innerHTML = (it ? '<img class="slot-item" alt="" src="' + itemIcon(it.id) + '"><span class="count">' + it.count + '</span>' : '') + '<span class="slot-key">' + (i + 1) + '</span>';
       (function (n) { b.addEventListener('click', function () { selectSlot(n); }); })(i);
       hotbarEl.appendChild(b);
     }
@@ -1271,14 +1325,24 @@
   }
 
   // Buttons and keys
-  function interact() { toast('Nothing here yet.'); }
+  var petalDay = 0;
+  function interact() {
+    var p = witch && witch.position();
+    if (p && dawn.near(p.x, p.z)) {                                    // the Dawn Tree gives you one petal a day
+      if (petalDay === day) { toast('The Dawn Tree has already given you a petal today.'); return; }
+      if (!addItem('petal', 1)) { toast('Your hotbar is full.'); return; }
+      petalDay = day; toast('The Dawn Tree gives you a Dawn Petal.');
+      return;
+    }
+    toast('Nothing here yet.');
+  }
   function castSpell() {
     if (mana < 20) { toast('Not enough mana.'); return; }
     mana -= 20;
     showMana();
     toast('Dawn Bloom! Nothing to water yet.');
   }
-  function openBag() { toast('Your bag is empty.'); }
+  function openBag() { var n = bag.filter(Boolean).map(function (it) { return ITEMS[it.id].name + ' ×' + it.count; }); toast(n.length ? 'In your bag: ' + n.join(', ') + '.' : 'Your bag is empty.'); }
 
   function toggleFull() {
     var on = !document.body.classList.contains('full');

@@ -560,6 +560,10 @@ body.full .controls button > span { font-size: .72rem; }
 }
 .hotbar .slot.selected .slot-key { color: #fff; text-shadow: 0 0 4px rgba(200, 150, 255, 0.9), 0 1px 1px rgba(0, 0, 0, 0.8); }
 .hotbar .slot .count { font-size: .7rem; right: 13px; bottom: 12px; }
+/* Items in the hotbar */
+.slot-item { position: absolute; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px); object-fit: contain; pointer-events: none; z-index: 1; }
+.hotbar .slot:has(.slot-item)::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: radial-gradient(circle, rgba(30, 8, 60, 0.55), rgba(30, 8, 60, 0) 70%); }
+.hotbar .slot .count { z-index: 2; right: 7px; bottom: 6px; color: #fff; text-shadow: 0 0 3px rgba(60, 20, 100, 0.95), 0 1px 1px rgba(0, 0, 0, 0.8); }
 @media (max-width: 480px) { .hotbar .slot { width: 40px; }  .hotbar-slots { gap: 3px; padding: 4px 4px 15px; } }
 
 .row-btn {
