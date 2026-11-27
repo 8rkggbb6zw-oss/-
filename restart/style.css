@@ -225,6 +225,12 @@ body.full .title { letter-spacing: 1.5px; text-shadow: 0 1px 0 #2a1252, 0 2px 3p
   mix-blend-mode: screen;
 }
 @keyframes manaFlow { from { background-position: 0 0, 0 0; } to { background-position: 140px 0, -92px 0; } }
+/* Mana refilling at the Dawn Tree */
+.mana.filling { animation: manaGlow 1.2s ease-in-out infinite; }
+.mana.filling .mana-flow { animation-duration: 1.5s; }
+.mana.filling .mana-gem { animation: gemGlow 1.2s ease-in-out infinite; }
+@keyframes manaGlow { 0%, 100% { box-shadow: 0 0 0 .5px rgba(50, 30, 80, 0.45), 0 0 6px 1px rgba(255, 150, 230, 0.45); } 50% { box-shadow: 0 0 0 .5px rgba(50, 30, 80, 0.45), 0 0 14px 4px rgba(255, 150, 230, 0.85); } }
+@keyframes gemGlow { 0%, 100% { filter: drop-shadow(0 2px 2px rgba(30, 10, 60, 0.45)) drop-shadow(0 0 2px rgba(255, 170, 240, 0.5)); } 50% { filter: drop-shadow(0 2px 2px rgba(30, 10, 60, 0.45)) drop-shadow(0 0 8px rgba(255, 170, 240, 1)); } }
 @media (max-width: 440px) { .mana { width: 112px; } .time-face { min-width: 112px; padding: 0 10px 0 24px; } #clock { font-size: .82rem; } .stats { gap: 4px; } }
 .mana span {
   position: absolute;

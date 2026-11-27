@@ -945,8 +945,43 @@
     var light = new THREE.PointLight('#ffa8ee', 1.3, 14, 2); light.position.set(0, 4.6, 0); tree.add(light);
     scene.add(tree);
 
+    // Mana: glowing motes drifting out of the tree to you while it refills your mana
+    var MOTES = 70, moGeo = new THREE.BufferGeometry(), moS = [];
+    moGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MOTES * 3), 3)); moGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MOTES * 3), 3));
+    var motes = new THREE.Points(moGeo, new THREE.PointsMaterial({ map: GLOW, size: 0.42, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    motes.frustumCulled = false; scene.add(motes);
+    for (var mo = 0; mo < MOTES; mo++) moS.push({ k: 2, a: new THREE.Vector3(), c: new THREE.Vector3(), tint: tints[mo % 3] });
+    var moP = new THREE.Vector3(), moQ = new THREE.Vector3(), spawnT = 0;
+    function feed(on, t, dt, tx, ty, tz) {
+      spawnT += dt;
+      if (on && spawnT > 0.05) {                                         // a new mote leaves the bark or blossom
+        spawnT = 0;
+        for (var i = 0; i < MOTES; i++) if (moS[i].k >= 1) {
+          var m = moS[i], hi = r() < 0.5, a = r() * 6.28, d = hi ? 1 + r() * 2.2 : 0.75;
+          m.a.set(Math.cos(a) * d, hi ? 3.6 + r() * 2.2 : 0.6 + r() * 2.6, Math.sin(a) * d); tree.localToWorld(m.a);
+          m.c.set((m.a.x + tx) / 2 + (r() - 0.5) * 2, Math.max(m.a.y, ty) + 0.8 + r() * 1.2, (m.a.z + tz) / 2 + (r() - 0.5) * 2);
+          m.k = 0; m.v = 0.55 + r() * 0.4; m.p = r() * 6.28; break;
+        }
+      }
+      var pos = moGeo.attributes.position, col = moGeo.attributes.color;
+      for (var j = 0; j < MOTES; j++) {
+        var s = moS[j];
+        if (s.k >= 1) { col.setXYZ(j, 0, 0, 0); continue; }
+        s.k = Math.min(1, s.k + s.v * dt); var k = s.k, ik = 1 - k;
+        moQ.set(tx, ty, tz);
+        moP.copy(s.a).multiplyScalar(ik * ik).addScaledVector(s.c, 2 * ik * k).addScaledVector(moQ, k * k);   // a curve from the tree to her
+        moP.x += Math.sin(t * 6 + s.p) * 0.06 * ik; moP.y += Math.cos(t * 5 + s.p) * 0.06 * ik;
+        pos.setXYZ(j, moP.x, moP.y, moP.z);
+        var br = Math.min(1, k * 6) * (1 - Math.pow(k, 6)) * (0.8 + 0.2 * Math.sin(t * 9 + s.p));
+        col.setXYZ(j, s.tint.r * br, s.tint.g * br, s.tint.b * br);
+      }
+      pos.needsUpdate = col.needsUpdate = true;
+    }
+
     var fade = 1, pq = new THREE.Quaternion();
     return {
+      feed: feed,
+      near: function (x, z) { return Math.hypot(x - TREE_X, z - TREE_Z) < 4.4; },
       blocks: function (x, z) { return Math.hypot(x - TREE_X, z - TREE_Z) < 1.35; },
       update: function (t, dt, px, pz) {
         var pulse = Math.sin(t * 1.3), gust = 0.5 + 0.5 * Math.sin(t * 0.35) * Math.sin(t * 0.13 + 1);
@@ -1187,6 +1222,32 @@
     manaEl.style.width = (mana / MANA_MAX * 100) + '%';
     manaNumEl.textContent = Math.round(mana) + ' / ' + MANA_MAX;
   }
+  // The Dawn Tree refills your mana while you stand under it
+  var manaBar = manaEl.closest('.mana'), filling = false, chimeT = 0, audio = null;
+  function wakeAudio() { if (!audio && (window.AudioContext || window.webkitAudioContext)) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio && audio.state === 'suspended') audio.resume(); }
+  window.addEventListener('pointerdown', wakeAudio); window.addEventListener('keydown', wakeAudio);
+  function chime(freq, vol, len) {                                     // a soft bell-like note
+    if (!audio || audio.state !== 'running') return;
+    var t0 = audio.currentTime;
+    [1, 2.76, 5.4].forEach(function (h, i) {
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = freq * h;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol / (1 + i * 2.5), t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len / (1 + i));
+      o.connect(g); g.connect(audio.destination); o.start(t0); o.stop(t0 + len);
+    });
+  }
+  function treeMana(t, dt) {
+    var p = witch ? witch.position() : null, near = !!p && dawn.near(p.x, p.z), want = near && mana < MANA_MAX;
+    if (want) {
+      if (!filling) toast('The Dawn Tree is restoring your mana.');
+      mana = Math.min(MANA_MAX, mana + 32 * dt); showMana();
+      chimeT -= dt;
+      if (chimeT <= 0) { chimeT = 0.22; chime(520 + 400 * mana / MANA_MAX + Math.random() * 30, 0.05, 0.9); }
+      if (mana >= MANA_MAX) { toast('Your mana is full.'); [784, 988, 1175].forEach(function (f, i) { setTimeout(function () { chime(f, 0.07, 1.6); }, i * 110); }); }
+    }
+    filling = want; manaBar.classList.toggle('filling', want);
+    dawn.feed(want, t, dt, p ? p.x : 0, p ? p.y + 1.1 : 0, p ? p.z : 0);
+  }
 
   // Hotbar
   var HOTBAR_SIZE = 6;
@@ -1331,6 +1392,7 @@
     if (witch) witch.update(now / 1000, dt, mv[0], mv[1]);
     followCamera(dt);
     dawn.update(now / 1000, dt, witch ? witch.position().x : 0, witch ? witch.position().z : 0);
+    treeMana(now / 1000, dt);
     if (witch) grassCenter.value.set(witch.position().x, witch.position().z);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
