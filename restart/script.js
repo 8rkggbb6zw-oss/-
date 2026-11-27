@@ -1223,41 +1223,118 @@
     [reeds, stalks, heads].forEach(function (m) { m.castShadow = true; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; scene.add(m); });
 
     // Lily pads
-    var padTex = paint(256, 256, function (g, w) {
-      var c = w / 2, gr = g.createRadialGradient(c, c, 0, c, c, c); gr.addColorStop(0, '#5f7a2c'); gr.addColorStop(0.7, '#46632a'); gr.addColorStop(0.97, '#3a5222'); gr.addColorStop(1, '#6a5a2a');
-      g.fillStyle = gr; g.fillRect(0, 0, w, w);
-      g.strokeStyle = 'rgba(160,190,100,.45)'; g.lineWidth = 1.4;
-      for (var i = 0; i < 26; i++) { var a = i / 26 * 6.29; g.beginPath(); g.moveTo(c, c); g.quadraticCurveTo(c + Math.cos(a + 0.08) * c * 0.5, c + Math.sin(a + 0.08) * c * 0.5, c + Math.cos(a) * c, c + Math.sin(a) * c); g.stroke(); }
-      for (var s = 0; s < 40; s++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '140,110,50' : '30,45,20') + ',' + (0.1 + r() * 0.2) + ')'; g.beginPath(); g.arc(r() * w, r() * w, 2 + r() * 8, 0, 6.29); g.fill(); }
-    }, true);
-    var padG = new THREE.CircleGeometry(1, 48, 0.2, Math.PI * 2 - 0.4), pdp = padG.attributes.position;
-    for (var pv = 0; pv < pdp.count; pv++) { var px2 = pdp.getX(pv), py2 = pdp.getY(pv), rr3 = Math.hypot(px2, py2); pdp.setZ(pv, 0.06 * Math.pow(rr3, 6) - 0.01 * rr3); }
-    padG.rotateX(-Math.PI / 2); padG.computeVertexNormals();
-    var pads = [], PADS = 64, padMesh = new THREE.InstancedMesh(padG, new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.45, side: THREE.DoubleSide }), PADS);
-    for (var pd = 0; pd < PADS; pd++) {
-      var pa2, pt2, pp3, tries = 0;
-      do { pa2 = r() * 6.28; pt2 = 0.3 + r() * 0.6; pp3 = polar(pt2, pa2); tries++; }
-      while (tries < 30 && (Math.abs(Math.atan2(Math.sin(pa2 - da), Math.cos(pa2 - da))) < 0.4 || pads.some(function (o) { return Math.hypot(o.x - pp3[0], o.z - pp3[1]) < o.s + 0.45; })));
-      var ps2 = 0.2 + r() * 0.25; pads.push({ x: pp3[0], z: pp3[1], s: ps2, yaw: r() * 6.28, ph: r() * 6.28 });
-      var pc = 0.6 + r() * 0.3; C4.setRGB(pc, pc * (0.92 + r() * 0.1), pc * 0.8); padMesh.setColorAt(pd, C4);
+    function padPaint(worn) {
+      return paint(512, 512, function (g, w) {
+        var c = w / 2, R0 = c * 0.985;
+        g.save(); g.beginPath(); g.arc(c, c, R0, 0, 6.29); g.clip();
+        var gr = g.createRadialGradient(c, c, 0, c, c, R0); gr.addColorStop(0, '#6f8a34'); gr.addColorStop(0.25, '#4f7029'); gr.addColorStop(0.75, '#3e5f22'); gr.addColorStop(0.95, '#34501d'); gr.addColorStop(1, '#4a3a1c');
+        g.fillStyle = gr; g.fillRect(0, 0, w, w);
+        for (var i = 0; i < 70; i++) { var x = r() * w, y = r() * w, rad = 15 + r() * 60, tone = r() < 0.5 ? '90,120,40' : '30,50,18'; var bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, 'rgba(' + tone + ',.25)'); bl.addColorStop(1, 'rgba(' + tone + ',0)'); g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+        function vein(x, y, a, len, wd, depth) {                       // veins fan out from the middle and fork towards the rim
+          var steps = 10, px = x, py = y;
+          g.lineWidth = wd; g.strokeStyle = 'rgba(150,180,90,' + (0.5 - depth * 0.12) + ')';
+          g.beginPath(); g.moveTo(px, py);
+          for (var s = 1; s <= steps; s++) { a += (r() - 0.5) * 0.06; px += Math.cos(a) * len / steps; py += Math.sin(a) * len / steps; g.lineTo(px, py); }
+          g.stroke();
+          g.lineWidth = wd * 0.6; g.strokeStyle = 'rgba(20,35,12,.25)'; g.beginPath(); g.moveTo(x + 1.2, y + 1.2); g.lineTo(px + 1.2, py + 1.2); g.stroke();
+          if (depth < 2) { vein(px, py, a - 0.16, len * 0.62, wd * 0.65, depth + 1); vein(px, py, a + 0.16, len * 0.62, wd * 0.65, depth + 1); }
+        }
+        for (var v = 0; v < 24; v++) vein(c, c, v / 24 * Math.PI * 2 + 0.13, R0 * 0.42, 2.6, 0);
+        for (var n = 0; n < 2500; n++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '200,220,150' : '20,30,10') + ',' + (0.03 + r() * 0.06) + ')'; g.fillRect(r() * w, r() * w, 1 + r() * 2, 1 + r() * 2); }
+        var sh = g.createLinearGradient(0, 0, w, w); sh.addColorStop(0.2, 'rgba(230,245,200,0)'); sh.addColorStop(0.42, 'rgba(230,245,200,.16)'); sh.addColorStop(0.6, 'rgba(230,245,200,0)');   // a waxy sheen
+        g.fillStyle = sh; g.fillRect(0, 0, w, w);
+        g.fillStyle = '#a8b860'; g.beginPath(); g.arc(c, c, 4, 0, 6.29); g.fill();
+        if (worn) {                                                       // yellowing and brown spots creeping in from the rim
+          for (var y2 = 0; y2 < 5; y2++) { var a2 = r() * 6.28, d2 = R0 * (0.65 + r() * 0.3), xx = c + Math.cos(a2) * d2, yy = c + Math.sin(a2) * d2, rr4 = 20 + r() * 45; var yb = g.createRadialGradient(xx, yy, 0, xx, yy, rr4); yb.addColorStop(0, 'rgba(170,140,50,.75)'); yb.addColorStop(0.6, 'rgba(150,130,50,.35)'); yb.addColorStop(1, 'rgba(150,130,50,0)'); g.fillStyle = yb; g.fillRect(xx - rr4, yy - rr4, rr4 * 2, rr4 * 2); }
+          for (var b = 0; b < 9; b++) { g.fillStyle = 'rgba(' + (70 + r() * 30 | 0) + ',45,20,.7)'; g.beginPath(); g.arc(c + (r() - 0.5) * R0 * 1.6, c + (r() - 0.5) * R0 * 1.6, 2 + r() * 6, 0, 6.29); g.fill(); }
+        }
+        g.strokeStyle = 'rgba(110,40,40,.85)'; g.lineWidth = 4; g.beginPath(); g.arc(c, c, R0 - 2, 0, 6.29); g.stroke();   // a thin red-brown rim
+        g.restore();
+        for (var d = 0; d < 7; d++) {                                     // beads of water
+          var dx = c + (r() - 0.5) * R0 * 1.3, dy = c + (r() - 0.5) * R0 * 1.3, dr = 2 + r() * 5;
+          g.fillStyle = 'rgba(10,25,8,.35)'; g.beginPath(); g.arc(dx + 1.5, dy + 1.5, dr, 0, 6.29); g.fill();
+          var dg = g.createRadialGradient(dx - dr * 0.3, dy - dr * 0.3, 0, dx, dy, dr); dg.addColorStop(0, 'rgba(255,255,255,.95)'); dg.addColorStop(0.35, 'rgba(190,220,170,.5)'); dg.addColorStop(1, 'rgba(60,100,40,.6)');
+          g.fillStyle = dg; g.beginPath(); g.arc(dx, dy, dr, 0, 6.29); g.fill();
+        }
+        if (worn) {                                                       // nibbles and holes
+          g.globalCompositeOperation = 'destination-out';
+          for (var h = 0; h < 4; h++) { var ha = r() * 6.28; g.beginPath(); g.arc(c + Math.cos(ha) * R0, c + Math.sin(ha) * R0, 6 + r() * 14, 0, 6.29); g.fill(); }
+          for (var h2 = 0; h2 < 3; h2++) { var ha2 = r() * 6.28, hd = R0 * (0.3 + r() * 0.5); g.beginPath(); g.ellipse(c + Math.cos(ha2) * hd, c + Math.sin(ha2) * hd, 3 + r() * 7, 2 + r() * 5, r() * 3, 0, 6.29); g.fill(); }
+          g.globalCompositeOperation = 'source-over';
+        }
+      }, true);
     }
-    padMesh.receiveShadow = true; scene.add(padMesh);
-    // Water lilies
-    var petalShape = new THREE.Shape(); petalShape.moveTo(0, 0); petalShape.bezierCurveTo(0.045, 0.04, 0.05, 0.13, 0, 0.2); petalShape.bezierCurveTo(-0.05, 0.13, -0.045, 0.04, 0, 0);
-    var lpG = new THREE.ShapeGeometry(petalShape, 8), lpp = lpG.attributes.position, lpc = [];
-    for (var lv = 0; lv < lpp.count; lv++) { var ly = lpp.getY(lv), lx = lpp.getX(lv); lpp.setZ(lv, -Math.pow(lx / 0.05, 2) * 0.012 + ly * ly * 0.4); var tip = ly / 0.2; lpc.push(1, 1 - tip * tip * 0.38, 1 - tip * tip * 0.22); }
-    lpG.setAttribute('color', new THREE.Float32BufferAttribute(lpc, 3)); lpG.computeVertexNormals();
-    var lilyMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.5, emissive: new THREE.Color('#ffe0ec'), emissiveIntensity: 0.08 });
-    function lily() {
-      var f = new THREE.Group();
-      [[11, 1.35, 1.0], [9, 0.95, 0.82], [7, 0.55, 0.62]].forEach(function (ring, ri) {
-        for (var i = 0; i < ring[0]; i++) { var m = new THREE.Mesh(lpG, lilyMat), hold = new THREE.Group(); hold.rotation.y = (i + ri * 0.5) / ring[0] * Math.PI * 2; m.rotation.x = -ring[1]; m.scale.setScalar(ring[2]); m.position.y = ri * 0.01; hold.add(m); f.add(hold); }
+    var underTex = paint(256, 256, function (g, w) {                    // the underside: purple-red with raised pale veins
+      var c = w / 2; g.fillStyle = '#5a2232'; g.fillRect(0, 0, w, w);
+      g.strokeStyle = 'rgba(200,140,140,.35)'; g.lineWidth = 2;
+      for (var i = 0; i < 24; i++) { var a = i / 24 * 6.29; g.beginPath(); g.moveTo(c, c); g.lineTo(c + Math.cos(a) * c, c + Math.sin(a) * c); g.stroke(); }
+    }, true);
+    var padG = new THREE.BufferGeometry(), pgp = [], pgu = [], pgi = [], RG = 14, SG = 96, NOTCH = 0.11;
+    for (var pr = 0; pr <= RG; pr++) for (var pa = 0; pa <= SG; pa++) {
+      var rr3 = pr / RG, th = NOTCH + (Math.PI * 2 - NOTCH * 2) * pa / SG, cx = Math.cos(th) * rr3, cz = Math.sin(th) * rr3;
+      var lobe = Math.max(0, 1 - Math.min(th, Math.PI * 2 - th) / 0.6) * (th < Math.PI ? 1 : -1);   // the two lobes by the notch, one lifting a touch over the other
+      var y = 0.014 * rr3 + 0.075 * Math.pow(rr3, 9) + 0.01 * Math.sin(th * 9 + 1) * Math.pow(rr3, 5) + 0.006 * Math.sin(th * 23) * Math.pow(rr3, 8) + Math.max(0, lobe) * 0.02 * rr3;
+      pgp.push(cx, y, -cz); pgu.push(0.5 + cx * 0.5, 0.5 + cz * 0.5);
+    }
+    for (var pr2 = 0; pr2 < RG; pr2++) for (var pa3 = 0; pa3 < SG; pa3++) { var A3 = pr2 * (SG + 1) + pa3, B3 = A3 + SG + 1; pgi.push(A3, B3, A3 + 1, B3, B3 + 1, A3 + 1); }
+    padG.setAttribute('position', new THREE.Float32BufferAttribute(pgp, 3)); padG.setAttribute('uv', new THREE.Float32BufferAttribute(pgu, 2)); padG.setIndex(pgi); padG.computeVertexNormals();
+    var padKinds = [padPaint(false), padPaint(true)].map(function (tx) {
+      var top = new THREE.InstancedMesh(padG, new THREE.MeshStandardMaterial({ map: tx, color: '#c4ccb4', alphaTest: 0.5, roughness: 0.3, side: THREE.FrontSide }), 64);
+      var bottom = new THREE.InstancedMesh(padG, new THREE.MeshStandardMaterial({ map: underTex, alphaMap: tx, alphaTest: 0.5, roughness: 0.6, side: THREE.BackSide }), 64);
+      top.receiveShadow = true; top.count = bottom.count = 0; scene.add(top); scene.add(bottom);
+      return { top: top, bottom: bottom };
+    });
+    var pads = [], PADS = 70;
+    for (var pd = 0; pd < PADS; pd++) {                                 // in loose drifts, the big ones and little ones mixed
+      var pa2, pt2, pp3, tries = 0, ps2 = r() < 0.25 ? 0.12 + r() * 0.1 : 0.22 + r() * 0.24;
+      do { pa2 = r() * 6.28; pt2 = 0.3 + r() * 0.62; pp3 = polar(pt2, pa2); tries++; }
+      while (tries < 40 && (Math.abs(Math.atan2(Math.sin(pa2 - da), Math.cos(pa2 - da))) < 0.35 || pads.some(function (o) { return Math.hypot(o.x - pp3[0], o.z - pp3[1]) < (o.s + ps2) * 0.92; })));
+      var kind = padKinds[r() < 0.3 ? 1 : 0], slot = kind.top.count++; kind.bottom.count++;
+      pads.push({ x: pp3[0], z: pp3[1], s: ps2, yaw: r() * 6.28, ph: r() * 6.28, kind: kind, slot: slot });
+    }
+    // Water lilies: pointed, cupped petals with fine veins, white or blush pink, round a crown of golden stamens
+    var petalTex = paint(128, 256, function (g, w, h) {
+      var gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, '#f3f2dc'); gr.addColorStop(0.25, '#ffffff'); gr.addColorStop(0.8, '#fdf6f8'); gr.addColorStop(1, '#f6d6e2');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      for (var i = 0; i < 26; i++) { var x0 = w / 2 + (i - 13) * 2.2; g.strokeStyle = 'rgba(200,180,190,' + (0.18 + r() * 0.15) + ')'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(w / 2, h); g.quadraticCurveTo(x0 + (x0 - w / 2) * 1.6, h * 0.5, w / 2 + (x0 - w / 2) * 0.6, 0); g.stroke(); }
+      var sh = g.createLinearGradient(0, 0, w, 0); sh.addColorStop(0, 'rgba(180,170,190,.35)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(180,170,190,.35)'); g.fillStyle = sh; g.fillRect(0, 0, w, h);
+    }, true);
+    function petalGeo(len, wid, cup, lift) {
+      var shp = new THREE.Shape(); shp.moveTo(0, 0); shp.bezierCurveTo(wid * 0.9, len * 0.12, wid, len * 0.62, 0, len); shp.bezierCurveTo(-wid, len * 0.62, -wid * 0.9, len * 0.12, 0, 0);
+      var g = new THREE.ShapeGeometry(shp, 12), p = g.attributes.position, uv = g.attributes.uv;
+      for (var i = 0; i < p.count; i++) { var x = p.getX(i), y = p.getY(i); uv.setXY(i, 0.5 + x / (wid * 2.2), y / len); p.setZ(i, -Math.pow(x / wid, 2) * cup + Math.pow(y / len, 2) * lift); }
+      g.computeVertexNormals(); return g;
+    }
+    var petalOuter = petalGeo(0.21, 0.05, 0.018, 0.03), petalInner = petalGeo(0.17, 0.042, 0.022, 0.04), sepalG = petalGeo(0.2, 0.055, 0.012, 0.02);
+    var stamenG = new THREE.CylinderGeometry(0.0035, 0.005, 0.06, 5); stamenG.translate(0, 0.03, 0);
+    var ringG = new THREE.CylinderGeometry(0.03, 0.026, 0.02, 20);
+    var stamenMat = new THREE.MeshStandardMaterial({ color: '#f2b51c', emissive: new THREE.Color('#a06000'), emissiveIntensity: 0.2, roughness: 0.55 });
+    var sepalMat = new THREE.MeshStandardMaterial({ color: '#5d7a33', side: THREE.DoubleSide, roughness: 0.5 });
+    function lily(pink) {
+      var f = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ map: petalTex, color: pink ? '#f6b9cf' : '#ffffff', side: THREE.DoubleSide, roughness: 0.45, emissive: new THREE.Color(pink ? '#ffd0e0' : '#fff6f8'), emissiveIntensity: 0.06 });
+      for (var s = 0; s < 4; s++) { var hs = new THREE.Group(), m = new THREE.Mesh(sepalG, sepalMat); hs.rotation.y = s / 4 * Math.PI * 2 + 0.4; m.rotation.x = -1.45; hs.add(m); f.add(hs); }
+      [[14, 1.25, petalOuter, 1], [12, 0.85, petalOuter, 0.92], [10, 0.5, petalInner, 0.85], [8, 0.25, petalInner, 0.7]].forEach(function (ring, ri) {
+        for (var i = 0; i < ring[0]; i++) { var hold = new THREE.Group(), m = new THREE.Mesh(ring[2], mat); hold.rotation.y = (i + ri * 0.5) / ring[0] * Math.PI * 2 + (r() - 0.5) * 0.15; m.rotation.x = -ring[1] - (r() - 0.5) * 0.12; m.scale.setScalar(ring[3] * (0.92 + r() * 0.16)); m.position.y = 0.004 + ri * 0.008; hold.add(m); f.add(hold); }
       });
-      var heart = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.04, 14), new THREE.MeshStandardMaterial({ color: '#f2c230', emissive: new THREE.Color('#c08a10'), emissiveIntensity: 0.25, roughness: 0.6 })); heart.position.y = 0.03; f.add(heart);
+      var crown = new THREE.Group(); crown.position.y = 0.03; f.add(crown);
+      for (var st = 0; st < 34; st++) { var hold2 = new THREE.Group(), sm = new THREE.Mesh(stamenG, stamenMat); hold2.rotation.y = st / 34 * Math.PI * 2; sm.position.z = 0.028 + (st % 2) * 0.006; sm.rotation.x = 0.35 + (st % 3) * 0.1; hold2.add(sm); crown.add(hold2); }
+      var disc2 = new THREE.Mesh(ringG, new THREE.MeshStandardMaterial({ color: '#e8c84a', roughness: 0.6 })); disc2.position.y = 0.01; crown.add(disc2);
       return f;
     }
+    function bud() {                                                    // a closed bud on its stem, just above the water
+      var b = new THREE.Group();
+      var stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.12, 6), sepalMat); stem.position.y = 0.04; b.add(stem);
+      var head = new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.03, 0.02], [0.036, 0.06], [0.026, 0.1], [0, 0.14]].map(function (q) { return new THREE.Vector2(q[0], q[1]); }), 12), new THREE.MeshStandardMaterial({ color: '#7c8a45', roughness: 0.5 }));
+      head.position.y = 0.09; b.add(head);
+      for (var i = 0; i < 4; i++) { var tip = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.05, 6), new THREE.MeshStandardMaterial({ color: '#f4d2de', roughness: 0.5 })); tip.position.set(Math.cos(i * 1.57) * 0.012, 0.2, Math.sin(i * 1.57) * 0.012); b.add(tip); }
+      return b;
+    }
     var flowers = [];
-    pads.forEach(function (p, i) { if (i % 5 === 1) { var fl = lily(); fl.scale.setScalar(0.9 + r() * 0.4); scene.add(fl); flowers.push({ f: fl, pad: p }); } });
+    pads.forEach(function (p, i) {
+      if (p.s < 0.2) return;
+      if (i % 5 === 1) { var fl = lily(r() < 0.35); fl.scale.setScalar(0.9 + r() * 0.35); scene.add(fl); flowers.push({ f: fl, pad: p }); }
+      else if (i % 9 === 4) { var bd = bud(); bd.scale.setScalar(0.9 + r() * 0.3); scene.add(bd); flowers.push({ f: bd, pad: p }); }
+    });
 
     // Koi
     function koiTex(seed) {
@@ -1295,10 +1372,10 @@
         pads.forEach(function (p, i) {
           var bob = Math.sin(t * 0.8 + p.ph) * 0.006;
           E4.set(Math.sin(t * 0.9 + p.ph) * 0.02, p.yaw + Math.sin(t * 0.15 + p.ph) * 0.15, Math.cos(t * 0.7 + p.ph) * 0.02); Q4.setFromEuler(E4);
-          P4.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05, WY + 0.012 + bob, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); S4.set(p.s, 1, p.s);
-          M4.compose(P4, Q4, S4); padMesh.setMatrixAt(i, M4);
+          P4.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05, WY + 0.008 + bob, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); S4.set(p.s, p.s, p.s);
+          M4.compose(P4, Q4, S4); p.kind.top.setMatrixAt(p.slot, M4); p.kind.bottom.setMatrixAt(p.slot, M4);
         });
-        padMesh.instanceMatrix.needsUpdate = true;
+        padKinds.forEach(function (k) { k.top.instanceMatrix.needsUpdate = true; k.bottom.instanceMatrix.needsUpdate = true; });
         flowers.forEach(function (f) { var p = f.pad; f.f.position.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05 + p.s * 0.25, WY + 0.02 + Math.sin(t * 0.8 + p.ph) * 0.006, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); f.f.rotation.y = p.yaw + t * 0.02; });
         koi.forEach(function (k) {
           k.a += k.sp * dt / k.rt * (1 + 0.3 * Math.sin(t * 0.3 + k.ph));
