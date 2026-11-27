@@ -945,7 +945,7 @@
     var light = new THREE.PointLight('#ffa8ee', 1.3, 14, 2); light.position.set(0, 4.6, 0); tree.add(light);
     scene.add(tree);
 
-    // Mana: glowing motes drifting out of the tree to you while it refills your mana
+    // Mana
     var MOTES = 70, moGeo = new THREE.BufferGeometry(), moS = [];
     moGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MOTES * 3), 3)); moGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MOTES * 3), 3));
     var motes = new THREE.Points(moGeo, new THREE.PointsMaterial({ map: GLOW, size: 0.42, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -954,7 +954,7 @@
     var moP = new THREE.Vector3(), moQ = new THREE.Vector3(), spawnT = 0;
     function feed(on, t, dt, tx, ty, tz) {
       spawnT += dt;
-      if (on && spawnT > 0.05) {                                         // a new mote leaves the bark or blossom
+      if (on && spawnT > 0.05) {
         spawnT = 0;
         for (var i = 0; i < MOTES; i++) if (moS[i].k >= 1) {
           var m = moS[i], hi = r() < 0.5, a = r() * 6.28, d = hi ? 1 + r() * 2.2 : 0.75;
@@ -969,7 +969,7 @@
         if (s.k >= 1) { col.setXYZ(j, 0, 0, 0); continue; }
         s.k = Math.min(1, s.k + s.v * dt); var k = s.k, ik = 1 - k;
         moQ.set(tx, ty, tz);
-        moP.copy(s.a).multiplyScalar(ik * ik).addScaledVector(s.c, 2 * ik * k).addScaledVector(moQ, k * k);   // a curve from the tree to her
+        moP.copy(s.a).multiplyScalar(ik * ik).addScaledVector(s.c, 2 * ik * k).addScaledVector(moQ, k * k);
         moP.x += Math.sin(t * 6 + s.p) * 0.06 * ik; moP.y += Math.cos(t * 5 + s.p) * 0.06 * ik;
         pos.setXYZ(j, moP.x, moP.y, moP.z);
         var br = Math.min(1, k * 6) * (1 - Math.pow(k, 6)) * (0.8 + 0.2 * Math.sin(t * 9 + s.p));
@@ -1222,11 +1222,11 @@
     manaEl.style.width = (mana / MANA_MAX * 100) + '%';
     manaNumEl.textContent = Math.round(mana) + ' / ' + MANA_MAX;
   }
-  // The Dawn Tree refills your mana while you stand under it
+  // Dawn Tree Gives Mana
   var manaBar = manaEl.closest('.mana'), filling = false, chimeT = 0, audio = null;
   function wakeAudio() { if (!audio && (window.AudioContext || window.webkitAudioContext)) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio && audio.state === 'suspended') audio.resume(); }
   window.addEventListener('pointerdown', wakeAudio); window.addEventListener('keydown', wakeAudio);
-  function chime(freq, vol, len) {                                     // a soft bell-like note
+  function chime(freq, vol, len) {
     if (!audio || audio.state !== 'running') return;
     var t0 = audio.currentTime;
     [1, 2.76, 5.4].forEach(function (h, i) {
