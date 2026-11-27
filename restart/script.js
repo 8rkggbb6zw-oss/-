@@ -1061,7 +1061,7 @@
     var pos = [], uv = [], L = 0.05 / 0.9;
     all.forEach(function (tri) { tri.forEach(function (q) {
       var x = q[0], y = q[1], v = (y + 0.47) / 0.9;                          // v: 0 at the base, 1 at the tip
-      var z = 0.11 * x * x / 0.11 * (0.4 + v) - 0.06 * v * v * v;            // cupped across, the tip curling back
+      var z = 0.11 * x * x / 0.11 * (0.4 + v) - 0.06 * v * v * v;
       pos.push(x * L, (y + 0.47) * L, z * L); uv.push(0.5 + x * k, 0.5 + y * k);
     }); });
     var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
@@ -1718,7 +1718,7 @@
       var x0 = S, x1 = -1;
       for (var x = 0; x < S; x++) if (D[(y * S + x) * 4 + 3] > 0) { if (x < x0) x0 = x; x1 = x; }
       if (x1 < 0) continue;
-      var mid = (x0 + x1) / 2, hw = Math.max(1, (x1 - x0) / 2), v = (S / 2 + 0.47 * k - y) / (0.82 * k);   // v: 0 at the base, 1 at the tip
+      var mid = (x0 + x1) / 2, hw = Math.max(1, (x1 - x0) / 2), v = (S / 2 + 0.47 * k - y) / (0.82 * k);
       for (var x2 = x0; x2 <= x1; x2++) {
         var o = (y * S + x2) * 4, al = D[o + 3] / 255; if (!al) continue;
         var u = (x2 - mid) / hw, cup = Math.sqrt(Math.max(0, 1 - u * u));
