@@ -1,4 +1,3 @@
-// Everdawn: the base of the game
 (function () {
   'use strict';
 
