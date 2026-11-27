@@ -1012,6 +1012,41 @@
     };
   })();
 
+  // Holding: upper arm (forward, in, down), elbow bend, wrist (x, y, z)
+  var HOLD = [0.45, -0.1, -0.05, 2.4, 0, -0.3, 0.3];
+  var FINGERS = [['Thumb', 1, 0, -0.5, -0.4], ['Index', 1, 0, 0, 0.75], ['Middle', 1, 0, 0, 1.2], ['Ring', 1, 0, 0, 1.3], ['Little', 1, 0, 0, 1.35]];
+  // A Dawn Petal you can hold: about 5 cm long, cupped, its tip curling back, thin enough for light to glow through
+  var petalTex = null;
+  function makePetal() {
+    if (!petalTex) { petalTex = new THREE.CanvasTexture(petalPaint(256, true)); petalTex.encoding = THREE.sRGBEncoding; }
+    var sh = new THREE.Shape(), Y = function (y) { return -y; };
+    sh.moveTo(0, Y(0.47));
+    sh.bezierCurveTo(0.1, Y(0.4), 0.31, Y(0.2), 0.33, Y(-0.08)); sh.bezierCurveTo(0.35, Y(-0.33), 0.2, Y(-0.45), 0.08, Y(-0.43));
+    sh.quadraticCurveTo(0.03, Y(-0.42), 0, Y(-0.35)); sh.quadraticCurveTo(-0.03, Y(-0.42), -0.08, Y(-0.43));
+    sh.bezierCurveTo(-0.2, Y(-0.45), -0.35, Y(-0.33), -0.33, Y(-0.08)); sh.bezierCurveTo(-0.31, Y(0.2), -0.1, Y(0.4), 0, Y(0.47));
+    var geo = new THREE.ShapeGeometry(sh, 24), P, k = 0.92;
+    // fill in more points so it can bend smoothly
+    geo = geo.toNonIndexed(); P = geo.attributes.position;
+    var pts = []; for (var i = 0; i < P.count; i += 3) pts.push([P.getX(i), P.getY(i)], [P.getX(i + 1), P.getY(i + 1)], [P.getX(i + 2), P.getY(i + 2)]);
+    function split(tri, n) { if (!n) return [tri]; var m = function (a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }, ab = m(tri[0], tri[1]), bc = m(tri[1], tri[2]), ca = m(tri[2], tri[0]);
+      return [].concat(split([tri[0], ab, ca], n - 1), split([ab, tri[1], bc], n - 1), split([ca, bc, tri[2]], n - 1), split([ab, bc, ca], n - 1)); }
+    var all = []; for (var t = 0; t < pts.length; t += 3) all = all.concat(split([pts[t], pts[t + 1], pts[t + 2]], 2));
+    var pos = [], uv = [], L = 0.05 / 0.9;
+    all.forEach(function (tri) { tri.forEach(function (q) {
+      var x = q[0], y = q[1], v = (y + 0.47) / 0.9;                          // v: 0 at the base, 1 at the tip
+      var z = 0.11 * x * x / 0.11 * (0.4 + v) - 0.06 * v * v * v;            // cupped across, the tip curling back
+      pos.push(x * L, (y + 0.47) * L, z * L); uv.push(0.5 + x * k, 0.5 + y * k);
+    }); });
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.computeVertexNormals();
+    var nm = g.attributes.normal, sum = {}, key = function (i) { return Math.round(pos[i * 3] * 1e5) + ',' + Math.round(pos[i * 3 + 1] * 1e5); };   // smooth, not faceted
+    for (var i2 = 0; i2 < nm.count; i2++) { var kk = key(i2), a = sum[kk] || (sum[kk] = [0, 0, 0]); a[0] += nm.getX(i2); a[1] += nm.getY(i2); a[2] += nm.getZ(i2); }
+    for (var i3 = 0; i3 < nm.count; i3++) { var b = sum[key(i3)], l = Math.hypot(b[0], b[1], b[2]) || 1; nm.setXYZ(i3, b[0] / l, b[1] / l, b[2] / l); }
+    var mat = new THREE.MeshStandardMaterial({ map: petalTex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.55, emissive: new THREE.Color('#ff7fb8'), emissiveMap: petalTex, emissiveIntensity: 0.18 });
+    var m = new THREE.Mesh(g, mat); m.castShadow = true;
+    return m;
+  }
+
   // The Witch
   var witch = null;
   var MODEL_URLS = [window.EVERDAWN_MODEL_URL,
@@ -1074,7 +1109,10 @@
     function blink(v) { blinkBinds.forEach(function (b) { if (b[1] < b[0].morphTargetInfluences.length) b[0].morphTargetInfluences[b[1]] = b[2] * v; }); }
 
     // Standing on the farm
-    var x = 0, z = 0, heading = 0, speed = 0, phase = 0, walkW = 0;
+    var x = 0, z = 0, heading = 0, speed = 0, phase = 0, walkW = 0, holding = null, holdW = 0;
+    // What she holds: a Dawn Petal pinched between thumb and finger
+    var heldPetal = makePetal(); heldPetal.visible = false; scene.add(heldPetal);
+    var hv = new THREE.Vector3(), hv2 = new THREE.Vector3(), hUp = new THREE.Vector3(), hFw = new THREE.Vector3(), hSd = new THREE.Vector3(), hM = new THREE.Matrix4();
     var hipsRestY = B.hips ? B.hips.position.y : 0;
     holder.position.set(x, groundHeight(x, z, FARM), z);
     var nextBlink = 2, blinkT = -1;
@@ -1128,11 +1166,28 @@
           var s = a[4], sway = Math.sin(t * 1.4 + s * 0.6) * 0.015 * I;
           var sn = s * Math.sin(pa), lag = s * Math.sin(pa - 0.9), lag2 = s * Math.sin(pa - 1.5);
           var swing = (sn < 0 ? 0.2 : 0.13) * sn * W * jit;
-          pose(a[0], E(0.03 * swing, 0, -s * 0.09));
-          pose(a[1], E(-0.1 + swing, 0, -s * (1.2 + sway)));
-          pose(a[2], E(0, -s * (0.22 + 0.16 * W * (0.5 - 0.5 * lag)), 0));
-          pose(a[3], E(0.12 * lag2 * W, -s * (0.2 + 0.06 * W), -s * (0.1 + 0.05 * W)));
+          var h = s < 0 ? holdW : 0, hs = 1 - h * 0.8;                     // the hand holding something stays up in front of her
+          pose(a[0], E(0.03 * swing * hs, 0, -s * 0.09));
+          pose(a[1], E(-0.1 + swing * hs + h * HOLD[0], h * HOLD[1], -s * (1.2 + sway) + h * HOLD[2]));
+          pose(a[2], E(0, -s * (0.22 + 0.16 * W * (0.5 - 0.5 * lag)) * (1 - h) + h * HOLD[3], 0));
+          pose(a[3], E(0.12 * lag2 * W * hs + h * HOLD[4], -s * (0.2 + 0.06 * W) * (1 - h) + h * HOLD[5], -s * (0.1 + 0.05 * W) * (1 - h) + h * HOLD[6]));
         });
+
+        // Fingers: a gentle pinch round the petal, the others softly curled
+        holdW += ((holding ? 1 : 0) - holdW) * Math.min(1, dt * 6);
+        FINGERS.forEach(function (f) { var c = holdW * f[1]; [0, 1, 2].forEach(function (j) { pose(B['right' + f[0] + ['Proximal', 'Intermediate', 'Distal'][j]] || B['right' + f[0] + ['Metacarpal', 'Proximal', 'Distal'][j]], E(f[2] * c, f[3] * c, f[4] * c * (j ? 0.8 : 1))); }); });
+        if (holding && holdW > 0.5) {
+          holder.updateMatrixWorld(true);
+          var tip1 = B.rightThumbDistal || B.rightHand, tip2 = B.rightIndexDistal || B.rightHand;
+          tip1.getWorldPosition(hv); tip2.getWorldPosition(hv2); hv.lerp(hv2, 0.5);
+          hFw.set(Math.sin(heading), 0, Math.cos(heading)); hSd.set(hFw.z, 0, -hFw.x);
+          hUp.set(0, 1, 0).addScaledVector(hFw, 0.25).addScaledVector(hSd, 0.15).normalize();   // standing up, leaning a little out
+          var face = hFw.clone().multiplyScalar(-1).addScaledVector(hSd, -0.6).normalize();       // its cupped face turned out
+          var side = new THREE.Vector3().crossVectors(hUp, face).normalize(); face.crossVectors(side, hUp);
+          hM.makeBasis(side, hUp, face); heldPetal.quaternion.setFromRotationMatrix(hM);
+          heldPetal.position.copy(hv).addScaledVector(hUp, -0.014);
+          heldPetal.visible = true;
+        } else heldPetal.visible = false;
 
         // Head: steady, looking ahead, settling against the bob of each step
         pose(B.neck, E(0.02 - 0.01 * W, (0.03 * Math.sin(t * 0.3)) * I - 0.04 * Math.sin(p) * W, 0));
@@ -1142,7 +1197,8 @@
         if (nextBlink <= 0) { blinkT = 0; nextBlink = 2 + Math.random() * 3.5; }
         if (blinkT >= 0) { blinkT += dt; var bv = blinkT < 0.08 ? blinkT / 0.08 : Math.max(0, 1 - (blinkT - 0.08) / 0.1); blink(bv); if (blinkT > 0.2) { blink(0); blinkT = -1; } }
       },
-      position: function () { return holder.position; }
+      position: function () { return holder.position; },
+      hold: function (id) { holding = id; }
     };
   }
   loadWitch(0);
@@ -1249,8 +1305,8 @@
   }
 
   // Dawn Petal icon: a cupped cherry petal, painted pixel by pixel
-  function petalIcon() {
-    var S = 192, c = document.createElement('canvas'); c.width = c.height = S;
+  function petalPaint(S, flat) {
+    var c = document.createElement('canvas'); c.width = c.height = S;
     var g = c.getContext('2d'), k = S * 0.92;
     g.translate(S / 2, S / 2); g.scale(k, k);                             // the outline: narrow at its base, rounded shoulders, a notch at the tip
     g.beginPath(); g.moveTo(0, 0.47);
@@ -1269,16 +1325,20 @@
         var u = (x2 - mid) / hw, cup = Math.sqrt(Math.max(0, 1 - u * u));
         var ang = Math.atan2((x2 - S / 2) / k, Math.max(0.02, v + 0.06));
         var vein = Math.pow(Math.abs(Math.cos(ang * 21)), 30) * 0.06 * (1 - v * 0.5) + Math.pow(Math.abs(Math.cos(ang * 7.5)), 60) * 0.05;
-        var light = 0.5 + 0.46 * cup - 0.2 * u + 0.08 * v - vein;      // lit from the upper left, shaded where it curls away
+        var light = flat ? 0.95 - vein * 1.4 : 0.5 + 0.46 * cup - 0.2 * u + 0.08 * v - vein;   // lit from the upper left, shaded where it curls away
         var blush = Math.max(0, 1 - v * 2.2), pearl = Math.max(0, v - 0.45) * 1.6;
         var R = 250 - blush * 50, G = 146 - blush * 104 + pearl * 48, B = 186 - blush * 62 + pearl * 26;
-        var rim = Math.pow(Math.abs(u), 10);                             // a thin bright edge where light comes through
+        var rim = Math.pow(Math.abs(u), 10) * (flat ? 0.5 : 1);                             // a thin bright edge where light comes through
         R = R * light + rim * 40; G = G * light + rim * 46; B = B * light + rim * 40;
         var n = ((Math.sin(x2 * 12.9898 + y * 78.233) * 43758.5453) % 1) * 5;
         D[o] = Math.min(255, R + n); D[o + 1] = Math.min(255, G + n); D[o + 2] = Math.min(255, B + n); D[o + 3] = 255 * al * (0.93 + 0.07 * cup);
       }
     }
     g.putImageData(img, 0, 0);
+    return c;
+  }
+  function petalIcon() {
+    var S = 192, c = petalPaint(S, false);
     var out = document.createElement('canvas'); out.width = out.height = S; var q = out.getContext('2d');
     q.translate(S / 2, S / 2); q.rotate(-0.5); q.translate(-S / 2, -S / 2);
     q.shadowColor = 'rgba(40,0,30,.55)'; q.shadowBlur = 12; q.shadowOffsetX = 4; q.shadowOffsetY = 7; q.drawImage(c, 0, 0);
@@ -1317,6 +1377,7 @@
       hotbarEl.appendChild(b);
     }
   }
+  function heldId() { return bag[selected] ? bag[selected].id : null; }
   function selectSlot(n) {
     selected = n;
     var slots = hotbarEl.children;
@@ -1452,7 +1513,7 @@
     scene.fog.color.copy(scene.background);
     grassTime.value = now / 1000;
     var mv = moveInput();
-    if (witch) witch.update(now / 1000, dt, mv[0], mv[1]);
+    if (witch) { witch.hold(heldId()); witch.update(now / 1000, dt, mv[0], mv[1]); }
     followCamera(dt);
     dawn.update(now / 1000, dt, witch ? witch.position().x : 0, witch ? witch.position().z : 0);
     treeMana(now / 1000, dt);
