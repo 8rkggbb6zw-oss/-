@@ -1013,8 +1013,8 @@
   })();
 
   // Holding: upper arm (forward, in, down), elbow bend, wrist (x, y, z)
-  var HOLD = [-0.05, 0.2, -0.25, 1.95, 0.5, -0.35, 0.25];
-  var FINGERS = [['Thumb', 1, 0, -0.4, -0.3], ['Index', 1, 0, 0, 0.5], ['Middle', 1, 0, 0, 0.55], ['Ring', 1, 0, 0, 0.65], ['Little', 1, 0, 0, 0.75]];
+  var HOLD = [-0.05, 0.2, -0.25, 1.95, -2.1, -0.95, 0.25];
+  var FINGERS = [['Thumb', 1, -0.3, -2.1, 0.6], ['Index', 1, 0, 0, 1.2], ['Middle', 1, 0, 0, 1.3], ['Ring', 1, 0, 0, 1.4], ['Little', 1, 0, 0, 1.5]];   // thumb and first finger pinch, the rest tucked in
   // A Dawn Petal you can hold: about 5 cm long, cupped, its tip curling back, thin enough for light to glow through
   var petalTex = null;
   function makePetal() {
@@ -1112,6 +1112,7 @@
     var x = 0, z = 0, heading = 0, speed = 0, phase = 0, walkW = 0, holding = null, holdW = 0;
     // What she holds: a Dawn Petal pinched between thumb and finger
     var heldPetal = makePetal(); heldPetal.visible = false; scene.add(heldPetal);
+    function tipOf(bone, out) { var p = bone.getWorldPosition(new THREE.Vector3()), q = bone.parent.getWorldPosition(new THREE.Vector3()); return out.copy(p).addScaledVector(p.sub(q).normalize(), 0.012); }   // a fingertip's pad, just past its last joint
     var hv = new THREE.Vector3(), hv2 = new THREE.Vector3(), hUp = new THREE.Vector3(), hFw = new THREE.Vector3(), hSd = new THREE.Vector3(), hM = new THREE.Matrix4();
     var hipsRestY = B.hips ? B.hips.position.y : 0;
     holder.position.set(x, groundHeight(x, z, FARM), z);
@@ -1176,16 +1177,15 @@
         // Fingers: a gentle pinch round the petal, the others softly curled
         holdW += ((holding ? 1 : 0) - holdW) * Math.min(1, dt * 6);
         FINGERS.forEach(function (f) { var c = holdW * f[1]; [0, 1, 2].forEach(function (j) { pose(B['right' + f[0] + ['Proximal', 'Intermediate', 'Distal'][j]] || B['right' + f[0] + ['Metacarpal', 'Proximal', 'Distal'][j]], E(f[2] * c, f[3] * c, f[4] * c * (j ? 0.8 : 1))); }); });
-        if (holding && holdW > 0.5) {
+        if (holding && holdW > 0.5 && B.rightThumbDistal && B.rightIndexDistal) {
           holder.updateMatrixWorld(true);
-          var tip1 = B.rightThumbDistal || B.rightHand, tip2 = B.rightIndexDistal || B.rightHand;
-          tip1.getWorldPosition(hv); tip2.getWorldPosition(hv2); hv.lerp(hv2, 0.5);
-          hFw.set(Math.sin(heading), 0, Math.cos(heading)); hSd.set(hFw.z, 0, -hFw.x);
-          hUp.set(0, 1, 0).addScaledVector(hFw, 0.25).addScaledVector(hSd, 0.15).normalize();   // standing up, leaning a little out
-          var face = hFw.clone().multiplyScalar(-1).addScaledVector(hSd, -0.6).normalize();       // its cupped face turned out
-          var side = new THREE.Vector3().crossVectors(hUp, face).normalize(); face.crossVectors(side, hUp);
+          tipOf(B.rightThumbDistal, hv); tipOf(B.rightIndexDistal, hv2);       // the pads of her thumb and first finger
+          var pinch = hv.clone().lerp(hv2, 0.5), face = hv.clone().sub(hv2).normalize();   // the petal lies flat between them
+          B.rightHand.getWorldPosition(hFw); hUp.copy(pinch).sub(hFw).normalize().lerp(new THREE.Vector3(0, 1, 0), 0.35);   // pointing out past her fingertips, a little upward
+          hUp.addScaledVector(face, -hUp.dot(face)).normalize();
+          var side = new THREE.Vector3().crossVectors(hUp, face).normalize();
           hM.makeBasis(side, hUp, face); heldPetal.quaternion.setFromRotationMatrix(hM);
-          heldPetal.position.copy(hv).addScaledVector(hUp, -0.024).addScaledVector(face, -0.011);   // its base tucked behind her thumb
+          heldPetal.position.copy(pinch).addScaledVector(hUp, -0.009);          // its narrow base held between them
           heldPetal.visible = true;
         } else heldPetal.visible = false;
 
