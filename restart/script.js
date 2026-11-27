@@ -217,7 +217,7 @@
   }
 
   var grassTime = { value: 0 }, grassCenter = { value: new THREE.Vector2(0, 0) };
-  // Bare soil spots (x, z, radius) the grass thins out around, and the island's grass
+  // Bare soil spots
   var soilSpots = { value: [] }, farmGrass = null, farmGround = null;
   for (var si = 0; si < 32; si++) soilSpots.value.push(new THREE.Vector3(0, 0, -1));
   function insideFarm(x, z, w, R) {
@@ -485,7 +485,7 @@
     tree.position.set(TREE_X, baseY, TREE_Z); tree.rotation.y = 0.4;
     function localGround(x, z) { var c = Math.cos(0.4), s = Math.sin(0.4); return groundHeight(TREE_X + x * c + z * s, TREE_Z - x * s + z * c, FARM) - baseY; }
     function paint(w, h, fn, srgb) { var c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); return canvasTex(c, srgb); }
-    // Soft round glow, built pixel by pixel (no speckles on iPhone/iPad)
+    // Soft Glow
     function glowTex(stops) {
       var S = 64, d = new Uint8Array(S * S * 4);
       for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
@@ -501,13 +501,13 @@
       sp.scale.set(size, size, 1); return sp;
     }
 
-    // Bark: twisting plates split by deep fissures, fine cherry lenticels, a bump map to match
+    // Bark
     var BW = 256, BH = 512;
     function barkPaint(g, bump) {
       g.fillStyle = bump ? '#808080' : '#5e3f5f'; g.fillRect(0, 0, BW, BH);
       function wrapStroke(fn) { for (var ox = -BW; ox <= BW; ox += BW) for (var oy = -BH; oy <= BH; oy += BH) fn(ox, oy); }
       var rr = rand(7);
-      for (var i = 0; i < 520; i++) {                                  // plates
+      for (var i = 0; i < 520; i++) {
         var x = rr() * BW, y = rr() * BH, len = 20 + rr() * 70, wd = 3 + rr() * 9, lt = rr();
         var col = bump ? 'rgba(' + (140 + lt * 90 | 0) + ',' + (140 + lt * 90 | 0) + ',' + (140 + lt * 90 | 0) + ',.5)'
           : 'rgba(' + (110 + lt * 60 | 0) + ',' + (74 + lt * 44 | 0) + ',' + (112 + lt * 52 | 0) + ',.45)';
@@ -978,7 +978,7 @@
     };
   })();
 
-  // Your witch: Witch.vrm, loaded from GitHub
+  // The Witch
   var witch = null;
   var MODEL_URLS = [window.EVERDAWN_MODEL_URL,
     'https://raw.githubusercontent.com/8rkggbb6zw-oss/-/claude/coding-conversation-f08c0n/Witch.vrm',
