@@ -1012,10 +1012,10 @@
     };
   })();
 
-  // Holding: upper arm (forward, in, down), elbow bend, wrist (x, y, z)
+  // Arm Position
   var HOLD = [-0.05, 0.2, -0.25, 1.95, -2.1, -0.95, 0.25];
-  var FINGERS = [['Thumb', 1, -0.3, -2.1, 0.6], ['Index', 1, 0, 0, 1.2], ['Middle', 1, 0, 0, 1.3], ['Ring', 1, 0, 0, 1.4], ['Little', 1, 0, 0, 1.5]];   // thumb and first finger pinch, the rest tucked in
-  // A Dawn Petal you can hold: about 5 cm long, cupped, its tip curling back, thin enough for light to glow through
+  var FINGERS = [['Thumb', 1, -0.3, -2.1, 0.6], ['Index', 1, 0, 0, 1.2], ['Middle', 1, 0, 0, 1.3], ['Ring', 1, 0, 0, 1.4], ['Little', 1, 0, 0, 1.5]];
+  // Holding the Dawn Petal
   var petalTex = null;
   function makePetal() {
     if (!petalTex) { petalTex = new THREE.CanvasTexture(petalPaint(256, true)); petalTex.encoding = THREE.sRGBEncoding; }
@@ -1025,7 +1025,6 @@
     sh.quadraticCurveTo(0.03, Y(-0.42), 0, Y(-0.35)); sh.quadraticCurveTo(-0.03, Y(-0.42), -0.08, Y(-0.43));
     sh.bezierCurveTo(-0.2, Y(-0.45), -0.35, Y(-0.33), -0.33, Y(-0.08)); sh.bezierCurveTo(-0.31, Y(0.2), -0.1, Y(0.4), 0, Y(0.47));
     var geo = new THREE.ShapeGeometry(sh, 24), P, k = 0.92;
-    // fill in more points so it can bend smoothly
     geo = geo.toNonIndexed(); P = geo.attributes.position;
     var pts = []; for (var i = 0; i < P.count; i += 3) pts.push([P.getX(i), P.getY(i)], [P.getX(i + 1), P.getY(i + 1)], [P.getX(i + 2), P.getY(i + 2)]);
     function split(tri, n) { if (!n) return [tri]; var m = function (a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }, ab = m(tri[0], tri[1]), bc = m(tri[1], tri[2]), ca = m(tri[2], tri[0]);
@@ -1304,11 +1303,11 @@
     dawn.feed(want, t, dt, p ? p.x : 0, p ? p.y + 1.1 : 0, p ? p.z : 0);
   }
 
-  // Dawn Petal icon: a cupped cherry petal, painted pixel by pixel
+  // Dawn Petal icon
   function petalPaint(S, flat) {
     var c = document.createElement('canvas'); c.width = c.height = S;
     var g = c.getContext('2d'), k = S * 0.92;
-    g.translate(S / 2, S / 2); g.scale(k, k);                             // the outline: narrow at its base, rounded shoulders, a notch at the tip
+    g.translate(S / 2, S / 2); g.scale(k, k);
     g.beginPath(); g.moveTo(0, 0.47);
     g.bezierCurveTo(0.1, 0.4, 0.31, 0.2, 0.33, -0.08); g.bezierCurveTo(0.35, -0.33, 0.2, -0.45, 0.08, -0.43);
     g.quadraticCurveTo(0.03, -0.42, 0, -0.35); g.quadraticCurveTo(-0.03, -0.42, -0.08, -0.43);
