@@ -1496,31 +1496,101 @@
     });
 
     // Koi
-    function koiTex(seed) {
-      var kr = rand(seed);
-      return paint(256, 128, function (g, w, h) {
-        g.fillStyle = '#f4efe6'; g.fillRect(0, 0, w, h);
-        var orange = ['#e2531c', '#ea6a1e', '#d9401a', '#f08a2a'][Math.floor(kr() * 4)];
-        for (var i = 0; i < 7; i++) { var x = kr() * w, y = kr() * h * 0.6 + h * 0.2, rx = 15 + kr() * 40, ry = 10 + kr() * 28; g.fillStyle = orange; g.beginPath(); g.ellipse(x, y, rx, ry, kr() * 3, 0, 6.29); g.fill(); }
-        if (kr() < 0.5) for (var j = 0; j < 5; j++) { g.fillStyle = '#1b1614'; g.beginPath(); g.ellipse(kr() * w, kr() * h, 4 + kr() * 10, 3 + kr() * 6, 0, 0, 6.29); g.fill(); }
-        for (var s = 0; s < 500; s++) { g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 0.6; var sx = (s % 25) / 25 * w + (Math.floor(s / 25) % 2) * 5, sy = Math.floor(s / 25) / 20 * h; g.beginPath(); g.arc(sx, sy, 4, 0.3, 2.8); g.stroke(); }   // scales
+    var KOI = [                                                         // back, belly, patches, fins, glow
+      { name: 'moon', back: '#5a6e8c', belly: '#eef4fb', patch: '#c9dcf2', fin: '#bfe2ff', glow: '#5fc8ff', hue: 0.56 },
+      { name: 'amethyst', back: '#4a2a78', belly: '#efe3fb', patch: '#9b5ad8', fin: '#d9b6ff', glow: '#b06bff', hue: 0.76 },
+      { name: 'rose', back: '#f3ece6', belly: '#fff8f4', patch: '#e2557a', fin: '#ffc6d8', glow: '#ff6fa8', hue: 0.94 },
+      { name: 'sunfire', back: '#e8742a', belly: '#fff0d6', patch: '#f8c23a', fin: '#ffd88a', glow: '#ffb43a', hue: 0.1 }
+    ];
+    function hb(u) { return 0.058 * (Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, u), 0.6)), 0.85) * 0.86 + u * 0.14); }   // the body's height along its length
+    var koiBody = (function () {                                         // nose at +x, tail at -x; a deep, rounded body narrowing to the tail
+      var NU = 30, NA = 18, pos = [], uv = [], idx = [];
+      for (var i = 0; i <= NU; i++) for (var j = 0; j <= NA; j++) {
+        var u = i / NU, a = j / NA * Math.PI * 2, hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u);
+        var y = Math.cos(a) * hy * (Math.cos(a) < 0 ? 0.92 : 1) - hy * 0.08, z = Math.sin(a) * hz;
+        if (u < 0.06) { var k = u / 0.06; y *= 0.6 + 0.4 * k; z *= 0.75 + 0.25 * k; }
+        pos.push(0.2 - u * 0.4, y, z); uv.push(u, j / NA);
+      }
+      for (var i2 = 0; i2 < NU; i2++) for (var j2 = 0; j2 < NA; j2++) { var A = i2 * (NA + 1) + j2, B = A + NA + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+      var nm = g.attributes.normal; for (var i3 = 0; i3 <= NU; i3++) { var s0 = i3 * (NA + 1), s1 = s0 + NA, nx = nm.getX(s0) + nm.getX(s1), ny = nm.getY(s0) + nm.getY(s1), nz = nm.getZ(s0) + nm.getZ(s1), l = Math.hypot(nx, ny, nz) || 1; nm.setXYZ(s0, nx / l, ny / l, nz / l); nm.setXYZ(s1, nx / l, ny / l, nz / l); }
+      return g;
+    })();
+    var koiFins = (function () {                                          // tail, back fin, side fins, belly fins: all thin and see-through
+      function fin(pts) { var s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i += 2) s.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); return new THREE.ShapeGeometry(s, 14); }
+      function uvBox(g) { g.computeBoundingBox(); var b = g.boundingBox, p = g.attributes.position, uv = g.attributes.uv; for (var i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - b.min.x) / (b.max.x - b.min.x || 1), (p.getY(i) - b.min.y) / (b.max.y - b.min.y || 1)); return g; }
+      var tail = uvBox(fin([[-0.185, 0.008], [-0.27, 0.06], [-0.42, 0.095], [-0.39, 0.03], [-0.345, 0], [-0.39, -0.03], [-0.42, -0.095], [-0.27, -0.06], [-0.185, -0.008]]));
+      var dorsal = uvBox(fin([[0.07, hb(0.33) * 0.9], [0.02, hb(0.45) + 0.05], [-0.1, hb(0.75) + 0.035], [-0.13, hb(0.82) + 0.01], [-0.12, hb(0.8) * 0.7]]));
+      var anal = uvBox(fin([[-0.07, -hb(0.67) * 0.85], [-0.1, -hb(0.72) - 0.035], [-0.14, -hb(0.83) - 0.012], [-0.135, -hb(0.82) * 0.8], [-0.12, -hb(0.78) * 0.8]]));
+      var side = uvBox(fin([[0, 0], [0.005, -0.03], [-0.03, -0.075], [-0.055, -0.07], [-0.06, -0.04], [-0.04, -0.01], [0, 0]]));
+      var parts = [[tail, new THREE.Matrix4()], [dorsal, new THREE.Matrix4()], [anal, new THREE.Matrix4()]];
+      [-1, 1].forEach(function (sd) {
+        var m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 1.05, 0, 0.25)); m.setPosition(0.105, -0.028, sd * 0.03); parts.push([side, m]);                  // pectoral fins, spread to the side
+        var m2 = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.5, 0, 0.1)); m2.setPosition(-0.02, -0.045, sd * 0.015); m2.multiply(new THREE.Matrix4().makeScale(0.7, 0.7, 0.7)); parts.push([side, m2]);   // pelvic fins
+      });
+      return merge(parts);
+    })();
+    function koiTextures(kind, seed) {
+      var kr = rand(seed), patches = [];
+      for (var i = 0; i < 6; i++) patches.push([0.15 + kr() * 0.7, 0.1 + kr() * 0.8, 0.06 + kr() * 0.12, 0.08 + kr() * 0.16]);
+      var skin = paint(512, 256, function (g, w, h) {
+        var gr = g.createLinearGradient(0, 0, 0, h);                       // dark back (top and bottom edges of the map), pale belly (middle)
+        gr.addColorStop(0, kind.back); gr.addColorStop(0.3, kind.belly); gr.addColorStop(0.5, kind.belly); gr.addColorStop(0.7, kind.belly); gr.addColorStop(1, kind.back);
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+        patches.forEach(function (p) { [0, 1].forEach(function (m) { var y = (m ? 1 - p[1] * 0.35 : p[1] * 0.35) * h; g.fillStyle = kind.patch; g.globalAlpha = 0.85; g.beginPath(); for (var a = 0; a <= 6.29; a += 0.3) { var rr2 = 1 + (kr() - 0.5) * 0.35; g.lineTo(p[0] * w + Math.cos(a) * p[2] * w * rr2, y + Math.sin(a) * p[3] * h * rr2); } g.fill(); }); });
+        g.globalAlpha = 1;
+        for (var row = 0; row < 26; row++) for (var col = 0; col < 54; col++) {   // overlapping scales, each catching the light at its rim
+          var x = (col + (row % 2) * 0.5) / 54 * w, y = row / 26 * h, sr = w / 54 * 0.62;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.06 + kr() * 0.1) + ')'; g.lineWidth = 0.8; g.beginPath(); g.arc(x, y, sr, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+          g.strokeStyle = 'rgba(0,0,0,.06)'; g.beginPath(); g.arc(x, y + 1.2, sr, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke();
+        }
+        var head = g.createLinearGradient(0, 0, w * 0.18, 0); head.addColorStop(0, 'rgba(255,255,255,.25)'); head.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = head; g.fillRect(0, 0, w * 0.18, h);   // smooth, scaleless head
+        [0.25, 0.75].forEach(function (lv) { g.fillStyle = 'rgba(20,20,30,.6)'; g.beginPath(); g.arc(w * 0.075, lv * h, 6.5, 0, 6.29); g.fill(); g.fillStyle = '#0a0a10'; g.beginPath(); g.arc(w * 0.075, lv * h, 4.5, 0, 6.29); g.fill(); g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(w * 0.072, lv * h - 1.5, 1.4, 0, 6.29); g.fill(); });   // eyes
       }, true);
+      var glow = paint(512, 256, function (g, w, h) {                     // what glows: a line of dots along each side, and soft light in the patches
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+        [0.25, 0.75].forEach(function (lv) { for (var d = 0; d < 34; d++) { if (kr() < 0.3) continue; var x = w * (0.17 + d * 0.021 + (kr() - 0.5) * 0.008), y0 = lv * h + (kr() - 0.5) * 5, sz = 2 + kr() * 3.5, gl = g.createRadialGradient(x, y0, 0, x, y0, sz); gl.addColorStop(0, 'rgba(255,255,255,' + (0.5 + kr() * 0.5) + ')'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(x - sz, y0 - sz, sz * 2, sz * 2); } });
+        patches.forEach(function (p) { [0, 1].forEach(function (m) { var y = (m ? 1 - p[1] * 0.35 : p[1] * 0.35) * h, gl = g.createRadialGradient(p[0] * w, y, 0, p[0] * w, y, p[2] * w); gl.addColorStop(0, 'rgba(255,255,255,.35)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); }); });
+      }, false);
+      var finT = paint(256, 256, function (g, w, h) {                     // fine rays, clear near the body, glowing toward the edges
+        g.clearRect(0, 0, w, h);
+        var gr = g.createRadialGradient(w * 0.05, h / 2, 0, w * 0.05, h / 2, w * 1.05); gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(0.6, 'rgba(255,255,255,.4)'); gr.addColorStop(1, 'rgba(255,255,255,.85)');
+        g.fillStyle = gr; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 40; i++) { var a = (i / 39 - 0.5) * 2.6; g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(w * 0.02, h / 2); g.quadraticCurveTo(w * 0.5 * Math.cos(a), h / 2 + Math.sin(a) * h * 0.4, Math.cos(a) * w * 1.1, h / 2 + Math.sin(a) * h * 0.9); g.stroke(); }
+      }, false);
+      return { skin: skin, glow: glow, fin: finT };
     }
-    var koiBody = new THREE.SphereGeometry(1, 22, 14); koiBody.rotateZ(-Math.PI / 2);
-    var kbp = koiBody.attributes.position;
-    for (var kv = 0; kv < kbp.count; kv++) { var kx = kbp.getX(kv), kf2 = kx > 0 ? 1 : 0.35 + 0.65 * (1 + kx); kbp.setXYZ(kv, kx * 0.2, kbp.getY(kv) * 0.055 * kf2, kbp.getZ(kv) * 0.045 * kf2); }   // a rounded head, tapering to the tail
-    koiBody.computeVertexNormals();
-    var tailShape = new THREE.Shape(); tailShape.moveTo(0, 0); tailShape.quadraticCurveTo(-0.06, 0.06, -0.12, 0.08); tailShape.quadraticCurveTo(-0.09, 0, -0.12, -0.08); tailShape.quadraticCurveTo(-0.06, -0.06, 0, 0);
-    var tailG = new THREE.ShapeGeometry(tailShape, 8), finMat = new THREE.MeshStandardMaterial({ color: '#f6c8a0', transparent: true, opacity: 0.75, side: THREE.DoubleSide, roughness: 0.5 });
+    var koiGlowTex = (function () {
+      var S = 64, d = new Uint8Array(S * S * 4);
+      for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) { var q = Math.hypot((x + 0.5) / S - 0.5, (y + 0.5) / S - 0.5) * 2, k = (y * S + x) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.max(0, Math.pow(1 - Math.min(1, q), 2.4)) * 255; }
+      var t = new THREE.DataTexture(d, S, S, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
+    })();
+    function swim(mat, k) {                                               // the whole fish ripples side to side, more toward the tail
+      mat.onBeforeCompile = function (sh) {
+        sh.uniforms.uTime = grassTime; sh.uniforms.uPh = k.phU; sh.uniforms.uBeat = k.beatU;
+        sh.vertexShader = 'uniform float uTime; uniform float uPh; uniform float uBeat;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
+          'float bw = clamp((0.1 - position.x) / 0.5, 0.0, 1.0);\n' +
+          'transformed.z += sin(uTime * uBeat + uPh - position.x * 14.0) * (0.004 + 0.06 * bw * bw);');
+      };
+      return mat;
+    }
     var koi = [];
-    for (var kf = 0; kf < 9; kf++) {
-      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, new THREE.MeshStandardMaterial({ map: koiTex(70 + kf), roughness: 0.35 }));
-      fish.add(body);
-      var tail = new THREE.Group(); tail.position.x = -0.19; fish.add(tail); tail.add(new THREE.Mesh(tailG, finMat));
-      [-1, 1].forEach(function (sd) { var fin = new THREE.Mesh(new THREE.CircleGeometry(0.035, 10), finMat); fin.position.set(0.07, -0.03, sd * 0.04); fin.rotation.set(Math.PI / 2 - sd * 0.5, 0, 0.6); fish.add(fin); });
-      var sc = 0.9 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
-      koi.push({ g: fish, tail: tail, a: r() * 6.28, rt: 0.35 + r() * 0.35, sp: (0.12 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.22 + r() * 0.25, ph: r() * 6.28, wob: r() * 6.28 });
+    for (var kf = 0; kf < 10; kf++) {
+      var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { phU: { value: r() * 6.28 }, beatU: { value: 5 } };
+      var bodyMat = swim(new THREE.MeshStandardMaterial({ map: tx.skin, color: '#d8e4e0', transparent: true, opacity: 0.9, roughness: 0.28, metalness: 0.25, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.4 }), k);
+      var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, color: kind.fin, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.4, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.35 }), k);
+      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat);
+      body.castShadow = true; body.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins);   // drawn after the water: they swim just under the surface
+      var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(0.75, 0.45, 1); aura.renderOrder = 6; fish.add(aura);   // its glow shows up through the water
+      var sc = 1 + r() * 0.7; fish.scale.setScalar(sc); scene.add(fish);
+      Object.assign(k, { g: fish, kind: kind, bodyMat: bodyMat, finMat: finMat, aura: aura, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
+      koi.push(k);
     }
+    // a trail of glowing motes drifting up behind each fish
+    var TRAIL = 14, trGeo = new THREE.BufferGeometry(), trC = new THREE.Color();
+    trGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3)); trGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3));
+    var trail = new THREE.Points(trGeo, new THREE.PointsMaterial({ map: koiGlowTex, size: 0.07, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    trail.frustumCulled = false; trail.renderOrder = 6; scene.add(trail);
 
     var kP = new THREE.Vector3(), kQ = new THREE.Quaternion(), kE = new THREE.Euler();
     return {
@@ -1536,14 +1606,31 @@
         });
         padKinds.forEach(function (k) { k.top.instanceMatrix.needsUpdate = true; k.bottom.instanceMatrix.needsUpdate = true; });
         flowers.forEach(function (f) { var p = f.pad; f.f.position.set(p.x + Math.sin(t * 0.1 + p.ph) * 0.05 + p.s * 0.25, WY + 0.02 + Math.sin(t * 0.8 + p.ph) * 0.006, p.z + Math.cos(t * 0.12 + p.ph) * 0.05); f.f.rotation.y = p.yaw + t * 0.02; });
-        koi.forEach(function (k) {
-          k.a += k.sp * dt / k.rt * (1 + 0.3 * Math.sin(t * 0.3 + k.ph));
+        var bg = scene.background, night = 1 - Math.min(1, (bg.r * 0.3 + bg.g * 0.5 + bg.b * 0.2) * 1.8), tp = trGeo.attributes.position, tc = trGeo.attributes.color;
+        koi.forEach(function (k, n) {
+          var pace = 1 + 0.35 * Math.sin(t * 0.3 + k.ph);
+          k.a += k.sp * dt / k.rt * pace;
           var rad = k.rt + 0.25 * Math.sin(t * 0.21 + k.ph), a = k.a, R = pondR(a) * rad;
-          kP.set(PX + Math.cos(a) * R, 0, PZ + Math.sin(a) * R); var bedY = groundHeight(kP.x, kP.z, FARM); kP.y = Math.max(bedY + 0.12, WY - k.depth - 0.08 * Math.sin(t * 0.4 + k.ph));
+          kP.set(PX + Math.cos(a) * R, 0, PZ + Math.sin(a) * R); var bedY = groundHeight(kP.x, kP.z, FARM); kP.y = Math.max(bedY + 0.14, WY - k.depth - 0.08 * Math.sin(t * 0.4 + k.ph));
           var dir = Math.atan2(-Math.cos(a) * k.sp, -Math.sin(a) * k.sp);
-          k.g.position.copy(kP); k.g.rotation.set(0, dir, Math.sin(t * 2 + k.wob) * 0.04);
-          k.tail.rotation.y = Math.sin(t * 5 + k.wob) * 0.45; k.g.children[0].rotation.y = Math.sin(t * 5 + k.wob - 1) * 0.06;
+          k.g.position.copy(kP); k.g.rotation.set(0, dir, Math.sin(t * 0.8 + k.ph) * 0.06);
+          k.beatU.value = 4.5 + 2.5 * pace;
+          var pulse = 0.5 + 0.5 * Math.sin(t * 1.7 + k.ph);
+          k.bodyMat.emissiveIntensity = 0.55 + pulse * 0.3 + night * 1.1;
+          k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.05 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.3 + pulse * 0.15 + night * 0.9;
+          k.aura.material.opacity = 0.3 + pulse * 0.12 + night * 0.4;
+          k.tick = (k.tick || 0) + dt;
+          if (k.tick > 0.14) { k.tick = 0; k.trail.unshift({ x: kP.x + Math.cos(dir) * 0.08 * k.g.scale.x, y: kP.y, z: kP.z - Math.sin(dir) * 0.08 * k.g.scale.x, age: 0 }); if (k.trail.length > TRAIL) k.trail.pop(); }
+          trC.set(k.kind.glow);
+          for (var m = 0; m < TRAIL; m++) {
+            var q = k.trail[m], o = n * TRAIL + m;
+            if (!q) { tc.setXYZ(o, 0, 0, 0); continue; }
+            q.age += dt; q.y += dt * 0.05;
+            var f = Math.max(0, 1 - q.age / 2) * (0.5 + 0.5 * Math.sin(t * 9 + m)) * (0.6 + night * 0.4);
+            tp.setXYZ(o, q.x, Math.min(q.y, WY - 0.03), q.z); tc.setXYZ(o, trC.r * f, trC.g * f, trC.b * f);
+          }
         });
+        tp.needsUpdate = tc.needsUpdate = true;
       }
     };
   })();
