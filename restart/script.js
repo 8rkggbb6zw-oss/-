@@ -1433,7 +1433,7 @@
         nm.getNormalMatrix(pt[1]);
         for (var i = 0; i < p.count; i++) {
           v.fromBufferAttribute(p, i).applyMatrix4(pt[1]); P.push(v.x, v.y, v.z);
-          if (colors) { var c = typeof pt[2] === 'function' ? pt[2](v.x, v.y, v.z) : (pt[2] || [1, 1, 1]); C.push(c[0], c[1], c[2]); }
+          if (colors) { var c = pt[2] === 'own' ? [g.attributes.color.getX(i), g.attributes.color.getY(i), g.attributes.color.getZ(i)] : typeof pt[2] === 'function' ? pt[2](v.x, v.y, v.z) : (pt[2] || [1, 1, 1]); C.push(c[0], c[1], c[2]); }
           v.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); N.push(v.x, v.y, v.z);
           U.push(u ? u.getX(i) : 0, u ? u.getY(i) : 0);
         }
@@ -1557,24 +1557,50 @@
     })();
     var SPINES = [];                                                      // where each spine on the back stands: position along the body, height, size
     for (var si = 0; si < 17; si++) { var bigS = si % 2 === 0; SPINES.push({ u: 0.16 + si * 0.036, h: bigS ? 0.026 + 0.034 * Math.sin(Math.PI * (si + 0.5) / 17) : 0.013, w: bigS ? 0.0065 : 0.0042, lean: 0.35 + si * 0.025 }); }
-    function koiCrownFor(kind) {                                          // crystal spines down the back and two long jointed whiskers, coloured deep at the root and pale at the tip
-      var cDeep = new THREE.Color(kind.deep), cPale = new THREE.Color(kind.pale), cGlow = new THREE.Color(kind.glow), tmp = new THREE.Color(), parts = [];
-      function grad(y0, y1) { return function (x, y) { var k = Math.max(0, Math.min(1, (y - y0) / (y1 - y0 || 1))); tmp.copy(cDeep).lerp(cGlow, Math.min(1, k * 1.6)).lerp(cPale, Math.max(0, k - 0.5) * 2); return [tmp.r, tmp.g, tmp.b]; }; }
-      var shard = new THREE.CylinderGeometry(0, 1, 1, 5, 8); shard.translate(0, 0.5, 0);   // a five-faceted shard, curving back, with a twist up its length
-      var sp = shard.attributes.position;
-      for (var i = 0; i < sp.count; i++) { var y = sp.getY(i), a = 0.6 * y, cx = sp.getX(i), cz = sp.getZ(i); sp.setXYZ(i, cx * Math.cos(a) - cz * Math.sin(a) - y * y * 0.5, y, cx * Math.sin(a) + cz * Math.cos(a)); }
-      shard.computeVertexNormals();
-      var socket = new THREE.TorusGeometry(1, 0.35, 6, 12); socket.rotateX(Math.PI / 2);
+    function koiCrownFor(kind, skinTex) {                                  // crystal spines down the back
+      var lin = function (c) { return new THREE.Color(c).convertSRGBToLinear(); };
+      var cDeep = lin(kind.deep), cPale = lin(kind.pale), cGlow = lin(kind.glow), tmp = new THREE.Color(), parts = [], cr = rand(Math.round(kind.hue * 977) + 3), skinC = lin(kind.fin1);
+      if (skinTex && skinTex.image && skinTex.image.getContext) {         // the colour of this fish's back, for the skin round each spine
+        var d = skinTex.image.getContext('2d').getImageData(Math.round(0.4 * skinTex.image.width), 2, 9, 9).data, r2 = 0, g2 = 0, b2 = 0;
+        for (var q = 0; q < d.length; q += 4) { r2 += d[q]; g2 += d[q + 1]; b2 += d[q + 2]; }
+        skinC = new THREE.Color(r2 / 81 / 255, g2 / 81 / 255, b2 / 81 / 255).convertSRGBToLinear();
+      }
+      function shardGeo(sides, segs, twist, curve, seed) {               // a faceted shard: each flat face catches the light its own way, banded as it grew, frosted at the root and clear at the tip
+        var sr = rand(seed), g = new THREE.CylinderGeometry(0, 1, 1, sides, segs).toNonIndexed(); g.translate(0, 0.5, 0);
+        var p = g.attributes.position, col = [];
+        for (var i = 0; i < p.count; i++) { var y = p.getY(i), a = twist * y, cx = p.getX(i) * (1 + 0.08 * Math.sin(y * 9 + seed)), cz = p.getZ(i); p.setXYZ(i, cx * Math.cos(a) - cz * Math.sin(a) - y * y * curve, y, cx * Math.sin(a) + cz * Math.cos(a)); }
+        g.computeVertexNormals();
+        for (var t = 0; t < p.count; t += 3) {
+          var face = 0.82 + sr() * 0.32;                                   // each facet a little lighter or darker
+          for (var v = 0; v < 3; v++) {
+            var y2 = p.getY(t + v), band = 1 - 0.28 * Math.pow(Math.max(0, Math.cos((y2 - 0.12) * 26)), 16) * (y2 < 0.85 ? 1 : 0), frost = Math.max(0, 1 - y2 / 0.25);
+            tmp.copy(cDeep).lerp(cGlow, Math.min(1, y2 * 1.7)).lerp(cPale, Math.max(0, y2 - 0.55) * 2.2).lerp(cPale, frost * 0.35).multiplyScalar(face * band);
+            col.push(tmp.r, tmp.g, tmp.b);
+          }
+        }
+        g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        return g;
+      }
+      function coreGeo() { var g = new THREE.CylinderGeometry(0, 1, 1, 6, 6); g.translate(0, 0.5, 0); var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var y = p.getY(i); p.setX(i, p.getX(i) - y * y * 0.5); } g.computeVertexNormals(); var c = []; for (var k = 0; k < p.count; k++) c.push(1, 1, 1); g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return g; }
+      var core = coreGeo();
+      var sleeve = new THREE.CylinderGeometry(1, 2.3, 1, 18, 3, true); sleeve.translate(0, 0.5, 0);   // a fleshy sleeve of skin where each spine grows from the back
+      var sp2 = sleeve.attributes.position; for (var sv = 0; sv < sp2.count; sv++) { var yy = sp2.getY(sv), rr = 1 + 1.3 * Math.pow(1 - yy, 2.2); var ang = Math.atan2(sp2.getZ(sv), sp2.getX(sv)); sp2.setX(sv, Math.cos(ang) * rr); sp2.setZ(sv, Math.sin(ang) * rr); } sleeve.computeVertexNormals();
+      var tips = [];
       SPINES.forEach(function (S, i) {
-        var x = 0.2 - S.u * 0.4, y0 = hb(S.u) * 0.94 - 0.004, m = new THREE.Matrix4().makeRotationZ(S.lean);
-        m.premultiply(new THREE.Matrix4().makeTranslation(x, y0, 0)); m.multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w * 0.7));
-        parts.push([shard, m, grad(y0, y0 + S.h * 0.95)]);
-        var sm = new THREE.Matrix4().makeTranslation(x, y0 + 0.001, 0); sm.multiply(new THREE.Matrix4().makeScale(S.w * 1.1, S.w * 0.8, S.w * 0.9)); parts.push([socket, sm, [cDeep.r, cDeep.g, cDeep.b]]);   // a little ring where it grows from the skin
+        var x = 0.2 - S.u * 0.4, y0 = hb(S.u) * 0.94 - 0.004, big = S.h > 0.02;
+        var m = new THREE.Matrix4().makeRotationZ(S.lean); m.premultiply(new THREE.Matrix4().makeTranslation(x, y0, 0));
+        var main = shardGeo(6, 12, 0.7 + cr() * 0.4, 0.5, i * 13 + 1);
+        parts.push([main, m.clone().multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w * 0.75)), 'own']);
+        parts.push([core, m.clone().multiply(new THREE.Matrix4().makeScale(S.w * 0.3, S.h * 0.86, S.w * 0.22)), [1.4, 1.4, 1.4]]);   // a bright core of light inside
+        parts.push([sleeve, m.clone().multiply(new THREE.Matrix4().makeScale(S.w * 1.05, S.h * 0.14, S.w * 0.8)).premultiply(new THREE.Matrix4().makeTranslation(0, -0.0012, 0)), [skinC.r, skinC.g, skinC.b]]);
+        if (big) [-1, 1].forEach(function (sd) {                         // small crystals budding off its root
+          var bm = m.clone().multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * (0.55 + cr() * 0.25), 0, -0.35 - cr() * 0.3))).multiply(new THREE.Matrix4().makeScale(S.w * 0.45, S.h * (0.22 + cr() * 0.14), S.w * 0.35));
+          parts.push([shardGeo(5, 6, 0.4, 0.3, i * 31 + sd + 9), bm, 'own']);
+        });
+        var tipM = m.clone().multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w)), tip = new THREE.Vector3(-0.5, 1, 0).applyMatrix4(tipM); tips.push(tip.x, tip.y, tip.z);
       });
-      var g = merge(parts.map(function (p) { return p[2] && typeof p[2] === 'function' && p[2](0, 0, 0) === null ? [p[0], p[1]] : p; }), true);
-      // the whiskers carry their own colours
-      var off = 0, gc = g.attributes.color;
-      parts.forEach(function (p) { var n = p[0].attributes.position.count; if (typeof p[2] === 'function' && p[2](0, 0, 0) === null) { var cc = p[0].attributes.color; for (var i = 0; i < n; i++) gc.setXYZ(off + i, cc.getX(i), cc.getY(i), cc.getZ(i)); } off += n; });
+      var g = merge(parts, true);
+      g.userData.tips = tips;
       return g;
     }
     function koiWhiskersFor(kind, skinTex) {                                       // whiskers rising out of the swell of skin, coloured like the face at the root
@@ -1813,8 +1839,8 @@
       var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { kind: kind, phU: { value: r() * 6.28 }, beatU: { value: 5 }, rimU: { value: 1 } };
       var bodyMat = swim(new THREE.MeshPhysicalMaterial({ map: tx.skin, bumpMap: tx.bump, bumpScale: 0.0009, transparent: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.5 }), k, false, true);   // wet and glossy
       var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, bumpMap: tx.finBump, bumpScale: 0.0012, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.45 }), k, true, false);
-      var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.92, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true);
-      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrownFor(kind), crystalMat);
+      var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.82, flatShading: false, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true);
+      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrownFor(kind, tx.skin), crystalMat);
       body.renderOrder = 6; crown.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins, crown);   // drawn after the water: they swim just under the surface
       var et = eyeTex(kind), eyeMat = swim(new THREE.MeshStandardMaterial({ map: et.map, roughness: 0.6, emissive: new THREE.Color(kind.glow), emissiveMap: et.glow, emissiveIntensity: 0.4 }), k, false, false);
       var corneaMat = swim(new THREE.MeshBasicMaterial({ color: '#ffffff', alphaMap: corneaTex, transparent: true, depthWrite: false, toneMapped: false }), k, false, false);   // a clear, glassy lens over each eye: only its gleam shows
@@ -1822,6 +1848,8 @@
       var socketMat = swim(new THREE.MeshPhysicalMaterial({ color: sockC, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 }), k, false, true);
       var eyes = new THREE.Mesh(eyeGeo, eyeMat), cornea = new THREE.Mesh(corneaGeo, corneaMat), socket = new THREE.Mesh(socketGeo, socketMat);
       eyes.renderOrder = 6; socket.renderOrder = 6; cornea.renderOrder = 7; eyes.add(cornea, socket); fish.add(eyes);
+      var tipGeo = new THREE.BufferGeometry(); tipGeo.setAttribute('position', new THREE.Float32BufferAttribute(crown.geometry.userData.tips, 3));
+      var tipPts = new THREE.Points(tipGeo, new THREE.PointsMaterial({ map: koiGlowTex, color: kind.pale, size: 0.03, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); tipPts.renderOrder = 8; fish.add(tipPts);   // glints at the spine tips
       var whiskMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.5 }), k, false, true, true);
       var whiskers = new THREE.Mesh(koiWhiskersFor(kind, tx.skin), whiskMat); whiskers.renderOrder = 6; fish.add(whiskers);
       var shadow = new THREE.Mesh(shadowGeo, shadowMat.clone()); shadow.renderOrder = 2; scene.add(shadow);
@@ -1830,7 +1858,7 @@
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: '#ffffff', transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.22, 0.1, 1); core.renderOrder = 8; fish.add(core);   // a light glowing inside
       var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(1.1, 0.55, 1); aura.renderOrder = 6; fish.add(aura);
       var sc = 1 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
-      Object.assign(k, { g: fish, shadow: shadow, whiskMat: whiskMat, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
+      Object.assign(k, { g: fish, shadow: shadow, tipPts: tipPts, whiskMat: whiskMat, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
       koi.push(k);
     }
     // a trail of glowing motes drifting up behind each fish
@@ -1872,7 +1900,7 @@
           k.shadow.position.set(kP.x, bedY + 0.015, kP.z); k.shadow.rotation.y = dir; var hgt = kP.y - bedY; k.shadow.scale.setScalar(k.g.scale.x * (1 + hgt * 1.5)); k.shadow.material.opacity = Math.max(0, 0.55 - hgt * 0.5) * (1 - night * 0.6);   // a soft shadow on the bed below
           k.beatU.value = 4.5 + 2.5 * pace;
           var pulse = 0.5 + 0.5 * Math.sin(t * 1.7 + k.ph);
-          k.bodyMat.emissiveIntensity = 0.35 + pulse * 0.2 + night * 1.2; k.rimU.value = 0.35 + pulse * 0.25 + night * 0.8; k.whiskMat.emissiveIntensity = k.bodyMat.emissiveIntensity; k.crystalMat.emissiveIntensity = 0.3 + pulse * 0.35 + night;
+          k.bodyMat.emissiveIntensity = 0.35 + pulse * 0.2 + night * 1.2; k.rimU.value = 0.35 + pulse * 0.25 + night * 0.8; k.whiskMat.emissiveIntensity = k.bodyMat.emissiveIntensity; k.tipPts.material.opacity = 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.6 + k.ph * 3), 3); k.tipPts.material.size = 0.02 + 0.02 * k.tipPts.material.opacity; k.crystalMat.emissiveIntensity = 0.3 + pulse * 0.35 + night;
           k.core.material.opacity = 0.25 + pulse * 0.2 + night * 0.3; k.orbs.forEach(function (o, oi) { var tw = 0.5 + 0.5 * Math.sin(t * 3.3 + k.ph + oi * 1.7); o.material.opacity = 0.5 + tw * 0.5; o.scale.setScalar(0.05 + tw * 0.04); });
           k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.08 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.4 + pulse * 0.25 + night * 0.9;
           k.aura.material.opacity = 0.28 + pulse * 0.14 + night * 0.4;
