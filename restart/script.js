@@ -1657,12 +1657,6 @@
         [0.25, 0.75].forEach(function (lv) {
           var gx = w * 0.15, gy = lv * h;                               // gill plates
           [0, 5].forEach(function (o) { g.strokeStyle = o ? 'rgba(255,255,255,.35)' : 'rgba(10,0,20,.45)'; g.lineWidth = o ? 0.8 : 1.6; g.beginPath(); g.arc(gx - 26 + o, gy, 30, -0.75, 0.75); g.stroke(); });
-          var ex = w * 0.075, ey = lv * h;                              // large dark eyes with an iris ring and two catch-lights
-          var ir = g.createRadialGradient(ex, ey, 2, ex, ey, 9); ir.addColorStop(0, kind.fin2); ir.addColorStop(0.7, kind.fin1); ir.addColorStop(1, kind.deep);
-          g.fillStyle = ir; g.beginPath(); g.arc(ex, ey, 9, 0, 6.29); g.fill();
-          for (var rr3 = 0; rr3 < 16; rr3++) { var a3 = rr3 / 16 * 6.28; g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(ex + Math.cos(a3) * 5.5, ey + Math.sin(a3) * 5.5); g.lineTo(ex + Math.cos(a3) * 8.5, ey + Math.sin(a3) * 8.5); g.stroke(); }
-          g.fillStyle = '#04020a'; g.beginPath(); g.arc(ex, ey, 5.2, 0, 6.29); g.fill();
-          g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(ex - 1.8, ey - 2, 1.7, 0, 6.29); g.fill(); g.beginPath(); g.arc(ex + 1.6, ey + 1.6, 0.7, 0, 6.29); g.fill();
           g.fillStyle = 'rgba(10,0,20,.5)'; g.beginPath(); g.arc(w * 0.03, lv * h + (lv < 0.5 ? 9 : -9), 1, 0, 6.29); g.fill();   // nostril
         });
         g.strokeStyle = 'rgba(20,0,20,.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, h * 0.43); g.quadraticCurveTo(w * 0.035, h * 0.5, 0, h * 0.57); g.stroke();   // the mouth
@@ -1698,7 +1692,6 @@
         });
         g.shadowBlur = 0;
         for (var s = 0; s < 220; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.4 + kr() * 0.6) + ')'; g.beginPath(); g.arc(kr() * w, kr() * h, 0.4 + kr() * 1, 0, 6.29); g.fill(); }
-        [0.25, 0.75].forEach(function (lv) { var gl = g.createRadialGradient(w * 0.075, lv * h, 0, w * 0.075, lv * h, 12); gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.7, 'rgba(255,255,255,.9)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); });
       }, false);
       var finT = paint(1024, 512, function (g) {                          // silk: colour shifting from body to tip, bands of shimmer, fine forking rays, sparkles and a luminous edge
         g.scale(2, 2); var w = 512, h = 256;
@@ -1755,22 +1748,62 @@
       return mat;
     }
     var eyeTexCache = {};
-    function eyeTex(kind) {                                               // a glossy dark pupil, a ring of coloured iris with fine streaks, a gold rim
+    function eyeTex(kind) {                                               // iris, pupil and the light that shines back from deep in the eye
       if (eyeTexCache[kind.glow]) return eyeTexCache[kind.glow];
-      return (eyeTexCache[kind.glow] = paint(128, 128, function (g, w) {
-        var c = w / 2; g.fillStyle = kind.deep; g.fillRect(0, 0, w, w);
-        var ir = g.createRadialGradient(c, c, 8, c, c, 30); ir.addColorStop(0, kind.fin2); ir.addColorStop(0.6, kind.fin1); ir.addColorStop(1, '#d8b060');
-        g.fillStyle = ir; g.beginPath(); g.arc(c, c, 30, 0, 6.29); g.fill();
-        for (var i = 0; i < 60; i++) { var a = i / 60 * 6.28; g.strokeStyle = 'rgba(' + (i % 2 ? '255,255,255' : '0,0,0') + ',.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(c + Math.cos(a) * 12, c + Math.sin(a) * 12); g.lineTo(c + Math.cos(a) * 29, c + Math.sin(a) * 29); g.stroke(); }
-        g.fillStyle = '#020104'; g.beginPath(); g.arc(c, c, 13, 0, 6.29); g.fill();
-      }, true));
+      var er = rand(Math.round(kind.hue * 1000) + 7), S = 512, c = S / 2, IR = S * 0.44, PR = IR * 0.42;
+      function pupil(g, grow) {                                           // a fish's pupil: round, with a teardrop notch toward the front
+        g.beginPath(); g.ellipse(c, c, PR * 1.06 + grow, PR + grow, 0, 0, 6.29); g.moveTo(c + PR * 1.06 + grow, c);
+        g.quadraticCurveTo(c + PR * 1.5 + grow, c, c + PR * 1.62 + grow, c + PR * 0.08); g.quadraticCurveTo(c + PR * 1.35, c + PR * 0.45 + grow * 0.5, c + PR * 0.7, c + PR * 0.75 + grow);
+      }
+      var map = paint(S, S, function (g) {
+        g.fillStyle = kind.deep; g.fillRect(0, 0, S, S);
+        var sc = g.createRadialGradient(c, c, IR * 0.95, c, c, S * 0.5); sc.addColorStop(0, '#2a2433'); sc.addColorStop(1, kind.deep); g.fillStyle = sc; g.fillRect(0, 0, S, S);   // the dark band round the iris
+        var ir = g.createRadialGradient(c, c, PR, c, c, IR); ir.addColorStop(0, kind.fin2); ir.addColorStop(0.35, kind.fin1); ir.addColorStop(0.75, kind.glow); ir.addColorStop(0.93, '#c9a24a'); ir.addColorStop(1, '#3a2a1a');
+        g.fillStyle = ir; g.beginPath(); g.arc(c, c, IR, 0, 6.29); g.fill();
+        for (var f = 0; f < 900; f++) {                                   // radiating fibres, some light, some dark, gently wavy
+          var a = er() * 6.283, r0 = PR * (1 + er() * 0.15), r1 = IR * (0.6 + er() * 0.4), wob = (er() - 0.5) * 0.08, l = er();
+          g.strokeStyle = l < 0.45 ? 'rgba(255,255,255,' + (0.06 + er() * 0.16) + ')' : l < 0.85 ? 'rgba(0,0,0,' + (0.05 + er() * 0.14) + ')' : 'rgba(255,220,140,' + (0.1 + er() * 0.2) + ')';
+          g.lineWidth = 0.6 + er() * 1.4; g.beginPath(); g.moveTo(c + Math.cos(a) * r0, c + Math.sin(a) * r0);
+          g.quadraticCurveTo(c + Math.cos(a + wob) * (r0 + r1) / 2, c + Math.sin(a + wob) * (r0 + r1) / 2, c + Math.cos(a + wob * 0.5) * r1, c + Math.sin(a + wob * 0.5) * r1); g.stroke();
+        }
+        g.strokeStyle = 'rgba(255,240,210,.45)'; g.lineWidth = 2.2; g.beginPath();   // the zigzag collarette round the pupil
+        for (var z = 0; z <= 72; z++) { var az = z / 72 * 6.283, rz = PR * (1.55 + (z % 2 ? 0.12 : -0.05) + (er() - 0.5) * 0.08); if (z) g.lineTo(c + Math.cos(az) * rz, c + Math.sin(az) * rz); else g.moveTo(c + Math.cos(az) * rz, c + Math.sin(az) * rz); } g.stroke();
+        for (var k2 = 0; k2 < 40; k2++) { var ak = er() * 6.283, rk = PR * (1.7 + er() * 0.7); g.fillStyle = 'rgba(0,0,0,' + (0.15 + er() * 0.2) + ')'; g.beginPath(); g.ellipse(c + Math.cos(ak) * rk, c + Math.sin(ak) * rk, 2 + er() * 4, 1 + er() * 2, ak, 0, 6.29); g.fill(); }   // crypts
+        for (var fl = 0; fl < 70; fl++) { var af = er() * 6.283, rf = PR * 1.2 + er() * (IR - PR * 1.3); g.fillStyle = 'rgba(255,' + (190 + er() * 50 | 0) + ',90,' + (0.35 + er() * 0.4) + ')'; g.beginPath(); g.arc(c + Math.cos(af) * rf, c + Math.sin(af) * rf, 0.8 + er() * 2, 0, 6.29); g.fill(); }   // flecks of gold
+        var lr = g.createRadialGradient(c, c, IR * 0.86, c, c, IR * 1.02); lr.addColorStop(0, 'rgba(0,0,0,0)'); lr.addColorStop(0.7, 'rgba(10,5,20,.75)'); lr.addColorStop(1, 'rgba(10,5,20,0)'); g.fillStyle = lr; g.fillRect(0, 0, S, S);   // the dark limbal ring
+        g.fillStyle = '#030206'; pupil(g, 0); g.fill();
+        var tp = g.createRadialGradient(c - PR * 0.1, c + PR * 0.15, 0, c, c, PR); tp.addColorStop(0, kind.glow); tp.addColorStop(0.5, 'rgba(0,0,0,0)'); g.globalAlpha = 0.14; g.fillStyle = tp; pupil(g, -2); g.fill(); g.globalAlpha = 1;   // a hint of eyeshine deep inside
+        g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = 3; pupil(g, 2); g.stroke();
+      }, true);
+      var glow = paint(S, S, function (g) {                               // only the eyeshine and the faintest shimmer in the iris glow
+        g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+        for (var f = 0; f < 200; f++) { var a = er() * 6.283; g.strokeStyle = 'rgba(255,255,255,' + (0.05 + er() * 0.1) + ')'; g.lineWidth = 1; g.beginPath(); g.moveTo(c + Math.cos(a) * PR * 1.1, c + Math.sin(a) * PR * 1.1); g.lineTo(c + Math.cos(a) * IR * 0.9, c + Math.sin(a) * IR * 0.9); g.stroke(); }
+        var tp = g.createRadialGradient(c - PR * 0.1, c + PR * 0.15, 0, c, c, PR * 0.8); tp.addColorStop(0, 'rgba(255,255,255,.3)'); tp.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = tp; pupil(g, -3); g.fill();
+      }, false);
+      return (eyeTexCache[kind.glow] = { map: map, glow: glow });
     }
-    var eyeGeo = (function () {                                           // two domed eyes set into the head
-      var parts = [], hy = hb(0.075), hz = hy * (0.7 - 0.12 * 0.075);
+    var corneaTex = paint(256, 256, function (g, w) {                    // soft reflections of the sky on the wet cornea (brightness = how much shows)
+      g.fillStyle = '#000'; g.fillRect(0, 0, w, w);
+      function soft(x, y, rx, ry, a, rot) { g.save(); g.translate(x * w, y * w); g.rotate(rot || 0); g.scale(1, ry / rx); var gr = g.createRadialGradient(0, 0, 0, 0, 0, rx * w); gr.addColorStop(0, 'rgba(255,255,255,' + a + ')'); gr.addColorStop(0.6, 'rgba(255,255,255,' + a * 0.9 + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx * w, 0, 6.29); g.fill(); g.restore(); }
+      soft(0.36, 0.32, 0.085, 0.05, 1, -0.5); soft(0.36, 0.32, 0.03, 0.02, 1, -0.5);                          // the sky
+      soft(0.41, 0.36, 0.03, 0.02, 0.5, -0.5);
+      soft(0.63, 0.66, 0.025, 0.018, 0.35, 0.3);                          // light bouncing up from below
+      var rim = g.createRadialGradient(w / 2, w / 2, w * 0.4, w / 2, w / 2, w * 0.5); rim.addColorStop(0, 'rgba(255,255,255,0)'); rim.addColorStop(0.8, 'rgba(255,255,255,.08)'); rim.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rim; g.fillRect(0, 0, w, w);
+    }, false);
+    function eyeParts(rDome, height, flatUV) {                             // a dome on each side of the head, its texture centred on the pupil
+      var hy = hb(0.075), hz = hy * (0.7 - 0.12 * 0.075), parts = [];
       [-1, 1].forEach(function (sd) {
-        var e = new THREE.SphereGeometry(0.0105, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55); e.rotateX(sd * Math.PI / 2);
-        var m = new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.78); parts.push([e, m]);
+        var e = new THREE.SphereGeometry(rDome, 40, 20, 0, Math.PI * 2, 0, Math.PI * 0.5), p = e.attributes.position, uv = e.attributes.uv;
+        for (var i = 0; i < p.count; i++) { var x = p.getX(i), z = p.getZ(i); uv.setXY(i, 0.5 + sd * x / (2 * rDome) * flatUV, 0.5 - z / (2 * rDome) * flatUV); p.setY(i, p.getY(i) * height); }
+        e.computeVertexNormals(); e.rotateX(sd * Math.PI / 2); e.rotateY(sd * 0.12);   // facing out, turned a touch forward
+        parts.push([e, new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.9)]);
       });
+      return merge(parts);
+    }
+    var eyeGeo = eyeParts(0.0102, 0.55, 1), corneaGeo = eyeParts(0.0108, 0.82, 1);
+    var socketGeo = (function () {                                        // a soft ring of skin round each eye
+      var hy = hb(0.075), hz = hy * (0.7 - 0.12 * 0.075), parts = [];
+      [-1, 1].forEach(function (sd) { var t = new THREE.TorusGeometry(0.0108, 0.0022, 12, 48); var m = new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.9); m.multiply(new THREE.Matrix4().makeRotationY(sd * 0.12)); parts.push([t, m]); });
       return merge(parts);
     })();
     var shadowGeo = new THREE.PlaneGeometry(0.7, 0.32); shadowGeo.rotateX(-Math.PI / 2);
@@ -1783,8 +1816,12 @@
       var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.92, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true);
       var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrownFor(kind), crystalMat);
       body.renderOrder = 6; crown.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins, crown);   // drawn after the water: they swim just under the surface
-      var eyeMat = swim(new THREE.MeshPhysicalMaterial({ map: eyeTex(kind), roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02, emissive: new THREE.Color(kind.glow), emissiveMap: eyeTex(kind), emissiveIntensity: 0.25 }), k, false, false);
-      var eyes = new THREE.Mesh(eyeGeo, eyeMat); eyes.renderOrder = 6; fish.add(eyes);
+      var et = eyeTex(kind), eyeMat = swim(new THREE.MeshStandardMaterial({ map: et.map, roughness: 0.6, emissive: new THREE.Color(kind.glow), emissiveMap: et.glow, emissiveIntensity: 0.4 }), k, false, false);
+      var corneaMat = swim(new THREE.MeshBasicMaterial({ color: '#ffffff', alphaMap: corneaTex, transparent: true, depthWrite: false, toneMapped: false }), k, false, false);   // a clear, glassy lens over each eye: only its gleam shows
+      var sockC = (function () { var cv = tx.skin.image, d = cv.getContext('2d').getImageData(Math.round(0.12 * cv.width), Math.round(0.25 * cv.height) - 3, 7, 7).data, r2 = 0, g2 = 0, b2 = 0; for (var q = 0; q < d.length; q += 4) { r2 += d[q]; g2 += d[q + 1]; b2 += d[q + 2]; } return new THREE.Color(r2 / 49 / 255, g2 / 49 / 255, b2 / 49 / 255).convertSRGBToLinear().multiplyScalar(0.82); })();
+      var socketMat = swim(new THREE.MeshPhysicalMaterial({ color: sockC, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 }), k, false, true);
+      var eyes = new THREE.Mesh(eyeGeo, eyeMat), cornea = new THREE.Mesh(corneaGeo, corneaMat), socket = new THREE.Mesh(socketGeo, socketMat);
+      eyes.renderOrder = 6; socket.renderOrder = 6; cornea.renderOrder = 7; eyes.add(cornea, socket); fish.add(eyes);
       var whiskMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.5 }), k, false, true, true);
       var whiskers = new THREE.Mesh(koiWhiskersFor(kind, tx.skin), whiskMat); whiskers.renderOrder = 6; fish.add(whiskers);
       var shadow = new THREE.Mesh(shadowGeo, shadowMat.clone()); shadow.renderOrder = 2; scene.add(shadow);
