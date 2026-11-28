@@ -1110,7 +1110,7 @@
       var x = bp.getX(bi), z = bp.getZ(bi), t = pondT(x, z), y = g0(x, z);
       bp.setY(bi, y + 0.01); bu.push(x * 0.32, z * 0.32);
       var n1 = vnoise(x * 0.6, z * 0.6), n2 = vnoise(x * 1.7 + 5, z * 1.7);
-      if (t < 1) bcol.copy(SAND).lerp(SILT, Math.min(1, (WY - y) / 0.6)).lerp(WEED, Math.max(0, n1 - 0.4) * 1.4 * Math.min(1, (WY - y) * 3));
+      if (t < 1) bcol.copy(SAND).lerp(SILT, Math.pow(Math.min(1, Math.max(0, WY - y) / 1.3), 0.7)).lerp(WEED, Math.max(0, n1 - 0.4) * 1.4 * Math.min(1, (WY - y) * 3));
       else bcol.copy(MUD).lerp(DAMP, Math.min(1, (t - 1) / 0.25));
       bcol.multiplyScalar(0.85 + n2 * 0.3); bc.push(bcol.r, bcol.g, bcol.b);
       var edge = 1.12 + (n1 - 0.5) * 0.12; ba.push(t < edge ? 1 : Math.max(0, 1 - (t - edge) / 0.18));
@@ -1124,10 +1124,10 @@
       sh.fragmentShader = 'uniform float uTime;\nuniform float uWY;\nvarying float vA;\nvarying vec3 vWp;\n' + sh.fragmentShader
         .replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\ndiffuseColor.a *= vA;')
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' +
-          'float under = clamp((uWY - vWp.y) * 4.0, 0.0, 1.0) * clamp(1.6 - (uWY - vWp.y), 0.0, 1.0);\n' +       // light rippling over the bed, under the water
+          'float under = clamp((uWY - vWp.y) * 4.0, 0.0, 1.0) * exp(-(uWY - vWp.y) * 2.2);\n' +       // light rippling over the bed, under the water
           'vec2 q = vWp.xz * 1.7; float c1 = abs(sin(q.x + sin(q.y * 1.3 + uTime * 0.9)) * sin(q.y + sin(q.x * 1.1 - uTime * 0.7)));\n' +
           'vec2 q2 = vWp.xz * 2.6 + 3.0; float c2 = abs(sin(q2.x - sin(q2.y * 0.9 - uTime * 1.1)) * sin(q2.y + sin(q2.x * 1.4 + uTime * 0.8)));\n' +
-          'totalEmissiveRadiance += vec3(0.85, 0.95, 0.8) * (pow(1.0 - c1, 8.0) + pow(1.0 - c2, 8.0)) * 0.16 * under;');
+          'totalEmissiveRadiance += vec3(0.85, 0.95, 0.8) * (pow(1.0 - c1, 8.0) + pow(1.0 - c2, 8.0)) * 0.12 * under;');
     };
     var bed = new THREE.Mesh(bedG, bedMat); bed.receiveShadow = true; bed.renderOrder = 1; scene.add(bed);
 
@@ -1151,11 +1151,12 @@
         '  float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);\n' +
         '  vec3 refl = mix(sky * 1.05, sky * 0.55 + vec3(0.01, 0.03, 0.07) * day, clamp(rf.y * 1.3, 0.0, 1.0));\n' +
         '  refl = mix(refl, vec3(0.06, 0.09, 0.04) * day, smoothstep(0.82, 1.05, vT) * 0.55);\n' +            // the grassy banks mirrored near the edge
-        '  vec3 body = mix(vec3(0.1, 0.12, 0.06), vec3(0.01, 0.045, 0.045), smoothstep(0.0, 0.8, vD)) * day;\n' +
+        '  float path = vD / max(dot(n, v), 0.3), k = 1.0 - exp(-path * 1.7);\n' +            // light fades the further it travels through the water
+        '  vec3 body = mix(mix(vec3(0.16, 0.17, 0.08), vec3(0.04, 0.1, 0.07), smoothstep(0.0, 0.5, k)), vec3(0.008, 0.035, 0.04), smoothstep(0.45, 1.0, k)) * day;\n' +
         '  float sp = max(dot(rf, uSun), 0.0);\n' +
         '  vec3 col = mix(body, refl, fres) + vec3(1.0, 0.94, 0.82) * (pow(sp, 400.0) * 4.0 + pow(sp, 60.0) * 0.12) * day;\n' +
         '  col += vec3(0.5, 0.52, 0.48) * (1.0 - smoothstep(0.0, 0.05, vD)) * 0.18 * day;\n' +              // a faint bright line where it laps the shore
-        '  float a = clamp(mix(0.3, 0.93, smoothstep(0.0, 0.6, vD)) + fres * 0.7, 0.0, 1.0);\n' +
+        '  float a = 0.05 + k * 0.93; a = clamp(a + fres * 0.7 * (1.0 - a), 0.0, 1.0);\n' +
         '  gl_FragColor = vec4(col, a);\n' +
         '  #include <tonemapping_fragment>\n  #include <encodings_fragment>\n}'
     });
