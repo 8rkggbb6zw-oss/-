@@ -1503,6 +1503,7 @@
       { deep: '#5a2a06', pale: '#fff1c8', fin1: '#ffc65a', fin2: '#ff7a3a', glow: '#ffb33c', hue: 0.1 },    // Sunfire
       { deep: '#06343a', pale: '#c8fff0', fin1: '#5effd0', fin2: '#7ab8ff', glow: '#3cf2c8', hue: 0.46 }    // Aurora
     ];
+    function hbn(u) { return u < 0.05 ? hb(0.05) * Math.sqrt(Math.max(0, u) / 0.05) : hb(u); }   // a rounded snout rather than a point
     function hb(u) { return 0.058 * (Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, u), 0.6)), 0.85) * 0.86 + u * 0.14); }   // the body's height along its length
     var WX = 0.172, MH = 0;                                           // whisker roots: where along the head, how far the skin swells
     function WA(sd) { return sd > 0 ? Math.PI / 2 + 0.5 : Math.PI * 1.5 - 0.5; }   // ...and how far round, a little below the side
@@ -1514,13 +1515,19 @@
     var koiBody = (function () {                                         // nose at +x, tail at -x
       var NU = 72, NA = 44, pos = [], uv = [], idx = [];
       for (var i = 0; i <= NU; i++) for (var j = 0; j <= NA; j++) {
-        var u = Math.pow(i / NU, 1.3), a = j / NA * Math.PI * 2, hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u);
+        var u = Math.pow(i / NU, 1.3), a = j / NA * Math.PI * 2, hy = hbn(u) + 0.0005, hz = hy * (0.7 - 0.12 * u);
         var y = Math.cos(a) * hy * (Math.cos(a) < 0 ? 0.92 : 1) - hy * 0.08, z = Math.sin(a) * hz, x = 0.2 - u * 0.4;
         if (u < 0.06) { var k = u / 0.06; y *= 0.6 + 0.4 * k; z *= 0.75 + 0.25 * k; }
         [-1, 1].forEach(function (sd) {                                   // the skin swells smoothly into the root of each whisker
           var da = Math.atan2(Math.sin(a - WA(sd)), Math.cos(a - WA(sd))), w = Math.exp(-Math.pow((x - WX) / 0.013, 2) - Math.pow(da / 0.42, 2));
           y += Math.cos(a) * MH * w; z += Math.sin(a) * MH * w; x += 0.004 * w;
         });
+        var vv = j / NA, lv = vv < 0.5 ? 0.25 : 0.75, dyP = (vv - lv) * 256, lift = 0;   // the face: a raised gill cover, a brow over each eye, a soft cheek
+        if (Math.abs(dyP) < 26) { var ue = (50.8 + Math.sqrt(900 - dyP * dyP)) / 512, kk = Math.min(1, Math.max(0, (ue - u) / 0.006)) * Math.min(1, Math.max(0, (u - 0.085) / 0.03)) * Math.min(1, (26 - Math.abs(dyP)) / 6); lift += 0.0011 * kk - 0.0008 * Math.exp(-Math.pow((u - ue - 0.006) / 0.004, 2)) * Math.min(1, (26 - Math.abs(dyP)) / 6); }   // and a shallow groove behind it
+        var ea = vv < 0.5 ? Math.PI / 2 : Math.PI * 1.5, dE = Math.atan2(Math.sin(a - ea), Math.cos(a - ea));
+        lift += 0.0014 * Math.exp(-Math.pow((u - 0.075) / 0.018, 2) - Math.pow((Math.abs(dE) - 0.62) / 0.16, 2)) * (Math.cos(a) > Math.cos(ea) - 0.01 ? 1 : 0);   // brow above the eye
+        lift += 0.0012 * Math.exp(-Math.pow((u - 0.1) / 0.03, 2) - Math.pow((Math.abs(dE) - 0.75) / 0.3, 2)) * (Math.cos(a) < 0 ? 1 : 0);   // cheek below it
+        y += Math.cos(a) * lift; z += Math.sin(a) * lift;
         pos.push(x, y, z); uv.push(u, j / NA);
       }
       for (var i2 = 0; i2 < NU; i2++) for (var j2 = 0; j2 < NA; j2++) { var A = i2 * (NA + 1) + j2, B = A + NA + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
@@ -1558,7 +1565,7 @@
     var SPINES = [];                                                      // where each spine on the back stands: position along the body, height, size
     for (var si = 0; si < 17; si++) { var bigS = si % 2 === 0; SPINES.push({ u: 0.16 + si * 0.036, h: bigS ? 0.026 + 0.034 * Math.sin(Math.PI * (si + 0.5) / 17) : 0.013, w: bigS ? 0.0065 : 0.0042, lean: 0.35 + si * 0.025 }); }
     function skinAt(v, press) {                                                   // where the body's skin is under a point: lifts it onto the skin if inside; gives the skin's normal and texture position
-      var u = Math.max(0, (0.2 - v.x) / 0.4), hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u), fy = 1, fz = 1;
+      var u = Math.max(0, (0.2 - v.x) / 0.4), hy = hbn(u) + 0.0005, hz = hy * (0.7 - 0.12 * u), fy = 1, fz = 1;
       if (u < 0.06) { var k = u / 0.06; fy = 0.6 + 0.4 * k; fz = 0.75 + 0.25 * k; }
       var cy = -hy * 0.08 * fy, ey = (v.y < cy ? 0.92 : 1) * hy * fy, ez = hz * fz, dy = v.y - cy, dz = v.z, q = Math.hypot(dy / ey, dz / ez);
       var tq = q < 1.004 ? 1.004 : q + (1.004 - q) * (press || 0);   // inside: lift onto the skin; outside: press down onto it
@@ -1726,9 +1733,26 @@
         [0.25, 0.75].forEach(function (lv) {
           var gx = w * 0.15, gy = lv * h;                               // gill plates
           [0, 5].forEach(function (o) { g.strokeStyle = o ? 'rgba(255,255,255,.35)' : 'rgba(10,0,20,.45)'; g.lineWidth = o ? 0.8 : 1.6; g.beginPath(); g.arc(gx - 26 + o, gy, 30, -0.75, 0.75); g.stroke(); });
-          g.fillStyle = 'rgba(10,0,20,.5)'; g.beginPath(); g.arc(w * 0.03, lv * h + (lv < 0.5 ? 9 : -9), 1, 0, 6.29); g.fill();   // nostril
         });
-        g.strokeStyle = 'rgba(20,0,20,.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, h * 0.43); g.quadraticCurveTo(w * 0.035, h * 0.5, 0, h * 0.57); g.stroke();   // the mouth
+        g.save(); g.beginPath(); g.rect(0, 0, w * 0.17, h); g.clip();      // the face: mottling, fine pores, an iridescent cheek, gill-cover striations, wrinkles
+        for (var mt = 0; mt < 260; mt++) { var mx = kr() * w * 0.17, my = kr() * h; g.fillStyle = kr() < 0.5 ? hsl((kr() - 0.5) * 0.15, 50, 40, 0.04 + kr() * 0.04) : 'rgba(255,255,255,' + (0.03 + kr() * 0.05) + ')'; g.beginPath(); g.ellipse(mx, my, 1 + kr() * 4, 1 + kr() * 3, kr() * 3, 0, 6.29); g.fill(); }
+        for (var pp = 0; pp < 900; pp++) { g.fillStyle = 'rgba(' + (kr() < 0.5 ? '0,0,0' : '255,255,255') + ',' + (0.03 + kr() * 0.05) + ')'; g.fillRect(kr() * w * 0.17, kr() * h, 0.5, 0.5); }
+        [0.25, 0.75].forEach(function (lv) {
+          var ex = w * 0.075, ey = lv * h, cy2 = ey + (lv < 0.5 ? 16 : -16), ch = g.createRadialGradient(w * 0.1, cy2, 0, w * 0.1, cy2, 22);
+          ch.addColorStop(0, hsl(0.12, 80, 75, 0.22)); ch.addColorStop(0.5, hsl(-0.1, 80, 70, 0.12)); ch.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = ch; g.fillRect(0, 0, w, h);   // a shimmer on the cheek
+          for (var st = 0; st < 24; st++) { var sa = -0.7 + st / 23 * 1.4; g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(50.8 + Math.cos(sa) * 12, ey + Math.sin(sa) * 12); g.lineTo(50.8 + Math.cos(sa) * 29, ey + Math.sin(sa) * 29); g.stroke(); }   // fine lines over the gill cover
+          g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 0.7; g.beginPath(); g.arc(50.8, ey, 31.5, -0.72, 0.72); g.stroke();   // its thin membrane edge
+          var gs = g.createRadialGradient(50.8, ey, 30.5, 50.8, ey, 36); gs.addColorStop(0, 'rgba(10,0,10,.55)'); gs.addColorStop(0.35, 'rgba(120,20,40,.35)'); gs.addColorStop(1, 'rgba(10,0,10,0)');   // the gill slit: a shadowed gap with a glimpse of red gill inside
+          g.save(); g.beginPath(); g.arc(50.8, ey, 36, -0.66, 0.66); g.arc(50.8, ey, 30.5, 0.66, -0.66, true); g.closePath(); g.clip(); g.fillStyle = gs; g.fillRect(0, 0, w, h); g.restore();
+          g.strokeStyle = 'rgba(20,0,20,.22)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(14, h * 0.5 + (lv < 0.5 ? -1 : 1) * 12); g.quadraticCurveTo(24, ey + (lv < 0.5 ? 1 : -1) * 22, 40, ey + (lv < 0.5 ? 1 : -1) * 20); g.stroke();   // the line of the jaw
+          g.strokeStyle = 'rgba(255,255,255,.1)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(14, h * 0.5 + (lv < 0.5 ? -1 : 1) * 13); g.quadraticCurveTo(24, ey + (lv < 0.5 ? 1 : -1) * 23.2, 40, ey + (lv < 0.5 ? 1 : -1) * 21.2); g.stroke();
+          function pore(px, py) { g.fillStyle = 'rgba(0,0,10,.16)'; g.beginPath(); g.arc(px, py, 0.6, 0, 6.29); g.fill(); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 0.35; g.beginPath(); g.arc(px - 0.15, py - 0.15, 0.9, 3.4, 5.6); g.stroke(); }
+          for (var e2 = 0; e2 < 14; e2++) { var ea2 = e2 / 14 * 6.28; pore(ex + Math.cos(ea2) * 13.5, ey + Math.sin(ea2) * 12); }   // sensory pores ringing the eye
+          for (var jw = 0; jw < 7; jw++) pore(16 + jw * 6, ey + (lv < 0.5 ? 1 : -1) * (26 - jw * 0.6) );   // and running along the jaw
+          for (var sn = 0; sn < 4; sn++) pore(16 + sn * 5, ey + (lv < 0.5 ? -1 : 1) * (8 + sn));   // and over the snout
+          g.strokeStyle = 'rgba(20,0,20,.25)'; g.lineWidth = 0.5; for (var wr = 0; wr < 3; wr++) { g.beginPath(); g.moveTo(14, h * 0.5 + (lv < 0.5 ? -1 : 1) * (14 + wr * 3)); g.quadraticCurveTo(20, h * 0.5 + (lv < 0.5 ? -1 : 1) * (16 + wr * 3), 26, h * 0.5 + (lv < 0.5 ? -1 : 1) * (21 + wr * 3)); g.stroke(); }   // creases by the corners of the mouth
+        });
+        g.restore();
       }, true);
       var glow = paint(1024, 512, function (g) {                         // what glows: a winding line, runes, filigree, stars, gill edges, eye rings
         g.scale(2, 2); var w = 512, h = 256;
@@ -1748,6 +1772,7 @@
             else { g.arc(rx, ry, rs, 0, 6.29); g.moveTo(rx + rs * 0.5, ry); g.arc(rx, ry, rs * 0.5, 0, 6.29); }
             g.stroke();
           }
+          for (var gp = 0; gp < 14; gp++) { var ga2 = gp / 14 * 6.28; g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.arc(w * 0.075 + Math.cos(ga2) * 13.5, lv * h + Math.sin(ga2) * 12, 0.7, 0, 6.29); g.fill(); }   // the pores round the eye glow faintly
           g.lineWidth = 0.9; g.shadowBlur = 4; g.beginPath(); g.arc(w * 0.15 - 26, lv * h, 30, -0.7, 0.7); g.stroke();   // gill edge
         });
         g.lineWidth = 0.7; g.shadowBlur = 3;                             // filigree curling along the back
@@ -1790,6 +1815,12 @@
           g.save(); g.beginPath(); g.arc(ox, cy, r, -Math.PI / 2 - 0.25, Math.PI / 2 + 0.25); g.closePath(); g.clip();
           var sg = g.createLinearGradient(ox - r, 0, ox + r, 0); sg.addColorStop(0, '#6a6a6a'); sg.addColorStop(0.65, '#9a9a9a'); sg.addColorStop(0.92, '#b8b8b8'); sg.addColorStop(1, '#a0a0a0');
           g.fillStyle = sg; g.fillRect(ox - r, cy - r, r * 2.2, r * 2); g.restore();
+        });
+        [0.25, 0.75].forEach(function (lv) {                              // pores sunk into the face, and the gill cover's raised edge
+          var ex = w * 0.075, ey = lv * h; g.fillStyle = '#5a5a5a';
+          for (var e2 = 0; e2 < 14; e2++) { var ea2 = e2 / 14 * 6.28; g.beginPath(); g.arc(ex + Math.cos(ea2) * 13.5, ey + Math.sin(ea2) * 12, 1.1, 0, 6.29); g.fill(); }
+          for (var jw = 0; jw < 7; jw++) { g.beginPath(); g.arc(16 + jw * 6, ey + (lv < 0.5 ? 1 : -1) * (26 - jw * 0.6), 1.1, 0, 6.29); g.fill(); }
+          g.strokeStyle = '#a8a8a8'; g.lineWidth = 1.2; g.beginPath(); g.arc(50.8, ey, 29, -0.72, 0.72); g.stroke();
         });
         [0.25, 0.75].forEach(function (lv) { g.strokeStyle = '#404040'; g.lineWidth = 2; g.beginPath(); g.arc(w * 0.15 - 26, lv * h, 30, -0.75, 0.75); g.stroke(); });   // the gill edge, a crease
       }, false);
@@ -1875,8 +1906,28 @@
     var eyeGeo = eyeParts(0.0102, 0.55, 1), corneaGeo = eyeParts(0.0108, 0.82, 1);
     var socketGeo = (function () {                                        // a soft ring of skin round each eye
       var hy = hb(0.075), hz = hy * (0.7 - 0.12 * 0.075), parts = [];
-      [-1, 1].forEach(function (sd) { var t = new THREE.TorusGeometry(0.0108, 0.0022, 12, 48); var m = new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.9); m.multiply(new THREE.Matrix4().makeRotationY(sd * 0.12)); parts.push([t, m]); });
+      [-1, 1].forEach(function (sd) { var t = new THREE.TorusGeometry(0.0106, 0.0015, 12, 48); t.scale(1, 1, 0.6); var m = new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.9); m.multiply(new THREE.Matrix4().makeRotationY(sd * 0.12)); parts.push([t, m]); });
       return merge(parts);
+    })();
+    function skinSample(tex, u, v) { var cv = tex.image, d = cv.getContext('2d').getImageData(Math.max(0, Math.round(u * cv.width) - 3), Math.max(0, Math.round(v * cv.height) - 3), 7, 7).data, r2 = 0, g2 = 0, b2 = 0; for (var q = 0; q < d.length; q += 4) { r2 += d[q]; g2 += d[q + 1]; b2 += d[q + 2]; } return new THREE.Color(r2 / 49 / 255, g2 / 49 / 255, b2 / 49 / 255).convertSRGBToLinear(); }
+    var faceGeo = (function () {                                         // fleshy lips round the mouth, and a nostril with a little flap on each side
+      var skin = [], dark = [];
+      function lipLine(off) { return new THREE.CatmullRomCurve3([-1, -0.75, -0.45, -0.15, 0.15, 0.45, 0.75, 1].map(function (t) { var v = new THREE.Vector3(0.1985 - 0.0045 * t * t, -0.0035 + off * (1 - t * t), t * 0.0058); skinAt(v, 1); return v; })); }   // following the curve of the snout
+      [[0.0016, 0.0016], [-0.0016, 0.0019]].forEach(function (L) {          // upper and lower lip, fuller in the middle, thinning to the corners
+        var curve = lipLine(L[0]), N = 40, R = 10, pos = [], idx = [], fr = curve.computeFrenetFrames(N, false);
+        for (var i = 0; i <= N; i++) { var t = i / N, c = curve.getPointAt(t), rad = L[1] * (0.35 + 0.65 * Math.sin(Math.PI * t)); for (var j = 0; j <= R; j++) { var a = j / R * Math.PI * 2, n = fr.normals[i], b = fr.binormals[i]; pos.push(c.x + (n.x * Math.cos(a) + b.x * Math.sin(a)) * rad, c.y + (n.y * Math.cos(a) + b.y * Math.sin(a)) * rad, c.z + (n.z * Math.cos(a) + b.z * Math.sin(a)) * rad); } }
+        for (var i2 = 0; i2 < N; i2++) for (var j2 = 0; j2 < R; j2++) { var A = i2 * (R + 1) + j2, B = A + R + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
+        var lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); lg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); lg.setIndex(idx); lg.computeVertexNormals();
+        skin.push([lg, new THREE.Matrix4()]);
+      });
+      dark.push([new THREE.TubeGeometry(lipLine(0), 40, 0.00045, 6, false), new THREE.Matrix4()]);   // the dark line where they meet
+      [-1, 1].forEach(function (sd) {
+        var v = new THREE.Vector3(0.186, 0.004, sd * 0.002), sk = skinAt(v), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), sk.n.clone().add(new THREE.Vector3(0.6, 0, 0)).normalize());
+        var rim = new THREE.TorusGeometry(0.0011, 0.00032, 8, 24); skin.push([rim, new THREE.Matrix4().compose(v.clone().addScaledVector(sk.n, 0.0002), q, new THREE.Vector3(1, 0.75, 1))]);
+        var flap = new THREE.SphereGeometry(0.0012, 12, 8, 0, Math.PI); skin.push([flap, new THREE.Matrix4().compose(v.clone().addScaledVector(sk.n, 0.0006).add(new THREE.Vector3(-0.0006, 0.0006, 0)), q, new THREE.Vector3(1, 0.5, 0.5))]);
+        var nh = new THREE.CircleGeometry(0.00085, 16); dark.push([nh, new THREE.Matrix4().compose(v.clone().addScaledVector(sk.n, 0.0001), q, new THREE.Vector3(1, 0.7, 1))]);
+      });
+      return { skin: merge(skin), dark: merge(dark) };
     })();
     var shadowGeo = new THREE.PlaneGeometry(0.7, 0.32); shadowGeo.rotateX(-Math.PI / 2);
     var shadowMat = new THREE.MeshBasicMaterial({ map: paint(128, 64, function (g, w, h) { var gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(0,0,0,.7)'); gr.addColorStop(0.5, 'rgba(0,0,0,.3)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.scale(1, 0.5); g.fillStyle = gr; g.fillRect(0, 0, w, h * 2); g.restore(); }, false), transparent: true, depthWrite: false, opacity: 0.5 });
@@ -1898,6 +1949,10 @@
       eyes.renderOrder = 6; socket.renderOrder = 6; cornea.renderOrder = 7; eyes.add(cornea, socket); fish.add(eyes);
       var tipGeo = new THREE.BufferGeometry(); tipGeo.setAttribute('position', new THREE.Float32BufferAttribute(crown.geometry.userData.tips, 3));
       var tipPts = new THREE.Points(tipGeo, new THREE.PointsMaterial({ map: koiGlowTex, color: kind.pale, size: 0.03, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); tipPts.renderOrder = 8; fish.add(tipPts);   // glints at the spine tips
+      var lipC = skinSample(tx.skin, 0.02, 0.5).lerp(new THREE.Color(kind.fin2).convertSRGBToLinear(), 0.25);
+      var faceMat = swim(new THREE.MeshPhysicalMaterial({ color: lipC, roughness: 0.35, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }), k, false, true);
+      var darkMat = swim(new THREE.MeshStandardMaterial({ color: new THREE.Color(kind.deep).convertSRGBToLinear().multiplyScalar(0.25), roughness: 0.6, side: THREE.DoubleSide }), k, false, false);
+      var face = new THREE.Mesh(faceGeo.skin, faceMat); face.add(new THREE.Mesh(faceGeo.dark, darkMat)); face.renderOrder = 6; face.children[0].renderOrder = 6; body.add(face);
       var whiskMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.5 }), k, false, true, true);
       var whiskers = new THREE.Mesh(koiWhiskersFor(kind, tx.skin), whiskMat); whiskers.renderOrder = 6; fish.add(whiskers);
       var shadow = new THREE.Mesh(shadowGeo, shadowMat.clone()); shadow.renderOrder = 2; scene.add(shadow);
