@@ -1505,7 +1505,7 @@
     ];
     function hb(u) { return 0.058 * (Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, u), 0.6)), 0.85) * 0.86 + u * 0.14); }   // the body's height along its length
     var koiBody = (function () {                                         // nose at +x, tail at -x
-      var NU = 30, NA = 18, pos = [], uv = [], idx = [];
+      var NU = 48, NA = 28, pos = [], uv = [], idx = [];
       for (var i = 0; i <= NU; i++) for (var j = 0; j <= NA; j++) {
         var u = i / NU, a = j / NA * Math.PI * 2, hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u);
         var y = Math.cos(a) * hy * (Math.cos(a) < 0 ? 0.92 : 1) - hy * 0.08, z = Math.sin(a) * hz;
@@ -1519,79 +1519,177 @@
     })();
     var koiFins = (function () {                                          // long silk fins that trail and flutter
       function fin(pts) { var s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i += 2) s.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); return new THREE.ShapeGeometry(s, 18); }
+      function uvUp(g, up) { g.computeBoundingBox(); var b = g.boundingBox, p = g.attributes.position, uv = g.attributes.uv; for (var i = 0; i < p.count; i++) { var k = (p.getY(i) - b.min.y) / (b.max.y - b.min.y || 1); uv.setXY(i, up ? 1 - k : k, (p.getX(i) - b.min.x) / (b.max.x - b.min.x || 1)); } return g; }   // the fin's base (at the body) is the right of the texture
+      function uvBase(g) { return uvUp(g, true); }
       function uvBox(g) { g.computeBoundingBox(); var b = g.boundingBox, p = g.attributes.position, uv = g.attributes.uv; for (var i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - b.min.x) / (b.max.x - b.min.x || 1), (p.getY(i) - b.min.y) / (b.max.y - b.min.y || 1)); return g; }
       var tail = uvBox(fin([[-0.18, 0.012], [-0.3, 0.13], [-0.5, 0.17], [-0.66, 0.16], [-0.7, 0.1], [-0.58, 0.07], [-0.5, 0.02], [-0.47, 0], [-0.5, -0.02], [-0.58, -0.07], [-0.7, -0.1], [-0.66, -0.16], [-0.5, -0.17], [-0.3, -0.13], [-0.18, -0.012]]));
-      var dorsal = uvBox(fin([[0.09, hb(0.3) * 0.9], [0.02, hb(0.45) + 0.08], [-0.14, hb(0.8) + 0.1], [-0.3, 0.1], [-0.33, 0.05], [-0.2, hb(0.88) + 0.01], [-0.14, hb(0.82) * 0.7]]));
-      var anal = uvBox(fin([[-0.06, -hb(0.65) * 0.85], [-0.12, -hb(0.72) - 0.06], [-0.3, -0.08], [-0.31, -0.04], [-0.17, -hb(0.85) * 0.8], [-0.14, -hb(0.8) * 0.8], [-0.06, -hb(0.65) * 0.85]]));
+      var dorsal = uvBase(fin([[0.09, hb(0.3) * 0.9], [0.02, hb(0.45) + 0.08], [-0.14, hb(0.8) + 0.1], [-0.3, 0.1], [-0.33, 0.05], [-0.2, hb(0.88) + 0.01], [-0.14, hb(0.82) * 0.7]]));
+      var anal = uvUp(fin([[-0.06, -hb(0.65) * 0.85], [-0.12, -hb(0.72) - 0.06], [-0.3, -0.08], [-0.31, -0.04], [-0.17, -hb(0.85) * 0.8], [-0.14, -hb(0.8) * 0.8], [-0.06, -hb(0.65) * 0.85]]));
       var ribbon = uvBox(fin([[0, 0], [0.01, -0.04], [-0.06, -0.1], [-0.2, -0.16], [-0.27, -0.14], [-0.14, -0.06], [-0.05, -0.01], [-0.02, 0.005], [0, 0]]));
       var parts = [[tail, new THREE.Matrix4()], [dorsal, new THREE.Matrix4()], [anal, new THREE.Matrix4()]];
       [-1, 1].forEach(function (sd) {
         var m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.95, sd * 0.25, 0.1)); m.setPosition(0.105, -0.028, sd * 0.03); m.multiply(new THREE.Matrix4().makeScale(0.75, 0.75, 0.75)); parts.push([ribbon, m]);   // long side ribbons streaming back
         var m2 = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.45, sd * 0.1, 0.05)); m2.setPosition(-0.02, -0.045, sd * 0.015); m2.multiply(new THREE.Matrix4().makeScale(0.6, 0.6, 0.6)); parts.push([ribbon, m2]);
       });
-      return merge(parts);
-    })();
-    var koiCrown = (function () {                                         // a crest of crystal spines down the back, and two long whiskers
-      var parts = [], spine = new THREE.ConeGeometry(1, 1, 6, 1); spine.translate(0, 0.5, 0);
-      for (var i = 0; i < 9; i++) {
-        var u = 0.18 + i * 0.065, x = 0.2 - u * 0.4, h = 0.022 + 0.03 * Math.sin(Math.PI * (i + 0.5) / 9), m = new THREE.Matrix4().makeRotationZ(0.35 + i * 0.04);
-        m.premultiply(new THREE.Matrix4().makeTranslation(x, hb(u) * 0.96 - 0.004, 0)); m.multiply(new THREE.Matrix4().makeScale(0.006, h, 0.004)); parts.push([spine, m]);
-      }
-      [-1, 1].forEach(function (sd) {
-        var pts = [[0.19, -0.012, sd * 0.012], [0.25, -0.02, sd * 0.04], [0.29, -0.005, sd * 0.07], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); });
-        parts.push([new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.0022, 5, false), new THREE.Matrix4()]);
+      var crest = [];                                                     // a sheer web stretched between the back spines, dipping between them
+      for (var ci = 0; ci <= 16; ci++) { var u = 0.16 + ci * 0.036, big = ci % 2 === 0, hh = big ? 0.026 + 0.034 * Math.sin(Math.PI * (ci + 0.5) / 17) : 0.013; crest.push([0.2 - u * 0.4 - Math.sin(0.35 + ci * 0.025) * hh * 0.62, hb(u) * 0.94 + Math.cos(0.35 + ci * 0.025) * hh * (big ? 0.62 : 0.3)]); }
+      var cs = new THREE.Shape(); cs.moveTo(0.2 - 0.16 * 0.4, hb(0.16) * 0.8);
+      crest.forEach(function (q, ci) { if (ci) { var pq = crest[ci - 1]; cs.quadraticCurveTo((pq[0] + q[0]) / 2, Math.min(pq[1], q[1]) - 0.004, q[0], q[1]); } else cs.lineTo(q[0], q[1]); });
+      cs.lineTo(0.2 - 0.74 * 0.4, hb(0.74) * 0.8); cs.lineTo(0.2 - 0.16 * 0.4, hb(0.16) * 0.8);
+      parts.push([uvUp(new THREE.ShapeGeometry(cs, 12), true), new THREE.Matrix4().makeTranslation(0, 0, 0.0005)]);
+      [-1, 1].forEach(function (sd) {                                     // two long filaments trailing from the tail's tips, each ending in a tiny bead
+        var c = new THREE.CatmullRomCurve3([[-0.66, sd * 0.155], [-0.76, sd * 0.15], [-0.86, sd * 0.1], [-0.94, sd * 0.11]].map(function (q) { return new THREE.Vector3(q[0], q[1], 0); }));
+        parts.push([new THREE.TubeGeometry(c, 30, 0.0012, 4, false), new THREE.Matrix4()]);
+        var bead = new THREE.SphereGeometry(0.0035, 8, 6); parts.push([bead, new THREE.Matrix4().makeTranslation(-0.94, sd * 0.11, 0)]);
       });
       return merge(parts);
     })();
-    var orbG = new THREE.SphereGeometry(0.008, 10, 8);
+    var SPINES = [];                                                      // where each spine on the back stands: position along the body, height, size
+    for (var si = 0; si < 17; si++) { var bigS = si % 2 === 0; SPINES.push({ u: 0.16 + si * 0.036, h: bigS ? 0.026 + 0.034 * Math.sin(Math.PI * (si + 0.5) / 17) : 0.013, w: bigS ? 0.0065 : 0.0042, lean: 0.35 + si * 0.025 }); }
+    function koiCrownFor(kind) {                                          // crystal spines down the back and two long jointed whiskers, coloured deep at the root and pale at the tip
+      var cDeep = new THREE.Color(kind.deep), cPale = new THREE.Color(kind.pale), cGlow = new THREE.Color(kind.glow), tmp = new THREE.Color(), parts = [];
+      function grad(y0, y1) { return function (x, y) { var k = Math.max(0, Math.min(1, (y - y0) / (y1 - y0 || 1))); tmp.copy(cDeep).lerp(cGlow, Math.min(1, k * 1.6)).lerp(cPale, Math.max(0, k - 0.5) * 2); return [tmp.r, tmp.g, tmp.b]; }; }
+      var shard = new THREE.CylinderGeometry(0, 1, 1, 5, 8); shard.translate(0, 0.5, 0);   // a five-faceted shard, curving back, with a twist up its length
+      var sp = shard.attributes.position;
+      for (var i = 0; i < sp.count; i++) { var y = sp.getY(i), a = 0.6 * y, cx = sp.getX(i), cz = sp.getZ(i); sp.setXYZ(i, cx * Math.cos(a) - cz * Math.sin(a) - y * y * 0.5, y, cx * Math.sin(a) + cz * Math.cos(a)); }
+      shard.computeVertexNormals();
+      var socket = new THREE.TorusGeometry(1, 0.35, 6, 12); socket.rotateX(Math.PI / 2);
+      SPINES.forEach(function (S, i) {
+        var x = 0.2 - S.u * 0.4, y0 = hb(S.u) * 0.94 - 0.004, m = new THREE.Matrix4().makeRotationZ(S.lean);
+        m.premultiply(new THREE.Matrix4().makeTranslation(x, y0, 0)); m.multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w * 0.7));
+        parts.push([shard, m, grad(y0, y0 + S.h * 0.95)]);
+        var sm = new THREE.Matrix4().makeTranslation(x, y0 + 0.001, 0); sm.multiply(new THREE.Matrix4().makeScale(S.w * 1.1, S.w * 0.8, S.w * 0.9)); parts.push([socket, sm, [cDeep.r, cDeep.g, cDeep.b]]);   // a little ring where it grows from the skin
+      });
+      [-1, 1].forEach(function (sd) {                                     // whiskers: tapering, beaded at each joint, with fine hairs, rising to a crystal held in three petals
+        var curve = new THREE.CatmullRomCurve3([[0.19, -0.012, sd * 0.012], [0.235, -0.024, sd * 0.035], [0.275, -0.012, sd * 0.06], [0.3, 0.012, sd * 0.078], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }));
+        var N = 60, R = 8, pos = [], col = [], idx = [], fr = curve.computeFrenetFrames(N, false);
+        for (var i = 0; i <= N; i++) {
+          var t = i / N, c = curve.getPointAt(t), bead = Math.pow(Math.max(0, Math.sin(t * Math.PI * 14)), 6), rad = (0.0034 * Math.pow(1 - t, 0.7) + 0.0009) * (1 + bead * 0.35);
+          tmp.copy(cDeep).lerp(cGlow, t).lerp(cPale, bead * 0.4);
+          for (var j = 0; j <= R; j++) { var a = j / R * Math.PI * 2, n = fr.normals[i], b = fr.binormals[i]; pos.push(c.x + (n.x * Math.cos(a) + b.x * Math.sin(a)) * rad, c.y + (n.y * Math.cos(a) + b.y * Math.sin(a)) * rad, c.z + (n.z * Math.cos(a) + b.z * Math.sin(a)) * rad); col.push(tmp.r, tmp.g, tmp.b); }
+        }
+        for (var i2 = 0; i2 < N; i2++) for (var j2 = 0; j2 < R; j2++) { var A = i2 * (R + 1) + j2, B = A + R + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
+        var tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); tg.setIndex(idx); tg.computeVertexNormals();
+        parts.push([tg, new THREE.Matrix4(), function (x, y, z) { return null; }]);
+        var hair = new THREE.CylinderGeometry(0, 0.0007, 1, 4); hair.translate(0, 0.5, 0);
+        for (var hh = 2; hh < 26; hh++) {                                 // fine hairs fanning off each joint
+          var t3 = hh / 28, p3 = curve.getPointAt(t3), tn = curve.getTangentAt(t3), q = new THREE.Quaternion();
+          [-1, 1].forEach(function (side) {
+            var dir = new THREE.Vector3(0, 1, 0).applyAxisAngle(tn, side * 1.1 + hh * 0.4).addScaledVector(tn, 0.6).normalize();
+            q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir); var len = 0.007 * (1 - t3 * 0.6);
+            parts.push([hair, new THREE.Matrix4().compose(p3, q, new THREE.Vector3(1, len, 1)), [cPale.r * 0.9, cPale.g * 0.9, cPale.b * 0.9]]);
+          });
+        }
+        var tip = curve.getPointAt(1), petal = new THREE.SphereGeometry(1, 8, 6); petal.scale(0.0035, 0.008, 0.0016); petal.translate(0, 0.006, 0);
+        for (var pt = 0; pt < 3; pt++) { var pm = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.55, pt / 3 * Math.PI * 2, 0, 'YXZ')); pm.premultiply(new THREE.Matrix4().makeTranslation(tip.x, tip.y - 0.006, tip.z)); parts.push([petal, pm, [cDeep.r * 1.4, cDeep.g * 1.4, cDeep.b * 1.4]]); }   // three petals cupping the crystal
+      });
+      var g = merge(parts.map(function (p) { return p[2] && typeof p[2] === 'function' && p[2](0, 0, 0) === null ? [p[0], p[1]] : p; }), true);
+      // the whiskers carry their own colours
+      var off = 0, gc = g.attributes.color;
+      parts.forEach(function (p) { var n = p[0].attributes.position.count; if (typeof p[2] === 'function' && p[2](0, 0, 0) === null) { var cc = p[0].attributes.color; for (var i = 0; i < n; i++) gc.setXYZ(off + i, cc.getX(i), cc.getY(i), cc.getZ(i)); } off += n; });
+      return g;
+    }
+    var orbG = new THREE.IcosahedronGeometry(0.0085, 1);                  // a faceted crystal at the end of each whisker
     function koiTextures(kind, seed) {
-      var kr = rand(seed);
-      var skin = paint(512, 256, function (g, w, h) {                     // a deep nebula back fading to a pale pearl belly, swirled and starry
+      var kr = rand(seed), hsl = function (dh, s, l, a) { return 'hsla(' + (((kind.hue + dh) % 1 + 1) % 1 * 360).toFixed(0) + ',' + s + '%,' + l + '%,' + a + ')'; };
+      var skin = paint(1024, 512, function (g) {                        // a deep nebula back fading to a pale pearl belly, swirled and starry
+        g.scale(2, 2); var w = 512, h = 256;
         var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, kind.deep); gr.addColorStop(0.2, kind.fin1); gr.addColorStop(0.36, kind.pale); gr.addColorStop(0.64, kind.pale); gr.addColorStop(0.8, kind.fin1); gr.addColorStop(1, kind.deep);
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
-        for (var c = 0; c < 40; c++) { var x = kr() * w, y = kr() * h, rad = 20 + kr() * 70, cl = kr() < 0.5 ? kind.fin1 : kind.fin2, bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, cl); bl.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = 0.18 + kr() * 0.2; g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
-        g.globalAlpha = 1;
-        for (var row = 0; row < 26; row++) for (var col = 0; col < 54; col++) {   // fine scales with pearly rims
-          var sx = (col + (row % 2) * 0.5) / 54 * w, sy = row / 26 * h, sr = w / 54 * 0.62;
-          g.strokeStyle = 'rgba(255,255,255,' + (0.08 + kr() * 0.12) + ')'; g.lineWidth = 0.8; g.beginPath(); g.arc(sx, sy, sr, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+        for (var c = 0; c < 70; c++) { var x = kr() * w, y = kr() * h, rad = 12 + kr() * 60, cl = kr() < 0.5 ? kind.fin1 : kind.fin2, bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, cl); bl.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = 0.14 + kr() * 0.2; g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+        for (var sw = 0; sw < 18; sw++) {                               // wisps of nebula, swirling
+          var sx = kr() * w, sy = kr() * h, sa = kr() * 6.28; g.strokeStyle = kr() < 0.5 ? kind.fin2 : kind.pale; g.globalAlpha = 0.12 + kr() * 0.12; g.lineWidth = 2 + kr() * 5; g.beginPath(); g.moveTo(sx, sy);
+          for (var st = 0; st < 12; st++) { sa += 0.35 + kr() * 0.2; sx += Math.cos(sa) * (6 - st * 0.35); sy += Math.sin(sa) * (6 - st * 0.35); g.lineTo(sx, sy); } g.stroke();
         }
-        for (var s = 0; s < 260; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.3 + kr() * 0.6) + ')'; g.fillRect(kr() * w, kr() * h, 1 + kr() * 1.2, 1 + kr() * 1.2); }   // stars
-        [0.25, 0.75].forEach(function (lv) {                              // large dark eyes with a glowing ring
-          var ex = w * 0.075, ey = lv * h; g.fillStyle = kind.fin1; g.beginPath(); g.arc(ex, ey, 8, 0, 6.29); g.fill();
-          g.fillStyle = '#05030a'; g.beginPath(); g.arc(ex, ey, 6, 0, 6.29); g.fill(); g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(ex - 1.5, ey - 2, 1.8, 0, 6.29); g.fill();
+        g.globalAlpha = 1;
+        for (var row = 0; row < 44; row++) for (var col = 0; col < 96; col++) {   // scales: each one tinted its own shimmer, shaded at its base, with a pearly rim
+          var x2 = (col + (row % 2) * 0.5) / 96 * w, y2 = row / 44 * h, sr = w / 96 * 0.68; if (x2 < w * 0.17) continue;
+          g.fillStyle = hsl((kr() - 0.5) * 0.2, 80, 70, 0.07 + kr() * 0.08); g.beginPath(); g.arc(x2, y2, sr, 0, Math.PI); g.fill();
+          g.fillStyle = 'rgba(0,0,0,' + (0.02 + kr() * 0.03) + ')'; g.beginPath(); g.arc(x2, y2 + sr * 0.15, sr * 0.6, 0, Math.PI); g.fill();
+          g.strokeStyle = 'rgba(255,255,255,' + (0.1 + kr() * 0.16) + ')'; g.lineWidth = 0.7; g.beginPath(); g.arc(x2, y2, sr, 0.12 * Math.PI, 0.88 * Math.PI); g.stroke();
+        }
+        for (var s = 0; s < 420; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.3 + kr() * 0.6) + ')'; g.fillRect(kr() * w, kr() * h, 0.6 + kr() * 1.1, 0.6 + kr() * 1.1); }   // stars
+        var head = g.createLinearGradient(0, 0, w * 0.17, 0); head.addColorStop(0, kind.pale); head.addColorStop(1, 'rgba(255,255,255,0)'); g.globalAlpha = 0.35; g.fillStyle = head; g.fillRect(0, 0, w * 0.17, h); g.globalAlpha = 1;   // smooth head
+        [0.25, 0.75].forEach(function (lv) {
+          var gx = w * 0.15, gy = lv * h;                               // gill plates
+          [0, 5].forEach(function (o) { g.strokeStyle = o ? 'rgba(255,255,255,.35)' : 'rgba(10,0,20,.45)'; g.lineWidth = o ? 0.8 : 1.6; g.beginPath(); g.arc(gx - 26 + o, gy, 30, -0.75, 0.75); g.stroke(); });
+          var ex = w * 0.075, ey = lv * h;                              // large dark eyes with an iris ring and two catch-lights
+          var ir = g.createRadialGradient(ex, ey, 2, ex, ey, 9); ir.addColorStop(0, kind.fin2); ir.addColorStop(0.7, kind.fin1); ir.addColorStop(1, kind.deep);
+          g.fillStyle = ir; g.beginPath(); g.arc(ex, ey, 9, 0, 6.29); g.fill();
+          for (var rr3 = 0; rr3 < 16; rr3++) { var a3 = rr3 / 16 * 6.28; g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 0.5; g.beginPath(); g.moveTo(ex + Math.cos(a3) * 5.5, ey + Math.sin(a3) * 5.5); g.lineTo(ex + Math.cos(a3) * 8.5, ey + Math.sin(a3) * 8.5); g.stroke(); }
+          g.fillStyle = '#04020a'; g.beginPath(); g.arc(ex, ey, 5.2, 0, 6.29); g.fill();
+          g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(ex - 1.8, ey - 2, 1.7, 0, 6.29); g.fill(); g.beginPath(); g.arc(ex + 1.6, ey + 1.6, 0.7, 0, 6.29); g.fill();
+          g.fillStyle = 'rgba(10,0,20,.5)'; g.beginPath(); g.arc(w * 0.03, lv * h + (lv < 0.5 ? 9 : -9), 1, 0, 6.29); g.fill();   // nostril
         });
+        g.strokeStyle = 'rgba(20,0,20,.55)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, h * 0.43); g.quadraticCurveTo(w * 0.035, h * 0.5, 0, h * 0.57); g.stroke();   // the mouth
       }, true);
-      var glow = paint(512, 256, function (g, w, h) {                     // runes and glowing lines that light up
+      var glow = paint(1024, 512, function (g) {                         // what glows: a winding line, runes, filigree, stars, gill edges, eye rings
+        g.scale(2, 2); var w = 512, h = 256;
         g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.lineCap = 'round';
         [0.25, 0.75].forEach(function (lv) {
-          g.lineWidth = 1.6; g.shadowColor = '#fff'; g.shadowBlur = 6; g.beginPath();   // the glowing line along each side
-          for (var x = w * 0.15; x < w * 0.95; x += 6) { var y = lv * h + Math.sin(x * 0.05) * 3; if (x === w * 0.15) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
-          for (var d = 0; d < 9; d++) { if (kr() < 0.35) continue;                                   // little rune marks above and below it
-            var rx = w * (0.2 + d * 0.085), ry = lv * h + (d % 2 ? -11 : 11), rs = 2.2 + kr() * 1.6; g.lineWidth = 0.9; g.beginPath();
-            var kindR = Math.floor(kr() * 4);
+          g.lineWidth = 0.9; g.shadowColor = '#fff'; g.shadowBlur = 4; g.beginPath();
+          for (var x = w * 0.16; x < w * 0.96; x += 4) { var y = lv * h + Math.sin(x * 0.05) * 3; if (x === w * 0.16) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
+          for (var p = 0; p < 40; p++) { var px = w * (0.17 + p * 0.02), py = lv * h + Math.sin(px * 0.05) * 3; g.fillStyle = '#fff'; g.beginPath(); g.arc(px, py, 0.9 + (p % 3 === 0 ? 0.8 : 0), 0, 6.29); g.fill(); }   // beads along the line
+          for (var d = 0; d < 14; d++) {                                  // little runes above and below it
+            if (kr() < 0.25) continue;
+            var rx = w * (0.2 + d * 0.054), ry = lv * h + (d % 2 ? -10 : 10), rs = 2 + kr() * 1.6, kindR = Math.floor(kr() * 6); g.lineWidth = 0.8; g.shadowBlur = 3; g.beginPath();
             if (kindR === 0) { g.arc(rx, ry, rs, 0, 6.29); g.moveTo(rx, ry - rs); g.lineTo(rx, ry + rs); }
             else if (kindR === 1) { g.moveTo(rx - rs, ry + rs); g.lineTo(rx, ry - rs); g.lineTo(rx + rs, ry + rs); g.moveTo(rx - rs * 0.5, ry); g.lineTo(rx + rs * 0.5, ry); }
-            else if (kindR === 2) { g.moveTo(rx, ry - rs); g.lineTo(rx + rs, ry); g.lineTo(rx, ry + rs); g.lineTo(rx - rs, ry); g.closePath(); }
-            else { g.arc(rx, ry, rs, 0.3, 2.8); g.moveTo(rx - rs, ry - rs); g.lineTo(rx + rs, ry - rs); }
+            else if (kindR === 2) { g.moveTo(rx, ry - rs); g.lineTo(rx + rs, ry); g.lineTo(rx, ry + rs); g.lineTo(rx - rs, ry); g.closePath(); g.moveTo(rx, ry); g.arc(rx, ry, 0.5, 0, 6.29); }
+            else if (kindR === 3) { g.arc(rx, ry, rs, 0.3, 2.8); g.moveTo(rx - rs, ry - rs); g.lineTo(rx + rs, ry - rs); }
+            else if (kindR === 4) { for (var sp = 0; sp < 5; sp++) { var a4 = -Math.PI / 2 + sp * 4 * Math.PI / 5; if (sp) g.lineTo(rx + Math.cos(a4) * rs, ry + Math.sin(a4) * rs); else g.moveTo(rx + Math.cos(a4) * rs, ry + Math.sin(a4) * rs); } g.closePath(); }
+            else { g.arc(rx, ry, rs, 0, 6.29); g.moveTo(rx + rs * 0.5, ry); g.arc(rx, ry, rs * 0.5, 0, 6.29); }
+            g.stroke();
+          }
+          g.lineWidth = 0.9; g.shadowBlur = 4; g.beginPath(); g.arc(w * 0.15 - 26, lv * h, 30, -0.7, 0.7); g.stroke();   // gill edge
+        });
+        g.lineWidth = 0.7; g.shadowBlur = 3;                             // filigree curling along the back
+        [0.06, 0.94].forEach(function (lv) {
+          for (var f = 0; f < 10; f++) {
+            var fx = w * (0.22 + f * 0.07), fy = lv * h, dir = f % 2 ? 1 : -1; g.beginPath(); g.moveTo(fx - 14, fy);
+            g.bezierCurveTo(fx - 6, fy + dir * 8, fx + 4, fy + dir * 8, fx + 6, fy + dir * 2);
+            for (var cu = 0; cu < 14; cu++) { var ca = cu * 0.5, cr = 4 - cu * 0.27; g.lineTo(fx + 2 + Math.cos(ca) * cr, fy + dir * (2 - Math.sin(ca) * cr)); }
             g.stroke();
           }
         });
         g.shadowBlur = 0;
-        for (var s = 0; s < 140; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.4 + kr() * 0.6) + ')'; g.beginPath(); g.arc(kr() * w, kr() * h, 0.6 + kr() * 1.2, 0, 6.29); g.fill(); }   // sparkling stars
-        [0.25, 0.75].forEach(function (lv) { var gl = g.createRadialGradient(w * 0.075, lv * h, 0, w * 0.075, lv * h, 11); gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.65, 'rgba(255,255,255,.9)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); });   // glowing eye rings
+        for (var s = 0; s < 220; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.4 + kr() * 0.6) + ')'; g.beginPath(); g.arc(kr() * w, kr() * h, 0.4 + kr() * 1, 0, 6.29); g.fill(); }
+        [0.25, 0.75].forEach(function (lv) { var gl = g.createRadialGradient(w * 0.075, lv * h, 0, w * 0.075, lv * h, 12); gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.7, 'rgba(255,255,255,.9)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); });
       }, false);
-      var finT = paint(512, 256, function (g, w, h) {                      // silk: the base colour at the body (right) shifting to the tip colour, fine rays, a luminous edge, sparkles
+      var finT = paint(1024, 512, function (g) {                          // silk: colour shifting from body to tip, bands of shimmer, fine forking rays, sparkles and a luminous edge
+        g.scale(2, 2); var w = 512, h = 256;
         var gr = g.createLinearGradient(w, 0, 0, 0); gr.addColorStop(0, kind.fin1); gr.addColorStop(0.55, kind.fin2); gr.addColorStop(1, '#ffffff');
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
-        var al = g.createLinearGradient(w, 0, 0, 0); al.addColorStop(0, 'rgba(0,0,0,.5)'); al.addColorStop(0.5, 'rgba(0,0,0,.72)'); al.addColorStop(1, 'rgba(0,0,0,.4)');   // thinner and clearer in the middle
+        for (var b = 0; b < 9; b++) { var bx = w * (0.08 + b * 0.1), bg = g.createLinearGradient(bx - 14, 0, bx + 14, 0); bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(0.5, hsl(b * 0.06 - 0.2, 90, 75, 0.35)); bg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = bg; g.fillRect(bx - 14, 0, 28, h); }   // shimmering bands
+        var al = g.createLinearGradient(w, 0, 0, 0); al.addColorStop(0, 'rgba(0,0,0,.92)'); al.addColorStop(0.07, 'rgba(0,0,0,.55)'); al.addColorStop(0.5, 'rgba(0,0,0,.72)'); al.addColorStop(1, 'rgba(0,0,0,.4)');   // fading in softly where it meets the body
         g.globalCompositeOperation = 'destination-out'; g.fillStyle = al; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over';
-        for (var i = 0; i < 60; i++) { var y0 = h / 2 + (i / 59 - 0.5) * h * 0.3, y1 = (i / 59) * h; g.strokeStyle = 'rgba(255,255,255,' + (0.25 + kr() * 0.3) + ')'; g.lineWidth = 0.9 + kr(); g.beginPath(); g.moveTo(w, y0); g.bezierCurveTo(w * 0.6, y0, w * 0.4, y1 + Math.sin(i) * 8, 0, y1); g.stroke(); }
-        for (var s = 0; s < 180; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.5 + kr() * 0.5) + ')'; g.beginPath(); g.arc(kr() * w * 0.8, kr() * h, 0.6 + kr() * 1.4, 0, 6.29); g.fill(); }
-        var eg = g.createLinearGradient(0, 0, 0, h); eg.addColorStop(0, 'rgba(255,255,255,.9)'); eg.addColorStop(0.08, 'rgba(255,255,255,0)'); eg.addColorStop(0.92, 'rgba(255,255,255,0)'); eg.addColorStop(1, 'rgba(255,255,255,.9)');
-        g.fillStyle = eg; g.fillRect(0, 0, w * 0.75, h);                  // a glowing edge
-        var tg = g.createLinearGradient(0, 0, w * 0.15, 0); tg.addColorStop(0, 'rgba(255,255,255,.9)'); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = tg; g.fillRect(0, 0, w * 0.15, h);
+        for (var i = 0; i < 90; i++) {                                    // rays, each forking near its tip
+          var y0 = h / 2 + (i / 89 - 0.5) * h * 0.3, y1 = (i / 89) * h, wob = Math.sin(i * 1.7) * 8;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.22 + kr() * 0.3) + ')'; g.lineWidth = 0.6 + kr() * 0.7; g.beginPath(); g.moveTo(w, y0); g.bezierCurveTo(w * 0.6, y0, w * 0.4, y1 + wob, w * 0.18, y1 + wob * 0.6); g.stroke();
+          g.lineWidth *= 0.6; g.beginPath(); g.moveTo(w * 0.18, y1 + wob * 0.6); g.lineTo(0, y1 + wob * 0.6 - 4); g.moveTo(w * 0.18, y1 + wob * 0.6); g.lineTo(0, y1 + wob * 0.6 + 4); g.stroke();
+          if (i % 3 === 0) for (var sg = 1; sg < 8; sg++) { var t2 = sg / 8; g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(w * (1 - t2 * 0.8), y0 + (y1 - y0) * t2 * t2 - 0.5, 1.5, 1); }   // segments along the ray
+        }
+        for (var ph = 0; ph < 140; ph++) { var py0 = kr() * h; [kr() * 0.6 + 0.1].forEach(function (fx, fi) { var gx = w * fx, gyy = py0 + (h / 2 - py0) * (1 - fx) * 0.4, rg = g.createRadialGradient(gx, gyy, 0, gx, gyy, 1.2 + kr() * 2); rg.addColorStop(0, 'rgba(255,255,255,.95)'); rg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = rg; g.fillRect(gx - 4, gyy - 4, 8, 8); }); }   // glowing beads along the rays
+        for (var vn = 0; vn < 240; vn++) { var vx = kr() * w * 0.8, vy = kr() * h; g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = 0.4; g.beginPath(); g.moveTo(vx, vy); g.lineTo(vx - 4 - kr() * 6, vy + (kr() - 0.5) * 6); g.stroke(); }   // fine veins between the rays
+        for (var s = 0; s < 320; s++) { var sx = kr() * w * 0.85, sy = kr() * h, sz = 0.4 + kr() * 1.3; g.fillStyle = 'rgba(255,255,255,' + (0.5 + kr() * 0.5) + ')'; g.beginPath(); g.arc(sx, sy, sz, 0, 6.29); g.fill(); if (sz > 1.4) { g.fillRect(sx - sz * 2.5, sy - 0.2, sz * 5, 0.4); g.fillRect(sx - 0.2, sy - sz * 2.5, 0.4, sz * 5); } }   // sparkles, the big ones with a cross of light
+        var eg = g.createLinearGradient(0, 0, 0, h); eg.addColorStop(0, 'rgba(255,255,255,.95)'); eg.addColorStop(0.06, 'rgba(255,255,255,0)'); eg.addColorStop(0.94, 'rgba(255,255,255,0)'); eg.addColorStop(1, 'rgba(255,255,255,.95)');
+        g.fillStyle = eg; g.fillRect(0, 0, w * 0.75, h);
+        var tg = g.createLinearGradient(0, 0, w * 0.12, 0); tg.addColorStop(0, 'rgba(255,255,255,.95)'); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = tg; g.fillRect(0, 0, w * 0.12, h);
       }, true);
-      return { skin: skin, glow: glow, fin: finT };
+      var bump = paint(1024, 512, function (g) {                        // raised scales, each a little dome that catches the light
+        g.scale(2, 2); var w = 512, h = 256; g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+        for (var row = 0; row < 44; row++) for (var col = 0; col < 96; col++) {
+          var x2 = (col + (row % 2) * 0.5) / 96 * w, y2 = row / 44 * h, sr = w / 96 * 0.68; if (x2 < w * 0.17) continue;
+          var sg = g.createRadialGradient(x2, y2 - sr * 0.3, 0, x2, y2, sr); sg.addColorStop(0, '#b4b4b4'); sg.addColorStop(0.8, '#8a8a8a'); sg.addColorStop(1, '#5a5a5a');
+          g.fillStyle = sg; g.beginPath(); g.arc(x2, y2, sr, 0, Math.PI); g.fill();
+        }
+        [0.25, 0.75].forEach(function (lv) { g.strokeStyle = '#404040'; g.lineWidth = 2; g.beginPath(); g.arc(w * 0.15 - 26, lv * h, 30, -0.75, 0.75); g.stroke(); });   // the gill edge, a crease
+      }, false);
+      var finBump = paint(512, 256, function (g, w, h) {                  // the rays stand up from the membrane
+        g.fillStyle = '#707070'; g.fillRect(0, 0, w, h);
+        for (var i = 0; i < 90; i++) { var y0 = h / 2 + (i / 89 - 0.5) * h * 0.3, y1 = (i / 89) * h; g.strokeStyle = '#d0d0d0'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(w, y0); g.bezierCurveTo(w * 0.6, y0, w * 0.4, y1, 0, y1); g.stroke(); }
+      }, false);
+      return { skin: skin, glow: glow, fin: finT, bump: bump, finBump: finBump };
     }
     var koiGlowTex = (function () {
       var S = 64, d = new Uint8Array(S * S * 4);
@@ -1606,24 +1704,48 @@
           'transformed.z += sin(uTime * uBeat + uPh - position.x * 12.0) * (0.004 + 0.05 * bw * bw);\n' +
           (flutter ? 'transformed.y += sin(uTime * 3.1 + uPh - position.x * 22.0) * 0.012 * bw * bw; transformed.z += sin(uTime * 4.3 + uPh + position.y * 30.0) * 0.008 * bw;\n' : ''));
         if (rim) sh.fragmentShader = 'uniform float uRim; uniform vec3 uRimC;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' +
-          'totalEmissiveRadiance += uRimC * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.2) * uRim;');
+          'totalEmissiveRadiance += uRimC * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 4.0) * uRim * 0.6;');
       };
       return mat;
     }
+    var eyeTexCache = {};
+    function eyeTex(kind) {                                               // a glossy dark pupil, a ring of coloured iris with fine streaks, a gold rim
+      if (eyeTexCache[kind.glow]) return eyeTexCache[kind.glow];
+      return (eyeTexCache[kind.glow] = paint(128, 128, function (g, w) {
+        var c = w / 2; g.fillStyle = kind.deep; g.fillRect(0, 0, w, w);
+        var ir = g.createRadialGradient(c, c, 8, c, c, 30); ir.addColorStop(0, kind.fin2); ir.addColorStop(0.6, kind.fin1); ir.addColorStop(1, '#d8b060');
+        g.fillStyle = ir; g.beginPath(); g.arc(c, c, 30, 0, 6.29); g.fill();
+        for (var i = 0; i < 60; i++) { var a = i / 60 * 6.28; g.strokeStyle = 'rgba(' + (i % 2 ? '255,255,255' : '0,0,0') + ',.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(c + Math.cos(a) * 12, c + Math.sin(a) * 12); g.lineTo(c + Math.cos(a) * 29, c + Math.sin(a) * 29); g.stroke(); }
+        g.fillStyle = '#020104'; g.beginPath(); g.arc(c, c, 13, 0, 6.29); g.fill();
+      }, true));
+    }
+    var eyeGeo = (function () {                                           // two domed eyes set into the head
+      var parts = [], hy = hb(0.075), hz = hy * (0.7 - 0.12 * 0.075);
+      [-1, 1].forEach(function (sd) {
+        var e = new THREE.SphereGeometry(0.0105, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55); e.rotateX(sd * Math.PI / 2);
+        var m = new THREE.Matrix4().makeTranslation(0.17, -hy * 0.02, sd * hz * 0.78); parts.push([e, m]);
+      });
+      return merge(parts);
+    })();
+    var shadowGeo = new THREE.PlaneGeometry(0.7, 0.32); shadowGeo.rotateX(-Math.PI / 2);
+    var shadowMat = new THREE.MeshBasicMaterial({ map: paint(128, 64, function (g, w, h) { var gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(0,0,0,.7)'); gr.addColorStop(0.5, 'rgba(0,0,0,.3)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.save(); g.scale(1, 0.5); g.fillStyle = gr; g.fillRect(0, 0, w, h * 2); g.restore(); }, false), transparent: true, depthWrite: false, opacity: 0.5 });
     var koi = [];
     for (var kf = 0; kf < 10; kf++) {
       var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { kind: kind, phU: { value: r() * 6.28 }, beatU: { value: 5 }, rimU: { value: 1 } };
-      var bodyMat = swim(new THREE.MeshStandardMaterial({ map: tx.skin, transparent: true, opacity: 0.88, roughness: 0.2, metalness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.8 }), k, false, true);
-      var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.45 }), k, true, false);
-      var crystalMat = swim(new THREE.MeshStandardMaterial({ color: kind.pale, transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.2, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.9 }), k, false, false);
-      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrown, crystalMat);
+      var bodyMat = swim(new THREE.MeshPhysicalMaterial({ map: tx.skin, bumpMap: tx.bump, bumpScale: 0.0009, transparent: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.5 }), k, false, true);   // wet and glossy
+      var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, bumpMap: tx.finBump, bumpScale: 0.0012, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.45 }), k, true, false);
+      var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.92, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true);
+      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrownFor(kind), crystalMat);
       body.renderOrder = 6; crown.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins, crown);   // drawn after the water: they swim just under the surface
-      var orbMat = new THREE.MeshBasicMaterial({ color: kind.glow, transparent: true }), orbs = [];
-      [-1, 1].forEach(function (sd) { var o = new THREE.Mesh(orbG, orbMat); o.position.set(0.31, 0.03, sd * 0.085); o.renderOrder = 7; fish.add(o); var og = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); og.scale.set(0.07, 0.07, 1); og.position.copy(o.position); og.renderOrder = 8; fish.add(og); orbs.push(og); });
+      var eyeMat = swim(new THREE.MeshPhysicalMaterial({ map: eyeTex(kind), roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02, emissive: new THREE.Color(kind.glow), emissiveMap: eyeTex(kind), emissiveIntensity: 0.25 }), k, false, false);
+      var eyes = new THREE.Mesh(eyeGeo, eyeMat); eyes.renderOrder = 6; fish.add(eyes);
+      var shadow = new THREE.Mesh(shadowGeo, shadowMat.clone()); shadow.renderOrder = 2; scene.add(shadow);
+      var orbMat = new THREE.MeshBasicMaterial({ color: kind.glow, transparent: true, opacity: 0.55, depthWrite: false }), orbs = [];
+      [-1, 1].forEach(function (sd) { var inner = new THREE.Mesh(new THREE.SphereGeometry(0.0045, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff' })); inner.position.set(0.31, 0.03, sd * 0.085); inner.renderOrder = 8; fish.add(inner); var o = new THREE.Mesh(orbG, orbMat); o.position.set(0.31, 0.03, sd * 0.085); o.renderOrder = 7; fish.add(o); var og = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); og.scale.set(0.07, 0.07, 1); og.position.copy(o.position); og.renderOrder = 8; fish.add(og); orbs.push(og); });
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: '#ffffff', transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.22, 0.1, 1); core.renderOrder = 8; fish.add(core);   // a light glowing inside
       var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(1.1, 0.55, 1); aura.renderOrder = 6; fish.add(aura);
       var sc = 1 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
-      Object.assign(k, { g: fish, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
+      Object.assign(k, { g: fish, shadow: shadow, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
       koi.push(k);
     }
     // a trail of glowing motes drifting up behind each fish
@@ -1631,6 +1753,14 @@
     trGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3)); trGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3));
     var trail = new THREE.Points(trGeo, new THREE.PointsMaterial({ map: koiGlowTex, size: 0.07, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     trail.frustumCulled = false; trail.renderOrder = 6; scene.add(trail);
+    // sparkles circling each fish, and bubbles rising from their mouths
+    var ORB = 10, obGeo = new THREE.BufferGeometry(); obGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(koi.length * ORB * 3), 3)); obGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(koi.length * ORB * 3), 3));
+    var orbit = new THREE.Points(obGeo, new THREE.PointsMaterial({ map: koiGlowTex, size: 0.045, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); orbit.frustumCulled = false; orbit.renderOrder = 8; scene.add(orbit);
+    var bubbleTex = paint(64, 64, function (g, w) { var c = w / 2, gr = g.createRadialGradient(c, c, c * 0.55, c, c, c * 0.95); gr.addColorStop(0, 'rgba(255,255,255,.05)'); gr.addColorStop(0.75, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.ellipse(c * 0.72, c * 0.68, c * 0.16, c * 0.1, -0.7, 0, 6.29); g.fill(); }, false);
+    var BUB = 40, bubs = [], buGeo = new THREE.BufferGeometry(); buGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BUB * 3), 3));
+    var bubbles = new THREE.Points(buGeo, new THREE.PointsMaterial({ map: bubbleTex, size: 0.035, transparent: true, depthWrite: false })); bubbles.frustumCulled = false; bubbles.renderOrder = 8; scene.add(bubbles);
+    for (var bu = 0; bu < BUB; bu++) bubs.push({ y: -99 });
+    var bubT = 0, noseV = new THREE.Vector3();
 
     var kP = new THREE.Vector3(), kQ = new THREE.Quaternion(), kE = new THREE.Euler();
     return {
@@ -1654,9 +1784,10 @@
           kP.set(PX + Math.cos(a) * R, 0, PZ + Math.sin(a) * R); var bedY = groundHeight(kP.x, kP.z, FARM); kP.y = Math.max(bedY + 0.14, WY - k.depth - 0.08 * Math.sin(t * 0.4 + k.ph));
           var dir = Math.atan2(-Math.cos(a) * k.sp, -Math.sin(a) * k.sp);
           k.g.position.copy(kP); k.g.rotation.set(0, dir, Math.sin(t * 0.8 + k.ph) * 0.06);
+          k.shadow.position.set(kP.x, bedY + 0.015, kP.z); k.shadow.rotation.y = dir; var hgt = kP.y - bedY; k.shadow.scale.setScalar(k.g.scale.x * (1 + hgt * 1.5)); k.shadow.material.opacity = Math.max(0, 0.55 - hgt * 0.5) * (1 - night * 0.6);   // a soft shadow on the bed below
           k.beatU.value = 4.5 + 2.5 * pace;
           var pulse = 0.5 + 0.5 * Math.sin(t * 1.7 + k.ph);
-          k.bodyMat.emissiveIntensity = 0.7 + pulse * 0.4 + night * 1.2; k.rimU.value = 0.7 + pulse * 0.5 + night * 0.8; k.crystalMat.emissiveIntensity = 0.6 + pulse * 0.6 + night;
+          k.bodyMat.emissiveIntensity = 0.35 + pulse * 0.2 + night * 1.2; k.rimU.value = 0.35 + pulse * 0.25 + night * 0.8; k.crystalMat.emissiveIntensity = 0.3 + pulse * 0.35 + night;
           k.core.material.opacity = 0.25 + pulse * 0.2 + night * 0.3; k.orbs.forEach(function (o, oi) { var tw = 0.5 + 0.5 * Math.sin(t * 3.3 + k.ph + oi * 1.7); o.material.opacity = 0.5 + tw * 0.5; o.scale.setScalar(0.05 + tw * 0.04); });
           k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.08 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.4 + pulse * 0.25 + night * 0.9;
           k.aura.material.opacity = 0.28 + pulse * 0.14 + night * 0.4;
@@ -1672,6 +1803,27 @@
           }
         });
         tp.needsUpdate = tc.needsUpdate = true;
+        var op = obGeo.attributes.position, oc = obGeo.attributes.color;
+        koi.forEach(function (k, n) {
+          trC.set(k.kind.glow); var c = k.g.position, sc2 = k.g.scale.x;
+          for (var m = 0; m < ORB; m++) {
+            var a2 = t * (0.9 + m * 0.07) + m * 0.63 + k.ph, rr4 = (0.12 + 0.06 * Math.sin(m * 1.3 + t)) * sc2, o = n * ORB + m, tw = 0.5 + 0.5 * Math.sin(t * 5 + m * 2.1);
+            op.setXYZ(o, c.x + Math.cos(a2) * rr4, Math.min(c.y + Math.sin(a2 * 1.3 + m) * 0.05 * sc2, WY - 0.02), c.z + Math.sin(a2) * rr4);
+            var f = tw * (0.5 + night * 0.5); oc.setXYZ(o, (trC.r * 0.6 + 0.4) * f, (trC.g * 0.6 + 0.4) * f, (trC.b * 0.6 + 0.4) * f);
+          }
+        });
+        op.needsUpdate = oc.needsUpdate = true;
+        bubT += dt;
+        if (bubT > 0.35) {                                                 // a fish lets a few bubbles go
+          bubT = 0; var kk = koi[Math.floor(Math.random() * koi.length)]; noseV.set(0.22, 0, 0); kk.g.localToWorld(noseV);
+          for (var nb = 0; nb < 1 + Math.floor(Math.random() * 3); nb++) { var bb = bubs.find(function (q) { return q.y < -50; }); if (!bb) break; bb.x = noseV.x + (Math.random() - 0.5) * 0.02; bb.y = noseV.y - nb * 0.03; bb.z = noseV.z + (Math.random() - 0.5) * 0.02; bb.v = 0.18 + Math.random() * 0.12; bb.p = Math.random() * 6.28; }
+        }
+        var bp3 = buGeo.attributes.position;
+        bubs.forEach(function (q, i) {
+          if (q.y > -50) { q.y += q.v * dt; q.v += dt * 0.08; q.x += Math.sin(t * 6 + q.p) * dt * 0.03; if (q.y > WY - 0.01) q.y = -99; }
+          bp3.setXYZ(i, q.x || 0, q.y, q.z || 0);
+        });
+        bp3.needsUpdate = true;
       }
     };
   })();
