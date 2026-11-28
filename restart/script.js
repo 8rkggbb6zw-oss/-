@@ -1562,18 +1562,19 @@
       });
       [-1, 1].forEach(function (sd) {                                     // whiskers: tapering, beaded at each joint, with fine hairs, rising to a crystal held in three petals
         var rh = hb(0.07), rz = rh * 0.69;                                 // rooted in the side of the snout, just behind the lip
-        var curve = new THREE.CatmullRomCurve3([[0.172, -rh * 0.32, sd * rz * 0.86], [0.19, -rh * 0.42, sd * rz * 0.96], [0.215, -rh * 0.52, sd * (rz + 0.008)], [0.25, -0.02, sd * 0.042], [0.28, -0.008, sd * 0.062], [0.3, 0.012, sd * 0.078], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }));
-        var N = 60, R = 8, pos = [], col = [], idx = [], fr = curve.computeFrenetFrames(N, false);
+        var curve = new THREE.CatmullRomCurve3([[0.155, -rh * 0.22, sd * rz * 0.2], [0.175, -rh * 0.34, sd * rz * 0.72], [0.193, -rh * 0.44, sd * rz * 1.0], [0.215, -rh * 0.52, sd * (rz + 0.008)], [0.25, -0.02, sd * 0.042], [0.28, -0.008, sd * 0.062], [0.3, 0.012, sd * 0.078], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }));
+        var N = 110, R = 14, pos = [], col = [], idx = [], fr = curve.computeFrenetFrames(N, false), skinC = new THREE.Color(kind.pale).lerp(new THREE.Color(kind.fin1), 0.45);
         for (var i = 0; i <= N; i++) {
-          var t = i / N, c = curve.getPointAt(t), bead = t < 0.12 ? 0 : Math.pow(Math.max(0, Math.sin(t * Math.PI * 14)), 6), rad = (0.0034 * Math.pow(1 - t, 0.7) + 0.0009) * (1 + bead * 0.35) + 0.0045 * Math.pow(Math.max(0, 1 - t / 0.12), 2);   // a fleshy root swelling out of the skin
-          tmp.copy(cDeep).lerp(cGlow, Math.max(0, t - 0.1) / 0.9).lerp(cPale, bead * 0.4);
+          var t = i / N, c = curve.getPointAt(t), bead = t < 0.2 ? 0 : Math.pow(Math.max(0, Math.sin(t * Math.PI * 12)), 8) * Math.min(1, (t - 0.2) * 8), ring = t < 0.08 ? 0 : 0.05 * Math.pow(Math.abs(Math.sin(t * Math.PI * 70)), 3) * Math.min(1, (t - 0.08) * 10);
+          var rad = (0.0032 * Math.pow(1 - t, 0.75) + 0.0008) * (1 + bead * 0.3 - ring) + 0.0042 * Math.exp(-t / 0.07);   // a fleshy root flaring into the skin, fine rings along its length
+          tmp.copy(cDeep).lerp(cGlow, Math.max(0, t - 0.1) / 0.9).lerp(cPale, bead * 0.4).lerp(skinC, Math.max(0, 1 - t / 0.2)).multiplyScalar(1 - ring * 2.5);   // skin-coloured where it leaves the face
           for (var j = 0; j <= R; j++) { var a = j / R * Math.PI * 2, n = fr.normals[i], b = fr.binormals[i]; pos.push(c.x + (n.x * Math.cos(a) + b.x * Math.sin(a)) * rad, c.y + (n.y * Math.cos(a) + b.y * Math.sin(a)) * rad, c.z + (n.z * Math.cos(a) + b.z * Math.sin(a)) * rad); col.push(tmp.r, tmp.g, tmp.b); }
         }
         for (var i2 = 0; i2 < N; i2++) for (var j2 = 0; j2 < R; j2++) { var A = i2 * (R + 1) + j2, B = A + R + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
         var tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); tg.setIndex(idx); tg.computeVertexNormals();
         parts.push([tg, new THREE.Matrix4(), function (x, y, z) { return null; }]);
         var hair = new THREE.CylinderGeometry(0, 0.0007, 1, 4); hair.translate(0, 0.5, 0);
-        for (var hh = 5; hh < 26; hh++) {                                 // fine hairs fanning off each joint
+        for (var hh = 9; hh < 26; hh++) {                                 // fine hairs fanning off each joint
           var t3 = hh / 28, p3 = curve.getPointAt(t3), tn = curve.getTangentAt(t3), q = new THREE.Quaternion();
           [-1, 1].forEach(function (side) {
             var dir = new THREE.Vector3(0, 1, 0).applyAxisAngle(tn, side * 1.1 + hh * 0.4).addScaledVector(tn, 0.6).normalize();
@@ -1581,6 +1582,11 @@
             parts.push([hair, new THREE.Matrix4().compose(p3, q, new THREE.Vector3(1, len, 1)), [cPale.r * 0.9, cPale.g * 0.9, cPale.b * 0.9]]);
           });
         }
+        var root = curve.getPointAt(0.1), pad = new THREE.SphereGeometry(1, 16, 10), nrm = new THREE.Vector3(0, -0.3, sd).normalize(), pq = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm);
+        parts.push([pad, new THREE.Matrix4().compose(root.clone().addScaledVector(nrm, -0.002), pq, new THREE.Vector3(0.011, 0.0035, 0.008)), [skinC.r, skinC.g, skinC.b]]);   // a soft fleshy pad where it meets the face
+        var bump = new THREE.SphereGeometry(1, 6, 4);
+        for (var pb = 0; pb < 14; pb++) { var tb = 0.14 + pb * 0.012, pb3 = curve.getPointAt(tb), ab = pb * 2.4, nb = fr.normals[Math.round(tb * N)], bb = fr.binormals[Math.round(tb * N)], rr0 = 0.0032 * Math.pow(1 - tb, 0.75) + 0.0008 + 0.0042 * Math.exp(-tb / 0.07);
+          var dirB = nb.clone().multiplyScalar(Math.cos(ab)).addScaledVector(bb, Math.sin(ab)); parts.push([bump, new THREE.Matrix4().makeTranslation(pb3.x + dirB.x * rr0, pb3.y + dirB.y * rr0, pb3.z + dirB.z * rr0).multiply(new THREE.Matrix4().makeScale(0.0007, 0.0007, 0.0007)), [cPale.r, cPale.g, cPale.b]]); }   // tiny sensory bumps near the root
         var tip = curve.getPointAt(1), petal = new THREE.SphereGeometry(1, 8, 6); petal.scale(0.0035, 0.008, 0.0016); petal.translate(0, 0.006, 0);
         for (var pt = 0; pt < 3; pt++) { var pm = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.55, pt / 3 * Math.PI * 2, 0, 'YXZ')); pm.premultiply(new THREE.Matrix4().makeTranslation(tip.x, tip.y - 0.006, tip.z)); parts.push([petal, pm, [cDeep.r * 1.4, cDeep.g * 1.4, cDeep.b * 1.4]]); }   // three petals cupping the crystal
       });
