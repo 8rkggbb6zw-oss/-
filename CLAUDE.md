@@ -20,5 +20,5 @@ The test browser can't reach cdnjs, so serve a copy of the game locally with thr
 
 The restarted Everdawn lives in `restart/` (`index.html`, `style.css`, `script.js`), pasted into a new pen. **With every single change, in the same reply, always give both pages — never wait to be asked, never send one without the other:**
 1. A by-hand page for that change (Find / Replace with, a Copy button on each replacement).
-2. The updated full copy page (https://claude.ai/artifact/MRzk9cuf4nizLt6iS6M96y, republished from `glowing-star-by-hand.html`) with all three files, checked to match the repo files exactly.
+2. The updated full copy page (https://claude.ai/artifact/MRzk9cuf4nizLt6iS6M96y, republished from `glowing-star-by-hand.html`) with all three files, checked to match the repo files exactly. On the page itself, mark each file "changed" or "no change" (a badge on each box and a list at the top).
 Keep notes in the code short (e.g. `// Mana`), and keep the user's own renamed notes.
