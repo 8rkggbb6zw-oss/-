@@ -1557,6 +1557,33 @@
     })();
     var SPINES = [];                                                      // where each spine on the back stands: position along the body, height, size
     for (var si = 0; si < 17; si++) { var bigS = si % 2 === 0; SPINES.push({ u: 0.16 + si * 0.036, h: bigS ? 0.026 + 0.034 * Math.sin(Math.PI * (si + 0.5) / 17) : 0.013, w: bigS ? 0.0065 : 0.0042, lean: 0.35 + si * 0.025 }); }
+    function skinAt(v, press) {                                                   // where the body's skin is under a point: lifts it onto the skin if inside; gives the skin's normal and texture position
+      var u = Math.max(0, (0.2 - v.x) / 0.4), hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u), fy = 1, fz = 1;
+      if (u < 0.06) { var k = u / 0.06; fy = 0.6 + 0.4 * k; fz = 0.75 + 0.25 * k; }
+      var cy = -hy * 0.08 * fy, ey = (v.y < cy ? 0.92 : 1) * hy * fy, ez = hz * fz, dy = v.y - cy, dz = v.z, q = Math.hypot(dy / ey, dz / ez);
+      var tq = q < 1.004 ? 1.004 : q + (1.004 - q) * (press || 0);   // inside: lift onto the skin; outside: press down onto it
+      if (tq !== q) { v.y = cy + dy / q * tq; v.z = dz / q * tq; q = tq; }
+      return { n: new THREE.Vector3(0, dy / (ey * ey), dz / (ez * ez)).normalize(), u: u, v: Math.atan2(dz / ez, dy / ey) / (Math.PI * 2), q: q };
+    }
+    var koiSleeves = (function () {                                       // the scaled skin of the back rising round the root of each spine, so the scales flow up into it
+      var P = [], N = [], UV = [], F = [], I = [], off = 0, R = 28, H = 14;
+      SPINES.forEach(function (S) {
+        var x = 0.2 - S.u * 0.4, y0 = hb(S.u) * 0.94 - 0.004, m = new THREE.Matrix4().makeRotationZ(S.lean); m.premultiply(new THREE.Matrix4().makeTranslation(x, y0, 0));
+        var nm = new THREE.Matrix3().getNormalMatrix(m), ring = [];
+        for (var j = 0; j <= H; j++) {
+          var t = j / H, rr = S.w * (0.62 + 0.25 * (1 - t) + 2.0 * Math.pow(1 - t, 2.4)), yy = S.h * 0.26 * t - 0.002 * (1 - t);   // its top tucks just inside the crystal   // flares wide and flat at the bottom, hugging the spine at the top
+          for (var i = 0; i <= R; i++) {
+            var a = i / R * Math.PI * 2, v = new THREE.Vector3(Math.cos(a) * rr, yy, Math.sin(a) * rr * 0.8).applyMatrix4(m), sk = skinAt(v, Math.pow(Math.max(0, 1 - t / 0.6), 1.5));
+            var tubeN = new THREE.Vector3(Math.cos(a), 0.6 * (1 - t) + 0.15, Math.sin(a)).applyMatrix3(nm).normalize(), lie = Math.pow(1 - t, 1.5);
+            P.push(v.x, v.y, v.z); var fd = Math.max(0, Math.min(1, (t - 0.3) / 0.55)); F.push(fd * fd * (3 - 2 * fd)); var nn = tubeN.lerp(sk.n, lie).normalize(); N.push(nn.x, nn.y, nn.z); UV.push(sk.u, sk.v);
+          }
+        }
+        for (var j2 = 0; j2 < H; j2++) for (var i2 = 0; i2 < R; i2++) { var A = off + j2 * (R + 1) + i2, B = A + R + 1; I.push(A, B, A + 1, B, B + 1, A + 1); }
+        off += (H + 1) * (R + 1);
+      });
+      var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setAttribute('aFade', new THREE.Float32BufferAttribute(F, 1)); g.setIndex(I);
+      return g;
+    })();
     function koiCrownFor(kind, skinTex) {                                  // crystal spines down the back
       var lin = function (c) { return new THREE.Color(c).convertSRGBToLinear(); };
       var cDeep = lin(kind.deep), cPale = lin(kind.pale), cGlow = lin(kind.glow), tmp = new THREE.Color(), parts = [], cr = rand(Math.round(kind.hue * 977) + 3), skinC = lin(kind.fin1);
@@ -1574,11 +1601,13 @@
           var face = 0.82 + sr() * 0.32;                                   // each facet a little lighter or darker
           for (var v = 0; v < 3; v++) {
             var y2 = p.getY(t + v), band = 1 - 0.28 * Math.pow(Math.max(0, Math.cos((y2 - 0.12) * 26)), 16) * (y2 < 0.85 ? 1 : 0), frost = Math.max(0, 1 - y2 / 0.25);
-            tmp.copy(cDeep).lerp(cGlow, Math.min(1, y2 * 1.7)).lerp(cPale, Math.max(0, y2 - 0.55) * 2.2).lerp(cPale, frost * 0.35).multiplyScalar(face * band);
+            var up = Math.max(0, Math.min(1, (y2 - 0.12) / 0.5)); up = up * up * (3 - 2 * up);   // the skin's colour at the root, shading smoothly up through the glow to a pale tip
+            tmp.copy(skinC).lerp(cGlow, up).lerp(cPale, Math.max(0, y2 - 0.6) * 2.4).multiplyScalar(1 + (face * band - 1) * Math.min(1, y2 * 3));
             col.push(tmp.r, tmp.g, tmp.b);
           }
         }
         g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+        var gl = []; for (var gi = 0; gi < p.count; gi++) { var gy = Math.max(0, Math.min(1, (p.getY(gi) - 0.15) / 0.55)); gl.push(gy * gy); } g.setAttribute('aGl', new THREE.Float32BufferAttribute(gl, 1));   // glowing more towards the tip
         return g;
       }
       function coreGeo() { var g = new THREE.CylinderGeometry(0, 1, 1, 6, 6); g.translate(0, 0.5, 0); var p = g.attributes.position; for (var i = 0; i < p.count; i++) { var y = p.getY(i); p.setX(i, p.getX(i) - y * y * 0.5); } g.computeVertexNormals(); var c = []; for (var k = 0; k < p.count; k++) c.push(1, 1, 1); g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); return g; }
@@ -1592,15 +1621,16 @@
         var main = shardGeo(6, 12, 0.7 + cr() * 0.4, 0.5, i * 13 + 1);
         parts.push([main, m.clone().multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w * 0.75)), 'own']);
         parts.push([core, m.clone().multiply(new THREE.Matrix4().makeScale(S.w * 0.3, S.h * 0.86, S.w * 0.22)), [1.4, 1.4, 1.4]]);   // a bright core of light inside
-        parts.push([sleeve, m.clone().multiply(new THREE.Matrix4().makeScale(S.w * 1.05, S.h * 0.14, S.w * 0.8)).premultiply(new THREE.Matrix4().makeTranslation(0, -0.0012, 0)), [skinC.r, skinC.g, skinC.b]]);
         if (big) [-1, 1].forEach(function (sd) {                         // small crystals budding off its root
           var bm = m.clone().multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * (0.55 + cr() * 0.25), 0, -0.35 - cr() * 0.3))).multiply(new THREE.Matrix4().makeScale(S.w * 0.45, S.h * (0.22 + cr() * 0.14), S.w * 0.35));
           parts.push([shardGeo(5, 6, 0.4, 0.3, i * 31 + sd + 9), bm, 'own']);
         });
         var tipM = m.clone().multiply(new THREE.Matrix4().makeScale(S.w, S.h, S.w)), tip = new THREE.Vector3(-0.5, 1, 0).applyMatrix4(tipM); tips.push(tip.x, tip.y, tip.z);
       });
-      var g = merge(parts, true);
-      g.userData.tips = tips;
+      var g = merge(parts, true), G = [];
+      parts.forEach(function (pt) { var n = pt[0].attributes.position.count, a = pt[0].attributes.aGl; for (var i = 0; i < n; i++) G.push(a ? a.getX(i) : pt[0].attributes.position.getY(i) > 0.4 ? 1 : 0.3); });
+      g.setAttribute('aGl', new THREE.Float32BufferAttribute(G, 1));
+      g.userData.tips = tips; g.userData.skinC = skinC;
       return g;
     }
     function koiWhiskersFor(kind, skinTex) {                                       // whiskers rising out of the swell of skin, coloured like the face at the root
@@ -1660,6 +1690,16 @@
       return g;
     }
     var orbG = new THREE.IcosahedronGeometry(0.0085, 1);                  // a faceted crystal at the end of each whisker
+    var SCALES = (function () {                                           // scale layout: overlapping rows, the free edge of each facing the tail, larger mid-body, smaller at head, tail and belly
+      var out = [], sr0 = rand(404), cols = 74, rows = 30;
+      for (var col = cols - 1; col >= 0; col--) for (var row = 0; row <= rows; row++) {   // tail first, so each scale's free edge lies over the next one back
+        var x = (col + (row % 2) * 0.5) / cols, y = row / rows, belly = Math.abs(y - 0.5) < 0.2 ? 1 - (0.2 - Math.abs(y - 0.5)) * 1.5 : 1;
+        if (x < 0.165) continue;
+        var size = (0.75 + 0.35 * Math.sin(Math.PI * Math.min(1, (x - 0.165) / 0.8))) * belly * (0.94 + sr0() * 0.12);
+        out.push([x + (sr0() - 0.5) * 0.002, y + (sr0() - 0.5) * 0.004, size, sr0(), sr0()]);
+      }
+      return out;
+    })();
     function koiTextures(kind, seed) {
       var kr = rand(seed), hsl = function (dh, s, l, a) { return 'hsla(' + (((kind.hue + dh) % 1 + 1) % 1 * 360).toFixed(0) + ',' + s + '%,' + l + '%,' + a + ')'; };
       var skin = paint(1024, 512, function (g) {                        // a deep nebula back fading to a pale pearl belly, swirled and starry
@@ -1672,12 +1712,15 @@
           for (var st = 0; st < 12; st++) { sa += 0.35 + kr() * 0.2; sx += Math.cos(sa) * (6 - st * 0.35); sy += Math.sin(sa) * (6 - st * 0.35); g.lineTo(sx, sy); } g.stroke();
         }
         g.globalAlpha = 1;
-        for (var row = 0; row < 44; row++) for (var col = 0; col < 96; col++) {   // scales: each one tinted its own shimmer, shaded at its base, with a pearly rim
-          var x2 = (col + (row % 2) * 0.5) / 96 * w, y2 = row / 44 * h, sr = w / 96 * 0.68; if (x2 < w * 0.17) continue;
-          g.fillStyle = hsl((kr() - 0.5) * 0.2, 80, 70, 0.07 + kr() * 0.08); g.beginPath(); g.arc(x2, y2, sr, 0, Math.PI); g.fill();
-          g.fillStyle = 'rgba(0,0,0,' + (0.02 + kr() * 0.03) + ')'; g.beginPath(); g.arc(x2, y2 + sr * 0.15, sr * 0.6, 0, Math.PI); g.fill();
-          g.strokeStyle = 'rgba(255,255,255,' + (0.1 + kr() * 0.16) + ')'; g.lineWidth = 0.7; g.beginPath(); g.arc(x2, y2, sr, 0.12 * Math.PI, 0.88 * Math.PI); g.stroke();
-        }
+        SCALES.forEach(function (S) {                                    // each scale: a pearly centre, fine growth rings, a darker pigmented margin, a bright free edge
+          var cx = S[0] * w, cy = S[1] * h, r = 5.6 * S[2], ox = cx - r * 0.55;
+          g.save(); g.beginPath(); g.arc(ox, cy, r, -Math.PI / 2 - 0.25, Math.PI / 2 + 0.25); g.closePath(); g.clip();
+          var sg = g.createRadialGradient(ox - r * 0.2, cy, 0, ox, cy, r); sg.addColorStop(0, hsl((S[3] - 0.5) * 0.2, 70, 82, 0.22)); sg.addColorStop(0.6, hsl((S[3] - 0.5) * 0.15, 60, 65, 0.12)); sg.addColorStop(0.85, 'rgba(10,0,25,' + (0.16 + S[4] * 0.12) + ')'); sg.addColorStop(1, 'rgba(10,0,25,.05)');
+          g.fillStyle = sg; g.fillRect(ox - r, cy - r, r * 2.2, r * 2);
+          g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 0.4; for (var c = 0.35; c < 0.9; c += 0.14) { g.beginPath(); g.arc(ox, cy, r * c, -1.2, 1.2); g.stroke(); }   // growth rings
+          g.restore();
+          g.strokeStyle = 'rgba(255,255,255,' + (0.12 + S[4] * 0.14) + ')'; g.lineWidth = 0.6; g.beginPath(); g.arc(ox, cy, r * 0.98, -1.25, 1.25); g.stroke();   // its free edge catching the light
+        });
         for (var s = 0; s < 420; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.3 + kr() * 0.6) + ')'; g.fillRect(kr() * w, kr() * h, 0.6 + kr() * 1.1, 0.6 + kr() * 1.1); }   // stars
         var head = g.createLinearGradient(0, 0, w * 0.17, 0); head.addColorStop(0, kind.pale); head.addColorStop(1, 'rgba(255,255,255,0)'); g.globalAlpha = 0.35; g.fillStyle = head; g.fillRect(0, 0, w * 0.17, h); g.globalAlpha = 1;   // smooth head
         [0.25, 0.75].forEach(function (lv) {
@@ -1741,11 +1784,13 @@
       }, true);
       var bump = paint(1024, 512, function (g) {                        // raised scales, each a little dome that catches the light
         g.scale(2, 2); var w = 512, h = 256; g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
-        for (var row = 0; row < 44; row++) for (var col = 0; col < 96; col++) {
-          var x2 = (col + (row % 2) * 0.5) / 96 * w, y2 = row / 44 * h, sr = w / 96 * 0.68; if (x2 < w * 0.17) continue;
-          var sg = g.createRadialGradient(x2, y2 - sr * 0.3, 0, x2, y2, sr); sg.addColorStop(0, '#b4b4b4'); sg.addColorStop(0.8, '#8a8a8a'); sg.addColorStop(1, '#5a5a5a');
-          g.fillStyle = sg; g.beginPath(); g.arc(x2, y2, sr, 0, Math.PI); g.fill();
-        }
+        SCALES.forEach(function (S) {                                    // each scale rises from under the one in front to a raised free edge, which casts a thin shadow on the scale behind
+          var cx = S[0] * w, cy = S[1] * h, r = 5.6 * S[2], ox = cx - r * 0.55;
+          g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1.1; g.beginPath(); g.arc(ox + 0.8, cy, r, -1.3, 1.3); g.stroke();
+          g.save(); g.beginPath(); g.arc(ox, cy, r, -Math.PI / 2 - 0.25, Math.PI / 2 + 0.25); g.closePath(); g.clip();
+          var sg = g.createLinearGradient(ox - r, 0, ox + r, 0); sg.addColorStop(0, '#6a6a6a'); sg.addColorStop(0.65, '#9a9a9a'); sg.addColorStop(0.92, '#b8b8b8'); sg.addColorStop(1, '#a0a0a0');
+          g.fillStyle = sg; g.fillRect(ox - r, cy - r, r * 2.2, r * 2); g.restore();
+        });
         [0.25, 0.75].forEach(function (lv) { g.strokeStyle = '#404040'; g.lineWidth = 2; g.beginPath(); g.arc(w * 0.15 - 26, lv * h, 30, -0.75, 0.75); g.stroke(); });   // the gill edge, a crease
       }, false);
       var finBump = paint(512, 256, function (g, w, h) {                  // the rays stand up from the membrane
@@ -1759,14 +1804,15 @@
       for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) { var q = Math.hypot((x + 0.5) / S - 0.5, (y + 0.5) / S - 0.5) * 2, k = (y * S + x) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.max(0, Math.pow(1 - Math.min(1, q), 2.4)) * 255; }
       var t = new THREE.DataTexture(d, S, S, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
     })();
-    function swim(mat, k, flutter, rim, perGlow) {                                  // the whole fish ripples side to side; its silk fins flutter; its rim glows
+    function swim(mat, k, flutter, rim, perGlow, fadeTo) {                                  // the whole fish ripples side to side; its silk fins flutter; its rim glows
       mat.onBeforeCompile = function (sh) {
         sh.uniforms.uTime = grassTime; sh.uniforms.uPh = k.phU; sh.uniforms.uBeat = k.beatU; sh.uniforms.uRim = k.rimU; sh.uniforms.uRimC = { value: new THREE.Color(k.kind.glow) };
-        sh.vertexShader = 'uniform float uTime; uniform float uPh; uniform float uBeat;\n' + (perGlow ? 'attribute float aGl; varying float vGl;\n' : '') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
+        sh.vertexShader = 'uniform float uTime; uniform float uPh; uniform float uBeat;\n' + (perGlow ? 'attribute float aGl; varying float vGl;\n' : '') + (fadeTo ? 'attribute float aFade; varying float vFade;\n' : '') + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
           'float bw = clamp((0.1 - position.x) / 0.5, 0.0, 1.7);\n' +
           'transformed.z += sin(uTime * uBeat + uPh - position.x * 12.0) * (0.004 + 0.05 * bw * bw);\n' +
-          (perGlow ? 'vGl = aGl;\n' : '') +
+          (perGlow ? 'vGl = aGl;\n' : '') + (fadeTo ? 'vFade = aFade;\n' : '') +
           (flutter ? 'transformed.y += sin(uTime * 3.1 + uPh - position.x * 22.0) * 0.012 * bw * bw; transformed.z += sin(uTime * 4.3 + uPh + position.y * 30.0) * 0.008 * bw;\n' : ''));
+        if (fadeTo) { sh.uniforms.uFadeC = { value: fadeTo }; sh.fragmentShader = 'uniform vec3 uFadeC; varying float vFade;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, uFadeC, vFade);').replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 1.0 - vFade;'); }   // shading from the skin into the crystal's colour
         if (perGlow) sh.fragmentShader = 'varying float vGl;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vGl;');   // no glow where it is still skin
         if (rim) sh.fragmentShader = 'uniform float uRim; uniform vec3 uRimC;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' +
           'totalEmissiveRadiance += uRimC * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 4.0) * uRim * 0.6;');
@@ -1839,8 +1885,10 @@
       var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { kind: kind, phU: { value: r() * 6.28 }, beatU: { value: 5 }, rimU: { value: 1 } };
       var bodyMat = swim(new THREE.MeshPhysicalMaterial({ map: tx.skin, bumpMap: tx.bump, bumpScale: 0.0009, transparent: true, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.5 }), k, false, true);   // wet and glossy
       var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, bumpMap: tx.finBump, bumpScale: 0.0012, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.45 }), k, true, false);
-      var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.82, flatShading: false, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true);
+      var crystalMat = swim(new THREE.MeshPhysicalMaterial({ vertexColors: true, transparent: true, opacity: 0.97, flatShading: false, roughness: 0.08, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.6 }), k, false, true, true);
       var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrownFor(kind, tx.skin), crystalMat);
+      var sleeveMat = swim(new THREE.MeshPhysicalMaterial({ map: tx.skin, bumpMap: tx.bump, bumpScale: 0.0009, roughness: 0.3, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.5 }), k, false, true, false, crown.geometry.userData.skinC);
+      var sleeves = new THREE.Mesh(koiSleeves, sleeveMat); sleeves.renderOrder = 6; body.add(sleeves);   // the same skin and scales as the body, shading into the crystal
       body.renderOrder = 6; crown.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins, crown);   // drawn after the water: they swim just under the surface
       var et = eyeTex(kind), eyeMat = swim(new THREE.MeshStandardMaterial({ map: et.map, roughness: 0.6, emissive: new THREE.Color(kind.glow), emissiveMap: et.glow, emissiveIntensity: 0.4 }), k, false, false);
       var corneaMat = swim(new THREE.MeshBasicMaterial({ color: '#ffffff', alphaMap: corneaTex, transparent: true, depthWrite: false, toneMapped: false }), k, false, false);   // a clear, glassy lens over each eye: only its gleam shows
@@ -1858,7 +1906,7 @@
       var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: '#ffffff', transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.22, 0.1, 1); core.renderOrder = 8; fish.add(core);   // a light glowing inside
       var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(1.1, 0.55, 1); aura.renderOrder = 6; fish.add(aura);
       var sc = 1 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
-      Object.assign(k, { g: fish, shadow: shadow, tipPts: tipPts, whiskMat: whiskMat, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
+      Object.assign(k, { g: fish, shadow: shadow, sleeveMat: sleeveMat, tipPts: tipPts, whiskMat: whiskMat, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
       koi.push(k);
     }
     // a trail of glowing motes drifting up behind each fish
@@ -1900,7 +1948,7 @@
           k.shadow.position.set(kP.x, bedY + 0.015, kP.z); k.shadow.rotation.y = dir; var hgt = kP.y - bedY; k.shadow.scale.setScalar(k.g.scale.x * (1 + hgt * 1.5)); k.shadow.material.opacity = Math.max(0, 0.55 - hgt * 0.5) * (1 - night * 0.6);   // a soft shadow on the bed below
           k.beatU.value = 4.5 + 2.5 * pace;
           var pulse = 0.5 + 0.5 * Math.sin(t * 1.7 + k.ph);
-          k.bodyMat.emissiveIntensity = 0.35 + pulse * 0.2 + night * 1.2; k.rimU.value = 0.35 + pulse * 0.25 + night * 0.8; k.whiskMat.emissiveIntensity = k.bodyMat.emissiveIntensity; k.tipPts.material.opacity = 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.6 + k.ph * 3), 3); k.tipPts.material.size = 0.02 + 0.02 * k.tipPts.material.opacity; k.crystalMat.emissiveIntensity = 0.3 + pulse * 0.35 + night;
+          k.bodyMat.emissiveIntensity = 0.35 + pulse * 0.2 + night * 1.2; k.rimU.value = 0.35 + pulse * 0.25 + night * 0.8; k.whiskMat.emissiveIntensity = k.sleeveMat.emissiveIntensity = k.bodyMat.emissiveIntensity; k.tipPts.material.opacity = 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.6 + k.ph * 3), 3); k.tipPts.material.size = 0.02 + 0.02 * k.tipPts.material.opacity; k.crystalMat.emissiveIntensity = 0.3 + pulse * 0.35 + night;
           k.core.material.opacity = 0.25 + pulse * 0.2 + night * 0.3; k.orbs.forEach(function (o, oi) { var tw = 0.5 + 0.5 * Math.sin(t * 3.3 + k.ph + oi * 1.7); o.material.opacity = 0.5 + tw * 0.5; o.scale.setScalar(0.05 + tw * 0.04); });
           k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.08 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.4 + pulse * 0.25 + night * 0.9;
           k.aura.material.opacity = 0.28 + pulse * 0.14 + night * 0.4;
