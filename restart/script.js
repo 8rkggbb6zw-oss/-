@@ -1163,6 +1163,108 @@
 
     var toC = new THREE.Vector2(-PX, -PZ).normalize(), da = Math.atan2(toC.y, toC.x);
 
+    // The Dock
+    var dU = new THREE.Vector3(-toC.x, 0, -toC.y), Sd = new THREE.Vector3(-dU.z, 0, dU.x), sp0 = polar(1.2, da), S0 = new THREE.Vector3(sp0[0], 0, sp0[1]);
+    var DL = 6.6, DW = 1.8, DY = WY + 0.32, yawD = -Math.atan2(dU.z, dU.x);
+    function dAt(al, ac, y) { return S0.clone().addScaledVector(dU, al).addScaledVector(Sd, ac).setY(y); }
+    var dockWood = paint(512, 1024, function (g, w, h) {                  // sun-bleached, weathered boards
+      g.fillStyle = '#8c8174'; g.fillRect(0, 0, w, h);
+      for (var b = 0; b < 160; b++) { var x = r() * w, y = r() * h, rad = 20 + r() * 80, tone = r() < 0.5 ? '110,96,80' : '170,164,156'; var bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, 'rgba(' + tone + ',.3)'); bl.addColorStop(1, 'rgba(' + tone + ',0)'); g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+      var knots = []; for (var k = 0; k < 9; k++) knots.push([r() * w, r() * h, 6 + r() * 10]);
+      for (var i = 0; i < 260; i++) {                                    // grain flowing round the knots
+        var x0 = r() * w, dark = r() < 0.6; g.strokeStyle = dark ? 'rgba(60,50,40,' + (0.12 + r() * 0.22) + ')' : 'rgba(205,198,188,' + (0.1 + r() * 0.15) + ')'; g.lineWidth = 0.5 + r() * 1.6;
+        g.beginPath();
+        for (var y2 = 0; y2 <= h; y2 += 8) {
+          var x2 = x0 + Math.sin(y2 * 0.008 + i) * 4 + Math.sin(y2 * 0.031 + i * 3) * 1.5;
+          knots.forEach(function (kn) { var dy = y2 - kn[1], dx = x2 - kn[0], d = Math.hypot(dx, dy); if (d < kn[2] * 4) x2 += (dx >= 0 ? 1 : -1) * kn[2] * 2.2 * Math.exp(-d / (kn[2] * 1.4)); });
+          if (y2) g.lineTo(x2, y2); else g.moveTo(x2, y2);
+        }
+        g.stroke();
+      }
+      knots.forEach(function (kn) {
+        var kg = g.createRadialGradient(kn[0], kn[1], 0, kn[0], kn[1], kn[2]); kg.addColorStop(0, '#3a2c22'); kg.addColorStop(0.6, '#5a4838'); kg.addColorStop(1, 'rgba(90,72,56,0)');
+        g.fillStyle = kg; g.beginPath(); g.ellipse(kn[0], kn[1], kn[2] * 0.8, kn[2] * 1.3, 0, 0, 6.29); g.fill();
+        g.strokeStyle = 'rgba(40,30,22,.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(kn[0], kn[1] + kn[2]); g.lineTo(kn[0] + (r() - 0.5) * 6, kn[1] + kn[2] * 4); g.stroke();   // a check running from it
+      });
+      for (var c = 0; c < 30; c++) { var cx = r() * w, cy = r() * h, cl = 30 + r() * 160; g.strokeStyle = 'rgba(30,24,18,.7)'; g.lineWidth = 0.6 + r() * 1.2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + (r() - 0.5) * 4, cy + cl); g.stroke(); }   // cracks along the grain
+      for (var d = 0; d < 3000; d++) { g.fillStyle = 'rgba(' + (r() < 0.5 ? '40,34,28' : '220,215,205') + ',' + (0.04 + r() * 0.08) + ')'; g.fillRect(r() * w, r() * h, 1, 1 + r() * 4); }
+    }, true);
+    var woodMat = new THREE.MeshStandardMaterial({ map: dockWood, bumpMap: dockWood, bumpScale: 0.012, roughness: 0.92, vertexColors: true });
+    var metalMat = new THREE.MeshStandardMaterial({ color: '#8a8c8e', metalness: 0.75, roughness: 0.45, vertexColors: true });
+    var dParts = [], dMetal = [], dQ = new THREE.Quaternion(), dE = new THREE.Euler(), dS = new THREE.Vector3();
+    function dMat(pos, yawOff, rx, rz, s) { dE.set(rx || 0, yawD + (yawOff || 0), rz || 0); dQ.setFromEuler(dE); dS.set(s ? s[0] : 1, s ? s[1] : 1, s ? s[2] : 1); return new THREE.Matrix4().compose(pos, dQ, dS); }
+    function boxUV(w, h, d, su, sv) { var g = new THREE.BoxGeometry(w, h, d, 1, 1, 3), uv = g.attributes.uv, ou = r(), ov = r(); for (var i = 0; i < uv.count; i++) uv.setXY(i, ou + uv.getX(i) * su, ov + uv.getY(i) * sv); return g; }
+    var tints = [[0.9, 0.88, 0.85], [0.82, 0.76, 0.68], [0.78, 0.7, 0.6], [0.95, 0.93, 0.9]];
+    // Deck boards across the beams, with narrow gaps, each a little different
+    var nailHead = new THREE.CylinderGeometry(0.006, 0.006, 0.004, 6);
+    for (var al = -0.35, n = 0; al < DL; n++) {
+      var bw = 0.135 + r() * 0.025, newer = r() < 0.06, t = newer ? [1.05, 0.86, 0.66] : tints[Math.floor(r() * tints.length)], sh = 0.92 + r() * 0.12;
+      var bg = boxUV(bw, 0.038, DW + (r() - 0.5) * 0.05, 0.12, 0.85), bp = bg.attributes.position;
+      for (var i = 0; i < bp.count; i++) { var z = bp.getZ(i) / (DW / 2); bp.setY(i, bp.getY(i) + (r() < 0 ? 0 : 0.004 * (1 - z * z)) * (n % 3 === 0 ? 1 : 0.3)); }   // some boards bowed a touch
+      bg.computeVertexNormals();
+      var c = al + bw / 2, end = (r() - 0.5) * 0.03;
+      dParts.push([bg, dMat(dAt(c, end, DY + (r() - 0.5) * 0.005), (r() - 0.5) * 0.012, 0, (r() - 0.5) * 0.02), [t[0] * sh, t[1] * sh, t[2] * sh]]);
+      [-0.72, 0, 0.72].forEach(function (ac) { [-0.035, 0.035].forEach(function (o) {   // two nails into each beam
+        var rust = r() < 0.4; dMetal.push([nailHead, dMat(dAt(c + o, ac + end, DY + 0.021)), rust ? [0.42, 0.26, 0.14] : [0.32, 0.31, 0.3]]);
+      }); });
+      al += bw + 0.008 + r() * 0.008;
+    }
+    // Beams under the boards, and a header at each end
+    [-0.72, 0, 0.72].forEach(function (ac) { dParts.push([boxUV(DL + 0.4, 0.16, 0.09, 0.08, 1), dMat(dAt(DL / 2 - 0.15, ac, DY - 0.1)), [0.6, 0.55, 0.5]]); });
+    [-0.3, DL - 0.04].forEach(function (al2) { dParts.push([boxUV(0.08, 0.2, DW + 0.1, 0.1, 1), dMat(dAt(al2, 0, DY - 0.09)), [0.62, 0.56, 0.5]]); });
+    [DL * 0.33, DL * 0.66].forEach(function (al2) { dParts.push([boxUV(0.06, 0.12, DW - 0.1, 0.08, 1), dMat(dAt(al2, 0, DY - 0.12)), [0.55, 0.5, 0.45]]); });   // cross braces
+    // Pilings driven into the bed: wet and dark at the water line, green with weed below it
+    function pileColour(x, y, z) {
+      if (y < WY - 0.02) { var k = Math.min(1, (WY - y) / 0.25); return [0.42 - k * 0.14, 0.44 - k * 0.1, 0.3 - k * 0.12]; }
+      if (y < WY + 0.12) return [0.5, 0.46, 0.4];
+      return [0.86, 0.8, 0.72];
+    }
+    var pileTops = [];
+    [-0.35, 1.9, 4.1, DL - 0.1].forEach(function (al2, pi) { [-1, 1].forEach(function (sd) {
+      var base = dAt(al2, sd * (DW / 2 + 0.07), 0), bot = Math.min(groundHeight(base.x, base.z, FARM), WY) - 0.35, tall = pi === 0 || pi === 3, top = DY + (tall ? 0.75 : 0.06), h = top - bot;
+      var pg = new THREE.CylinderGeometry(0.105, 0.12, h, 16, 10), pp = pg.attributes.position, ph = r() * 9;
+      for (var i = 0; i < pp.count; i++) { var a = Math.atan2(pp.getZ(i), pp.getX(i)), k = 1 + 0.05 * Math.sin(a * 3 + ph) + 0.03 * Math.sin(pp.getY(i) * 4 + a * 2 + ph); pp.setX(i, pp.getX(i) * k); pp.setZ(i, pp.getZ(i) * k); }
+      var uvp = pg.attributes.uv, ou = r(); for (var j = 0; j < uvp.count; j++) uvp.setXY(j, ou + uvp.getX(j) * 0.35, uvp.getY(j) * h * 0.5);
+      pg.computeVertexNormals();
+      dParts.push([pg, new THREE.Matrix4().makeTranslation(base.x, bot + h / 2, base.z), pileColour]);
+      var capG = new THREE.CylinderGeometry(0.1, 0.105, 0.02, 16); dParts.push([capG, new THREE.Matrix4().makeTranslation(base.x, top, base.z), [0.55, 0.48, 0.4]]);   // the sawn end, greyed
+      if (tall) pileTops.push(new THREE.Vector3(base.x, top - 0.18, base.z));
+    }); });
+    // Cleats on the deck at the far end, and a ladder down into the water
+    [-1, 1].forEach(function (sd) {
+      var at = dAt(DL - 0.35, sd * 0.68, DY + 0.02);
+      dMetal.push([new THREE.BoxGeometry(0.05, 0.02, 0.07), dMat(at.clone().setY(DY + 0.03)), [0.45, 0.45, 0.46]]);
+      dMetal.push([new THREE.CylinderGeometry(0.013, 0.016, 0.24, 8), dMat(at.clone().setY(DY + 0.055), 0, Math.PI / 2), [0.5, 0.5, 0.52]]);
+    });
+    var ladY0 = Math.max(groundHeight(dAt(DL + 0.08, 0, 0).x, dAt(DL + 0.08, 0, 0).z, FARM), WY - 0.9);
+    [-0.22, 0.22].forEach(function (ac) {
+      var top = DY + 0.55, h = top - ladY0, rail = new THREE.TorusGeometry(0.12, 0.016, 8, 16, Math.PI);
+      dMetal.push([new THREE.CylinderGeometry(0.016, 0.016, h, 10), new THREE.Matrix4().compose(dAt(DL + 0.12, ac, ladY0 + h / 2), new THREE.Quaternion(), new THREE.Vector3(1, 1, 1)), [0.62, 0.63, 0.64]]);
+      dMetal.push([rail, dMat(dAt(DL, ac, top), 0, 0, 0), [0.62, 0.63, 0.64]]);   // curving over onto the deck
+    });
+    for (var ry = DY - 0.05; ry > ladY0 + 0.05; ry -= 0.28) dMetal.push([new THREE.CylinderGeometry(0.014, 0.014, 0.44, 8), dMat(dAt(DL + 0.12, 0, ry), 0, Math.PI / 2, 0), ry < WY ? [0.36, 0.4, 0.3] : [0.6, 0.61, 0.62]]);
+    var dockMesh = new THREE.Mesh(merge(dParts, true), woodMat), metalMesh = new THREE.Mesh(merge(dMetal, true), metalMat);
+    dockMesh.castShadow = dockMesh.receiveShadow = metalMesh.castShadow = true; scene.add(dockMesh); scene.add(metalMesh);
+    // Rope: twisted hemp slung between the tall posts and wrapped round them
+    var ropeTex = paint(64, 256, function (g, w, h) {
+      g.fillStyle = '#b39a6e'; g.fillRect(0, 0, w, h);
+      for (var y = -h; y < h * 2; y += 9) { g.strokeStyle = 'rgba(70,55,35,.55)'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y + 22); g.stroke(); g.strokeStyle = 'rgba(230,215,180,.35)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, y + 3); g.lineTo(w, y + 25); g.stroke(); }
+      for (var f = 0; f < 300; f++) { g.fillStyle = 'rgba(240,225,190,.25)'; g.fillRect(r() * w, r() * h, 1, 3); }
+    }, true);
+    var ropeMat = new THREE.MeshStandardMaterial({ map: ropeTex, roughness: 0.95 }), ropes = [];
+    function ropeBetween(a, b, sag) {
+      var pts = []; for (var i = 0; i <= 20; i++) { var k = i / 20; pts.push(a.clone().lerp(b, k).add(new THREE.Vector3(0, -sag * 4 * k * (1 - k), 0))); }
+      var tg = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.022, 8, false), uv = tg.attributes.uv; for (var j = 0; j < uv.count; j++) uv.setXY(j, uv.getY(j), uv.getX(j) * a.distanceTo(b) * 3);
+      ropes.push([tg, new THREE.Matrix4()]);
+    }
+    var byS = [[], []]; pileTops.forEach(function (p, i) { byS[i % 2].push(p); });
+    byS.forEach(function (side) { ropeBetween(side[0], side[1], 0.32); side.forEach(function (p) { for (var w2 = 0; w2 < 3; w2++) ropes.push([new THREE.TorusGeometry(0.125, 0.021, 8, 20), new THREE.Matrix4().compose(p.clone().setY(p.y - 0.02 + w2 * 0.04), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)), new THREE.Vector3(1, 1, 1))]); }); });
+    var coil = new THREE.TorusGeometry(0.11, 0.02, 8, 24);                // a coil of spare line on the deck
+    for (var cl2 = 0; cl2 < 4; cl2++) ropes.push([coil, new THREE.Matrix4().compose(dAt(DL - 0.75, -0.45, DY + 0.04 + cl2 * 0.03), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)), new THREE.Vector3(1 - cl2 * 0.08, 1 - cl2 * 0.08, 1))]);
+    var ropeMesh = new THREE.Mesh(merge(ropes), ropeMat); ropeMesh.castShadow = true; scene.add(ropeMesh);
+    var onDock = function (x, z) { var v = new THREE.Vector3(x - S0.x, 0, z - S0.z), al3 = v.dot(dU), ac3 = v.dot(Sd); return al3 > -0.4 && al3 < DL && Math.abs(ac3) < DW / 2 - 0.12; };
+
+
     // Rocks
     var rockTex = rockTexture(false), rockMat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.03, vertexColors: true, roughness: 0.88 });
     for (var rk = 0; rk < 26; rk++) {
@@ -1330,9 +1432,9 @@
         nm.getNormalMatrix(pt[1]);
         for (var i = 0; i < p.count; i++) {
           v.fromBufferAttribute(p, i).applyMatrix4(pt[1]); P.push(v.x, v.y, v.z);
+          if (colors) { var c = typeof pt[2] === 'function' ? pt[2](v.x, v.y, v.z) : (pt[2] || [1, 1, 1]); C.push(c[0], c[1], c[2]); }
           v.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); N.push(v.x, v.y, v.z);
           U.push(u ? u.getX(i) : 0, u ? u.getY(i) : 0);
-          if (colors) { var c = pt[2] || [1, 1, 1]; C.push(c[0], c[1], c[2]); }
         }
         if (g.index) for (var j = 0; j < g.index.count; j++) I.push(g.index.getX(j) + off); else for (var j2 = 0; j2 < p.count; j2++) I.push(j2 + off);
         off += p.count;
@@ -1421,8 +1523,8 @@
 
     var kP = new THREE.Vector3(), kQ = new THREE.Quaternion(), kE = new THREE.Euler();
     return {
-      walkable: function (x, z) { return pondT(x, z) > 1.07; },
-      floor: function (x, z) { return groundHeight(x, z, FARM); },
+      walkable: function (x, z) { return onDock(x, z) || pondT(x, z) > 1.07; },
+      floor: function (x, z) { var g = groundHeight(x, z, FARM); return onDock(x, z) ? Math.max(g, DY + 0.02) : g; },
       update: function (t, dt) {
         waterMat.uniforms.uSun.value.copy(sun.position).normalize();
         pads.forEach(function (p, i) {
