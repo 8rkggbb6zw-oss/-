@@ -1166,7 +1166,7 @@
 
     // The Dock
     var dU = new THREE.Vector3(-toC.x, 0, -toC.y), Sd = new THREE.Vector3(-dU.z, 0, dU.x), sp0 = polar(1.2, da), S0 = new THREE.Vector3(sp0[0], 0, sp0[1]);
-    var DL = 6.6, DW = 1.8, DY = WY + 0.32, yawD = -Math.atan2(dU.z, dU.x);
+    var DL = 9.8, DW = 1.8, DY = WY + 0.32, yawD = -Math.atan2(dU.z, dU.x);
     function dAt(al, ac, y) { return S0.clone().addScaledVector(dU, al).addScaledVector(Sd, ac).setY(y); }
     var dockWood = paint(512, 1024, function (g, w, h) {                  // sun-bleached, weathered boards
       g.fillStyle = '#8c8174'; g.fillRect(0, 0, w, h);
@@ -1213,7 +1213,7 @@
     // Beams under the boards, and a header at each end
     [-0.72, 0, 0.72].forEach(function (ac) { dParts.push([boxUV(DL + 0.4, 0.16, 0.09, 0.08, 1), dMat(dAt(DL / 2 - 0.15, ac, DY - 0.1)), [0.6, 0.55, 0.5]]); });
     [-0.3, DL - 0.04].forEach(function (al2) { dParts.push([boxUV(0.08, 0.2, DW + 0.1, 0.1, 1), dMat(dAt(al2, 0, DY - 0.09)), [0.62, 0.56, 0.5]]); });
-    [DL * 0.33, DL * 0.66].forEach(function (al2) { dParts.push([boxUV(0.06, 0.12, DW - 0.1, 0.08, 1), dMat(dAt(al2, 0, DY - 0.12)), [0.55, 0.5, 0.45]]); });   // cross braces
+    [DL * 0.2, DL * 0.4, DL * 0.6, DL * 0.8].forEach(function (al2) { dParts.push([boxUV(0.06, 0.12, DW - 0.1, 0.08, 1), dMat(dAt(al2, 0, DY - 0.12)), [0.55, 0.5, 0.45]]); });   // cross braces
     // Pilings driven into the bed: wet and dark at the water line, green with weed below it
     function pileColour(x, y, z) {
       if (y < WY - 0.02) { var k = Math.min(1, (WY - y) / 0.25); return [0.42 - k * 0.14, 0.44 - k * 0.1, 0.3 - k * 0.12]; }
@@ -1221,8 +1221,8 @@
       return [0.86, 0.8, 0.72];
     }
     var pileTops = [];
-    [-0.35, 1.9, 4.1, DL - 0.1].forEach(function (al2, pi) { [-1, 1].forEach(function (sd) {
-      var base = dAt(al2, sd * (DW / 2 + 0.07), 0), bot = Math.min(groundHeight(base.x, base.z, FARM), WY) - 0.35, tall = pi === 0 || pi === 3, top = DY + (tall ? 0.75 : 0.06), h = top - bot;
+    var PILES = [-0.35, 1.9, 4.1, 6.1, 8.0, DL - 0.1]; PILES.forEach(function (al2, pi) { [-1, 1].forEach(function (sd) {
+      var base = dAt(al2, sd * (DW / 2 + 0.07), 0), bot = Math.min(groundHeight(base.x, base.z, FARM), WY) - 0.35, tall = pi === 0 || pi === PILES.length - 1, top = DY + (tall ? 0.75 : 0.06), h = top - bot;
       var pg = new THREE.CylinderGeometry(0.105, 0.12, h, 16, 10), pp = pg.attributes.position, ph = r() * 9;
       for (var i = 0; i < pp.count; i++) { var a = Math.atan2(pp.getZ(i), pp.getX(i)), k = 1 + 0.05 * Math.sin(a * 3 + ph) + 0.03 * Math.sin(pp.getY(i) * 4 + a * 2 + ph); pp.setX(i, pp.getX(i) * k); pp.setZ(i, pp.getZ(i) * k); }
       var uvp = pg.attributes.uv, ou = r(); for (var j = 0; j < uvp.count; j++) uvp.setXY(j, ou + uvp.getX(j) * 0.35, uvp.getY(j) * h * 0.5);
