@@ -1496,14 +1496,15 @@
     });
 
     // Koi
-    var KOI = [                                                         // back, belly, patches, fins, glow
-      { name: 'moon', back: '#5a6e8c', belly: '#eef4fb', patch: '#c9dcf2', fin: '#bfe2ff', glow: '#5fc8ff', hue: 0.56 },
-      { name: 'amethyst', back: '#4a2a78', belly: '#efe3fb', patch: '#9b5ad8', fin: '#d9b6ff', glow: '#b06bff', hue: 0.76 },
-      { name: 'rose', back: '#f3ece6', belly: '#fff8f4', patch: '#e2557a', fin: '#ffc6d8', glow: '#ff6fa8', hue: 0.94 },
-      { name: 'sunfire', back: '#e8742a', belly: '#fff0d6', patch: '#f8c23a', fin: '#ffd88a', glow: '#ffb43a', hue: 0.1 }
+    var KOI = [                                                         // body deep and pale, fin base and fin tip, glow
+      { deep: '#1a2c5a', pale: '#cfe6ff', fin1: '#9fe4ff', fin2: '#c8a8ff', glow: '#62d4ff', hue: 0.55 },   // Moonveil
+      { deep: '#2a0c4a', pale: '#e6c6ff', fin1: '#c78bff', fin2: '#ff7ad9', glow: '#b26bff', hue: 0.78 },   // Amethyst
+      { deep: '#5a1430', pale: '#ffe2ec', fin1: '#ff8fbd', fin2: '#ffd3a0', glow: '#ff6fae', hue: 0.95 },   // Rose
+      { deep: '#5a2a06', pale: '#fff1c8', fin1: '#ffc65a', fin2: '#ff7a3a', glow: '#ffb33c', hue: 0.1 },    // Sunfire
+      { deep: '#06343a', pale: '#c8fff0', fin1: '#5effd0', fin2: '#7ab8ff', glow: '#3cf2c8', hue: 0.46 }    // Aurora
     ];
     function hb(u) { return 0.058 * (Math.pow(Math.sin(Math.PI * Math.pow(Math.min(1, u), 0.6)), 0.85) * 0.86 + u * 0.14); }   // the body's height along its length
-    var koiBody = (function () {                                         // nose at +x, tail at -x; a deep, rounded body narrowing to the tail
+    var koiBody = (function () {                                         // nose at +x, tail at -x
       var NU = 30, NA = 18, pos = [], uv = [], idx = [];
       for (var i = 0; i <= NU; i++) for (var j = 0; j <= NA; j++) {
         var u = i / NU, a = j / NA * Math.PI * 2, hy = hb(u) + 0.0005, hz = hy * (0.7 - 0.12 * u);
@@ -1516,48 +1517,80 @@
       var nm = g.attributes.normal; for (var i3 = 0; i3 <= NU; i3++) { var s0 = i3 * (NA + 1), s1 = s0 + NA, nx = nm.getX(s0) + nm.getX(s1), ny = nm.getY(s0) + nm.getY(s1), nz = nm.getZ(s0) + nm.getZ(s1), l = Math.hypot(nx, ny, nz) || 1; nm.setXYZ(s0, nx / l, ny / l, nz / l); nm.setXYZ(s1, nx / l, ny / l, nz / l); }
       return g;
     })();
-    var koiFins = (function () {                                          // tail, back fin, side fins, belly fins: all thin and see-through
-      function fin(pts) { var s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i += 2) s.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); return new THREE.ShapeGeometry(s, 14); }
+    var koiFins = (function () {                                          // long silk fins that trail and flutter
+      function fin(pts) { var s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i += 2) s.quadraticCurveTo(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]); return new THREE.ShapeGeometry(s, 18); }
       function uvBox(g) { g.computeBoundingBox(); var b = g.boundingBox, p = g.attributes.position, uv = g.attributes.uv; for (var i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - b.min.x) / (b.max.x - b.min.x || 1), (p.getY(i) - b.min.y) / (b.max.y - b.min.y || 1)); return g; }
-      var tail = uvBox(fin([[-0.185, 0.008], [-0.27, 0.06], [-0.42, 0.095], [-0.39, 0.03], [-0.345, 0], [-0.39, -0.03], [-0.42, -0.095], [-0.27, -0.06], [-0.185, -0.008]]));
-      var dorsal = uvBox(fin([[0.07, hb(0.33) * 0.9], [0.02, hb(0.45) + 0.05], [-0.1, hb(0.75) + 0.035], [-0.13, hb(0.82) + 0.01], [-0.12, hb(0.8) * 0.7]]));
-      var anal = uvBox(fin([[-0.07, -hb(0.67) * 0.85], [-0.1, -hb(0.72) - 0.035], [-0.14, -hb(0.83) - 0.012], [-0.135, -hb(0.82) * 0.8], [-0.12, -hb(0.78) * 0.8]]));
-      var side = uvBox(fin([[0, 0], [0.005, -0.03], [-0.03, -0.075], [-0.055, -0.07], [-0.06, -0.04], [-0.04, -0.01], [0, 0]]));
+      var tail = uvBox(fin([[-0.18, 0.012], [-0.3, 0.13], [-0.5, 0.17], [-0.66, 0.16], [-0.7, 0.1], [-0.58, 0.07], [-0.5, 0.02], [-0.47, 0], [-0.5, -0.02], [-0.58, -0.07], [-0.7, -0.1], [-0.66, -0.16], [-0.5, -0.17], [-0.3, -0.13], [-0.18, -0.012]]));
+      var dorsal = uvBox(fin([[0.09, hb(0.3) * 0.9], [0.02, hb(0.45) + 0.08], [-0.14, hb(0.8) + 0.1], [-0.3, 0.1], [-0.33, 0.05], [-0.2, hb(0.88) + 0.01], [-0.14, hb(0.82) * 0.7]]));
+      var anal = uvBox(fin([[-0.06, -hb(0.65) * 0.85], [-0.12, -hb(0.72) - 0.06], [-0.3, -0.08], [-0.31, -0.04], [-0.17, -hb(0.85) * 0.8], [-0.14, -hb(0.8) * 0.8], [-0.06, -hb(0.65) * 0.85]]));
+      var ribbon = uvBox(fin([[0, 0], [0.01, -0.04], [-0.06, -0.1], [-0.2, -0.16], [-0.27, -0.14], [-0.14, -0.06], [-0.05, -0.01], [-0.02, 0.005], [0, 0]]));
       var parts = [[tail, new THREE.Matrix4()], [dorsal, new THREE.Matrix4()], [anal, new THREE.Matrix4()]];
       [-1, 1].forEach(function (sd) {
-        var m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 1.05, 0, 0.25)); m.setPosition(0.105, -0.028, sd * 0.03); parts.push([side, m]);                  // pectoral fins, spread to the side
-        var m2 = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.5, 0, 0.1)); m2.setPosition(-0.02, -0.045, sd * 0.015); m2.multiply(new THREE.Matrix4().makeScale(0.7, 0.7, 0.7)); parts.push([side, m2]);   // pelvic fins
+        var m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.95, sd * 0.25, 0.1)); m.setPosition(0.105, -0.028, sd * 0.03); m.multiply(new THREE.Matrix4().makeScale(0.75, 0.75, 0.75)); parts.push([ribbon, m]);   // long side ribbons streaming back
+        var m2 = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(sd * 0.45, sd * 0.1, 0.05)); m2.setPosition(-0.02, -0.045, sd * 0.015); m2.multiply(new THREE.Matrix4().makeScale(0.6, 0.6, 0.6)); parts.push([ribbon, m2]);
       });
       return merge(parts);
     })();
+    var koiCrown = (function () {                                         // a crest of crystal spines down the back, and two long whiskers
+      var parts = [], spine = new THREE.ConeGeometry(1, 1, 6, 1); spine.translate(0, 0.5, 0);
+      for (var i = 0; i < 9; i++) {
+        var u = 0.18 + i * 0.065, x = 0.2 - u * 0.4, h = 0.022 + 0.03 * Math.sin(Math.PI * (i + 0.5) / 9), m = new THREE.Matrix4().makeRotationZ(0.35 + i * 0.04);
+        m.premultiply(new THREE.Matrix4().makeTranslation(x, hb(u) * 0.96 - 0.004, 0)); m.multiply(new THREE.Matrix4().makeScale(0.006, h, 0.004)); parts.push([spine, m]);
+      }
+      [-1, 1].forEach(function (sd) {
+        var pts = [[0.19, -0.012, sd * 0.012], [0.25, -0.02, sd * 0.04], [0.29, -0.005, sd * 0.07], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); });
+        parts.push([new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.0022, 5, false), new THREE.Matrix4()]);
+      });
+      return merge(parts);
+    })();
+    var orbG = new THREE.SphereGeometry(0.008, 10, 8);
     function koiTextures(kind, seed) {
-      var kr = rand(seed), patches = [];
-      for (var i = 0; i < 6; i++) patches.push([0.15 + kr() * 0.7, 0.1 + kr() * 0.8, 0.06 + kr() * 0.12, 0.08 + kr() * 0.16]);
-      var skin = paint(512, 256, function (g, w, h) {
-        var gr = g.createLinearGradient(0, 0, 0, h);                       // dark back (top and bottom edges of the map), pale belly (middle)
-        gr.addColorStop(0, kind.back); gr.addColorStop(0.3, kind.belly); gr.addColorStop(0.5, kind.belly); gr.addColorStop(0.7, kind.belly); gr.addColorStop(1, kind.back);
+      var kr = rand(seed);
+      var skin = paint(512, 256, function (g, w, h) {                     // a deep nebula back fading to a pale pearl belly, swirled and starry
+        var gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, kind.deep); gr.addColorStop(0.2, kind.fin1); gr.addColorStop(0.36, kind.pale); gr.addColorStop(0.64, kind.pale); gr.addColorStop(0.8, kind.fin1); gr.addColorStop(1, kind.deep);
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
-        patches.forEach(function (p) { [0, 1].forEach(function (m) { var y = (m ? 1 - p[1] * 0.35 : p[1] * 0.35) * h; g.fillStyle = kind.patch; g.globalAlpha = 0.85; g.beginPath(); for (var a = 0; a <= 6.29; a += 0.3) { var rr2 = 1 + (kr() - 0.5) * 0.35; g.lineTo(p[0] * w + Math.cos(a) * p[2] * w * rr2, y + Math.sin(a) * p[3] * h * rr2); } g.fill(); }); });
+        for (var c = 0; c < 40; c++) { var x = kr() * w, y = kr() * h, rad = 20 + kr() * 70, cl = kr() < 0.5 ? kind.fin1 : kind.fin2, bl = g.createRadialGradient(x, y, 0, x, y, rad); bl.addColorStop(0, cl); bl.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = 0.18 + kr() * 0.2; g.fillStyle = bl; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
         g.globalAlpha = 1;
-        for (var row = 0; row < 26; row++) for (var col = 0; col < 54; col++) {   // overlapping scales, each catching the light at its rim
-          var x = (col + (row % 2) * 0.5) / 54 * w, y = row / 26 * h, sr = w / 54 * 0.62;
-          g.strokeStyle = 'rgba(255,255,255,' + (0.06 + kr() * 0.1) + ')'; g.lineWidth = 0.8; g.beginPath(); g.arc(x, y, sr, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
-          g.strokeStyle = 'rgba(0,0,0,.06)'; g.beginPath(); g.arc(x, y + 1.2, sr, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke();
+        for (var row = 0; row < 26; row++) for (var col = 0; col < 54; col++) {   // fine scales with pearly rims
+          var sx = (col + (row % 2) * 0.5) / 54 * w, sy = row / 26 * h, sr = w / 54 * 0.62;
+          g.strokeStyle = 'rgba(255,255,255,' + (0.08 + kr() * 0.12) + ')'; g.lineWidth = 0.8; g.beginPath(); g.arc(sx, sy, sr, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
         }
-        var head = g.createLinearGradient(0, 0, w * 0.18, 0); head.addColorStop(0, 'rgba(255,255,255,.25)'); head.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = head; g.fillRect(0, 0, w * 0.18, h);   // smooth, scaleless head
-        [0.25, 0.75].forEach(function (lv) { g.fillStyle = 'rgba(20,20,30,.6)'; g.beginPath(); g.arc(w * 0.075, lv * h, 6.5, 0, 6.29); g.fill(); g.fillStyle = '#0a0a10'; g.beginPath(); g.arc(w * 0.075, lv * h, 4.5, 0, 6.29); g.fill(); g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.arc(w * 0.072, lv * h - 1.5, 1.4, 0, 6.29); g.fill(); });   // eyes
+        for (var s = 0; s < 260; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.3 + kr() * 0.6) + ')'; g.fillRect(kr() * w, kr() * h, 1 + kr() * 1.2, 1 + kr() * 1.2); }   // stars
+        [0.25, 0.75].forEach(function (lv) {                              // large dark eyes with a glowing ring
+          var ex = w * 0.075, ey = lv * h; g.fillStyle = kind.fin1; g.beginPath(); g.arc(ex, ey, 8, 0, 6.29); g.fill();
+          g.fillStyle = '#05030a'; g.beginPath(); g.arc(ex, ey, 6, 0, 6.29); g.fill(); g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(ex - 1.5, ey - 2, 1.8, 0, 6.29); g.fill();
+        });
       }, true);
-      var glow = paint(512, 256, function (g, w, h) {                     // what glows: a line of dots along each side, and soft light in the patches
-        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
-        [0.25, 0.75].forEach(function (lv) { for (var d = 0; d < 34; d++) { if (kr() < 0.3) continue; var x = w * (0.17 + d * 0.021 + (kr() - 0.5) * 0.008), y0 = lv * h + (kr() - 0.5) * 5, sz = 2 + kr() * 3.5, gl = g.createRadialGradient(x, y0, 0, x, y0, sz); gl.addColorStop(0, 'rgba(255,255,255,' + (0.5 + kr() * 0.5) + ')'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(x - sz, y0 - sz, sz * 2, sz * 2); } });
-        patches.forEach(function (p) { [0, 1].forEach(function (m) { var y = (m ? 1 - p[1] * 0.35 : p[1] * 0.35) * h, gl = g.createRadialGradient(p[0] * w, y, 0, p[0] * w, y, p[2] * w); gl.addColorStop(0, 'rgba(255,255,255,.35)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); }); });
+      var glow = paint(512, 256, function (g, w, h) {                     // runes and glowing lines that light up
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.lineCap = 'round';
+        [0.25, 0.75].forEach(function (lv) {
+          g.lineWidth = 1.6; g.shadowColor = '#fff'; g.shadowBlur = 6; g.beginPath();   // the glowing line along each side
+          for (var x = w * 0.15; x < w * 0.95; x += 6) { var y = lv * h + Math.sin(x * 0.05) * 3; if (x === w * 0.15) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke();
+          for (var d = 0; d < 9; d++) { if (kr() < 0.35) continue;                                   // little rune marks above and below it
+            var rx = w * (0.2 + d * 0.085), ry = lv * h + (d % 2 ? -11 : 11), rs = 2.2 + kr() * 1.6; g.lineWidth = 0.9; g.beginPath();
+            var kindR = Math.floor(kr() * 4);
+            if (kindR === 0) { g.arc(rx, ry, rs, 0, 6.29); g.moveTo(rx, ry - rs); g.lineTo(rx, ry + rs); }
+            else if (kindR === 1) { g.moveTo(rx - rs, ry + rs); g.lineTo(rx, ry - rs); g.lineTo(rx + rs, ry + rs); g.moveTo(rx - rs * 0.5, ry); g.lineTo(rx + rs * 0.5, ry); }
+            else if (kindR === 2) { g.moveTo(rx, ry - rs); g.lineTo(rx + rs, ry); g.lineTo(rx, ry + rs); g.lineTo(rx - rs, ry); g.closePath(); }
+            else { g.arc(rx, ry, rs, 0.3, 2.8); g.moveTo(rx - rs, ry - rs); g.lineTo(rx + rs, ry - rs); }
+            g.stroke();
+          }
+        });
+        g.shadowBlur = 0;
+        for (var s = 0; s < 140; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.4 + kr() * 0.6) + ')'; g.beginPath(); g.arc(kr() * w, kr() * h, 0.6 + kr() * 1.2, 0, 6.29); g.fill(); }   // sparkling stars
+        [0.25, 0.75].forEach(function (lv) { var gl = g.createRadialGradient(w * 0.075, lv * h, 0, w * 0.075, lv * h, 11); gl.addColorStop(0, 'rgba(255,255,255,0)'); gl.addColorStop(0.65, 'rgba(255,255,255,.9)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gl; g.fillRect(0, 0, w, h); });   // glowing eye rings
       }, false);
-      var finT = paint(256, 256, function (g, w, h) {                     // fine rays, clear near the body, glowing toward the edges
-        g.clearRect(0, 0, w, h);
-        var gr = g.createRadialGradient(w * 0.05, h / 2, 0, w * 0.05, h / 2, w * 1.05); gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(0.6, 'rgba(255,255,255,.4)'); gr.addColorStop(1, 'rgba(255,255,255,.85)');
+      var finT = paint(512, 256, function (g, w, h) {                      // silk: the base colour at the body (right) shifting to the tip colour, fine rays, a luminous edge, sparkles
+        var gr = g.createLinearGradient(w, 0, 0, 0); gr.addColorStop(0, kind.fin1); gr.addColorStop(0.55, kind.fin2); gr.addColorStop(1, '#ffffff');
         g.fillStyle = gr; g.fillRect(0, 0, w, h);
-        for (var i = 0; i < 40; i++) { var a = (i / 39 - 0.5) * 2.6; g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(w * 0.02, h / 2); g.quadraticCurveTo(w * 0.5 * Math.cos(a), h / 2 + Math.sin(a) * h * 0.4, Math.cos(a) * w * 1.1, h / 2 + Math.sin(a) * h * 0.9); g.stroke(); }
-      }, false);
+        var al = g.createLinearGradient(w, 0, 0, 0); al.addColorStop(0, 'rgba(0,0,0,.5)'); al.addColorStop(0.5, 'rgba(0,0,0,.72)'); al.addColorStop(1, 'rgba(0,0,0,.4)');   // thinner and clearer in the middle
+        g.globalCompositeOperation = 'destination-out'; g.fillStyle = al; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'source-over';
+        for (var i = 0; i < 60; i++) { var y0 = h / 2 + (i / 59 - 0.5) * h * 0.3, y1 = (i / 59) * h; g.strokeStyle = 'rgba(255,255,255,' + (0.25 + kr() * 0.3) + ')'; g.lineWidth = 0.9 + kr(); g.beginPath(); g.moveTo(w, y0); g.bezierCurveTo(w * 0.6, y0, w * 0.4, y1 + Math.sin(i) * 8, 0, y1); g.stroke(); }
+        for (var s = 0; s < 180; s++) { g.fillStyle = 'rgba(255,255,255,' + (0.5 + kr() * 0.5) + ')'; g.beginPath(); g.arc(kr() * w * 0.8, kr() * h, 0.6 + kr() * 1.4, 0, 6.29); g.fill(); }
+        var eg = g.createLinearGradient(0, 0, 0, h); eg.addColorStop(0, 'rgba(255,255,255,.9)'); eg.addColorStop(0.08, 'rgba(255,255,255,0)'); eg.addColorStop(0.92, 'rgba(255,255,255,0)'); eg.addColorStop(1, 'rgba(255,255,255,.9)');
+        g.fillStyle = eg; g.fillRect(0, 0, w * 0.75, h);                  // a glowing edge
+        var tg = g.createLinearGradient(0, 0, w * 0.15, 0); tg.addColorStop(0, 'rgba(255,255,255,.9)'); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = tg; g.fillRect(0, 0, w * 0.15, h);
+      }, true);
       return { skin: skin, glow: glow, fin: finT };
     }
     var koiGlowTex = (function () {
@@ -1565,29 +1598,36 @@
       for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) { var q = Math.hypot((x + 0.5) / S - 0.5, (y + 0.5) / S - 0.5) * 2, k = (y * S + x) * 4; d[k] = d[k + 1] = d[k + 2] = 255; d[k + 3] = Math.max(0, Math.pow(1 - Math.min(1, q), 2.4)) * 255; }
       var t = new THREE.DataTexture(d, S, S, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
     })();
-    function swim(mat, k) {                                               // the whole fish ripples side to side, more toward the tail
+    function swim(mat, k, flutter, rim) {                                  // the whole fish ripples side to side; its silk fins flutter; its rim glows
       mat.onBeforeCompile = function (sh) {
-        sh.uniforms.uTime = grassTime; sh.uniforms.uPh = k.phU; sh.uniforms.uBeat = k.beatU;
+        sh.uniforms.uTime = grassTime; sh.uniforms.uPh = k.phU; sh.uniforms.uBeat = k.beatU; sh.uniforms.uRim = k.rimU; sh.uniforms.uRimC = { value: new THREE.Color(k.kind.glow) };
         sh.vertexShader = 'uniform float uTime; uniform float uPh; uniform float uBeat;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n' +
-          'float bw = clamp((0.1 - position.x) / 0.5, 0.0, 1.0);\n' +
-          'transformed.z += sin(uTime * uBeat + uPh - position.x * 14.0) * (0.004 + 0.06 * bw * bw);');
+          'float bw = clamp((0.1 - position.x) / 0.5, 0.0, 1.7);\n' +
+          'transformed.z += sin(uTime * uBeat + uPh - position.x * 12.0) * (0.004 + 0.05 * bw * bw);\n' +
+          (flutter ? 'transformed.y += sin(uTime * 3.1 + uPh - position.x * 22.0) * 0.012 * bw * bw; transformed.z += sin(uTime * 4.3 + uPh + position.y * 30.0) * 0.008 * bw;\n' : ''));
+        if (rim) sh.fragmentShader = 'uniform float uRim; uniform vec3 uRimC;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' +
+          'totalEmissiveRadiance += uRimC * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 2.2) * uRim;');
       };
       return mat;
     }
     var koi = [];
     for (var kf = 0; kf < 10; kf++) {
-      var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { phU: { value: r() * 6.28 }, beatU: { value: 5 } };
-      var bodyMat = swim(new THREE.MeshStandardMaterial({ map: tx.skin, color: '#d8e4e0', transparent: true, opacity: 0.9, roughness: 0.28, metalness: 0.25, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.4 }), k);
-      var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, color: kind.fin, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.4, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.35 }), k);
-      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat);
-      body.castShadow = true; body.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins);   // drawn after the water: they swim just under the surface
-      var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(0.75, 0.45, 1); aura.renderOrder = 6; fish.add(aura);   // its glow shows up through the water
-      var sc = 1 + r() * 0.7; fish.scale.setScalar(sc); scene.add(fish);
-      Object.assign(k, { g: fish, kind: kind, bodyMat: bodyMat, finMat: finMat, aura: aura, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
+      var kind = KOI[kf % KOI.length], tx = koiTextures(kind, 70 + kf), k = { kind: kind, phU: { value: r() * 6.28 }, beatU: { value: 5 }, rimU: { value: 1 } };
+      var bodyMat = swim(new THREE.MeshStandardMaterial({ map: tx.skin, transparent: true, opacity: 0.88, roughness: 0.2, metalness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.glow, emissiveIntensity: 0.8 }), k, false, true);
+      var finMat = swim(new THREE.MeshStandardMaterial({ map: tx.fin, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.35, emissive: new THREE.Color(kind.glow), emissiveMap: tx.fin, emissiveIntensity: 0.45 }), k, true, false);
+      var crystalMat = swim(new THREE.MeshStandardMaterial({ color: kind.pale, transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.2, emissive: new THREE.Color(kind.glow), emissiveIntensity: 0.9 }), k, false, false);
+      var fish = new THREE.Group(), body = new THREE.Mesh(koiBody, bodyMat), fins = new THREE.Mesh(koiFins, finMat), crown = new THREE.Mesh(koiCrown, crystalMat);
+      body.renderOrder = 6; crown.renderOrder = 6; fins.renderOrder = 7; fish.add(body, fins, crown);   // drawn after the water: they swim just under the surface
+      var orbMat = new THREE.MeshBasicMaterial({ color: kind.glow, transparent: true }), orbs = [];
+      [-1, 1].forEach(function (sd) { var o = new THREE.Mesh(orbG, orbMat); o.position.set(0.31, 0.03, sd * 0.085); o.renderOrder = 7; fish.add(o); var og = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); og.scale.set(0.07, 0.07, 1); og.position.copy(o.position); og.renderOrder = 8; fish.add(og); orbs.push(og); });
+      var core = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: '#ffffff', transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.22, 0.1, 1); core.renderOrder = 8; fish.add(core);   // a light glowing inside
+      var aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: koiGlowTex, color: kind.glow, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false })); aura.scale.set(1.1, 0.55, 1); aura.renderOrder = 6; fish.add(aura);
+      var sc = 1 + r() * 0.6; fish.scale.setScalar(sc); scene.add(fish);
+      Object.assign(k, { g: fish, bodyMat: bodyMat, finMat: finMat, crystalMat: crystalMat, aura: aura, core: core, orbs: orbs, a: r() * 6.28, rt: 0.3 + r() * 0.4, sp: (0.1 + r() * 0.1) * (r() < 0.5 ? 1 : -1), depth: 0.1 + r() * 0.16, ph: r() * 6.28, trail: [] });
       koi.push(k);
     }
     // a trail of glowing motes drifting up behind each fish
-    var TRAIL = 14, trGeo = new THREE.BufferGeometry(), trC = new THREE.Color();
+    var TRAIL = 20, trGeo = new THREE.BufferGeometry(), trC = new THREE.Color();
     trGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3)); trGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(koi.length * TRAIL * 3), 3));
     var trail = new THREE.Points(trGeo, new THREE.PointsMaterial({ map: koiGlowTex, size: 0.07, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     trail.frustumCulled = false; trail.renderOrder = 6; scene.add(trail);
@@ -1616,9 +1656,10 @@
           k.g.position.copy(kP); k.g.rotation.set(0, dir, Math.sin(t * 0.8 + k.ph) * 0.06);
           k.beatU.value = 4.5 + 2.5 * pace;
           var pulse = 0.5 + 0.5 * Math.sin(t * 1.7 + k.ph);
-          k.bodyMat.emissiveIntensity = 0.55 + pulse * 0.3 + night * 1.1;
-          k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.05 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.3 + pulse * 0.15 + night * 0.9;
-          k.aura.material.opacity = 0.3 + pulse * 0.12 + night * 0.4;
+          k.bodyMat.emissiveIntensity = 0.7 + pulse * 0.4 + night * 1.2; k.rimU.value = 0.7 + pulse * 0.5 + night * 0.8; k.crystalMat.emissiveIntensity = 0.6 + pulse * 0.6 + night;
+          k.core.material.opacity = 0.25 + pulse * 0.2 + night * 0.3; k.orbs.forEach(function (o, oi) { var tw = 0.5 + 0.5 * Math.sin(t * 3.3 + k.ph + oi * 1.7); o.material.opacity = 0.5 + tw * 0.5; o.scale.setScalar(0.05 + tw * 0.04); });
+          k.finMat.emissive.setHSL((k.kind.hue + Math.sin(t * 0.5 + k.ph) * 0.08 + 1) % 1, 0.85, 0.6); k.finMat.emissiveIntensity = 0.4 + pulse * 0.25 + night * 0.9;
+          k.aura.material.opacity = 0.28 + pulse * 0.14 + night * 0.4;
           k.tick = (k.tick || 0) + dt;
           if (k.tick > 0.14) { k.tick = 0; k.trail.unshift({ x: kP.x + Math.cos(dir) * 0.08 * k.g.scale.x, y: kP.y, z: kP.z - Math.sin(dir) * 0.08 * k.g.scale.x, age: 0 }); if (k.trail.length > TRAIL) k.trail.pop(); }
           trC.set(k.kind.glow);
