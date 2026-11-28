@@ -1561,18 +1561,19 @@
         var sm = new THREE.Matrix4().makeTranslation(x, y0 + 0.001, 0); sm.multiply(new THREE.Matrix4().makeScale(S.w * 1.1, S.w * 0.8, S.w * 0.9)); parts.push([socket, sm, [cDeep.r, cDeep.g, cDeep.b]]);   // a little ring where it grows from the skin
       });
       [-1, 1].forEach(function (sd) {                                     // whiskers: tapering, beaded at each joint, with fine hairs, rising to a crystal held in three petals
-        var curve = new THREE.CatmullRomCurve3([[0.19, -0.012, sd * 0.012], [0.235, -0.024, sd * 0.035], [0.275, -0.012, sd * 0.06], [0.3, 0.012, sd * 0.078], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }));
+        var rh = hb(0.07), rz = rh * 0.69;                                 // rooted in the side of the snout, just behind the lip
+        var curve = new THREE.CatmullRomCurve3([[0.172, -rh * 0.32, sd * rz * 0.86], [0.19, -rh * 0.42, sd * rz * 0.96], [0.215, -rh * 0.52, sd * (rz + 0.008)], [0.25, -0.02, sd * 0.042], [0.28, -0.008, sd * 0.062], [0.3, 0.012, sd * 0.078], [0.31, 0.03, sd * 0.085]].map(function (q) { return new THREE.Vector3(q[0], q[1], q[2]); }));
         var N = 60, R = 8, pos = [], col = [], idx = [], fr = curve.computeFrenetFrames(N, false);
         for (var i = 0; i <= N; i++) {
-          var t = i / N, c = curve.getPointAt(t), bead = Math.pow(Math.max(0, Math.sin(t * Math.PI * 14)), 6), rad = (0.0034 * Math.pow(1 - t, 0.7) + 0.0009) * (1 + bead * 0.35);
-          tmp.copy(cDeep).lerp(cGlow, t).lerp(cPale, bead * 0.4);
+          var t = i / N, c = curve.getPointAt(t), bead = t < 0.12 ? 0 : Math.pow(Math.max(0, Math.sin(t * Math.PI * 14)), 6), rad = (0.0034 * Math.pow(1 - t, 0.7) + 0.0009) * (1 + bead * 0.35) + 0.0045 * Math.pow(Math.max(0, 1 - t / 0.12), 2);   // a fleshy root swelling out of the skin
+          tmp.copy(cDeep).lerp(cGlow, Math.max(0, t - 0.1) / 0.9).lerp(cPale, bead * 0.4);
           for (var j = 0; j <= R; j++) { var a = j / R * Math.PI * 2, n = fr.normals[i], b = fr.binormals[i]; pos.push(c.x + (n.x * Math.cos(a) + b.x * Math.sin(a)) * rad, c.y + (n.y * Math.cos(a) + b.y * Math.sin(a)) * rad, c.z + (n.z * Math.cos(a) + b.z * Math.sin(a)) * rad); col.push(tmp.r, tmp.g, tmp.b); }
         }
         for (var i2 = 0; i2 < N; i2++) for (var j2 = 0; j2 < R; j2++) { var A = i2 * (R + 1) + j2, B = A + R + 1; idx.push(A, B, A + 1, B, B + 1, A + 1); }
         var tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); tg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); tg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); tg.setIndex(idx); tg.computeVertexNormals();
         parts.push([tg, new THREE.Matrix4(), function (x, y, z) { return null; }]);
         var hair = new THREE.CylinderGeometry(0, 0.0007, 1, 4); hair.translate(0, 0.5, 0);
-        for (var hh = 2; hh < 26; hh++) {                                 // fine hairs fanning off each joint
+        for (var hh = 5; hh < 26; hh++) {                                 // fine hairs fanning off each joint
           var t3 = hh / 28, p3 = curve.getPointAt(t3), tn = curve.getTangentAt(t3), q = new THREE.Quaternion();
           [-1, 1].forEach(function (side) {
             var dir = new THREE.Vector3(0, 1, 0).applyAxisAngle(tn, side * 1.1 + hh * 0.4).addScaledVector(tn, 0.6).normalize();
